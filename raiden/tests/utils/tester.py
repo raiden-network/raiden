@@ -1,17 +1,9 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
+from binascii import hexlify
 
-import ethereum.db
-import ethereum.blocks
-import ethereum.config
-from ethereum import tester
-from ethereum.utils import int_to_addr, zpad
+from ethereum.tools import tester, _solidity
+from ethereum.utils import normalize_address
 
-from raiden.utils import (
-    address_decoder,
-    data_decoder,
-    quantity_decoder,
-)
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
@@ -44,14 +36,8 @@ class InvalidKey(str):
 INVALID_KEY = InvalidKey('default_key_was_not_set')
 
 
-def create_tester_state(deploy_key, private_keys, tester_blockgas_limit):
-    tester_state = tester.state()
-
-    # special addresses 1 to 5
-    alloc = {
-        int_to_addr(i): {'wei': 1}
-        for i in range(1, 5)
-    }
+def create_tester_chain(deploy_key, private_keys, tester_blockgas_limit):
+    alloc = {}
 
     for privkey in [deploy_key] + private_keys:
         address = privatekey_to_address(privkey)
@@ -64,35 +50,10 @@ def create_tester_state(deploy_key, private_keys, tester_blockgas_limit):
             'balance': DEFAULT_BALANCE,
         }
 
-    db = ethereum.db.EphemDB()
-    env = ethereum.config.Env(
-        db,
-        ethereum.config.default_config,
-    )
-    genesis_overwrite = {
-        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
-        'difficulty': quantity_decoder('0x20000'),
-        'mixhash': zpad(b'\x00', 32),
-        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
-        'timestamp': 0,
-        'extra_data': b'',
-        'gas_limit': tester_blockgas_limit,
-        'start_alloc': alloc,
-    }
-    genesis_block = ethereum.blocks.genesis(
-        env,
-        **genesis_overwrite
-    )
+    tester.k0 = deploy_key
+    tester.a0 = privatekey_to_address(deploy_key)
 
-    # enable DELEGATECALL opcode
-    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
-
-    tester_state.db = db
-    tester_state.env = env
-    tester_state.block = genesis_block
-    tester_state.blocks = [genesis_block]
-
-    return tester_state
+    return tester.Chain(alloc)
 
 
 def approve_and_deposit(tester_token, nettingcontract, deposit, key):
@@ -108,130 +69,146 @@ def approve_and_deposit(tester_token, nettingcontract, deposit, key):
     )
 
 
-def deploy_standard_token(deploy_key, tester_state, token_amount):
+def deploy_standard_token(deploy_key, tester_chain, token_amount):
     standard_token_path = get_contract_path('StandardToken.sol')
     human_token_path = get_contract_path('HumanStandardToken.sol')
 
-    standard_token_address = tester_state.contract(
-        None,
-        path=standard_token_path,
-        language='solidity',
+    standard_token_compiled = _solidity.compile_contract(
+        standard_token_path,
+        "StandardToken"
     )
-    tester_state.mine(number_of_blocks=1)
+    standard_token_address = tester_chain.contract(
+        standard_token_compiled['bin'],
+        language='evm'
+    )
+    tester_chain.mine(number_of_blocks=1)
 
-    human_token_libraries = {
+    contract_libraries = {
         'StandardToken': hexlify(standard_token_address),
     }
-    # using abi_contract because of the constructor_parameters
-    human_token_proxy = tester_state.abi_contract(
-        None,
-        path=human_token_path,
-        language='solidity',
-        libraries=human_token_libraries,
-        constructor_parameters=[token_amount, 'raiden', 0, 'rd'],
-        sender=deploy_key,
-    )
-    tester_state.mine(number_of_blocks=1)
 
-    human_token_address = human_token_proxy.address
+    human_token_compiled = _solidity.compile_contract(
+        human_token_path,
+        'HumanStandardToken',
+        contract_libraries
+    )
+    ct = tester.ContractTranslator(human_token_compiled['abi'])
+    human_token_args = ct.encode_constructor_arguments([token_amount, 'raiden', 0, 'rd'])
+    human_token_address = tester_chain.contract(
+        human_token_compiled['bin'] + human_token_args,
+        language='evm',
+        sender=deploy_key
+    )
+    tester_chain.mine(number_of_blocks=1)
+
     return human_token_address
 
 
-def deploy_nettingchannel_library(deploy_key, tester_state):
+def deploy_nettingchannel_library(deploy_key, tester_chain):
     netting_library_path = get_contract_path('NettingChannelLibrary.sol')
-    netting_channel_library_address = tester_state.contract(
-        None,
-        path=netting_library_path,
-        language='solidity',
-        contract_name='NettingChannelLibrary',
-        sender=deploy_key,
+
+    netting_library_compiled = _solidity.compile_contract(
+        netting_library_path,
+        "NettingChannelLibrary"
     )
-    tester_state.mine(number_of_blocks=1)
+    netting_channel_library_address = tester_chain.contract(
+        netting_library_compiled['bin'],
+        language='evm',
+        sender=deploy_key
+    )
+    tester_chain.mine(number_of_blocks=1)
+
     return netting_channel_library_address
 
 
-def deploy_channelmanager_library(deploy_key, tester_state, tester_nettingchannel_library_address):
+def deploy_channelmanager_library(deploy_key, tester_chain, tester_nettingchannel_library_address):
     channelmanager_library_path = get_contract_path('ChannelManagerLibrary.sol')
-    manager_address = tester_state.contract(
-        None,
-        path=channelmanager_library_path,
-        language='solidity',
-        contract_name='ChannelManagerLibrary',
-        libraries={
-            'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address),
-        },
-        sender=deploy_key,
+
+    contract_libraries = {
+        'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address),
+    }
+
+    channelmanager_library_compiled = _solidity.compile_contract(
+        channelmanager_library_path,
+        'ChannelManagerLibrary',
+        contract_libraries
     )
-    tester_state.mine(number_of_blocks=1)
-    return manager_address
+    channelmanager_library_address = tester_chain.contract(
+        channelmanager_library_compiled['bin'],
+        language='evm'
+    )
+    tester_chain.mine(number_of_blocks=1)
+
+    return channelmanager_library_address
 
 
-def deploy_registry(deploy_key, tester_state, channel_manager_library_address):
+def deploy_registry(deploy_key, tester_chain, channel_manager_library_address):
     registry_path = get_contract_path('Registry.sol')
-    registry_address = tester_state.contract(
-        None,
-        path=registry_path,
-        language='solidity',
-        contract_name='Registry',
-        libraries={
-            'ChannelManagerLibrary': hexlify(channel_manager_library_address)
-        },
-        sender=deploy_key,
+    contract_libraries = {
+        'ChannelManagerLibrary': hexlify(channel_manager_library_address),
+    }
+
+    registry_compiled = _solidity.compile_contract(
+        registry_path,
+        'Registry',
+        contract_libraries
     )
-    tester_state.mine(number_of_blocks=1)
+    registry_address = tester_chain.contract(
+        registry_compiled['bin'],
+        language='evm',
+        sender=deploy_key
+    )
+    tester_chain.mine(number_of_blocks=1)
+
     return registry_address
 
 
-def create_tokenproxy(tester_state, tester_token_address, log_listener):
+def create_tokenproxy(tester_chain, tester_token_address, log_listener):
     translator = tester.ContractTranslator(
         CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
     )
+    tester_chain.head_state.log_listeners.append(log_listener)
     token_abi = tester.ABIContract(
-        tester_state,
+        tester_chain,
         translator,
         tester_token_address,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
     )
     return token_abi
 
 
-def create_registryproxy(tester_state, tester_registry_address, log_listener):
+def create_registryproxy(tester_chain, tester_registry_address, log_listener):
     translator = tester.ContractTranslator(CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY))
+    tester_chain.head_state.log_listeners.append(log_listener)
     registry_abi = tester.ABIContract(
-        tester_state,
+        tester_chain,
         translator,
         tester_registry_address,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
     )
     return registry_abi
 
 
-def create_channelmanager_proxy(tester_state, tester_channelmanager_address, log_listener):
+def create_channelmanager_proxy(tester_chain, tester_channelmanager_address, log_listener):
     translator = tester.ContractTranslator(
         CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER)
     )
     channel_manager_abi = tester.ABIContract(
-        tester_state,
+        tester_chain,
         translator,
         tester_channelmanager_address,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
     )
+    tester_chain.head_state.log_listeners.append(log_listener)
     return channel_manager_abi
 
 
-def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, log_listener):
+def create_nettingchannel_proxy(tester_chain, tester_nettingchannel_address, log_listener):
     translator = tester.ContractTranslator(
         CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL)
     )
+    tester_chain.head_state.log_listeners.append(log_listener)
     netting_channel_abi = tester.ABIContract(
-        tester_state,
+        tester_chain,
         translator,
         tester_nettingchannel_address,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
     )
     return netting_channel_abi
 
@@ -254,9 +231,9 @@ def channel_from_nettingcontract(
     address_balance = netting_contract.addressAndBalance(sender=our_key)
     address1_hex, balance1, address2_hex, balance2 = address_balance
 
-    token_address = unhexlify(token_address_hex)
-    address1 = unhexlify(address1_hex)
-    address2 = unhexlify(address2_hex)
+    token_address = normalize_address(token_address_hex)
+    address1 = normalize_address(address1_hex)
+    address2 = normalize_address(address2_hex)
 
     if our_address == address1:
         our_balance = balance1
@@ -292,30 +269,32 @@ def channel_from_nettingcontract(
     return channel
 
 
-def new_registry(deploy_key, tester_state, channel_manager_library_address, log_listener):
+def new_registry(deploy_key, tester_chain, channel_manager_library_address, log_listener):
     registry_address = deploy_registry(
         deploy_key,
-        tester_state,
+        tester_chain,
         channel_manager_library_address,
     )
+    tester_chain.head_state.log_listeners.append(log_listener)
 
     registry = create_registryproxy(
-        tester_state,
+        tester_chain,
         registry_address,
         log_listener,
     )
     return registry
 
 
-def new_token(deploy_key, tester_state, token_amount, log_listener):
+def new_token(deploy_key, tester_chain, token_amount, log_listener):
     token_address = deploy_standard_token(
         deploy_key,
-        tester_state,
+        tester_chain,
         token_amount,
     )
+    tester_chain.head_state.log_listeners.append(log_listener)
 
     token = create_tokenproxy(
-        tester_state,
+        tester_chain,
         token_address,
         log_listener,
     )
@@ -324,7 +303,7 @@ def new_token(deploy_key, tester_state, token_amount, log_listener):
 
 def new_channelmanager(
         deploy_key,
-        tester_state,
+        tester_chain,
         log_listener,
         tester_registry,
         tester_token_address):
@@ -333,10 +312,10 @@ def new_channelmanager(
         tester_token_address,
         sender=deploy_key,
     )
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
 
     channelmanager = create_channelmanager_proxy(
-        tester_state,
+        tester_chain,
         channel_manager_address,
         log_listener,
     )
@@ -346,7 +325,7 @@ def new_channelmanager(
 def new_nettingcontract(
         our_key,
         partner_key,
-        tester_state,
+        tester_chain,
         log_listener,
         channelmanager,
         settle_timeout):
@@ -365,10 +344,10 @@ def new_nettingcontract(
         settle_timeout,
         sender=our_key,
     )
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
 
     nettingchannel = create_nettingchannel_proxy(
-        tester_state,
+        tester_chain,
         netting_channel_address0_hex,
         log_listener,
     )

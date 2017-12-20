@@ -4,7 +4,7 @@ from binascii import hexlify
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
-from ethereum.tester import TransactionFailed
+from ethereum.tools.tester import TransactionFailed
 
 from raiden.blockchain.events import (
     ALL_EVENTS,

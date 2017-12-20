@@ -13,24 +13,30 @@ import requests
 from http import HTTPStatus
 from string import Template
 
-from ethereum._solidity import get_solidity
+from ethereum.tools._solidity import get_solidity
 
 from raiden.tests.utils.tester_client import (
     tester_deploy_contract,
     BlockChainServiceTesterMock,
     NettingChannelTesterMock,
 )
-from raiden.utils import get_contract_path, get_project_root, fix_tester_storage
+from raiden.utils import (
+    get_contract_path,
+    get_project_root,
+    fix_tester_storage,
+    address_encoder,
+    address_decoder,
+)
 from raiden.blockchain.abi import contract_checksum
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.tests.utils.tester import create_tester_state
+from raiden.tests.utils.tester import create_tester_chain
 from raiden.network.utils import get_free_port
 from raiden.connection_manager import ConnectionManager
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
-TEST_PARTNER_ADDRESS = b'2' * 40
+TEST_PARTNER_ADDRESS = '2' * 40
 TEST_DEPOSIT_AMOUNT = 5
 
 RST_DATADIR = tempfile.mkdtemp()
@@ -112,16 +118,16 @@ def run_smoketests(raiden_service, test_config, debug=False):
         chain = raiden_service.chain
         assert (
             raiden_service.default_registry.address ==
-            unhexlify(test_config['contracts']['registry_address'])
+            address_decoder(test_config['contracts']['registry_address'])
         )
         assert (
             raiden_service.default_registry.token_addresses() ==
-            [unhexlify(test_config['contracts']['token_address'])]
+            [address_decoder(test_config['contracts']['token_address'])]
         )
         assert len(chain.address_to_discovery.keys()) == 1
         assert (
             list(chain.address_to_discovery.keys())[0] ==
-            unhexlify(test_config['contracts']['discovery_address'])
+            address_decoder(test_config['contracts']['discovery_address'])
         )
         discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
@@ -193,7 +199,7 @@ def deploy_and_open_channel_alloc(deployment_key):
         - return the state dump and the contract addresses
     """
     deployment_key_bin = unhexlify(deployment_key)
-    state = create_tester_state(
+    state = create_tester_chain(
         deployment_key_bin,
         [deployment_key_bin],
         6 * 10 ** 6
@@ -228,7 +234,6 @@ def deploy_and_open_channel_alloc(deployment_key):
     )
 
     manager = registry.manager_by_token(token_address)
-
     assert manager.private_key == deployment_key_bin
     our_address = TEST_ACCOUNT['address']
 
@@ -250,19 +255,16 @@ def deploy_and_open_channel_alloc(deployment_key):
     discovery.proxy.registerEndpoint(TEST_ENDPOINT)
 
     contracts = dict(
-        registry_address=registry_address,
-        token_address=token_address,
-        discovery_address=discovery_address,
-        channel_address=channel_address,
+        registry_address=address_encoder(registry_address),
+        token_address=address_encoder(token_address),
+        discovery_address=address_encoder(discovery_address),
+        channel_address=address_encoder(channel_address),
     )
-    for k, v in contracts.items():
-        contracts[k] = hexlify(v).decode()
 
     alloc = dict()
     # preserve all accounts and contracts
-    for address in state.block.state.to_dict().keys():
-        address = hexlify(address).decode()
-        alloc[address] = state.block.account_to_dict(address)
+    for address in state.head_state.to_dict().keys():
+        alloc[address] = state.head_state.account_to_dict(address)
 
     for account, content in alloc.items():
         alloc[account]['storage'] = fix_tester_storage(content['storage'])

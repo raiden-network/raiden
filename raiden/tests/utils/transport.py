@@ -67,7 +67,7 @@ class UnreliableTransport(DummyTransport):
 
             log.debug(
                 'dropped packet',
-                sender=pex(sender),
+                sender=pex(str(sender).encode()),
                 counter=self.network.counter,
                 msghash=pex(sha3(bytes_))
             )

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
-
 import pytest
+from ethereum.utils import normalize_address
 
 from raiden.utils import privatekey_to_address
 from raiden.tests.utils.tester import (
-    create_tester_state,
+    create_tester_chain,
     approve_and_deposit,
     channel_from_nettingcontract,
     create_registryproxy,
@@ -38,63 +37,63 @@ def tester_events():
 
 
 @pytest.fixture
-def tester_state(deploy_key, private_keys, tester_blockgas_limit):
-    return create_tester_state(deploy_key, private_keys, tester_blockgas_limit)
+def tester_chain(deploy_key, private_keys, tester_blockgas_limit):
+    return create_tester_chain(deploy_key, private_keys, tester_blockgas_limit)
 
 
 @pytest.fixture
-def tester_token_address(private_keys, token_amount, tester_state, sender_index=0):
+def tester_token_address(private_keys, token_amount, tester_chain, sender_index=0):
     deploy_key = private_keys[sender_index]
 
     return deploy_standard_token(
         deploy_key,
-        tester_state,
+        tester_chain,
         token_amount,
     )
 
 
 @pytest.fixture
-def tester_nettingchannel_library_address(deploy_key, tester_state):
+def tester_nettingchannel_library_address(deploy_key, tester_chain):
     return deploy_nettingchannel_library(
         deploy_key,
-        tester_state,
+        tester_chain,
     )
 
 
 @pytest.fixture
 def tester_channelmanager_library_address(
         deploy_key,
-        tester_state,
+        tester_chain,
         tester_nettingchannel_library_address):
     return deploy_channelmanager_library(
         deploy_key,
-        tester_state,
+        tester_chain,
         tester_nettingchannel_library_address,
     )
 
 
 @pytest.fixture
-def tester_registry_address(tester_state, deploy_key, tester_channelmanager_library_address):
+def tester_registry_address(tester_chain, deploy_key, tester_channelmanager_library_address):
     return deploy_registry(
         deploy_key,
-        tester_state,
+        tester_chain,
         tester_channelmanager_library_address,
     )
 
 
 @pytest.fixture
-def tester_token_raw(tester_state, tester_token_address, tester_events):
+def tester_token_raw(tester_chain, tester_token_address, tester_events):
     return create_tokenproxy(
-        tester_state,
+        tester_chain,
         tester_token_address,
         tester_events.append,
     )
 
 
 @pytest.fixture
-def tester_token(token_amount, private_keys, tester_state, tester_token_address, tester_events):
+def tester_token(token_amount, private_keys, tester_chain, tester_token_address, tester_events):
     token = create_tokenproxy(
-        tester_state,
+        tester_chain,
         tester_token_address,
         tester_events.append,
     )
@@ -111,9 +110,9 @@ def tester_token(token_amount, private_keys, tester_state, tester_token_address,
 
 
 @pytest.fixture
-def tester_registry(tester_state, tester_registry_address, tester_events):
+def tester_registry(tester_chain, tester_registry_address, tester_events):
     return create_registryproxy(
-        tester_state,
+        tester_chain,
         tester_registry_address,
         tester_events.append,
     )
@@ -122,14 +121,14 @@ def tester_registry(tester_state, tester_registry_address, tester_events):
 @pytest.fixture
 def tester_channelmanager(
         private_keys,
-        tester_state,
+        tester_chain,
         tester_events,
         tester_registry,
         tester_token):
     privatekey0 = private_keys[0]
     channel_manager = new_channelmanager(
         privatekey0,
-        tester_state,
+        tester_chain,
         tester_events.append,
         tester_registry,
         tester_token.address,
@@ -143,7 +142,7 @@ def tester_nettingcontracts(
         both_participants_deposit,
         private_keys,
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_events,
         tester_channelmanager,
         tester_token):
@@ -159,13 +158,11 @@ def tester_nettingcontracts(
         # will be repeated for each ABI
         if pos == 1:
             log_listener = tester_events.append
-        else:
-            log_listener = None
 
         nettingcontract = new_nettingcontract(
             first_key,
             second_key,
-            tester_state,
+            tester_chain,
             log_listener,
             tester_channelmanager,
             settle_timeout,
@@ -193,13 +190,13 @@ def tester_nettingcontracts(
 
 
 @pytest.fixture
-def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
+def tester_channels(tester_chain, tester_nettingcontracts, reveal_timeout):
     result = list()
     for first_key, second_key, nettingcontract in tester_nettingcontracts:
         first_externalstate = ChannelExternalStateTester(
-            tester_state,
+            tester_chain,
             first_key,
-            unhexlify(nettingcontract.address),
+            normalize_address(nettingcontract.address),
         )
         first_channel = channel_from_nettingcontract(
             first_key,
@@ -209,9 +206,9 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
         )
 
         second_externalstate = ChannelExternalStateTester(
-            tester_state,
+            tester_chain,
             second_key,
-            unhexlify(nettingcontract.address),
+            normalize_address(nettingcontract.address),
         )
         second_channel = channel_from_nettingcontract(
             second_key,

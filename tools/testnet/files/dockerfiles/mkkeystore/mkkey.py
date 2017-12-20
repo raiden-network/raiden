@@ -15,7 +15,7 @@ try:
     from ethereum.tools import keys
 except ImportError:
     from ethereum.keys import make_keystore_json, sha3, encode_hex
-    from ethereum import keys
+    from ethereum.tools import keys
 
 
 class BytesJSONEncoder(JSONEncoder):

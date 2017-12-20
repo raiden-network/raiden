@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 
+from ethereum.utils import normalize_address
+
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_ENDPOINT_REGISTRY,
@@ -65,7 +67,7 @@ class Discovery(object):
         self.startgas = startgas
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
-        self.not_found_address = b'0' * 40
+        self.not_found_address = '0x' + '0' * 40
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
@@ -102,7 +104,7 @@ class Discovery(object):
         if address == self.not_found_address:  # the 0 address means nothing found
             return None
 
-        return unhexlify(address)
+        return normalize_address(address)
 
     def version(self):
         return self.proxy.call('contract_version')

@@ -19,13 +19,13 @@ from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.messages import Ack
 
 
-ADDRESS = sha3('foo')[:20]
-ADDRESS2 = sha3('boo')[:20]
-ADDRESS3 = sha3('coo')[:20]
-ADDRESS4 = sha3('goo')[:20]
-SECRET = 'secret'
+ADDRESS = sha3(b'foo')[:20]
+ADDRESS2 = sha3(b'boo')[:20]
+ADDRESS3 = sha3(b'coo')[:20]
+ADDRESS4 = sha3(b'goo')[:20]
+SECRET = b'secret'
 HASH = sha3(SECRET)
-HASH2 = sha3('joo')
+HASH2 = sha3(b'joo')
 
 
 def test_transfer_statechange_operators():
@@ -97,10 +97,10 @@ def test_state_operators():
 
 
 def test_event_operators():
-    a = EventTransferSentSuccess(2, 5, sha3('target'))
-    b = EventTransferSentSuccess(2, 5, sha3('target'))
-    c = EventTransferSentSuccess(3, 4, sha3('target'))
-    d = EventTransferSentSuccess(3, 4, sha3('differenttarget'))
+    a = EventTransferSentSuccess(2, 5, sha3(b'target'))
+    b = EventTransferSentSuccess(2, 5, sha3(b'target'))
+    c = EventTransferSentSuccess(3, 4, sha3(b'target'))
+    d = EventTransferSentSuccess(3, 4, sha3(b'differenttarget'))
 
     assert a == b
     assert not a != b
@@ -117,10 +117,10 @@ def test_event_operators():
     assert a != c
     assert not a == c
 
-    a = EventTransferReceivedSuccess(2, 5, sha3('initiator'))
-    b = EventTransferReceivedSuccess(2, 5, sha3('initiator'))
-    c = EventTransferReceivedSuccess(3, 5, sha3('initiator'))
-    d = EventTransferReceivedSuccess(3, 5, sha3('other initiator'))
+    a = EventTransferReceivedSuccess(2, 5, sha3(b'initiator'))
+    b = EventTransferReceivedSuccess(2, 5, sha3(b'initiator'))
+    c = EventTransferReceivedSuccess(3, 5, sha3(b'initiator'))
+    d = EventTransferReceivedSuccess(3, 5, sha3(b'other initiator'))
 
     assert a == b
     assert not a != b

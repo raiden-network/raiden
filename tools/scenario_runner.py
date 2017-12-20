@@ -94,7 +94,7 @@ def run(privatekey,
 
     rpc_client = JSONRPCClient(
         '127.0.0.1',
-        '8545',
+        8545,
         privatekey_bin,
     )
 

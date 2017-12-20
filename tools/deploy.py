@@ -7,7 +7,7 @@ import os
 
 import click
 from ethereum import slogging
-from ethereum._solidity import compile_contract
+from ethereum.tools._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient

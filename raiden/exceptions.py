@@ -134,12 +134,8 @@ class TransferUnwanted(RaidenError):
 
 
 class UnknownTokenAddress(RaidenError):
-    def __init__(self, address):
-        super(UnknownTokenAddress, self).__init__(
-            'Message with unknown token address {} received'.format(pex(address))
-        )
-
-        self.address = address
+    """ Raised when the token address in unknown. """
+    pass
 
 
 class STUNUnavailableException(RaidenError):

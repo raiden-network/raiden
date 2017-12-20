@@ -11,7 +11,7 @@ import time
 from logging import StreamHandler, Formatter
 
 from ethereum.slogging import getLogger
-from ethereum._solidity import compile_file
+from ethereum.tools._solidity import compile_file
 from ethereum.utils import denoms
 import gevent
 from gevent.event import Event

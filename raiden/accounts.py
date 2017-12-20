@@ -6,7 +6,7 @@ import sys
 from binascii import hexlify, unhexlify
 
 from bitcoin import privtopub
-from ethereum import keys
+from ethereum.tools import keys
 from ethereum.slogging import get_logger
 
 log = get_logger(__name__)

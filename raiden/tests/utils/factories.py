@@ -19,7 +19,7 @@ UNIT_SETTLE_TIMEOUT = 50
 UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 
-UNIT_SECRET = 'secretsecretsecretsecretsecretse'
+UNIT_SECRET = b'secretsecretsecretsecretsecretse'
 UNIT_HASHLOCK = sha3(UNIT_SECRET)
 
 UNIT_TOKEN_ADDRESS = 'tokentokentokentokentokentokentokentoken'
@@ -43,7 +43,7 @@ def make_address():
 
 
 def make_privkey_address():
-    private_key_bin = sha3(''.join(random.choice(string.printable) for _ in range(20)))
+    private_key_bin = sha3(''.join(random.choice(string.printable) for _ in range(20)).encode())
     privkey = PrivateKey(private_key_bin)
     pubkey = privkey.public_key.format(compressed=False)
     address = publickey_to_address(pubkey)

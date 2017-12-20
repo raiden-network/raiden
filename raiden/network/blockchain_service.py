@@ -3,7 +3,7 @@ import os
 
 import gevent
 from ethereum import slogging
-from ethereum import _solidity
+from ethereum.tools import _solidity
 
 from raiden.network.proxies import (
     Discovery,

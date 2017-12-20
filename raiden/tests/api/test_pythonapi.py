@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
-
 import pytest
 
 from raiden.api.python import RaidenAPI
@@ -15,7 +13,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import get_contract_path
+from raiden.utils import get_contract_path, address_encoder
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_token_addresses:{}'])
@@ -43,7 +41,7 @@ def test_token_addresses(raiden_network, token_addresses):
 @pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('number_of_tokens', [0])
-def test_token_registration(raiden_network, tester_state):
+def test_token_registration(raiden_network, tester_chain):
     node1 = raiden_network[0]
     token_amount = 1000
 
@@ -115,7 +113,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     assert any(
         (
             event['_event_type'] == b'ChannelNewBalance' and
-            event['participant'] == hexlify(api1.address)
+            event['participant'] == address_encoder(api1.address)
         )
         for event in event_list2
     )
@@ -134,7 +132,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     assert any(
         (
             event['_event_type'] == b'ChannelClosed' and
-            event['closing_address'] == hexlify(api1.address)
+            event['closing_address'] == address_encoder(api1.address)
         )
         for event in event_list3
     )

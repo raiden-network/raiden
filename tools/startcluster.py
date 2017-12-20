@@ -94,7 +94,7 @@ def to_cmd(node, datadir=None):
     return shlex.split(' '.join(cmd))
 
 
-def create_keystore_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
+def create_keystore_account(datadir, privkey=encode_hex(sha3(b'localhost:627'))):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -173,7 +173,7 @@ def create_node_configuration(miner=True,
     if miner:
         node['minerthreads'] = 1  # conservative
         node['unlock'] = 0
-    node['nodekey'] = sha3('node:{}'.format(node_key_seed))
+    node['nodekey'] = sha3('node:{}'.format(node_key_seed).encode())
     node['nodekeyhex'] = encode_hex(node['nodekey'])
     node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
     node['address'] = privatekey_to_address(node['nodekey'])

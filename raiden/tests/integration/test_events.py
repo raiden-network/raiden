@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
-
 import gevent
 import pytest
 
@@ -23,7 +21,7 @@ from raiden.blockchain.events import (
     get_all_netting_channel_events,
     get_all_registry_events,
 )
-from raiden.utils import sha3
+from raiden.utils import sha3, address_encoder
 
 
 def event_dicts_are_equal(dict1, dict2):
@@ -144,8 +142,8 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
         '_event_type': b'TokenAdded',
-        'channel_manager_address': hexlify(manager0.address),
-        'token_address': hexlify(token_address),
+        'channel_manager_address': address_encoder(manager0.address),
+        'token_address': address_encoder(token_address),
         'block_number': 'ignore',
     })
 
@@ -176,9 +174,9 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert event_dicts_are_equal(events[0], {
         '_event_type': b'ChannelNew',
         'settle_timeout': settle_timeout,
-        'netting_channel': hexlify(netcontract_address),
-        'participant1': hexlify(app0.raiden.address),
-        'participant2': hexlify(app1.raiden.address),
+        'netting_channel': address_encoder(netcontract_address),
+        'participant1': address_encoder(app0.raiden.address),
+        'participant2': address_encoder(app1.raiden.address),
         'block_number': 'ignore',
     })
 
@@ -228,8 +226,8 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     new_balance_event = {
         '_event_type': b'ChannelNewBalance',
-        'token_address': hexlify(token_address),
-        'participant': hexlify(app0.raiden.address),
+        'token_address': address_encoder(token_address),
+        'participant': address_encoder(app0.raiden.address),
         'balance': deposit,
         'block_number': 'ignore',
     }
@@ -257,7 +255,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     closed_event = {
         '_event_type': b'ChannelClosed',
-        'closing_address': hexlify(app0.raiden.address),
+        'closing_address': address_encoder(app0.raiden.address),
         'block_number': 'ignore',
     }
 

@@ -50,7 +50,7 @@ from raiden.network.protocol import (
 
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-HASH2 = sha3('terribleweathermuchstayinside___')
+HASH2 = sha3(b'terribleweathermuchstayinside___')
 
 
 def get_messages_by_type(messages, type_):

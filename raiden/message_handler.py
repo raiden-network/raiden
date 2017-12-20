@@ -198,7 +198,9 @@ class RaidenMessageHandler(object):
         self.balance_proof(message)
 
         if message.token not in self.raiden.token_to_channelgraph:
-            raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
+            raise UnknownTokenAddress(
+                'Unknown token address {}'.format(pex(message.token))
+            )
 
         if message.token in self.blocked_tokens:
             raise TransferUnwanted()

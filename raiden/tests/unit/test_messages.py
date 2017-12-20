@@ -50,7 +50,7 @@ def test_hash():
 
 
 def test_ack():
-    echo = sha3('random')
+    echo = sha3(b'random')
     ack = Ack(ADDRESS, echo)
     assert ack.echo == echo
     data = ack.encode()

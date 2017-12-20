@@ -4,11 +4,12 @@ import os
 from collections import defaultdict
 from itertools import count
 
-from ethereum import tester, slogging, _solidity
-from ethereum.tester import TransactionFailed
+from ethereum import slogging
+from ethereum.tools import tester, _solidity
+from ethereum.tools.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
-from ethereum._solidity import solidity_get_contract_key
+from ethereum.tools._solidity import solidity_get_contract_key
 
 from raiden import messages
 from raiden.exceptions import (
@@ -18,8 +19,7 @@ from raiden.exceptions import (
 )
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-    DISCOVERY_REGISTRATION_GAS
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 )
 from raiden.utils import (
     address_decoder,
@@ -53,7 +53,7 @@ FILTER_ID_GENERATOR = count()
 
 
 def tester_deploy_contract(
-        tester_state,
+        tester_chain,
         private_key,
         contract_name,
         contract_path,
@@ -87,14 +87,10 @@ def tester_deploy_contract(
         dependency_contract['bin'] = bytecode
 
         log.info('Creating contract {}'.format(deploy_contract))
-        contract_address = tester_state.evm(
-            bytecode,
-            private_key,
-            endowment=0,
-        )
-        tester_state.mine(number_of_blocks=1)
+        contract_address = tester_chain.contract(bytecode, language='evm', sender=private_key)
+        tester_chain.mine(number_of_blocks=1)
 
-        if len(tester_state.block.get_code(contract_address)) == 0:
+        if len(tester_chain.head_state.get_code(contract_address)) == 0:
             raise Exception('Contract code empty')
 
         libraries[deploy_contract] = encode_hex(contract_address)
@@ -113,24 +109,20 @@ def tester_deploy_contract(
         bytecode = contract['bin']
 
     log.info('Creating contract {}'.format(contract_name))
-    contract_address = tester_state.evm(
-        bytecode,
-        private_key,
-        endowment=0,
-    )
-    tester_state.mine(number_of_blocks=1)
+    contract_address = tester_chain.contract(bytecode, language='evm', sender=private_key)
+    tester_chain.mine(number_of_blocks=1)
 
-    if len(tester_state.block.get_code(contract_address)) == 0:
+    if len(tester_chain.head_state.get_code(contract_address)) == 0:
         raise Exception('Contract code empty')
 
     return contract_address
 
 
 class ChannelExternalStateTester(object):
-    def __init__(self, tester_state, private_key, address):
-        self.tester_state = tester_state
+    def __init__(self, tester_chain, private_key, address):
+        self.tester_chain = tester_chain
         self.netting_channel = NettingChannelTesterMock(
-            tester_state,
+            tester_chain,
             private_key,
             address,
         )
@@ -142,7 +134,7 @@ class ChannelExternalStateTester(object):
         self.hashlocks_channels = defaultdict(list)
 
     def get_block_number(self):
-        return self.tester_state.block.number
+        return self.tester_chain.block.number
 
     @property
     def opened_block(self):
@@ -186,8 +178,8 @@ class ChannelExternalStateTester(object):
 
 
 class FilterTesterMock(object):
-    def __init__(self, tester_state, contract_address, topics, filter_id_raw):
-        self.tester_state = tester_state
+    def __init__(self, tester_chain, contract_address, topics, filter_id_raw):
+        self.tester_chain = tester_chain
         self.filter_id_raw = filter_id_raw
         self.contract_address = contract_address
         self.topics = topics
@@ -211,7 +203,7 @@ class FilterTesterMock(object):
         )
 
         if valid_topics and valid_address:
-            block_number = getattr(event, 'block_number', None) or self.tester_state.block.number
+            block_number = getattr(event, 'block_number', None) or self.tester_chain.block.number
             self.events.append({
                 'topics': event.topics,
                 'data': event.data,
@@ -234,8 +226,8 @@ class ClientMock(object):
 
 
 class BlockChainServiceTesterMock(object):
-    def __init__(self, private_key, tester_state):
-        self.tester_state = tester_state
+    def __init__(self, private_key, tester_chain):
+        self.tester_chain = tester_chain
 
         self.address = privatekey_to_address(private_key)
         self.private_key = private_key
@@ -248,14 +240,14 @@ class BlockChainServiceTesterMock(object):
         self.client = ClientMock()
 
     def block_number(self):
-        return self.tester_state.block.number
+        return self.tester_chain.block.number
 
     def is_synced(self):
         return True
 
     def next_block(self):
-        self.tester_state.mine(number_of_blocks=1)
-        return self.tester_state.block.number
+        self.tester_chain.mine(number_of_blocks=1)
+        return self.tester_chain.block.number
 
     def estimate_blocktime(self, *args):  # pylint: disable=no-self-use
         return 1
@@ -264,7 +256,7 @@ class BlockChainServiceTesterMock(object):
         """ Return a proxy to interact with an token. """
         if token_address not in self.address_to_token:
             self.address_to_token[token_address] = TokenTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 token_address,
             )
@@ -274,7 +266,7 @@ class BlockChainServiceTesterMock(object):
     def discovery(self, discovery_address):
         if discovery_address not in self.address_to_discovery:
             self.address_to_discovery[discovery_address] = DiscoveryTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 discovery_address,
             )
@@ -285,7 +277,7 @@ class BlockChainServiceTesterMock(object):
         """ Return a proxy to interact with a NettingChannelContract. """
         if netting_channel_address not in self.address_to_nettingchannel:
             channel = NettingChannelTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 netting_channel_address,
             )
@@ -296,7 +288,7 @@ class BlockChainServiceTesterMock(object):
     def registry(self, registry_address):
         if registry_address not in self.address_to_registry:
             self.address_to_registry[registry_address] = RegistryTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 registry_address,
             )
@@ -308,7 +300,7 @@ class BlockChainServiceTesterMock(object):
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         return tester_deploy_contract(
-            self.tester_state,
+            self.tester_chain,
             self.private_key,
             contract_name,
             contract_path,
@@ -332,30 +324,26 @@ class BlockChainServiceTesterMock(object):
 
 
 class DiscoveryTesterMock(object):
-    def __init__(self, tester_state, private_key, address):
-        if len(tester_state.block.get_code(address)) == 0:
+    def __init__(self, tester_chain, private_key, address):
+        if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
 
         self.address = address
-        self.tester_state = tester_state
+        self.tester_chain = tester_chain
         self.private_key = private_key
 
         self.proxy = tester.ABIContract(
-            tester_state,
+            tester_chain,
             CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
-            address,
-            default_key=private_key,
+            address
         )
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != privatekey_to_address(self.private_key):
             raise ValueError('node_address doesnt match this node address')
 
-        prev_gas_limit = tester.gas_limit
-        tester.gas_limit = DISCOVERY_REGISTRATION_GAS
         self.proxy.registerEndpoint(endpoint)
-        tester.gas_limit = prev_gas_limit
-        self.tester_state.mine(number_of_blocks=1)
+        self.tester_chain.mine(number_of_blocks=1)
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = hexlify(node_address_bin)
@@ -379,48 +367,45 @@ class DiscoveryTesterMock(object):
 
 
 class TokenTesterMock(object):
-    def __init__(self, tester_state, private_key, address):
-        if len(tester_state.block.get_code(address)) == 0:
+    def __init__(self, tester_chain, private_key, address):
+        if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
 
         self.address = address
-        self.tester_state = tester_state
+        self.tester_chain = tester_chain
         self.private_key = private_key
 
         self.proxy = tester.ABIContract(
-            tester_state,
+            tester_chain,
             CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
-            address,
-            default_key=private_key,
+            address
         )
 
     def approve(self, contract_address, allowance):
-        self.proxy.approve(contract_address, allowance)
-        self.tester_state.mine(number_of_blocks=1)
+        self.proxy.approve(contract_address, allowance, sender=self.private_key)
+        self.tester_chain.mine(number_of_blocks=1)
 
     def balance_of(self, address):
-        result = self.proxy.balanceOf(address)
-        return result
+        return self.proxy.balanceOf(address)
 
     def transfer(self, address_to, amount):
-        self.proxy.transfer(address_to, amount)
-        self.tester_state.mine(number_of_blocks=1)
+        self.proxy.transfer(address_to, amount, sender=self.private_key)
+        self.tester_chain.mine(number_of_blocks=1)
 
 
 class RegistryTesterMock(object):
-    def __init__(self, tester_state, private_key, address):
-        if len(tester_state.block.get_code(address)) == 0:
+    def __init__(self, tester_chain, private_key, address):
+        if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
 
         self.address = address
-        self.tester_state = tester_state
+        self.tester_chain = tester_chain
         self.private_key = private_key
 
         self.registry_proxy = tester.ABIContract(
-            self.tester_state,
+            self.tester_chain,
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
-            self.address,
-            default_key=private_key,
+            self.address
         )
         self.tokenadded_filters = list()
 
@@ -429,24 +414,24 @@ class RegistryTesterMock(object):
 
     def manager_address_by_token(self, token_address):
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return unhexlify(channel_manager_address_hex)
+        return channel_manager_address_hex
 
     def add_token(self, token_address):
         self.registry_proxy.addToken(token_address)
-        self.tester_state.mine(number_of_blocks=1)
+        self.tester_chain.mine(number_of_blocks=1)
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return unhexlify(channel_manager_address_hex)
+        return channel_manager_address_hex
 
     def token_addresses(self):
         result = [
-            unhexlify(address)
+            address_decoder(address)
             for address in self.registry_proxy.tokenAddresses()
         ]
         return result
 
     def manager_addresses(self):
         result = [
-            unhexlify(address)
+            address_decoder(address)
             for address in self.registry_proxy.channelManagerAddresses()
         ]
         return result
@@ -455,19 +440,19 @@ class RegistryTesterMock(object):
         """May also receive from_block, to_block but they are not used here"""
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
         filter_ = FilterTesterMock(
-            self.tester_state,
+            self.tester_chain,
             self.address,
             topics,
             next(FILTER_ID_GENERATOR)
         )
-        self.tester_state.block.log_listeners.append(filter_.event)
+        self.tester_chain.head_state.log_listeners.append(filter_.event)
         return filter_
 
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
         if manager_address not in self.address_to_channelmanager:
             manager = ChannelManagerTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 manager_address,
             )
@@ -489,7 +474,7 @@ class RegistryTesterMock(object):
         if token_address not in self.token_to_channelmanager:
             manager_address = self.manager_address_by_token(token_address)
             manager = ChannelManagerTesterMock(
-                self.tester_state,
+                self.tester_chain,
                 self.private_key,
                 manager_address,
             )
@@ -501,19 +486,18 @@ class RegistryTesterMock(object):
 
 
 class ChannelManagerTesterMock(object):
-    def __init__(self, tester_state, private_key, address):
-        if len(tester_state.block.get_code(address)) == 0:
+    def __init__(self, tester_chain, private_key, address):
+        if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
 
         self.address = address
-        self.tester_state = tester_state
+        self.tester_chain = tester_chain
         self.private_key = private_key
 
         self.proxy = tester.ABIContract(
-            tester_state,
+            tester_chain,
             CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
-            address,
-            default_key=private_key,
+            address
         )
         self.participant_filter = defaultdict(list)
         self.address_filter = defaultdict(list)
@@ -553,20 +537,23 @@ class ChannelManagerTesterMock(object):
             other = peer1
 
         try:
-            netting_channel_address_hex = self.proxy.newChannel(other, settle_timeout)
-
+            netting_channel_address_hex = self.proxy.newChannel(
+                other,
+                settle_timeout,
+                sender=self.private_key
+            )
         except TransactionFailed:
             raise DuplicatedChannelError('Duplicated channel')
 
-        self.tester_state.mine(number_of_blocks=1)
+        self.tester_chain.mine(number_of_blocks=1)
 
         channel = NettingChannelTesterMock(
-            self.tester_state,
+            self.tester_chain,
             self.private_key,
             netting_channel_address_hex,
         )
 
-        return unhexlify(channel.address)
+        return address_decoder(channel.address)
 
     def channels_addresses(self):
         channel_flat_encoded = self.proxy.getChannelsParticipants()
@@ -590,29 +577,28 @@ class ChannelManagerTesterMock(object):
     def channelnew_filter(self):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
         filter_ = FilterTesterMock(
-            self.tester_state,
+            self.tester_chain,
             self.address,
             topics,
             next(FILTER_ID_GENERATOR)
         )
-        self.tester_state.block.log_listeners.append(filter_.event)
+        self.tester_chain.head_state.log_listeners.append(filter_.event)
         return filter_
 
 
 class NettingChannelTesterMock(object):
-    def __init__(self, tester_state, private_key, address):
-        if len(tester_state.block.get_code(address)) == 0:
+    def __init__(self, tester_chain, private_key, address):
+        if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
 
         self.address = address
-        self.tester_state = tester_state
+        self.tester_chain = tester_chain
         self.private_key = private_key
 
         self.proxy = tester.ABIContract(
-            tester_state,
+            tester_chain,
             CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
-            address,
-            default_key=private_key,
+            address
         )
 
         self.newbalance_filters = list()
@@ -643,7 +629,7 @@ class NettingChannelTesterMock(object):
     def deposit(self, amount):
         self._check_exists()
         token = TokenTesterMock(
-            self.tester_state,
+            self.tester_chain,
             self.private_key,
             self.token_address(),
         )
@@ -655,11 +641,11 @@ class NettingChannelTesterMock(object):
                 current_balance,
             ))
 
-        self.proxy.deposit(amount)
-        self.tester_state.mine(number_of_blocks=1)
+        self.proxy.deposit(amount, sender=self.private_key)
+        self.tester_chain.mine(number_of_blocks=1)
 
     def _check_exists(self):
-        if self.tester_state.block.get_code(self.address) == b'':
+        if self.tester_chain.head_state.get_code(self.address) == b'':
             raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
                 address_encoder(self.address),
             ))
@@ -738,7 +724,7 @@ class NettingChannelTesterMock(object):
             extra_hash,
             signature,
         )
-        self.tester_state.mine(number_of_blocks=1)
+        self.tester_chain.mine(number_of_blocks=1)
 
         log.info(
             'close sucessfull',
@@ -770,7 +756,7 @@ class NettingChannelTesterMock(object):
                 extra_hash,
                 signature,
             )
-            self.tester_state.mine(number_of_blocks=1)
+            self.tester_chain.mine(number_of_blocks=1)
 
             log.info(
                 'update_transfer sucessfull',
@@ -799,7 +785,7 @@ class NettingChannelTesterMock(object):
                 merkleproof_encoded,
                 secret,
             )
-            self.tester_state.mine(number_of_blocks=1)
+            self.tester_chain.mine(number_of_blocks=1)
 
             lock = messages.Lock.from_bytes(locked_encoded)
             log.info(
@@ -812,15 +798,15 @@ class NettingChannelTesterMock(object):
     def settle(self):
         self._check_exists()
         self.proxy.settle()
-        self.tester_state.mine(number_of_blocks=1)
+        self.tester_chain.mine(number_of_blocks=1)
 
     def all_events_filter(self):
         topics = None
         filter_ = FilterTesterMock(
-            self.tester_state,
+            self.tester_chain,
             self.address,
             topics,
             next(FILTER_ID_GENERATOR)
         )
-        self.tester_state.block.log_listeners.append(filter_.event)
+        self.tester_chain.head_state.log_listeners.append(filter_.event)
         return filter_

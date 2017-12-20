@@ -5,10 +5,13 @@ import re
 import string
 import sys
 import time
+from typing import Tuple, Union
 
 import gevent
 from coincurve import PrivateKey
 from ethereum.utils import remove_0x_head
+from ethereum.abi import ContractTranslator
+from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
@@ -27,7 +30,7 @@ def safe_address_decode(address):
     return address
 
 
-def sha3(data):
+def sha3(data: bytes) -> bytes:
     """
     Raises:
         RuntimeError: If Keccak lib initialization failed, or if the function
@@ -36,9 +39,6 @@ def sha3(data):
         TypeError: This function does not accept unicode objects, they must be
         encoded prior to usage.
     """
-    # FIXME: check that only bytes objects get here
-    if isinstance(data, str):
-        data = data.encode()
     return keccak_256(data).digest()
 
 
@@ -50,7 +50,7 @@ def isaddress(data):
     return isinstance(data, (bytes, bytearray)) and len(data) == 20
 
 
-def address_decoder(addr):
+def address_decoder(addr: str) -> bytes:
     if addr[:2] == '0x':
         addr = addr[2:]
 
@@ -59,7 +59,7 @@ def address_decoder(addr):
     return addr
 
 
-def address_encoder(address):
+def address_encoder(address: bytes) -> str:
     assert len(address) in (20, 0)
     return '0x' + hexlify(address).decode()
 
@@ -112,11 +112,8 @@ def topic_encoder(topic):
     return topic
 
 
-def pex(data):
-    # FIXME: see if there is a better way
-    if not isinstance(data, bytes):
-        data = str(data).encode()
-    return hexlify(data)[:8]
+def pex(data: bytes) -> str:
+    return hexlify(data).decode()[:8]
 
 
 def lpex(lst):
@@ -132,9 +129,7 @@ def host_port_to_endpoint(host, port):
     return '{}:{}'.format(host, port)
 
 
-def split_endpoint(endpoint):
-    if not isinstance(endpoint, str):
-        endpoint = endpoint.decode()
+def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)
@@ -224,8 +219,8 @@ def fix_tester_storage(storage):
     """
     new_storage = dict()
     for key, val in storage.items():
-        new_key = '0x%064x' % int(key if key != b'0x' else b'0x0', 16)
-        new_val = '0x%064x' % int(val, 16)
+        new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
+        new_val = '0x%064x' % int(val if val != '0x' else '0x0', 16)
         new_storage[new_key] = new_val
     return new_storage
 
@@ -290,3 +285,7 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
 
 def is_frozen():
     return getattr(sys, 'frozen', False)
+
+
+def event_decoder(event: Log, contract_translator: ContractTranslator):
+    return contract_translator.decode_event(event.topics, event.data)
