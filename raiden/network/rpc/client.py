@@ -253,7 +253,7 @@ class JSONRPCClient(object):
 
             # we may have hammered the server and not all tx are
             # registered as `pending` yet
-            try:
+            if initialized:
                 while nonce < self.nonce_current_value:
                     log.debug(
                         'nonce on server too low; retrying',
@@ -269,11 +269,9 @@ class JSONRPCClient(object):
                     )
                     pending_transactions = quantity_decoder(pending_transactions_hex)
                     nonce = pending_transactions + self.nonce_offset
-            except TypeError:
-                pass
-            finally:
-                self.nonce_current_value = nonce
-                self.nonce_last_update = query_time
+
+            self.nonce_current_value = nonce
+            self.nonce_last_update = query_time
 
             return self.nonce_current_value
 
