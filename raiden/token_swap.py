@@ -337,7 +337,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
 
         for route in from_routes:
             # for each new path a new secret must be used
-            secret = sha3(hex(random.getrandbits(256)))
+            secret = sha3(hex(random.getrandbits(256)).encode())
             hashlock = sha3(secret)
 
             from_channel = from_graph.get_channel_by_contract_address(route.channel_address)
@@ -668,7 +668,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
                     'EXCHANGE TRANSFER NEW PATH',
-                    path=lpex(taker_paying_hop),
+                    path=lpex(str(t).encode() for t in taker_paying_hop),
                     hashlock=pex(hashlock),
                 )
 

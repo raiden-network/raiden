@@ -37,8 +37,8 @@ def test_compute_layers_invalid_length():
 
 
 def test_compute_layers_duplicated():
-    hash_0 = sha3('x')
-    hash_1 = sha3('y')
+    hash_0 = sha3(b'x')
+    hash_1 = sha3(b'y')
 
     with pytest.raises(ValueError):
         compute_layers([hash_0, hash_0])
@@ -48,7 +48,7 @@ def test_compute_layers_duplicated():
 
 
 def test_compute_layers_single_entry():
-    hash_0 = sha3('x')
+    hash_0 = sha3(b'x')
     layers = compute_layers([hash_0])
     assert layers[MERKLEROOT][0] == hash_0
 
@@ -57,7 +57,7 @@ def test_compute_layers_single_entry():
 
 
 def test_one():
-    hash_0 = 'a' * 32
+    hash_0 = b'a' * 32
 
     leaves = [hash_0]
     layers = compute_layers(leaves)
@@ -71,8 +71,8 @@ def test_one():
 
 
 def test_two():
-    hash_0 = 'a' * 32
-    hash_1 = 'b' * 32
+    hash_0 = b'a' * 32
+    hash_1 = b'b' * 32
 
     leaves = [hash_0, hash_1]
     layers = compute_layers(leaves)
@@ -130,7 +130,7 @@ def test_many(tree_up_to=10):
     for number_of_leaves in range(1, tree_up_to):  # skipping the empty tree
 
         leaves = [
-            sha3(str(value))
+            sha3(str(value).encode())
             for value in range(number_of_leaves)
         ]
 

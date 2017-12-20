@@ -20,7 +20,7 @@ from raiden.tests.fixtures.tester import (
     tester_channelmanager_library_address,
     tester_nettingchannel_library_address,
     tester_registry_address,
-    tester_state,
+    tester_chain,
 )
 
 try:
@@ -183,30 +183,30 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     deposit = 10000
 
     tokens = [
-        sha3('token:{}'.format(number))[:20]
+        sha3('token:{}'.format(number).encode())[:20]
         for number in range(num_tokens)
     ]
 
     private_keys = [
-        sha3('speed:{}'.format(position))
+        sha3('speed:{}'.format(position).encode())
         for position in range(num_nodes)
     ]
 
     blockchain_services = list()
-    tester = tester_state(
+    tester = tester_chain(
         private_keys[0],
         private_keys,
         tester_blockgas_limit(),
     )
     nettingchannel_library_address = tester_nettingchannel_library_address(
-        tester_state,
+        tester_chain,
     )
     channelmanager_library_address = tester_channelmanager_library_address(
-        tester_state,
+        tester_chain,
         nettingchannel_library_address,
     )
     registry_address = tester_registry_address(
-        tester_state,
+        tester_chain,
         channelmanager_library_address,
     )
     for privkey in private_keys:

@@ -36,7 +36,7 @@ class NettingChannelMock(object):
     # pylint: disable=no-self-use
 
     def __init__(self):
-        self.address = 'channeladdresschanne'
+        self.address = b'channeladdresschanne'
 
     def opened(self):
         return 1
@@ -66,7 +66,7 @@ def test_end_state():
     balance1 = 70
     balance2 = 110
 
-    lock_secret = sha3('test_end_state')
+    lock_secret = sha3(b'test_end_state')
     lock_amount = 30
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
@@ -249,7 +249,7 @@ def test_sender_cannot_overspend():
         amount=amount,
         identifier=1,
         expiration=expiration,
-        hashlock=sha3('test_locked_amount_cannot_be_spent'),
+        hashlock=sha3(b'test_locked_amount_cannot_be_spent'),
     )
     sent_mediated_transfer0.sign(privkey1, address1)
 
@@ -261,7 +261,7 @@ def test_sender_cannot_overspend():
     lock2 = Lock(
         amount=amount,
         expiration=expiration,
-        hashlock=sha3('test_locked_amount_cannot_be_spent2'),
+        hashlock=sha3(b'test_locked_amount_cannot_be_spent2'),
     )
     leaves = [
         sha3(sent_mediated_transfer0.lock.as_bytes),
@@ -327,7 +327,7 @@ def test_receiver_cannot_spend_locked_amount():
         amount=amount1,
         identifier=1,
         expiration=expiration,
-        hashlock=sha3('test_locked_amount_cannot_be_spent'),
+        hashlock=sha3(b'test_locked_amount_cannot_be_spent'),
     )
     receive_mediated_transfer0.sign(privkey2, address2)
 
@@ -341,7 +341,7 @@ def test_receiver_cannot_spend_locked_amount():
     lock2 = Lock(
         amount=amount2,
         expiration=expiration,
-        hashlock=sha3('test_locked_amount_cannot_be_spent2'),
+        hashlock=sha3(b'test_locked_amount_cannot_be_spent2'),
     )
     layers = compute_layers([sha3(lock2.as_bytes)])
     tree2 = MerkleTreeState(layers)
@@ -488,7 +488,7 @@ def test_python_channel():
     assert test_channel.partner_state.amount_locked == 0
     assert test_channel.get_next_nonce() == 2
 
-    secret = sha3('test_channel')
+    secret = sha3(b'test_channel')
     hashlock = sha3(secret)
     amount2 = 10
     fee = 0
@@ -665,7 +665,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             amount=amount,
             identifier=identifier,
             expiration=expiration,
-            hashlock=sha3(secret),
+            hashlock=sha3(secret.encode()),
         )
 
         # synchronized registration
@@ -703,7 +703,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             # synchronized claiming
             secret_message = channel0.create_secret(
                 identifier,
-                secret,
+                secret.encode(),
             )
             app0.raiden.sign(secret_message)
             channel0.register_transfer(block_number, secret_message)
@@ -814,7 +814,7 @@ def test_locked_transfer(raiden_network, settle_timeout):
     block_number = app0.raiden.chain.block_number()
     expiration = block_number + settle_timeout - 1
 
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     identifier = 1

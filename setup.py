@@ -83,7 +83,7 @@ class CompileWebUI(Command):
 
         npm_version = subprocess.check_output([npm, '--version'])
         # require npm 4.x.x or later
-        if not int(npm_version.split('.')[0]) >= 4:
+        if not int(npm_version.split(b'.')[0]) >= 4:
             self.announce(
                 'NPM 4.x or later required. Skipping webUI compilation',
                 level=distutils.log.WARN,
@@ -107,14 +107,7 @@ with open('README.rst') as readme_file:
 
 history = ''
 
-
-ethereum_url = (
-    'git+https://github.com/palango/pyethereum'
-    '@take_solidity_interface_into_account#egg=ethereum'
-)
-
 install_requires_replacements = {
-    ethereum_url: 'ethereum',
     'git+https://github.com/konradkonrad/pystun@develop#egg=pystun': 'pystun',
 }
 

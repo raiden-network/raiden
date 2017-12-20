@@ -245,8 +245,8 @@ def geth_create_blockchain(
             config['unlock'] = 0
 
         config['nodekey'] = key
-        config['nodekeyhex'] = encode_hex(key).decode()
-        config['pub'] = encode_hex(privtopub(key)).decode()
+        config['nodekeyhex'] = encode_hex(key)
+        config['pub'] = encode_hex(privtopub(key))
         config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port

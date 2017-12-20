@@ -633,7 +633,7 @@ class RaidenProtocol(object):
             )
 
         # All messages must be ordered, but only on a per channel basis.
-        token_address = getattr(message, 'token', '')
+        token_address = getattr(message, 'token', b'')
 
         # Ignore duplicated messages
         if echohash not in self.senthashes_to_states:

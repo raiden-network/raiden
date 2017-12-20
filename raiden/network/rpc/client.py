@@ -8,11 +8,11 @@ import rlp
 import gevent
 from gevent.lock import Semaphore
 from ethereum import slogging
-from ethereum import _solidity
+from ethereum.tools import _solidity
 from ethereum.abi import ContractTranslator
 from ethereum.transactions import Transaction
 from ethereum.utils import normalize_address
-from ethereum._solidity import (
+from ethereum.tools._solidity import (
     solidity_unresolved_symbols,
     solidity_library_symbol,
     solidity_resolve_symbols
@@ -120,12 +120,12 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
 
 def format_data_for_call(
-        sender='',
-        to='',
-        value=0,
-        data='',
-        startgas=GAS_PRICE,
-        gasprice=GAS_PRICE):
+        sender: bytes=b'',
+        to: bytes=b'',
+        value: int=0,
+        data: bytes=b'',
+        startgas: int=GAS_PRICE,
+        gasprice: int=GAS_PRICE):
     """ Helper to format the transaction data. """
 
     json_data = {}
@@ -484,7 +484,7 @@ class JSONRPCClient(object):
         ]
 
     @check_node_connection
-    def call(self, method, *args):
+    def call(self, method: str, *args) -> str:
         """ Do the request and return the result.
 
         Args:
@@ -496,7 +496,7 @@ class JSONRPCClient(object):
                 - Data arguments must be hex encoded starting with '0x'
         """
         request = self.protocol.create_request(method, args)
-        reply = self.transport.send_message(request.serialize())
+        reply = self.transport.send_message(request.serialize().encode())
 
         jsonrpc_reply = self.protocol.parse_reply(reply)
         if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
@@ -622,12 +622,12 @@ class JSONRPCClient(object):
 
     def eth_call(
             self,
-            sender='',
-            to='',
-            value=0,
-            data=b'',
-            startgas=GAS_PRICE,
-            gasprice=GAS_PRICE,
+            sender: bytes=b'',
+            to: bytes=b'',
+            value: int=0,
+            data: bytes=b'',
+            startgas: int=GAS_PRICE,
+            gasprice: int=GAS_PRICE,
             block_number='latest'):
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
@@ -660,12 +660,12 @@ class JSONRPCClient(object):
 
     def eth_estimateGas(
             self,
-            sender='',
-            to='',
-            value=0,
-            data='',
-            startgas=GAS_PRICE,
-            gasprice=GAS_PRICE):
+            sender: bytes=b'',
+            to: bytes=b'',
+            value: int=0,
+            data: bytes=b'',
+            startgas: int=GAS_PRICE,
+            gasprice: int=GAS_PRICE):
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
@@ -720,7 +720,7 @@ class JSONRPCClient(object):
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionReceipt', transaction_hash)
 
-    def eth_getCode(self, address, block='latest'):
+    def eth_getCode(self, address: bytes, block='latest'):
         """ Returns code at a given address.
 
         Args:

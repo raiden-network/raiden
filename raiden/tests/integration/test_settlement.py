@@ -261,7 +261,7 @@ def test_close_channel_lack_of_balance_proof(
 
     channel01 = channel(app0, app1, token_address)
 
-    secret = sha3('test_close_channel_lack_of_balance_proof')
+    secret = sha3(b'test_close_channel_lack_of_balance_proof')
     hashlock = sha3(secret)
 
     fee = 0

@@ -4,9 +4,9 @@ import os
 import itertools
 
 import pytest
-from ethereum import _solidity
-from ethereum._solidity import compile_file
-from ethereum.utils import denoms
+from ethereum.tools import _solidity
+from ethereum.tools._solidity import compile_file
+from ethereum.utils import denoms, normalize_address
 
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
@@ -289,7 +289,7 @@ def test_blockchain(
         'channelManagerByToken',
         token_proxy.contract_address,
     )
-    channel_manager_address = unhexlify(channel_manager_address_encoded)
+    channel_manager_address = normalize_address(channel_manager_address_encoded)
 
     log = log_list[0]
     log_topics = [
@@ -302,8 +302,8 @@ def test_blockchain(
         unhexlify(log_data[2:]),
     )
 
-    assert channel_manager_address == unhexlify(event['channel_manager_address'])
-    assert token_proxy.contract_address == unhexlify(event['token_address'])
+    assert channel_manager_address == normalize_address(event['channel_manager_address'])
+    assert token_proxy.contract_address == normalize_address(event['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),

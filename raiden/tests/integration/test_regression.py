@@ -127,7 +127,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     token = token_addresses[0]
 
     identifier = 1
-    secret = sha3('test_regression_multiple_revealsecret')
+    secret = sha3(b'test_regression_multiple_revealsecret')
     hashlock = sha3(secret)
     expiration = app0.raiden.get_block_number() + 100
     amount = 10

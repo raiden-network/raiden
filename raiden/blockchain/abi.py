@@ -8,7 +8,7 @@ import subprocess
 
 from threading import Lock
 
-from ethereum import _solidity
+from ethereum.tools import _solidity
 from ethereum.abi import event_id, normalize_name, ContractTranslator
 
 from raiden.utils import get_contract_path

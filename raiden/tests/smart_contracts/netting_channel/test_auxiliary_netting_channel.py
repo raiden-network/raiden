@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
+from binascii import hexlify
 import os
 import string
 from itertools import chain, product
 
 import pytest
 from ethereum.abi import ValueOutOfBounds
-from ethereum.tester import TransactionFailed
+from ethereum.tools import _solidity, tester
+from ethereum.tools.tester import TransactionFailed
+from ethereum.utils import normalize_address
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
 from raiden.messages import DirectTransfer
@@ -33,28 +35,41 @@ FAKE_TREE = [
     ARBITRARY_DATA[:7],
 ]
 
-HASH = sha3('muchcodingsuchwow_______________')
+HASH = sha3(b'muchcodingsuchwow_______________')
 
 
-def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address):
+def deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address):
     contracts_path = os.path.join(get_project_root(), 'smart_contracts')
     raiden_remap = 'raiden={}'.format(contracts_path)
 
-    auxiliary = tester_state.abi_contract(
-        None,
-        path=get_relative_contract(__file__, 'AuxiliaryTester.sol'),
-        language='solidity',
-        libraries={'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address)},
-        extra_args=raiden_remap,
+    contract_libraries = {
+        'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address),
+    }
+
+    auxiliary_tester_compiled = _solidity.compile_contract(
+        get_relative_contract(__file__, 'AuxiliaryTester.sol'),
+        'AuxiliaryTester',
+        contract_libraries,
+        extra_args=raiden_remap
     )
-    tester_state.mine(number_of_blocks=1)
+    auxiliary_tester_address = tester_chain.contract(
+        auxiliary_tester_compiled['bin'],
+        language='evm',
+        sender=tester.k0
+    )
+    auxiliary = tester.ABIContract(
+        tester_chain,
+        auxiliary_tester_compiled['abi'],
+        auxiliary_tester_address
+    )
+    tester_chain.mine(number_of_blocks=1)
 
     return auxiliary
 
 
-def test_min_uses_usigned(tester_state, tester_nettingchannel_library_address):
+def test_min_uses_usigned(tester_chain, tester_nettingchannel_library_address):
     """ Min cannot be called with negative values. """
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     INVALID_VALUES = [INT64_MIN, -1]
     VALID_VALUES = [0, INT64_MAX, UINT64_MAX]
@@ -69,9 +84,9 @@ def test_min_uses_usigned(tester_state, tester_nettingchannel_library_address):
             auxiliary.min(a, b)
 
 
-def test_max_uses_unsigned(tester_state, tester_nettingchannel_library_address):
+def test_max_uses_unsigned(tester_chain, tester_nettingchannel_library_address):
     """ Max cannot be called with negative values. """
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     INVALID_VALUES = [INT64_MIN, -1]
     VALID_VALUES = [0, INT64_MAX, UINT64_MAX]
@@ -86,16 +101,16 @@ def test_max_uses_unsigned(tester_state, tester_nettingchannel_library_address):
             auxiliary.max(a, b)
 
 
-def test_min(tester_state, tester_nettingchannel_library_address):
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+def test_min(tester_chain, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     VALUES = [UINT64_MIN, 1, INT64_MAX, UINT64_MAX]
     for a, b in product(VALUES, VALUES):
         assert auxiliary.min(a, b) == min(a, b)
 
 
-def test_max(tester_state, tester_nettingchannel_library_address):
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+def test_max(tester_chain, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     VALUES = [UINT64_MIN, 1, INT64_MAX, UINT64_MAX]
     for a, b in product(VALUES, VALUES):
@@ -105,11 +120,11 @@ def test_max(tester_state, tester_nettingchannel_library_address):
 @pytest.mark.parametrize('tree', FAKE_TREE)
 def test_merkle_proof(
         tree,
-        tester_state,
+        tester_chain,
         tester_nettingchannel_library_address):
     """ computeMerkleRoot and the python implementation must compute the same value. """
 
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     hashes = [sha3(element) for element in tree]
     layers = compute_layers(hashes)
@@ -129,11 +144,11 @@ def test_merkle_proof(
 @pytest.mark.parametrize('tree', FAKE_TREE)
 def test_merkle_proof_missing_byte(
         tree,
-        tester_state,
+        tester_chain,
         tester_nettingchannel_library_address):
     """ computeMerkleRoot must fail if the proof is missing a byte. """
 
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     hashes = [sha3(element) for element in tree]
     layers = compute_layers(hashes)
@@ -163,8 +178,8 @@ def test_merkle_proof_missing_byte(
             )
 
 
-def test_signature_split(tester_state, tester_nettingchannel_library_address):
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+def test_signature_split(tester_chain, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     privkey, address = make_privkey_address()
     msg = DirectTransfer(
@@ -196,8 +211,8 @@ def test_signature_split(tester_state, tester_nettingchannel_library_address):
         r, s, v = auxiliary.signatureSplit(signature)
 
 
-def test_recoverAddressFromSignature(tester_state, tester_nettingchannel_library_address):
-    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+def test_recoverAddressFromSignature(tester_chain, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
     privkey, address = make_privkey_address()
 
     msg = DirectTransfer(
@@ -222,4 +237,4 @@ def test_recoverAddressFromSignature(tester_state, tester_nettingchannel_library
         signature
     )
 
-    assert unhexlify(computed_address) == msg.sender
+    assert normalize_address(computed_address) == msg.sender

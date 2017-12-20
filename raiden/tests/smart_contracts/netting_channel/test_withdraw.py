@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
-
 import pytest
-from ethereum.tester import TransactionFailed
+from ethereum.utils import normalize_address
+from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
 from raiden.messages import Lock, MediatedTransfer
@@ -28,7 +27,7 @@ def test_withdraw(
         settle_timeout,
         reveal_timeout,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -40,10 +39,10 @@ def test_withdraw(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     lock_amount = 31
-    lock_expiration = tester_state.block.number + reveal_timeout + 5
+    lock_expiration = tester_chain.block.number + reveal_timeout + 5
     secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
-    new_block = Block(tester_state.block.number)
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
     lock0 = Lock(lock_amount, lock_expiration, hashlock)
@@ -55,7 +54,7 @@ def test_withdraw(
         address1,
         lock0,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
         secret,
     )
 
@@ -75,7 +74,7 @@ def test_withdraw(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
 
     nettingchannel.withdraw(
         proof.lock_encoded,
@@ -84,7 +83,7 @@ def test_withdraw(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial_balance0 + deposit - lock0.amount
@@ -100,7 +99,7 @@ def test_withdraw_at_settlement_block(
         deposit,
         settle_timeout,
         tester_nettingcontracts,
-        tester_state,
+        tester_chain,
         tester_token):
 
     """ It must be possible to unlock a lock up to and including the settlment
@@ -116,7 +115,7 @@ def test_withdraw_at_settlement_block(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     lock_amount = 31
-    lock_expiration = tester_state.block.number + settle_timeout
+    lock_expiration = tester_chain.block.number + settle_timeout
     secret = b'settlementsettlementsettlementse'
     hashlock = sha3(secret)
 
@@ -135,7 +134,7 @@ def test_withdraw_at_settlement_block(
         identifier=1,
         nonce=nonce,
         token=tester_token.address,
-        channel=unhexlify(nettingchannel.address),
+        channel=normalize_address(nettingchannel.address),
         transferred_amount=0,
         recipient=address1,
         locksroot=lock0_hash,
@@ -158,10 +157,10 @@ def test_withdraw_at_settlement_block(
         sender=pkey1,
     )
 
-    block_until_settlement_end = lock_expiration - tester_state.block.number
-    tester_state.mine(number_of_blocks=block_until_settlement_end)
+    block_until_settlement_end = lock_expiration - tester_chain.block.number
+    tester_chain.mine(number_of_blocks=block_until_settlement_end)
 
-    assert lock_expiration == tester_state.block.number
+    assert lock_expiration == tester_chain.block.number
     nettingchannel.withdraw(
         lock0_bytes,
         b'',  # the lock itself it the root, the proof is empty
@@ -169,7 +168,7 @@ def test_withdraw_at_settlement_block(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial_balance0 + deposit - lock0.amount
@@ -179,14 +178,14 @@ def test_withdraw_at_settlement_block(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
+def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     lock_timeout = reveal_timeout + 5
-    lock_expiration = tester_state.block.number + lock_timeout
+    lock_expiration = tester_chain.block.number + lock_timeout
     secret = b'expiredlockexpiredlockexpiredloc'
     hashlock = sha3(secret)
-    new_block = Block(tester_state.block.number)
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
     lock1 = Lock(amount=31, expiration=lock_expiration, hashlock=hashlock)
@@ -198,7 +197,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
         privatekey_to_address(pkey1),
         lock1,
         pkey1,
-        tester_state.block.number,
+        tester_chain.block.number,
         secret,
     )
 
@@ -213,7 +212,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
     )
 
     # expire the lock
-    tester_state.mine(number_of_blocks=lock_timeout + 1)
+    tester_chain.mine(number_of_blocks=lock_timeout + 1)
 
     unlock_proofs = list(channel0.partner_state.get_known_unlocks())
     proof = unlock_proofs[0]
@@ -234,7 +233,7 @@ def test_withdraw_both_participants(
         settle_timeout,
         reveal_timeout,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -249,10 +248,10 @@ def test_withdraw_both_participants(
     hashlock = sha3(secret)
 
     lock_amount = 31
-    lock01_expiration = tester_state.block.number + settle_timeout - 1 * reveal_timeout
-    lock10_expiration = tester_state.block.number + settle_timeout - 2 * reveal_timeout
+    lock01_expiration = tester_chain.block.number + settle_timeout - 1 * reveal_timeout
+    lock10_expiration = tester_chain.block.number + settle_timeout - 2 * reveal_timeout
 
-    new_block = Block(tester_state.block.number)
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
 
@@ -267,7 +266,7 @@ def test_withdraw_both_participants(
         address1,
         lock01,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
         secret,
     )
 
@@ -278,7 +277,7 @@ def test_withdraw_both_participants(
         address0,
         lock10,
         pkey1,
-        tester_state.block.number,
+        tester_chain.block.number,
         secret,
     )
 
@@ -291,7 +290,7 @@ def test_withdraw_both_participants(
         mediated01.signature,
         sender=pkey1,
     )
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
 
     mediated10_hash = sha3(mediated10.packed().data[:-65])
     nettingchannel.updateTransfer(
@@ -302,7 +301,7 @@ def test_withdraw_both_participants(
         mediated10.signature,
         sender=pkey0,
     )
-    tester_state.mine(number_of_blocks=1)
+    tester_chain.mine(number_of_blocks=1)
 
     proof01 = channel1.partner_state.compute_proof_for_lock(
         secret,
@@ -326,7 +325,7 @@ def test_withdraw_both_participants(
         sender=pkey0,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial_balance0 + deposit - lock01.amount + lock10.amount
@@ -336,13 +335,13 @@ def test_withdraw_both_participants(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
+def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     """ A lock can be withdrawn only once, the second try must fail. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    lock_expiration = tester_state.block.number + reveal_timeout + 5
+    lock_expiration = tester_chain.block.number + reveal_timeout + 5
     secret = b'secretsecretsecretsecretsecretse'
-    new_block = Block(tester_state.block.number)
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
     lock = Lock(17, lock_expiration, sha3(secret))
@@ -354,7 +353,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
         privatekey_to_address(pkey0),
         lock,
         pkey1,
-        tester_state.block.number,
+        tester_chain.block.number,
         secret,
     )
 
@@ -391,13 +390,13 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
 def test_withdraw_fails_with_partial_merkle_proof(
         tree,
         tester_channels,
-        tester_state,
+        tester_chain,
         settle_timeout):
 
     """ withdraw must fail if informed proof is not complete. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
-    current_block = tester_state.block.number
+    current_block = tester_chain.block.number
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
@@ -454,11 +453,11 @@ def test_withdraw_fails_with_partial_merkle_proof(
 
 
 @pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
-def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, settle_timeout):
+def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, settle_timeout):
     """ withdraw must fail if the proof is tampered. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
-    current_block = tester_state.block.number
+    current_block = tester_chain.block.number
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
@@ -505,15 +504,16 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
         for pos, hash_ in enumerate(merkle_proof):
             # changing arbitrary bytes from the proof
             tampered_hash = bytearray(hash_)
-            tampered_hash[5], tampered_hash[6] = tampered_hash[6], tampered_hash[5]
+            tampered_hash[6], tampered_hash[7] = tampered_hash[7], tampered_hash[6]
 
             tampered_proof = list(merkle_proof)
             tampered_proof[pos] = tampered_hash
 
+            joiner = b''
             with pytest.raises(TransactionFailed):
                 nettingchannel.withdraw(
                     lock_encoded,
-                    b''.join(tampered_proof),
+                    joiner.join(tampered_proof),
                     secret,
                     sender=pkey1,
                 )
@@ -523,14 +523,14 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
 def test_withdraw_tampered_lock_amount(
         tree,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token,
         settle_timeout):
 
     """ withdraw must fail if the lock amonut is tampered. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
-    current_block = tester_state.block.number
+    current_block = tester_chain.block.number
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
@@ -593,7 +593,7 @@ def test_withdraw_tampered_lock_amount(
 def test_withdraw_lock_with_a_large_expiration(
         deposit,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token,
         settle_timeout):
 
@@ -606,14 +606,14 @@ def test_withdraw_lock_with_a_large_expiration(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     # use a really large expiration
-    lock_expiration = tester_state.block.number + settle_timeout * 5
+    lock_expiration = tester_chain.block.number + settle_timeout * 5
 
     # work around for the python expiration validation
     bad_block_number = lock_expiration - 10
     channel0.state_transition(Block(bad_block_number))
 
     lock_amount = 29
-    secret = sha3('test_withdraw_lock_with_a_large_expiration')
+    secret = sha3(b'test_withdraw_lock_with_a_large_expiration')
     lock_hashlock = sha3(secret)
     lock = Lock(
         amount=lock_amount,
@@ -653,7 +653,7 @@ def test_withdraw_lock_with_a_large_expiration(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial_balance0 + deposit - lock_amount

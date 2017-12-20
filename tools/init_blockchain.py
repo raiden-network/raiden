@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify
 
-from ethereum._solidity import compile_file
+from ethereum.tools._solidity import compile_file
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import GAS_PRICE
@@ -13,7 +13,7 @@ def connect(host='127.0.0.1', port=8545):
     client = JSONRPCClient(
         host,
         port,
-        privkey='1' * 64,
+        privkey=b'1' * 64,
     )
     return client
 
@@ -28,7 +28,7 @@ def create_and_distribute_token(
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
-    name = name or hexlify(sha3(''.join(receivers)))
+    name = name or hexlify(sha3(''.join(receivers).encode()))
     contract_path = get_contract_path('HumanStandardToken.sol')
     token_proxy = client.deploy_solidity_contract(
         client.sender,

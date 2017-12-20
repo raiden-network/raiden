@@ -15,7 +15,7 @@ from raiden.tests.fixtures.tester import (
     tester_channelmanager_library_address,
     tester_nettingchannel_library_address,
     tester_registry_address,
-    tester_state,
+    tester_chain,
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
@@ -35,25 +35,25 @@ def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
     deposit = amount * num_transfers
 
     private_keys = [
-        sha3('mediated_transfer:{}'.format(position))
+        sha3('mediated_transfer:{}'.format(position).encode())
         for position in range(num_nodes)
     ]
 
     blockchain_services = list()
-    tester = tester_state(
+    tester = tester_chain(
         private_keys[0],
         private_keys,
         tester_blockgas_limit(),
     )
     nettingchannel_library_address = tester_nettingchannel_library_address(
-        tester_state,
+        tester_chain,
     )
     channelmanager_library_address = tester_channelmanager_library_address(
-        tester_state,
+        tester_chain,
         nettingchannel_library_address,
     )
     registry_address = tester_registry_address(
-        tester_state,
+        tester_chain,
         channelmanager_library_address,
     )
     for privkey in private_keys:
@@ -198,7 +198,7 @@ def main():
         GreenletProfiler.start()
 
     tokens = [
-        sha3('token:{}'.format(number))[:20]
+        sha3('token:{}'.format(number).encode())[:20]
         for number in range(args.tokens)
     ]
 

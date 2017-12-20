@@ -10,10 +10,8 @@ monkey.patch_all()
 
 import pytest
 from ethereum import slogging
-from ethereum.keys import PBKDF2_CONSTANTS
-from ethereum import processblock
+from ethereum.tools.keys import PBKDF2_CONSTANTS
 
-from raiden.settings import GAS_LIMIT
 from raiden.tests.fixtures import *  # noqa: F401,F403
 
 gevent.get_hub().SYSTEM_ERROR = BaseException
@@ -109,22 +107,6 @@ def enable_greenlet_debugger(request):
     if request.config.option.usepdb:
         from raiden.utils.debug import enable_greenlet_debugger
         enable_greenlet_debugger()
-
-
-@pytest.fixture(scope='session', autouse=True)
-def monkey_patch_tester():
-    original_apply_transaction = processblock.apply_transaction
-
-    def apply_transaction(block, transaction):
-        start_gas = block.gas_used
-        result = original_apply_transaction(block, transaction)
-        end_gas = block.gas_used
-
-        assert end_gas - start_gas <= GAS_LIMIT
-
-        return result
-
-    processblock.apply_transaction = apply_transaction
 
 
 @pytest.fixture(scope='session', autouse=True)
