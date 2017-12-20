@@ -105,8 +105,8 @@ def geth_create_account(datadir, privkey):
         datadir (str): the datadir in which the account is created
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
-    with open(keyfile_path, 'w') as handler:
-        handler.write(hexlify(privkey).decode())
+    with open(keyfile_path, 'wb') as handler:
+        handler.write(hexlify(privkey))
 
     password_path = os.path.join(datadir, 'pw')
     with open(password_path, 'w') as handler:

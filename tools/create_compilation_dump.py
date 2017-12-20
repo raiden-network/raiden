@@ -65,7 +65,7 @@ def deploy_all(token_groups=None):
     deployed = dict()
 
     tokens = dict()
-    for name, group in list(token_groups.items()):
+    for name, group in token_groups.items():
         token_name, address = create_and_distribute_token(state, group, name)
         tokens[token_name] = address
         deployed[token_name] = address

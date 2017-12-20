@@ -564,7 +564,7 @@ def print_merged():
 def print_all_threads():
     global _state
 
-    for thread_state in list(_state.values()):
+    for thread_state in _state.values():
         print_thread_profile(thread_state)
 
     print()

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import os
 import json
 from datetime import datetime
@@ -78,7 +77,7 @@ def process_results(results_dir, plot_filename):
             matplotlib.use('Agg')
             import matplotlib.pyplot as plt
             import matplotlib.dates as md
-            print(("Writing plot to '{}'...".format(plot_filename)))
+            print("Writing plot to '{}'...".format(plot_filename))
             dates = [datetime.fromtimestamp(ts) for ts in times]
             plt.subplots_adjust(bottom=0.2)
             plt.xticks(rotation=90)

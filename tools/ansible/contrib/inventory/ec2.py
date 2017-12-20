@@ -558,7 +558,7 @@ class Ec2Inventory(object):
             conn = self.connect(region)
             reservations = []
             if self.ec2_instance_filters:
-                for filter_key, filter_values in list(self.ec2_instance_filters.items()):
+                for filter_key, filter_values in self.ec2_instance_filters.items():
                     reservations.extend(conn.get_all_instances(
                         filters={filter_key: filter_values}
                     ))
@@ -661,7 +661,7 @@ class Ec2Inventory(object):
                 c['Tags'] = tags['TagList']
 
                 if self.ec2_instance_filters:
-                    for filter_key, filter_values in list(self.ec2_instance_filters.items()):
+                    for filter_key, filter_values in self.ec2_instance_filters.items():
                         # get AWS tag key e.g. tag:env will be 'env'
                         tag_name = filter_key.split(":", 1)[1]
                         # Filter values is a list (if you put multiple values
@@ -922,7 +922,7 @@ class Ec2Inventory(object):
 
         # Inventory: Group by tag keys
         if self.group_by_tag_keys:
-            for k, v in list(instance.tags.items()):
+            for k, v in instance.tags.items():
                 if self.expand_csv_tags and v and ',' in v:
                     values = [x.strip() for x in v.split(',')]
                 else:
@@ -1420,7 +1420,7 @@ class Ec2Inventory(object):
             elif key == 'ec2__placement':
                 instance_vars['ec2_placement'] = value.zone
             elif key == 'ec2_tags':
-                for k, v in list(value.items()):
+                for k, v in value.items():
                     if self.expand_csv_tags and ',' in v:
                         v = [x.strip() for x in v.split(',')]
                     key = self.to_safe('ec2_tag_' + k)
