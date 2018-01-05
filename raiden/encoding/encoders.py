@@ -4,8 +4,6 @@ import sys
 
 from rlp.utils import int_to_big_endian
 
-PY2 = sys.version_info.major == 2
-
 
 __all__ = ('integer',)
 
@@ -28,22 +26,13 @@ class integer(object):  # pylint: disable=invalid-name
             ).format(value, self.minimum, self.maximum)
             raise ValueError(msg)
 
-    if PY2:
-        @staticmethod
-        def encode(value, length):  # pylint: disable=unused-argument
-            return int_to_big_endian(value)
+    @staticmethod
+    def encode(value, length):
+        return value.to_bytes(length, byteorder='big')
 
-        @staticmethod
-        def decode(value):
-            return int(codecs.encode(value, 'hex'), 16)
-    else:
-        @staticmethod
-        def encode(value, length):
-            return value.to_bytes(length, byteorder='big')
-
-        @staticmethod
-        def decode(value):
-            return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
+    @staticmethod
+    def decode(value):
+        return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
 
 
 class optional_bytes(object):  # pylint: disable=invalid-name

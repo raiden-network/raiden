@@ -7,16 +7,6 @@ import sys
 import linecache
 
 
-if sys.version_info[0] == 2:
-    def iteritems(d, **kw):
-        iterator = iter(d.items)
-        return iterator(**kw)
-else:
-    def iteritems(d, **kw):
-        iterator = iter(d.iteritems)
-        return iterator(**kw)
-
-
 def _getitem_from_frame(f_locals, key, default=None):
     """
     f_locals is not guaranteed to have .get(), but it will always
@@ -33,14 +23,12 @@ def to_dict(dictish):
     Given something that closely resembles a dictionary, we attempt
     to coerce it into a propery dictionary.
     """
-    if hasattr(dictish, 'iterkeys'):
-        method = dictish.iterkeys
-    elif hasattr(dictish, 'keys'):
+    if hasattr(dictish, 'keys'):
         method = dictish.keys
     else:
         raise ValueError(dictish)
 
-    return dict((k, dictish[k]) for k in method())
+    return {k: dictish[k] for k in method()}
 
 
 def get_lines_from_file(filename, lineno, context_lines, loader=None, module_name=None):
@@ -95,7 +83,7 @@ def get_frame_locals(frame):
 
     f_vars = {}
     f_size = 0
-    for key, value in iteritems(f_locals):
+    for key, value in f_locals.values():
         v_size = len(repr(value))
         if v_size + f_size < 4096:
             f_vars[key] = value
