@@ -215,7 +215,7 @@ class APIServer(object):
             self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
 
         if web_ui:
-            for route in ('/ui/<path:file>', '/ui', '/ui/', '/index.html', '/'):
+            for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
                 self.flask_app.add_url_rule(
                     route,
                     route,
