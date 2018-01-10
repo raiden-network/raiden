@@ -76,7 +76,7 @@ class NettingChannelStateMachine(GenericStateMachine):
             self.private_keys,
             gas_limit,
         )
-        self.settle_timeout = 50
+        self.settle_timeout = 10
         self.token_amount = 1000
 
         self.tokens = [
@@ -183,7 +183,7 @@ class NettingChannelStateMachine(GenericStateMachine):
 
         mine_op = tuples(
             just(MINE),
-            integers(min_value=1, max_value=self.settle_timeout * 10),
+            integers(min_value=1, max_value=self.settle_timeout * 5),
         )
 
         # increases likely hood of the mine op, while permitting transactions
