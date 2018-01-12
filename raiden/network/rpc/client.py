@@ -3,6 +3,7 @@ import os
 import warnings
 from time import time as now
 from binascii import hexlify, unhexlify
+from typing import Optional
 
 import rlp
 import gevent
@@ -185,15 +186,20 @@ class JSONRPCClient(object):
     """ Ethereum JSON RPC client.
 
     Args:
-        host (str): Ethereum node host address.
-        port (int): Ethereum node port number.
-        privkey (bin): Local user private key, used to sign transactions.
-        nonce_update_interval (float): Update the account nonce every
+        host: Ethereum node host address.
+        port: Ethereum node port number.
+        privkey: Local user private key, used to sign transactions.
+        nonce_update_interval: Update the account nonce every
             `nonce_update_interval` seconds.
-        nonce_offset (int): Network's default base nonce number.
+        nonce_offset: Network's default base nonce number.
     """
 
-    def __init__(self, host, port, privkey, nonce_update_interval=5.0, nonce_offset=0):
+    def __init__(self,
+                 host: str,
+                 port: int,
+                 privkey: bytes,
+                 nonce_update_interval: float=5.0,
+                 nonce_offset: int=0):
         endpoint = 'http://{}:{}'.format(host, port)
         session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
@@ -382,7 +388,7 @@ class JSONRPCClient(object):
 
                 transaction_hash_hex = self.send_transaction(
                     sender,
-                    to='',
+                    to=b'',
                     data=bytecode,
                     gasprice=gasprice,
                 )
@@ -417,7 +423,7 @@ class JSONRPCClient(object):
 
         transaction_hash_hex = self.send_transaction(
             sender,
-            to='',
+            to=b'',
             data=bytecode,
             gasprice=gasprice,
         )
@@ -489,11 +495,11 @@ class JSONRPCClient(object):
         ]
 
     @check_node_connection
-    def call(self, method: str, *args) -> str:
+    def call(self, method: str, *args):
         """ Do the request and return the result.
 
         Args:
-            method (str): The RPC method.
+            method: The RPC method.
             args: The encoded arguments expected by the method.
                 - Object arguments must be supplied as a dictionary.
                 - Quantity arguments must be hex encoded starting with '0x' and
@@ -513,13 +519,13 @@ class JSONRPCClient(object):
 
     def send_transaction(
             self,
-            sender,
-            to,
-            value=0,
-            data='',
-            startgas=0,
-            gasprice=GAS_PRICE,
-            nonce=None):
+            sender: bytes,
+            to: bytes,
+            value: int=0,
+            data: bytes=b'',
+            startgas: int=0,
+            gasprice: int=GAS_PRICE,
+            nonce: Optional[int]=None):
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -572,13 +578,13 @@ class JSONRPCClient(object):
 
     def eth_sendTransaction(
             self,
-            nonce=None,
-            sender='',
-            to='',
-            value=0,
-            data='',
-            gasPrice=GAS_PRICE,
-            gas=GAS_PRICE):
+            sender: bytes=b'',
+            to: bytes=b'',
+            value: int=0,
+            data: bytes=b'',
+            gasPrice: int=GAS_PRICE,
+            gas: int=GAS_PRICE,
+            nonce: Optional[int]=None):
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
 
@@ -596,14 +602,14 @@ class JSONRPCClient(object):
                 that use the same nonce.
         """
 
-        if to == '' and data.isalnum():
+        if to == b'' and data.isalnum():
             warnings.warn(
                 'Verify that the data parameter is _not_ hex encoded, if this is the case '
                 'the data will be double encoded and result in unexpected '
                 'behavior.'
             )
 
-        if to == '0' * 40:
+        if to == b'0' * 40:
             warnings.warn('For contract creation the empty string must be used.')
 
         if sender is None:
@@ -701,7 +707,7 @@ class JSONRPCClient(object):
 
         return quantity_decoder(res)
 
-    def eth_getTransactionReceipt(self, transaction_hash):
+    def eth_getTransactionReceipt(self, transaction_hash: bytes):
         """ Returns the receipt of a transaction by transaction hash.
 
         Args:
@@ -750,7 +756,7 @@ class JSONRPCClient(object):
             block,
         )
 
-    def eth_getTransactionByHash(self, transaction_hash):
+    def eth_getTransactionByHash(self, transaction_hash: bytes):
         """ Returns the information about a transaction requested by
         transaction hash.
         """
@@ -769,7 +775,7 @@ class JSONRPCClient(object):
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionByHash', transaction_hash)
 
-    def poll(self, transaction_hash, confirmations=None, timeout=None):
+    def poll(self, transaction_hash: bytes, confirmations=None, timeout=None):
         """ Wait until the `transaction_hash` is applied or rejected.
         If timeout is None, this could wait indefinitely!
 

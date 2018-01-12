@@ -5,6 +5,7 @@ import gevent
 from ethereum import slogging
 from ethereum.tools import _solidity
 
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
     Discovery,
     Token,
@@ -31,11 +32,11 @@ class BlockChainService(object):
 
     def __init__(
             self,
-            privatekey_bin,
-            jsonrpc_client,
-            startgas,
-            gasprice,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            privatekey_bin: bytes,
+            jsonrpc_client: JSONRPCClient,
+            startgas: int,
+            gasprice: int,
+            poll_timeout: int=DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -49,10 +50,10 @@ class BlockChainService(object):
         self.startgas = startgas
         self.gasprice = gasprice
 
-    def block_number(self):
+    def block_number(self) -> int:
         return self.client.block_number()
 
-    def is_synced(self):
+    def is_synced(self) -> bool:
         result = self.client.call('eth_syncing')
 
         # the node is synchronized
@@ -67,12 +68,12 @@ class BlockChainService(object):
 
         return True
 
-    def estimate_blocktime(self, oldest=256):
+    def estimate_blocktime(self, oldest: int=256) -> int:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
-            oldest (int): delta in block numbers to go back.
+            oldest: delta in block numbers to go back.
         Return:
-            average block time (int) in seconds
+            average block time in seconds
         """
         last_block_number = self.block_number()
         # around genesis block there is nothing to estimate
@@ -87,13 +88,13 @@ class BlockChainService(object):
         last_timestamp = int(self.get_block_header(last_block_number)['timestamp'], 16)
         first_timestamp = int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
         delta = last_timestamp - first_timestamp
-        return delta / interval
+        return delta // interval
 
-    def get_block_header(self, block_number):
+    def get_block_header(self, block_number: int):
         block_number = block_tag_encoder(block_number)
         return self.client.call('eth_getBlockByNumber', block_number, False)
 
-    def next_block(self):
+    def next_block(self) -> int:
         target_block_number = self.block_number() + 1
         current_block = target_block_number
 
@@ -103,7 +104,7 @@ class BlockChainService(object):
 
         return current_block
 
-    def token(self, token_address):
+    def token(self, token_address: bytes) -> Token:
         """ Return a proxy to interact with a token. """
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
@@ -119,7 +120,7 @@ class BlockChainService(object):
 
         return self.address_to_token[token_address]
 
-    def discovery(self, discovery_address):
+    def discovery(self, discovery_address: bytes) -> Discovery:
         """ Return a proxy to interact with the discovery. """
         if not isaddress(discovery_address):
             raise ValueError('discovery_address must be a valid address')
@@ -135,7 +136,7 @@ class BlockChainService(object):
 
         return self.address_to_discovery[discovery_address]
 
-    def netting_channel(self, netting_channel_address):
+    def netting_channel(self, netting_channel_address: bytes) -> NettingChannel:
         """ Return a proxy to interact with a NettingChannelContract. """
         if not isaddress(netting_channel_address):
             raise ValueError('netting_channel_address must be a valid address')
@@ -152,7 +153,7 @@ class BlockChainService(object):
 
         return self.address_to_nettingchannel[netting_channel_address]
 
-    def registry(self, registry_address):
+    def registry(self, registry_address: bytes) -> Registry:
         if not isaddress(registry_address):
             raise ValueError('registry_address must be a valid address')
 
@@ -182,7 +183,7 @@ class BlockChainService(object):
             self.node_address,
             contract_name,
             contracts,
-            dict(),
+            list(),
             constructor_parameters,
             contract_path=contract_path,
             gasprice=GAS_PRICE,
