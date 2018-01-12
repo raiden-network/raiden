@@ -11,10 +11,10 @@ from raiden.constants import (
     DISCOVERY_REGISTRATION_GAS,
 )
 from raiden.exceptions import (
-    AddressWithoutCode,
     TransactionThrew,
     UnknownAddress,
 )
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
@@ -45,16 +45,7 @@ class Discovery(object):
         if not isaddress(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(discovery_address),
-            'latest',
-        )
-
-        if result == b'0x':
-            raise AddressWithoutCode('Discovery address {} does not contain code'.format(
-                address_encoder(discovery_address),
-            ))
+        check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),

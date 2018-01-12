@@ -50,7 +50,7 @@ class Registry(object):
         if not isaddress(registry_address):
             raise ValueError('registry_address must be a valid address')
 
-        check_address_has_code(jsonrpc_client, registry_address)
+        check_address_has_code(jsonrpc_client, registry_address, 'Registry')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),

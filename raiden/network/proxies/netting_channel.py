@@ -9,11 +9,9 @@ from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.exceptions import (
-    AddressWithoutCode,
-    TransactionThrew,
-)
+from raiden.exceptions import TransactionThrew
 from raiden import messages
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
@@ -63,16 +61,18 @@ class NettingChannel(object):
         self._check_exists()
 
     def _check_exists(self):
-        result = self.client.call(
-            'eth_getCode',
-            address_encoder(self.address),
-            'latest',
-        )
+        check_address_has_code(self.client, self.address, 'Netting Channel')
 
-        if result == '0x':
-            raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
-                address_encoder(self.address),
-            ))
+    def _call_and_check_result(self, function_name: str):
+        call_result = self.proxy.call(function_name)
+
+        if call_result == b'':
+            self._check_exists()
+            raise RuntimeError(
+                "Call to '{}' returned nothing".format(function_name)
+            )
+
+        return call_result
 
     def token_address(self):
         """ Returns the type of token that can be transferred by the channel.
@@ -80,12 +80,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        address = self.proxy.call('tokenAddress')
-
-        if address == b'':
-            self._check_exists()
-            raise RuntimeError('token address returned empty')
-
+        address = self._call_and_check_result('tokenAddress')
         return address_decoder(address)
 
     def detail(self):
@@ -94,15 +89,10 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        our_address = privatekey_to_address(self.client.privkey)
-
-        data = self.proxy.call('addressAndBalance', startgas=self.startgas)
-
-        if data == b'':
-            self._check_exists()
-            raise RuntimeError('address and balance returned empty')
+        data = self._call_and_check_result('addressAndBalance')
 
         settle_timeout = self.settle_timeout()
+        our_address = privatekey_to_address(self.client.privkey)
 
         if address_decoder(data[0]) == our_address:
             return {
@@ -134,13 +124,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        settle_timeout = self.proxy.call('settleTimeout')
-
-        if settle_timeout == b'':
-            self._check_exists()
-            raise RuntimeError('settle_timeout returned empty')
-
-        return settle_timeout
+        return self._call_and_check_result('settleTimeout')
 
     def opened(self):
         """ Returns the block in which the channel was created.
@@ -148,13 +132,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        opened = self.proxy.call('opened')
-
-        if opened == b'':
-            self._check_exists()
-            raise RuntimeError('opened returned empty')
-
-        return opened
+        return self._call_and_check_result('opened')
 
     def closed(self):
         """ Returns the block in which the channel was closed or 0.
@@ -162,13 +140,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        closed = self.proxy.call('closed')
-
-        if closed == b'':
-            self._check_exists()
-            raise RuntimeError('closed returned empty')
-
-        return closed
+        return self._call_and_check_result('closed')
 
     def closing_address(self):
         """ Returns the address of the closer, if the channel is closed, None
