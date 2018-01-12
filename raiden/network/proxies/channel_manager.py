@@ -17,12 +17,12 @@ from raiden.network.rpc.filters import (
     new_filter,
     Filter,
 )
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
     estimate_and_transact,
 )
 from raiden.exceptions import (
-    AddressWithoutCode,
     DuplicatedChannelError,
     SamePeerAddress,
 )
@@ -53,16 +53,7 @@ class ChannelManager(object):
         if not isaddress(manager_address):
             raise ValueError('manager_address must be a valid address')
 
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(manager_address),
-            'latest',
-        )
-
-        if result == b'0x':
-            raise AddressWithoutCode('Channel manager address {} does not contain code'.format(
-                address_encoder(manager_address),
-            ))
+        check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),

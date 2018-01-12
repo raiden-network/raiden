@@ -51,15 +51,20 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
-def check_address_has_code(client, address):
+def check_address_has_code(client,
+                           address: bytes,
+                           contract_name: str=''):
+    """ Checks that the given address contains code. """
+
     result = client.call(
         'eth_getCode',
         address_encoder(address),
         'latest',
     )
 
-    if result == b'0x':
-        raise AddressWithoutCode('Address {} does not contain code'.format(
+    if result == '0x':
+        raise AddressWithoutCode('{}Address {} does not contain code'.format(
+            '[{}]: '.format(contract_name) if contract_name else '',
             address_encoder(address),
         ))
 

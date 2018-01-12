@@ -5,10 +5,8 @@ from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_HUMAN_STANDARD_TOKEN,
 )
-from raiden.exceptions import (
-    AddressWithoutCode,
-    TransactionThrew,
-)
+from raiden.exceptions import TransactionThrew
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
     estimate_and_transact,
@@ -34,16 +32,7 @@ class Token(object):
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
 
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(token_address),
-            'latest',
-        )
-
-        if result == b'0x':
-            raise AddressWithoutCode('Token address {} does not contain code'.format(
-                address_encoder(token_address),
-            ))
+        check_address_has_code(jsonrpc_client, token_address, 'Token')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
