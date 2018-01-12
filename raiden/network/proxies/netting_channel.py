@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from binascii import unhexlify
+from typing import Optional, List
 
 from ethereum import slogging
 from ethereum.utils import encode_hex
@@ -403,12 +404,16 @@ class NettingChannel(object):
         if log.isEnabledFor(logging.INFO):
             log.info('settle sucessfull', contract=pex(self.address))
 
-    def events_filter(self, topics, from_block=None, to_block=None):
+    def events_filter(self,
+                      topics: Optional[List],
+                      from_block: Optional[int]=None,
+                      to_block: Optional[int]=None) -> Filter:
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
-            topics (list): A list of event ids to filter for. Can also be None,
-                           in which case all events are queried.
-
+            topics: A list of event ids to filter for. Can also be None,
+                    in which case all events are queried.
+            from_block: The block number to start looking for events.
+            to_block: The block number to stop looking for events.
         Return:
             Filter: The filter instance.
         """

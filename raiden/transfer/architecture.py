@@ -2,6 +2,7 @@
 # pylint: disable=too-few-public-methods
 from collections import namedtuple
 from copy import deepcopy
+from typing import List
 
 TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 
@@ -104,16 +105,16 @@ class StateManager(object):
         self.state_transition = state_transition
         self.current_state = current_state
 
-    def dispatch(self, state_change):
+    def dispatch(self, state_change: StateChange) -> List[Event]:
         """ Apply the `state_change` in the current machine and return the
         resulting events.
 
         Args:
-            state_change (StateChange): An object representation of a state
+            state_change: An object representation of a state
             change.
 
         Return:
-            Event: A list of events produced by the state transition, it's
+            A list of events produced by the state transition, it's
             the upper layer's responsibility to decided how to handle these
             events.
         """

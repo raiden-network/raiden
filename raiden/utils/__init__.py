@@ -125,7 +125,7 @@ def activate_ultratb():
     sys.excepthook = ultratb.VerboseTB(call_pdb=True, tb_offset=6)
 
 
-def host_port_to_endpoint(host, port):
+def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
 
@@ -139,11 +139,11 @@ def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     return host, port
 
 
-def publickey_to_address(publickey):
+def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key_bin):
+def privatekey_to_address(private_key_bin: bytes) -> bytes:
     if not len(private_key_bin) == 32:
         raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
     private_key = PrivateKey(private_key_bin)
