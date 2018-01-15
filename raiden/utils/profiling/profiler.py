@@ -151,7 +151,7 @@ class GlobalState(dict):
         self.last = None
 
 
-class ThreadState(object):
+class ThreadState:
     ''' This class is responsable to store the state of an execution thread,
     that can be a native thread, with a 1-to-1 mapping between userland and
     kernel space, or a light thread with a n-to-1, be it cooperative or not.

@@ -7,7 +7,7 @@ print("use pypy")
 DEBUG = False
 
 
-class Node(object):
+class Node:
     """
     a node with `num_channels` actively opens half of them with other nodes
     and has `deposit`.
@@ -144,7 +144,7 @@ class Node(object):
         return True
 
 
-class Transfer(object):
+class Transfer:
 
     def __init__(self, sender, receiver, amount):
         self.sender = sender
@@ -159,7 +159,7 @@ class Transfer(object):
         return '<Transfer v=%d t=%s>' % (self.amount, self.receiver)
 
 
-class Simulation(object):
+class Simulation:
     num_nodes = 100000
     max_id = 2**256
     # max_id = num_nodes * 10

@@ -5,7 +5,7 @@ from ethereum.utils import normalize_address
 from raiden.exceptions import InvalidFunctionName
 
 
-class ContractProxy(object):
+class ContractProxy:
     """ Proxy to interact with a smart contract through the rpc interface. """
 
     def __init__(

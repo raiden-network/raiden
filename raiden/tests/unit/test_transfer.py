@@ -79,7 +79,7 @@ def sign_and_send(message, key, address, app):
     gevent.sleep(3)
 
 
-class MediatedTransferTestHelper(object):
+class MediatedTransferTestHelper:
     def __init__(self, raiden_network, graph):
         self.raiden_network = raiden_network
         self.graph = graph

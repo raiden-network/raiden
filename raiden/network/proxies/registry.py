@@ -37,7 +37,7 @@ from raiden.network.rpc.filters import (
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Registry(object):
+class Registry:
     def __init__(
             self,
             jsonrpc_client,

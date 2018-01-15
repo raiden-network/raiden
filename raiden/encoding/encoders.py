@@ -3,7 +3,7 @@
 __all__ = ('integer',)
 
 
-class integer(object):  # pylint: disable=invalid-name
+class integer:  # pylint: disable=invalid-name
     ''' Defines the value as an integer and it's valid value range. '''
 
     def __init__(self, minimum: int, maximum: int):
@@ -30,7 +30,7 @@ class integer(object):  # pylint: disable=invalid-name
         return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
 
 
-class optional_bytes(object):  # pylint: disable=invalid-name
+class optional_bytes:  # pylint: disable=invalid-name
     ''' This encoder assumes that a byte string full of NULL values is equal to
     the value being absent. If any of the bytes is not \x00 then all full array
     is considered part of the value.

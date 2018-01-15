@@ -86,7 +86,7 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
     return result
 
 
-class Filter(object):
+class Filter:
     def __init__(self, jsonrpc_client, filter_id_raw):
         self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client

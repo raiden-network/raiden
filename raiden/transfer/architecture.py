@@ -32,7 +32,7 @@ TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 # outputs are separated under different class hierarquies (StateChange and Event).
 
 
-class State(object):
+class State:
     """ An isolated state, modified by StateChange messages.
 
     Notes:
@@ -47,7 +47,7 @@ class State(object):
     __slots__ = ()
 
 
-class StateChange(object):
+class StateChange:
     """ Declare the transition to be applied in a state object.
 
     StateChanges are incoming events that change this node state (eg. a
@@ -66,7 +66,7 @@ class StateChange(object):
     __slots__ = ()
 
 
-class Event(object):
+class Event:
     """ Events produced by the execution of a state change.
 
     Nomenclature convention:
@@ -83,7 +83,7 @@ class Event(object):
     __slots__ = ()
 
 
-class StateManager(object):
+class StateManager:
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
     """

@@ -453,7 +453,7 @@ def healthcheck(
             )
 
 
-class RaidenProtocol(object):
+class RaidenProtocol:
     """ Encode the message into a packet and send it.
 
     Each message received is stored by hash and if it is received twice the

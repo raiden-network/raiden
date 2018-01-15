@@ -18,7 +18,7 @@ def _serialize_statistics(statistics):
     return (statistics.count, statistics.size, traceback)
 
 
-class TraceProfiler(object):
+class TraceProfiler:
     def __init__(self, datadir):
         self.datadir = datadir
         self.profiling = False

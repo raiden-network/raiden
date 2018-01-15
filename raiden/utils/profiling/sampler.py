@@ -65,7 +65,7 @@ def sample_objects(timestamp, stream):
     stream.write(data_pickled)
 
 
-class SampleProfiler(object):
+class SampleProfiler:
     def __init__(self, datadir):
         self.datadir = datadir
 

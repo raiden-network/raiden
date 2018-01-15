@@ -28,7 +28,7 @@ from raiden.utils import (
 )
 
 
-class Discovery(object):
+class Discovery:
     """On chain smart contract raiden node discovery: allows registering
     endpoints (host, port) for your ethereum-/raiden-address and looking up
     endpoints for other ethereum-/raiden-addressess.

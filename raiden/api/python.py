@@ -45,7 +45,7 @@ from raiden.utils import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class RaidenAPI(object):
+class RaidenAPI:
     """ CLI interface. """
     # pylint: disable=too-many-public-methods
 

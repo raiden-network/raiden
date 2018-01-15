@@ -12,7 +12,7 @@ from gevent.server import DatagramServer
 from raiden.exceptions import RaidenShuttingDown
 
 
-class DummyPolicy(object):
+class DummyPolicy:
     """Dummy implementation for the throttling policy that always
     returns a wait_time of 0.
     """
@@ -23,7 +23,7 @@ class DummyPolicy(object):
         return 0.
 
 
-class TokenBucket(object):
+class TokenBucket:
     """Implementation of the token bucket throttling algorithm.
     """
 
@@ -58,7 +58,7 @@ class TokenBucket(object):
         self.timestamp = now
 
 
-class UDPTransport(object):
+class UDPTransport:
     """ Node communication using the UDP protocol. """
 
     def __init__(
@@ -132,7 +132,7 @@ class UDPTransport(object):
         self.server.start()
 
 
-class DummyNetwork(object):
+class DummyNetwork:
     """ Store global state for an in process network, this won't use a real
     network protocol just greenlet communication.
     """
@@ -162,7 +162,7 @@ class DummyNetwork(object):
         gevent.spawn_later(0.00000000001, receive_end, bytes_)
 
 
-class DummyTransport(object):
+class DummyTransport:
     """ Communication between inter-process nodes. """
     network = DummyNetwork()
     on_recv_cbs = []  # debugging
@@ -183,7 +183,7 @@ class DummyTransport(object):
 
         # The protocol checks if the transport is still running prior to
         # sending ACKs
-        class ServerMock(object):
+        class ServerMock:
             started = True
         self.server = ServerMock()
 

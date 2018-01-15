@@ -17,7 +17,7 @@ from raiden.exceptions import InvalidAddress
 log = slogging.getLogger(__name__)
 
 
-class Discovery(object):
+class Discovery:
     """ Mock mapping address: host, port """
 
     def __init__(self):

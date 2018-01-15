@@ -140,7 +140,7 @@ class EventRequestSchema(BaseSchema):
     from_block = fields.Integer(missing=None)
     to_block = fields.Integer(missing=None)
 
-    class Meta(object):
+    class Meta:
         strict = True
         # decoding to a dict is required by the @use_kwargs decorator from webargs
         decoding_class = dict
@@ -149,7 +149,7 @@ class EventRequestSchema(BaseSchema):
 class AddressSchema(BaseSchema):
     address = AddressField()
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = Address
 
@@ -157,7 +157,7 @@ class AddressSchema(BaseSchema):
 class AddressListSchema(BaseListSchema):
     data = fields.List(AddressField())
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = AddressList
 
@@ -166,7 +166,7 @@ class PartnersPerTokenSchema(BaseSchema):
     partner_address = AddressField()
     channel = fields.String()
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = PartnersPerToken
 
@@ -174,7 +174,7 @@ class PartnersPerTokenSchema(BaseSchema):
 class PartnersPerTokenListSchema(BaseListSchema):
     data = fields.Nested(PartnersPerTokenSchema, many=True)
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = PartnersPerTokenList
 
@@ -192,7 +192,7 @@ class ChannelSchema(BaseSchema):
         CHANNEL_STATE_SETTLED,
     ]))
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = Channel
 
@@ -214,7 +214,7 @@ class ChannelRequestSchema(BaseSchema):
         ])
     )
 
-    class Meta(object):
+    class Meta:
         strict = True
         # decoding to a dict is required by the @use_kwargs decorator from webargs:
         decoding_class = dict
@@ -223,7 +223,7 @@ class ChannelRequestSchema(BaseSchema):
 class ChannelListSchema(BaseListSchema):
     data = fields.Nested(ChannelSchema, many=True)
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = ChannelList
 
@@ -243,7 +243,7 @@ class TokenSwapsSchema(BaseSchema):
     receiving_amount = fields.Integer(required=True)
     receiving_token = AddressField(required=True)
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = dict
 
@@ -255,7 +255,7 @@ class TransferSchema(BaseSchema):
     amount = fields.Integer(required=True)
     identifier = fields.Integer(missing=None)
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = dict
 
@@ -267,7 +267,7 @@ class ConnectionsConnectSchema(BaseSchema):
     )
     joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = dict
 
@@ -279,6 +279,6 @@ class ConnectionsLeaveSchema(BaseSchema):
         missing=True,
     )
 
-    class Meta(object):
+    class Meta:
         strict = True
         decoding_class = dict

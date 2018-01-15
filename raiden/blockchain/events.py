@@ -248,7 +248,7 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
     return result
 
 
-class BlockchainEvents(object):
+class BlockchainEvents:
     """ Events polling. """
 
     def __init__(self):

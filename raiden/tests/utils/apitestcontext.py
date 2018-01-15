@@ -27,7 +27,7 @@ from raiden.utils import (
 )
 
 
-class NettingChannelMock(object):
+class NettingChannelMock:
 
     def __init__(self, channel_address):
         self.address = channel_address
@@ -41,7 +41,7 @@ class NettingChannelMock(object):
         return self.state == CHANNEL_STATE_CLOSED or self.state == CHANNEL_STATE_SETTLED
 
 
-class ConnectionManagerMock(object):
+class ConnectionManagerMock:
     def __init__(self, token_address, funds):
         self.token_address = token_address
         self.funds = funds
@@ -49,7 +49,7 @@ class ConnectionManagerMock(object):
         self.open_channels = []
 
 
-class ApiTestContext():
+class ApiTestContext:
 
     def __init__(self, reveal_timeout):
         self.events = list()

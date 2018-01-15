@@ -50,7 +50,7 @@ UNEVENTFUL_EVENTS = (
 )
 
 
-class StateMachineEventHandler(object):
+class StateMachineEventHandler:
     def __init__(self, raiden):
         self.raiden = raiden
 

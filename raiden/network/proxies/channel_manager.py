@@ -40,7 +40,7 @@ from raiden.utils import (
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class ChannelManager(object):
+class ChannelManager:
     def __init__(
             self,
             jsonrpc_client,

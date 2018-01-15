@@ -18,7 +18,7 @@ def get_closest_node_id(target_id):
     return nodeids[0]
 
 
-class Node(object):
+class Node:
 
     def __init__(self, id, num_channels, deposit):
         self.id = id
@@ -102,7 +102,7 @@ class Node(object):
         return True
 
 
-class Transfer(object):
+class Transfer:
 
     def __init__(self, sender, receiver, amount):
         self.sender = sender

@@ -25,7 +25,7 @@ from raiden.utils import (
 )
 
 
-class App(object):  # pylint: disable=too-few-public-methods
+class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'host': '',
         'port': INITIAL_PORT,
