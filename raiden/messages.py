@@ -59,7 +59,7 @@ def assert_transfer_values(identifier, token, recipient):
 
 
 def decode(data):
-    klass = CMDID_TO_CLASS[data[0:1]]
+    klass = CMDID_TO_CLASS[data[0]]
     return klass.decode(data)
 
 
@@ -104,7 +104,7 @@ class Message(MessageHashable):
     def packed(self):
         klass = messages.CMDID_MESSAGE[self.cmdid]
         data = buffer_for(klass)
-        data[0:1] = self.cmdid
+        data[0] = self.cmdid
         packed = klass(data)
         self.pack(packed)
 
