@@ -63,7 +63,7 @@ def decode(data):
     return klass.decode(data)
 
 
-class MessageHashable(object):
+class MessageHashable:
     pass
 
 

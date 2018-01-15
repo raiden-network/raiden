@@ -36,7 +36,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.tests.utils import factories
 
 
-class SequenceGenerator(object):
+class SequenceGenerator:
     """ Return a generator that goes through the alphabet letters. """
     def __init__(self):
         self.i = 0

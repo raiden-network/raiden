@@ -19,7 +19,7 @@ from raiden.network.transport import UDPTransport
 from raiden.network.sockfactory import socket_factory
 
 
-class DummyProtocol(object):
+class DummyProtocol:
 
     def __init__(self):
         self.raiden = None

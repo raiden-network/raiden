@@ -20,7 +20,7 @@ from raiden.utils import (
 )
 
 
-class Token(object):
+class Token:
     def __init__(
             self,
             jsonrpc_client,

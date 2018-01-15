@@ -32,7 +32,7 @@ from raiden.utils import pex
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class RaidenMessageHandler(object):
+class RaidenMessageHandler:
     """ Class responsible to handle the protocol messages.
 
     Note:

@@ -170,7 +170,7 @@ def validate_solc():
         raise RuntimeError(msg)
 
 
-class ContractManager(object):
+class ContractManager:
     def __init__(self):
         self.is_instantiated = False
         self.lock = Lock()

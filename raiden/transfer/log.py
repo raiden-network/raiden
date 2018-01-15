@@ -217,7 +217,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         self.conn.close()
 
 
-class StateChangeLog(object):
+class StateChangeLog:
 
     def __init__(
             self,

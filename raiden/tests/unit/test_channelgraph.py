@@ -3,17 +3,17 @@ from raiden.network.channelgraph import ChannelGraph, ChannelDetails
 from raiden.tests.utils.factories import make_address
 
 
-class ParticipantStateMock(object):
+class ParticipantStateMock:
     def __init__(self, address):
         self.address = address
 
 
-class NettingChannelMock(object):
+class NettingChannelMock:
     def __init__(self, address):
         self.address = address
 
 
-class ExternalStateMock(object):
+class ExternalStateMock:
     def __init__(self, netting_channel):
         self.netting_channel = netting_channel
         self.settled_block = 0

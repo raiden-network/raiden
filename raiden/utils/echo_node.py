@@ -31,7 +31,7 @@ log = slogging.getLogger(__name__)
 TRANSFER_MEMORY = 4096
 
 
-class EchoNode(object):
+class EchoNode:
 
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)

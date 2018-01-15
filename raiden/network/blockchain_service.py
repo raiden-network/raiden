@@ -26,7 +26,7 @@ from raiden.utils import (
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class BlockChainService(object):
+class BlockChainService:
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes
 

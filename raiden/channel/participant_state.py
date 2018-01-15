@@ -32,7 +32,7 @@ UnlockPartialProof = namedtuple('UnlockPartialProof', ('lock', 'lockhashed', 'se
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
 
 
-class ChannelEndState(object):
+class ChannelEndState:
     """ Tracks the state of one of the participants in a channel. """
 
     def __init__(self, participant_address, participant_balance, balance_proof, merkletree):

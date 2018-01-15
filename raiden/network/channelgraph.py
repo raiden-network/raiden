@@ -193,7 +193,7 @@ def get_best_routes(
     return online_nodes
 
 
-class ChannelGraph(object):
+class ChannelGraph:
     """ Has Graph based on the channels and can find path between participants. """
 
     def __init__(

@@ -118,7 +118,7 @@ def tester_deploy_contract(
     return contract_address
 
 
-class ChannelExternalStateTester(object):
+class ChannelExternalStateTester:
     def __init__(self, tester_chain, private_key, address):
         self.tester_chain = tester_chain
         self.netting_channel = NettingChannelTesterMock(
@@ -177,7 +177,7 @@ class ChannelExternalStateTester(object):
             channels_registered.append(channel)
 
 
-class FilterTesterMock(object):
+class FilterTesterMock:
     def __init__(self, tester_chain, contract_address, topics, filter_id_raw):
         self.tester_chain = tester_chain
         self.filter_id_raw = filter_id_raw
@@ -217,7 +217,7 @@ class FilterTesterMock(object):
         self.events = list()
 
 
-class ClientMock(object):
+class ClientMock:
     def __init__(self):
         self.stop_event = None
 
@@ -225,7 +225,7 @@ class ClientMock(object):
         self.stop_event = event
 
 
-class BlockChainServiceTesterMock(object):
+class BlockChainServiceTesterMock:
     def __init__(self, private_key, tester_chain):
         self.tester_chain = tester_chain
 
@@ -323,7 +323,7 @@ class BlockChainServiceTesterMock(object):
         return token_address
 
 
-class DiscoveryTesterMock(object):
+class DiscoveryTesterMock:
     def __init__(self, tester_chain, private_key, address):
         if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
@@ -366,7 +366,7 @@ class DiscoveryTesterMock(object):
         return self.proxy.contract_version()
 
 
-class TokenTesterMock(object):
+class TokenTesterMock:
     def __init__(self, tester_chain, private_key, address):
         if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
@@ -393,7 +393,7 @@ class TokenTesterMock(object):
         self.tester_chain.mine(number_of_blocks=1)
 
 
-class RegistryTesterMock(object):
+class RegistryTesterMock:
     def __init__(self, tester_chain, private_key, address):
         if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
@@ -485,7 +485,7 @@ class RegistryTesterMock(object):
         return self.token_to_channelmanager[token_address]
 
 
-class ChannelManagerTesterMock(object):
+class ChannelManagerTesterMock:
     def __init__(self, tester_chain, private_key, address):
         if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')
@@ -586,7 +586,7 @@ class ChannelManagerTesterMock(object):
         return filter_
 
 
-class NettingChannelTesterMock(object):
+class NettingChannelTesterMock:
     def __init__(self, tester_chain, private_key, address):
         if len(tester_chain.head_state.get_code(address)) == 0:
             raise Exception('Contract code empty')

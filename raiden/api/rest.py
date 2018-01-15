@@ -150,7 +150,7 @@ def restapi_setup_type_converters(flask_app, names_to_converters):
         flask_app.url_map.converters[key] = value
 
 
-class APIServer(object):
+class APIServer:
     """
     Runs the API-server that routes the endpoint to the resources.
     The API is wrapped in multiple layers, and the Server should be invoked this way::
@@ -251,7 +251,7 @@ class APIServer(object):
             self.wsgiserver = None
 
 
-class RestAPI(object):
+class RestAPI:
     """
     This wraps around the actual RaidenAPI in api/python.
     It will provide the additional, neccessary RESTful logic and

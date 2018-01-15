@@ -140,10 +140,10 @@ def test_channel_to_api_dict():
     )
 
     # mock external state to provide the channel address
-    class NettingChannel(object):
+    class NettingChannel:
         address = channel_address
 
-    class ExternalState(object):
+    class ExternalState:
         def __init__(self, opened_block):
             self.netting_channel = NettingChannel()
             self.settled_block = 0

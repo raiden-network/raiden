@@ -32,7 +32,7 @@ from raiden.utils import sha3
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class NettingChannelMock(object):
+class NettingChannelMock:
     # pylint: disable=no-self-use
 
     def __init__(self):
@@ -925,7 +925,7 @@ def test_channel_must_accept_expired_locks():
 
 
 def test_channel_close_called_only_once():
-    class MockCheckCallsToClose():
+    class MockCheckCallsToClose:
         def __init__(self):
             self.address = 'mockcheckcallstoclosemockcheckcallstoclo'
             self.close_calls = 0

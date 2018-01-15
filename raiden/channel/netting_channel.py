@@ -35,7 +35,7 @@ from raiden.transfer.merkle_tree import LEAVES, merkleroot
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class ChannelExternalState(object):
+class ChannelExternalState:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, register_channel_for_hashlock, netting_channel):
@@ -133,7 +133,7 @@ class ChannelExternalState(object):
             return self.netting_channel.settle()
 
 
-class Channel(object):
+class Channel:
     # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-public-methods
 
     def __init__(
@@ -827,7 +827,7 @@ class Channel(object):
         return not self.__eq__(other)
 
 
-class ChannelSerialization(object):
+class ChannelSerialization:
 
     def __init__(self, channel_instance):
         self.channel_address = channel_instance.channel_address

@@ -34,7 +34,7 @@ def get_closest_node_idx(target_id, nodeids):
     return idx
 
 
-class Node(object):
+class Node:
     """
     a node with `num_channels` actively opens half of them with other nodes
     and has `deposit`.
@@ -196,7 +196,7 @@ class Node(object):
         return True
 
 
-class Transfer(object):
+class Transfer:
 
     def __init__(self, sender, receiver, amount):
         self.sender = sender
@@ -240,7 +240,7 @@ def mk_power_distribution_func(v_min, v_max):
 # assert False
 
 
-class Simulation(object):
+class Simulation:
     num_nodes = 10000
     max_id = 2**32
     num_channels = 32

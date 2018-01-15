@@ -6,7 +6,7 @@ from raiden.ui.cli import (
 )
 
 
-class MockClient():
+class MockClient:
 
     def __init__(self, version):
         self.version_string = version

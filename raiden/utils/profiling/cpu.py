@@ -6,7 +6,7 @@ import gevent_profiler
 import GreenletProfiler
 
 
-class CpuProfiler(object):
+class CpuProfiler:
     def __init__(self, datadir):
         self.profiling = False
         self.datadir = datadir

@@ -43,7 +43,7 @@ SwapKey = namedtuple('SwapKey', (
 ))
 
 
-class GreenletTasksDispatcher(object):
+class GreenletTasksDispatcher:
     def __init__(self):
         self.hashlocks_greenlets = defaultdict(list)
 

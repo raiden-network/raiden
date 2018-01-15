@@ -183,7 +183,7 @@ def check_node_connection(func):
     return retry_on_disconnect
 
 
-class JSONRPCClient(object):
+class JSONRPCClient:
     """ Ethereum JSON RPC client.
 
     Args:

@@ -23,7 +23,7 @@ from raiden.exceptions import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class ConnectionManager(object):
+class ConnectionManager:
     """The ConnectionManager provides a high level abstraction for connecting to a
     Token network.
 

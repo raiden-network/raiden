@@ -22,7 +22,7 @@ $ python ../../tools/join-contracts.py SomeContractWithImports.sol joined.sol
 """
 
 
-class ContractJoiner(object):
+class ContractJoiner:
     def __init__(self):
         self.have_pragma = False
         self.seen = set()

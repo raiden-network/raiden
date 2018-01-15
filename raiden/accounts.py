@@ -43,7 +43,7 @@ def find_keystoredir():
     return keystore_path
 
 
-class AccountManager(object):
+class AccountManager:
     def __init__(self, keystore_path=None):
         self.keystore_path = keystore_path
         self.accounts = {}
@@ -106,7 +106,7 @@ class AccountManager(object):
         return acc.privkey
 
 
-class Account(object):
+class Account:
     """Represents an account.  """
 
     def __init__(self, keystore, password=None, path=None):

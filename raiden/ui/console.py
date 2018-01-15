@@ -64,7 +64,7 @@ def inputhook_gevent():
 
 
 @inputhook_manager.register('gevent')
-class GeventInputHook(object):
+class GeventInputHook:
 
     def __init__(self, manager):
         self.manager = manager
@@ -95,7 +95,7 @@ class GeventInputHook(object):
         self.manager.clear_inputhook()
 
 
-class SigINTHandler(object):
+class SigINTHandler:
 
     def __init__(self, event):
         self.event = event
@@ -208,7 +208,7 @@ class Console(BaseService):
         # start console service
         super(Console, self).start()
 
-        class Raiden(object):
+        class Raiden:
             def __init__(self, app):
                 self.app = app
 
@@ -287,7 +287,7 @@ class Console(BaseService):
         sys.exit(0)
 
 
-class ConsoleTools(object):
+class ConsoleTools:
     def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service

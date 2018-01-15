@@ -11,7 +11,7 @@ TIMER = signal.ITIMER_PROF
 TIMER_SIGNAL = signal.SIGPROF
 
 
-class Timer(object):
+class Timer:
     def __init__(
             self,
             callback,
