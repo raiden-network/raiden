@@ -129,7 +129,7 @@ def read_version_from_git():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         ).communicate()
-        # Popen return bytes
+        # Popen returns bytes
         git_version = git_version.decode()
 
         if git_version.startswith('v'):

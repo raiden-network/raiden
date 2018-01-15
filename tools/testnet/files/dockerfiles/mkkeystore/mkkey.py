@@ -9,13 +9,8 @@ from datetime import datetime
 from ethereum import slogging
 
 
-try:
-    # ethereum >= 2.0
-    from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
-    from ethereum.tools import keys
-except ImportError:
-    from ethereum.keys import make_keystore_json, sha3, encode_hex
-    from ethereum.tools import keys
+from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
+from ethereum.tools import keys
 
 
 class BytesJSONEncoder(JSONEncoder):

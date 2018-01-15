@@ -463,7 +463,7 @@ class Channel(object):
                         to=pex(to_state.address),
                         hashlock=pex(transfer.lock.hashlock),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex([str(l).encode() for l in lockhashes]),
+                        lockhashes=lpex(str(l).encode() for l in lockhashes),
                         received_locksroot=pex(transfer.locksroot),
                     )
                 raise ValueError('hashlock is already registered')
@@ -483,7 +483,7 @@ class Channel(object):
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex([str(l).encode() for l in lockhashes]),
+                        lockhashes=lpex(str(l).encode() for l in lockhashes),
                         expected_locksroot=pex(expected_locksroot),
                         received_locksroot=pex(transfer.locksroot),
                     )
@@ -574,7 +574,7 @@ class Channel(object):
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
                     currentlocksroot=pex(merkleroot(from_state.merkletree)),
-                    lockhashes=lpex([str(l).encode() for l in lockhashes]),
+                    lockhashes=lpex(str(l).encode() for l in lockhashes),
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
                     lock_hashlock=pex(transfer.lock.hashlock),

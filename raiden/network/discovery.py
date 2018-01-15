@@ -56,9 +56,11 @@ class ContractDiscovery(Discovery):
     Allows registering and looking up by endpoint (host, port) for node_address.
     """
 
-    def __init__(self,
-                 node_address: bytes,
-                 discovery_proxy: proxies.Discovery):
+    def __init__(
+            self,
+            node_address: bytes,
+            discovery_proxy: proxies.Discovery):
+
         super(ContractDiscovery, self).__init__()
 
         self.node_address = node_address
