@@ -459,7 +459,8 @@ def options(func):
 
 @options
 @click.command()
-def app(address,
+def app(
+        address,
         keystore_path,
         gas_price,
         eth_rpc_endpoint,
@@ -482,7 +483,6 @@ def app(address,
         datadir,
         eth_client_communication,
         nat):
-
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App

@@ -70,7 +70,8 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     type=str
 )
 @click.command()
-def run(privatekey,
+def run(
+        privatekey,
         registry_contract_address,
         discovery_contract_address,
         listen_address,

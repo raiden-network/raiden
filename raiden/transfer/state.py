@@ -45,14 +45,15 @@ class RouteState(State):
         CHANNEL_STATE_SETTLED,
     )
 
-    def __init__(self,
-                 state,
-                 node_address,
-                 channel_address,
-                 available_balance,
-                 settle_timeout,
-                 reveal_timeout,
-                 closed_block):
+    def __init__(
+            self,
+            state,
+            node_address,
+            channel_address,
+            available_balance,
+            settle_timeout,
+            reveal_timeout,
+            closed_block):
 
         if state not in self.valid_states:
             raise ValueError('invalid value for state')

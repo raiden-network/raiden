@@ -52,9 +52,10 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
-def check_address_has_code(client,
-                           address: bytes,
-                           contract_name: str=''):
+def check_address_has_code(
+        client,
+        address: bytes,
+        contract_name: str = ''):
     """ Checks that the given address contains code. """
 
     result = client.call(
@@ -126,12 +127,12 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
 
 def format_data_for_call(
-        sender: bytes=b'',
-        to: bytes=b'',
-        value: int=0,
-        data: bytes=b'',
-        startgas: int=GAS_PRICE,
-        gasprice: int=GAS_PRICE):
+        sender: bytes = b'',
+        to: bytes = b'',
+        value: int = 0,
+        data: bytes = b'',
+        startgas: int = GAS_PRICE,
+        gasprice: int = GAS_PRICE):
     """ Helper to format the transaction data. """
 
     json_data = {}
@@ -194,12 +195,14 @@ class JSONRPCClient(object):
         nonce_offset: Network's default base nonce number.
     """
 
-    def __init__(self,
-                 host: str,
-                 port: int,
-                 privkey: bytes,
-                 nonce_update_interval: float=5.0,
-                 nonce_offset: int=0):
+    def __init__(
+            self,
+            host: str,
+            port: int,
+            privkey: bytes,
+            nonce_update_interval: float = 5.0,
+            nonce_offset: int = 0):
+
         endpoint = 'http://{}:{}'.format(host, port)
         session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
@@ -521,11 +524,11 @@ class JSONRPCClient(object):
             self,
             sender: bytes,
             to: bytes,
-            value: int=0,
-            data: bytes=b'',
-            startgas: int=0,
-            gasprice: int=GAS_PRICE,
-            nonce: Optional[int]=None):
+            value: int = 0,
+            data: bytes = b'',
+            startgas: int = 0,
+            gasprice: int = GAS_PRICE,
+            nonce: Optional[int] = None):
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -578,13 +581,13 @@ class JSONRPCClient(object):
 
     def eth_sendTransaction(
             self,
-            sender: bytes=b'',
-            to: bytes=b'',
-            value: int=0,
-            data: bytes=b'',
-            gasPrice: int=GAS_PRICE,
-            gas: int=GAS_PRICE,
-            nonce: Optional[int]=None):
+            sender: bytes = b'',
+            to: bytes = b'',
+            value: int = 0,
+            data: bytes = b'',
+            gasPrice: int = GAS_PRICE,
+            gas: int = GAS_PRICE,
+            nonce: Optional[int] = None):
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
 
@@ -633,12 +636,12 @@ class JSONRPCClient(object):
 
     def eth_call(
             self,
-            sender: bytes=b'',
-            to: bytes=b'',
-            value: int=0,
-            data: bytes=b'',
-            startgas: int=GAS_PRICE,
-            gasprice: int=GAS_PRICE,
+            sender: bytes = b'',
+            to: bytes = b'',
+            value: int = 0,
+            data: bytes = b'',
+            startgas: int = GAS_PRICE,
+            gasprice: int = GAS_PRICE,
             block_number='latest'):
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
@@ -671,12 +674,12 @@ class JSONRPCClient(object):
 
     def eth_estimateGas(
             self,
-            sender: bytes=b'',
-            to: bytes=b'',
-            value: int=0,
-            data: bytes=b'',
-            startgas: int=GAS_PRICE,
-            gasprice: int=GAS_PRICE):
+            sender: bytes = b'',
+            to: bytes = b'',
+            value: int = 0,
+            data: bytes = b'',
+            startgas: int = GAS_PRICE,
+            gasprice: int = GAS_PRICE):
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.

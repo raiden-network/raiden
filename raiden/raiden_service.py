@@ -473,7 +473,7 @@ class RaidenService(object):
 
         self.protocol.send_and_wait(recipient, message, timeout)
 
-    def register_secret(self, secret):
+    def register_secret(self, secret: bytes):
         """ Register the secret with any channel that has a hashlock on it.
 
         This must search through all channels registered for a given hashlock
@@ -483,8 +483,8 @@ class RaidenService(object):
         Raises:
             TypeError: If secret is unicode data.
         """
-        if isinstance(secret, str):
-            raise TypeError('secret must be binary')
+        if not isinstance(secret, bytes):
+            raise TypeError('secret must be bytes')
 
         hashlock = sha3(secret)
         revealsecret_message = RevealSecret(secret)

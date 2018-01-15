@@ -36,7 +36,7 @@ class BlockChainService(object):
             jsonrpc_client: JSONRPCClient,
             startgas: int,
             gasprice: int,
-            poll_timeout: int=DEFAULT_POLL_TIMEOUT):
+            poll_timeout: int = DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -68,7 +68,7 @@ class BlockChainService(object):
 
         return True
 
-    def estimate_blocktime(self, oldest: int=256) -> int:
+    def estimate_blocktime(self, oldest: int=256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
             oldest: delta in block numbers to go back.
@@ -88,7 +88,7 @@ class BlockChainService(object):
         last_timestamp = int(self.get_block_header(last_block_number)['timestamp'], 16)
         first_timestamp = int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
         delta = last_timestamp - first_timestamp
-        return delta // interval
+        return delta / interval
 
     def get_block_header(self, block_number: int):
         block_number = block_tag_encoder(block_number)
