@@ -87,7 +87,7 @@ Successfully opening a channel will return the following information::
         "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
         "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
         "balance": 1337,
-        "state": "open",
+        "state": "opened",
         "settle_timeout": 600
     }
 
@@ -242,7 +242,7 @@ When successful this will give a response with a channel object where the state 
         "settle_timeout": 600
     }
 
-Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"open"``.
+Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"opened"``.
 
 .. _settle:
 
