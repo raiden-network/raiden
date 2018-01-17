@@ -1,5 +1,5 @@
 # temporary until pystun creates a new release
-git+https://github.com/konradkonrad/pystun@develop#egg=pystun
+git+https://github.com/LefterisJP/pystun@develop#egg=pystun
 
 bitcoin==1.1.42
 cachetools==2.0.1
