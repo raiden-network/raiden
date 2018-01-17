@@ -43,7 +43,7 @@ class ContractProxy:
     def transact(self, function_name, *args, **kargs):
         self._check_function_name_and_kargs(function_name, kargs)
 
-        data = self.translator.encode(function_name, args)
+        data = self.translator.encode_function_call(function_name, args)
         txhash = self.transaction_function(
             sender=self.sender,
             to=self.contract_address,
@@ -57,7 +57,7 @@ class ContractProxy:
     def call(self, function_name, *args, **kargs):
         self._check_function_name_and_kargs(function_name, kargs)
 
-        data = self.translator.encode(function_name, args)
+        data = self.translator.encode_function_call(function_name, args)
         res = self.call_function(
             sender=self.sender,
             to=self.contract_address,
@@ -67,7 +67,7 @@ class ContractProxy:
         )
 
         if res:
-            res = self.translator.decode(function_name, res)
+            res = self.translator.decode_function_result(function_name, res)
             if len(res) == 1:
                 res = res[0]
 
@@ -79,7 +79,7 @@ class ContractProxy:
 
         self._check_function_name_and_kargs(function_name, kargs)
 
-        data = self.translator.encode(function_name, args)
+        data = self.translator.encode_function_call(function_name, args)
 
         res = self.estimate_function(
             sender=self.sender,
