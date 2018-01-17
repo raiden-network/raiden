@@ -237,12 +237,11 @@ def get_system_spec():
             platform.architecture()[0]
         )
     else:
-        system_info = '{} {} {} {} / {}'.format(
+        system_info = '{} {} {} {}'.format(
             platform.system(),
             '_'.join(platform.architecture()),
             platform.release(),
-            platform.machine(),
-            ' '.join(part for part in platform.linux_distribution() if part)
+            platform.machine()
         )
 
     system_spec = dict(
