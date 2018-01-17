@@ -108,7 +108,7 @@ with open('README.rst') as readme_file:
 history = ''
 
 install_requires_replacements = {
-    'git+https://github.com/konradkonrad/pystun@develop#egg=pystun': 'pystun',
+    'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
 }
 
 install_requires = list(set(
