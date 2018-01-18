@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from typing import List, Dict, Union, Optional
+
 from ethereum.utils import normalize_address
 
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import (
     address_decoder,
     address_encoder,
@@ -10,7 +13,12 @@ from raiden.utils import (
 )
 
 
-def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
+def new_filter(
+        jsonrpc_client: JSONRPCClient,
+        contract_address: bytes,
+        topics: Optional[List[int]],
+        from_block: Union[str, int] = 0,
+        to_block: Union[str, int] = 'latest'):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     if isinstance(from_block, int):
         from_block = hex(from_block)
@@ -19,8 +27,8 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
         to_block = hex(to_block)
 
     json_data = {
-        'fromBlock': from_block or hex(0),
-        'toBlock': to_block or 'latest',
+        'fromBlock': from_block,
+        'toBlock': to_block,
         'address': address_encoder(normalize_address(contract_address)),
     }
 
@@ -33,7 +41,12 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
     return jsonrpc_client.call('eth_newFilter', json_data)
 
 
-def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
+def get_filter_events(
+        jsonrpc_client: JSONRPCClient,
+        contract_address: bytes,
+        topics: Optional[List[int]],
+        from_block: Union[str, int] = 0,
+        to_block: Union[str, int] = 'latest') -> List[Dict]:
     """ Get filter.
 
     This handles bad encoding from geth rpc.
@@ -45,8 +58,8 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
         to_block = hex(to_block)
 
     json_data = {
-        'fromBlock': from_block or hex(0),
-        'toBlock': to_block or 'latest',
+        'fromBlock': from_block,
+        'toBlock': to_block,
         'address': address_encoder(normalize_address(contract_address)),
     }
 
@@ -87,11 +100,11 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
 
 
 class Filter:
-    def __init__(self, jsonrpc_client, filter_id_raw):
+    def __init__(self, jsonrpc_client: JSONRPCClient, filter_id_raw: int):
         self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
 
-    def _query_filter(self, function):
+    def _query_filter(self, function: str) -> List[Dict]:
         filter_changes = self.client.call(function, self.filter_id_raw)
 
         # geth could return None
@@ -121,10 +134,10 @@ class Filter:
 
         return result
 
-    def changes(self):
+    def changes(self) -> List[Dict]:
         return self._query_filter('eth_getFilterChanges')
 
-    def getall(self):
+    def getall(self) -> List[Dict]:
         return self._query_filter('eth_getFilterLogs')
 
     def uninstall(self):

@@ -3,7 +3,7 @@ import os
 import warnings
 from time import time as now
 from binascii import hexlify, unhexlify
-from typing import Optional
+from typing import Optional, List, Dict, Union
 
 import rlp
 import gevent
@@ -12,7 +12,6 @@ from ethereum import slogging
 from ethereum.tools import _solidity
 from ethereum.abi import ContractTranslator
 from ethereum.transactions import Transaction
-from ethereum.utils import normalize_address
 from ethereum.tools._solidity import (
     solidity_unresolved_symbols,
     solidity_library_symbol,
@@ -135,27 +134,14 @@ def format_data_for_call(
         gasprice: int = GAS_PRICE):
     """ Helper to format the transaction data. """
 
-    json_data = {}
-
-    if sender is not None:
-        json_data['from'] = address_encoder(sender)
-
-    if to is not None:
-        json_data['to'] = data_encoder(to)
-
-    if value is not None:
-        json_data['value'] = quantity_encoder(value)
-
-    if gasprice is not None:
-        json_data['gasPrice'] = quantity_encoder(gasprice)
-
-    if startgas is not None:
-        json_data['gas'] = quantity_encoder(startgas)
-
-    if data is not None:
-        json_data['data'] = data_encoder(data)
-
-    return json_data
+    return {
+        'from': address_encoder(sender),
+        'to': data_encoder(to),
+        'value': quantity_encoder(value),
+        'gasPrice': quantity_encoder(gasprice),
+        'gas': quantity_encoder(startgas),
+        'data': data_encoder(data)
+    }
 
 
 def check_node_connection(func):
@@ -297,7 +283,7 @@ class JSONRPCClient:
         res = self.call('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
 
-    def gaslimit(self):
+    def gaslimit(self) -> int:
         last_block = self.call('eth_getBlockByNumber', 'latest', True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
@@ -473,15 +459,13 @@ class JSONRPCClient:
         filter_id = self.call('eth_newFilter', json_data)
         return quantity_decoder(filter_id)
 
-    def filter_changes(self, fid):
+    def filter_changes(self, fid: int) -> List:
         changes = self.call('eth_getFilterChanges', quantity_encoder(fid))
 
         if not changes:
-            return None
+            return list()
 
-        if isinstance(changes, bytes):
-            return data_decoder(changes)
-
+        assert isinstance(changes, list)
         decoders = {
             'blockHash': data_decoder,
             'transactionHash': data_decoder,
@@ -592,16 +576,16 @@ class JSONRPCClient:
         data field contains code.
 
         Args:
-            sender (address): The 20 bytes address the transaction is sent from.
-            to (address): DATA, 20 Bytes - (optional when creating new
-                contract) The address the transaction is directed to.
-            gas (int): Gas provided for the transaction execution. It will
+            sender: The address the transaction is sent from.
+            to: The address the transaction is directed to.
+                (optional when creating new contract)
+            gas: Gas provided for the transaction execution. It will
                 return unused gas.
-            gasPrice (int): gasPrice used for each unit of gas paid.
-            value (int): Value sent with this transaction.
-            data (bin): The compiled code of a contract OR the hash of the
+            gasPrice: gasPrice used for each unit of gas paid.
+            value: Value sent with this transaction.
+            data: The compiled code of a contract OR the hash of the
                 invoked method signature and encoded parameters.
-            nonce (int): This allows to overwrite your own pending transactions
+            nonce: This allows to overwrite your own pending transactions
                 that use the same nonce.
         """
 
@@ -618,14 +602,14 @@ class JSONRPCClient:
         if sender is None:
             raise ValueError('sender needs to be provided.')
 
-        json_data = {
-            'to': data_encoder(normalize_address(to, allow_blank=True)),
-            'value': quantity_encoder(value),
-            'gasPrice': quantity_encoder(gasPrice),
-            'gas': quantity_encoder(gas),
-            'data': data_encoder(data),
-            'from': address_encoder(sender),
-        }
+        json_data = format_data_for_call(
+            sender,
+            to,
+            value,
+            data,
+            gas,
+            gasPrice
+        )
 
         if nonce is not None:
             json_data['nonce'] = quantity_encoder(nonce)
@@ -642,19 +626,19 @@ class JSONRPCClient:
             data: bytes = b'',
             startgas: int = GAS_PRICE,
             gasprice: int = GAS_PRICE,
-            block_number='latest'):
+            block_number: Union[str, int] = 'latest'):
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
 
         Args:
             sender: The address the transaction is sent from.
             to: The address the transaction is directed to.
-            gas (int): Gas provided for the transaction execution. eth_call
+            gas: Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
                 executions.
-            gasPrice (int): gasPrice used for unit of gas paid.
-            value (int): Integer of the value sent with this transaction.
-            data (bin): Hash of the method signature and encoded parameters.
+            gasPrice: gasPrice used for unit of gas paid.
+            value: Integer of the value sent with this transaction.
+            data: Hash of the method signature and encoded parameters.
                 For details see Ethereum Contract ABI.
             block_number: Determines the state of ethereum used in the
                 call.
@@ -679,7 +663,7 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = GAS_PRICE,
-            gasprice: int = GAS_PRICE):
+            gasprice: int = GAS_PRICE) -> int:
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
@@ -687,12 +671,12 @@ class JSONRPCClient:
         Args:
             sender: The address the transaction is sent from.
             to: The address the transaction is directed to.
-            gas (int): Gas provided for the transaction execution. eth_call
+            gas: Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
                 executions.
-            gasPrice (int): gasPrice used for unit of gas paid.
-            value (int): Integer of the value sent with this transaction.
-            data (bin): Hash of the method signature and encoded parameters.
+            gasPrice: gasPrice used for unit of gas paid.
+            value: Integer of the value sent with this transaction.
+            data: Hash of the method signature and encoded parameters.
                 For details see Ethereum Contract ABI.
             block_number: Determines the state of ethereum used in the
                 call.
@@ -710,7 +694,7 @@ class JSONRPCClient:
 
         return quantity_decoder(res)
 
-    def eth_getTransactionReceipt(self, transaction_hash: bytes):
+    def eth_getTransactionReceipt(self, transaction_hash: bytes) -> Dict:
         """ Returns the receipt of a transaction by transaction hash.
 
         Args:
@@ -734,7 +718,7 @@ class JSONRPCClient:
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionReceipt', transaction_hash)
 
-    def eth_getCode(self, address: bytes, block='latest'):
+    def eth_getCode(self, address: bytes, block: Union[int, str] = 'latest') -> str:
         """ Returns code at a given address.
 
         Args:
@@ -778,16 +762,19 @@ class JSONRPCClient:
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionByHash', transaction_hash)
 
-    def poll(self, transaction_hash: bytes, confirmations=None, timeout=None):
+    def poll(
+            self,
+            transaction_hash: bytes,
+            confirmations: Optional[int] = None,
+            timeout: Optional[float] = None):
         """ Wait until the `transaction_hash` is applied or rejected.
         If timeout is None, this could wait indefinitely!
 
         Args:
-            transaction_hash (hash): Transaction hash that we are waiting for.
-            confirmations (int): Number of block confirmations that we will
+            transaction_hash: Transaction hash that we are waiting for.
+            confirmations: Number of block confirmations that we will
                 wait for.
-            timeout (float): Timeout in seconds, raise an Excpetion on
-                timeout.
+            timeout: Timeout in seconds, raise an Excpetion on timeout.
         """
         if transaction_hash.startswith(b'0x'):
             warnings.warn(
