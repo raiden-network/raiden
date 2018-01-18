@@ -5,7 +5,7 @@ import re
 import string
 import sys
 import time
-from typing import Tuple, Union
+from typing import Tuple, Union, List, Iterable
 
 import gevent
 from coincurve import PrivateKey
@@ -42,12 +42,12 @@ def sha3(data: bytes) -> bytes:
     return keccak_256(data).digest()
 
 
-def ishash(data):
-    return isinstance(data, (bytes, bytearray)) and len(data) == 32
+def ishash(data: bytes) -> bool:
+    return isinstance(data, bytes) and len(data) == 32
 
 
-def isaddress(data):
-    return isinstance(data, (bytes, bytearray)) and len(data) == 20
+def isaddress(data: bytes) -> bool:
+    return isinstance(data, bytes) and len(data) == 20
 
 
 def address_decoder(addr: str) -> bytes:
@@ -72,35 +72,34 @@ def block_tag_encoder(val):
     return '0x' + hexlify(val).decode()
 
 
-def data_encoder(data, length=None):
+def data_encoder(data: bytes, length: int = 0) -> str:
     data = hexlify(data)
-    length = length or 0
     return '0x' + data.rjust(length * 2, b'0').decode()
 
 
-def data_decoder(data):
+def data_decoder(data: str) -> bytes:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
     data = unhexlify(data)
     return data
 
 
-def quantity_decoder(data):
+def quantity_decoder(data: str) -> int:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
     return int(data, 16)
 
 
-def quantity_encoder(i):
+def quantity_encoder(i: int) -> str:
     """Encode integer quantity `data`."""
     return hex(i).rstrip('L')
 
 
-def topic_decoder(topic):
+def topic_decoder(topic: str) -> int:
     return int(topic[2:], 16)
 
 
-def topic_encoder(topic):
+def topic_encoder(topic: int) -> str:
     assert isinstance(topic, int)
 
     if topic == 0:
@@ -116,7 +115,7 @@ def pex(data: bytes) -> str:
     return hexlify(data).decode()[:8]
 
 
-def lpex(lst):
+def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
@@ -151,11 +150,11 @@ def privatekey_to_address(private_key_bin: bytes) -> bytes:
     return publickey_to_address(pubkey)
 
 
-def get_project_root():
+def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
-def get_contract_path(contract_name):
+def get_contract_path(contract_name: str) -> str:
     contract_path = os.path.join(
         get_project_root(),
         'smart_contracts',

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from binascii import unhexlify
+from typing import List, Union
 
 from ethereum import slogging
 
@@ -67,11 +68,20 @@ class ChannelManager:
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
-    def token_address(self):
+    def token_address(self) -> bytes:
         """ Return the token of this manager. """
         return address_decoder(self.proxy.call('tokenAddress'))
 
-    def new_netting_channel(self, other_peer, settle_timeout):
+    def new_netting_channel(self, other_peer: bytes, settle_timeout: int):
+        """ Creates and deploys a new netting channel contract.
+
+        Args:
+            other_peer: The peer to open the channel with.
+            settle_timeout: The settle timout to use for this channel.
+
+        Returns:
+            The address of the new netting channel.
+        """
         if not isaddress(other_peer):
             raise ValueError('The other_peer must be a valid address')
 
@@ -148,7 +158,9 @@ class ChannelManager:
         channel_iter = iter(channel_flat)
         return list(zip(channel_iter, channel_iter))
 
-    def channels_by_participant(self, participant_address):  # pylint: disable=invalid-name
+    def channels_by_participant(
+            self,
+            participant_address: bytes) -> List[bytes]:
         """ Return a list of channel address that `participant_address` is a participant. """
         address_list = self.proxy.call(
             'nettingContractsByAddress',
@@ -161,11 +173,18 @@ class ChannelManager:
             for address in address_list
         ]
 
-    def channelnew_filter(self, from_block=None, to_block=None):
+    def channelnew_filter(
+            self,
+            from_block: Union[str, int] = 0,
+            to_block: Union[str, int] = 'latest') -> Filter:
         """ Install a new filter for ChannelNew events.
 
+        Args:
+            start_block:Create filter starting from this block number (default: 0).
+            end_block: Create filter stopping at this block number (default: 'latest').
+
         Return:
-            Filter: The filter instance.
+            The filter instance.
         """
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
 
