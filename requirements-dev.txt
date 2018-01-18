@@ -8,7 +8,6 @@ pytest-cov==2.5.1
 flaky==3.4.0
 hypothesis==3.44.14
 grequests==0.3.0
-detox==0.11
 flake8==3.5.0
 
 # Debugging
