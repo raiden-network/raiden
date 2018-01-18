@@ -59,7 +59,6 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     token1 = app1.raiden.chain.token(token_address)
 
     netcontract_address = graph0.new_netting_channel(
-        app0.raiden.address,
         app1.raiden.address,
         settle_timeout,
     )
@@ -157,7 +156,6 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert not events
 
     netcontract_address = manager0.new_netting_channel(
-        app0.raiden.address,
         app1.raiden.address,
         settle_timeout,
     )

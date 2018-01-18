@@ -235,10 +235,8 @@ def deploy_and_open_channel_alloc(deployment_key):
 
     manager = registry.manager_by_token(token_address)
     assert manager.private_key == deployment_key_bin
-    our_address = TEST_ACCOUNT['address']
 
     channel_address = manager.new_netting_channel(
-        unhexlify(our_address),
         unhexlify(TEST_PARTNER_ADDRESS),
         50
     )

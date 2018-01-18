@@ -71,12 +71,9 @@ class ChannelManager:
         """ Return the token of this manager. """
         return address_decoder(self.proxy.call('tokenAddress'))
 
-    def new_netting_channel(self, peer1, peer2, settle_timeout):
-        if not isaddress(peer1):
-            raise ValueError('The peer1 must be a valid address')
-
-        if not isaddress(peer2):
-            raise ValueError('The peer2 must be a valid address')
+    def new_netting_channel(self, other_peer, settle_timeout):
+        if not isaddress(other_peer):
+            raise ValueError('The other_peer must be a valid address')
 
         invalid_timeout = (
             settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
@@ -87,20 +84,16 @@ class ChannelManager:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
-        if peer1 == peer2:
-            raise SamePeerAddress('Peer1 and peer2 must not be equal')
-
-        if privatekey_to_address(self.client.privkey) == peer1:
-            other = peer2
-        else:
-            other = peer1
+        local_address = privatekey_to_address(self.client.privkey)
+        if local_address == other_peer:
+            raise SamePeerAddress('The other peer must not have the same address as the client.')
 
         transaction_hash = estimate_and_transact(
             self.proxy,
             'newChannel',
             self.startgas,
             self.gasprice,
-            other,
+            other_peer,
             settle_timeout,
         )
 
@@ -111,7 +104,7 @@ class ChannelManager:
 
         netting_channel_results_encoded = self.proxy.call(
             'getChannelWith',
-            other,
+            other_peer,
             startgas=self.startgas,
         )
 
@@ -119,7 +112,11 @@ class ChannelManager:
         netting_channel_address_encoded = netting_channel_results_encoded
 
         if not netting_channel_address_encoded:
-            log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
+            log.error(
+                'netting_channel_address failed',
+                peer1=pex(local_address),
+                peer2=pex(other_peer)
+            )
             raise RuntimeError('netting_channel_address failed')
 
         netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
@@ -127,8 +124,8 @@ class ChannelManager:
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'new_netting_channel called',
-                peer1=pex(peer1),
-                peer2=pex(peer2),
+                peer1=pex(local_address),
+                peer2=pex(other_peer),
                 netting_channel=pex(netting_channel_address_bin),
             )
 
