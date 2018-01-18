@@ -507,20 +507,18 @@ class ChannelManagerTesterMock:
         token_address = address_decoder(token_address_hex)
         return token_address
 
-    def new_netting_channel(self, peer1, peer2, settle_timeout):
+    def new_netting_channel(self, other_peer, settle_timeout):
         """ Creates a new netting contract between peer1 and peer2.
 
         Raises:
-            ValueError: If peer1 or peer2 is not a valid address.
+            ValueError: If other_peer is not a valid address.
         """
-        if not isaddress(peer1):
-            raise ValueError('The peer1 must be a valid address')
+        if not isaddress(other_peer):
+            raise ValueError('The other_peer must be a valid address')
 
-        if not isaddress(peer2):
-            raise ValueError('The peer2 must be a valid address')
-
-        if peer1 == peer2:
-            raise SamePeerAddress('peer1 and peer2 must not be equal')
+        local_address = privatekey_to_address(self.private_key)
+        if local_address == other_peer:
+            raise SamePeerAddress('The other peer must not have the same address as the client.')
 
         invalid_timeout = (
             settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
@@ -531,14 +529,9 @@ class ChannelManagerTesterMock:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
-        if privatekey_to_address(self.private_key) == peer1:
-            other = peer2
-        else:
-            other = peer1
-
         try:
             netting_channel_address_hex = self.proxy.newChannel(
-                other,
+                other_peer,
                 settle_timeout,
                 sender=self.private_key
             )

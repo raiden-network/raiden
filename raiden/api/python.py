@@ -202,7 +202,6 @@ class RaidenAPI:
         assert token_address in self.raiden.token_to_channelgraph
 
         netcontract_address = channel_manager.new_netting_channel(
-            self.raiden.address,
             partner_address,
             settle_timeout,
         )

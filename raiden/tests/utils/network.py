@@ -39,7 +39,6 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
         manager = first.raiden.default_registry.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
-            first.raiden.address,
             second.raiden.address,
             settle_timeout,
         )

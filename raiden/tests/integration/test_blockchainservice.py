@@ -60,7 +60,6 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     # create one channel
     netting_address_01 = manager0.new_netting_channel(
-        peer0_address,
         peer1_address,
         settle_timeout,
     )
@@ -80,13 +79,11 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     #  is still open should throw an exception
     with pytest.raises(Exception):
         manager0.new_netting_channel(
-            peer0_address,
             peer1_address,
             settle_timeout,
         )
     # create other channel
     netting_address_02 = manager0.new_netting_channel(
-        peer0_address,
         peer2_address,
         settle_timeout,
     )
@@ -163,7 +160,6 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     # open channel with same peer again
     netting_address_01_reopened = manager0.new_netting_channel(
-        peer0_address,
         peer1_address,
         settle_timeout,
     )
@@ -192,7 +188,6 @@ def test_channelmanager_graph_building(
     for app0, app1 in pairs:
         manager = app0.raiden.default_registry.manager_by_token(token_address)
         manager.new_netting_channel(
-            app0.raiden.address,
             app1.raiden.address,
             settle_timeout,
         )
@@ -343,11 +338,10 @@ def test_channel_with_self(raiden_network, settle_timeout):
     with pytest.raises(SamePeerAddress) as excinfo:
         graph0.new_netting_channel(
             app0.raiden.address,
-            app0.raiden.address,
             settle_timeout,
         )
 
-    assert 'Peer1 and peer2 must not be equal' in str(excinfo.value)
+    assert 'The other peer must not have the same address as the client.' in str(excinfo.value)
 
     transaction_hash = graph0.proxy.transact(
         'newChannel',
