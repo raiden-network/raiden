@@ -77,17 +77,12 @@ jobs:
       os: osx
       language: generic
       osx_image: xcode8.3
+      env: TEST_TYPE=""
       before_install:
         - sysctl -n machdep.cpu.brand_string
         - mkdir -p $HOME/.bin
-        - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
+        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:$PATH
         - .travis/before_install.sh
-        - ls -la $HOME/.bin
-        - uname -a
-        - sw_vers
-        - xcodebuild -version
-        - solc --version
-        - geth --help
       install:
         - .travis/install.sh
       before_script:
