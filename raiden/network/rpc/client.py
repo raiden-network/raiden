@@ -56,14 +56,9 @@ def check_address_has_code(
         address: bytes,
         contract_name: str = ''):
     """ Checks that the given address contains code. """
+    result = client.eth_getCode(address, 'latest')
 
-    result = client.call(
-        'eth_getCode',
-        address_encoder(address),
-        'latest',
-    )
-
-    if result == '0x':
+    if len(result) == 0:
         raise AddressWithoutCode('{}Address {} does not contain code'.format(
             '[{}]: '.format(contract_name) if contract_name else '',
             address_encoder(address),
@@ -392,9 +387,9 @@ class JSONRPCClient:
 
                 libraries[deploy_contract] = contract_address
 
-                deployed_code = self.eth_getCode(unhexlify(contract_address))
+                deployed_code = self.eth_getCode(address_decoder(contract_address))
 
-                if deployed_code == '0x':
+                if len(deployed_code) == 0:
                     raise RuntimeError('Contract address has no code, check gas usage.')
 
             hex_bytecode = solidity_resolve_symbols(contract['bin_hex'], libraries)
@@ -422,9 +417,9 @@ class JSONRPCClient:
         receipt = self.eth_getTransactionReceipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
-        deployed_code = self.eth_getCode(unhexlify(contract_address[2:]))
+        deployed_code = self.eth_getCode(address_decoder(contract_address))
 
-        if deployed_code == '0x':
+        if len(deployed_code) == 0:
             raise RuntimeError(
                 'Deployment of {} failed. Contract address has no code, check gas usage.'.format(
                     contract_name,
@@ -718,13 +713,13 @@ class JSONRPCClient:
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionReceipt', transaction_hash)
 
-    def eth_getCode(self, address: bytes, block: Union[int, str] = 'latest') -> str:
+    def eth_getCode(self, address: bytes, block: Union[int, str] = 'latest') -> bytes:
         """ Returns code at a given address.
 
         Args:
             address: An address.
             block: Integer block number, or the string 'latest',
-                'earliest' or 'pending'.
+                'earliest' or 'pending'. Default is 'latest'.
         """
         if address.startswith(b'0x'):
             warnings.warn(
@@ -737,11 +732,8 @@ class JSONRPCClient:
                 'address length must be 20 (it might be hex encoded)'
             )
 
-        return self.call(
-            'eth_getCode',
-            address_encoder(address),
-            block,
-        )
+        result = self.call('eth_getCode', address_encoder(address), block)
+        return data_decoder(result)
 
     def eth_getTransactionByHash(self, transaction_hash: bytes):
         """ Returns the information about a transaction requested by

@@ -491,24 +491,16 @@ class ConsoleTools:
         """
         contract_address = safe_address_decode(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.call(
-            'eth_getCode',
-            contract_address,
-            'latest',
-        )
+        result = self._raiden.chain.client.eth_getCode(contract_address)
 
         current_time = time.time()
-        while result == '0x':
+        while len(result) == 0:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.chain.client.call(
-                'eth_getCode',
-                contract_address,
-                'latest',
-            )
+            result = self._raiden.chain.client.eth_getCode(contract_address)
             gevent.sleep(0.5)
 
             current_time = time.time()
 
-        return result != '0x'
+        return len(result) > 0
