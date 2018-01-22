@@ -5,6 +5,7 @@ from ethereum.abi import ContractTranslator
 from ethereum.utils import normalize_address
 
 from raiden.exceptions import InvalidFunctionName
+from raiden.utils.typing import address
 
 
 class ContractProxy:
@@ -12,9 +13,9 @@ class ContractProxy:
 
     def __init__(
             self,
-            sender: bytes,
+            sender: address,
             abi: Dict,
-            contract_address: bytes,
+            contract_address: address,
             call_function: Callable,
             transact_function: Callable,
             estimate_function: Optional[Callable] = None):
@@ -32,7 +33,7 @@ class ContractProxy:
         self.translator = translator
         self.valid_kargs = {'gasprice', 'startgas', 'value'}
 
-    def _check_function_name_and_kargs(self, function_name, kargs):
+    def _check_function_name_and_kargs(self, function_name: str, kargs):
         if function_name not in self.translator.function_data:
             raise InvalidFunctionName('Unknown function {}'.format(function_name))
 

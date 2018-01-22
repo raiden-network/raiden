@@ -46,6 +46,7 @@ from raiden.utils import (
     topic_decoder,
     topic_encoder,
 )
+from raiden.utils.typing import address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
@@ -53,7 +54,7 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 def check_address_has_code(
         client,
-        address: bytes,
+        address: address,
         contract_name: str = ''):
     """ Checks that the given address contains code. """
     result = client.eth_getCode(address, 'latest')
@@ -121,8 +122,8 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
 
 def format_data_for_call(
-        sender: bytes = b'',
-        to: bytes = b'',
+        sender: address = b'',
+        to: address = b'',
         value: int = 0,
         data: bytes = b'',
         startgas: int = GAS_PRICE,
@@ -273,7 +274,7 @@ class JSONRPCClient:
     def inject_stop_event(self, event):
         self.stop_event = event
 
-    def balance(self, account):
+    def balance(self, account: address):
         """ Return the balance of the account of given address. """
         res = self.call('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
@@ -283,7 +284,7 @@ class JSONRPCClient:
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
 
-    def new_contract_proxy(self, contract_interface, address):
+    def new_contract_proxy(self, contract_interface, contract_address: address):
         """ Return a proxy for interacting with a smart contract.
 
         Args:
@@ -293,7 +294,7 @@ class JSONRPCClient:
         return ContractProxy(
             self.sender,
             contract_interface,
-            address,
+            contract_address,
             self.eth_call,
             self.send_transaction,
             self.eth_estimateGas,
@@ -501,8 +502,8 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            sender: bytes,
-            to: bytes,
+            sender: address,
+            to: address,
             value: int = 0,
             data: bytes = b'',
             startgas: int = 0,
@@ -560,8 +561,8 @@ class JSONRPCClient:
 
     def eth_sendTransaction(
             self,
-            sender: bytes = b'',
-            to: bytes = b'',
+            sender: address = b'',
+            to: address = b'',
             value: int = 0,
             data: bytes = b'',
             gasPrice: int = GAS_PRICE,
@@ -615,8 +616,8 @@ class JSONRPCClient:
 
     def eth_call(
             self,
-            sender: bytes = b'',
-            to: bytes = b'',
+            sender: address = b'',
+            to: address = b'',
             value: int = 0,
             data: bytes = b'',
             startgas: int = GAS_PRICE,
@@ -653,8 +654,8 @@ class JSONRPCClient:
 
     def eth_estimateGas(
             self,
-            sender: bytes = b'',
-            to: bytes = b'',
+            sender: address = b'',
+            to: address = b'',
             value: int = 0,
             data: bytes = b'',
             startgas: int = GAS_PRICE,
@@ -713,26 +714,26 @@ class JSONRPCClient:
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionReceipt', transaction_hash)
 
-    def eth_getCode(self, address: bytes, block: Union[int, str] = 'latest') -> bytes:
+    def eth_getCode(self, code_address: address, block: Union[int, str] = 'latest') -> bytes:
         """ Returns code at a given address.
 
         Args:
-            address: An address.
+            code_address: An address.
             block: Integer block number, or the string 'latest',
                 'earliest' or 'pending'. Default is 'latest'.
         """
-        if address.startswith(b'0x'):
+        if code_address.startswith(b'0x'):
             warnings.warn(
                 'address seems to be already encoded, this will result '
                 'in unexpected behavior'
             )
 
-        if len(address) != 20:
+        if len(code_address) != 20:
             raise ValueError(
                 'address length must be 20 (it might be hex encoded)'
             )
 
-        result = self.call('eth_getCode', address_encoder(address), block)
+        result = self.call('eth_getCode', address_encoder(code_address), block)
         return data_decoder(result)
 
     def eth_getTransactionByHash(self, transaction_hash: bytes):

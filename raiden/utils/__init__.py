@@ -15,6 +15,7 @@ from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
+from raiden.utils.typing import address
 
 
 LETTERS = string.printable
@@ -50,7 +51,7 @@ def isaddress(data: bytes) -> bool:
     return isinstance(data, bytes) and len(data) == 20
 
 
-def address_decoder(addr: str) -> bytes:
+def address_decoder(addr: str) -> address:
     if addr[:2] == '0x':
         addr = addr[2:]
 
@@ -59,7 +60,7 @@ def address_decoder(addr: str) -> bytes:
     return addr
 
 
-def address_encoder(address: bytes) -> str:
+def address_encoder(address: address) -> str:
     assert len(address) in (20, 0)
     return '0x' + hexlify(address).decode()
 
@@ -142,7 +143,7 @@ def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key_bin: bytes) -> bytes:
+def privatekey_to_address(private_key_bin: bytes) -> address:
     if not len(private_key_bin) == 32:
         raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
     private_key = PrivateKey(private_key_bin)

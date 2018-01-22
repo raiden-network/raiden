@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from binascii import unhexlify
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from ethereum import slogging
 
@@ -37,6 +37,7 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
 )
+from raiden.utils.typing import address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -68,11 +69,11 @@ class ChannelManager:
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
-    def token_address(self) -> bytes:
+    def token_address(self) -> address:
         """ Return the token of this manager. """
         return address_decoder(self.proxy.call('tokenAddress'))
 
-    def new_netting_channel(self, other_peer: bytes, settle_timeout: int):
+    def new_netting_channel(self, other_peer: address, settle_timeout: int) -> address:
         """ Creates and deploys a new netting channel contract.
 
         Args:
@@ -141,7 +142,7 @@ class ChannelManager:
 
         return netting_channel_address_bin
 
-    def channels_addresses(self):
+    def channels_addresses(self) -> List[Tuple[address, address]]:
         # for simplicity the smart contract return a shallow list where every
         # second item forms a tuple
         channel_flat_encoded = self.proxy.call(
@@ -158,9 +159,7 @@ class ChannelManager:
         channel_iter = iter(channel_flat)
         return list(zip(channel_iter, channel_iter))
 
-    def channels_by_participant(
-            self,
-            participant_address: bytes) -> List[bytes]:
+    def channels_by_participant(self, participant_address: address) -> List[address]:
         """ Return a list of channel address that `participant_address` is a participant. """
         address_list = self.proxy.call(
             'nettingContractsByAddress',
