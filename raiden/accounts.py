@@ -5,9 +5,10 @@ import os
 import sys
 from binascii import hexlify, unhexlify
 
-from bitcoin import privtopub
 from ethereum.tools import keys
 from ethereum.slogging import get_logger
+
+from raiden.utils.crypto import privtopub
 
 log = get_logger(__name__)
 
