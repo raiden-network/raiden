@@ -94,8 +94,14 @@ URLS_V1 = [
 
 
 def api_response(result, status_code=HTTPStatus.OK):
+    if status_code == HTTPStatus.NO_CONTENT:
+        assert not result, 'Provided 204 response with non-zero length response'
+        data = ''
+    else:
+        data = json.dumps(result)
+
     response = make_response((
-        json.dumps(result) if result else '',
+        data,
         status_code,
         {'mimetype': 'application/json', 'Content-Type': 'application/json'}
     ))
