@@ -95,7 +95,7 @@ URLS_V1 = [
 
 def api_response(result, status_code=HTTPStatus.OK):
     response = make_response((
-        json.dumps(result),
+        json.dumps(result) if result else '',
         status_code,
         {'mimetype': 'application/json', 'Content-Type': 'application/json'}
     ))
