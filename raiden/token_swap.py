@@ -51,7 +51,7 @@ class GreenletTasksDispatcher:
         """ Register the task to receive messages based on `hashlock`.
 
         Registration is required otherwise the task won't receive any messages
-        from the protocol, un-registering is done by the `unregister_task`
+        from the protocol. Un-registering is done by the `unregister_task`
         function.
 
         Note:
@@ -168,7 +168,7 @@ class BaseMediatedTransferTask(Task):
 
     def _wait_for_unlock_or_close(self, raiden, graph, channel, mediated_transfer):  # noqa
         """ Wait for a Secret message from our partner to update the local
-        state, if the Secret message is not sent within time the channel will
+        state. If the Secret message is not sent in time the channel will
         be closed.
 
         Note:
@@ -266,7 +266,7 @@ class BaseMediatedTransferTask(Task):
         """ Utility to wait until the expiration block.
 
         For a chain A-B-C, if an attacker controls A and C a mediated transfer
-        can be done through B and C will wait for/send a timeout, for that
+        can be done through B and C will wait for/send a timeout. For that
         reason B must not unregister the hashlock until the lock has expired,
         otherwise the revealed secret wouldn't be caught.
         """
@@ -284,7 +284,7 @@ class BaseMediatedTransferTask(Task):
 
 
 # Note: send_and_wait_valid methods are used to check the message type and
-# sender only, this can be improved by using a encrypted connection between the
+# sender only. This can be improved by using an encrypted connection between the
 # nodes making the signature validation unnecessary
 
 
@@ -390,7 +390,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
 
                 # A swap is composed of two mediated transfers, we need to
-                # reveal the secret to both, since the maker is one of the ends
+                # reveal the secret to both. Since the maker is one of the ends
                 # we just need to send the reveal secret directly to the taker.
                 reveal_secret = RevealSecret(secret)
                 raiden.sign(reveal_secret)
@@ -462,8 +462,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         Returns:
             None: when the timeout was reached.
             MediatedTransfer: when a valid state is reached.
-            RefundTransfer: when an invalid state is reached by
-                our partner.
+            RefundTransfer: when an invalid state is reached by our partner.
         """
         # pylint: disable=too-many-arguments
 
