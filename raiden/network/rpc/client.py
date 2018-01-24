@@ -686,7 +686,17 @@ class JSONRPCClient:
             startgas,
             gasprice,
         )
-        res = self.call('eth_estimateGas', json_data)
+        try:
+            res = self.call('eth_estimateGas', json_data)
+        except EthNodeCommunicationError as e:
+            tx_would_fail = str(e) in [
+                'gas required exceeds allowance or always failing transaction',  # geth
+                'Transaction execution error.'  # parity
+            ]
+            if tx_would_fail:
+                return -1
+            else:
+                raise e
 
         return quantity_decoder(res)
 
