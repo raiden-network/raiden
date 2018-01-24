@@ -12,10 +12,10 @@ export interface Event {
     balance?: number;
     identifier?: number;
     data?: string;
-};
+}
 
 export interface EventsParam {
     channel?: string;
     token?: string;
     activity?: boolean;
-};
+}

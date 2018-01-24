@@ -6,4 +6,4 @@ export interface Channel {
     balance: number;
     settle_timeout: number;
     reveal_timeout: number;
-};
+}

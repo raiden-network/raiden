@@ -1,4 +1,4 @@
 export const environment = {
-  production: true,
-  configFile: 'assets/config/config.production.json'
+    production: true,
+    configFile: 'assets/config/config.production.json'
 };

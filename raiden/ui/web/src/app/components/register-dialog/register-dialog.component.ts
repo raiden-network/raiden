@@ -54,7 +54,7 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
                         summary: 'Token registered',
                         detail: 'Your token was successfully registered: ' + userToken.address,
                     });
-                })
+                });
         }
         this.visible = false;
     }

@@ -6,4 +6,4 @@ export interface Usertoken {
     name: string;
     balance: number;
     connected?: Connection;
-};
+}

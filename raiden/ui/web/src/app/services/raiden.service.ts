@@ -153,7 +153,7 @@ export class RaidenService {
     public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
         const data = {
             'funds': funds
-        }
+        };
         return this.http.put(`${this.raidenConfig.api}/connections/${tokenAddress}`, data)
             .catch((error) => this.handleError(error));
     }

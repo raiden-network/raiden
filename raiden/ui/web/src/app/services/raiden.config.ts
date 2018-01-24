@@ -12,7 +12,7 @@ interface RDNConfig {
     poll_interval?: number;
     block_start?: number;
     http_timeout?: number;
-};
+}
 
 const default_config: RDNConfig = {
     raiden: '/api/1',
