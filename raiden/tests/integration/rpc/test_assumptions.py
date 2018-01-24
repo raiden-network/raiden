@@ -77,6 +77,16 @@ def test_call_throws(deploy_client, blockchain_backend):
     assert contract_proxy.call('fail') == b''
 
 
+def test_estimate_gas_fail(deploy_client, blockchain_backend):
+    """ A JSON RPC estimate gas call for a throwing transaction returns -1"""
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.contract_address
+    assert len(deploy_client.eth_getCode(address)) > 0
+
+    assert contract_proxy.estimate_gas('fail') == -1
+
+
 def test_transact_opcode(deploy_client, blockchain_backend):
     """ The receipt status field of a transaction that did not throw is 0x1 """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
