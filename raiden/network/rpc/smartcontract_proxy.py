@@ -77,6 +77,12 @@ class ContractProxy:
         return res
 
     def estimate_gas(self, function_name: str, *args, **kargs):
+        """ Returns the estimated gas for the function or -1 if the function
+        will throw.
+
+        Raises:
+            EthNodeCommunicationError: If the ethereum node's reply can't be parsed.
+        """
         if not self.estimate_function:
             raise RuntimeError('estimate_function was not supplied.')
 
