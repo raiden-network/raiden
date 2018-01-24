@@ -753,7 +753,6 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                         to=pex(maker_address),
                     )
 
-                self.async_result.set(False)
                 return
 
         # no route is available, wait for the sent mediated transfer to expire
@@ -766,8 +765,6 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                 from_=pex(node_address),
                 to=pex(maker_address),
             )
-
-        self.async_result.set(False)
 
     def send_and_wait_valid(self, raiden, mediated_transfer, maker_payer_hop):
         """ Start the second half of the exchange and wait for the SecretReveal
