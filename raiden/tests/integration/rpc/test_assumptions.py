@@ -84,7 +84,7 @@ def test_estimate_gas_fail(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert len(deploy_client.eth_getCode(address)) > 0
 
-    assert contract_proxy.estimate_gas('fail') == -1
+    assert not contract_proxy.estimate_gas('fail')
 
 
 def test_transact_opcode(deploy_client, blockchain_backend):

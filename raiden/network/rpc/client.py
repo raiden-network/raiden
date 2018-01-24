@@ -496,7 +496,7 @@ class JSONRPCClient:
         if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
             return jsonrpc_reply.result
         elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
-            raise EthNodeCommunicationError(jsonrpc_reply.error)
+            raise EthNodeCommunicationError(jsonrpc_reply.error, jsonrpc_reply._jsonrpc_error_code)
         else:
             raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
 
@@ -689,12 +689,9 @@ class JSONRPCClient:
         try:
             res = self.call('eth_estimateGas', json_data)
         except EthNodeCommunicationError as e:
-            tx_would_fail = str(e) in [
-                'gas required exceeds allowance or always failing transaction',  # geth
-                'Transaction execution error.'  # parity
-            ]
-            if tx_would_fail:
-                return -1
+            tx_would_fail = e.error_code and e.error_code in (-32015, -32000)
+            if tx_would_fail:  # -32015 is parity and -32000 is geth
+                return None
             else:
                 raise e
 

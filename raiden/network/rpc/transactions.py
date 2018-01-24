@@ -32,7 +32,7 @@ def estimate_and_transact(proxy, function_name, startgas, gasprice, *args):
 
     # XXX: From Byzantium and on estimate gas is not giving an accurate estimation
     #      and as such we not longer utilize its result but use the GAS_LIMIT in
-    #      all transactions. With the revert() call not consumin all given gas that
+    #      all transactions. With the revert() call not consuming all given gas that
     #      is not that bad
     #
     # estimated_gas = callobj.estimate_gas(
