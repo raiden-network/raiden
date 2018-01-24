@@ -101,10 +101,7 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert len(deploy_client.eth_getCode(address)) > 0
 
-    gas = min(
-        contract_proxy.estimate_gas('fail'),
-        deploy_client.gaslimit(),
-    )
+    gas = deploy_client.gaslimit()
 
     transaction_hex = contract_proxy.transact('fail', startgas=gas)
     transaction = unhexlify(transaction_hex)
