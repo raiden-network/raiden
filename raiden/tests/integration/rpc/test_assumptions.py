@@ -2,10 +2,13 @@
 from binascii import unhexlify
 import os
 
+import pytest
 from ethereum.tools import _solidity
 
+from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.rpc.filters import new_filter, get_filter_events
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.client import JSONRPCClient
 
 # pylint: disable=unused-argument,protected-access
 
@@ -85,6 +88,32 @@ def test_estimate_gas_fail(deploy_client, blockchain_backend):
     assert len(deploy_client.eth_getCode(address)) > 0
 
     assert not contract_proxy.estimate_gas('fail')
+
+
+def test_duplicated_transaction_raises(deploy_client, blockchain_backend):
+    """ If the same transaction is sent twice a JSON RPC error is raised. """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.contract_address
+    assert len(deploy_client.eth_getCode(address)) > 0
+
+    host = '0.0.0.0'  # hardcoded in the deploy_client fixture
+    second_client = JSONRPCClient(
+        host,
+        deploy_client.port,
+        deploy_client.privkey,
+    )
+
+    second_proxy = second_client.new_contract_proxy(
+        contract_proxy.abi,
+        contract_proxy.contract_address,
+    )
+
+    gas = contract_proxy.estimate_gas('ret') * 2
+
+    with pytest.raises(EthNodeCommunicationError):
+        second_proxy.transact('ret', startgas=gas)
+        contract_proxy.transact('ret', startgas=gas)
 
 
 def test_transact_opcode(deploy_client, blockchain_backend):
