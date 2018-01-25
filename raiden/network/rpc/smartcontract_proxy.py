@@ -77,7 +77,7 @@ class ContractProxy:
         return res
 
     def estimate_gas(self, function_name: str, *args, **kargs):
-        """ Returns the estimated gas for the function or -1 if the function
+        """ Returns the estimated gas for the function or None if the function
         will throw.
 
         Raises:
