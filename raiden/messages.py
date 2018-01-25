@@ -7,6 +7,7 @@ from raiden.encoding.format import buffer_for
 from raiden.encoding.signing import recover_publickey
 from raiden.utils import publickey_to_address, sha3, ishash, pex
 from raiden.transfer.state import BalanceProofState
+from raiden.exceptions import InvalidProtocolMessage
 
 __all__ = (
     'Ack',
@@ -59,7 +60,10 @@ def assert_transfer_values(identifier, token, recipient):
 
 
 def decode(data):
-    klass = CMDID_TO_CLASS[data[0]]
+    try:
+        klass = CMDID_TO_CLASS[data[0]]
+    except KeyError:
+        raise InvalidProtocolMessage('Invalid message type (data[0] = {})'.format(hex(data[0])))
     return klass.decode(data)
 
 

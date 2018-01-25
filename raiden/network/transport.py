@@ -9,7 +9,13 @@ import socket
 import gevent
 from gevent.server import DatagramServer
 
-from raiden.exceptions import RaidenShuttingDown
+from raiden.exceptions import (
+    RaidenShuttingDown,
+    InvalidProtocolMessage,
+)
+from ethereum import slogging
+
+log = slogging.getLogger(__name__)
 
 
 class DummyPolicy:
@@ -81,6 +87,9 @@ class UDPTransport:
     def receive(self, data, host_port):  # pylint: disable=unused-argument
         try:
             self.protocol.receive(data)
+        except InvalidProtocolMessage as e:
+            log.warning("Can't decode: {} (data={}, len={})".format(str(e), data, len(data)))
+            return
         except RaidenShuttingDown:  # For a clean shutdown
             return
 

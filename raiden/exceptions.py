@@ -177,3 +177,7 @@ class TransactionThrew(RaidenError):
         super(TransactionThrew, self).__init__(
             '{} transaction threw. Receipt={}'.format(txname, receipt)
         )
+
+
+class InvalidProtocolMessage(RaidenError):
+    """Raised on an invalid or an unknown Raiden protocol message"""
