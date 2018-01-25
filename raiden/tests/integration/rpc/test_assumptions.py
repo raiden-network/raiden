@@ -78,7 +78,7 @@ def test_call_throws(deploy_client, blockchain_backend):
 
 
 def test_estimate_gas_fail(deploy_client, blockchain_backend):
-    """ A JSON RPC estimate gas call for a throwing transaction returns -1"""
+    """ A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.contract_address
