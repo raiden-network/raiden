@@ -23,7 +23,35 @@ compat.make_admonition = BaseAdmonition
 # - Add Raiden path to the path for sphinx to import
 import os
 import sys
+import subprocess
+import shlex
 sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
+
+
+def check_if_nightly(version):
+    try:
+        git_version, _ = subprocess.Popen(
+            shlex.split('git describe --tags'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        ).communicate()
+        git_version = git_version.decode()
+
+        if git_version.startswith('v'):
+            git_version = git_version[1:]
+
+        git_version = git_version.strip()
+        # if this is has commits after the tag, it's a prerelease:
+        if git_version.count('-') == 2:
+            return 'nightly'
+        elif git_version.count('.') == 2:
+            return git_version
+        else:
+            return version
+
+    except BaseException as e:
+        return version
+
 
 # -- General configuration ------------------------------------------------
 
@@ -69,12 +97,15 @@ master_doc = 'index'
 project = 'Raiden Network'
 author = 'Raiden Project'
 
+
+version_string = '0.2.0'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = '0.2.0'
+version = check_if_nightly(version_string)
+
 # The full version, including alpha/beta/rc tags.
 release = version
 
