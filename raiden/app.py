@@ -89,6 +89,7 @@ class App:  # pylint: disable=too-few-public-methods
         # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
         self.services = dict()
+        self.stopping = False
 
     def __repr__(self):
         return '<{} {}>'.format(
@@ -103,6 +104,9 @@ class App:  # pylint: disable=too-few-public-methods
         Args:
             leave_channels (bool): if True, also close and settle all channels before stopping
         """
+        if self.stopping:
+            return
+        self.stopping = True
         if leave_channels:
             self.raiden.close_and_settle()
 
