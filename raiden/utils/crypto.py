@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import bitcoin
-
+from coincurve import PrivateKey
 
 def privtopub(raw_privkey):
-    pubkey = bitcoin.privtopub(raw_privkey)
-    raw_pubkey = bitcoin.encode_pubkey(pubkey, 'bin_electrum')
-    assert len(raw_pubkey) == 64
-    return raw_pubkey
+    pub = PrivateKey.from_hex(raw_privkey).public_key.format(compressed=False)
+    return pub[1:]
