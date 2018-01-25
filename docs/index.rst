@@ -1,4 +1,4 @@
-Raiden Network |version| Documentation
+Raiden Network |capitalized_version| Documentation
 *****************************************
 
 
