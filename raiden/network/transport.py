@@ -7,6 +7,7 @@ from time import time
 import socket
 
 import gevent
+import logging
 from gevent.server import DatagramServer
 
 from raiden.exceptions import (
@@ -88,7 +89,8 @@ class UDPTransport:
         try:
             self.protocol.receive(data)
         except InvalidProtocolMessage as e:
-            log.warning("Can't decode: {} (data={}, len={})".format(str(e), data, len(data)))
+            if log.isEnabledFor(logging.WARNING):
+                log.warning("Can't decode: {} (data={}, len={})".format(str(e), data, len(data)))
             return
         except RaidenShuttingDown:  # For a clean shutdown
             return
