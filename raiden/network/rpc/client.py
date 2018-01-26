@@ -33,7 +33,7 @@ from raiden.exceptions import (
 )
 from raiden.network.protocol import timeout_two_stage
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import GAS_PRICE
+from raiden.settings import GAS_PRICE, GAS_LIMIT
 from raiden.utils import (
     address_decoder,
     address_encoder,
@@ -126,7 +126,7 @@ def format_data_for_call(
         to: address = b'',
         value: int = 0,
         data: bytes = b'',
-        startgas: int = GAS_PRICE,
+        startgas: int = GAS_LIMIT,
         gasprice: int = GAS_PRICE):
     """ Helper to format the transaction data. """
 
@@ -566,7 +566,7 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             gasPrice: int = GAS_PRICE,
-            gas: int = GAS_PRICE,
+            gas: int = GAS_LIMIT,
             nonce: Optional[int] = None):
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
@@ -620,7 +620,7 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: int = GAS_PRICE,
+            startgas: int = GAS_LIMIT,
             gasprice: int = GAS_PRICE,
             block_number: Union[str, int] = 'latest'):
         """ Executes a new message call immediately without creating a
@@ -658,7 +658,7 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: int = GAS_PRICE,
+            startgas: int = GAS_LIMIT,
             gasprice: int = GAS_PRICE) -> int:
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
