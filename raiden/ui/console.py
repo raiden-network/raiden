@@ -304,7 +304,6 @@ class ConsoleTools:
             symbol='RDT',
             decimals=2,
             timeout=60,
-            gasprice=GAS_PRICE,
             auto_register=True):
         """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
@@ -316,7 +315,6 @@ class ConsoleTools:
             symbol (str): token shorthand symbol.
             decimals (int): decimal places.
             timeout (int): timeout in seconds for creation.
-            gasprice (int): gasprice for the creation transaction.
             auto_register (boolean): if True(default), automatically register
                 the token with raiden.
 
@@ -331,7 +329,6 @@ class ConsoleTools:
             dict(),
             (initial_alloc, name, decimals, symbol),
             contract_path=contract_path,
-            gasprice=gasprice,
             timeout=timeout)
         token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:

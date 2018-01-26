@@ -293,10 +293,12 @@ OPTIONS = [
     ),
     click.option(
         '--gas-price',
-        help="Set the Ethereum transaction's gas price",
-        default=GAS_PRICE,
-        type=int,
-        show_default=True,
+        help=(
+            'Set the gas price for ethereum transactions. If not provided '
+            'the value of the RPC calls eth_gasPrice is going to be used'
+        ),
+        default=None,
+        type=int
     ),
     click.option(
         '--eth-rpc-endpoint',
@@ -540,6 +542,7 @@ def app(
         rpc_host,
         rpc_port,
         privatekey_bin,
+        gas_price,
     )
 
     # this assumes the eth node is already online

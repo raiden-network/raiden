@@ -457,7 +457,6 @@ def _jsonrpc_services(
             dict(),
             tuple(),
             contract_path=registry_path,
-            gasprice=GAS_PRICE,
             timeout=poll_timeout,
         )
         registry_address = registry_proxy.contract_address

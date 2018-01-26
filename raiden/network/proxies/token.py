@@ -26,7 +26,6 @@ class Token:
             jsonrpc_client,
             token_address,
             startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(token_address):
@@ -43,7 +42,6 @@ class Token:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
     def approve(self, contract_address, allowance):
@@ -56,7 +54,6 @@ class Token:
             self.proxy,
             'approve',
             self.startgas,
-            self.gasprice,
             contract_address,
             allowance,
         )
@@ -110,7 +107,6 @@ class Token:
             self.proxy,
             'transfer',
             self.startgas,
-            self.gasprice,
             to_address,
             amount,
         )

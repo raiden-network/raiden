@@ -95,7 +95,7 @@ def allcontracts(contract_files):
     }
 
 
-def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
+def deploy_file(contract, compiled_contracts, client):
     libraries = dict()
     filename, _, name = contract.partition(":")
     log.info("Deploying %s", name)
@@ -106,18 +106,17 @@ def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
         libraries,
         '',
         contract_path=filename,
-        gasprice=gas_price
     )
     log.info("Deployed %s @ 0x%s", name, hexlify(proxy.contract_address))
     libraries[contract] = hexlify(proxy.contract_address)
     return libraries
 
 
-def deploy_all(client, gas_price=GAS_PRICE):
+def deploy_all(client):
     compiled_contracts = allcontracts(RAIDEN_CONTRACT_FILES)
     deployed = {}
     for contract in CONTRACTS_TO_DEPLOY:
-        deployed.update(deploy_file(contract, compiled_contracts, client, gas_price))
+        deployed.update(deploy_file(contract, compiled_contracts, client))
     return deployed
 
 
@@ -133,16 +132,17 @@ def main(privatekey_hex, pretty, gas_price, port):
 
     privatekey = decode_hex(privatekey_hex)
 
+    gas_price_in_wei = gas_price * 1000000000
     patch_deploy_solidity_contract()
     host = '127.0.0.1'
     client = JSONRPCClient(
         host,
         port,
         privatekey,
+        gas_price_in_wei,
     )
 
-    gas_price_in_wei = gas_price * 1000000000
-    deployed = deploy_all(client, gas_price_in_wei)
+    deployed = deploy_all(client)
     print(json.dumps(deployed, indent=2 if pretty else None))
 
 

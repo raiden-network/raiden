@@ -4,7 +4,6 @@ from binascii import hexlify
 from ethereum.tools._solidity import compile_file
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import GAS_PRICE
 from raiden.utils import get_contract_path, sha3
 
 
@@ -23,7 +22,6 @@ def create_and_distribute_token(
         receivers,
         amount_per_receiver=1000,
         name=None,
-        gasprice=GAS_PRICE,
         timeout=120):
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
@@ -42,7 +40,6 @@ def create_and_distribute_token(
             name[:4].upper()  # symbol
         ),
         contract_path=contract_path,
-        gasprice=gasprice,
         timeout=timeout
     )
     for receiver in receivers:

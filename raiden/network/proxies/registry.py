@@ -43,7 +43,6 @@ class Registry:
             jsonrpc_client,
             registry_address,
             startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -61,7 +60,6 @@ class Registry:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
         self.address_to_channelmanager = dict()
@@ -91,7 +89,6 @@ class Registry:
             self.proxy,
             'addToken',
             self.startgas,
-            self.gasprice,
             token_address,
         )
 
@@ -155,7 +152,6 @@ class Registry:
                 self.client,
                 manager_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
@@ -189,7 +185,6 @@ class Registry:
                 self.client,
                 manager_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
