@@ -6,6 +6,7 @@ import string
 import sys
 import time
 from typing import Tuple, Union, List, Iterable
+from collections import namedtuple
 
 import gevent
 from coincurve import PrivateKey
@@ -288,3 +289,36 @@ def is_frozen():
 
 def event_decoder(event: Log, contract_translator: ContractTranslator):
     return contract_translator.decode_event(event.topics, event.data)
+
+
+ResultCache = namedtuple('ResultCache', ('result', 'timestamp'))
+
+
+def cache_response_timewise(seconds=600):
+    """ This is a decorator for caching results of functions of objects.
+    The objects must have:
+        - A results_cache dictionary attribute
+        - A semaphore attribute named lock
+
+    Objects adhering to this interface are all the exchanges and the rotkelchen object.
+    """
+    def _cache_response_timewise(f):
+        def wrapper(wrappingobj, *args):
+            with wrappingobj.lock:
+                now = int(time.time())
+                cache_miss = (
+                    f.__name__ not in wrappingobj.results_cache or
+                    now - wrappingobj.results_cache[f.__name__].timestamp > seconds
+                )
+            if cache_miss:
+                result = f(wrappingobj, *args)
+                with wrappingobj.lock:
+                    wrappingobj.results_cache[f.__name__] = ResultCache(result, now)
+                return result
+
+            # else hit the cache
+            with wrappingobj.lock:
+                return wrappingobj.results_cache[f.__name__].result
+
+        return wrapper
+    return _cache_response_timewise

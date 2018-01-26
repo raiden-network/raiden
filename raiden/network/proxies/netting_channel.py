@@ -41,13 +41,11 @@ class NettingChannel:
             jsonrpc_client,
             channel_address,
             startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         self.address = channel_address
         self.client = jsonrpc_client
         self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
         self.client = jsonrpc_client
@@ -190,7 +188,6 @@ class NettingChannel:
             self.client,
             token_address,
             self.startgas,
-            self.gasprice,
             self.poll_timeout,
         )
         current_balance = token.balance_of(self.node_address)
@@ -208,7 +205,6 @@ class NettingChannel:
             self.proxy,
             'deposit',
             self.startgas,
-            self.gasprice,
             amount,
         )
 
@@ -247,7 +243,6 @@ class NettingChannel:
             self.proxy,
             'close',
             self.startgas,
-            self.gasprice,
             nonce,
             transferred_amount,
             locksroot,
@@ -298,7 +293,6 @@ class NettingChannel:
                 self.proxy,
                 'updateTransfer',
                 self.startgas,
-                self.gasprice,
                 nonce,
                 transferred_amount,
                 locksroot,
@@ -354,7 +348,6 @@ class NettingChannel:
                 self.proxy,
                 'withdraw',
                 self.startgas,
-                self.gasprice,
                 locked_encoded,
                 merkleproof_encoded,
                 secret,
@@ -391,7 +384,6 @@ class NettingChannel:
             self.proxy,
             'settle',
             self.startgas,
-            self.gasprice,
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)

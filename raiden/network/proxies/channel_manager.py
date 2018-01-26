@@ -48,7 +48,6 @@ class ChannelManager:
             jsonrpc_client,
             manager_address,
             startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -66,7 +65,6 @@ class ChannelManager:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
     def token_address(self) -> address:
@@ -103,7 +101,6 @@ class ChannelManager:
             self.proxy,
             'newChannel',
             self.startgas,
-            self.gasprice,
             other_peer,
             settle_timeout,
         )

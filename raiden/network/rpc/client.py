@@ -45,6 +45,7 @@ from raiden.utils import (
     quantity_encoder,
     topic_decoder,
     topic_encoder,
+    cache_response_timewise,
 )
 from raiden.utils.typing import address
 
@@ -182,6 +183,7 @@ class JSONRPCClient:
             host: str,
             port: int,
             privkey: bytes,
+            gas_price: Optional[int] = None,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0):
 
@@ -209,6 +211,11 @@ class JSONRPCClient:
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
+        self.given_gas_price = gas_price
+
+        # Needed only for cache_response_timewise decorator
+        self.lock = Semaphore()
+        self.results_cache = {}
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
@@ -279,10 +286,19 @@ class JSONRPCClient:
         res = self.call('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
 
+    @cache_response_timewise()
     def gaslimit(self) -> int:
         last_block = self.call('eth_getBlockByNumber', 'latest', True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
+
+    @cache_response_timewise()
+    def gasprice(self) -> int:
+        if self.given_gas_price:
+            return self.given_gas_price
+
+        gas_price = self.call('eth_gasPrice')
+        return quantity_decoder(gas_price)
 
     def new_contract_proxy(self, contract_interface, contract_address: address):
         """ Return a proxy for interacting with a smart contract.
@@ -308,8 +324,7 @@ class JSONRPCClient:
             libraries,
             constructor_parameters,
             contract_path=None,
-            timeout=None,
-            gasprice=GAS_PRICE):
+            timeout=None):
         """
         Deploy a solidity contract.
         Args:
@@ -322,7 +337,6 @@ class JSONRPCClient:
                                  to the contract is a required argument to extract
                                  the contract data from the `all_contracts` dict.
             timeout (int): Amount of time to poll the chain to confirm deployment
-            gasprice: The gasprice to provide for the transaction
         """
 
         if contract_name in all_contracts:
@@ -375,7 +389,6 @@ class JSONRPCClient:
                     sender,
                     to=b'',
                     data=bytecode,
-                    gasprice=gasprice,
                 )
                 transaction_hash = unhexlify(transaction_hash_hex)
 
@@ -410,7 +423,6 @@ class JSONRPCClient:
             sender,
             to=b'',
             data=bytecode,
-            gasprice=gasprice,
         )
         transaction_hash = unhexlify(transaction_hash_hex)
 
@@ -507,7 +519,6 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = 0,
-            gasprice: int = GAS_PRICE,
             nonce: Optional[int] = None):
         """ Helper to send signed messages.
 
@@ -535,7 +546,7 @@ class JSONRPCClient:
         if not startgas:
             startgas = self.gaslimit() - 1
 
-        tx = Transaction(nonce, gasprice, startgas, to=to, value=value, data=data)
+        tx = Transaction(nonce, self.gasprice(), startgas, to=to, value=value, data=data)
 
         if self.privkey:
             tx.sign(self.privkey)
@@ -565,7 +576,6 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            gasPrice: int = GAS_PRICE,
             gas: int = GAS_LIMIT,
             nonce: Optional[int] = None):
         """ Creates new message call transaction or a contract creation, if the
@@ -604,7 +614,7 @@ class JSONRPCClient:
             value,
             data,
             gas,
-            gasPrice
+            self.gasPrice()
         )
 
         if nonce is not None:
@@ -621,7 +631,6 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = GAS_LIMIT,
-            gasprice: int = GAS_PRICE,
             block_number: Union[str, int] = 'latest'):
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
@@ -646,7 +655,7 @@ class JSONRPCClient:
             value,
             data,
             startgas,
-            gasprice,
+            self.gasprice(),
         )
         res = self.call('eth_call', json_data, block_number)
 
@@ -658,8 +667,7 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: int = GAS_LIMIT,
-            gasprice: int = GAS_PRICE) -> int:
+            startgas: int = GAS_LIMIT) -> int:
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
@@ -670,7 +678,6 @@ class JSONRPCClient:
             gas: Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
                 executions.
-            gasPrice: gasPrice used for unit of gas paid.
             value: Integer of the value sent with this transaction.
             data: Hash of the method signature and encoded parameters.
                 For details see Ethereum Contract ABI.
@@ -683,8 +690,7 @@ class JSONRPCClient:
             to,
             value,
             data,
-            startgas,
-            gasprice,
+            startgas
         )
         try:
             res = self.call('eth_estimateGas', json_data)

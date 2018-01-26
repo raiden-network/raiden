@@ -39,7 +39,6 @@ class Discovery:
             jsonrpc_client,
             discovery_address,
             startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(discovery_address):
@@ -56,7 +55,6 @@ class Discovery:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
         self.not_found_address = '0x' + '0' * 40
 
@@ -67,7 +65,6 @@ class Discovery:
         transaction_hash = self.proxy.transact(
             'registerEndpoint',
             endpoint,
-            gasprice=self.gasprice,
             startgas=DISCOVERY_REGISTRATION_GAS,
         )
 

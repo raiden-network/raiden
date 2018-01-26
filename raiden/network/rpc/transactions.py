@@ -24,7 +24,7 @@ def check_transaction_threw(client, transaction_hash):
     return None
 
 
-def estimate_and_transact(proxy, function_name, startgas, gasprice, *args):
+def estimate_and_transact(proxy, function_name, startgas, *args):
     """Estimate gas using eth_estimateGas. Multiply by 2 to make sure sufficient gas is provided
     Limit maximum gas to GAS_LIMIT to avoid exceeding blockgas limit
     """
@@ -44,7 +44,6 @@ def estimate_and_transact(proxy, function_name, startgas, gasprice, *args):
     transaction_hash = proxy.transact(
         function_name,
         *args,
-        startgas=estimated_gas,
-        gasprice=gasprice
+        startgas=estimated_gas
     )
     return transaction_hash

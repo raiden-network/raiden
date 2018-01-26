@@ -35,7 +35,7 @@ class BlockChainService:
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
             startgas: int,
-            gasprice: int,
+            gasprice: int = None,
             poll_timeout: int = DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
@@ -48,7 +48,7 @@ class BlockChainService:
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.startgas = startgas
-        self.gasprice = gasprice
+        self.gasprice = gasprice if gasprice else self.client.gasprice()
 
     def block_number(self) -> int:
         return self.client.block_number()
@@ -114,7 +114,6 @@ class BlockChainService:
                 self.client,
                 token_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
@@ -130,7 +129,6 @@ class BlockChainService:
                 self.client,
                 discovery_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
@@ -146,7 +144,6 @@ class BlockChainService:
                 self.client,
                 netting_channel_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
             self.address_to_nettingchannel[netting_channel_address] = channel
@@ -162,7 +159,6 @@ class BlockChainService:
                 self.client,
                 registry_address,
                 self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
@@ -186,7 +182,6 @@ class BlockChainService:
             list(),
             constructor_parameters,
             contract_path=contract_path,
-            gasprice=GAS_PRICE,
             timeout=self.poll_timeout,
         )
         return proxy.contract_address

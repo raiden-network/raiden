@@ -233,7 +233,6 @@ def test_blockchain(
         list(),
         (total_token, 'raiden', 2, 'Rd'),
         contract_path=humantoken_path,
-        gasprice=GAS_PRICE,
         timeout=poll_timeout,
     )
 
@@ -246,7 +245,6 @@ def test_blockchain(
         list(),
         tuple(),
         contract_path=registry_path,
-        gasprice=GAS_PRICE,
         timeout=poll_timeout,
     )
 
