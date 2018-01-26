@@ -44,7 +44,7 @@ checkout of raiden.
 
 #. Clone the raiden repository::
 
-    $ git clone https://github.com/raiden-network/raiden.git
+    $ git clone https://github.com/raiden-network/raiden.git |checkout_branch|
 
 #. Install the dependecies::
 
