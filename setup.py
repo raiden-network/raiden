@@ -181,6 +181,7 @@ setup(
     },
     install_requires=install_requires,
     tests_require=test_requirements,
+    python_requires='>=3.5',
     entry_points={
         'console_scripts': [
             'raiden = raiden.__main__:main'
