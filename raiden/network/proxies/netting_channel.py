@@ -40,12 +40,10 @@ class NettingChannel:
             self,
             jsonrpc_client,
             channel_address,
-            startgas,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         self.address = channel_address
         self.client = jsonrpc_client
-        self.startgas = startgas
         self.poll_timeout = poll_timeout
 
         self.client = jsonrpc_client
@@ -187,7 +185,6 @@ class NettingChannel:
         token = Token(
             self.client,
             token_address,
-            self.startgas,
             self.poll_timeout,
         )
         current_balance = token.balance_of(self.node_address)
@@ -204,7 +201,6 @@ class NettingChannel:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'deposit',
-            self.startgas,
             amount,
         )
 
@@ -242,7 +238,6 @@ class NettingChannel:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'close',
-            self.startgas,
             nonce,
             transferred_amount,
             locksroot,
@@ -292,7 +287,6 @@ class NettingChannel:
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'updateTransfer',
-                self.startgas,
                 nonce,
                 transferred_amount,
                 locksroot,
@@ -347,7 +341,6 @@ class NettingChannel:
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'withdraw',
-                self.startgas,
                 locked_encoded,
                 merkleproof_encoded,
                 secret,
@@ -383,7 +376,6 @@ class NettingChannel:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'settle',
-            self.startgas,
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)

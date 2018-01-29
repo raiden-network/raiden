@@ -47,7 +47,6 @@ class ChannelManager:
             self,
             jsonrpc_client,
             manager_address,
-            startgas,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -64,7 +63,6 @@ class ChannelManager:
         self.address = manager_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
         self.poll_timeout = poll_timeout
 
     def token_address(self) -> address:
@@ -100,7 +98,6 @@ class ChannelManager:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'newChannel',
-            self.startgas,
             other_peer,
             settle_timeout,
         )
@@ -113,7 +110,6 @@ class ChannelManager:
         netting_channel_results_encoded = self.proxy.call(
             'getChannelWith',
             other_peer,
-            startgas=self.startgas,
         )
 
         # address is at index 0
@@ -144,7 +140,6 @@ class ChannelManager:
         # second item forms a tuple
         channel_flat_encoded = self.proxy.call(
             'getChannelsParticipants',
-            startgas=self.startgas,
         )
 
         channel_flat = [
@@ -161,7 +156,6 @@ class ChannelManager:
         address_list = self.proxy.call(
             'nettingContractsByAddress',
             participant_address,
-            startgas=self.startgas,
         )
 
         return [

@@ -42,7 +42,6 @@ class Registry:
             self,
             jsonrpc_client,
             registry_address,
-            startgas,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -59,7 +58,6 @@ class Registry:
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
         self.poll_timeout = poll_timeout
 
         self.address_to_channelmanager = dict()
@@ -72,7 +70,6 @@ class Registry:
         address = self.proxy.call(
             'channelManagerByToken',
             token_address,
-            startgas=self.startgas,
         )
 
         if address == b'':
@@ -88,7 +85,6 @@ class Registry:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'addToken',
-            self.startgas,
             token_address,
         )
 
@@ -116,13 +112,13 @@ class Registry:
     def token_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.call('tokenAddresses', startgas=self.startgas)
+            for address in self.proxy.call('tokenAddresses')
         ]
 
     def manager_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.call('channelManagerAddresses', startgas=self.startgas)
+            for address in self.proxy.call('channelManagerAddresses')
         ]
 
     def tokenadded_filter(self, from_block=None, to_block=None):
@@ -151,7 +147,6 @@ class Registry:
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.startgas,
                 self.poll_timeout,
             )
 
@@ -184,7 +179,6 @@ class Registry:
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.startgas,
                 self.poll_timeout,
             )
 

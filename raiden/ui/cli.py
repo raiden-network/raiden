@@ -22,7 +22,6 @@ from ethereum.utils import denoms
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.constants import (
-    DISCOVERY_REGISTRATION_GAS,
     ID_TO_NETWORKNAME,
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
@@ -35,7 +34,6 @@ from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
-    GAS_LIMIT,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
@@ -551,14 +549,14 @@ def app(
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
-        GAS_LIMIT,
         gas_price,
     )
 
     if sync_check:
         check_synced(blockchain_service)
 
-    discovery_tx_cost = rpc_client.gasprice() * DISCOVERY_REGISTRATION_GAS
+    # 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
+    discovery_tx_cost = rpc_client.gasprice() * 60000
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:

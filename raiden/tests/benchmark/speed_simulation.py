@@ -109,7 +109,6 @@ def setup_tps(
     blockchain_service = BlockChainService(
         privatekey,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
     blockchain_service.default_registry.add_token(token_address)
@@ -177,7 +176,6 @@ def tps_run(
     blockchain_service = BlockChainService(
         privatekey,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
 
