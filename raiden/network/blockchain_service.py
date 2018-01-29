@@ -2,6 +2,7 @@
 import os
 
 import gevent
+from typing import Optional
 from ethereum import slogging
 from ethereum.tools import _solidity
 
@@ -31,7 +32,7 @@ class BlockChainService:
             self,
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
-            gasprice: int = None,
+            gasprice: Optional[int] = None,
             poll_timeout: int = DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
