@@ -36,7 +36,6 @@ from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
     GAS_LIMIT,
-    GAS_PRICE,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
@@ -559,7 +558,7 @@ def app(
     if sync_check:
         check_synced(blockchain_service)
 
-    discovery_tx_cost = gas_price * DISCOVERY_REGISTRATION_GAS
+    discovery_tx_cost = rpc_client.gasprice() * DISCOVERY_REGISTRATION_GAS
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:
