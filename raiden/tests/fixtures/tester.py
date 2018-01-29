@@ -23,7 +23,7 @@ from raiden.tests.utils.tester_client import ChannelExternalStateTester
 def tester_blockgas_limit():
     """ The tester's block gas limit.
 
-    Set this value to `GAS_LIMIT`ing if the test needs to consider the gas usage.
+    Set this value to `GAS_LIMIT` if the test needs to consider the gas usage.
 
     Note:
         `GAS_LIMIT` is defined in `raiden.network.rpc.client.GAS_LIMIT`
