@@ -25,7 +25,6 @@ class Token:
             self,
             jsonrpc_client,
             token_address,
-            startgas,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(token_address):
@@ -41,7 +40,6 @@ class Token:
         self.address = token_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
         self.poll_timeout = poll_timeout
 
     def approve(self, contract_address, allowance):
@@ -53,7 +51,6 @@ class Token:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'approve',
-            self.startgas,
             contract_address,
             allowance,
         )
@@ -106,7 +103,6 @@ class Token:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'transfer',
-            self.startgas,
             to_address,
             amount,
         )

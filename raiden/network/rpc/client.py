@@ -300,6 +300,11 @@ class JSONRPCClient:
         gas_price = self.call('eth_gasPrice')
         return quantity_decoder(gas_price)
 
+    def check_startgas(self, startgas):
+        if not startgas:
+            return self.gaslimit() - 1
+        return startgas
+
     def new_contract_proxy(self, contract_interface, contract_address: address):
         """ Return a proxy for interacting with a smart contract.
 
@@ -518,7 +523,7 @@ class JSONRPCClient:
             to: address,
             value: int = 0,
             data: bytes = b'',
-            startgas: int = 0,
+            startgas: Optional[int] = None,
             nonce: Optional[int] = None):
         """ Helper to send signed messages.
 
@@ -543,8 +548,7 @@ class JSONRPCClient:
             if nonce is None:
                 nonce = 0
 
-        if not startgas:
-            startgas = self.gaslimit() - 1
+        startgas = self.check_startgas(startgas)
 
         tx = Transaction(nonce, self.gasprice(), startgas, to=to, value=value, data=data)
 
@@ -630,7 +634,7 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: int = GAS_LIMIT,
+            startgas: Optional[int] = None,
             block_number: Union[str, int] = 'latest'):
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
@@ -648,7 +652,7 @@ class JSONRPCClient:
             block_number: Determines the state of ethereum used in the
                 call.
         """
-
+        startgas = self.check_startgas(startgas)
         json_data = format_data_for_call(
             sender,
             to,
@@ -667,7 +671,7 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: int = GAS_LIMIT) -> int:
+            startgas: Optional[int] = None) -> int:
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
@@ -684,7 +688,7 @@ class JSONRPCClient:
             block_number: Determines the state of ethereum used in the
                 call.
         """
-
+        startgas = self.check_startgas(startgas)
         json_data = format_data_for_call(
             sender,
             to,

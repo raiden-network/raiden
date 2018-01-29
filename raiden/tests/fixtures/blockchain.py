@@ -467,7 +467,6 @@ def _jsonrpc_services(
     deploy_blockchain = BlockChainService(
         deploy_key,
         deploy_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
     deploy_registry = deploy_blockchain.registry(registry_address)
@@ -484,7 +483,6 @@ def _jsonrpc_services(
         blockchain = BlockChainService(
             privkey,
             rpc_client,
-            GAS_LIMIT,
             GAS_PRICE,
         )
         blockchain_services.append(blockchain)

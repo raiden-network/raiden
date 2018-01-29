@@ -102,7 +102,6 @@ def run(
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
 
