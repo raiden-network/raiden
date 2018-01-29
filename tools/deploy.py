@@ -11,7 +11,6 @@ from ethereum.tools._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import GAS_PRICE
 from raiden.utils import get_contract_path
 
 

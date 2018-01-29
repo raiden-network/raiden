@@ -12,10 +12,7 @@ from raiden.network.proxies import (
     NettingChannel,
     Registry,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-    GAS_PRICE,
-)
+from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
     block_tag_encoder,
     isaddress,

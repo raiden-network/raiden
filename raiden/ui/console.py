@@ -21,7 +21,6 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
-from raiden.settings import GAS_PRICE
 
 ENTER_CONSOLE_TIMEOUT = 3
 GUI_GEVENT = 'gevent'
