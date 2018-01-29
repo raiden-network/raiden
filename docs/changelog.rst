@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1230` Unless specifically provided gas price and gas limit are now dynamically calculated from the `eth_gasPrice()` and latest block's limit respectively.
 * :feature:`87` Update raiden to use Python 3 and the latest version of pyethereum.
 * :feature:`1015` Added macOS compatibility and binary releases.
 * :feature:`1093` Reconnect raiden to ethereum node after disconnect.
