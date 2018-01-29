@@ -21,10 +21,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery
 from raiden.network.rpc import JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
+from raiden.settings import GAS_PRICE
 
 TRANSFER_AMOUNT = 1
 TOKEN_ADDRESS = sha3(b'tps')[:20]

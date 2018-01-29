@@ -32,10 +32,7 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
 )
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
+from raiden.settings import GAS_PRICE
 
 BlockchainServices = namedtuple(
     'BlockchainServices',

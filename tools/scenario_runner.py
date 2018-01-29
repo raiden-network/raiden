@@ -21,11 +21,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
-
+from raiden.settings import GAS_PRICE
 
 monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
