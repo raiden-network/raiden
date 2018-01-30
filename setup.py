@@ -170,7 +170,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
     cmdclass={
@@ -181,7 +180,7 @@ setup(
     },
     install_requires=install_requires,
     tests_require=test_requirements,
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     entry_points={
         'console_scripts': [
             'raiden = raiden.__main__:main'
