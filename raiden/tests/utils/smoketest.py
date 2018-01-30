@@ -332,6 +332,7 @@ def start_ethereum(smoketest_genesis):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding='UTF-8',
     )
     ethereum_node.stdin.write(TEST_ACCOUNT_PASSWORD + os.linesep)
     time.sleep(.1)
