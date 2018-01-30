@@ -812,7 +812,7 @@ def smoketest(ctx, debug, **kwargs):
     open(report_file, 'w+')
 
     def append_report(subject, data):
-        with open(report_file, 'a') as handler:
+        with open(report_file, 'a', encoding='UTF-8') as handler:
             handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
             if data is not None:
                 if isinstance(data, bytes):
