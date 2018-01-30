@@ -12,6 +12,7 @@ Flask==0.12.2
 gevent-websocket==0.10.1
 ipaddress==1.0.19
 ipython<5.0.0
+marshmallow==2.15.0
 marshmallow_polyfield==3.2
 miniupnpc==2.0.2
 netifaces==0.10.6
