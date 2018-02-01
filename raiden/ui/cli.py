@@ -56,6 +56,9 @@ gevent.monkey.patch_all()
 CURSOR_STARTLINE = '\x1b[1000D'
 CLEARLINE = '\x1b[2K'
 
+# 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
+DISCOVERY_TX_GAS_LIMIT = 60000
+
 
 def toogle_cpu_profiler(raiden):
     try:
@@ -555,8 +558,7 @@ def app(
     if sync_check:
         check_synced(blockchain_service)
 
-    # 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
-    discovery_tx_cost = rpc_client.gasprice() * 60000
+    discovery_tx_cost = rpc_client.gasprice() * DISCOVERY_TX_GAS_LIMIT
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:

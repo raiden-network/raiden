@@ -300,7 +300,7 @@ def cache_response_timewise(seconds=600):
         - A results_cache dictionary attribute
         - A semaphore attribute named lock
 
-    Objects adhering to this interface are all the exchanges and the rotkelchen object.
+    Objects adhering to this interface are: RPCClient
     """
     def _cache_response_timewise(f):
         def wrapper(wrappingobj, *args):
