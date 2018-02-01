@@ -618,7 +618,7 @@ class JSONRPCClient:
             value,
             data,
             gas,
-            self.gasPrice()
+            self.gasprice()
         )
 
         if nonce is not None:
