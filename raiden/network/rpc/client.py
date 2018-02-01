@@ -183,7 +183,7 @@ class JSONRPCClient:
             host: str,
             port: int,
             privkey: bytes,
-            gas_price: Optional[int] = None,
+            gasprice: Optional[int] = None,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0):
 
@@ -211,7 +211,7 @@ class JSONRPCClient:
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
-        self.given_gas_price = gas_price
+        self.given_gas_price = gasprice
 
         # Needed only for cache_response_timewise decorator
         self.lock = Semaphore()
