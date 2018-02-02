@@ -139,16 +139,25 @@ def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     return host, port
 
 
+def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
+    if not len(private_key_bin) == 32:
+        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
+    private_key = PrivateKey(private_key_bin)
+    pubkey = private_key.public_key.format(compressed=False)
+    return pubkey
+
+
 def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
 def privatekey_to_address(private_key_bin: bytes) -> address:
-    if not len(private_key_bin) == 32:
-        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
-    private_key = PrivateKey(private_key_bin)
-    pubkey = private_key.public_key.format(compressed=False)
-    return publickey_to_address(pubkey)
+    return publickey_to_address(privatekey_to_publickey(private_key_bin))
+
+
+def privtopub(private_key_bin: bytes) -> bytes:
+    raw_pubkey = privatekey_to_publickey(private_key_bin)
+    return raw_pubkey[1:]
 
 
 def get_project_root() -> str:

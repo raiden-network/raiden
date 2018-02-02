@@ -17,8 +17,8 @@ from requests import ConnectionError
 from raiden.utils import (
     address_encoder,
     privatekey_to_address,
+    privtopub
 )
-from raiden.utils.crypto import privtopub
 from raiden.tests.utils.genesis import GENESIS_STUB
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
