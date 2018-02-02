@@ -10,8 +10,11 @@ from subprocess import Popen, PIPE
 from ethereum.utils import encode_hex
 
 from genesis_builder import mk_genesis, generate_accounts
-from raiden.utils.crypto import privtopub as privtopub_enode
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import (
+    privtopub as privtopub_enode,
+    privatekey_to_address,
+    sha3
+)
 
 # DEFAULTS
 NUM_GETH_NODES = 3
