@@ -287,17 +287,19 @@ class JSONRPCClient:
 
     @cache_response_timewise()
     def gaslimit(self) -> int:
-        last_block = self.call('eth_getBlockByNumber', 'latest', True)
-        gas_limit = quantity_decoder(last_block['gasLimit'])
-        return gas_limit
+        with self.lock:
+            last_block = self.call('eth_getBlockByNumber', 'latest', True)
+            gas_limit = quantity_decoder(last_block['gasLimit'])
+            return gas_limit
 
     @cache_response_timewise()
     def gasprice(self) -> int:
         if self.given_gas_price:
             return self.given_gas_price
 
-        gas_price = self.call('eth_gasPrice')
-        return quantity_decoder(gas_price)
+        with self.lock:
+            gas_price = self.call('eth_gasPrice')
+            return quantity_decoder(gas_price)
 
     def check_startgas(self, startgas):
         if not startgas:
