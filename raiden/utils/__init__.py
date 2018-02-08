@@ -7,6 +7,7 @@ import sys
 import time
 from typing import Tuple, Union, List, Iterable
 from collections import namedtuple
+from functools import wraps
 
 import gevent
 from coincurve import PrivateKey
@@ -304,6 +305,7 @@ def cache_response_timewise(seconds=600):
     def _cache_response_timewise(f):
         results_cache = None
 
+        @wraps(f)
         def wrapper(wrappingobj, *args):
             nonlocal results_cache
 
