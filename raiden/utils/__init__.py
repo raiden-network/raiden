@@ -296,30 +296,26 @@ ResultCache = namedtuple('ResultCache', ('result', 'timestamp'))
 
 
 def cache_response_timewise(seconds=600):
-    """ This is a decorator for caching results of functions of objects.
-    The objects must have:
-        - A semaphore attribute named lock
+    """ This is a decorator for caching results of functions based on time.
 
-    Objects adhering to this interface are: RPCClient
-    """
+    Decorated functions should handle locking on their own so that there
+    are no data races if a function is accessed by multiple threads."""
     def _cache_response_timewise(f):
         results_cache = None
 
         @wraps(f)
-        def wrapper(wrappingobj, *args):
+        def wrapper(*args, **kwargs):
             nonlocal results_cache
 
-            with wrappingobj.lock:
-                now = int(time.time())
-                cache_miss = (
-                    not results_cache or
-                    now - results_cache.timestamp > seconds
-                )
+            now = int(time.time())
+            cache_miss = (
+                not results_cache or
+                now - results_cache.timestamp > seconds
+            )
 
             if cache_miss:
-                result = f(wrappingobj, *args)
-                with wrappingobj.lock:
-                    results_cache = ResultCache(result, now)
+                result = f(*args, **kwargs)
+                results_cache = ResultCache(result, now)
                 return result
 
             # else hit the cache
