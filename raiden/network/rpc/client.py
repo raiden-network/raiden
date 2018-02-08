@@ -215,7 +215,6 @@ class JSONRPCClient:
 
         # Needed only for cache_response_timewise decorator
         self.lock = Semaphore()
-        self.results_cache = {}
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
