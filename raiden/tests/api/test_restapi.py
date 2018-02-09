@@ -1094,6 +1094,24 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
+def test_token_events_errors_for_unregistered_token(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'tokeneventsresource',
+            token_address='0x61c808d82a3ac53231750dadc13c777b59310bd9',
+            from_block=5,
+            to_block=20
+        )
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
+
+
 def test_get_connection_managers_info(
         api_backend,
         api_test_context,

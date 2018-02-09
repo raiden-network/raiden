@@ -439,10 +439,13 @@ class RestAPI:
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_token_network_events(self, token_address, from_block, to_block):
-        raiden_service_result = self.raiden_api.get_token_network_events(
-            token_address, from_block, to_block
-        )
-        return api_response(result=normalize_events_list(raiden_service_result))
+        try:
+            raiden_service_result = self.raiden_api.get_token_network_events(
+                token_address, from_block, to_block
+            )
+            return api_response(result=normalize_events_list(raiden_service_result))
+        except KeyError as e:
+            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_channel_events(self, channel_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_events(

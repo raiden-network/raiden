@@ -642,15 +642,18 @@ class RaidenAPI:
                 'Expected binary address format for token in get_token_network_events'
             )
 
-        graph = self.raiden.token_to_channelgraph[token_address]
+        try:
+            graph = self.raiden.token_to_channelgraph[token_address]
 
-        return get_all_channel_manager_events(
-            self.raiden.chain,
-            graph.channelmanager_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
+            return get_all_channel_manager_events(
+                self.raiden.chain,
+                graph.channelmanager_address,
+                events=ALL_EVENTS,
+                from_block=from_block,
+                to_block=to_block,
+            )
+        except KeyError:
+            raise KeyError('The token address is not registered.')
 
     def get_network_events(self, from_block, to_block):
         registry_address = self.raiden.default_registry.address
