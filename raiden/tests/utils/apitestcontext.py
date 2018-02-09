@@ -104,8 +104,10 @@ class ApiTestContext:
 
     def get_token_network_events(self, token_address, from_block, to_block):
         return_list = list()
-        if token_address != self.token_for_channelnew:
-            raise ValueError(
+        # if this happens the token hasn't been registered yet
+        # in the API the lookup would fail with a KeyError, return the same here
+        if not hasattr(self, 'token_for_channelnew') or token_address != self.token_for_channelnew:
+            raise KeyError(
                 'Unexpected token address: "{}"  during channelnew '
                 'query'.format(pex(token_address))
             )
