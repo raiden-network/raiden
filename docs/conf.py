@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
 def check_if_nightly(version):
     try:
         git_version, _ = subprocess.Popen(
-            shlex.split('git describe --tags'),
+            shlex.split('git describe --tags --abbrev=8'),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         ).communicate()

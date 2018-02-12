@@ -125,7 +125,7 @@ def read_version_from_git():
     try:
         import shlex
         git_version, _ = subprocess.Popen(
-            shlex.split('git describe --tags'),
+            shlex.split('git describe --tags --abbrev=8'),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         ).communicate()
