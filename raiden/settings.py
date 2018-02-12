@@ -4,6 +4,7 @@ from ethereum.utils import denoms, int_to_big_endian
 
 INITIAL_PORT = 40001
 
+RPC_CACHE_TTL = 600
 CACHE_TTL = 60
 ESTIMATED_BLOCK_TIME = 7
 GAS_LIMIT = 3141592  # Morden's gasLimit.

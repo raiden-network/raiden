@@ -6,8 +6,6 @@ import string
 import sys
 import time
 from typing import Tuple, Union, List, Iterable
-from collections import namedtuple
-from functools import wraps
 
 import gevent
 from coincurve import PrivateKey
@@ -290,36 +288,3 @@ def is_frozen():
 
 def event_decoder(event: Log, contract_translator: ContractTranslator):
     return contract_translator.decode_event(event.topics, event.data)
-
-
-ResultCache = namedtuple('ResultCache', ('result', 'timestamp'))
-
-
-def cache_response_timewise(seconds=600):
-    """ This is a decorator for caching results of functions based on time.
-
-    Decorated functions should handle locking on their own so that there
-    are no data races if a function is accessed by multiple threads."""
-    def _cache_response_timewise(f):
-        results_cache = None
-
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            nonlocal results_cache
-
-            now = int(time.time())
-            cache_miss = (
-                not results_cache or
-                now - results_cache.timestamp > seconds
-            )
-
-            if cache_miss:
-                result = f(*args, **kwargs)
-                results_cache = ResultCache(result, now)
-                return result
-
-            # else hit the cache
-            return results_cache.result
-
-        return wrapper
-    return _cache_response_timewise
