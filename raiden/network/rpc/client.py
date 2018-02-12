@@ -283,10 +283,12 @@ class JSONRPCClient:
         return quantity_decoder(res)
 
     @cache_response_timewise()
-    def gaslimit(self) -> int:
-        last_block = self.call('eth_getBlockByNumber', 'latest', True)
+    def gaslimit(self, location='latest') -> int:
+        last_block = self.call('eth_getBlockByNumber', location, True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
-        return gas_limit
+        # The gas limit can fluctuate from the actual pending limit by a maximum
+        # of up to a 1/1024th of the previous gas limit
+        return gas_limit - int(gas_limit / 1024)
 
     @cache_response_timewise()
     def gasprice(self) -> int:
@@ -298,7 +300,7 @@ class JSONRPCClient:
 
     def check_startgas(self, startgas):
         if not startgas:
-            return self.gaslimit() - 1
+            return self.gaslimit()
         return startgas
 
     def new_contract_proxy(self, contract_interface, contract_address: address):
