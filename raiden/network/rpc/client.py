@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Union
 
 import rlp
 import gevent
+import cachetools
 from gevent.lock import Semaphore
 from ethereum import slogging
 from ethereum.tools import _solidity
@@ -33,7 +34,7 @@ from raiden.exceptions import (
 )
 from raiden.network.protocol import timeout_two_stage
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import GAS_PRICE, GAS_LIMIT
+from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
     address_decoder,
     address_encoder,
@@ -45,7 +46,6 @@ from raiden.utils import (
     quantity_encoder,
     topic_decoder,
     topic_encoder,
-    cache_response_timewise,
 )
 from raiden.utils.typing import address
 
@@ -213,6 +213,19 @@ class JSONRPCClient:
         self.nonce_offset = nonce_offset
         self.given_gas_price = gasprice
 
+        cache = cachetools.TTLCache(
+            maxsize=1,
+            ttl=RPC_CACHE_TTL,
+        )
+        cache_wrapper = cachetools.cached(cache=cache)
+        self.gaslimit = cache_wrapper(self._gaslimit)
+        cache = cachetools.TTLCache(
+            maxsize=1,
+            ttl=RPC_CACHE_TTL,
+        )
+        cache_wrapper = cachetools.cached(cache=cache)
+        self.gasprice = cache_wrapper(self._gasprice)
+
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
 
@@ -282,16 +295,14 @@ class JSONRPCClient:
         res = self.call('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
 
-    @cache_response_timewise()
-    def gaslimit(self, location='latest') -> int:
+    def _gaslimit(self, location='pending') -> int:
         last_block = self.call('eth_getBlockByNumber', location, True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
         # The gas limit can fluctuate from the actual pending limit by a maximum
         # of up to a 1/1024th of the previous gas limit
         return gas_limit - int(gas_limit / 1024)
 
-    @cache_response_timewise()
-    def gasprice(self) -> int:
+    def _gasprice(self) -> int:
         if self.given_gas_price:
             return self.given_gas_price
 
