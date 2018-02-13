@@ -194,7 +194,7 @@ class Console(BaseService):
     """
 
     def __init__(self, app):
-        super(Console, self).__init__(app)
+        super().__init__(app)
         self.interrupt = Event()
         self.console_locals = {}
         if app.start_console:
@@ -205,7 +205,7 @@ class Console(BaseService):
 
     def start(self):
         # start console service
-        super(Console, self).start()
+        super().start()
 
         class Raiden:
             def __init__(self, app):

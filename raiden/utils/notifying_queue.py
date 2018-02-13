@@ -5,7 +5,7 @@ from gevent.event import Event
 
 class NotifyingQueue(Event):
     def __init__(self):
-        super(NotifyingQueue, self).__init__()
+        super().__init__()
         self._queue = Queue()
 
     def put(self, item):

@@ -117,7 +117,7 @@ class InvalidLocksRoot(RaidenError):
             pex(got_locksroot),
         )
 
-        super(InvalidLocksRoot, self).__init__(msg)
+        super().__init__(msg)
 
 
 class InvalidNonce(RaidenError):
@@ -153,7 +153,7 @@ class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""
     def __init__(self, error_msg, error_code=None):
-        super(EthNodeCommunicationError, self).__init__(error_msg)
+        super().__init__(error_msg)
         self.error_code = error_code
 
 
@@ -174,7 +174,7 @@ class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""
     def __init__(self, txname, receipt):
-        super(TransactionThrew, self).__init__(
+        super().__init__(
             '{} transaction threw. Receipt={}'.format(txname, receipt)
         )
 

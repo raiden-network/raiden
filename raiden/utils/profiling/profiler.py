@@ -147,7 +147,7 @@ def calculate_metrics(info):
 class GlobalState(dict):
     ''' This class is responsable to store the state of a profiling session '''
     def __init__(self, *args, **kwargs):
-        super(GlobalState, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.last = None
 
 

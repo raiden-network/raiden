@@ -120,7 +120,7 @@ class SignedMessage(Message):
     # current API assumes that signing is called before, this can be improved
     # by changing the order to packing then signing
     def __init__(self):
-        super(SignedMessage, self).__init__()
+        super().__init__()
         self.signature = b''
         self.sender = b''
 
@@ -177,7 +177,7 @@ class SignedMessage(Message):
 
 class EnvelopeMessage(SignedMessage):
     def __init__(self):
-        super(EnvelopeMessage, self).__init__()
+        super().__init__()
         self.nonce = 0
         self.transferred_amount = 0
         self.locksroot = EMPTY_MERKLE_ROOT
@@ -284,7 +284,7 @@ class Ack(Message):
     cmdid = messages.ACK
 
     def __init__(self, sender, echo):
-        super(Ack, self).__init__()
+        super().__init__()
         self.sender = sender
         self.echo = echo
 
@@ -311,7 +311,7 @@ class Ping(SignedMessage):
     cmdid = messages.PING
 
     def __init__(self, nonce):
-        super(Ping, self).__init__()
+        super().__init__()
         self.nonce = nonce
 
     @staticmethod
@@ -330,7 +330,7 @@ class SecretRequest(SignedMessage):
     cmdid = messages.SECRETREQUEST
 
     def __init__(self, identifier, hashlock, amount):
-        super(SecretRequest, self).__init__()
+        super().__init__()
         self.identifier = identifier
         self.hashlock = hashlock
         self.amount = amount
@@ -373,7 +373,7 @@ class Secret(EnvelopeMessage):
             transferred_amount,
             locksroot,
             secret):
-        super(Secret, self).__init__()
+        super().__init__()
 
         assert_envelope_values(
             nonce,
@@ -453,7 +453,7 @@ class RevealSecret(SignedMessage):
     cmdid = messages.REVEALSECRET
 
     def __init__(self, secret):
-        super(RevealSecret, self).__init__()
+        super().__init__()
         self.secret = secret
         self._hashlock = None
 
@@ -526,7 +526,7 @@ class DirectTransfer(EnvelopeMessage):
         )
         assert_transfer_values(identifier, token, recipient)
 
-        super(DirectTransfer, self).__init__()
+        super().__init__()
         self.identifier = identifier
         self.nonce = nonce
         self.token = token
@@ -667,7 +667,7 @@ class LockedTransfer(EnvelopeMessage):
             recipient,
             locksroot,
             lock):
-        super(LockedTransfer, self).__init__()
+        super().__init__()
 
         assert_envelope_values(
             nonce,
@@ -801,7 +801,7 @@ class MediatedTransfer(LockedTransfer):
         if fee >= 2 ** 256:
             raise ValueError('fee is too large')
 
-        super(MediatedTransfer, self).__init__(
+        super().__init__(
             identifier,
             nonce,
             token,

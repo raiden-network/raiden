@@ -22,7 +22,7 @@ class Task(gevent.Greenlet):
     """
 
     def __init__(self):
-        super(Task, self).__init__()
+        super().__init__()
         self.response_queue = Queue()
 
 
@@ -30,7 +30,7 @@ class AlarmTask(Task):
     """ Task to notify when a block is mined. """
 
     def __init__(self, chain):
-        super(AlarmTask, self).__init__()
+        super().__init__()
 
         self.callbacks = list()
         self.stop_event = AsyncResult()
@@ -122,7 +122,7 @@ class AlarmTask(Task):
 
     def start(self):
         self.last_block_number = self.chain.block_number()
-        super(AlarmTask, self).start()
+        super().start()
 
     def stop_and_wait(self):
         self.stop_event.set(True)

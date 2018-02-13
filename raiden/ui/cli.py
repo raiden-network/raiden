@@ -268,7 +268,7 @@ class NATChoiceType(click.Choice):
             else:
                 port = None
             return ip, port
-        return super(NATChoiceType, self).convert(value, param, ctx)
+        return super().convert(value, param, ctx)
 
 
 ADDRESS_TYPE = AddressType()

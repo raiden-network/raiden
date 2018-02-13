@@ -17,7 +17,7 @@ class BytesJSONEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, bytes):
             return o.decode('UTF-8')
-        return super(BytesJSONEncoder, self).default(o)
+        return super().default(o)
 
 
 @click.command()
