@@ -21,12 +21,12 @@ class MessageLoggerTransport(DummyTransport):
             protocol=None,
             throttle_policy=DummyPolicy()):
 
-        super(MessageLoggerTransport, self).__init__(host, port, protocol, throttle_policy)
+        super().__init__(host, port, protocol, throttle_policy)
         self.addresses_to_messages = dict()
 
     def send(self, sender, host_port, bytes_):
         self.addresses_to_messages.setdefault(sender.address, []).append(decode(bytes_))
-        super(MessageLoggerTransport, self).network.send(sender, host_port, bytes_)
+        super().network.send(sender, host_port, bytes_)
 
     def get_sent_messages(self, node_address):
         return self.addresses_to_messages.get(node_address, [])
@@ -46,7 +46,7 @@ class UnreliableTransport(DummyTransport):
             protocol=None,
             throttle_policy=DummyPolicy()):
 
-        super(UnreliableTransport, self).__init__(host, port, protocol, throttle_policy)
+        super().__init__(host, port, protocol, throttle_policy)
         self.droprate = 0
 
     def send(self, sender, host_port, bytes_):

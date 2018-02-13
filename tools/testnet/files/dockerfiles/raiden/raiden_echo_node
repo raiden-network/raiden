@@ -29,7 +29,7 @@ class NotCrashingLogstashFormatter(LogstashFormatterVersion1):
             return bytes(json.dumps(message, cls=REPRJSONEncoder), 'utf-8')
 
     def get_extra_fields(self, record):
-        fields = super(NotCrashingLogstashFormatter, self).get_extra_fields(record)
+        fields = super().get_extra_fields(record)
         if 'original_msg' in fields and record.args:
             fields['original_msg'] = fields['original_msg'] % record.args
         return fields
@@ -37,8 +37,7 @@ class NotCrashingLogstashFormatter(LogstashFormatterVersion1):
 
 class NotCrashingUDPLogstashHandler(UDPLogstashHandler):
     def __init__(self, host, port=5959, message_type='logstash', tags=None, fqdn=False, version=0):
-        super(NotCrashingUDPLogstashHandler, self).__init__(host, port, message_type, tags, fqdn,
-                                                            version)
+        super().__init__(host, port, message_type, tags, fqdn, version)
         if version == 1:
             self.formatter = NotCrashingLogstashFormatter(message_type, tags, fqdn)
         else:

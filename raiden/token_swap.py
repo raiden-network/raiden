@@ -296,7 +296,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
     """
 
     def __init__(self, raiden, tokenswap, async_result):
-        super(MakerTokenSwapTask, self).__init__()
+        super().__init__()
 
         self.raiden = raiden
         self.tokenswap = tokenswap
@@ -536,7 +536,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             tokenswap,
             from_mediated_transfer):
 
-        super(TakerTokenSwapTask, self).__init__()
+        super().__init__()
 
         self.raiden = raiden
         self.from_mediated_transfer = from_mediated_transfer

@@ -59,7 +59,7 @@ class NettingChannelStateMachine(GenericStateMachine):
     """
 
     def __init__(self):
-        super(NettingChannelStateMachine, self).__init__()
+        super().__init__()
 
         deploy_key = sha3(b'deploy_key')
         gas_limit = 10 ** 10

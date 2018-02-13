@@ -61,7 +61,7 @@ class ContractDiscovery(Discovery):
             node_address: bytes,
             discovery_proxy: proxies.Discovery):
 
-        super(ContractDiscovery, self).__init__()
+        super().__init__()
 
         self.node_address = node_address
         self.discovery_proxy = discovery_proxy
