@@ -32,6 +32,7 @@ from raiden.exceptions import (
     InvalidState,
     NoPathError,
     NoTokenManager,
+    UnknownTokenAddress,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -653,7 +654,7 @@ class RaidenAPI:
                 to_block=to_block,
             )
         except KeyError:
-            raise KeyError('The token address is not registered.')
+            raise UnknownTokenAddress('The token address is not registered.')
 
     def get_network_events(self, from_block, to_block):
         registry_address = self.raiden.default_registry.address

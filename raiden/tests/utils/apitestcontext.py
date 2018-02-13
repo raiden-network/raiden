@@ -12,7 +12,11 @@ from raiden.channel import (
     ChannelExternalState,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
+from raiden.exceptions import (
+    InvalidAddress,
+    InvalidSettleTimeout,
+    UnknownTokenAddress,
+)
 from raiden.tests.utils.factories import make_address
 from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.transfer.state import (
@@ -105,9 +109,9 @@ class ApiTestContext:
     def get_token_network_events(self, token_address, from_block, to_block):
         return_list = list()
         # if this happens the token hasn't been registered yet
-        # in the API the lookup would fail with a KeyError, return the same here
+        # in the API the lookup would fail with a UnknownTokenAddress, return the same here
         if not hasattr(self, 'token_for_channelnew') or token_address != self.token_for_channelnew:
-            raise KeyError(
+            raise UnknownTokenAddress(
                 'Unexpected token address: "{}"  during channelnew '
                 'query'.format(pex(token_address))
             )
