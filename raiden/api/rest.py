@@ -27,6 +27,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     DuplicatedChannelError,
     ChannelNotFound,
+    UnknownTokenAddress,
 )
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -444,7 +445,7 @@ class RestAPI:
                 token_address, from_block, to_block
             )
             return api_response(result=normalize_events_list(raiden_service_result))
-        except KeyError as e:
+        except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_channel_events(self, channel_address, from_block, to_block):
