@@ -183,7 +183,7 @@ class JSONRPCClient:
             host: str,
             port: int,
             privkey: bytes,
-            gasprice: Optional[int] = None,
+            gasprice: int = None,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0):
 
@@ -535,8 +535,8 @@ class JSONRPCClient:
             to: address,
             value: int = 0,
             data: bytes = b'',
-            startgas: Optional[int] = None,
-            nonce: Optional[int] = None):
+            startgas: int = None,
+            nonce: int = None):
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -593,7 +593,8 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             gas: int = GAS_LIMIT,
-            nonce: Optional[int] = None):
+            nonce: int = None
+    ) -> bytes:
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
 
@@ -646,8 +647,9 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: Optional[int] = None,
-            block_number: Union[str, int] = 'latest'):
+            startgas: int = None,
+            block_number: Union[str, int] = 'latest'
+    ) -> bytes:
         """ Executes a new message call immediately without creating a
         transaction on the blockchain.
 
@@ -683,7 +685,8 @@ class JSONRPCClient:
             to: address = b'',
             value: int = 0,
             data: bytes = b'',
-            startgas: Optional[int] = None) -> int:
+            startgas: int = None
+    ) -> Optional[int]:
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
@@ -787,8 +790,8 @@ class JSONRPCClient:
     def poll(
             self,
             transaction_hash: bytes,
-            confirmations: Optional[int] = None,
-            timeout: Optional[float] = None):
+            confirmations: int = None,
+            timeout: float = None):
         """ Wait until the `transaction_hash` is applied or rejected.
         If timeout is None, this could wait indefinitely!
 
