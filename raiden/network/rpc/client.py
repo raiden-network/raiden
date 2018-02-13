@@ -188,13 +188,13 @@ class JSONRPCClient:
             nonce_offset: int = 0):
 
         endpoint = 'http://{}:{}'.format(host, port)
-        session = requests.Session()
+        self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
-        session.mount(endpoint, adapter)
+        self.session.mount(endpoint, adapter)
 
         self.transport = HttpPostClientTransport(
             endpoint,
-            post_method=session.post,
+            post_method=self.session.post,
             headers={'content-type': 'application/json'},
         )
 
@@ -225,6 +225,9 @@ class JSONRPCClient:
         )
         cache_wrapper = cachetools.cached(cache=cache)
         self.gasprice = cache_wrapper(self._gasprice)
+
+    def __del__(self):
+        self.session.close()
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
