@@ -11,6 +11,9 @@ Raiden is a payment channel implementation which provides scalable, low latency,
 
 Installation
 ============
+
+.. warning:: If you are just switching from an old installation of raiden which was using python 2, then you should make sure to remove your raiden directory. By default that would mean: :code:`rm -rf ~/.raiden`
+
 The preferred way to install Raiden is downloading a self contained application bundle from the
 `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
 
