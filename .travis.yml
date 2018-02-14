@@ -6,9 +6,9 @@ python:
 - '3.6'
 env:
   global:
-  - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.3-4bb3c89d.tar.gz'
-  - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.7.3-4bb3c89d.tar.gz'
-  - GETH_VERSION='1.7.3'
+  - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.0-5f540757.tar.gz'
+  - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.0-5f540757.tar.gz
+  - GETH_VERSION='1.8.0'
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux'
   - SOLC_URL_MACOS='https://www.dropbox.com/s/21xuco6djjpdwd4/solc_0.4.18?dl=0'
   - SOLC_VERSION='v0.4.18'
