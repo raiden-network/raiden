@@ -1,4 +1,4 @@
-include README.md
+include README.rst
 include requirements.txt
 include raiden/smart_contracts/*
 include raiden/smoketest_config.json

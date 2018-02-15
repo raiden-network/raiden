@@ -59,21 +59,15 @@ docs:
 	$(MAKE) -C docs html
 
 RAIDENVERSION?=master
-GETH_URL_LINUX?='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.3-4bb3c89d.tar.gz'
-SOLC_URL_LINUX?='https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux'
 
-bundle:
+bundle-docker:
 	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) -f docker/build.Dockerfile docker
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
-	docker cp builder:/raiden/raiden-$(RAIDENVERSION).tar.gz dist/raiden-$(RAIDENVERSION).tar.gz
+	docker cp builder:/raiden/raiden-$(RAIDENVERSION)-linux.tar.gz dist/raiden-$(RAIDENVERSION)-linux.tar.gz
 	docker rm builder
 
-test_bundle_docker := docker run --privileged --rm -v $(shell pwd)/dist:/data
-test_bundle_exe := /data/raiden--x86_64.AppImage --help
-test_bundle_test := grep -q "Usage: raiden"
-
-pyibundle:
+bundle:
 	python setup.py compile_contracts
 	python setup.py compile_webui
 	pyinstaller --noconfirm --clean raiden.spec
