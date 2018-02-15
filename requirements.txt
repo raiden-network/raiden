@@ -22,5 +22,5 @@ pycryptodome==3.4.7
 pysha3==1.0.2
 repoze.lru==0.7.0
 rlp==0.6
-tinyrpc[gevent,httpclient,jsonext,websocket,wsgi]==0.7
+-e git://github.com/mbr/tinyrpc.git@0fb6eae9a8c0bc5eecad26c067d2d57787512452#egg=tinyrpc
 webargs==1.8.1
