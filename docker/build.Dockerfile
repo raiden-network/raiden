@@ -9,7 +9,7 @@ RUN apt-get update
 RUN apt-get install -y git-core wget
 
 RUN wget -O /usr/bin/solc ${SOLC_URL_LINUX} && chmod +x /usr/bin/solc
-RUN wget -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && cd /tmp && tar xzvf geth.tar.gz && mv geth-linux-amd64-1.7.3-4bb3c89d/geth /usr/bin/geth && rm geth.tar.gz
+RUN wget -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && cd /tmp && tar xzvf geth.tar.gz && mv geth-linux-amd64-1.8.0-5f540757/geth /usr/bin/geth && rm geth.tar.gz
 RUN wget -O /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-v8.2.1-linux-x64.tar.gz && cd /tmp && tar xzvf node.tar.gz && mkdir /tmp/node_modules && chmod -R a+rwX /tmp/node_modules && rm node.tar.gz
 
 
@@ -21,7 +21,7 @@ ARG RAIDENVERSION=master
 ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
 
 # clone raiden repo + install dependencies
-RUN git clone https://github.com/raiden-network/raiden
+RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO}
 WORKDIR /raiden
 RUN pip install -r requirements.txt
 
@@ -37,4 +37,4 @@ RUN pip install pyinstaller
 RUN pyinstaller --noconfirm --clean raiden.spec
 
 # pack result to have a unique name to get it out of the container later
-RUN tar -cvzf raiden-${RAIDENVERSION}.tar.gz dist/raiden*
+RUN cd dist && tar -cvzf raiden-${RAIDENVERSION}-linux.tar.gz raiden* && mv raiden-${RAIDENVERSION}-linux.tar.gz ..
