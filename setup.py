@@ -109,7 +109,6 @@ history = ''
 
 install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
-    '-e git://github.com/mbr/tinyrpc.git@0fb6eae9a8c0bc5eecad26c067d2d57787512452#egg=tinyrpc[gevent,httpclient]': 'tinyrpc',
 }
 
 install_requires = list(set(
