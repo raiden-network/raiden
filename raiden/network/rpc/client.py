@@ -18,13 +18,6 @@ from ethereum.tools._solidity import (
     solidity_library_symbol,
     solidity_resolve_symbols
 )
-from tinyrpc.protocols.jsonrpc import (
-    JSONRPCErrorResponse,
-    JSONRPCProtocol,
-    JSONRPCSuccessResponse,
-)
-from tinyrpc.transports.http import HttpPostClientTransport
-from tinyrpc.exc import InvalidReplyError
 import requests
 
 from raiden.exceptions import (
@@ -51,6 +44,8 @@ from raiden.utils.typing import address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
+JSON_RPC_VERSION = '2.0'
+JSON_RPC_RESPONSE_KEYS = {'id', 'jsonrpc', 'error', 'result'}
 
 
 def check_address_has_code(
@@ -156,10 +151,10 @@ def check_node_connection(func):
                     log.info('Client reconnected')
                 return result
 
-            except (requests.exceptions.ConnectionError, InvalidReplyError):
+            except (requests.exceptions.ConnectionError, EthNodeCommunicationError) as e:
                 log.info(
                     'Timeout in eth client connection to {}. Is the client offline? Trying '
-                    'again in {}s.'.format(self.transport.endpoint, timeout)
+                    'again in {}s.'.format(self.endpoint, timeout)
                 )
             gevent.sleep(timeout)
 
@@ -188,19 +183,17 @@ class JSONRPCClient:
             nonce_offset: int = 0):
 
         endpoint = 'http://{}:{}'.format(host, port)
-        self.session = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
-        self.session.mount(endpoint, adapter)
 
-        self.transport = HttpPostClientTransport(
-            endpoint,
-            post_method=self.session.post,
-            headers={'content-type': 'application/json'},
-        )
+        transport = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
+        transport.mount(endpoint, adapter)
+
+        self.transport = transport
+        self.endpoint = endpoint
+        self.jsonrpc_counter = 0
 
         self.port = port
         self.privkey = privkey
-        self.protocol = JSONRPCProtocol()
         self.sender = privatekey_to_address(privkey)
         # Needs to be initialized to None in the beginning since JSONRPCClient
         # gets constructed before the RaidenService Object.
@@ -518,16 +511,48 @@ class JSONRPCClient:
                 without left zeros.
                 - Data arguments must be hex encoded starting with '0x'
         """
-        request = self.protocol.create_request(method, args)
-        reply = self.transport.send_message(request.serialize().encode())
+        self.jsonrpc_counter += 1
+        json_data = {
+            'jsonrpc': JSON_RPC_VERSION,
+            'method': method,
+            'id': self.jsonrpc_counter,
+        }
 
-        jsonrpc_reply = self.protocol.parse_reply(reply)
-        if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
-            return jsonrpc_reply.result
-        elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
-            raise EthNodeCommunicationError(jsonrpc_reply.error, jsonrpc_reply._jsonrpc_error_code)
-        else:
-            raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
+        if args:
+            json_data['params'] = args
+
+        result = self.transport.post(self.endpoint, json=json_data)
+
+        try:
+            response = result.json()
+        except Exception as e:
+            raise EthNodeCommunicationError(e)
+
+        if not JSON_RPC_RESPONSE_KEYS.issuperset(response.keys()):
+            raise EthNodeCommunicationError('JSONRPC: Invalid response')
+
+        if 'jsonrpc' not in response:
+            raise EthNodeCommunicationError('JSONRPC: Missing jsonrpc key in response.')
+
+        if response['jsonrpc'] != JSON_RPC_VERSION:
+            raise EthNodeCommunicationError('JSONRPC: Wrong version')
+
+        if 'id' not in response:
+            raise EthNodeCommunicationError('JSONRPC: Missing id in response')
+
+        if 'error' in response == 'result' in response:
+            raise EthNodeCommunicationError(
+                'JSONRPC: Reply must contain exactly one of result and error.'
+            )
+
+        if 'error' in response:
+            error = response['error']
+            raise EthNodeCommunicationError(
+                error['message'],
+                error['code'],
+            )
+
+        return response.get('result')
 
     def send_transaction(
             self,
