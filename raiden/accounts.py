@@ -8,7 +8,7 @@ from binascii import hexlify, unhexlify
 from ethereum.tools import keys
 from ethereum.slogging import get_logger
 
-from raiden.utils import privtopub
+from raiden.utils import privtopub, privatekey_to_address
 
 log = get_logger(__name__)
 
@@ -221,7 +221,7 @@ class Account:
         elif 'address' in self.keystore:
             self._address = unhexlify(self.keystore['address'])
         elif not self.locked:
-            self._address = keys.privtoaddr(self.privkey)
+            self._address = privatekey_to_address(self.privkey)
         else:
             return None
         return self._address
