@@ -140,11 +140,11 @@ def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
 
 
 def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
-    if not len(private_key_bin) == 32:
+    """ Returns public key in bitcoins 'bin' encoding. """
+    if not ishash(private_key_bin):
         raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
     private_key = PrivateKey(private_key_bin)
-    pubkey = private_key.public_key.format(compressed=False)
-    return pubkey
+    return private_key.public_key.format(compressed=False)
 
 
 def publickey_to_address(publickey: bytes) -> bytes:
@@ -156,7 +156,9 @@ def privatekey_to_address(private_key_bin: bytes) -> address:
 
 
 def privtopub(private_key_bin: bytes) -> bytes:
+    """ Returns public key in bitcoins 'bin_electrum' encoding. """
     raw_pubkey = privatekey_to_publickey(private_key_bin)
+    assert raw_pubkey.startswith(b'\x04')
     return raw_pubkey[1:]
 
 
