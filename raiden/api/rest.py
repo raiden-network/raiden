@@ -132,7 +132,7 @@ def normalize_events_list(old_list):
     new_list = []
     for _event in old_list:
         new_event = dict(_event)
-        new_event['event_type'] = new_event.pop('_event_type')
+        new_event['event_type'] = new_event.pop('_event_type').decode()
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
         if new_event['event_type'] == 'EventTransferReceivedSuccess':

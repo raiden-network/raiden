@@ -96,7 +96,7 @@ class ApiTestContext:
     def get_network_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
-            expected_event_type = event['_event_type'] == 'TokenAdded'
+            expected_event_type = event['_event_type'] == b'TokenAdded'
             in_block_range = (
                 event['block_number'] >= from_block and
                 event['block_number'] <= to_block
@@ -116,7 +116,7 @@ class ApiTestContext:
                 'query'.format(pex(token_address))
             )
         for event in self.events:
-            expected_event_type = event['_event_type'] == 'ChannelNew'
+            expected_event_type = event['_event_type'] == b'ChannelNew'
             in_block_range = (
                 event['block_number'] >= from_block and
                 event['block_number'] <= to_block
@@ -136,11 +136,11 @@ class ApiTestContext:
 
         for event in self.events:
             is_channel_event = (
-                event['_event_type'] == 'ChannelNewBalance' or
-                event['_event_type'] == 'ChannelClosed' or
-                event['_event_type'] == 'TransferUpdated' or
-                event['_event_type'] == 'ChannelSettled' or
-                event['_event_type'] == 'ChannelSecretRevealed'
+                event['_event_type'] == b'ChannelNewBalance' or
+                event['_event_type'] == b'ChannelClosed' or
+                event['_event_type'] == b'TransferUpdated' or
+                event['_event_type'] == b'ChannelSettled' or
+                event['_event_type'] == b'ChannelSecretRevealed'
             )
             in_block_range = (
                 event['block_number'] >= from_block and

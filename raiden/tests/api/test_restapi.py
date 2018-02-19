@@ -726,46 +726,46 @@ def test_query_blockchain_events(
     # a block number but for the purposes of making sure block numbers propagate
     # in the API logic I am adding them here and testing for them later.
     api_test_context.add_events([{
-        '_event_type': 'TokenAdded',
+        '_event_type': b'TokenAdded',
         'block_number': 1,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     }, {
-        '_event_type': 'TokenAdded',
+        '_event_type': b'TokenAdded',
         'block_number': 13,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     }, {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
         'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
         'block_number': 15,
     }, {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xa193fb0032c8635d590f8f31be9f70bd12451b1e',
         'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
         'block_number': 100,
     }, {
-        '_event_type': 'ChannelNewBalance',
+        '_event_type': b'ChannelNewBalance',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'participant': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'balance': 200,
         'block_number': 20,
     }, {
-        '_event_type': 'ChannelNewBalance',
+        '_event_type': b'ChannelNewBalance',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'participant': '0x00472c1e4275230354dbe5007a5976053f12610a',
         'balance': 650,
         'block_number': 150,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 35,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 250,
     }])
 
@@ -850,14 +850,14 @@ def test_break_blockchain_events(
         rest_api_port_number):
 
     api_test_context.add_events([{
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
         'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
         'block_number': 15,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 35,
     }])
 
