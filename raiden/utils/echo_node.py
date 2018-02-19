@@ -106,7 +106,7 @@ class EchoNode:
                         )
                         received_transfers.extend([
                             event for event in channel_events
-                            if event['_event_type'] == 'EventTransferReceivedSuccess'
+                            if event['_event_type'] == b'EventTransferReceivedSuccess'
                         ])
                     for event in received_transfers:
                         transfer = event.copy()

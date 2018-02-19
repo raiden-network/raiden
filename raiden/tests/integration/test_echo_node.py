@@ -42,7 +42,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
     transfer_initiators = list()
     events_received = list()
     for event in events:
-        if event['_event_type'] == 'EventTransferReceivedSuccess':
+        if event['_event_type'] == b'EventTransferReceivedSuccess':
             events_received.append(event)
             transfer_initiators.append(event['initiator'])
 
@@ -98,7 +98,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
         received = {}
 
         for event in events:
-            if event['_event_type'] == 'EventTransferReceivedSuccess':
+            if event['_event_type'] == b'EventTransferReceivedSuccess':
                 received[repr(event)] = event
 
         assert len(received) == 1
@@ -178,7 +178,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         events = get_channel_events_for_token(app, token_address, 0)
 
         for event in events:
-            if event['_event_type'] == 'EventTransferReceivedSuccess':
+            if event['_event_type'] == b'EventTransferReceivedSuccess':
                 received[repr(event)] = event
 
     assert len(received) == 2

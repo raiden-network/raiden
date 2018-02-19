@@ -214,7 +214,7 @@ def test_api_channel_events(raiden_chain):
             assert max_block != 0
 
         if idx == 2:
-            assert result['_event_type'] == 'EventTransferSentSuccess'
+            assert result['_event_type'] == b'EventTransferSentSuccess'
             assert result['amount'] == amount
             assert result['target'] == app1.raiden.address
         else:
