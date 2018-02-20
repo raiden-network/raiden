@@ -126,6 +126,10 @@ def handle_request_parsing_error(err):
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
 
 
+def endpoint_not_found(e):
+    return api_error('invalid endpoint', HTTPStatus.NOT_FOUND)
+
+
 def normalize_events_list(old_list):
     """Internally the `event_type` key is prefixed with underscore but the API
     returns an object without that prefix"""
@@ -218,6 +222,8 @@ class APIServer:
         if is_frozen():
             # Inside frozen pyinstaller image
             self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
+
+        self.flask_app.errorhandler(HTTPStatus.NOT_FOUND)(endpoint_not_found)
 
         if web_ui:
             for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
