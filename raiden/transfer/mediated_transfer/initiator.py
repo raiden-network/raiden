@@ -33,7 +33,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.utils import sha3
 
 
-def cancel_current_route(state):
+def cancel_current_route(state, send_reveal_secret=False):
     """ Clear current state and try a new route.
 
     - Discards the current secret
@@ -45,13 +45,29 @@ def cancel_current_route(state):
     state.routes.canceled_routes.append(state.route)
     state.canceled_transfers.append(state.message)
 
+    extra_events = []
+    if send_reveal_secret:
+        transfer = state.transfer
+        reveal_secret = SendRevealSecret(
+            transfer.identifier,
+            transfer.secret,
+            transfer.token,
+            transfer.target,
+            state.our_address,
+        )
+        state.revealsecret = reveal_secret
+        extra_events.append(reveal_secret)
+
     state.transfer.secret = None
     state.transfer.hashlock = None
     state.message = None
     state.route = None
     state.secretrequest = None
 
-    return try_new_route(state)
+    iteration = try_new_route(state)
+    iteration.events.extend(extra_events)
+
+    return iteration
 
 
 def user_cancel_transfer(state):
@@ -112,18 +128,23 @@ def try_new_route(state):
         # No available route has sufficient balance for the current transfer,
         # cancel it.
         #
-        # At this point we can just discard all the state data, this is only
-        # valid because we are the initiator and we know that the secret was
-        # not released.
+        # At this point we can just discard all the state data except for the
+        # reveal secret.
         transfer_failed = EventTransferSentFailed(
             identifier=state.transfer.identifier,
             reason='no route available',
         )
 
+        state.transfer.secret = None
+        state.transfer.hashlock = None
+        state.message = None
+        state.route = None
+        state.secretrequest = None
+
         events = [transfer_failed]
         if unlock_failed:
             events.append(unlock_failed)
-        iteration = TransitionResult(None, events)
+        iteration = TransitionResult(state, events)
 
     else:
         state.route = try_route
@@ -195,7 +216,7 @@ def handle_routechange(state, state_change):
 
 def handle_transferrefund(state, state_change):
     if state_change.sender == state.route.node_address:
-        iteration = cancel_current_route(state)
+        iteration = cancel_current_route(state, send_reveal_secret=True)
     else:
         iteration = TransitionResult(state, list())
 
