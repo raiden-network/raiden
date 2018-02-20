@@ -321,7 +321,6 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     assert result.wait(timeout=10)
 
 
-@pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('transport_class', [MessageLoggerTransport])

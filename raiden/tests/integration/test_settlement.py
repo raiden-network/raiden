@@ -30,7 +30,6 @@ from raiden.utils import sha3, privatekey_to_address
 # pylint: disable=too-many-locals,too-many-statements
 
 
-@pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     alice_app, bob_app = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -185,7 +184,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     })
 
 
-@pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
@@ -296,7 +294,6 @@ def test_close_channel_lack_of_balance_proof(
 
 
 @pytest.mark.xfail(reason='test incomplete')
-@pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout):
     """ An attacker can try to steal tokens from a hub or the last node in a

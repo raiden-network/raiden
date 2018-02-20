@@ -10,7 +10,6 @@ from raiden.tests.utils.network import CHAIN
 from raiden.messages import RefundTransfer
 
 
-@pytest.mark.parametrize('privatekey_seed', ['test_refund_messages:{}'])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('settle_timeout', [50])

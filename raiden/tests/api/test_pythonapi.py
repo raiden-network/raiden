@@ -16,7 +16,6 @@ from raiden.transfer.state import (
 from raiden.utils import get_contract_path, address_encoder
 
 
-@pytest.mark.parametrize('privatekey_seed', ['test_token_addresses:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_token_addresses(raiden_network, token_addresses):
@@ -38,7 +37,6 @@ def test_token_addresses(raiden_network, token_addresses):
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_REACHABLE
 
 
-@pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('number_of_tokens', [0])
 def test_token_registration(raiden_network, tester_chain):
@@ -65,7 +63,6 @@ def test_token_registration(raiden_network, tester_chain):
     assert api1.get_tokens_list() == [token_address]
 
 
-@pytest.mark.parametrize('privatekey_seed', ['test_channel_lifetime:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_channel_lifecycle(raiden_network, token_addresses, deposit):
