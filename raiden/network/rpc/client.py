@@ -301,9 +301,7 @@ class JSONRPCClient:
     def _gaslimit(self, location='pending') -> int:
         last_block = self.call('eth_getBlockByNumber', location, True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
-        # The gas limit can fluctuate from the actual pending limit by a maximum
-        # of up to a 1/1024th of the previous gas limit
-        return gas_limit - int(gas_limit / 1024)
+        return gas_limit * 8 // 10
 
     def _gasprice(self) -> int:
         if self.given_gas_price:
