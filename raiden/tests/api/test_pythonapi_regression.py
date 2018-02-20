@@ -9,7 +9,6 @@ from raiden.transfer.state import (
 )
 
 
-@pytest.mark.parametrize('privatekey_seed', ['test_close_regression:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_close_regression(raiden_network, token_addresses):

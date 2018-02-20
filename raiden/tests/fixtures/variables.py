@@ -146,11 +146,11 @@ def nat_keepalive_timeout():
 
 
 @pytest.fixture
-def privatekey_seed():
+def privatekey_seed(request):
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.
     """
-    return 'key:{}'
+    return request.node.name + ':{}'
 
 
 @pytest.fixture

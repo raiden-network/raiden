@@ -95,7 +95,6 @@ def test_mediation(raiden_network, token_addresses, settle_timeout):
     assert must_contain_entry(app0_events, EventWithdrawSuccess, {})
 
 
-@pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('settle_timeout', [50])

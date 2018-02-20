@@ -19,7 +19,6 @@ from raiden.utils import privatekey_to_address, get_contract_path, topic_decoder
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 
-@pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [0])
@@ -198,7 +197,6 @@ def test_channelmanager_graph_building(
     'TRAVIS' in os.environ,
     reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
 )
-@pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
         blockchain_backend,  # required to start the geth backend pylint: disable=unused-argument
