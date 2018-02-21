@@ -405,58 +405,6 @@ class BalanceProofState(State):
         return not self.__eq__(other)
 
 
-class TransactionExecutionStatus(State):
-    """ Represents the status of a transaction. """
-    SUCCESS = 'success'
-    FAILURE = 'failure'
-    VALID_RESULT_VALUES = (
-        SUCCESS,
-        FAILURE,
-        None,
-    )
-
-    def __init__(
-            self,
-            started_block_number: typing.Optional[typing.block_number],
-            finished_block_number: typing.Optional[typing.block_number],
-            result):
-
-        # started_block_number is set for the node that sent the transaction,
-        # None otherwise
-        if not (started_block_number is None or isinstance(started_block_number, int)):
-            raise ValueError('started_block_number must be None or a block_number')
-
-        if not (finished_block_number is None or isinstance(finished_block_number, int)):
-            raise ValueError('finished_block_number must be None or a block_number')
-
-        if result not in self.VALID_RESULT_VALUES:
-            raise ValueError('result must be one of {}'.format(
-                ','.join(self.VALID_RESULT_VALUES),
-            ))
-
-        self.started_block_number = started_block_number
-        self.finished_block_number = finished_block_number
-        self.result = result
-
-    def __str__(self):
-        return '<TransactionExecutionStatus started:{} finished:{} result:{}>'.format(
-            self.started_block_number,
-            self.finished_block_number,
-            self.result,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, TransactionExecutionStatus) and
-            self.started_block_number == other.started_block_number and
-            self.finished_block_number == other.finished_block_number and
-            self.result == other.result
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class HashTimeLockState(State):
     """ Represents a hash time lock. """
 
@@ -515,6 +463,129 @@ class HashTimeLockState(State):
 
     def __hash__(self):
         return self.lockhash
+
+
+class UnlockPartialProofState(State):
+    """ Stores the lock accompained of it's unlocking secret. """
+
+    __slots__ = (
+        'lock',
+        'secret',
+    )
+
+    def __init__(self, lock: HashTimeLockState, secret: typing.secret):
+        if not isinstance(lock, HashTimeLockState):
+            raise ValueError('lock must be a HashTimeLockState instance')
+
+        if not isinstance(secret, typing.secret):
+            raise ValueError('secret must be a secret instance')
+
+        self.lock = lock
+        self.secret = secret
+
+    def __str__(self):
+        return '<UnlockPartialProofState lock:{}>'.format(
+            self.lock,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, UnlockPartialProofState) and
+            self.lock == other.lock and
+            self.secret == other.secret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class UnlockProofState(State):
+    """ An unlock proof for a given lock. """
+
+    __slots__ = (
+        'merkle_proof',
+        'lock_encoded',
+        'secret',
+    )
+
+    def __init__(
+            self,
+            merkle_proof: typing.List[typing.keccak256],
+            lock_encoded,
+            secret: typing.secret):
+
+        if not isinstance(secret, typing.secret):
+            raise ValueError('secret must be a secret instance')
+
+        self.merkle_proof = merkle_proof
+        self.lock_encoded = lock_encoded
+        self.secret = secret
+
+    def __str__(self):
+        return '<UnlockProofState>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, UnlockProofState) and
+            self.merkle_proof == other.merkle_proof and
+            self.lock_encoded == other.lock_encoded and
+            self.secret == other.secret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class TransactionExecutionStatus(State):
+    """ Represents the status of a transaction. """
+    SUCCESS = 'success'
+    FAILURE = 'failure'
+    VALID_RESULT_VALUES = (
+        SUCCESS,
+        FAILURE,
+        None,
+    )
+
+    def __init__(
+            self,
+            started_block_number: typing.Optional[typing.block_number],
+            finished_block_number: typing.Optional[typing.block_number],
+            result):
+
+        # started_block_number is set for the node that sent the transaction,
+        # None otherwise
+        if not (started_block_number is None or isinstance(started_block_number, int)):
+            raise ValueError('started_block_number must be None or a block_number')
+
+        if not (finished_block_number is None or isinstance(finished_block_number, int)):
+            raise ValueError('finished_block_number must be None or a block_number')
+
+        if result not in self.VALID_RESULT_VALUES:
+            raise ValueError('result must be one of {}'.format(
+                ','.join(self.VALID_RESULT_VALUES),
+            ))
+
+        self.started_block_number = started_block_number
+        self.finished_block_number = finished_block_number
+        self.result = result
+
+    def __str__(self):
+        return '<TransactionExecutionStatus started:{} finished:{} result:{}>'.format(
+            self.started_block_number,
+            self.finished_block_number,
+            self.result,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TransactionExecutionStatus) and
+            self.started_block_number == other.started_block_number and
+            self.finished_block_number == other.finished_block_number and
+            self.result == other.result
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class MerkleTreeState(State):
