@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-
-from binascii import hexlify
 import json
 import os
 
@@ -11,7 +8,7 @@ from ethereum.tools._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils import get_contract_path
+from raiden.utils import get_contract_path, address_encoder
 
 
 log = slogging.getLogger(__name__)
@@ -72,7 +69,7 @@ def patch_deploy_solidity_contract():
 
     exec(  # pylint: disable=exec-used
         code,
-        JSONRPCClient.deploy_solidity_contract.__func__.__globals__,
+        JSONRPCClient.deploy_solidity_contract.__globals__,
         ctx,
     )
 
@@ -97,7 +94,7 @@ def allcontracts(contract_files):
 def deploy_file(contract, compiled_contracts, client):
     libraries = dict()
     filename, _, name = contract.partition(":")
-    log.info("Deploying %s", name)
+    log.info(f"Deploying {name}")
     proxy = client.deploy_solidity_contract(
         client.sender,
         name,
@@ -106,8 +103,8 @@ def deploy_file(contract, compiled_contracts, client):
         '',
         contract_path=filename,
     )
-    log.info("Deployed %s @ 0x%s", name, hexlify(proxy.contract_address))
-    libraries[contract] = hexlify(proxy.contract_address)
+    log.info(f"Deployed {name} @ {address_encoder(proxy.contract_address)}")
+    libraries[contract] = address_encoder(proxy.contract_address)[2:]
     return libraries
 
 
