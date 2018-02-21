@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState
+from raiden.utils import pex
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
@@ -27,6 +28,27 @@ class Block(StateChange):
 
     def __str__(self):
         return 'Block({})'.format(self.block_number)
+
+
+class ActionChannelClose(StateChange):
+    """ User is closing an existing channel. """
+
+    def __init__(self, channel_identifier):
+        self.channel_identifier = channel_identifier
+
+    def __str__(self):
+        return '<ActionChannelClose channel:{}>'.format(
+            pex(self.channel_identifier),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionChannelClose) and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ActionRouteChange(StateChange):
