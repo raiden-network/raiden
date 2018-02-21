@@ -7,10 +7,11 @@ from ethereum.tools import _solidity
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
+    ChannelManager,
     Discovery,
-    Token,
     NettingChannel,
     Registry,
+    Token,
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
@@ -37,6 +38,7 @@ class BlockChainService:
         self.address_to_discovery = dict()
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
+        self.address_to_manager = dict()
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
@@ -110,6 +112,16 @@ class BlockChainService:
             )
 
         return self.address_to_token[token_address]
+
+    def channel_manager(self, channel_manager_address):
+        if channel_manager_address not in self.address_to_manager:
+            self.address_to_manager[channel_manager_address] = ChannelManager(
+                self.client,
+                channel_manager_address,
+                self.poll_timeout,
+            )
+
+        return self.address_to_manager[channel_manager_address]
 
     def discovery(self, discovery_address: bytes) -> Discovery:
         """ Return a proxy to interact with the discovery. """
