@@ -9,6 +9,7 @@ CHANNEL_STATE_CLOSING = 'waiting_for_close'
 CHANNEL_STATE_OPENED = 'opened'
 CHANNEL_STATE_SETTLED = 'settled'
 CHANNEL_STATE_SETTLING = 'waiting_for_settle'
+CHANNEL_STATE_UNUSABLE = 'channel_unusable'
 
 
 def balanceproof_from_envelope(envelope_message):
