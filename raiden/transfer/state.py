@@ -511,7 +511,6 @@ class BalanceProofSignedState(State):
             message_hash: typing.keccak256,
             signature: typing.signature,
             sender: typing.address):
-
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 

@@ -213,7 +213,7 @@ def test_end_state():
     assert merkleroot(state1.merkletree) == EMPTY_MERKLE_ROOT
     assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
-    assert state1.nonce is 2
+    assert state1.nonce == 2
     assert state2.nonce is None
 
 
@@ -883,7 +883,7 @@ def test_channel_must_accept_expired_locks():
     balance2 = 110
     reveal_timeout = 5
     settle_timeout = 15
-    privkey1, address1 = make_privkey_address()
+    _, address1 = make_privkey_address()
     privkey2, address2 = make_privkey_address()
     token_address = make_address()
 
