@@ -2,12 +2,14 @@
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
-from raiden.encoding import messages, signing
+from raiden.constants import UINT256_MAX
 from raiden.encoding.format import buffer_for
-from raiden.encoding.signing import recover_publickey
+from raiden.encoding import messages, signing
+from raiden.encoding.signing import recover_publickey_safe
 from raiden.utils import publickey_to_address, sha3, ishash, pex
 from raiden.transfer.state import BalanceProofState
 from raiden.exceptions import InvalidProtocolMessage
+from raiden.transfer.balance_proof import pack_signing_data
 
 __all__ = (
     'Ack',
@@ -38,7 +40,7 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
     if transferred_amount < 0:
         raise ValueError('transferred_amount cannot be negative')
 
-    if transferred_amount >= 2 ** 256:
+    if transferred_amount > UINT256_MAX:
         raise ValueError('transferred_amount is too large')
 
     if len(locksroot) != 32:
@@ -155,20 +157,7 @@ class SignedMessage(Message):
         data_that_was_signed = data[:-signature.size_bytes]
         message_signature = data[-signature.size_bytes:]
 
-        try:
-            publickey = recover_publickey(data_that_was_signed, message_signature)
-        except ValueError:
-            # raised if the signature has the wrong length
-            log.error('invalid signature')
-            return
-        except TypeError as e:
-            # raised if the PublicKey instantiation failed
-            log.error('invalid key data: {}'.format(e.message))
-            return
-        except Exception as e:  # pylint: disable=broad-except
-            # secp256k1 is using bare Exception classes: raised if the recovery failed
-            log.error('error while recovering pubkey: {}'.format(e.message))
-            return
+        publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
@@ -205,13 +194,13 @@ class EnvelopeMessage(SignedMessage):
         assert field.name == 'signature', 'signature is not the last field'
 
         data = packed.data
-        nonce = klass.get_bytes_from(data, 'nonce')
-        transferred_amount = klass.get_bytes_from(data, 'transferred_amount')
-        locksroot = klass.get_bytes_from(data, 'locksroot')
-        channel_address = klass.get_bytes_from(data, 'channel')
-        message_hash = self.message_hash
-
-        data_to_sign = nonce + transferred_amount + locksroot + channel_address + message_hash
+        data_to_sign = pack_signing_data(
+            klass.get_bytes_from(data, 'nonce'),
+            klass.get_bytes_from(data, 'transferred_amount'),
+            klass.get_bytes_from(data, 'channel'),
+            klass.get_bytes_from(data, 'locksroot'),
+            self.message_hash,
+        )
         signature = signing.sign(data_to_sign, private_key)
 
         packed.signature = signature
@@ -235,29 +224,15 @@ class EnvelopeMessage(SignedMessage):
         message_signature = data[-signature.size_bytes:]
         message_hash = sha3(message_data)
 
-        nonce = message_type.get_bytes_from(data, 'nonce')
-        transferred_amount = message_type.get_bytes_from(data, 'transferred_amount')
-        locksroot = message_type.get_bytes_from(data, 'locksroot')
-        channel_address = message_type.get_bytes_from(data, 'channel')
-
-        data_that_was_signed = (
-            nonce + transferred_amount + locksroot + channel_address + message_hash
+        data_that_was_signed = pack_signing_data(
+            message_type.get_bytes_from(data, 'nonce'),
+            message_type.get_bytes_from(data, 'transferred_amount'),
+            message_type.get_bytes_from(data, 'channel'),
+            message_type.get_bytes_from(data, 'locksroot'),
+            message_hash,
         )
 
-        try:
-            publickey = recover_publickey(data_that_was_signed, message_signature)
-        except ValueError:
-            # raised if the signature has the wrong length
-            log.error('invalid signature')
-            return
-        except TypeError as e:
-            # raised if the PublicKey instantiation failed
-            log.error('invalid key data: {}'.format(e.message))
-            return
-        except Exception as e:  # pylint: disable=broad-except
-            # secp256k1 is using bare Exception classes: raised if the recovery failed
-            log.error('error while recovering pubkey: {}'.format(e.message))
-            return
+        publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
@@ -756,7 +731,6 @@ class LockedTransfer(EnvelopeMessage):
 
 
 class MediatedTransfer(LockedTransfer):
-
     """
     A MediatedTransfer has a `target` address to which a chain of transfers shall
     be established. Here the `haslock` is mandatory.
