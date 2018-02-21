@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from raiden.encoding.format import buffer_for
+from raiden.encoding import messages
 from raiden.transfer.architecture import State
-from raiden.utils import pex, typing
 from raiden.constants import UINT256_MAX, UINT64_MAX
+from raiden.utils import pex, sha3, typing
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -455,6 +457,66 @@ class TransactionExecutionStatus(State):
         return not self.__eq__(other)
 
 
+class HashTimeLockState(State):
+    """ Represents a hash time lock. """
+
+    __slots__ = (
+        'amount',
+        'expiration',
+        'hashlock',
+        'encoded',
+        'lockhash',
+    )
+
+    def __init__(
+            self,
+            amount: typing.token_amount,
+            expiration: typing.block_number,
+            hashlock: typing.keccak256):
+
+        if not isinstance(amount, typing.token_amount):
+            raise ValueError('amount must be a token_amount instance')
+
+        if not isinstance(expiration, typing.block_number):
+            raise ValueError('expiration must be a block_number instance')
+
+        if not isinstance(hashlock, typing.keccak256):
+            raise ValueError('hashlock must be an keccak256 instance')
+
+        packed = messages.Lock(buffer_for(messages.Lock))
+        packed.amount = amount
+        packed.expiration = expiration
+        packed.hashlock = hashlock
+        encoded = bytes(packed.data)
+
+        self.amount = amount
+        self.expiration = expiration
+        self.hashlock = hashlock
+        self.encoded = encoded
+        self.lockhash = sha3(encoded)
+
+    def __str__(self):
+        return '<HashTimeLockState amount:{} expiration:{} hashlock:{}>'.format(
+            self.amount,
+            self.expiration,
+            pex(self.hashlock),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, HashTimeLockState) and
+            self.amount == other.amount and
+            self.expiration == other.expiration and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return self.lockhash
+
+
 class MerkleTreeState(State):
     def __init__(self, layers):
         self.layers = layers
@@ -464,6 +526,149 @@ class MerkleTreeState(State):
             return self.layers == other.layers
 
         return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class NettingChannelEndState(State):
+    """ The state of one of the nodes in a two party netting channel. """
+
+    __slots__ = (
+        'address',
+        'contract_balance',
+        'hashlocks_to_pendinglocks',
+        'hashlocks_to_unclaimedlocks',
+        'merkletree',
+        'balance_proof',
+    )
+
+    def __init__(self, address: typing.address, balance: typing.token_amount):
+        if not isinstance(address, typing.address):
+            raise ValueError('address must be an address instance')
+
+        if not isinstance(balance, typing.token_amount):
+            raise ValueError('balance must be a token_amount isinstance')
+
+        self.address = address
+        self.contract_balance = balance
+
+        self.hashlocks_to_pendinglocks = dict()
+        self.hashlocks_to_unclaimedlocks = dict()
+        self.merkletree = EMPTY_MERKLE_TREE
+        self.balance_proof = None
+
+    def __str__(self):
+        return '<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>'.format(
+            pex(self.address),
+            self.contract_balance,
+            self.merkletree,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, NettingChannelEndState) and
+            self.address == other.address and
+            self.contract_balance == other.contract_balance and
+            self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
+            self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
+            self.merkletree == other.merkletree and
+            self.balance_proof == other.balance_proof
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class NettingChannelState(State):
+    """ The state of a netting channel. """
+
+    __slots__ = (
+        'identifier',
+        'our_state',
+        'partner_state',
+        'token_address',
+        'reveal_timeout',
+        'settle_timeout',
+        'open_transaction',
+        'close_transaction',
+        'settle_transaction',
+    )
+
+    def __init__(
+            self,
+            identifier,
+            token_address: typing.address,
+            reveal_timeout: typing.block_number,
+            settle_timeout: typing.block_number,
+            our_state: NettingChannelEndState,
+            partner_state: NettingChannelEndState,
+            open_transaction: TransactionExecutionStatus,
+            close_transaction: typing.Optional[TransactionExecutionStatus],
+            settle_transaction: typing.Optional[TransactionExecutionStatus]):
+
+        if reveal_timeout >= settle_timeout:
+            raise ValueError('reveal_timeout must be smaller than settle_timeout')
+
+        if not isinstance(reveal_timeout, int) or reveal_timeout <= 0:
+            raise ValueError('reveal_timeout must be a positive integer')
+
+        if not isinstance(settle_timeout, int) or settle_timeout <= 0:
+            raise ValueError('settle_timeout must be a positive integer')
+
+        if not isinstance(open_transaction, TransactionExecutionStatus):
+            raise ValueError('open_transaction must be a TransactionExecutionStatus instance')
+
+        if open_transaction.result != TransactionExecutionStatus.SUCCESS:
+            raise ValueError(
+                'Cannot create a NettingChannelState with a non sucessfull open_transaction'
+            )
+
+        valid_close_transaction = (
+            close_transaction is None or
+            isinstance(close_transaction, TransactionExecutionStatus)
+        )
+        if not valid_close_transaction:
+            raise ValueError('close_transaction must be a TransactionExecutionStatus instance')
+
+        valid_settle_transaction = (
+            settle_transaction is None or
+            isinstance(settle_transaction, TransactionExecutionStatus)
+        )
+        if not valid_settle_transaction:
+            raise ValueError('settle_transaction must be a TransactionExecutionStatus instance')
+
+        self.identifier = identifier
+        self.token_address = token_address
+        self.reveal_timeout = reveal_timeout
+        self.settle_timeout = settle_timeout
+        self.our_state = our_state
+        self.partner_state = partner_state
+        self.open_transaction = open_transaction
+        self.close_transaction = close_transaction
+        self.settle_transaction = settle_transaction
+
+    def __str__(self):
+        return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
+            pex(self.identifier),
+            self.open_transaction,
+            self.close_transaction,
+            self.settle_transaction,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, NettingChannelState) and
+            self.identifier == other.identifier and
+            self.our_state == other.our_state and
+            self.partner_state == other.partner_state and
+            self.token_address == other.token_address and
+            self.reveal_timeout == other.reveal_timeout and
+            self.settle_timeout == other.settle_timeout and
+            self.open_transaction == other.open_transaction and
+            self.close_transaction == other.close_transaction and
+            self.settle_transaction == other.settle_transaction
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
