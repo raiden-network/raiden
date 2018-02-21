@@ -148,7 +148,7 @@ class StateManager:
         return not self.__eq__(other)
 
 
-class TransitionResult(object):
+class TransitionResult:
     """ Representes the result of applying a single state change.
 
     When a task is completed the new_state is set to None, allowing the parent
