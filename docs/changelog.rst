@@ -2,13 +2,16 @@
 Changelog
 =========
 
-* :bug:`1261` REST API now returns json error for invalid endpoints
-* :feature:`1230` Unless specifically provided gas price and gas limit are now dynamically calculated from the `eth_gasPrice()` and latest block's limit respectively.
+* :release:`0.3.0 <2018-02-21>`
+* :bug:`1217` Correctly decode network events in the REST API.
+* :bug:`1224` Fix internal server error on REST endpoint ``/events/tokens/`` for non-existing tokens.
+* :bug:`1261` REST API now returns json error for invalid endpoints.
+* :feature:`1230` Unless specifically provided gas price and gas limit are now dynamically calculated from the ``eth_gasPrice()`` and latest blocks limit respectively.
 * :feature:`87` Update raiden to use Python 3 and the latest version of pyethereum.
 * :feature:`1015` Added macOS compatibility and binary releases.
 * :feature:`1093` Reconnect raiden to ethereum node after disconnect.
 * :bug:`1138` REST and Python API close did not work if a transfer was made.
-* :feature:`1097` Added `--gas-price` command line option.
+* :feature:`1097` Added ``--gas-price`` command line option.
 * :feature:`1038` Introduce an upper limit for the ``settle_timeout`` attribute of the netting channel.
 * :bug:`1044` Rename ``/connection`` API endpoint to ``/connections`` for consistency.
 * :bug:`1049` Make raiden byzantium compatible by no longer relying on ``estimateGas``.
