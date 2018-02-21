@@ -199,6 +199,30 @@ class EventTransferReceivedSuccess(Event):
         return not self.__eq__(other)
 
 
+class EventTransferReceivedInvalidDirectTransfer(Event):
+    """ Event emitted when an invalid direct transfer is received. """
+
+    def __init__(self, identifier, reason):
+        self.identifier = identifier
+        self.reason = reason
+
+    def __str__(self):
+        return '<EventTransferReceivedInvalidDirectTransfer identifier:{} reason:{}>'.format(
+            self.identifier,
+            self.reason,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventTransferReceivedInvalidDirectTransfer) and
+            self.identifier == other.identifier and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class SendDirectTransfer(Event):
     """ Event emitted when a direct transfer message must be send. """
 
