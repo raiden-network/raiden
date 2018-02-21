@@ -196,7 +196,12 @@ class NettingChannel:
             ))
 
         if log.isEnabledFor(logging.INFO):
-            log.info('deposit called', contract=pex(self.address), amount=amount)
+            log.info(
+                'deposit called',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                amount=amount,
+            )
 
         transaction_hash = estimate_and_transact(
             self.proxy,
@@ -211,12 +216,22 @@ class NettingChannel:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical('deposit failed', contract=pex(self.address))
+            log.critical(
+                'deposit failed',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+            )
+
             self._check_exists()
             raise TransactionThrew('Deposit', receipt_or_none)
 
         if log.isEnabledFor(logging.INFO):
-            log.info('deposit sucessfull', contract=pex(self.address), amount=amount)
+            log.info(
+                'deposit sucessfull',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                amount=amount,
+            )
 
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
@@ -227,6 +242,7 @@ class NettingChannel:
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'close called',
+                node=pex(self.node_address),
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
@@ -250,6 +266,7 @@ class NettingChannel:
         if receipt_or_none:
             log.critical(
                 'close failed',
+                node=pex(self.node_address),
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
@@ -263,6 +280,7 @@ class NettingChannel:
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'close sucessfull',
+                node=pex(self.node_address),
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
@@ -276,6 +294,7 @@ class NettingChannel:
             if log.isEnabledFor(logging.INFO):
                 log.info(
                     'updateTransfer called',
+                    node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
@@ -303,6 +322,7 @@ class NettingChannel:
             if receipt_or_none:
                 log.critical(
                     'updateTransfer failed',
+                    node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
@@ -316,6 +336,7 @@ class NettingChannel:
             if log.isEnabledFor(logging.INFO):
                 log.info(
                     'updateTransfer sucessfull',
+                    node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
@@ -329,7 +350,11 @@ class NettingChannel:
         unlock_proofs = list(unlock_proofs)
 
         if log.isEnabledFor(logging.INFO):
-            log.info('withdraw called', contract=pex(self.address))
+            log.info(
+                'withdraw called',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+            )
 
         failed = False
         for merkle_proof, locked_encoded, secret in unlock_proofs:
@@ -353,15 +378,17 @@ class NettingChannel:
                 lock = messages.Lock.from_bytes(locked_encoded)
                 log.critical(
                     'withdraw failed',
+                    node=pex(self.node_address),
                     contract=pex(self.address),
                     lock=lock,
                 )
                 self._check_exists()
                 failed = True
 
-            if log.isEnabledFor(logging.INFO):
+            elif log.isEnabledFor(logging.INFO):
                 log.info(
                     'withdraw sucessfull',
+                    node=pex(self.node_address),
                     contract=pex(self.address),
                     lock=lock,
                 )
@@ -371,7 +398,10 @@ class NettingChannel:
 
     def settle(self):
         if log.isEnabledFor(logging.INFO):
-            log.info('settle called')
+            log.info(
+                'settle called',
+                node=pex(self.node_address),
+            )
 
         transaction_hash = estimate_and_transact(
             self.proxy,
@@ -381,12 +411,20 @@ class NettingChannel:
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.info('settle failed', contract=pex(self.address))
+            log.info(
+                'settle failed',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+            )
             self._check_exists()
             raise TransactionThrew('Settle', receipt_or_none)
 
         if log.isEnabledFor(logging.INFO):
-            log.info('settle sucessfull', contract=pex(self.address))
+            log.info(
+                'settle sucessfull',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+            )
 
     def events_filter(
             self,
