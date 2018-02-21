@@ -403,6 +403,58 @@ class BalanceProofState(State):
         return not self.__eq__(other)
 
 
+class TransactionExecutionStatus(State):
+    """ Represents the status of a transaction. """
+    SUCCESS = 'success'
+    FAILURE = 'failure'
+    VALID_RESULT_VALUES = (
+        SUCCESS,
+        FAILURE,
+        None,
+    )
+
+    def __init__(
+            self,
+            started_block_number: typing.Optional[typing.block_number],
+            finished_block_number: typing.Optional[typing.block_number],
+            result):
+
+        # started_block_number is set for the node that sent the transaction,
+        # None otherwise
+        if not (started_block_number is None or isinstance(started_block_number, int)):
+            raise ValueError('started_block_number must be None or a block_number')
+
+        if not (finished_block_number is None or isinstance(finished_block_number, int)):
+            raise ValueError('finished_block_number must be None or a block_number')
+
+        if result not in self.VALID_RESULT_VALUES:
+            raise ValueError('result must be one of {}'.format(
+                ','.join(self.VALID_RESULT_VALUES),
+            ))
+
+        self.started_block_number = started_block_number
+        self.finished_block_number = finished_block_number
+        self.result = result
+
+    def __str__(self):
+        return '<TransactionExecutionStatus started:{} finished:{} result:{}>'.format(
+            self.started_block_number,
+            self.finished_block_number,
+            self.result,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TransactionExecutionStatus) and
+            self.started_block_number == other.started_block_number and
+            self.finished_block_number == other.finished_block_number and
+            self.result == other.result
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class MerkleTreeState(State):
     def __init__(self, layers):
         self.layers = layers
