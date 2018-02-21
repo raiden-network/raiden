@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods
-from collections import namedtuple
 from copy import deepcopy
 from typing import List
-
-TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 
 
 # Quick overview
@@ -132,7 +129,8 @@ class StateManager:
 
         assert isinstance(iteration, TransitionResult)
 
-        self.current_state, events = iteration
+        self.current_state = iteration.new_state
+        events = iteration.events
 
         assert isinstance(self.current_state, (State, type(None)))
         assert all(isinstance(e, Event) for e in events)
@@ -140,12 +138,38 @@ class StateManager:
         return events
 
     def __eq__(self, other):
-        if isinstance(other, StateManager):
-            return (
-                self.state_transition == other.state_transition and
-                self.current_state == other.current_state
-            )
-        return False
+        return (
+            isinstance(other, StateManager) and
+            self.state_transition == other.state_transition and
+            self.current_state == other.current_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class TransitionResult(object):
+    """ Representes the result of applying a single state change.
+
+    When a task is completed the new_state is set to None, allowing the parent
+    task to cleanup after the child.
+    """
+
+    __slots__ = (
+        'new_state',
+        'events',
+    )
+
+    def __init__(self, new_state, events):
+        self.new_state = new_state
+        self.events = events
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TransitionResult) and
+            self.new_state == other.new_state and
+            self.events == other.events
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
