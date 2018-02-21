@@ -684,35 +684,24 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     )
 
 
-@pytest.mark.parametrize('number_of_nodes', [5])
-@pytest.mark.parametrize('channels_per_node', [2])
-def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
-    alice_app = raiden_network[0]
-    bob_app = raiden_network[1]
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_receive_mediatedtransfer_invalid_address(raiden_chain, token_addresses):
+    app0, app1, app2 = raiden_chain
+    token_address = token_addresses[0]
 
-    graph = list(alice_app.raiden.token_to_channelgraph.values())[0]
-    token_address = graph.token_address
-
-    channel0 = channel(alice_app, bob_app, token_address)
-
-    mt_helper = MediatedTransferTestHelper(raiden_network, graph)
-    initiator_address = alice_app.raiden.address
-    path = mt_helper.get_paths_of_length(initiator_address, 2)
-
-    alice_address, bob_address, charlie_address = path
     amount = 10
-    result = alice_app.raiden.mediated_transfer_async(
+    result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
-        charlie_address,
+        app2.raiden.address,
         identifier=1,
     )
-
     assert result.wait(timeout=10)
-    gevent.sleep(1.)
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
+    channel0 = channel(app0, app1, token_address)
     lock = Lock(amount, 1, UNIT_HASHLOCK)
     identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
@@ -721,20 +710,20 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         token=token_address,
         channel=channel0.channel_address,
         transferred_amount=amount,
-        recipient=bob_address,
+        recipient=app1.raiden.address,
         locksroot=UNIT_HASHLOCK,
         lock=lock,
-        target=charlie_address,
-        initiator=initiator_address,
+        target=app2.raiden.address,
+        initiator=app0.raiden.address,
         fee=0
     )
-    alice_key = PrivateKey(private_keys[0])
-    target_app = None
-    for app in raiden_network:
-        if app.raiden.address not in path:
-            target_app = app
-            break
-    sign_and_send(mediated_transfer, alice_key, alice_address, target_app)
+
+    sign_and_send(
+        mediated_transfer,
+        app0.raiden.private_key,
+        app0.raiden.address,
+        app1,
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
