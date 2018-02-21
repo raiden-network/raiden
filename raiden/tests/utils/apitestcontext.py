@@ -18,11 +18,11 @@ from raiden.exceptions import (
     UnknownTokenAddress,
 )
 from raiden.tests.utils.factories import make_address
-from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_TREE,
 )
 from raiden.utils import (
     address_decoder,

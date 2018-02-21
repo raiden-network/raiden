@@ -7,7 +7,7 @@ from raiden.encoding.format import buffer_for
 from raiden.encoding import messages, signing
 from raiden.encoding.signing import recover_publickey_safe
 from raiden.utils import publickey_to_address, sha3, ishash, pex
-from raiden.transfer.state import BalanceProofState
+from raiden.transfer.state import EMPTY_MERKLE_ROOT, BalanceProofState
 from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data
 
@@ -24,7 +24,6 @@ __all__ = (
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
-EMPTY_MERKLE_ROOT = b'\x00' * 32
 
 
 def assert_envelope_values(nonce, channel, transferred_amount, locksroot):

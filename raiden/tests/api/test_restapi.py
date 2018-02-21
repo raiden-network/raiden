@@ -20,8 +20,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_TREE,
 )
-from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,

@@ -78,11 +78,11 @@ from raiden.messages import (
     RevealSecret,
     SignedMessage,
 )
-from raiden.transfer.state import MerkleTreeState
-from raiden.transfer.merkle_tree import (
+from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
-    compute_layers,
+    MerkleTreeState,
 )
+from raiden.transfer.merkle_tree import compute_layers
 from raiden.network.protocol import (
     RaidenProtocol,
 )

@@ -15,9 +15,6 @@ from hypothesis.strategies import (
     tuples,
 )
 
-from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
-)
 from raiden.tests.utils.tester import (
     deploy_channelmanager_library,
     deploy_nettingchannel_library,
@@ -30,6 +27,7 @@ from raiden.tests.property.smart_contracts.strategies import (
     direct_transfer,
 )
 from raiden.tests.fixtures.tester import tester_chain
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     privatekey_to_address,
     sha3,

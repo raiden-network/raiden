@@ -18,7 +18,7 @@ from raiden.blockchain.abi import (
 )
 from raiden.channel import Channel, ChannelEndState
 from raiden.utils import privatekey_to_address, get_contract_path
-from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
+from raiden.transfer.state import EMPTY_MERKLE_TREE
 
 
 class InvalidKey(str):
