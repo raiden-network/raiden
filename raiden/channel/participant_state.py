@@ -5,9 +5,11 @@ from itertools import chain
 from ethereum import slogging
 
 from raiden.exceptions import InvalidLocksRoot
-from raiden.transfer.merkle_tree import (
+from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
     EMPTY_MERKLE_ROOT,
+)
+from raiden.transfer.merkle_tree import (
     LEAVES,
     compute_layers,
     compute_merkleproof_for,
