@@ -1,6 +1,106 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import Event
+from raiden.utils import pex
 # pylint: disable=too-many-arguments,too-few-public-methods
+
+
+class ContractSendChannelClose(Event):
+    """ Event emitted to close the netting channel.
+    This event is used when a node needs to prepare the channel to withdraw
+    on-chain.
+    """
+
+    def __init__(self, channel_identifier, token_address, balance_proof):
+        self.channel_identifier = channel_identifier
+        self.token_address = token_address
+        self.balance_proof = balance_proof
+
+    def __str__(self):
+        return '<ContractSendChannelClose channel:{} token:{} balance_proof:{}>'.format(
+            pex(self.channel_identifier),
+            pex(self.token_address),
+            self.balance_proof,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendChannelClose) and
+            self.channel_identifier == other.channel_identifier and
+            self.token_address == other.token_address and
+            self.balance_proof == other.balance_proof
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractSendChannelSettle(Event):
+    """ Event emitted if the netting channel must be settled. """
+
+    def __init__(self, channel_identifier):
+        self.channel_identifier = channel_identifier
+
+    def __str__(self):
+        return '<ContractSendChannelSettle channel:{}>'.format(
+            pex(self.channel_identifier)
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendChannelSettle) and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractSendChannelUpdateTransfer(Event):
+    """ Event emitted if the netting channel balance proof must be updated. """
+
+    def __init__(self, channel_identifier, balance_proof):
+        self.channel_identifier = channel_identifier
+        self.balance_proof = balance_proof
+
+    def __str__(self):
+        return '<ContractSendChannelUpdateTransfer channel:{} balance_proof:{}>'.format(
+            pex(self.channel_identifier),
+            self.balance_proof,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendChannelUpdateTransfer) and
+            self.channel_identifier == other.channel_identifier and
+            self.balance_proof == other.balance_proof
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractSendChannelWithdraw(Event):
+    """ Event emitted when the lock must be withdrawn on-chain. """
+
+    def __init__(self, channel_identifier, unlock_proofs):
+        self.channel_identifier = channel_identifier
+        self.unlock_proofs = unlock_proofs
+
+    def __str__(self):
+        return '<ContractSendChannelWithdraw channel:{} unlock_proofs:{}>'.format(
+            pex(self.channel_identifier),
+            self.unlock_proofs,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendChannelWithdraw) and
+            self.channel_identifier == other.channel_identifier and
+            self.unlock_proofs == other.unlock_proofs
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class EventTransferSentSuccess(Event):
