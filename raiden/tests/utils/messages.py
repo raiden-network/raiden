@@ -7,8 +7,8 @@ from raiden.network.transport import DummyTransport
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.tests.utils.factories import make_privkey_address
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     MediatedTransfer,

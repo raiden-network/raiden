@@ -3,13 +3,11 @@ import pytest
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
-    DirectTransfer,
-)
+from raiden.messages import DirectTransfer
 from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 from raiden.tests.utils.factories import make_address
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 
 
 def test_transfer_update_event(tester_chain, tester_channels, tester_events):

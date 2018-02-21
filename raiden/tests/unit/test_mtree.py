@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.messages import EMPTY_MERKLE_ROOT
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.merkle_tree import (
     MERKLEROOT,
     compute_layers,

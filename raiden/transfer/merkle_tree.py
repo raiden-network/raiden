@@ -4,18 +4,11 @@
 from itertools import zip_longest
 
 from raiden.exceptions import HashLengthNot32
-from raiden.messages import EMPTY_MERKLE_ROOT
-from raiden.transfer.state import MerkleTreeState
 from raiden.utils import sha3
 
 # the layers grow from the leaves to the root
 LEAVES = 0
 MERKLEROOT = -1
-
-EMPTY_MERKLE_TREE = MerkleTreeState([
-    [],                   # the leaves are empty
-    [EMPTY_MERKLE_ROOT],  # the root is the constant 0
-])
 
 
 def hash_pair(first, second):

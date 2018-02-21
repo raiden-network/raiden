@@ -394,3 +394,10 @@ class MerkleTreeState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+EMPTY_MERKLE_ROOT = b'\x00' * 32
+EMPTY_MERKLE_TREE = MerkleTreeState([
+    [],                   # the leaves are empty
+    [EMPTY_MERKLE_ROOT],  # the root is the constant 0
+])

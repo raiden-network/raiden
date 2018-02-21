@@ -12,7 +12,6 @@ from raiden.exceptions import (
     InsufficientBalance,
 )
 from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
     Lock,
     LockedTransfer,
     Secret,
@@ -22,11 +21,14 @@ from raiden.tests.utils.factories import make_address, make_privkey_address
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
 from raiden.transfer.merkle_tree import (
-    EMPTY_MERKLE_TREE,
     compute_layers,
     merkleroot,
 )
-from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.state import (
+    MerkleTreeState,
+    EMPTY_MERKLE_ROOT,
+    EMPTY_MERKLE_TREE,
+)
 from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name

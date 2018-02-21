@@ -2,12 +2,11 @@
 import gevent
 from coincurve import PrivateKey
 
-from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
 from raiden.messages import DirectTransfer
 from raiden.transfer.merkle_tree import (
-    EMPTY_MERKLE_ROOT,
     compute_layers,
     merkleroot,
 )
