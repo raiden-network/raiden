@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
-from raiden.utils import pex
+from raiden.utils import pex, typing
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -8,6 +8,18 @@ CHANNEL_STATE_CLOSING = 'waiting_for_close'
 CHANNEL_STATE_OPENED = 'opened'
 CHANNEL_STATE_SETTLED = 'settled'
 CHANNEL_STATE_SETTLING = 'waiting_for_settle'
+
+
+def balanceproof_from_envelope(envelope_message):
+    return BalanceProofState2(
+        envelope_message.nonce,
+        envelope_message.transferred_amount,
+        envelope_message.locksroot,
+        envelope_message.channel,
+        envelope_message.message_hash,
+        envelope_message.signature,
+        envelope_message.sender,
+    )
 
 
 class RouteState(State):
@@ -141,6 +153,195 @@ class RoutesState(State):
             )
 
         return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class BalanceProofUnsignedState(State):
+    """ Balance proof from the local node without the signature. """
+
+    __slots__ = (
+        'nonce',
+        'transferred_amount',
+        'locksroot',
+        'channel_address',
+    )
+
+    def __init__(
+            self,
+            nonce: int,
+            transferred_amount: typing.token_amount,
+            locksroot: typing.keccak256,
+            channel_address: typing.address):
+
+        if not isinstance(nonce, int):
+            raise ValueError('nonce must be int')
+
+        if not isinstance(transferred_amount, typing.token_amount):
+            raise ValueError('transferred_amount must be a token_amount instance')
+
+        if not isinstance(locksroot, typing.keccak256):
+            raise ValueError('locksroot must be an keccak256 instance')
+
+        if not isinstance(channel_address, typing.address):
+            raise ValueError('channel_address must be an address instance')
+
+        if nonce <= 0:
+            raise ValueError('nonce cannot be zero or negative')
+
+        if nonce >= 2 ** 64:
+            raise ValueError('nonce is too large')
+
+        if transferred_amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if transferred_amount >= 2 ** 256:
+            raise ValueError('transferred_amount is too large')
+
+        if len(locksroot) != 32:
+            raise ValueError('locksroot must have length 32')
+
+        if len(channel_address) != 20:
+            raise ValueError('channel is an invalid address')
+
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
+        self.channel_address = channel_address
+
+    def __str__(self):
+        return (
+            '<'
+            'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
+            'locksroot:{} channel_address:{}'
+            '>'
+        ).format(
+            self.nonce,
+            self.transferred_amount,
+            pex(self.locksroot),
+            pex(self.channel_address),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, BalanceProofUnsignedState) and
+            self.nonce == other.nonce and
+            self.transferred_amount == other.transferred_amount and
+            self.locksroot == other.locksroot and
+            self.channel_address == other.channel_address
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class BalanceProofState2(State):
+    """ Proof of a channel balance that can be used on-chain to resolve
+    disputes.
+    """
+
+    __slots__ = (
+        'nonce',
+        'transferred_amount',
+        'locksroot',
+        'channel_address',
+        'message_hash',
+        'signature',
+        'sender',
+    )
+
+    def __init__(
+            self,
+            nonce: int,
+            transferred_amount: typing.token_amount,
+            locksroot: typing.keccak256,
+            channel_address: typing.address,
+            message_hash: typing.keccak256,
+            signature: typing.signature,
+            sender: typing.address):
+
+        if not isinstance(nonce, int):
+            raise ValueError('nonce must be int')
+
+        if not isinstance(transferred_amount, typing.token_amount):
+            raise ValueError('transferred_amount must be a token_amount instance')
+
+        if not isinstance(locksroot, typing.keccak256):
+            raise ValueError('locksroot must be a keccak256 instance')
+
+        if not isinstance(channel_address, typing.address):
+            raise ValueError('channel_address must be an address instance')
+
+        if not isinstance(message_hash, typing.keccak256):
+            raise ValueError('message_hash must be a keccak256 instance')
+
+        if not isinstance(signature, typing.signature):
+            raise ValueError('signature must be an signature instance')
+
+        if not isinstance(sender, typing.address):
+            raise ValueError('sender must be an address instance')
+
+        if nonce <= 0:
+            raise ValueError('nonce cannot be zero or negative')
+
+        if nonce >= 2 ** 64:
+            raise ValueError('nonce is too large')
+
+        if transferred_amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if transferred_amount >= 2 ** 256:
+            raise ValueError('transferred_amount is too large')
+
+        if len(locksroot) != 32:
+            raise ValueError('locksroot must have length 32')
+
+        if len(channel_address) != 20:
+            raise ValueError('channel is an invalid address')
+
+        if len(message_hash) != 32:
+            raise ValueError('message_hash is an invalid hash')
+
+        if len(signature) != 65:
+            raise ValueError('signature is an invalid signature')
+
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
+        self.channel_address = channel_address
+        self.message_hash = message_hash
+        self.signature = signature
+        self.sender = sender
+
+    def __str__(self):
+        return (
+            '<'
+            'BalanceProofState nonce:{} transferred_amount:{} '
+            'locksroot:{} channel_address:{} message_hash:{}'
+            'signature:{} sender:{}'
+            '>'
+        ).format(
+            self.nonce,
+            self.transferred_amount,
+            pex(self.locksroot),
+            pex(self.channel_address),
+            pex(self.message_hash),
+            pex(self.signature),
+            pex(self.sender),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, BalanceProofState) and
+            self.nonce == other.nonce and
+            self.transferred_amount == other.transferred_amount and
+            self.locksroot == other.locksroot and
+            self.channel_address == other.channel_address and
+            self.message_hash == other.message_hash and
+            self.signature == other.signature and
+            self.sender == other.sender
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
