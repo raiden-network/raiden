@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState
-from raiden.utils import pex
+from raiden.utils import pex, sha3
+from raiden.utils.typing import address
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
@@ -141,6 +142,151 @@ class ActionTransferDirect(StateChange):
             self.token_address,
             self.node_address,
         )
+
+
+class ContractReceiveChannelClosed(StateChange):
+    """ A channel to which this node IS a participant was closed. """
+
+    def __init__(self, channel_identifier, closing_address: address, closed_block_number: int):
+        if not isinstance(closing_address, address):
+            raise ValueError('closing_address must be of type address')
+
+        if not isinstance(closed_block_number, int):
+            raise ValueError('closed_block_number must be of type int')
+
+        self.channel_identifier = channel_identifier
+        self.closing_address = closing_address
+        self.closed_block_number = closed_block_number
+
+    def __str__(self):
+        return '<ContractReceiveChannelClosed channel:{} closer:{} closed_at:{}>'.format(
+            pex(self.channel_identifier),
+            pex(self.closing_address),
+            self.closed_block_number
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelClosed) and
+            self.channel_identifier == other.channel_identifier and
+            self.closing_address == other.closing_address and
+            self.closed_block_number == other.closing_address
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveChannelNewBalance(StateChange):
+    """ A channel to which this node IS a participant had a deposit. """
+
+    def __init__(self, channel_identifier, participant_address: address, contract_balance: int):
+        if not isinstance(participant_address, address):
+            raise ValueError('participant_address must be of type address')
+
+        if not isinstance(contract_balance, int):
+            raise ValueError('contract_balance must be of type int')
+
+        self.channel_identifier = channel_identifier
+        self.participant_address = participant_address
+        self.contract_balance = contract_balance
+
+    def __str__(self):
+        return '<ContractReceiveChannelNewBalance channel:{} participant:{} balance:{}>'.format(
+            pex(self.channel_identifier),
+            pex(self.participant_address),
+            self.contract_balance,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelNewBalance) and
+            self.channel_identifier == other.channel_identifier and
+            self.participant_address == other.participant_address and
+            self.contract_balance == other.contract_balance
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveChannelSettled(StateChange):
+    """ A channel to which this node IS a participant was settled. """
+
+    def __init__(self, channel_identifier, settle_block_number: int):
+        if not isinstance(settle_block_number, int):
+            raise ValueError('settle_block_number must be of type int')
+
+        self.channel_identifier = channel_identifier
+        self.settle_block_number = settle_block_number
+
+    def __str__(self):
+        return '<ContractReceiveChannelSettled channel:{} settle_block:{}>'.format(
+            pex(self.channel_identifier),
+            self.settle_block_number,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelSettled) and
+            self.channel_identifier == other.channel_identifier and
+            self.settle_block_number == other.settle_block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveChannelWithdraw(StateChange):
+    """ A lock was withdrawn via the blockchain.
+    Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
+    emited by the netting channel.
+    Note:
+        For this state change the contract caller is not important but only the
+        receiving address. `receiver` is the address to which the lock's token
+        was transferred, this may be either of the channel participants.
+        If the channel was used for a mediated transfer that was refunded, this
+        event must be used twice, once for each receiver.
+    """
+
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_network_identifier,
+            channel_identifier,
+            secret,
+            receiver: address):
+
+        if not isinstance(receiver, address):
+            raise ValueError('receiver must be of type address')
+
+        hashlock = sha3(secret)
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_network_identifier = token_network_identifier
+        self.channel_identifier = channel_identifier
+        self.secret = secret
+        self.hashlock = hashlock
+        self.receiver = receiver
+
+    def __str__(self):
+        return '<ContractReceiveChannelWithdraw channel:{} receive:{} hashlock:{}>'.format(
+            pex(self.channel_identifier),
+            pex(self.receiver),
+            pex(self.hashlock),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelWithdraw) and
+            self.channel_identifier == other.channel_identifier and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock and
+            self.receiver == other.receiver
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ReceiveTransferDirect(StateChange):
