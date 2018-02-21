@@ -197,3 +197,41 @@ class EventTransferReceivedSuccess(Event):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class SendDirectTransfer(Event):
+    """ Event emitted when a direct transfer message must be send. """
+
+    def __init__(
+            self,
+            identifier,
+            balance_proof,
+            token,
+            recipient):
+
+        self.identifier = identifier
+        self.balance_proof = balance_proof
+        self.token = token
+        self.recipient = recipient
+
+    def __str__(self):
+        return (
+            '<SendDirectTransfer identifier:{} balance_proof:{} token:{} recipient:{}>'
+        ).format(
+            self.identifier,
+            self.balance_proof,
+            pex(self.token),
+            pex(self.recipient),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendDirectTransfer) and
+            self.identifier == other.identifier and
+            self.balance_proof == other.balance_proof and
+            self.token == other.token and
+            self.recipient == other.recipient
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
