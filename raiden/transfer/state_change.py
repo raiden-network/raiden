@@ -181,6 +181,26 @@ class ContractReceiveChannelClosed(StateChange):
         return not self.__eq__(other)
 
 
+class ActionInitNode(StateChange):
+    def __init__(self, block_number: int):
+        if not isinstance(block_number, int):
+            raise ValueError('block_number must be int')
+
+        self.block_number = block_number
+
+    def __str__(self):
+        return '<ActionInitNode block_number:{}>'.format(self.block_number)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionInitNode) and
+            self.block_number == other.block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ActionNewTokenNetwork(StateChange):
     """ Registers a new token network.
     A token network corresponds to a channel manager smart contract.
@@ -300,6 +320,19 @@ class ContractReceiveChannelSettled(StateChange):
             self.channel_identifier == other.channel_identifier and
             self.settle_block_number == other.settle_block_number
         )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ActionLeaveAllNetworks(StateChange):
+    """ User is quitting all payment networks. """
+
+    def __str__(self):
+        return '<ActionLeaveAllNetworks>'
+
+    def __eq__(self, other):
+        return isinstance(other, ActionLeaveAllNetworks)
 
     def __ne__(self, other):
         return not self.__eq__(other)
