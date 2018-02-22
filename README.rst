@@ -11,7 +11,7 @@ Raiden Network
 
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token.
 
-The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
+The Raiden project is a work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
 For more information please visit https://raiden.network/.
 
