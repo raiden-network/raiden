@@ -12,8 +12,3 @@ ls -la $HOME/.bin
 uname -a
 sw_vers
 xcodebuild -version
-solc --version
-geth --help
-python --version
-node --version
-npm --version

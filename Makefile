@@ -64,6 +64,7 @@ bundle-docker:
 	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) -f docker/build.Dockerfile docker
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
+	mkdir -p dist
 	docker cp builder:/raiden/raiden-$(RAIDENVERSION)-linux.tar.gz dist/raiden-$(RAIDENVERSION)-linux.tar.gz
 	docker rm builder
 

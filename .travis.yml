@@ -89,6 +89,11 @@ jobs:
         - python setup.py build
         - python setup.py compile_webui
       script:
+        - solc --version
+        - geth --help
+        - python --version
+        - node --version
+        - npm --version
         # pdbpp interferes with pyinstaller, uninstall it
         - pip uninstall -y pdbpp
         - pyinstaller --noconfirm --clean raiden.spec
