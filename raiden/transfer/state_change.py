@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import (
+    PaymentNetworkState,
     TokenNetworkState,
     RouteState,
 )
@@ -298,6 +299,32 @@ class ContractReceiveChannelSettled(StateChange):
             isinstance(other, ContractReceiveChannelSettled) and
             self.channel_identifier == other.channel_identifier and
             self.settle_block_number == other.settle_block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveNewPaymentNetwork(StateChange):
+    """ Registers a new payment network.
+    A payment network corresponds to a registry smart contract.
+    """
+
+    def __init__(self, payment_network: PaymentNetworkState):
+        if not isinstance(payment_network, PaymentNetworkState):
+            raise ValueError('payment_network must be a PaymentNetworkState instance')
+
+        self.payment_network = payment_network
+
+    def __str__(self):
+        return '<ContractReceiveNewPaymentNetwork network:{}>'.format(
+            self.payment_network,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveNewPaymentNetwork) and
+            self.payment_network == other.payment_network
         )
 
     def __ne__(self, other):
