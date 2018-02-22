@@ -5,7 +5,7 @@ from raiden.encoding.messages import (
 )
 
 
-def singing_data(
+def signing_data(
         nonce: int,
         transferred_amount: int,
         channel_address: bytes,
