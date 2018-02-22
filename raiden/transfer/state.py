@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple
+
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State
 from raiden.constants import UINT256_MAX, UINT64_MAX
-from raiden.utils import pex, sha3, typing
+from raiden.utils import lpex, pex, sha3, typing
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -44,6 +46,48 @@ def balanceproof_from_envelope(envelope_message):
         envelope_message.signature,
         envelope_message.sender,
     )
+
+
+class NodeState(State):
+    """ Umbrela object that stores all the node state.
+    For each registry smart contract there must be a payment network, withn the
+    payment network the existing token networks and channels are registered.
+    """
+
+    __slots__ = (
+        'block_number',
+        'identifiers_to_paymentnetworks',
+        'nodeaddresses_to_networkstates',
+        'payment_mapping',
+    )
+
+    def __init__(self, block_number: typing.block_number):
+        if not isinstance(block_number, typing.block_number):
+            raise ValueError('block_number must be an block_number')
+
+        self.block_number = block_number
+        self.identifiers_to_paymentnetworks = dict()
+        self.nodeaddresses_to_networkstates = dict()
+        self.payment_mapping = PaymentMappingState()
+
+    def __repr__(self):
+        return '<NodeState block:{} networks:{} qtd_transfers:{}>'.format(
+            self.block_number,
+            lpex(self.identifiers_to_paymentnetworks.keys()),
+            len(self.payment_mapping.hashlocks_to_task),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, NodeState) and
+            self.block_number == other.block_number and
+            self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
+            self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
+            self.payment_mapping == other.payment_mapping
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class PaymentNetworkState(State):
@@ -166,6 +210,63 @@ class TokenNetworkGraphState(State):
         return (
             isinstance(other, TokenNetworkGraphState) and
             self.network == other.network
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class PaymentMappingState(State):
+    """ Global map from hashlock to a transfer task.
+    This mapping is used to quickly dispatch state changes by hashlock, for
+    those that dont have a balance proof, e.g. SecretReveal.
+    This mapping forces one task per hashlock, assuming that hashlock collision
+    is unlikely. Features like token swaps, that span multiple networks, must
+    be encapsulated in a single task to work with this structure.
+    """
+
+    # Because of retries, there may be multiple transfers for the same payment,
+    # IOW there may be more than one task for the same transfer identifier. For
+    # this reason the mapping uses the hashlock as key.
+    #
+    # Because token swaps span multiple token networks, the state of the
+    # payment task is kept in this mapping, instead of inside an arbitrary
+    # token network.
+    __slots__ = (
+        'hashlocks_to_task',
+    )
+
+    InitiatorTask = namedtuple('InitiatorTask', (
+        'payment_network_identifier',
+        'token_network_identifier',
+        'manager_state',
+    ))
+
+    MediatorTask = namedtuple('MediatorTask', (
+        'payment_network_identifier',
+        'token_network_identifier',
+        'mediator_state',
+    ))
+
+    TargetTask = namedtuple('TargetTask', (
+        'payment_network_identifier',
+        'token_network_identifier',
+        'channel_identifier',
+        'target_state',
+    ))
+
+    def __init__(self):
+        self.hashlocks_to_task = dict()
+
+    def __repr__(self):
+        return '<PaymentMappingState qtd_transfers:{}>'.format(
+            len(self.hashlocks_to_task)
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, PaymentMappingState) and
+            self.hashlocks_to_task == other.hashlocks_to_task
         )
 
     def __ne__(self, other):
