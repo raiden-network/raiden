@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum.tools import tester
 
 from raiden.tests.fixtures.tester import tester_token_address
-from raiden.utils import sha3, get_system_spec, address_encoder, event_decoder
+from raiden.utils import sha3, address_encoder, event_decoder
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -77,13 +77,6 @@ def test_registry_nonexistent_token(tester_registry, tester_events):
         tester_registry.addToken(fake_token_address, sender=privatekey0)
 
 
-def assert_on_major_minor_version(raidenversion, versionstring):
-    """ Compare only the {major}.{minor} part of the versionstring with raidenversion. """
-    RAIDEN_VERSION = raidenversion.split('+')[0]
-    MAJOR, MINOR, PATCH = RAIDEN_VERSION.split('.')
-    assert tuple(versionstring.decode().split('.')[:2]) == (MAJOR, MINOR)
-
-
 def test_all_contracts_same_version(
         tester_registry,
         tester_channelmanager,
@@ -91,7 +84,6 @@ def test_all_contracts_same_version(
         endpoint_discovery_services):
     """ Test that all contracts in the repository have the same version"""
     privatekey0 = tester.k0
-    RAIDEN_VERSION = get_system_spec()['raiden']
 
     registry_version = tester_registry.contract_version(sender=privatekey0)
     channelmanager_version = tester_channelmanager.contract_version(sender=privatekey0)
@@ -101,4 +93,3 @@ def test_all_contracts_same_version(
 
     assert registry_version == channelmanager_version == channel_version
     assert channel_version == endpointregistry_version
-    assert_on_major_minor_version(RAIDEN_VERSION, channel_version)
