@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
 from raiden.utils import pex, typing
+from raiden.constants import UINT256_MAX, UINT64_MAX
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -11,7 +12,7 @@ CHANNEL_STATE_SETTLING = 'waiting_for_settle'
 
 
 def balanceproof_from_envelope(envelope_message):
-    return BalanceProofState2(
+    return BalanceProofSignedState(
         envelope_message.nonce,
         envelope_message.transferred_amount,
         envelope_message.locksroot,
@@ -182,7 +183,7 @@ class BalanceProofUnsignedState(State):
             raise ValueError('transferred_amount must be a token_amount instance')
 
         if not isinstance(locksroot, typing.keccak256):
-            raise ValueError('locksroot must be an keccak256 instance')
+            raise ValueError('locksroot must be a keccak256 instance')
 
         if not isinstance(channel_address, typing.address):
             raise ValueError('channel_address must be an address instance')
@@ -190,13 +191,13 @@ class BalanceProofUnsignedState(State):
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
 
-        if nonce >= 2 ** 64:
+        if nonce > UINT64_MAX:
             raise ValueError('nonce is too large')
 
         if transferred_amount < 0:
             raise ValueError('transferred_amount cannot be negative')
 
-        if transferred_amount >= 2 ** 256:
+        if transferred_amount > UINT256_MAX:
             raise ValueError('transferred_amount is too large')
 
         if len(locksroot) != 32:
@@ -210,7 +211,7 @@ class BalanceProofUnsignedState(State):
         self.locksroot = locksroot
         self.channel_address = channel_address
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
@@ -236,7 +237,7 @@ class BalanceProofUnsignedState(State):
         return not self.__eq__(other)
 
 
-class BalanceProofState2(State):
+class BalanceProofSignedState(State):
     """ Proof of a channel balance that can be used on-chain to resolve
     disputes.
     """
@@ -277,7 +278,7 @@ class BalanceProofState2(State):
             raise ValueError('message_hash must be a keccak256 instance')
 
         if not isinstance(signature, typing.signature):
-            raise ValueError('signature must be an signature instance')
+            raise ValueError('signature must be a signature instance')
 
         if not isinstance(sender, typing.address):
             raise ValueError('sender must be an address instance')
@@ -285,13 +286,13 @@ class BalanceProofState2(State):
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
 
-        if nonce >= 2 ** 64:
+        if nonce > UINT64_MAX:
             raise ValueError('nonce is too large')
 
         if transferred_amount < 0:
             raise ValueError('transferred_amount cannot be negative')
 
-        if transferred_amount >= 2 ** 256:
+        if transferred_amount > UINT256_MAX:
             raise ValueError('transferred_amount is too large')
 
         if len(locksroot) != 32:
@@ -314,10 +315,10 @@ class BalanceProofState2(State):
         self.signature = signature
         self.sender = sender
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<'
-            'BalanceProofState nonce:{} transferred_amount:{} '
+            'BalanceProofSignedState nonce:{} transferred_amount:{} '
             'locksroot:{} channel_address:{} message_hash:{}'
             'signature:{} sender:{}'
             '>'
@@ -333,7 +334,7 @@ class BalanceProofState2(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, BalanceProofState) and
+            isinstance(other, BalanceProofSignedState) and
             self.nonce == other.nonce and
             self.transferred_amount == other.transferred_amount and
             self.locksroot == other.locksroot and
