@@ -3,29 +3,6 @@ import sqlite3
 import threading
 
 
-def sqlite_sanity_check(conn):
-    """ Ensures that NUL character can be safely inserted and recovered
-    from the database.
-
-    http://bugs.python.org/issue13676
-    """
-
-    data = '\x00a'
-    conn.execute(
-        'INSERT INTO state_changes (identifier, data) VALUES (null, ?)',
-        (data, ),
-    )
-
-    result = next(conn.execute('SELECT data FROM state_changes ORDER BY identifier DESC'))
-
-    if result[0] != data:
-        raise RuntimeError(
-            'Database cannot save NUL character, ensure python is at least 2.7.3'
-        )
-
-    conn.rollback()
-
-
 class SQLiteStorage:
     def __init__(self, database_path, serializer):
         conn = sqlite3.connect(database_path)
@@ -58,8 +35,6 @@ class SQLiteStorage:
                 ')'
             )
 
-        sqlite_sanity_check(conn)
-
         # When writting to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
         # https://github.com/python/cpython/blob/2.7/Modules/_sqlite/cursor.c#L727-L732
@@ -90,8 +65,10 @@ class SQLiteStorage:
 
     def write_state_snapshot(self, statechange_id, snapshot):
         # TODO: Snapshotting is not yet implemented. This is just skeleton code
-        # Issue: https://github.com/raiden-network/raiden/issues/593
-        # This skeleton code assumes we only keep a single snapshot and overwrite it each time.
+        # (Issue #682)
+        #
+        # This skeleton code assumes we only keep a single snapshot and
+        # overwrite it each time.
         serialized_data = self.serializer.serialize(snapshot)
 
         with self.write_lock, self.conn:
@@ -109,9 +86,9 @@ class SQLiteStorage:
         """ Save events.
 
         Args:
-            events_data (List[Tuple]): Must be a list of tuples of the form:
-
-                (None, statechange_id, block_number, serialized_event_data)
+            state_change_id: Id of the state change that generate these events.
+            block_number: Block number at which the state change was applied.
+            events: List of Event objects.
         """
         events_data = [
             (None, state_change_id, block_number, self.serializer.serialize(event))
