@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import (
+    TokenNetworkState,
+    RouteState,
+)
 from raiden.utils import pex, sha3
 from raiden.utils.typing import address
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
@@ -177,6 +180,35 @@ class ContractReceiveChannelClosed(StateChange):
         return not self.__eq__(other)
 
 
+class ActionNewTokenNetwork(StateChange):
+    """ Registers a new token network.
+    A token network corresponds to a channel manager smart contract.
+    """
+
+    def __init__(self, payment_network_identifier, token_network: TokenNetworkState):
+        if not isinstance(token_network, TokenNetworkState):
+            raise ValueError('token_network must be a TokenNetworkState instance.')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_network = token_network
+
+    def __str__(self):
+        return '<ActionNewTokenNetwork network:{} token:{}>'.format(
+            pex(self.payment_network_identifier),
+            self.token_network,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionNewTokenNetwork) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_network == other.token_network
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelNewBalance(StateChange):
     """ A channel to which this node IS a participant had a deposit. """
 
@@ -210,6 +242,41 @@ class ContractReceiveChannelNewBalance(StateChange):
         return not self.__eq__(other)
 
 
+class ActionForTokenNetwork(StateChange):
+    """ Wraps state changes that must be applied to a given token network. """
+
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_network_identifier,
+            sub_state_change: StateChange):
+
+        if not isinstance(sub_state_change, StateChange):
+            raise ValueError('sub_state_change must be a StateChange instance')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_network_identifier = token_network_identifier
+        self.sub_state_change = sub_state_change
+
+    def __str__(self):
+        return '<ActionForPaymentNetwork network:{} token:{} state_change:{}>'.format(
+            pex(self.payment_network_identifier),
+            pex(self.token_network_identifier),
+            self.sub_state_change,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionForTokenNetwork) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_network_identifier == other.token_network_identifier and
+            self.sub_state_change == other.sub_state_change
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelSettled(StateChange):
     """ A channel to which this node IS a participant was settled. """
 
@@ -231,6 +298,33 @@ class ContractReceiveChannelSettled(StateChange):
             isinstance(other, ContractReceiveChannelSettled) and
             self.channel_identifier == other.channel_identifier and
             self.settle_block_number == other.settle_block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveNewTokenNetwork(StateChange):
+    """ A new token was registered with the payment network. """
+
+    def __init__(self, payment_network_identifier, token_network):
+        if not isinstance(token_network, TokenNetworkState):
+            raise ValueError('token_network must be a TokenNetworkState instance')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_network = token_network
+
+    def __str__(self):
+        return '<ContractReceiveNewTokenNetwork payment_network:{} network:{}>'.format(
+            pex(self.payment_network_identifier),
+            self.token_network,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveNewTokenNetwork) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_network == other.token_network
         )
 
     def __ne__(self, other):
@@ -283,6 +377,36 @@ class ContractReceiveChannelWithdraw(StateChange):
             self.secret == other.secret and
             self.hashlock == other.hashlock and
             self.receiver == other.receiver
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveNewRoute(StateChange):
+    """ New channel was created and this node is NOT a participant. """
+
+    def __init__(self, participant1: address, participant2: address):
+        if not isinstance(participant1, address):
+            raise ValueError('participant1 must be of type address')
+
+        if not isinstance(participant2, address):
+            raise ValueError('participant1 must be of type address')
+
+        self.participant1 = participant1
+        self.participant2 = participant2
+
+    def __str__(self):
+        return '<ContractReceiveNewRoute node1:{} node2:{}>'.format(
+            pex(self.participant1),
+            pex(self.participant2),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveNewRoute) and
+            self.participant1 == other.participant1 and
+            self.participant2 == other.participant2
         )
 
     def __ne__(self, other):

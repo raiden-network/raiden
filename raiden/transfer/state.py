@@ -46,6 +46,90 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
+class TokenNetworkState(State):
+    """ Corresponds to a channel manager smart contract. """
+
+    __slots__ = (
+        'address',
+        'token_address',
+        'network_graph',
+        'channelidentifiers_to_channels',
+        'partneraddresses_to_channels',
+    )
+
+    def __init__(
+            self,
+            address: typing.address,
+            token_address: typing.address,
+            network_graph: 'TokenNetworkGraphState',
+            partner_channels: typing.List['NettingChannelState']):
+
+        if not isinstance(address, typing.address):
+            raise ValueError('address must be an address instance')
+
+        if not isinstance(token_address, typing.address):
+            raise ValueError('token_address must be an address instance')
+
+        if not isinstance(network_graph, TokenNetworkGraphState):
+            raise ValueError('network_graph must be a TokenNetworkGraphState instance')
+
+        self.address = address
+        self.token_address = token_address
+        self.network_graph = network_graph
+
+        self.channelidentifiers_to_channels = {
+            channel.identifier: channel
+            for channel in partner_channels
+        }
+        self.partneraddresses_to_channels = {
+            channel.partner_state.address: channel
+            for channel in partner_channels
+        }
+
+    def __repr__(self):
+        return '<TokenNetworkState id:{}>'.format(pex(self.address))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TokenNetworkState) and
+            self.address == other.address and
+            self.token_address == other.token_address and
+            self.network_graph == other.network_graph and
+            self.channelidentifiers_to_channels == other.channelidentifiers_to_channels and
+            self.partneraddresses_to_channels == other.partneraddresses_to_channels
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+# This is necessary for the routing only, maybe it should be transient state
+# outside of the state tree.
+class TokenNetworkGraphState(State):
+    """ Stores the existing channels in the channel manager contract, used for
+    route finding.
+    """
+
+    __slots__ = (
+        'network',
+    )
+
+    def __init__(self, network):
+        self.network = network
+
+    def __repr__(self):
+        return '<TokenNetworkGraphState>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TokenNetworkGraphState) and
+            self.network == other.network
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class RouteState(State):
     """ Route state.
 
