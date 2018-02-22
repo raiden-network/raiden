@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :release:`0.3.0 <2018-02-21>`
+* :release:`0.3.0 <2018-02-22>`
 * :bug:`1273` Don't crash when using the ``--nat=ext:IP`` command line option.
 * :bug:`1217` Correctly decode network events in the REST API.
 * :bug:`1224` Fix internal server error on REST endpoint ``/events/tokens/`` for non-existing tokens.
