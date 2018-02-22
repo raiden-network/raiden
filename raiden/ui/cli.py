@@ -257,7 +257,7 @@ class NATChoiceType(click.Choice):
         if value.startswith('ext:'):
             ip, _, port = value[4:].partition(':')
             try:
-                IPv4Address(ip.decode('UTF-8', 'ignore'))
+                IPv4Address(ip)
             except AddressValueError:
                 self.fail('invalid IP address: {}'.format(ip), param, ctx)
             if port:
