@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from collections import namedtuple
 
+from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State
-from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.utils import lpex, pex, sha3, typing
-# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'
