@@ -46,6 +46,48 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
+class PaymentNetworkState(State):
+    """ Corresponds to a registry smart contract. """
+
+    __slots__ = (
+        'address',
+        'tokensidentifiers_to_tokennetworks',
+        'tokenaddresses_to_tokennetworks',
+    )
+
+    def __init__(
+            self,
+            address: typing.address,
+            token_network_list: typing.List['TokenNetworkState']):
+
+        if not isinstance(address, typing.address):
+            raise ValueError('address must be an address instance')
+
+        self.address = address
+        self.tokensidentifiers_to_tokennetworks = {
+            token_network.address: token_network
+            for token_network in token_network_list
+        }
+        self.tokenaddresses_to_tokennetworks = {
+            token_network.token_address: token_network
+            for token_network in token_network_list
+        }
+
+    def __repr__(self):
+        return '<PaymentNetworkState id:{}>'.format(pex(self.address))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, PaymentNetworkState) and
+            self.address == other.address and
+            self.tokenaddresses_to_tokennetworks == other.tokenaddresses_to_tokennetworks and
+            self.tokensidentifiers_to_tokennetworks == other.tokensidentifiers_to_tokennetworks
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class TokenNetworkState(State):
     """ Corresponds to a channel manager smart contract. """
 
