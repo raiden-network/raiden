@@ -240,7 +240,7 @@ class ContractReceiveChannelSettled(StateChange):
 class ContractReceiveChannelWithdraw(StateChange):
     """ A lock was withdrawn via the blockchain.
     Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
-    emited by the netting channel.
+    emitted by the netting channel.
     Note:
         For this state change the contract caller is not important but only the
         receiving address. `receiver` is the address to which the lock's token
