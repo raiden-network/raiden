@@ -80,7 +80,7 @@ jobs:
       before_install:
         - sysctl -n machdep.cpu.brand_string
         - mkdir -p $HOME/.bin
-        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:$PATH
+        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:/usr/local/bin/:$PATH
         - .travis/before_install.sh
       install:
         - .travis/install.sh
@@ -89,11 +89,6 @@ jobs:
         - python setup.py build
         - python setup.py compile_webui
       script:
-        - solc --version
-        - geth --help
-        - python --version
-        - node --version
-        - npm --version
         # pdbpp interferes with pyinstaller, uninstall it
         - pip uninstall -y pdbpp
         - pyinstaller --noconfirm --clean raiden.spec
