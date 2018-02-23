@@ -49,8 +49,8 @@ def balanceproof_from_envelope(envelope_message):
 
 
 class NodeState(State):
-    """ Umbrela object that stores all the node state.
-    For each registry smart contract there must be a payment network, withn the
+    """ Umbrella object that stores all the node state.
+    For each registry smart contract there must be a payment network. Within the
     payment network the existing token networks and channels are registered.
     """
 
