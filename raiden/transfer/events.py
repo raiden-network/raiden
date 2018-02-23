@@ -224,7 +224,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
 
 
 class SendDirectTransfer(Event):
-    """ Event emitted when a direct transfer message must be send. """
+    """ Event emitted when a direct transfer message must be sent. """
 
     def __init__(
             self,

@@ -429,7 +429,7 @@ class HashTimeLockState(State):
             raise ValueError('expiration must be a block_number instance')
 
         if not isinstance(hashlock, typing.keccak256):
-            raise ValueError('hashlock must be an keccak256 instance')
+            raise ValueError('hashlock must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
         packed.amount = amount
@@ -466,7 +466,7 @@ class HashTimeLockState(State):
 
 
 class UnlockPartialProofState(State):
-    """ Stores the lock accompained of it's unlocking secret. """
+    """ Stores the lock along with its unlocking secret. """
 
     __slots__ = (
         'lock',
@@ -707,7 +707,9 @@ class NettingChannelState(State):
             isinstance(settle_transaction, TransactionExecutionStatus)
         )
         if not valid_settle_transaction:
-            raise ValueError('settle_transaction must be a TransactionExecutionStatus instance')
+            raise ValueError(
+                'settle_transaction must be a TransactionExecutionStatus instance or None'
+            )
 
         self.identifier = identifier
         self.token_address = token_address
