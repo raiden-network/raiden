@@ -253,7 +253,7 @@ class LockedTransferUnsignedState(State):
         return not self.__eq__(other)
 
 
-class LockedTransferState2(State):
+class LockedTransferSignedState(State):
     """ State for a received transfer which contains a hash time lock and a
     signed balance proof.
     """
