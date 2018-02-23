@@ -95,7 +95,7 @@ class PaymentNetworkState(State):
 
     __slots__ = (
         'address',
-        'tokensidentifiers_to_tokennetworks',
+        'tokenidentifiers_to_tokennetworks',
         'tokenaddresses_to_tokennetworks',
     )
 
@@ -108,7 +108,7 @@ class PaymentNetworkState(State):
             raise ValueError('address must be an address instance')
 
         self.address = address
-        self.tokensidentifiers_to_tokennetworks = {
+        self.tokenidentifiers_to_tokennetworks = {
             token_network.address: token_network
             for token_network in token_network_list
         }
@@ -125,7 +125,7 @@ class PaymentNetworkState(State):
             isinstance(other, PaymentNetworkState) and
             self.address == other.address and
             self.tokenaddresses_to_tokennetworks == other.tokenaddresses_to_tokennetworks and
-            self.tokensidentifiers_to_tokennetworks == other.tokensidentifiers_to_tokennetworks
+            self.tokenidentifiers_to_tokennetworks == other.tokenidentifiers_to_tokennetworks
         )
 
     def __ne__(self, other):
