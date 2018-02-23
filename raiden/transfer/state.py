@@ -63,7 +63,7 @@ class NodeState(State):
 
     def __init__(self, block_number: typing.block_number):
         if not isinstance(block_number, typing.block_number):
-            raise ValueError('block_number must be an block_number')
+            raise ValueError('block_number must be a block_number')
 
         self.block_number = block_number
         self.identifiers_to_paymentnetworks = dict()
