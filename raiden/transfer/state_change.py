@@ -27,7 +27,7 @@ class Block(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __repr__(self):
         return 'Block({})'.format(self.block_number)
 
 
@@ -37,7 +37,7 @@ class ActionChannelClose(StateChange):
     def __init__(self, channel_identifier):
         self.channel_identifier = channel_identifier
 
-    def __str__(self):
+    def __repr__(self):
         return '<ActionChannelClose channel:{}>'.format(
             pex(self.channel_identifier),
         )
@@ -70,7 +70,7 @@ class ActionRouteChange(StateChange):
         self.identifier = identifier
         self.route = route
 
-    def __str__(self):
+    def __repr__(self):
         return 'ActionRouteChange(identifier:{} route:{})'.format(
             self.identifier,
             self.route,
@@ -98,7 +98,7 @@ class ActionCancelTransfer(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __repr__(self):
         return 'ActionCancelTransfer(identifier:{})'.format(
             self.identifier,
         )
@@ -131,7 +131,7 @@ class ActionTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __repr__(self):
         return (
             'ActionTransferDirect('
             'identifier:{} amount:{} token_address:{} node_address:{}'
@@ -158,7 +158,7 @@ class ContractReceiveChannelClosed(StateChange):
         self.closing_address = closing_address
         self.closed_block_number = closed_block_number
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveChannelClosed channel:{} closer:{} closed_at:{}>'.format(
             pex(self.channel_identifier),
             pex(self.closing_address),
@@ -191,7 +191,7 @@ class ContractReceiveChannelNewBalance(StateChange):
         self.participant_address = participant_address
         self.contract_balance = contract_balance
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveChannelNewBalance channel:{} participant:{} balance:{}>'.format(
             pex(self.channel_identifier),
             pex(self.participant_address),
@@ -220,7 +220,7 @@ class ContractReceiveChannelSettled(StateChange):
         self.channel_identifier = channel_identifier
         self.settle_block_number = settle_block_number
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveChannelSettled channel:{} settle_block:{}>'.format(
             pex(self.channel_identifier),
             self.settle_block_number,
@@ -269,7 +269,7 @@ class ContractReceiveChannelWithdraw(StateChange):
         self.hashlock = hashlock
         self.receiver = receiver
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveChannelWithdraw channel:{} receive:{} hashlock:{}>'.format(
             pex(self.channel_identifier),
             pex(self.receiver),
@@ -316,7 +316,7 @@ class ReceiveTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __repr__(self):
         return (
             'ReceiveTransferDirect('
             'identifier:{} amount:{} token_address:{} sender:{}'

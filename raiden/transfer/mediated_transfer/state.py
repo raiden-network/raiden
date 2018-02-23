@@ -228,7 +228,7 @@ class LockedTransferUnsignedState(State):
         self.initiator = initiator
         self.target = target
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<LockedTransferUnsignedState id:{} token:{} lock:{} target:{}>'
         ).format(
@@ -294,7 +294,7 @@ class LockedTransferState2(State):
         self.initiator = initiator
         self.target = target
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<LockedTransferState id:{} token:{} lock:{} target:{}>'
         ).format(
@@ -362,7 +362,7 @@ class LockedTransferState(State):
         self.hashlock = hashlock
         self.secret = secret
 
-    def __str__(self):
+    def __repr__(self):
         return '<HashTimeLocked id={} amount={} token={} target={} expire={} hashlock={}>'.format(
             self.identifier,
             self.amount,
