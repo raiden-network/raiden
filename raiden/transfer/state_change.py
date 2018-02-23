@@ -451,7 +451,7 @@ class ContractReceiveNewRoute(StateChange):
             raise ValueError('participant1 must be of type address')
 
         if not isinstance(participant2, address):
-            raise ValueError('participant1 must be of type address')
+            raise ValueError('participant2 must be of type address')
 
         self.participant1 = participant1
         self.participant2 = participant2
