@@ -188,7 +188,7 @@ class ActionInitNode(StateChange):
 
         self.block_number = block_number
 
-    def __str__(self):
+    def __repr__(self):
         return '<ActionInitNode block_number:{}>'.format(self.block_number)
 
     def __eq__(self, other):
@@ -213,7 +213,7 @@ class ActionNewTokenNetwork(StateChange):
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
 
-    def __str__(self):
+    def __repr__(self):
         return '<ActionNewTokenNetwork network:{} token:{}>'.format(
             pex(self.payment_network_identifier),
             self.token_network,
@@ -279,7 +279,7 @@ class ActionForTokenNetwork(StateChange):
         self.token_network_identifier = token_network_identifier
         self.sub_state_change = sub_state_change
 
-    def __str__(self):
+    def __repr__(self):
         return '<ActionForPaymentNetwork network:{} token:{} state_change:{}>'.format(
             pex(self.payment_network_identifier),
             pex(self.token_network_identifier),
@@ -328,7 +328,7 @@ class ContractReceiveChannelSettled(StateChange):
 class ActionLeaveAllNetworks(StateChange):
     """ User is quitting all payment networks. """
 
-    def __str__(self):
+    def __repr__(self):
         return '<ActionLeaveAllNetworks>'
 
     def __eq__(self, other):
@@ -349,7 +349,7 @@ class ContractReceiveNewPaymentNetwork(StateChange):
 
         self.payment_network = payment_network
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveNewPaymentNetwork network:{}>'.format(
             self.payment_network,
         )
@@ -374,7 +374,7 @@ class ContractReceiveNewTokenNetwork(StateChange):
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveNewTokenNetwork payment_network:{} network:{}>'.format(
             pex(self.payment_network_identifier),
             self.token_network,
@@ -456,7 +456,7 @@ class ContractReceiveNewRoute(StateChange):
         self.participant1 = participant1
         self.participant2 = participant2
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractReceiveNewRoute node1:{} node2:{}>'.format(
             pex(self.participant1),
             pex(self.participant2),
