@@ -7,6 +7,10 @@ for tool in automake libtool pkg-config libffi gmp openssl node python3; do
     brew install ${tool} || brew upgrade ${tool} || true
 done
 
+# create links so python 3 tools get used
+ln -sf /usr/local/bin/pip3 $HOME/.bin/pip
+ln -sf /usr/local/bin/python3 $HOME/.bin/python
+
 # some debug info
 ls -la $HOME/.bin
 uname -a
