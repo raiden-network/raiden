@@ -443,7 +443,7 @@ class HashTimeLockState(State):
         self.encoded = encoded
         self.lockhash = sha3(encoded)
 
-    def __str__(self):
+    def __repr__(self):
         return '<HashTimeLockState amount:{} expiration:{} hashlock:{}>'.format(
             self.amount,
             self.expiration,
@@ -483,7 +483,7 @@ class UnlockPartialProofState(State):
         self.lock = lock
         self.secret = secret
 
-    def __str__(self):
+    def __repr__(self):
         return '<UnlockPartialProofState lock:{}>'.format(
             self.lock,
         )
@@ -521,7 +521,7 @@ class UnlockProofState(State):
         self.lock_encoded = lock_encoded
         self.secret = secret
 
-    def __str__(self):
+    def __repr__(self):
         return '<UnlockProofState>'
 
     def __eq__(self, other):
@@ -569,7 +569,7 @@ class TransactionExecutionStatus(State):
         self.finished_block_number = finished_block_number
         self.result = result
 
-    def __str__(self):
+    def __repr__(self):
         return '<TransactionExecutionStatus started:{} finished:{} result:{}>'.format(
             self.started_block_number,
             self.finished_block_number,
@@ -629,7 +629,7 @@ class NettingChannelEndState(State):
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof = None
 
-    def __str__(self):
+    def __repr__(self):
         return '<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>'.format(
             pex(self.address),
             self.contract_balance,
@@ -719,7 +719,7 @@ class NettingChannelState(State):
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
 
-    def __str__(self):
+    def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
             pex(self.identifier),
             self.open_transaction,

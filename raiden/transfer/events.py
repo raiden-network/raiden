@@ -15,7 +15,7 @@ class ContractSendChannelClose(Event):
         self.token_address = token_address
         self.balance_proof = balance_proof
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractSendChannelClose channel:{} token:{} balance_proof:{}>'.format(
             pex(self.channel_identifier),
             pex(self.token_address),
@@ -40,7 +40,7 @@ class ContractSendChannelSettle(Event):
     def __init__(self, channel_identifier):
         self.channel_identifier = channel_identifier
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractSendChannelSettle channel:{}>'.format(
             pex(self.channel_identifier)
         )
@@ -62,7 +62,7 @@ class ContractSendChannelUpdateTransfer(Event):
         self.channel_identifier = channel_identifier
         self.balance_proof = balance_proof
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractSendChannelUpdateTransfer channel:{} balance_proof:{}>'.format(
             pex(self.channel_identifier),
             self.balance_proof,
@@ -86,7 +86,7 @@ class ContractSendChannelWithdraw(Event):
         self.channel_identifier = channel_identifier
         self.unlock_proofs = unlock_proofs
 
-    def __str__(self):
+    def __repr__(self):
         return '<ContractSendChannelWithdraw channel:{} unlock_proofs:{}>'.format(
             pex(self.channel_identifier),
             self.unlock_proofs,
@@ -206,7 +206,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
         self.identifier = identifier
         self.reason = reason
 
-    def __str__(self):
+    def __repr__(self):
         return '<EventTransferReceivedInvalidDirectTransfer identifier:{} reason:{}>'.format(
             self.identifier,
             self.reason,
@@ -238,7 +238,7 @@ class SendDirectTransfer(Event):
         self.token = token
         self.recipient = recipient
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<SendDirectTransfer identifier:{} balance_proof:{} token:{} recipient:{}>'
         ).format(
