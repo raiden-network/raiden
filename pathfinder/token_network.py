@@ -57,7 +57,8 @@ class TokenNetwork:
 
     def handle_channel_closed_event(self, channel_ident):
         """
-        Close a channel. This doesn't mean that the channel is settled yet, but it cannot transfer any more.
+        Close a channel. This doesn't mean that the channel is settled yet, but it cannot transfer
+        any more.
 
         Corresponds to the ChannelClosed event. Called by the contract event listener.
         """
@@ -65,7 +66,8 @@ class TokenNetwork:
 
     def handle_channel_settled_event(self, channel_ident):
         """
-        Settle a channel. This is nonessential as 'close_channel' has already removed the channel from the graph.
+        Settle a channel. This is nonessential as 'close_channel' has already removed the channel
+        from the graph.
 
         TODO: do we need this?
 
@@ -105,7 +107,8 @@ class TokenNetwork:
 
     def save_snapshot(self, filename):
         """
-        Serializes the token network so it doesn't need to sync from scratch when the snapshot is loaded
+        Serializes the token network so it doesn't need to sync from scratch when the snapshot is
+        loaded.
 
         We probably need to save the lasts synced block here.
         """

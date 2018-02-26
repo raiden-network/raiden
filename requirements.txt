@@ -1,1 +1,7 @@
 Click>=6.0
+coincurve
+eth_utils
+flask_restful
+gevent
+networkx
+requests
