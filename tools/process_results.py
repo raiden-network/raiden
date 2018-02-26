@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import os
 import json
 from datetime import datetime
@@ -50,7 +49,7 @@ def process_results(results_dir, plot_filename):
     amount_per_time = [0] * (last_time - initial_time)
     index = 0
     max_amount = (0.0, 0)
-    for time in xrange(initial_time, last_time):
+    for time in range(initial_time, last_time):
         for result in results:
             while len(result) > 0 and result[-1] < time + 1.0:
                 result.pop()
@@ -70,7 +69,7 @@ def process_results(results_dir, plot_filename):
         max_amount[1],
     ))
 
-    times = [time for time in xrange(initial_time, last_time)]  # + 1 ?
+    times = [time for time in range(initial_time, last_time)]  # + 1 ?
 
     if plot_filename:
         try:

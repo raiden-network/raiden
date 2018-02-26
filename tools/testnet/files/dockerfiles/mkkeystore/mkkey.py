@@ -9,20 +9,15 @@ from datetime import datetime
 from ethereum import slogging
 
 
-try:
-    # ethereum >= 2.0
-    from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
-    from ethereum.tools import keys
-except ImportError:
-    from ethereum.keys import make_keystore_json, sha3, encode_hex
-    from ethereum import keys
+from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
+from ethereum.tools import keys
 
 
 class BytesJSONEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, bytes):
             return o.decode('UTF-8')
-        return super(BytesJSONEncoder, self).default(o)
+        return super().default(o)
 
 
 @click.command()

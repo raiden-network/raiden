@@ -87,7 +87,7 @@ the contract. To do so follow the same steps as before except this time use:
    use pyethereum's :code:`encode_abi` function. For example::
 
     >>> from ethereum.abi import encode_abi
-    >>> encode_abi(['address'], ['0f114a1e9db192502e7856309cc899952b3db1ed']).encode('hex')
+    >>> encode_abi(['address'], ['0f114a1e9db192502e7856309cc899952b3db1ed']).hex()
     '0000000000000000000000000f114a1e9db192502e7856309cc899952b3db1ed'
 
 #. Place the output from the above call into the "Constructor Arguments" field
@@ -122,7 +122,7 @@ before except:
     >>> encode_abi(
     ...     ['address', 'address', 'address', 'uint256'],
     ...     ['0f114a1e9db192502e7856309cc899952b3db1ed', '001ee1b9b78de26879ac9db3854ce1430b339bee', '2222222222222222222222222222222222222222', 90]
-    ... ).encode('hex')
+    ... ).hex()
     0000000000000000000000000f114a1e9db192502e7856309cc899952b3db1ed000000000000000000000000001ee1b9b78de26879ac9db3854ce1430b339bee0000000000000000000000002222222222222222222222222222222222222222000000000000000000000000000000000000000000000000000000000000005a
 
 #. Place the output from the above call into the "Constructor Arguments" field

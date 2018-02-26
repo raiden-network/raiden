@@ -30,15 +30,14 @@ from raiden.utils import sha3, privatekey_to_address
 # pylint: disable=too-many-locals,too-many-statements
 
 
-@pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     alice_app, bob_app = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     setup_messages_cb()
 
-    alice_graph = alice_app.raiden.token_to_channelgraph.values()[0]
-    bob_graph = bob_app.raiden.token_to_channelgraph.values()[0]
+    alice_graph = list(alice_app.raiden.token_to_channelgraph.values())[0]
+    bob_graph = list(bob_app.raiden.token_to_channelgraph.values())[0]
     assert alice_graph.token_address == bob_graph.token_address
 
     alice_bob_channel = alice_graph.partneraddress_to_channel[bob_app.raiden.address]
@@ -56,7 +55,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     alice_to_bob_amount = 10
     expiration = alice_app.raiden.chain.block_number() + reveal_timeout + 1
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     assert bob_app.raiden.address in alice_graph.partneraddress_to_channel
@@ -185,7 +184,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     })
 
 
-@pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
@@ -261,7 +259,7 @@ def test_close_channel_lack_of_balance_proof(
 
     channel01 = channel(app0, app1, token_address)
 
-    secret = sha3('test_close_channel_lack_of_balance_proof')
+    secret = sha3(b'test_close_channel_lack_of_balance_proof')
     hashlock = sha3(secret)
 
     fee = 0
@@ -296,7 +294,6 @@ def test_close_channel_lack_of_balance_proof(
 
 
 @pytest.mark.xfail(reason='test incomplete')
-@pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout):
     """ An attacker can try to steal tokens from a hub or the last node in a
@@ -386,8 +383,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
-    channel0 = app0.raiden.token_to_channelgraph.values()[0].partneraddress_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph.values()[0].partneraddress_to_channel.values()[0]
+    channel0 = list(list(app0.raiden.token_to_channelgraph.values())[0].partneraddress_to_channel.values())[0]  # noqa: E501
+    channel1 = list(list(app1.raiden.token_to_channelgraph.values())[0].partneraddress_to_channel.values())[0]  # noqa: E501
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.secret)

@@ -10,8 +10,11 @@ from subprocess import Popen, PIPE
 from ethereum.utils import encode_hex
 
 from genesis_builder import mk_genesis, generate_accounts
-from raiden.utils.crypto import privtopub as privtopub_enode
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import (
+    privtopub as privtopub_enode,
+    privatekey_to_address,
+    sha3
+)
 
 # DEFAULTS
 NUM_GETH_NODES = 3
@@ -89,12 +92,12 @@ def to_cmd(node, datadir=None):
         cmd.append('--mine')
         cmd.append('--etherbase 0')
     if datadir:
-        assert isinstance(datadir, basestring)
+        assert isinstance(datadir, str)
         cmd.append('--datadir {}'.format(datadir))
     return shlex.split(' '.join(cmd))
 
 
-def create_keystore_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
+def create_keystore_account(datadir, privkey=encode_hex(sha3(b'localhost:627'))):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -173,7 +176,7 @@ def create_node_configuration(miner=True,
     if miner:
         node['minerthreads'] = 1  # conservative
         node['unlock'] = 0
-    node['nodekey'] = sha3('node:{}'.format(node_key_seed))
+    node['nodekey'] = sha3('node:{}'.format(node_key_seed).encode())
     node['nodekeyhex'] = encode_hex(node['nodekey'])
     node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
     node['address'] = privatekey_to_address(node['nodekey'])

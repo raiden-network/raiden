@@ -4,10 +4,11 @@ from ethereum.utils import denoms, int_to_big_endian
 
 INITIAL_PORT = 40001
 
+RPC_CACHE_TTL = 600
 CACHE_TTL = 60
 ESTIMATED_BLOCK_TIME = 7
 GAS_LIMIT = 3141592  # Morden's gasLimit.
-GAS_LIMIT_HEX = '0x' + hexlify(int_to_big_endian(GAS_LIMIT))
+GAS_LIMIT_HEX = '0x' + hexlify(int_to_big_endian(GAS_LIMIT)).decode('utf-8')
 GAS_PRICE = denoms.shannon * 20
 
 DEFAULT_PROTOCOL_RETRIES_BEFORE_BACKOFF = 5

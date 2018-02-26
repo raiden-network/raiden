@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 
 from binascii import hexlify
 import signal
@@ -22,11 +21,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
-
+from raiden.settings import GAS_PRICE
 
 monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -71,7 +66,8 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     type=str
 )
 @click.command()
-def run(privatekey,
+def run(
+        privatekey,
         registry_contract_address,
         discovery_contract_address,
         listen_address,
@@ -95,14 +91,13 @@ def run(privatekey,
 
     rpc_client = JSONRPCClient(
         '127.0.0.1',
-        '8545',
+        8545,
         privatekey_bin,
     )
 
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
 
@@ -248,7 +243,7 @@ def run(privatekey,
                 log.warning("Making {} transfers to {}".format(total_transfers, peer))
                 initial_time = time.time()
                 times = [0] * total_transfers
-                for index in xrange(total_transfers):
+                for index in range(total_transfers):
                     RaidenAPI(app.raiden).transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,

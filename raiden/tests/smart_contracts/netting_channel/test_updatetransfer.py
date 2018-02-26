@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
-
 import pytest
-from ethereum.tester import TransactionFailed
+from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
-    DirectTransfer,
-)
-from raiden.utils import privatekey_to_address, sha3
+from raiden.messages import DirectTransfer
+from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 from raiden.tests.utils.factories import make_address
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 
 
-def test_transfer_update_event(tester_state, tester_channels, tester_events):
+def test_transfer_update_event(tester_chain, tester_channels, tester_events):
     """ The event TransferUpdated is emitted after a successful call to
     updateTransfer.
     """
@@ -22,7 +18,7 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     direct0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -45,17 +41,18 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     )
     assert len(previous_events) + 1 == len(tester_events)
 
-    assert tester_events[-1] == {
-        '_event_type': 'TransferUpdated',
-        'node_address': hexlify(address1),
+    last_event = event_decoder(tester_events[-1], nettingchannel.translator)
+    assert last_event == {
+        '_event_type': b'TransferUpdated',
+        'node_address': address_encoder(address1),
     }
 
 
-def test_update_fails_on_open_channel(tester_state, tester_channels):
+def test_update_fails_on_open_channel(tester_chain, tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -76,11 +73,11 @@ def test_update_fails_on_open_channel(tester_state, tester_channels):
         )
 
 
-def test_update_not_allowed_after_settlement_period(settle_timeout, tester_channels, tester_state):
+def test_update_not_allowed_after_settlement_period(settle_timeout, tester_channels, tester_chain):
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     direct0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -90,7 +87,7 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
     )
 
     nettingchannel.close(sender=pkey0)
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
 
     direct0_hash = sha3(direct0.packed().data[:-65])
     with pytest.raises(TransactionFailed):
@@ -104,11 +101,11 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
         )
 
 
-def test_update_not_allowed_for_the_closing_address(tester_state, tester_channels):
+def test_update_not_allowed_for_the_closing_address(tester_chain, tester_channels):
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -117,7 +114,7 @@ def test_update_not_allowed_for_the_closing_address(tester_state, tester_channel
         pkey=pkey0,
     )
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer1 = make_direct_transfer_from_channel(
         block_number,
         channel1,
@@ -227,11 +224,11 @@ def test_update_must_fail_with_a_channel_address(tester_channels, private_keys):
         )
 
 
-def test_update_called_multiple_times_same_transfer(tester_state, tester_channels):
+def test_update_called_multiple_times_same_transfer(tester_chain, tester_channels):
     """ updateTransfer can be called only once. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -263,11 +260,11 @@ def test_update_called_multiple_times_same_transfer(tester_state, tester_channel
         )
 
 
-def test_update_called_multiple_times_new_transfer(tester_state, tester_channels):
+def test_update_called_multiple_times_new_transfer(tester_chain, tester_channels):
     """ updateTransfer second call must fail even if there is a new transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -276,7 +273,7 @@ def test_update_called_multiple_times_new_transfer(tester_state, tester_channels
         pkey=pkey0,
     )
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer1 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -309,11 +306,11 @@ def test_update_called_multiple_times_new_transfer(tester_state, tester_channels
         )
 
 
-def test_update_called_multiple_times_older_transfer(tester_state, tester_channels):
+def test_update_called_multiple_times_older_transfer(tester_chain, tester_channels):
     """ updateTransfer second call must fail even if called with an older transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -322,7 +319,7 @@ def test_update_called_multiple_times_older_transfer(tester_state, tester_channe
         pkey=pkey0,
     )
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer1 = make_direct_transfer_from_channel(
         block_number,
         channel0,

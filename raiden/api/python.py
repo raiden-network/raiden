@@ -4,7 +4,7 @@ from binascii import hexlify
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
-from ethereum.tester import TransactionFailed
+from ethereum.tools.tester import TransactionFailed
 
 from raiden.blockchain.events import (
     ALL_EVENTS,
@@ -32,6 +32,7 @@ from raiden.exceptions import (
     InvalidState,
     NoPathError,
     NoTokenManager,
+    UnknownTokenAddress,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -45,7 +46,7 @@ from raiden.utils import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class RaidenAPI(object):
+class RaidenAPI:
     """ CLI interface. """
     # pylint: disable=too-many-public-methods
 
@@ -202,7 +203,6 @@ class RaidenAPI(object):
         assert token_address in self.raiden.token_to_channelgraph
 
         netcontract_address = channel_manager.new_netting_channel(
-            self.raiden.address,
             partner_address,
             settle_timeout,
         )
@@ -484,13 +484,12 @@ class RaidenAPI(object):
             graph = self.raiden.token_to_channelgraph.get(token_address)
 
             if graph:
-                token_channels = graph.address_to_channel.values()
-                result = token_channels
+                result = list(graph.address_to_channel.values())
 
         elif partner_address:
             partner_channels = [
                 graph.partneraddress_to_channel[partner_address]
-                for graph in self.raiden.token_to_channelgraph.itervalues()
+                for graph in self.raiden.token_to_channelgraph.values()
                 if partner_address in graph.partneraddress_to_channel
             ]
 
@@ -498,8 +497,8 @@ class RaidenAPI(object):
 
         else:
             all_channels = list()
-            for graph in self.raiden.token_to_channelgraph.itervalues():
-                all_channels.extend(graph.address_to_channel.itervalues())
+            for graph in self.raiden.token_to_channelgraph.values():
+                all_channels.extend(graph.address_to_channel.values())
 
             result = all_channels
 
@@ -516,7 +515,7 @@ class RaidenAPI(object):
 
     def get_tokens_list(self):
         """Returns a list of tokens the node knows about"""
-        tokens_list = list(self.raiden.token_to_channelgraph.iterkeys())
+        tokens_list = list(self.raiden.token_to_channelgraph.keys())
         return tokens_list
 
     def transfer_and_wait(
@@ -549,7 +548,7 @@ class RaidenAPI(object):
             identifier=None):
         # pylint: disable=too-many-arguments
 
-        if not isinstance(amount, (int, long)):
+        if not isinstance(amount, int):
             raise InvalidAmount('Amount not a number')
 
         if amount <= 0:
@@ -644,15 +643,18 @@ class RaidenAPI(object):
                 'Expected binary address format for token in get_token_network_events'
             )
 
-        graph = self.raiden.token_to_channelgraph[token_address]
+        try:
+            graph = self.raiden.token_to_channelgraph[token_address]
 
-        return get_all_channel_manager_events(
-            self.raiden.chain,
-            graph.channelmanager_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
+            return get_all_channel_manager_events(
+                self.raiden.chain,
+                graph.channelmanager_address,
+                events=ALL_EVENTS,
+                from_block=from_block,
+                to_block=to_block,
+            )
+        except KeyError:
+            raise UnknownTokenAddress('The token address is not registered.')
 
     def get_network_events(self, from_block, to_block):
         registry_address = self.raiden.default_registry.address
@@ -692,7 +694,7 @@ class RaidenAPI(object):
             if is_user_transfer_event:
                 new_event = {
                     'block_number': event.block_number,
-                    '_event_type': type(event.event_object).__name__,
+                    '_event_type': type(event.event_object).__name__.encode(),
                 }
                 new_event.update(event.event_object.__dict__)
                 returned_events.append(new_event)

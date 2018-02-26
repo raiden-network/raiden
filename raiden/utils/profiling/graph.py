@@ -25,8 +25,6 @@ using ImageMagick:
 
     convert -append memory_timeline.png latency_scatter.png memory_objcount.png collage.png
 """
-from __future__ import absolute_import
-from __future__ import print_function
 
 # Improvements:
 # - Draw the composite graphs with matplotlib instead of using convert and make
@@ -316,7 +314,7 @@ def memory_data(filepath):
             if line
         ]
 
-    return map(convert_line, data)
+    return list(map(convert_line, data))
 
 
 def latency_data(filepath):
@@ -372,7 +370,7 @@ def main():
             memory_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_subplot(arguments.output, data_list)
 
     elif arguments.action == 'memory' and arguments.plot == 'timeline':
@@ -380,7 +378,7 @@ def main():
             memory_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_timeline(arguments.output, data_list)
 
     elif arguments.action == 'memory' and arguments.plot == 'objcount':
@@ -388,7 +386,7 @@ def main():
             objcount_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_objcount(arguments.output, data_list, topn=arguments.topn)
 
     elif arguments.action == 'latency' and arguments.plot == 'scatter':
@@ -396,7 +394,7 @@ def main():
             latency_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         latency_scatter(arguments.output, data_list, arguments.interval)
 
 

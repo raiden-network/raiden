@@ -21,20 +21,20 @@ from raiden.blockchain.events import (
     get_all_netting_channel_events,
     get_all_registry_events,
 )
-from raiden.utils import address_encoder, sha3
+from raiden.utils import sha3, address_encoder
 
 
 def event_dicts_are_equal(dict1, dict2):
-    for k, v in dict1.iteritems():
+    for k, v in dict1.items():
         if k not in dict2:
             return False
         if k == 'block_number':
             continue
 
         v2 = dict2[k]
-        if isinstance(v2, basestring) and v2.startswith('0x'):
+        if isinstance(v2, str) and v2.startswith('0x'):
             v2 = v2[2:]
-        if isinstance(v, basestring) and v.startswith('0x'):
+        if isinstance(v, str) and v.startswith('0x'):
             v = v[2:]
         if v2 != v:
             return False
@@ -42,7 +42,6 @@ def event_dicts_are_equal(dict1, dict2):
     return True
 
 
-@pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_timeout):
@@ -59,7 +58,6 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     token1 = app1.raiden.chain.token(token_address)
 
     netcontract_address = graph0.new_netting_channel(
-        app0.raiden.address,
         app1.raiden.address,
         settle_timeout,
     )
@@ -73,8 +71,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(app0.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
+    channel1 = list(app1.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
 
     assert_synched_channels(
         channel0, 0, [],
@@ -90,8 +88,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(app0.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
+    channel1 = list(app1.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -107,8 +105,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(app0.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
+    channel1 = list(app1.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -116,7 +114,6 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     )
 
 
-@pytest.mark.parametrize('privatekey_seed', ['query_events:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('cached_genesis', [None])
@@ -141,7 +138,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
-        '_event_type': 'TokenAdded',
+        '_event_type': b'TokenAdded',
         'channel_manager_address': address_encoder(manager0.address),
         'token_address': address_encoder(token_address),
         'block_number': 'ignore',
@@ -157,7 +154,6 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert not events
 
     netcontract_address = manager0.new_netting_channel(
-        app0.raiden.address,
         app1.raiden.address,
         settle_timeout,
     )
@@ -172,7 +168,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': settle_timeout,
         'netting_channel': address_encoder(netcontract_address),
         'participant1': address_encoder(app0.raiden.address),
@@ -197,8 +193,8 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(app0.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
+    channel1 = list(app1.raiden.token_to_channelgraph[token_address].address_to_channel.values())[0]  # noqa: E501
 
     assert_synched_channels(
         channel0, 0, [],
@@ -225,7 +221,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(events) == 1
 
     new_balance_event = {
-        '_event_type': 'ChannelNewBalance',
+        '_event_type': b'ChannelNewBalance',
         'token_address': address_encoder(token_address),
         'participant': address_encoder(app0.raiden.address),
         'balance': deposit,
@@ -254,7 +250,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(events) == 1
 
     closed_event = {
-        '_event_type': 'ChannelClosed',
+        '_event_type': b'ChannelClosed',
         'closing_address': address_encoder(app0.raiden.address),
         'block_number': 'ignore',
     }
@@ -284,7 +280,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(events) == 1
 
     settled_event = {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 'ignore',
     }
 
@@ -293,7 +289,6 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
 
 @pytest.mark.xfail(reason='out-of-gas for unlock and settle')
-@pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_timeout):

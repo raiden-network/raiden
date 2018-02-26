@@ -1,15 +1,12 @@
 """ Utilities to make and assert transfers. """
-from __future__ import print_function
-
 import gevent
 from coincurve import PrivateKey
 
-from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
 from raiden.messages import DirectTransfer
 from raiden.transfer.merkle_tree import (
-    EMPTY_MERKLE_ROOT,
     compute_layers,
     merkleroot,
 )
@@ -132,7 +129,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
         if secret is None:
             address = from_channel.external_state.netting_channel.address
             nonce = str(from_channel.our_state.nonce)
-            secret = sha3(address + nonce)
+            secret = sha3(address + nonce.encode())
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(

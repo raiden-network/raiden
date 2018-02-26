@@ -6,4 +6,4 @@ export interface SwapToken {
     sending_amount: number;
     receiving_token: string;
     receiving_amount: number;
-};
+}

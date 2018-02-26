@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 import pytest
-from ethereum import tester
-from ethereum.tester import TransactionFailed
+from ethereum.tools import tester
+from ethereum.tools.tester import TransactionFailed
 
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_NETTING_CHANNEL
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
-from raiden.tests.utils.tester import (
-    INVALID_KEY,
-)
 from raiden.utils import privatekey_to_address
 
 
-def test_nettingchannel_settle_timeout_inrange(private_keys, tester_channelmanager, tester_state):
+def test_nettingchannel_settle_timeout_inrange(private_keys, tester_channelmanager, tester_chain):
     """ The netting channel constructor must enforce that settle timeout is in
     the valid range.
 
@@ -24,8 +21,6 @@ def test_nettingchannel_settle_timeout_inrange(private_keys, tester_channelmanag
     pkey0 = private_keys[0]
     pkey1 = private_keys[1]
     pkey2 = private_keys[2]
-
-    log_listener = None
 
     with pytest.raises(TransactionFailed):
         small_settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
@@ -57,20 +52,15 @@ def test_nettingchannel_settle_timeout_inrange(private_keys, tester_channelmanag
     )
 
     netting_channel = tester.ABIContract(
-        tester_state,
-        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
-        netting_channel_address0_hex,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
+        tester_chain,
+        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
+        netting_channel_address0_hex
     )
     # pylint: disable=no-member
     assert netting_channel.settleTimeout(sender=pkey0) == minimum_settle_timeout
     netting_channel2 = tester.ABIContract(
-        tester_state,
-        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
-        netting_channel_address1_hex,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
+        tester_chain,
+        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
+        netting_channel_address1_hex
     )
-    # pylint: disable=no-member
     assert netting_channel2.settleTimeout(sender=pkey0) == max_settle_timeout

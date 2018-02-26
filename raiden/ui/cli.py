@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-
 from binascii import hexlify
 import sys
 import os
@@ -24,7 +22,6 @@ from ethereum.utils import denoms
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.constants import (
-    DISCOVERY_REGISTRATION_GAS,
     ID_TO_NETWORKNAME,
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
@@ -37,8 +34,6 @@ from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
-    GAS_LIMIT,
-    GAS_PRICE,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
@@ -58,8 +53,11 @@ from raiden.tests.utils.smoketest import (
 gevent.monkey.patch_all()
 
 # ansi escape code for moving the cursor and clearing the line
-CURSOR_STARTLINE = b'\x1b[1000D'
-CLEARLINE = b'\x1b[2K'
+CURSOR_STARTLINE = '\x1b[1000D'
+CLEARLINE = '\x1b[2K'
+
+# 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
+DISCOVERY_TX_GAS_LIMIT = 60000
 
 
 def toogle_cpu_profiler(raiden):
@@ -148,6 +146,14 @@ def check_synced(blockchain_service):
             "Because of this there is no way to determine the latest\n"
             "block with an oracle, and the events from the ethereum\n"
             "node cannot be trusted. Giving up.\n"
+        )
+        sys.exit(1)
+    except KeyError:
+        print(
+            'Your ethereum client is connected to a non-recognized private \n'
+            'network with network-ID {}. Since we can not check if the client \n'
+            'is synced please restart raiden with the --no-sync-check argument.'
+            '\n'.format(net_id)
         )
         sys.exit(1)
 
@@ -251,7 +257,7 @@ class NATChoiceType(click.Choice):
         if value.startswith('ext:'):
             ip, _, port = value[4:].partition(':')
             try:
-                IPv4Address(ip.decode('UTF-8', 'ignore'))
+                IPv4Address(ip)
             except AddressValueError:
                 self.fail('invalid IP address: {}'.format(ip), param, ctx)
             if port:
@@ -262,7 +268,7 @@ class NATChoiceType(click.Choice):
             else:
                 port = None
             return ip, port
-        return super(NATChoiceType, self).convert(value, param, ctx)
+        return super().convert(value, param, ctx)
 
 
 ADDRESS_TYPE = AddressType()
@@ -287,10 +293,12 @@ OPTIONS = [
     ),
     click.option(
         '--gas-price',
-        help="Set the Ethereum transaction's gas price",
-        default=GAS_PRICE,
-        type=int,
-        show_default=True,
+        help=(
+            'Set the gas price for ethereum transactions. If not provided '
+            'the value of the RPC calls eth_gasPrice is going to be used'
+        ),
+        default=None,
+        type=int
     ),
     click.option(
         '--eth-rpc-endpoint',
@@ -453,7 +461,8 @@ def options(func):
 
 @options
 @click.command()
-def app(address,
+def app(
+        address,
         keystore_path,
         gas_price,
         eth_rpc_endpoint,
@@ -476,7 +485,6 @@ def app(address,
         datadir,
         eth_client_communication,
         nat):
-
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
@@ -534,6 +542,7 @@ def app(address,
         rpc_host,
         rpc_port,
         privatekey_bin,
+        gas_price,
     )
 
     # this assumes the eth node is already online
@@ -543,14 +552,13 @@ def app(address,
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
-        GAS_LIMIT,
         gas_price,
     )
 
     if sync_check:
         check_synced(blockchain_service)
 
-    discovery_tx_cost = gas_price * DISCOVERY_REGISTRATION_GAS
+    discovery_tx_cost = rpc_client.gasprice() * DISCOVERY_TX_GAS_LIMIT
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:
@@ -560,7 +568,7 @@ def app(address,
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
             'Please deposit additional funds into this account.'
-            .format(discovery_tx_cost / float(denoms.ether), balance / float(denoms.ether))
+            .format(discovery_tx_cost / denoms.ether, balance / denoms.ether)
         )
         if not click.confirm('Try again?'):
             sys.exit(1)
@@ -743,7 +751,7 @@ def run(ctx, **kwargs):
                 gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
 
                 event.wait()
-
+                print('Signal received. Shutting down ...')
                 try:
                     api_server.stop()
                 except NameError:
@@ -806,10 +814,12 @@ def smoketest(ctx, debug, **kwargs):
     open(report_file, 'w+')
 
     def append_report(subject, data):
-        with open(report_file, 'a') as handler:
+        with open(report_file, 'a', encoding='UTF-8') as handler:
             handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
             if data is not None:
-                handler.writelines([(data + os.linesep).encode('utf-8')])
+                if isinstance(data, bytes):
+                    data = data.decode()
+                handler.writelines([data + os.linesep])
 
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)

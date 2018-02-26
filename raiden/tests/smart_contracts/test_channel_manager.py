@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
 import itertools
 
 import pytest
-from ethereum.tester import TransactionFailed
-from ethereum.utils import encode_hex
+from ethereum.tools.tester import TransactionFailed
 
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import privatekey_to_address, sha3, address_encoder, event_decoder
 from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,
@@ -14,11 +12,11 @@ from raiden.tests.utils.tester import (
 )
 
 
-def netting_channel_settled(tester_state, nettingchannel, pkey, settle_timeout):
+def netting_channel_settled(tester_chain, nettingchannel, pkey, settle_timeout):
     nettingchannel.close(sender=pkey)
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey)
-    tester_state.mine(1)
+    tester_chain.mine(1)
 
 
 def test_channelnew_event(
@@ -39,12 +37,12 @@ def test_channelnew_event(
         sender=pkey0,
     )
 
-    last_event = tester_events[-1]
+    last_event = event_decoder(tester_events[-1], tester_channelmanager.translator)
     assert last_event == {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'netting_channel': netting_channel_address1_hex,
-        'participant1': encode_hex(address0),
-        'participant2': encode_hex(address1),
+        'participant1': address_encoder(address0),
+        'participant2': address_encoder(address1),
         'settle_timeout': settle_timeout,
     }
 
@@ -54,7 +52,7 @@ def test_channeldeleted_event(
         tester_channelmanager,
         tester_events,
         tester_nettingcontracts,
-        tester_state):
+        tester_chain):
     """ A channel deleted event must be emmited when the channel is cleaned.
 
     This happens once a *new* channel with *the same parties* is created,
@@ -66,11 +64,13 @@ def test_channeldeleted_event(
     address1 = privatekey_to_address(pkey1)
 
     netting_channel_settled(
-        tester_state,
+        tester_chain,
         nettingchannel,
         pkey0,
         settle_timeout,
     )
+
+    tester_chain.head_state.log_listeners.append(tester_events.append)
 
     # old entry will be deleted when calling newChannel
     tester_channelmanager.newChannel(
@@ -79,17 +79,17 @@ def test_channeldeleted_event(
         sender=pkey0,
     )
 
-    channeldelete_event = tester_events[-2]
+    channeldelete_event = event_decoder(tester_events[-2], tester_channelmanager.translator)
     assert channeldelete_event == {
-        '_event_type': 'ChannelDeleted',
-        'caller_address': hexlify(address0),
-        'partner': hexlify(address1)
+        '_event_type': b'ChannelDeleted',
+        'caller_address': address_encoder(address0),
+        'partner': address_encoder(address1)
     }
 
 
 def test_newchannel_fails_until_channel_is_settled(
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_channelmanager,
         tester_nettingcontracts):
     """ A call to newChannel must fail if both participants have an existing
@@ -122,7 +122,7 @@ def test_newchannel_fails_until_channel_is_settled(
             sender=pkey0,
         )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
 
     # the settlement period is over but the channel is not settled yet
     with pytest.raises(TransactionFailed):
@@ -147,16 +147,17 @@ def test_newchannel_fails_until_channel_is_settled(
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_getchannelwith_must_return_zero_for_non_existing_channels(
         tester_channelmanager,
+        tester_chain,
         private_keys,
         settle_timeout):
     """ Queries to the channel manager for a non-existing channel with a partner
     must return zero.
     """
-    addresses = map(privatekey_to_address, private_keys)
+    addresses = list(map(privatekey_to_address, private_keys))
 
     sender_key = private_keys[0]
     sender_addr = privatekey_to_address(sender_key)
-    null_addr = '0' * 40
+    null_addr = '0x' + '0' * 40
 
     for addr in addresses:
         channel_address = tester_channelmanager.getChannelWith(addr, sender=sender_key)
@@ -169,19 +170,21 @@ def test_getchannelwith_must_return_zero_for_non_existing_channels(
             with pytest.raises(TransactionFailed):
                 tester_channelmanager.newChannel(addr, settle_timeout, sender=sender_key)
 
+        tester_chain.mine()
+
 
 def test_channelmanager_start_with_zero_entries(
         private_keys,
         tester_events,
         tester_registry,
-        tester_state,
+        tester_chain,
         tester_token):
     """ A new channel manager must start empty. """
 
     pkey0 = private_keys[0]
     channel_manager = new_channelmanager(
         pkey0,
-        tester_state,
+        tester_chain,
         tester_events.append,
         tester_registry,
         tester_token.address,
@@ -216,7 +219,7 @@ def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
     addr0_channels = tester_channelmanager.nettingContractsByAddress(address0, sender=pkey0)
     addr1_channels = tester_channelmanager.nettingContractsByAddress(address1, sender=pkey0)
 
-    nonexisting_address = sha3('this_does_not_exist')[:20]
+    nonexisting_address = sha3(b'this_does_not_exist')[:20]
     nonaddr_channels = tester_channelmanager.nettingContractsByAddress(
         nonexisting_address,
         sender=pkey0,
@@ -232,7 +235,7 @@ def test_for_issue_892(
         private_keys,
         settle_timeout,
         tester_channelmanager,
-        tester_state,
+        tester_chain,
         tester_events):
     """
     This is a regression test for issue #892 (https://github.com/raiden-network/raiden/issues/892)
@@ -253,6 +256,7 @@ def test_for_issue_892(
             settle_timeout,
             sender=pkey0,
         )
+        tester_chain.mine()
 
         assert tester_channelmanager.getChannelWith(address1, sender=pkey0) == channel_address_hex
         assert tester_channelmanager.getChannelWith(address0, sender=pkey1) == channel_address_hex
@@ -260,19 +264,19 @@ def test_for_issue_892(
         if first_pair:
             first_pair = False
             nettingchannel = create_nettingchannel_proxy(
-                tester_state,
+                tester_chain,
                 channel_address_hex,
                 tester_events.append,
             )
             nettingchannel.close(sender=pkey0)
-            tester_state.mine(number_of_blocks=settle_timeout + 2)
+            tester_chain.mine(number_of_blocks=settle_timeout + 2)
             nettingchannel.settle(sender=pkey1)
 
         else:
             # this is brittle, relying on an implicit ordering of addresses
             participant_pairs.extend((
-                hexlify(address0),
-                hexlify(address1),
+                address_encoder(address0),
+                address_encoder(address1),
             ))
 
         assert participant_pairs == tester_channelmanager.getChannelsParticipants(sender=pkey0)
@@ -282,7 +286,7 @@ def test_reopen_channel(
         private_keys,
         settle_timeout,
         tester_channelmanager,
-        tester_state):
+        tester_chain):
     """ A new channel can be opened after the old one is settled. When this
     happens the channel manager must update its internal data structures to
     point to the new channel address.
@@ -295,7 +299,7 @@ def test_reopen_channel(
     old_channel_addresses = list()
     for partner_pkey in private_keys[1:]:
         nettingcontract = new_nettingcontract(
-            pkey, partner_pkey, tester_state, log.append, tester_channelmanager, settle_timeout,
+            pkey, partner_pkey, tester_chain, log.append, tester_channelmanager, settle_timeout,
         )
         channels.append(nettingcontract)
 
@@ -308,7 +312,7 @@ def test_reopen_channel(
 
     for nettingchannel in channels:
         netting_channel_settled(
-            tester_state,
+            tester_chain,
             nettingchannel,
             pkey,
             settle_timeout,
@@ -317,7 +321,7 @@ def test_reopen_channel(
     channels = list()
     for partner_pkey in private_keys[1:]:
         nettingcontract = new_nettingcontract(
-            pkey, partner_pkey, tester_state, log.append, tester_channelmanager, settle_timeout,
+            pkey, partner_pkey, tester_chain, log.append, tester_channelmanager, settle_timeout,
         )
         channels.append(nettingcontract)
 
@@ -337,7 +341,7 @@ def test_reopen_regression_bad_index_update(
         private_keys,
         settle_timeout,
         tester_channelmanager,
-        tester_state):
+        tester_chain):
     """ deleteChannel used the wrong address to update the node_index mapping.
         Correct usage would be
 
@@ -360,23 +364,23 @@ def test_reopen_regression_bad_index_update(
 
     log = list()
     nettingchannel = new_nettingcontract(
-        pkey0, pkey2, tester_state, log.append, tester_channelmanager, settle_timeout,
+        pkey0, pkey2, tester_chain, log.append, tester_channelmanager, settle_timeout,
     )
 
     netting_channel_settled(
-        tester_state,
+        tester_chain,
         nettingchannel,
         pkey0,
         settle_timeout,
     )
 
     nettingchannel = new_nettingcontract(
-        pkey0, pkey2, tester_state, log.append, tester_channelmanager, settle_timeout,
+        pkey0, pkey2, tester_chain, log.append, tester_channelmanager, settle_timeout,
     )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_new_channel_state(private_keys, tester_state, tester_channelmanager):
+def test_new_channel_state(private_keys, tester_chain, tester_channelmanager):
     """ Tests the state of a newly created netting channel. """
     pkey0, pkey1 = private_keys
 
@@ -385,7 +389,7 @@ def test_new_channel_state(private_keys, tester_state, tester_channelmanager):
     channel = new_nettingcontract(
         pkey0,
         pkey1,
-        tester_state,
+        tester_chain,
         events.append,
         tester_channelmanager,
         settle_timeout,
@@ -394,14 +398,14 @@ def test_new_channel_state(private_keys, tester_state, tester_channelmanager):
     # pylint: disable=no-member
     assert channel.settleTimeout(sender=pkey0) == settle_timeout
     assert channel.tokenAddress(sender=pkey0) == tester_channelmanager.tokenAddress(sender=pkey0)
-    assert channel.opened(sender=pkey0) == tester_state.block.number - 1
+    assert channel.opened(sender=pkey0) == tester_chain.block.number - 1
     assert channel.closed(sender=pkey0) == 0
 
     address_and_balances = channel.addressAndBalance(sender=pkey0)
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
 
-    assert address_and_balances[0] == encode_hex(address0)
+    assert address_and_balances[0] == address_encoder(address0)
     assert address_and_balances[1] == 0
-    assert address_and_balances[2] == encode_hex(address1)
+    assert address_and_balances[2] == address_encoder(address1)
     assert address_and_balances[3] == 0

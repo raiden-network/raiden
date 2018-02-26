@@ -25,6 +25,7 @@ from raiden.exceptions import (
     TransferUnwanted,
     UnknownAddress,
     UnknownTokenAddress,
+    RaidenShuttingDown,
 )
 from raiden.constants import (
     UDP_MAX_MESSAGE_SIZE,
@@ -111,7 +112,7 @@ def timeout_two_stage(retries, timeout1, timeout2):
     Timeouts start spaced by `timeout1`, after `retries` increase
     to `timeout2` which is repeated indefinitely.
     """
-    for _ in xrange(retries):
+    for _ in range(retries):
         yield timeout1
     while True:
         yield timeout2
@@ -284,15 +285,18 @@ def single_queue_send(
             message_retry_max_timeout,
         )
 
-        acknowledged = retry_with_recovery(
-            protocol,
-            data,
-            receiver_address,
-            event_stop,
-            event_healthy,
-            event_unhealthy,
-            backoff,
-        )
+        try:
+            acknowledged = retry_with_recovery(
+                protocol,
+                data,
+                receiver_address,
+                event_stop,
+                event_healthy,
+                event_unhealthy,
+                backoff,
+            )
+        except RaidenShuttingDown:  # For a clean shutdown process
+            return
 
         if acknowledged:
             queue.get()
@@ -382,13 +386,16 @@ def healthcheck(
         )
 
         # Send Ping a few times before setting the node as unreachable
-        acknowledged = retry(
-            protocol,
-            data,
-            receiver_address,
-            event_stop,
-            [nat_keepalive_timeout] * nat_keepalive_retries,
-        )
+        try:
+            acknowledged = retry(
+                protocol,
+                data,
+                receiver_address,
+                event_stop,
+                [nat_keepalive_timeout] * nat_keepalive_retries,
+            )
+        except RaidenShuttingDown:  # For a clean shutdown process
+            return
 
         if event_stop.is_set():
             return
@@ -417,13 +424,16 @@ def healthcheck(
             # Retry until recovery, used for:
             # - Checking node status.
             # - Nat punching.
-            acknowledged = retry(
-                protocol,
-                data,
-                receiver_address,
-                event_stop,
-                repeat(nat_invitation_timeout),
-            )
+            try:
+                acknowledged = retry(
+                    protocol,
+                    data,
+                    receiver_address,
+                    event_stop,
+                    repeat(nat_invitation_timeout),
+                )
+            except RaidenShuttingDown:  # For a clean shutdown process
+                return
 
         if acknowledged:
             if log.isEnabledFor(logging.DEBUG):
@@ -443,7 +453,7 @@ def healthcheck(
             )
 
 
-class RaidenProtocol(object):
+class RaidenProtocol:
     """ Encode the message into a packet and send it.
 
     Each message received is stored by hash and if it is received twice the
@@ -518,7 +528,7 @@ class RaidenProtocol(object):
         self.transport.stop()
 
         # Set all the pending results to False
-        for waitack in self.senthashes_to_states.itervalues():
+        for waitack in self.senthashes_to_states.values():
             waitack.async_result.set(False)
 
     def get_health_events(self, receiver_address):
@@ -623,7 +633,7 @@ class RaidenProtocol(object):
             )
 
         # All messages must be ordered, but only on a per channel basis.
-        token_address = getattr(message, 'token', '')
+        token_address = getattr(message, 'token', b'')
 
         # Ignore duplicated messages
         if echohash not in self.senthashes_to_states:

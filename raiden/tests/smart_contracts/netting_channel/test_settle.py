@@ -3,7 +3,7 @@ import pytest
 
 from raiden.messages import Lock
 from raiden.transfer.state_change import Block
-from raiden.utils import sha3, privatekey_to_address
+from raiden.utils import sha3, privatekey_to_address, event_decoder
 from raiden.tests.utils.transfer import (
     increase_transferred_amount,
     make_direct_transfer_from_channel,
@@ -11,30 +11,31 @@ from raiden.tests.utils.transfer import (
 )
 
 
-def test_settle_event(settle_timeout, tester_state, tester_events, tester_nettingcontracts):
+def test_settle_event(settle_timeout, tester_chain, tester_events, tester_nettingcontracts):
     """ The event ChannelSettled is emitted when the channel is settled. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
 
     nettingchannel.close(sender=pkey0)
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
 
     previous_events = list(tester_events)
+    tester_chain.head_state.log_listeners.append(tester_events.append)
     nettingchannel.settle(sender=pkey0)
 
     # settle + a transfer per participant
     assert len(previous_events) + 3 == len(tester_events)
 
-    settle_event = tester_events[-1]
+    settle_event = event_decoder(tester_events[-1], nettingchannel.translator)
     assert settle_event == {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
     }
 
 
 def test_settle_unused_channel(
         deposit,
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_nettingcontracts,
         tester_token):
 
@@ -48,7 +49,7 @@ def test_settle_unused_channel(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     nettingchannel.close(sender=pkey0)
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
 
     nettingchannel.settle(sender=pkey0)
 
@@ -61,7 +62,7 @@ def test_settle_single_direct_transfer_for_closing_party(
         deposit,
         settle_timeout,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token):
 
     """ Test settle of a channel with one direct transfer to the participant
@@ -77,7 +78,7 @@ def test_settle_single_direct_transfer_for_closing_party(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -96,7 +97,7 @@ def test_settle_single_direct_transfer_for_closing_party(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     assert tester_token.balanceOf(address0, sender=pkey0) == initial0 + deposit - amount
@@ -108,7 +109,7 @@ def test_settle_single_direct_transfer_for_counterparty(
         deposit,
         settle_timeout,
         tester_channels,
-        tester_state,
+        tester_chain,
         tester_token):
 
     """ Test settle of a channel with one direct transfer to the participant
@@ -124,7 +125,7 @@ def test_settle_single_direct_transfer_for_counterparty(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -144,7 +145,7 @@ def test_settle_single_direct_transfer_for_counterparty(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     assert tester_token.balanceOf(address0, sender=pkey0) == initial0 + deposit - amount
@@ -155,7 +156,7 @@ def test_settle_single_direct_transfer_for_counterparty(
 def test_settle_two_direct_transfers(
         deposit,
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -170,7 +171,7 @@ def test_settle_two_direct_transfers(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -180,7 +181,7 @@ def test_settle_two_direct_transfers(
     )
 
     amount1 = 30
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer1 = make_direct_transfer_from_channel(
         block_number,
         channel1,
@@ -209,7 +210,7 @@ def test_settle_two_direct_transfers(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = tester_token.balanceOf(address0, sender=pkey0)
@@ -225,7 +226,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         deposit,
         settle_timeout,
         reveal_timeout,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -241,11 +242,11 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     transferred_amount0 = 30
     increase_transferred_amount(channel0, channel1, transferred_amount0)
 
-    expiration0 = tester_state.block.number + reveal_timeout + 5
-    new_block = Block(tester_state.block.number)
+    expiration0 = tester_chain.block.number + reveal_timeout + 5
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3('lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -253,7 +254,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         address1,
         lock0,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
     )
 
     nettingchannel.close(sender=pkey0)
@@ -268,7 +269,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey1)
 
     # the balances only change by transferred_amount because the lock was /not/ unlocked
@@ -286,7 +287,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         deposit,
         settle_timeout,
         reveal_timeout,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -302,11 +303,11 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     transferred_amount0 = 30
     increase_transferred_amount(channel0, channel1, transferred_amount0)
 
-    expiration0 = tester_state.block.number + reveal_timeout + 5
-    new_block = Block(tester_state.block.number)
+    expiration0 = tester_chain.block.number + reveal_timeout + 5
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3('lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -314,7 +315,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         address1,
         lock0,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
     )
 
     mediated0_hash = sha3(mediated0.packed().data[:-65])
@@ -327,7 +328,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey1)
 
     # the balances only change by transferred_amount because the lock was /not/ unlocked
@@ -343,7 +344,7 @@ def test_settle_two_locked_mediated_transfer_messages(
         deposit,
         settle_timeout,
         reveal_timeout,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -360,11 +361,11 @@ def test_settle_two_locked_mediated_transfer_messages(
     transferred_amount1 = 70
     increase_transferred_amount(channel1, channel0, transferred_amount1)
 
-    expiration0 = tester_state.block.number + reveal_timeout + 5
-    new_block = Block(tester_state.block.number)
+    expiration0 = tester_chain.block.number + reveal_timeout + 5
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3('lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -372,11 +373,11 @@ def test_settle_two_locked_mediated_transfer_messages(
         address1,
         lock0,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
     )
 
-    lock_expiration1 = tester_state.block.number + reveal_timeout + 5
-    lock1 = Lock(amount=31, expiration=lock_expiration1, hashlock=sha3('lock2'))
+    lock_expiration1 = tester_chain.block.number + reveal_timeout + 5
+    lock1 = Lock(amount=31, expiration=lock_expiration1, hashlock=sha3(b'lock2'))
     mediated1 = make_mediated_transfer(
         channel1,
         channel0,
@@ -384,7 +385,7 @@ def test_settle_two_locked_mediated_transfer_messages(
         address0,
         lock1,
         pkey1,
-        tester_state.block.number,
+        tester_chain.block.number,
     )
 
     mediated0_hash = sha3(mediated0.packed().data[:-65])
@@ -407,7 +408,7 @@ def test_settle_two_locked_mediated_transfer_messages(
         sender=pkey0,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     # the balances only change by transferred_amount because the lock was /not/ unlocked
@@ -422,7 +423,7 @@ def test_settle_two_locked_mediated_transfer_messages(
 def test_two_direct_transfers(
         settle_timeout,
         deposit,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -437,7 +438,7 @@ def test_two_direct_transfers(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -447,7 +448,7 @@ def test_two_direct_transfers(
     )
 
     second_amount0 = 90
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     second_direct0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -468,7 +469,7 @@ def test_two_direct_transfers(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial0 + deposit - first_amount0 - second_amount0
@@ -482,7 +483,7 @@ def test_mediated_after_direct_transfer(
         reveal_timeout,
         settle_timeout,
         deposit,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -497,7 +498,7 @@ def test_mediated_after_direct_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -506,11 +507,11 @@ def test_mediated_after_direct_transfer(
         pkey0,
     )
 
-    lock_expiration = tester_state.block.number + reveal_timeout + 5
-    new_block = Block(tester_state.block.number)
+    lock_expiration = tester_chain.block.number + reveal_timeout + 5
+    new_block = Block(tester_chain.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
-    lock1 = Lock(amount=31, expiration=lock_expiration, hashlock=sha3('lock2'))
+    lock1 = Lock(amount=31, expiration=lock_expiration, hashlock=sha3(b'lock2'))
     second_mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -518,7 +519,7 @@ def test_mediated_after_direct_transfer(
         address1,
         lock1,
         pkey0,
-        tester_state.block.number,
+        tester_chain.block.number,
     )
 
     nettingchannel.close(sender=pkey0)
@@ -533,7 +534,7 @@ def test_mediated_after_direct_transfer(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     # the balances only change by transferred_amount because the lock was /not/ unlocked
@@ -548,7 +549,7 @@ def test_mediated_after_direct_transfer(
 def test_settlement_with_unauthorized_token_transfer(
         deposit,
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_channels,
         tester_token):
 
@@ -561,7 +562,7 @@ def test_settlement_with_unauthorized_token_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -571,7 +572,7 @@ def test_settlement_with_unauthorized_token_transfer(
     )
 
     amount1 = 30
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer1 = make_direct_transfer_from_channel(
         block_number,
         channel1,
@@ -603,7 +604,7 @@ def test_settlement_with_unauthorized_token_transfer(
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = tester_token.balanceOf(address0, sender=pkey0)
@@ -615,7 +616,7 @@ def test_settlement_with_unauthorized_token_transfer(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey1) == extra_amount
 
 
-def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_token):
+def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_token):
     """ Transferred amount can be larger than the deposit. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -635,7 +636,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
 
     amount0 = 10
     transferred_amount0 += amount0
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     direct0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -646,7 +647,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
 
     amount1 = 30
     transferred_amount1 += amount1
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     direct1 = make_direct_transfer_from_channel(
         block_number,
         channel1,
@@ -675,7 +676,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
         sender=pkey1,
     )
 
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    tester_chain.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
 
     # the balances only change by transferred_amount because the lock was /not/ unlocked

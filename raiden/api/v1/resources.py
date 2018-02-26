@@ -22,7 +22,7 @@ def create_blueprint():
 
 class BaseResource(Resource):
     def __init__(self, rest_api_object, **kwargs):
-        super(BaseResource, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.rest_api = rest_api_object
 
 

@@ -11,7 +11,7 @@ TIMER = signal.ITIMER_PROF
 TIMER_SIGNAL = signal.SIGPROF
 
 
-class Timer(object):
+class Timer:
     def __init__(
             self,
             callback,
@@ -51,6 +51,6 @@ class Timer(object):
     def __del__(self):
         self.stop()
 
-    def __nonzero__(self):
+    def __bool__(self):
         # we're always truthy
         return True

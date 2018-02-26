@@ -3,7 +3,7 @@
 A benchmark script to configure a test network and execute random Raiden
 transactions.
 """
-from __future__ import print_function
+
 
 from binascii import unhexlify
 import codecs
@@ -21,19 +21,16 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery
 from raiden.network.rpc import JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
+from raiden.settings import GAS_PRICE
 
 TRANSFER_AMOUNT = 1
-TOKEN_ADDRESS = sha3('tps')[:20]
+TOKEN_ADDRESS = sha3(b'tps')[:20]
 
 
 def hostport_to_privkeyaddr(host, port):
     """ Return `(private key, address)` deterministically generated. """
     myip_port = '{}:{}'.format(host, port)
-    privkey = sha3(myip_port)
+    privkey = sha3(myip_port.encode())
     addr = privatekey_to_address(privkey)
 
     return privkey, addr
@@ -96,7 +93,7 @@ def setup_tps(
             the JSON-RPC end-point.
         config_path (str): A full/relative path to the yaml configuration file.
         channelmanager_address (str): The address of the channel manager contract.
-        token_address (str): The address of the token used for testing.
+        token_address (bytes): The address of the token used for testing.
         deposit (int): The default deposit that will be made for all test nodes.
     """
     host, port = rpc_server.split(':')
@@ -109,7 +106,6 @@ def setup_tps(
     blockchain_service = BlockChainService(
         privatekey,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
     blockchain_service.default_registry.add_token(token_address)
@@ -119,7 +115,7 @@ def setup_tps(
 
     node_addresses = []
     for node in config['nodes']:
-        privkey = sha3('{}:{}'.format(node['host'], node['port']))
+        privkey = sha3('{}:{}'.format(node['host'], node['port']).encode())
         node_addresses.append(privatekey_to_address(privkey))
 
     random_raiden_network(
@@ -177,7 +173,6 @@ def tps_run(
     blockchain_service = BlockChainService(
         privatekey,
         rpc_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
 

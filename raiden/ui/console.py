@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
 from binascii import hexlify
-import StringIO
+import io
 import errno
 import json
 import os
@@ -14,7 +11,7 @@ import time
 from logging import StreamHandler, Formatter
 
 from ethereum.slogging import getLogger
-from ethereum._solidity import compile_file
+from ethereum.tools._solidity import compile_file
 from ethereum.utils import denoms
 import gevent
 from gevent.event import Event
@@ -24,7 +21,6 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
-from raiden.settings import GAS_PRICE
 
 ENTER_CONSOLE_TIMEOUT = 3
 GUI_GEVENT = 'gevent'
@@ -67,7 +63,7 @@ def inputhook_gevent():
 
 
 @inputhook_manager.register('gevent')
-class GeventInputHook(object):
+class GeventInputHook:
 
     def __init__(self, manager):
         self.manager = manager
@@ -98,7 +94,7 @@ class GeventInputHook(object):
         self.manager.clear_inputhook()
 
 
-class SigINTHandler(object):
+class SigINTHandler:
 
     def __init__(self, event):
         self.event = event
@@ -198,7 +194,7 @@ class Console(BaseService):
     """
 
     def __init__(self, app):
-        super(Console, self).__init__(app)
+        super().__init__(app)
         self.interrupt = Event()
         self.console_locals = {}
         if app.start_console:
@@ -209,9 +205,9 @@ class Console(BaseService):
 
     def start(self):
         # start console service
-        super(Console, self).start()
+        super().start()
 
-        class Raiden(object):
+        class Raiden:
             def __init__(self, app):
                 self.app = app
 
@@ -245,7 +241,7 @@ class Console(BaseService):
             if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
                 root.removeHandler(handler)
 
-        stream = StringIO.StringIO()
+        stream = io.StringIO()
         handler = StreamHandler(stream=stream)
         handler.formatter = Formatter(u'%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
@@ -274,7 +270,7 @@ class Console(BaseService):
 
         self.console_locals['lastlog'] = lastlog
 
-        err = StringIO.StringIO()
+        err = io.StringIO()
         sys.stderr = err
 
         def lasterr(n=1):
@@ -290,7 +286,7 @@ class Console(BaseService):
         sys.exit(0)
 
 
-class ConsoleTools(object):
+class ConsoleTools:
     def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
@@ -307,7 +303,6 @@ class ConsoleTools(object):
             symbol='RDT',
             decimals=2,
             timeout=60,
-            gasprice=GAS_PRICE,
             auto_register=True):
         """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
@@ -319,7 +314,6 @@ class ConsoleTools(object):
             symbol (str): token shorthand symbol.
             decimals (int): decimal places.
             timeout (int): timeout in seconds for creation.
-            gasprice (int): gasprice for the creation transaction.
             auto_register (boolean): if True(default), automatically register
                 the token with raiden.
 
@@ -334,9 +328,8 @@ class ConsoleTools(object):
             dict(),
             (initial_alloc, name, decimals, symbol),
             contract_path=contract_path,
-            gasprice=gasprice,
             timeout=timeout)
-        token_address_hex = hexlify(token_proxy.address)
+        token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:
             self.register_token(token_address_hex)
         print("Successfully created {}the token '{}'.".format(
@@ -494,24 +487,16 @@ class ConsoleTools(object):
         """
         contract_address = safe_address_decode(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.call(
-            'eth_getCode',
-            contract_address,
-            'latest',
-        )
+        result = self._raiden.chain.client.eth_getCode(contract_address)
 
         current_time = time.time()
-        while result == '0x':
+        while len(result) == 0:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.chain.client.call(
-                'eth_getCode',
-                contract_address,
-                'latest',
-            )
+            result = self._raiden.chain.client.eth_getCode(contract_address)
             gevent.sleep(0.5)
 
             current_time = time.time()
 
-        return result != '0x'
+        return len(result) > 0

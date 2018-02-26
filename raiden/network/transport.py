@@ -7,10 +7,19 @@ from time import time
 import socket
 
 import gevent
+import logging
 from gevent.server import DatagramServer
 
+from raiden.exceptions import (
+    RaidenShuttingDown,
+    InvalidProtocolMessage,
+)
+from ethereum import slogging
 
-class DummyPolicy(object):
+log = slogging.getLogger(__name__)
+
+
+class DummyPolicy:
     """Dummy implementation for the throttling policy that always
     returns a wait_time of 0.
     """
@@ -21,7 +30,7 @@ class DummyPolicy(object):
         return 0.
 
 
-class TokenBucket(object):
+class TokenBucket:
     """Implementation of the token bucket throttling algorithm.
     """
 
@@ -56,7 +65,7 @@ class TokenBucket(object):
         self.timestamp = now
 
 
-class UDPTransport(object):
+class UDPTransport:
     """ Node communication using the UDP protocol. """
 
     def __init__(
@@ -77,7 +86,14 @@ class UDPTransport(object):
         self.throttle_policy = throttle_policy
 
     def receive(self, data, host_port):  # pylint: disable=unused-argument
-        self.protocol.receive(data)
+        try:
+            self.protocol.receive(data)
+        except InvalidProtocolMessage as e:
+            if log.isEnabledFor(logging.WARNING):
+                log.warning("Can't decode: {} (data={}, len={})".format(str(e), data, len(data)))
+            return
+        except RaidenShuttingDown:  # For a clean shutdown
+            return
 
         # enable debugging using the DummyNetwork callbacks
         DummyTransport.track_recv(self.protocol.raiden, host_port, data)
@@ -127,7 +143,7 @@ class UDPTransport(object):
         self.server.start()
 
 
-class DummyNetwork(object):
+class DummyNetwork:
     """ Store global state for an in process network, this won't use a real
     network protocol just greenlet communication.
     """
@@ -156,7 +172,7 @@ class DummyNetwork(object):
         gevent.spawn_later(0.00000000001, receive_end, bytes_)
 
 
-class DummyTransport(object):
+class DummyTransport:
     """ Communication between inter-process nodes. """
     def __init__(
             self,
@@ -175,7 +191,7 @@ class DummyTransport(object):
 
         # The protocol checks if the transport is still running prior to
         # sending ACKs
-        class ServerMock(object):
+        class ServerMock:
             started = True
         self.server = ServerMock()
 

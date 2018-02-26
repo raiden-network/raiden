@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
-from future import standard_library
-standard_library.install_aliases()
 import os
 import sys
 import itertools
@@ -11,7 +9,7 @@ from collections import defaultdict
 
 import filelock
 import gevent
-from gevent.event import AsyncResult
+from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
@@ -69,7 +67,7 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import InvalidAddress, AddressWithoutCode
+from raiden.exceptions import InvalidAddress, AddressWithoutCode, RaidenShuttingDown
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
@@ -80,11 +78,11 @@ from raiden.messages import (
     RevealSecret,
     SignedMessage,
 )
-from raiden.transfer.state import MerkleTreeState
-from raiden.transfer.merkle_tree import (
+from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
-    compute_layers,
+    MerkleTreeState,
 )
+from raiden.transfer.merkle_tree import compute_layers
 from raiden.network.protocol import (
     RaidenProtocol,
 )
@@ -118,7 +116,7 @@ def save_snapshot(serialization_file, raiden):
     ]
 
     all_queues = list()
-    for key, queue in raiden.protocol.channel_queue.iteritems():
+    for key, queue in raiden.protocol.channel_queue.items():
         queue_data = {
             'receiver_address': key[0],
             'token_address': key[1],
@@ -164,14 +162,14 @@ def endpoint_registry_exception_handler(greenlet):
         sys.exit(1)
 
 
-class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
+class RandomSecretGenerator:  # pylint: disable=too-few-public-methods
     def __next__(self):  # pylint: disable=no-self-use
         return os.urandom(32)
 
     next = __next__
 
 
-class RaidenService(object):
+class RaidenService:
     """ A Raiden node. """
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
@@ -241,6 +239,9 @@ class RaidenService(object):
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
         self._block_number = None
+        self.stop_event = Event()
+        self.start_event = Event()
+        self.chain.client.inject_stop_event(self.stop_event)
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -274,6 +275,12 @@ class RaidenService(object):
 
     def start(self):
         """ Start the node. """
+        # XXX Should this really be here? Or will start() never be called again
+        # after stop() in the lifetime of Raiden apart from the tests? This is
+        # at least at the moment prompted by tests/integration/test_transer.py
+        if self.stop_event and self.stop_event.is_set():
+            self.stop_event.clear()
+
         self.alarm.start()
 
         # Prime the block number cache and set the callbacks
@@ -300,6 +307,8 @@ class RaidenService(object):
         # Health check needs the protocol layer
         self.start_neighbours_healthcheck()
 
+        self.start_event.set()
+
     def start_neighbours_healthcheck(self):
         for graph in self.token_to_channelgraph.values():
             for neighbour in graph.get_neighbours():
@@ -308,8 +317,10 @@ class RaidenService(object):
 
     def stop(self):
         """ Stop the node. """
-        self.alarm.stop_async()
+        # Needs to come before any greenlets joining
+        self.stop_event.set()
         self.protocol.stop_and_wait()
+        self.alarm.stop_async()
 
         wait_for = [self.alarm]
         wait_for.extend(self.protocol.greenlets)
@@ -319,7 +330,7 @@ class RaidenService(object):
         gevent.wait(wait_for, timeout=self.shutdown_timeout)
 
         # Filters must be uninstalled after the alarm task has stopped. Since
-        # the events are polled by a alarm task callback, if the filters are
+        # the events are polled by an alarm task callback, if the filters are
         # uninstalled before the alarm task is fully stopped the callback
         # `poll_blockchain_events` will fail.
         #
@@ -328,7 +339,7 @@ class RaidenService(object):
         try:
             with gevent.Timeout(self.shutdown_timeout):
                 self.blockchain_events.uninstall_all_event_listeners()
-        except gevent.timeout.Timeout:
+        except (gevent.timeout.Timeout, RaidenShuttingDown):
             pass
 
         # save the state after all tasks are done
@@ -384,8 +395,8 @@ class RaidenService(object):
         state_change = Block(block_number)
         self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
-        for graph in self.token_to_channelgraph.itervalues():
-            for channel in graph.address_to_channel.itervalues():
+        for graph in self.token_to_channelgraph.values():
+            for channel in graph.address_to_channel.values():
                 channel.state_transition(state_change)
 
         # To avoid races, only update the internal cache after all the state
@@ -393,7 +404,7 @@ class RaidenService(object):
         self._block_number = block_number
 
     def set_node_network_state(self, node_address, network_state):
-        for graph in self.token_to_channelgraph.itervalues():
+        for graph in self.token_to_channelgraph.values():
             channel = graph.partneraddress_to_channel.get(node_address)
 
             if channel:
@@ -413,7 +424,7 @@ class RaidenService(object):
             on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
-        for graph in self.token_to_channelgraph.itervalues():
+        for graph in self.token_to_channelgraph.values():
             channel = graph.address_to_channel.get(netting_channel_address_bin)
 
             if channel is not None:
@@ -462,7 +473,7 @@ class RaidenService(object):
 
         self.protocol.send_and_wait(recipient, message, timeout)
 
-    def register_secret(self, secret):
+    def register_secret(self, secret: bytes):
         """ Register the secret with any channel that has a hashlock on it.
 
         This must search through all channels registered for a given hashlock
@@ -472,14 +483,14 @@ class RaidenService(object):
         Raises:
             TypeError: If secret is unicode data.
         """
-        if isinstance(secret, unicode):
-            raise TypeError('secret must be binary')
+        if not isinstance(secret, bytes):
+            raise TypeError('secret must be bytes')
 
         hashlock = sha3(secret)
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
-        for hash_channel in self.token_to_hashlock_to_channels.itervalues():
+        for hash_channel in self.token_to_hashlock_to_channels.values():
             for channel in hash_channel[hashlock]:
                 channel.register_secret(secret)
 
@@ -819,14 +830,13 @@ class RaidenService(object):
         return manager
 
     def leave_all_token_networks_async(self):
-        token_addresses = self.token_to_channelgraph.keys()
         leave_results = []
-        for token_address in token_addresses:
+        for token_address in self.token_to_channelgraph.keys():
             try:
                 connection_manager = self.connection_manager_for_token(token_address)
+                leave_results.append(connection_manager.leave_async())
             except InvalidAddress:
                 pass
-            leave_results.append(connection_manager.leave_async())
         combined_result = AsyncResult()
         gevent.spawn(gevent.wait, leave_results).link(combined_result)
         return combined_result
@@ -862,8 +872,6 @@ class RaidenService(object):
         # blocktime from the past
 
         current_block = last_block
-        avg_block_time = self.chain.estimate_blocktime()
-        wait_blocks_left = blocks_to_wait()
         while current_block < earliest_settlement:
             gevent.sleep(self.alarm.wait_time)
             last_block = self.chain.block_number()

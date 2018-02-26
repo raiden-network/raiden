@@ -35,7 +35,7 @@ from raiden.transfer.merkle_tree import LEAVES, merkleroot
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class ChannelExternalState(object):
+class ChannelExternalState:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, register_channel_for_hashlock, netting_channel):
@@ -133,7 +133,7 @@ class ChannelExternalState(object):
             return self.netting_channel.settle()
 
 
-class Channel(object):
+class Channel:
     # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-public-methods
 
     def __init__(
@@ -144,6 +144,12 @@ class Channel(object):
             token_address,
             reveal_timeout,
             settle_timeout):
+
+        if not isinstance(settle_timeout, int):
+            raise ValueError('settle_timeout must be integral')
+
+        if not isinstance(reveal_timeout, int):
+            raise ValueError('reveal_timeout must be integral')
 
         if settle_timeout <= reveal_timeout:
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
@@ -168,12 +174,6 @@ class Channel(object):
             # channel and then to unlock a lock on chain.
             #
             raise ValueError('reveal_timeout must be at least 3')
-
-        if not isinstance(settle_timeout, (int, long)):
-            raise ValueError('settle_timeout must be integral')
-
-        if not isinstance(reveal_timeout, (int, long)):
-            raise ValueError('reveal_timeout must be integral')
 
         self.our_state = our_state
         self.partner_state = partner_state
@@ -463,7 +463,7 @@ class Channel(object):
                         to=pex(to_state.address),
                         hashlock=pex(transfer.lock.hashlock),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(lockhashes),
+                        lockhashes=lpex(str(l).encode() for l in lockhashes),
                         received_locksroot=pex(transfer.locksroot),
                     )
                 raise ValueError('hashlock is already registered')
@@ -483,7 +483,7 @@ class Channel(object):
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(lockhashes),
+                        lockhashes=lpex(str(l).encode() for l in lockhashes),
                         expected_locksroot=pex(expected_locksroot),
                         received_locksroot=pex(transfer.locksroot),
                     )
@@ -574,7 +574,7 @@ class Channel(object):
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
                     currentlocksroot=pex(merkleroot(from_state.merkletree)),
-                    lockhashes=lpex(lockhashes),
+                    lockhashes=lpex(str(l).encode() for l in lockhashes),
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
                     lock_hashlock=pex(transfer.lock.hashlock),
@@ -827,7 +827,7 @@ class Channel(object):
         return not self.__eq__(other)
 
 
-class ChannelSerialization(object):
+class ChannelSerialization:
 
     def __init__(self, channel_instance):
         self.channel_address = channel_instance.channel_address

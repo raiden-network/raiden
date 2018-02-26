@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 
+from ethereum.utils import normalize_address
+
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_ENDPOINT_REGISTRY,
 )
-from raiden.constants import (
-    DISCOVERY_REGISTRATION_GAS,
-)
 from raiden.exceptions import (
-    AddressWithoutCode,
     TransactionThrew,
     UnknownAddress,
 )
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
@@ -26,7 +25,7 @@ from raiden.utils import (
 )
 
 
-class Discovery(object):
+class Discovery:
     """On chain smart contract raiden node discovery: allows registering
     endpoints (host, port) for your ethereum-/raiden-address and looking up
     endpoints for other ethereum-/raiden-addressess.
@@ -36,23 +35,12 @@ class Discovery(object):
             self,
             jsonrpc_client,
             discovery_address,
-            startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(discovery_address),
-            'latest',
-        )
-
-        if result == '0x':
-            raise AddressWithoutCode('Discovery address {} does not contain code'.format(
-                address_encoder(discovery_address),
-            ))
+        check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
@@ -62,18 +50,16 @@ class Discovery(object):
         self.address = discovery_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
+        self.not_found_address = '0x' + '0' * 40
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
             raise ValueError("node_address doesnt match this node's address")
 
-        transaction_hash = self.proxy.registerEndpoint.transact(
+        transaction_hash = self.proxy.transact(
+            'registerEndpoint',
             endpoint,
-            gasprice=self.gasprice,
-            startgas=DISCOVERY_REGISTRATION_GAS,
         )
 
         self.client.poll(
@@ -87,20 +73,20 @@ class Discovery(object):
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = hexlify(node_address_bin)
-        endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
+        endpoint = self.proxy.call('findEndpointByAddress', node_address_hex)
 
-        if endpoint == '':
+        if endpoint == b'':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 
     def address_by_endpoint(self, endpoint):
-        address = self.proxy.findAddressByEndpoint.call(endpoint)
+        address = self.proxy.call('findAddressByEndpoint', endpoint)
 
-        if set(address) == {'0'}:  # the 0 address means nothing found
+        if address == self.not_found_address:  # the 0 address means nothing found
             return None
 
-        return unhexlify(address)
+        return normalize_address(address)
 
     def version(self):
-        return self.proxy.contract_version.call()
+        return self.proxy.call('contract_version')

@@ -36,7 +36,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.tests.utils import factories
 
 
-class SequenceGenerator(object):
+class SequenceGenerator:
     """ Return a generator that goes through the alphabet letters. """
     def __init__(self):
         self.i = 0
@@ -48,7 +48,7 @@ class SequenceGenerator(object):
     def __next__(self):
         # pad the secret to the correct length by repeating the current character
         import string
-        new_secret = string.letters[self.i % len(string.letters)] * 40
+        new_secret = string.ascii_letters[self.i % len(string.ascii_letters)].encode() * 40
         self.secrets.append(new_secret)
         return new_secret
 
@@ -202,7 +202,9 @@ def test_init_with_usable_routes():
     assert mediated_transfer.token == factories.UNIT_TOKEN_ADDRESS
     assert mediated_transfer.amount == amount, 'transfer amount mismatch'
     assert mediated_transfer.expiration == expiration, 'transfer expiration mismatch'
-    assert mediated_transfer.hashlock == sha3(secret_generator.secrets[0]), 'wrong hashlock'
+
+    secret_hash = sha3(secret_generator.secrets[0])
+    assert mediated_transfer.hashlock == secret_hash, 'wrong hashlock'
     assert mediated_transfer.receiver == mediator_address, 'wrong mediator address'
 
     assert initiator_state.route == routes[0]

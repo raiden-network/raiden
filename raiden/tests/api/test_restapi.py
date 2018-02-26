@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-from future import standard_library
-standard_library.install_aliases()
-import http.client
+from http import HTTPStatus
 import json
 
 import pytest
@@ -22,8 +20,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_TREE,
 )
-from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
@@ -37,7 +35,7 @@ def assert_no_content_response(response):
     assert(
         response is not None and
         response.text == '' and
-        response.status_code == http.client.NO_CONTENT
+        response.status_code == HTTPStatus.NO_CONTENT
     )
 
 
@@ -57,7 +55,7 @@ def assert_response_with_error(response, status_code):
     )
 
 
-def assert_proper_response(response, status_code=http.client.OK):
+def assert_proper_response(response, status_code=HTTPStatus.OK):
     assert (
         response is not None and
         response.status_code == status_code and
@@ -68,8 +66,8 @@ def assert_proper_response(response, status_code=http.client.OK):
 def api_url_for(api_backend, endpoint, **kwargs):
     api_server, _ = api_backend
     # url_for() expects binary address so we have to convert here
-    for key, val in kwargs.iteritems():
-        if isinstance(val, basestring) and val.startswith('0x'):
+    for key, val in kwargs.items():
+        if isinstance(val, str) and val.startswith('0x'):
             kwargs[key] = address_decoder(val)
     with api_server.flask_app.app_context():
         return url_for('v1_resources.{}'.format(endpoint), **kwargs)
@@ -142,10 +140,10 @@ def test_channel_to_api_dict():
     )
 
     # mock external state to provide the channel address
-    class NettingChannel(object):
+    class NettingChannel:
         address = channel_address
 
-    class ExternalState(object):
+    class ExternalState:
         def __init__(self, opened_block):
             self.netting_channel = NettingChannel()
             self.settled_block = 0
@@ -188,7 +186,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
     )
     response = request.send().response
 
-    assert_response_with_code(response, http.client.NOT_FOUND)
+    assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
 def test_payload_with_address_without_prefix(api_backend):
@@ -204,7 +202,7 @@ def test_payload_with_address_without_prefix(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_payload_with_address_invalid_chars(api_backend):
@@ -220,7 +218,7 @@ def test_payload_with_address_invalid_chars(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_payload_with_address_invalid_length(api_backend):
@@ -236,7 +234,7 @@ def test_payload_with_address_invalid_length(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_api_query_our_address(
@@ -293,7 +291,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
@@ -320,7 +318,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -399,7 +397,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -478,7 +476,7 @@ def test_api_open_channel_invalid_input(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, status_code=http.client.CONFLICT)
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
     channel_data_obj['settle_timeout'] = NETTINGCHANNEL_SETTLE_TIMEOUT_MAX + 1
     request = grequests.put(
@@ -486,7 +484,7 @@ def test_api_open_channel_invalid_input(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, status_code=http.client.CONFLICT)
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
 def test_api_channel_state_change_errors(
@@ -509,7 +507,7 @@ def test_api_channel_state_change_errors(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     channel_address = response['channel_address']
 
@@ -523,7 +521,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
     # let's try to set a random state
     request = grequests.patch(
         api_url_for(
@@ -534,7 +532,7 @@ def test_api_channel_state_change_errors(
         json=dict(state='inlimbo')
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
     # let's try to set both new state and balance
     request = grequests.patch(
         api_url_for(
@@ -545,7 +543,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_CLOSED, balance=200)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
     # let's try to path with no arguments
     request = grequests.patch(
         api_url_for(
@@ -555,7 +553,7 @@ def test_api_channel_state_change_errors(
         ),
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
     # ok now let's close and settle for real
     request = grequests.patch(
@@ -589,7 +587,7 @@ def test_api_channel_state_change_errors(
         json=dict(balance=500)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
     # and now let's try to settle again
     request = grequests.patch(
@@ -601,7 +599,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
 def test_api_tokens(
@@ -622,7 +620,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -637,7 +635,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     # and now let's get the token list
     request = grequests.get(
@@ -672,7 +670,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     first_channel_address = response['channel_address']
 
@@ -682,7 +680,7 @@ def test_query_partners_by_token(
         json=channel_data_obj,
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     second_channel_address = response['channel_address']
 
@@ -694,7 +692,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
@@ -728,46 +726,46 @@ def test_query_blockchain_events(
     # a block number but for the purposes of making sure block numbers propagate
     # in the API logic I am adding them here and testing for them later.
     api_test_context.add_events([{
-        '_event_type': 'TokenAdded',
+        '_event_type': b'TokenAdded',
         'block_number': 1,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     }, {
-        '_event_type': 'TokenAdded',
+        '_event_type': b'TokenAdded',
         'block_number': 13,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     }, {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
         'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
         'block_number': 15,
     }, {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xa193fb0032c8635d590f8f31be9f70bd12451b1e',
         'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
         'block_number': 100,
     }, {
-        '_event_type': 'ChannelNewBalance',
+        '_event_type': b'ChannelNewBalance',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'participant': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'balance': 200,
         'block_number': 20,
     }, {
-        '_event_type': 'ChannelNewBalance',
+        '_event_type': b'ChannelNewBalance',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'participant': '0x00472c1e4275230354dbe5007a5976053f12610a',
         'balance': 650,
         'block_number': 150,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 35,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 250,
     }])
 
@@ -852,14 +850,14 @@ def test_break_blockchain_events(
         rest_api_port_number):
 
     api_test_context.add_events([{
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
         'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
         'block_number': 15,
     }, {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
         'block_number': 35,
     }])
 
@@ -934,7 +932,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
 
     tokenswap_obj = {
         'role': 'taker',
@@ -959,7 +957,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
 
 
 def test_api_transfers(
@@ -1083,7 +1081,7 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
         token_address=token_address,
     ))
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
     assert 'channel_manager_address' in response.json()
 
     # now try to reregister it and get the error
@@ -1093,7 +1091,25 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
         token_address=token_address,
     ))
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+
+def test_token_events_errors_for_unregistered_token(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'tokeneventsresource',
+            token_address='0x61c808d82a3ac53231750dadc13c777b59310bd9',
+            from_block=5,
+            to_block=20
+        )
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
 
 
 def test_get_connection_managers_info(

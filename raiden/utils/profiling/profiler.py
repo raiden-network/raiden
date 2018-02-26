@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-
 import contextlib
 import sys
 import threading
 import time
 from collections import OrderedDict, namedtuple
-from itertools import chain, izip_longest
+from itertools import chain, zip_longest
 
 import greenlet
 
@@ -149,11 +147,11 @@ def calculate_metrics(info):
 class GlobalState(dict):
     ''' This class is responsable to store the state of a profiling session '''
     def __init__(self, *args, **kwargs):
-        super(GlobalState, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.last = None
 
 
-class ThreadState(object):
+class ThreadState:
     ''' This class is responsable to store the state of an execution thread,
     that can be a native thread, with a 1-to-1 mapping between userland and
     kernel space, or a light thread with a n-to-1, be it cooperative or not.
@@ -373,7 +371,7 @@ def zip_outter_join(equal, *element_list):
     result = [list() for __ in range(length)]
 
     # do it all in one swipe
-    for iteration in izip_longest(*element_list):
+    for iteration in zip_longest(*element_list):
         # the done flag is set when the element is used, this can happen either
         # because the element was equal to another one or because it is the
         # element turn in the search
@@ -470,7 +468,7 @@ def merge_threadstates(*threadstates):
 
         # CallNode.children is an OrderedDict
         children = [
-            node.children.values()
+            list(node.children.values())
             for node in callnodes
         ]
 
@@ -480,7 +478,7 @@ def merge_threadstates(*threadstates):
 
         extend_search = []
         for nodes_joined in zip_outter_join(equal, *children):
-            nodes_joined = filter(None, nodes_joined)
+            nodes_joined = [_f for _f in nodes_joined if _f]
             info_merged = merge_info(*(node.info for node in nodes_joined))
             extend_search.append((depth + 1, info_merged, nodes_joined))
 

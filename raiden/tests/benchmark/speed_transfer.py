@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 
 import time
 
@@ -16,7 +15,7 @@ from raiden.tests.fixtures.tester import (
     tester_channelmanager_library_address,
     tester_nettingchannel_library_address,
     tester_registry_address,
-    tester_state,
+    tester_chain,
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
@@ -34,12 +33,12 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     num_tokens = 1
 
     private_keys = [
-        sha3('speed:{}'.format(position))
+        sha3('speed:{}'.format(position).encode())
         for position in range(num_nodes)
     ]
 
     tokens = [
-        sha3('token:{}'.format(number))[:20]
+        sha3('token:{}'.format(number).encode())[:20]
         for number in range(num_tokens)
     ]
 
@@ -56,20 +55,20 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     ]
 
     blockchain_services = list()
-    tester = tester_state(
+    tester = tester_chain(
         private_keys[0],
         private_keys,
         tester_blockgas_limit(),
     )
     nettingchannel_library_address = tester_nettingchannel_library_address(
-        tester_state,
+        tester_chain,
     )
     channelmanager_library_address = tester_channelmanager_library_address(
-        tester_state,
+        tester_chain,
         nettingchannel_library_address,
     )
     registry_address = tester_registry_address(
-        tester_state,
+        tester_chain,
         channelmanager_library_address,
     )
     for privkey in private_keys:
@@ -97,15 +96,15 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
-    channel0 = app0.raiden.token_to_channelgraph[tokens[0]].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[tokens[0]].address_to_channel.values()[0]
+    channel0 = list(app0.raiden.token_to_channelgraph[tokens[0]].address_to_channel.values())[0]
+    channel1 = list(app1.raiden.token_to_channelgraph[tokens[0]].address_to_channel.values())[0]
 
     expiration = app0.raiden.chain.block_number() + DEFAULT_REVEAL_TIMEOUT + 3
 
     start = time.time()
 
     for i, amount in enumerate(amounts):
-        hashlock = sha3(secrets[i])
+        hashlock = sha3(secrets[i].encode())
         locked_transfer = channel0.create_lockedtransfer(
             amount=amount,
             identifier=1,  # TODO: fill in identifier
@@ -130,7 +129,7 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
             channel1.register_secret(secret)
 
     elapsed = time.time() - start
-    print('%d transfers per second' % (num_transfers / elapsed))
+    print('{} transfers per second'.format(num_transfers / elapsed))
 
 
 def main():

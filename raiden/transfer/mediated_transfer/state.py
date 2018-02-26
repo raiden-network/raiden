@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 from ethereum.utils import encode_hex
+
 from raiden.transfer.architecture import State
+from raiden.utils import typing
+from raiden.transfer.state import (
+    EMPTY_MERKLE_ROOT,
+    BalanceProofState,
+    BalanceProofUnsignedState,
+    HashTimeLockState,
+)
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
@@ -179,6 +187,138 @@ class TargetState(State):
         return not self.__eq__(other)
 
 
+class LockedTransferUnsignedState(State):
+    """ State for a transfer created by the local node which contains a hash
+    time lock and may be sent.
+    """
+
+    __slots__ = (
+        'identifier',
+        'token',
+        'balance_proof',
+        'lock',
+        'initiator',
+        'target',
+    )
+
+    def __init__(
+            self,
+            identifier,
+            token: typing.address,
+            balance_proof: BalanceProofUnsignedState,
+            lock: HashTimeLockState,
+            initiator: typing.address,
+            target: typing.address):
+
+        if not isinstance(lock, HashTimeLockState):
+            raise ValueError('lock must be a HashTimeLockState instance')
+
+        if not isinstance(balance_proof, BalanceProofUnsignedState):
+            raise ValueError('balance_proof must be a BalanceProofState instance')
+
+        # At least the lock for this transfer must be in the locksroot, so it
+        # must not be empty
+        if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
+            raise ValueError('balance_proof must not be empty')
+
+        self.identifier = identifier
+        self.token = token
+        self.balance_proof = balance_proof
+        self.lock = lock
+        self.initiator = initiator
+        self.target = target
+
+    def __repr__(self):
+        return (
+            '<LockedTransferUnsignedState id:{} token:{} lock:{} target:{}>'
+        ).format(
+            self.identifier,
+            encode_hex(self.token),
+            self.lock,
+            encode_hex(self.target),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, LockedTransferUnsignedState) and
+            self.identifier == other.identifier and
+            self.token == other.token and
+            self.balance_proof == other.balance_proof and
+            self.lock == other.lock and
+            self.initiator == other.initiator and
+            self.target == other.target
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class LockedTransferSignedState(State):
+    """ State for a received transfer which contains a hash time lock and a
+    signed balance proof.
+    """
+
+    __slots__ = (
+        'identifier',
+        'token',
+        'balance_proof',
+        'lock',
+        'initiator',
+        'target',
+    )
+
+    def __init__(
+            self,
+            identifier,
+            token: typing.address,
+            balance_proof: BalanceProofState,
+            lock: HashTimeLockState,
+            initiator: typing.address,
+            target: typing.address):
+
+        if not isinstance(lock, HashTimeLockState):
+            raise ValueError('lock must be a HashTimeLockState instance')
+
+        if not isinstance(balance_proof, BalanceProofState):
+            raise ValueError('balance_proof must be a BalanceProofState instance')
+
+        # At least the lock for this transfer must be in the locksroot, so it
+        # must not be empty
+        if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
+            raise ValueError('balance_proof must not be empty')
+
+        self.identifier = identifier
+        self.token = token
+        self.balance_proof = balance_proof
+        self.lock = lock
+        self.initiator = initiator
+        self.target = target
+
+    def __repr__(self):
+        return (
+            '<LockedTransferState id:{} token:{} lock:{} target:{}>'
+        ).format(
+            self.identifier,
+            encode_hex(self.token),
+            self.lock,
+            encode_hex(self.target),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, LockedTransferState) and
+            self.identifier == other.identifier and
+            self.token == other.token and
+            self.balance_proof == other.balance_proof and
+            self.lock == other.lock and
+            self.initiator == other.initiator and
+            self.target == other.target
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class LockedTransferState(State):
     """ State of a transfer that is time hash locked.
 
@@ -222,7 +362,7 @@ class LockedTransferState(State):
         self.hashlock = hashlock
         self.secret = secret
 
-    def __str__(self):
+    def __repr__(self):
         return '<HashTimeLocked id={} amount={} token={} target={} expire={} hashlock={}>'.format(
             self.identifier,
             self.amount,

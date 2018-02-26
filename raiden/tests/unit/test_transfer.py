@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-
 import gevent
 import pytest
 from coincurve import PrivateKey
@@ -52,7 +50,7 @@ from raiden.network.protocol import (
 
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-HASH2 = sha3('terribleweathermuchstayinside___')
+HASH2 = sha3(b'terribleweathermuchstayinside___')
 
 
 def get_messages_by_type(messages, type_):
@@ -75,13 +73,13 @@ def assert_ack_for(receiver, message, message_list):
 
 def sign_and_send(message, key, address, app):
     message.sign(key, address)
-    message_data = str(message.packed().data)
+    message_data = bytes(message.packed().data)
     app.raiden.protocol.receive(message_data)
     # Give it some time to see if the unknown sender causes an error in the logic
     gevent.sleep(3)
 
 
-class MediatedTransferTestHelper(object):
+class MediatedTransferTestHelper:
     def __init__(self, raiden_network, graph):
         self.raiden_network = raiden_network
         self.graph = graph
@@ -135,8 +133,8 @@ def test_direct_transfer(raiden_network):
 
     messages = setup_messages_cb()
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
     channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
@@ -229,7 +227,7 @@ def test_transfer_noroutes(raiden_network, token_addresses):
 def test_mediated_transfer(raiden_network):
     alice_app = raiden_network[0]
 
-    graph = alice_app.raiden.token_to_channelgraph.values()[0]
+    graph = list(alice_app.raiden.token_to_channelgraph.values())[0]
     token_address = graph.token_address
     mt_helper = MediatedTransferTestHelper(raiden_network, graph)
 
@@ -323,7 +321,6 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     assert result.wait(timeout=10)
 
 
-@pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
@@ -506,7 +503,7 @@ def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_ke
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
 
     other_key, other_address = make_privkey_address()
     direct_transfer_message = DirectTransfer(
@@ -525,7 +522,7 @@ def test_receive_directtransfer_unknown(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
 
     other_key, other_address = make_privkey_address()
     amount = 10
@@ -550,7 +547,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
 def test_receive_hashlocktransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
 
     other_key = PrivateKey(HASH2)
     other_address = privatekey_to_address(HASH2)
@@ -590,8 +587,8 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
     channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
@@ -642,7 +639,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     bob_app = raiden_network[1]
     charlie_app = raiden_network[2]
 
-    graph = alice_app.raiden.token_to_channelgraph.values()[0]
+    graph = list(alice_app.raiden.token_to_channelgraph.values())[0]
     token_address = graph.token_address
 
     channel0 = channel(
@@ -687,35 +684,24 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     )
 
 
-@pytest.mark.parametrize('number_of_nodes', [5])
-@pytest.mark.parametrize('channels_per_node', [2])
-def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
-    alice_app = raiden_network[0]
-    bob_app = raiden_network[1]
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_receive_mediatedtransfer_invalid_address(raiden_chain, token_addresses):
+    app0, app1, app2 = raiden_chain
+    token_address = token_addresses[0]
 
-    graph = alice_app.raiden.token_to_channelgraph.values()[0]
-    token_address = graph.token_address
-
-    channel0 = channel(alice_app, bob_app, token_address)
-
-    mt_helper = MediatedTransferTestHelper(raiden_network, graph)
-    initiator_address = alice_app.raiden.address
-    path = mt_helper.get_paths_of_length(initiator_address, 2)
-
-    alice_address, bob_address, charlie_address = path
     amount = 10
-    result = alice_app.raiden.mediated_transfer_async(
+    result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
-        charlie_address,
+        app2.raiden.address,
         identifier=1,
     )
-
     assert result.wait(timeout=10)
-    gevent.sleep(1.)
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
+    channel0 = channel(app0, app1, token_address)
     lock = Lock(amount, 1, UNIT_HASHLOCK)
     identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
@@ -724,20 +710,20 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         token=token_address,
         channel=channel0.channel_address,
         transferred_amount=amount,
-        recipient=bob_address,
+        recipient=app1.raiden.address,
         locksroot=UNIT_HASHLOCK,
         lock=lock,
-        target=charlie_address,
-        initiator=initiator_address,
+        target=app2.raiden.address,
+        initiator=app0.raiden.address,
         fee=0
     )
-    alice_key = PrivateKey(private_keys[0])
-    target_app = None
-    for app in raiden_network:
-        if app.raiden.address not in path:
-            target_app = app
-            break
-    sign_and_send(mediated_transfer, alice_key, alice_address, target_app)
+
+    sign_and_send(
+        mediated_transfer,
+        app0.raiden.private_key,
+        app0.raiden.address,
+        app1,
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -745,8 +731,8 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
     channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
@@ -793,8 +779,8 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
 def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
     channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
@@ -842,8 +828,8 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
 def test_transfer_from_outdated(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
     channel1 = graph1.partneraddress_to_channel[app0.raiden.address]

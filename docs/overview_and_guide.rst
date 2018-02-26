@@ -11,24 +11,27 @@ Raiden is a payment channel implementation which provides scalable, low latency,
 
 Installation
 ============
+
+.. warning:: If you are just switching from an old installation of raiden which was using python 2, then you should make sure to remove your raiden directory. By default that would mean: :code:`rm -rf ~/.raiden`
+
 The preferred way to install Raiden is downloading a self contained application bundle from the
 `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
 
 Linux
 *****
 
-Download the latest :code:`raiden--x86_64.AppImage`, and make it executable:
+Download the latest :code:`raiden-<version>-linux.tar.gz`, and extract it::
 
-    chmod +x raiden--x86_64.AppImage
+    tar -xvzf raiden-<version>-linux.tar.gz
 
-The Raiden `AppImage <http://appimage.org/>`_ should work on most 64bit GNU/Linux distributions
-without any specific system dependencies, other than an Ethereum client installed in your system
-(see below). The Raiden AppImage bundle takes the same command line arguments as the ``raiden`` script.
+The Raiden binary should work on most 64bit GNU/Linux distributions without any specific system dependencies, other
+than an Ethereum client installed in your system (see below). The Raiden binary takes the same command line
+arguments as the ``raiden`` script.
 
 macOS
 *****
 
-Download the latest :code:`raiden-<version>-macOS.zip`, and extract it:
+Download the latest :code:`raiden-<version>-macOS.zip`, and extract it::
 
     unzip raiden-<version>-macOS.zip
 

@@ -1,18 +1,14 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
-from binascii import hexlify
 import json
 import os
 
 import click
 from ethereum import slogging
-from ethereum._solidity import compile_contract
+from ethereum.tools._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import GAS_PRICE
-from raiden.utils import get_contract_path
+from raiden.utils import get_contract_path, address_encoder
 
 
 log = slogging.getLogger(__name__)
@@ -73,7 +69,7 @@ def patch_deploy_solidity_contract():
 
     exec(  # pylint: disable=exec-used
         code,
-        JSONRPCClient.deploy_solidity_contract.im_func.__globals__,
+        JSONRPCClient.deploy_solidity_contract.__globals__,
         ctx,
     )
 
@@ -95,10 +91,10 @@ def allcontracts(contract_files):
     }
 
 
-def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
+def deploy_file(contract, compiled_contracts, client):
     libraries = dict()
     filename, _, name = contract.partition(":")
-    log.info("Deploying %s", name)
+    log.info(f"Deploying {name}")
     proxy = client.deploy_solidity_contract(
         client.sender,
         name,
@@ -106,18 +102,17 @@ def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
         libraries,
         '',
         contract_path=filename,
-        gasprice=gas_price
     )
-    log.info("Deployed %s @ 0x%s", name, hexlify(proxy.address))
-    libraries[contract] = hexlify(proxy.address)
+    log.info(f"Deployed {name} @ {address_encoder(proxy.contract_address)}")
+    libraries[contract] = address_encoder(proxy.contract_address)[2:]
     return libraries
 
 
-def deploy_all(client, gas_price=GAS_PRICE):
+def deploy_all(client):
     compiled_contracts = allcontracts(RAIDEN_CONTRACT_FILES)
     deployed = {}
     for contract in CONTRACTS_TO_DEPLOY:
-        deployed.update(deploy_file(contract, compiled_contracts, client, gas_price))
+        deployed.update(deploy_file(contract, compiled_contracts, client))
     return deployed
 
 
@@ -133,16 +128,17 @@ def main(privatekey_hex, pretty, gas_price, port):
 
     privatekey = decode_hex(privatekey_hex)
 
+    gas_price_in_wei = gas_price * 1000000000
     patch_deploy_solidity_contract()
     host = '127.0.0.1'
     client = JSONRPCClient(
         host,
         port,
         privatekey,
+        gas_price_in_wei,
     )
 
-    gas_price_in_wei = gas_price * 1000000000
-    deployed = deploy_all(client, gas_price_in_wei)
+    deployed = deploy_all(client)
     print(json.dumps(deployed, indent=2 if pretty else None))
 
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
 import filelock
 import sys
 from binascii import hexlify, unhexlify
@@ -25,7 +25,7 @@ from raiden.utils import (
 )
 
 
-class App(object):  # pylint: disable=too-few-public-methods
+class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'host': '',
         'port': INITIAL_PORT,
@@ -70,8 +70,8 @@ class App(object):  # pylint: disable=too-few-public-methods
             )
         except filelock.Timeout:
             pubkey = privatekey_to_address(unhexlify(self.config['privatekey_hex']))
-            print ('FATAL: Another Raiden instance already running for account 0x%s' %
-                   hexlify(str(pubkey)))
+            print('FATAL: Another Raiden instance already running for account 0x%s' %
+                  hexlify(str(pubkey)))
             sys.exit(1)
         self.start_console = self.config['console']
 

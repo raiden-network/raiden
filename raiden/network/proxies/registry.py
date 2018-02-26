@@ -37,20 +37,18 @@ from raiden.network.rpc.filters import (
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Registry(object):
+class Registry:
     def __init__(
             self,
             jsonrpc_client,
             registry_address,
-            startgas,
-            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
         if not isaddress(registry_address):
             raise ValueError('registry_address must be a valid address')
 
-        check_address_has_code(jsonrpc_client, registry_address)
+        check_address_has_code(jsonrpc_client, registry_address, 'Registry')
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
@@ -60,8 +58,6 @@ class Registry(object):
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
-        self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
         self.address_to_channelmanager = dict()
@@ -71,12 +67,12 @@ class Registry(object):
         """ Return the channel manager address for the given token or None if
         there is no correspoding address.
         """
-        address = self.proxy.channelManagerByToken.call(
+        address = self.proxy.call(
+            'channelManagerByToken',
             token_address,
-            startgas=self.startgas,
         )
 
-        if address == '':
+        if address == b'':
             check_address_has_code(self.client, self.address)
             return None
 
@@ -87,9 +83,8 @@ class Registry(object):
             raise ValueError('token_address must be a valid address')
 
         transaction_hash = estimate_and_transact(
-            self.proxy.addToken,
-            self.startgas,
-            self.gasprice,
+            self.proxy,
+            'addToken',
             token_address,
         )
 
@@ -117,19 +112,19 @@ class Registry(object):
     def token_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.tokenAddresses.call(startgas=self.startgas)
+            for address in self.proxy.call('tokenAddresses')
         ]
 
     def manager_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
+            for address in self.proxy.call('channelManagerAddresses')
         ]
 
     def tokenadded_filter(self, from_block=None, to_block=None):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
-        registry_address_bin = self.proxy.address
+        registry_address_bin = self.proxy.contract_address
         filter_id_raw = new_filter(
             self.client,
             registry_address_bin,
@@ -152,8 +147,6 @@ class Registry(object):
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 
@@ -186,8 +179,6 @@ class Registry(object):
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.startgas,
-                self.gasprice,
                 self.poll_timeout,
             )
 

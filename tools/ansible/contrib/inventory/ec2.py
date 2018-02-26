@@ -924,7 +924,7 @@ class Ec2Inventory(object):
         if self.group_by_tag_keys:
             for k, v in instance.tags.items():
                 if self.expand_csv_tags and v and ',' in v:
-                    values = map(lambda x: x.strip(), v.split(','))
+                    values = [x.strip() for x in v.split(',')]
                 else:
                     values = [v]
 
@@ -1422,7 +1422,7 @@ class Ec2Inventory(object):
             elif key == 'ec2_tags':
                 for k, v in value.items():
                     if self.expand_csv_tags and ',' in v:
-                        v = map(lambda x: x.strip(), v.split(','))
+                        v = [x.strip() for x in v.split(',')]
                     key = self.to_safe('ec2_tag_' + k)
                     instance_vars[key] = v
             elif key == 'ec2_groups':

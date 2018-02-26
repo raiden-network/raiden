@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """ Utilities to set-up a Raiden network. """
-from __future__ import print_function, division
 
 from binascii import hexlify
 
@@ -40,7 +39,6 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
         manager = first.raiden.default_registry.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
-            first.raiden.address,
             second.raiden.address,
             settle_timeout,
         )

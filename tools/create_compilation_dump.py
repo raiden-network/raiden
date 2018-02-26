@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
-from __future__ import print_function
 
 from binascii import hexlify
 import json
 
-from ethereum import tester
+from ethereum.tools import tester
 from ethereum import slogging
 from raiden.utils import privatekey_to_address, get_contract_path
 
@@ -87,7 +86,7 @@ def deploy_all(token_groups=None):
     )
 
     genesis_alloc = dict()
-    for account_address in deployed.itervalues():
+    for account_address in deployed.values():
         genesis_alloc[account_address] = state.block.account_to_dict(
             account_address).copy()
 
@@ -104,10 +103,12 @@ def deploy_all(token_groups=None):
     return (genesis_alloc, blockchain_config)
 
 
-def create_and_distribute_token(state,
-                                receivers,
-                                name=None,
-                                amount_per_receiver=1000000):
+def create_and_distribute_token(
+        state,
+        receivers,
+        name=None,
+        amount_per_receiver=1000000):
+
     proxy = state.abi_contract(
         None,
         path=get_contract_path(TARGETS['token']),

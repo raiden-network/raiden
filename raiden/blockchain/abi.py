@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
 
 import hashlib
 import json
@@ -8,7 +8,7 @@ import subprocess
 
 from threading import Lock
 
-from ethereum import _solidity
+from ethereum.tools import _solidity
 from ethereum.abi import event_id, normalize_name, ContractTranslator
 
 from raiden.utils import get_contract_path
@@ -71,8 +71,8 @@ def get_eventname_types(event_description):
 
 
 def get_static_or_compile(
-        contract_path,
-        contract_name,
+        contract_path: str,
+        contract_name: str,
         **compiler_flags):
     """Search the path of `contract_path` for a file with the same name and the
     extension `.static-abi.json`. If the file exists, and the recorded checksum
@@ -85,9 +85,9 @@ def get_static_or_compile(
     through the `setup.py compile_contracts` command.
 
     Args:
-        contract_path (str): the path of the contract file
-        contract_name (str): the contract name
-        **compiler_flags (dict): flags that will be passed to the compiler
+        contract_path: the path of the contract file
+        contract_name: the contract name
+        **compiler_flags: flags that will be passed to the compiler
     """
     # this will be set by `setup.py compile_contracts`
     store_updated = os.environ.get('STORE_PRECOMPILED', False)
@@ -122,7 +122,7 @@ def get_static_or_compile(
 
 def contract_checksum(contract_path):
     with open(contract_path) as f:
-        checksum = hashlib.sha1(f.read()).hexdigest()
+        checksum = hashlib.sha1(f.read().encode()).hexdigest()
         return checksum
 
 
@@ -170,7 +170,7 @@ def validate_solc():
         raise RuntimeError(msg)
 
 
-class ContractManager(object):
+class ContractManager:
     def __init__(self):
         self.is_instantiated = False
         self.lock = Lock()

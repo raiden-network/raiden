@@ -83,7 +83,7 @@ class CompileWebUI(Command):
 
         npm_version = subprocess.check_output([npm, '--version'])
         # require npm 4.x.x or later
-        if not int(npm_version.split('.')[0]) >= 4:
+        if not int(npm_version.split(b'.')[0]) >= 4:
             self.announce(
                 'NPM 4.x or later required. Skipping webUI compilation',
                 level=distutils.log.WARN,
@@ -107,15 +107,8 @@ with open('README.rst') as readme_file:
 
 history = ''
 
-
-ethereum_url = (
-    'git+https://github.com/LefterisJP/pyethereum'
-    '@take_solidity_interface_into_account#egg=ethereum'
-)
-
 install_requires_replacements = {
-    ethereum_url: 'ethereum',
-    'git+https://github.com/konradkonrad/pystun@develop#egg=pystun': 'pystun',
+    'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
 }
 
 install_requires = list(set(
@@ -125,17 +118,20 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.2.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion.cfg)
+version = '0.3.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 
 
 def read_version_from_git():
     try:
         import shlex
         git_version, _ = subprocess.Popen(
-            shlex.split('git describe --tags'),
+            shlex.split('git describe --tags --abbrev=8'),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         ).communicate()
+        # Popen returns bytes
+        git_version = git_version.decode()
+
         if git_version.startswith('v'):
             git_version = git_version[1:]
 
@@ -160,21 +156,21 @@ setup(
     version=read_version_from_git(),
     description='',
     long_description=readme + '\n\n' + history,
-    author='HeikoHeiko',
-    author_email='heiko@brainbot.com',
+    author='Brainbot Labs Est.',
+    author_email='contact@brainbot.li',
     url='https://github.com/raiden-network/raiden',
     packages=find_packages(),
     include_package_data=True,
-    license='BSD',
+    license='MIT',
     zip_safe=False,
     keywords='raiden',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
     ],
     cmdclass={
         'test': PyTest,
@@ -184,6 +180,7 @@ setup(
     },
     install_requires=install_requires,
     tests_require=test_requirements,
+    python_requires='>=3.6',
     entry_points={
         'console_scripts': [
             'raiden = raiden.__main__:main'

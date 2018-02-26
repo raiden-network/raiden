@@ -1,32 +1,29 @@
 -r requirements.txt
 
 # Testing
-pytest>=3.3.0
-pytest-timeout>=1.2.0
-pytest-random>=0.02
-pytest-cov
-flaky
-hypothesis
-grequests
-psutil
-detox
-flake8
+pytest==3.3.2
+pytest-timeout==1.2.1
+pytest-random==0.02
+pytest-cov==2.5.1
+flaky==3.4.0
+hypothesis==3.44.14
+grequests==0.3.0
+flake8==3.5.0
 
 # Debugging
-pdbpp>=0.8.3<1.0.0
+pdbpp==0.9.2
 
 # Continuous Integration
-coverage>=4.0<4.4
+coverage==4.4.2
 
 # Documentation
-sphinx>=1.5.1<2.0.0
-sphinx_rtd_theme
-sphinxcontrib-images
-# Pinning to latest master commit because it works with sphinx version >= 1.5.0
-git+https://github.com/bitprophet/releases.git@8261431dc8b40f6e4f587503e8a50f9d3290af74
+sphinx==1.6.6
+sphinx_rtd_theme==0.2.4
+sphinxcontrib-images==0.7.0
+releases==1.4.0
 
 # Release
-bumpversion>=0.5.3
+bumpversion==0.5.3
 
 # Benchmark
-u-msgpack-python>=2.3.0<3.0.0
+u-msgpack-python==2.4.1

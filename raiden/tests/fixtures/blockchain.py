@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-
 import json
+from binascii import hexlify
 from os import path
 from collections import namedtuple
 
 import pytest
 from ethereum import slogging
-from ethereum._solidity import compile_file
+from ethereum.tools._solidity import compile_file
 
 from raiden.utils import (
     address_decoder,
@@ -17,7 +16,7 @@ from raiden.utils import (
     privatekey_to_address,
 )
 from raiden.network.transport import DummyTransport
-from raiden.tests.fixtures.tester import tester_state
+from raiden.tests.fixtures.tester import tester_chain
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
@@ -33,10 +32,7 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
 )
-from raiden.settings import (
-    GAS_LIMIT,
-    GAS_PRICE,
-)
+from raiden.settings import GAS_PRICE
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
@@ -189,12 +185,12 @@ def cached_genesis(request):
         app.stop(leave_channels=False)
 
     # save the state from the last block into a genesis dict
-    tester = blockchain_services[0].tester_state
+    tester = blockchain_services[0].tester_chain
     tester.mine()
 
     genesis_alloc = dict()
-    for account_address in tester.block.state.to_dict():
-        account_alloc = tester.block.account_to_dict(account_address)
+    for account_address in tester.head_state.to_dict():
+        account_alloc = tester.head_state.account_to_dict(account_address)
 
         # Both keys and values of the account storage associative array
         # must now be encoded with 64 hex digits
@@ -206,7 +202,7 @@ def cached_genesis(request):
 
         # account_to_dict returns accounts with nonce=0 and the nonce must
         # be encoded with 16 hex digits
-        account_alloc['nonce'] = '0x%016x' % tester.block.get_nonce(account_address)
+        account_alloc['nonce'] = '0x%016x' % tester.head_state.get_nonce(account_address)
 
         genesis_alloc[account_address] = account_alloc
 
@@ -219,12 +215,8 @@ def cached_genesis(request):
     ]
 
     for address in account_addresses:
-        genesis_alloc[address]['balance'] = DEFAULT_BALANCE_BIN
-
-    alloc = {
-        address_encoder(address_maybe_bin): data
-        for address_maybe_bin, data in genesis_alloc.iteritems()
-    }
+        address_hex = hexlify(address).decode()
+        genesis_alloc[address_hex]['balance'] = DEFAULT_BALANCE_BIN
 
     genesis = GENESIS_STUB.copy()
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
@@ -234,7 +226,7 @@ def cached_genesis(request):
         random_marker,
         address_encoder(account_addresses[0])[2:],
     )
-    genesis['alloc'] = alloc
+    genesis['alloc'] = genesis_alloc
     genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
     genesis['config']['defaultRegistryAddress'] = address_encoder(registry_address)
     genesis['config']['tokenAddresses'] = [
@@ -462,10 +454,9 @@ def _jsonrpc_services(
             dict(),
             tuple(),
             contract_path=registry_path,
-            gasprice=GAS_PRICE,
             timeout=poll_timeout,
         )
-        registry_address = registry_proxy.address
+        registry_address = registry_proxy.contract_address
 
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine
@@ -473,7 +464,6 @@ def _jsonrpc_services(
     deploy_blockchain = BlockChainService(
         deploy_key,
         deploy_client,
-        GAS_LIMIT,
         GAS_PRICE,
     )
     deploy_registry = deploy_blockchain.registry(registry_address)
@@ -490,7 +480,6 @@ def _jsonrpc_services(
         blockchain = BlockChainService(
             privkey,
             rpc_client,
-            GAS_LIMIT,
             GAS_PRICE,
         )
         blockchain_services.append(blockchain)
@@ -505,7 +494,7 @@ def _jsonrpc_services(
 def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
     # calling the fixture directly because we don't want to force all
     # blockchain_services to instantiate a state
-    tester = tester_state(
+    tester = tester_chain(
         deploy_key,
         private_keys,
         tester_blockgas_limit,

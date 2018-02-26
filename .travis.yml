@@ -3,21 +3,21 @@ sudo: true
 
 language: python
 python:
-- '2.7'
+- '3.6'
 env:
   global:
-  - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.2-1db4ecdc.tar.gz'
-  - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.7.2-1db4ecdc.tar.gz'
-  - GETH_VERSION='1.7.2'
+  - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.0-5f540757.tar.gz'
+  - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.0-5f540757.tar.gz'
+  - GETH_VERSION='1.8.0'
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux'
   - SOLC_URL_MACOS='https://www.dropbox.com/s/21xuco6djjpdwd4/solc_0.4.18?dl=0'
   - SOLC_VERSION='v0.4.18'
   matrix:
   - TEST_TYPE='unit'
+  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
   - TEST_TYPE='smart_contracts'
   - TEST_TYPE='property'
   - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
 cache:
   pip: true
@@ -27,14 +27,14 @@ cache:
   - "$HOME/.bin"
 before_install:
   - mkdir -p $HOME/.bin
-  - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
+  - export PATH=$PATH:$HOME/.bin
   - ./.travis/before_install.sh
 install:
   ./.travis/install.sh
 before_script:
   ./.travis/before_script.sh
 script:
-  - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 after_success:
   - coveralls
 notifications:
@@ -49,13 +49,13 @@ jobs:
       before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh
       install: ./.travis/install.sh
       before_script: ./.travis/before_script.sh
-      script: RAIDENVERSION=$TRAVIS_TAG make bundle
+      script: RAIDENVERSION=$TRAVIS_TAG make bundle-docker
       env: TEST_TYPE=""
       deploy:
       - provider: releases
         api_key:
           secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-        file: dist/raiden--x86_64.AppImage
+        file: dist/raiden-${TRAVIS_TAG}-linux.tar.gz
         skip_cleanup: true
         on:
           tags: true
@@ -65,7 +65,7 @@ jobs:
         user: raiden_pypi_automated
         password:
             secure: pGSz00xatE6rLdmEvyHW2wM6VJvDeTY8s/huZzPLdAxX30UHZZACugdDNBCYgLmBpKN4pRrw5hXZ+09/6+MUpXHwFZ7tExJftUkHdLt9kY6bD/orFeHLU0hGzXJHSvCmGv2sTJ018j6MoKPiF+AzLaqExbHoOJZxtOf3O9a5LjP7M0uMDmUuCkBu2Y59Ozf3K5/uHio4pFDKTVg/jT5UzQ183LDvSPyfm/n0vbpvGyhfkThE+Nyk2Qs9Lu6WJjWj/Z96TZmnfqTfk9HIzePbkQSc1GLW2emCCYg5J8sGhKKShZ+1fGdhzN2nZQ2ccqnpLn+VJOumBQC+7fNlk7iKGBf10kESNlua/ccmD/jksdvYPlRQe12M0MqMh3cLRZU5EzEBMh/eIjQKj3MMPCk+YtSbXn6dITvZD/tkLXwQljNXHZvj4JEfdkP2dxORhMJ+TFwmvMgWyKhoSKTrZnN17qK2X9Agsr3taJ6RyzBMSzXDeSglNoYh/0mChLARjIXyz3WcoiIzpaRL8wPot1aRe4np/Rg+6c6PLMNvIAjgvNAvRFHCwKWzYwFaHjmi7bgDS6dirWdFd+TjAXCb8HFq+m670a0GY7u5JgHrU30QcfbeXhFJBUaBFkvDpJw53JogURlL+Et9So5xcJjYsYocUtrZi6YZ58UUu8A7ZWF0DNk=
-        python: 2.7
+        python: 3.6
         on:
           tags: true
           distributions: sdist bdist_wheel
@@ -76,22 +76,17 @@ jobs:
       os: osx
       language: generic
       osx_image: xcode8.3
+      env: TEST_TYPE=""
       before_install:
         - sysctl -n machdep.cpu.brand_string
         - mkdir -p $HOME/.bin
-        - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
+        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:/usr/local/bin/:$PATH
         - .travis/before_install.sh
-        - ls -la $HOME/.bin
-        - uname -a
-        - sw_vers
-        - xcodebuild -version
-        - solc --version
-        - geth --help
       install:
         - .travis/install.sh
       before_script:
         - .travis/before_script.sh
-        - python setup.py compile_contracts
+        - python setup.py build
         - python setup.py compile_webui
       script:
         # pdbpp interferes with pyinstaller, uninstall it

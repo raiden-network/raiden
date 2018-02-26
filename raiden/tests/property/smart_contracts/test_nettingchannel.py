@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
 import contextlib
 
 from coincurve import PrivateKey
-from ethereum.tester import TransactionFailed
-from ethereum.processblock import BlockGasLimitReached
+from ethereum.utils import normalize_address
+from ethereum.tools.tester import TransactionFailed
+from ethereum.exceptions import BlockGasLimitReached
 from hypothesis import assume
 from hypothesis.stateful import GenericStateMachine
 from hypothesis.strategies import (
@@ -15,9 +15,6 @@ from hypothesis.strategies import (
     tuples,
 )
 
-from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
-)
 from raiden.tests.utils.tester import (
     deploy_channelmanager_library,
     deploy_nettingchannel_library,
@@ -29,10 +26,12 @@ from raiden.tests.utils.tester import (
 from raiden.tests.property.smart_contracts.strategies import (
     direct_transfer,
 )
-from raiden.tests.fixtures.tester import tester_state
+from raiden.tests.fixtures.tester import tester_chain
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     privatekey_to_address,
     sha3,
+    address_decoder,
 )
 from raiden.tests.utils.factories import make_address
 
@@ -58,36 +57,36 @@ class NettingChannelStateMachine(GenericStateMachine):
     """
 
     def __init__(self):
-        super(NettingChannelStateMachine, self).__init__()
+        super().__init__()
 
-        deploy_key = sha3('deploy_key')
+        deploy_key = sha3(b'deploy_key')
         gas_limit = 10 ** 10
 
         self.private_keys = [
-            sha3('p1'),
-            sha3('p2'),
-            sha3('p3'),  # third key used to generate signed but invalid transfers
+            sha3(b'p1'),
+            sha3(b'p2'),
+            sha3(b'p3'),  # third key used to generate signed but invalid transfers
         ]
-        self.addresses = map(privatekey_to_address, self.private_keys)
+        self.addresses = list(map(privatekey_to_address, self.private_keys))
         self.log = list()
-        self.tester_state = tester_state(
+        self.tester_chain = tester_chain(
             deploy_key,
             self.private_keys,
             gas_limit,
         )
-        self.settle_timeout = 50
+        self.settle_timeout = 10
         self.token_amount = 1000
 
         self.tokens = [
             new_token(
                 deploy_key,
-                self.tester_state,
+                self.tester_chain,
                 self.token_amount,
                 self.log.append,
             ),
             new_token(
                 deploy_key,
-                self.tester_state,
+                self.tester_chain,
                 self.token_amount,
                 self.log.append,
             ),
@@ -101,22 +100,22 @@ class NettingChannelStateMachine(GenericStateMachine):
 
         self.nettingchannel_library_address = deploy_nettingchannel_library(
             deploy_key,
-            self.tester_state,
+            self.tester_chain,
         )
         self.channel_manager_library_address = deploy_channelmanager_library(
             deploy_key,
-            self.tester_state,
+            self.tester_chain,
             self.nettingchannel_library_address,
         )
         self.registry = new_registry(
             deploy_key,
-            self.tester_state,
+            self.tester_chain,
             self.channel_manager_library_address,
             self.log.append,
         )
         self.channelmanager = new_channelmanager(
             deploy_key,
-            self.tester_state,
+            self.tester_chain,
             self.log.append,
             self.registry,
             self.token.address,
@@ -124,7 +123,7 @@ class NettingChannelStateMachine(GenericStateMachine):
         self.netting_channel = new_nettingcontract(
             self.private_keys[0],
             self.private_keys[1],
-            self.tester_state,
+            self.tester_chain,
             self.log.append,
             self.channelmanager,
             self.settle_timeout,
@@ -137,12 +136,12 @@ class NettingChannelStateMachine(GenericStateMachine):
         self.closing_address = None
         self.update_transfer_called = False
         self.participant_addresses = {
-            unhexlify(address_and_balance[0]),
-            unhexlify(address_and_balance[2]),
+            address_decoder(address_and_balance[0]),
+            address_decoder(address_and_balance[2]),
         }
 
         self.channel_addresses = [
-            unhexlify(self.netting_channel.address),
+            address_decoder(self.netting_channel.address),
             make_address(),  # used to test invalid transfers
         ]
 
@@ -182,7 +181,7 @@ class NettingChannelStateMachine(GenericStateMachine):
 
         mine_op = tuples(
             just(MINE),
-            integers(min_value=1, max_value=self.settle_timeout * 10),
+            integers(min_value=1, max_value=self.settle_timeout * 5),
         )
 
         # increases likely hood of the mine op, while permitting transactions
@@ -214,7 +213,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                 assume(False)
 
         elif op == MINE:
-            self.tester_state.mine(number_of_blocks=step[1])
+            self.tester_chain.mine(number_of_blocks=step[1])
 
     def is_participant(self, address):
         return address in self.participant_addresses
@@ -310,7 +309,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != unhexlify(self.netting_channel.address):
+        elif transfer.channel != normalize_address(self.netting_channel.address):
             msg = 'close called with a transfer for a different channe didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.close(  # pylint: disable=no-member
@@ -349,7 +348,7 @@ class NettingChannelStateMachine(GenericStateMachine):
         settlement_end = close_block + self.settle_timeout
 
         is_closed = close_block != 0
-        is_settlement_period_over = is_closed and settlement_end < self.tester_state.block.number
+        is_settlement_period_over = is_closed and settlement_end < self.tester_chain.block.number
 
         if not self.is_participant(transfer.sender):
             msg = 'updateTransfer with transfer data from a non participant didnt fail'
@@ -396,7 +395,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != unhexlify(self.netting_channel.address):
+        elif transfer.channel != normalize_address(self.netting_channel.address):
             msg = 'updateTransfer called with a transfer for a different channel didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member

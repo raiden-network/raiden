@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
-
 from binascii import hexlify
 import json
+import io
 import os
 import shutil
 import subprocess
@@ -18,8 +17,8 @@ from requests import ConnectionError
 from raiden.utils import (
     address_encoder,
     privatekey_to_address,
+    privtopub
 )
-from raiden.utils.crypto import privtopub
 from raiden.tests.utils.genesis import GENESIS_STUB
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -58,6 +57,7 @@ def geth_to_cmd(node, datadir, verbosity):
     Args:
         node (dict): a node configuration
         datadir (str): the node's datadir
+        verbosity (int): geth logging verbosity, 0 - nothing, 5 - max
 
     Return:
         List[str]: cmd-args list
@@ -88,6 +88,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--networkid', '627',
         '--verbosity', str(verbosity),
         '--datadir', datadir,
+        '--password', os.path.join(datadir, 'pw'),
     ])
 
     log.debug('geth command: {}'.format(cmd))
@@ -104,8 +105,12 @@ def geth_create_account(datadir, privkey):
         datadir (str): the datadir in which the account is created
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
-    with open(keyfile_path, 'w') as handler:
+    with open(keyfile_path, 'wb') as handler:
         handler.write(hexlify(privkey))
+
+    password_path = os.path.join(datadir, 'pw')
+    with open(password_path, 'w') as handler:
+        handler.write(DEFAULT_PASSPHRASE)
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
@@ -286,7 +291,7 @@ def geth_create_blockchain(
         cmds.append(commandline)
 
     # save current term settings before running geth
-    if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
+    if isinstance(sys.stdin, io.IOBase):  # check that the test is running on non-capture mode
         term_settings = termios.tcgetattr(sys.stdin)
 
     stdout = None
@@ -326,7 +331,7 @@ def geth_create_blockchain(
     geth_wait_and_check(deploy_client, private_keys, random_marker)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
-    if isinstance(sys.stdin, file):
+    if isinstance(sys.stdin, io.IOBase):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     for process in processes_list:

@@ -19,13 +19,13 @@ from raiden.network.transport import UDPTransport
 from raiden.network.sockfactory import socket_factory
 
 
-class DummyProtocol(object):
+class DummyProtocol:
 
     def __init__(self):
         self.raiden = None
 
     def receive(self, data):
-        print data
+        print(data)
 
 
 if __name__ == "__main__":
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     else:
         target_port = port
     with socket_factory(ip, port, stun_host=stun_host) as mapped_socket:
-        print mapped_socket
+        print(mapped_socket)
         t = UDPTransport(mapped_socket.socket, protocol=DummyProtocol())
         while True:
             time.sleep(1)

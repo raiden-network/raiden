@@ -1,25 +1,18 @@
 # -*- coding: utf-8 -*-
-import codecs
-import sys
-
-from rlp.utils import int_to_big_endian
-
-PY2 = sys.version_info.major == 2
-
 
 __all__ = ('integer',)
 
 
-class integer(object):  # pylint: disable=invalid-name
+class integer:  # pylint: disable=invalid-name
     ''' Defines the value as an integer and it's valid value range. '''
 
-    def __init__(self, minimum, maximum):
+    def __init__(self, minimum: int, maximum: int):
         self.minimum = minimum
         self.maximum = maximum
 
-    def validate(self, value):
+    def validate(self, value: int):
         ''' Validates the integer is in the value range. '''
-        if not isinstance(value, (int, long)):
+        if not isinstance(value, int):
             raise ValueError('value is not an integer')
 
         if self.minimum > value or self.maximum < value:
@@ -28,25 +21,16 @@ class integer(object):  # pylint: disable=invalid-name
             ).format(value, self.minimum, self.maximum)
             raise ValueError(msg)
 
-    if PY2:
-        @staticmethod
-        def encode(value, length):  # pylint: disable=unused-argument
-            return int_to_big_endian(value)
+    @staticmethod
+    def encode(value: int, length: int):
+        return value.to_bytes(length, byteorder='big')
 
-        @staticmethod
-        def decode(value):
-            return int(codecs.encode(value, 'hex'), 16)
-    else:
-        @staticmethod
-        def encode(value, length):
-            return value.to_bytes(length, byteorder='big')
-
-        @staticmethod
-        def decode(value):
-            return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
+    @staticmethod
+    def decode(value: bytes):
+        return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
 
 
-class optional_bytes(object):  # pylint: disable=invalid-name
+class optional_bytes:  # pylint: disable=invalid-name
     ''' This encoder assumes that a byte string full of NULL values is equal to
     the value being absent. If any of the bytes is not \x00 then all full array
     is considered part of the value.
@@ -58,11 +42,11 @@ class optional_bytes(object):  # pylint: disable=invalid-name
         pass
 
     @staticmethod
-    def encode(value, length):  # pylint: disable=unused-argument
+    def encode(value: bytes, length: int):  # pylint: disable=unused-argument
         return value
 
     @staticmethod
-    def decode(value):
-        if value.lstrip('\x00') == b'':
+    def decode(value: bytes):
+        if value.lstrip(b'\x00') == b'':
             return b''
         return value

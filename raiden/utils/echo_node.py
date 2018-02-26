@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 from collections import deque
 import random
 
@@ -32,7 +31,7 @@ log = slogging.getLogger(__name__)
 TRANSFER_MEMORY = 4096
 
 
-class EchoNode(object):
+class EchoNode:
 
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
@@ -107,7 +106,7 @@ class EchoNode(object):
                         )
                         received_transfers.extend([
                             event for event in channel_events
-                            if event['_event_type'] == 'EventTransferReceivedSuccess'
+                            if event['_event_type'] == b'EventTransferReceivedSuccess'
                         ])
                     for event in received_transfers:
                         transfer = event.copy()

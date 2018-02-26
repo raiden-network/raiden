@@ -5,13 +5,17 @@ import re
 import string
 import sys
 import time
+from typing import Tuple, Union, List, Iterable
 
 import gevent
 from coincurve import PrivateKey
 from ethereum.utils import remove_0x_head
+from ethereum.abi import ContractTranslator
+from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
+from raiden.utils.typing import address
 
 
 LETTERS = string.printable
@@ -27,7 +31,7 @@ def safe_address_decode(address):
     return address
 
 
-def sha3(data):
+def sha3(data: bytes) -> bytes:
     """
     Raises:
         RuntimeError: If Keccak lib initialization failed, or if the function
@@ -39,15 +43,15 @@ def sha3(data):
     return keccak_256(data).digest()
 
 
-def ishash(data):
-    return isinstance(data, (bytes, bytearray)) and len(data) == 32
+def ishash(data: bytes) -> bool:
+    return isinstance(data, bytes) and len(data) == 32
 
 
-def isaddress(data):
-    return isinstance(data, (bytes, bytearray)) and len(data) == 20
+def isaddress(data: bytes) -> bool:
+    return isinstance(data, bytes) and len(data) == 20
 
 
-def address_decoder(addr):
+def address_decoder(addr: str) -> address:
     if addr[:2] == '0x':
         addr = addr[2:]
 
@@ -56,9 +60,9 @@ def address_decoder(addr):
     return addr
 
 
-def address_encoder(address):
+def address_encoder(address: address) -> str:
     assert len(address) in (20, 0)
-    return '0x' + hexlify(address)
+    return '0x' + hexlify(address).decode()
 
 
 def block_tag_encoder(val):
@@ -66,39 +70,38 @@ def block_tag_encoder(val):
         return hex(val).rstrip('L')
 
     assert val in ('latest', 'pending')
-    return '0x' + hexlify(val)
+    return '0x' + hexlify(val).decode()
 
 
-def data_encoder(data, length=None):
+def data_encoder(data: bytes, length: int = 0) -> str:
     data = hexlify(data)
-    length = length or 0
-    return '0x' + data.rjust(length * 2, '0')
+    return '0x' + data.rjust(length * 2, b'0').decode()
 
 
-def data_decoder(data):
+def data_decoder(data: str) -> bytes:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
     data = unhexlify(data)
     return data
 
 
-def quantity_decoder(data):
+def quantity_decoder(data: str) -> int:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
     return int(data, 16)
 
 
-def quantity_encoder(i):
+def quantity_encoder(i: int) -> str:
     """Encode integer quantity `data`."""
     return hex(i).rstrip('L')
 
 
-def topic_decoder(topic):
+def topic_decoder(topic: str) -> int:
     return int(topic[2:], 16)
 
 
-def topic_encoder(topic):
-    assert isinstance(topic, (int, long))
+def topic_encoder(topic: int) -> str:
+    assert isinstance(topic, int)
 
     if topic == 0:
         return '0x'
@@ -109,11 +112,11 @@ def topic_encoder(topic):
     return topic
 
 
-def pex(data):
-    return hexlify(str(data))[:8]
+def pex(data: bytes) -> str:
+    return hexlify(data).decode()[:8]
 
 
-def lpex(lst):
+def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
@@ -122,11 +125,11 @@ def activate_ultratb():
     sys.excepthook = ultratb.VerboseTB(call_pdb=True, tb_offset=6)
 
 
-def host_port_to_endpoint(host, port):
+def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
 
-def split_endpoint(endpoint):
+def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)
@@ -136,23 +139,34 @@ def split_endpoint(endpoint):
     return host, port
 
 
-def publickey_to_address(publickey):
+def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
+    """ Returns public key in bitcoins 'bin' encoding. """
+    if not ishash(private_key_bin):
+        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
+    private_key = PrivateKey(private_key_bin)
+    return private_key.public_key.format(compressed=False)
+
+
+def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key_bin):
-    if not len(private_key_bin) == 32:
-        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
-    private_key = PrivateKey(private_key_bin)
-    pubkey = private_key.public_key.format(compressed=False)
-    return publickey_to_address(pubkey)
+def privatekey_to_address(private_key_bin: bytes) -> address:
+    return publickey_to_address(privatekey_to_publickey(private_key_bin))
 
 
-def get_project_root():
+def privtopub(private_key_bin: bytes) -> bytes:
+    """ Returns public key in bitcoins 'bin_electrum' encoding. """
+    raw_pubkey = privatekey_to_publickey(private_key_bin)
+    assert raw_pubkey.startswith(b'\x04')
+    return raw_pubkey[1:]
+
+
+def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
-def get_contract_path(contract_name):
+def get_contract_path(contract_name: str) -> str:
     contract_path = os.path.join(
         get_project_root(),
         'smart_contracts',
@@ -162,7 +176,7 @@ def get_contract_path(contract_name):
 
 
 def safe_lstrip_hex(val):
-    if isinstance(val, basestring):
+    if isinstance(val, str):
         return remove_0x_head(val)
     return val
 
@@ -215,9 +229,9 @@ def fix_tester_storage(storage):
         newstorage (dict): the canonical representation
     """
     new_storage = dict()
-    for key, val in storage.iteritems():
+    for key, val in storage.items():
         new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
-        new_val = '0x%064x' % int(val, 16)
+        new_val = '0x%064x' % int(val if val != '0x' else '0x0', 16)
         new_storage[new_key] = new_val
     return new_storage
 
@@ -234,12 +248,11 @@ def get_system_spec():
             platform.architecture()[0]
         )
     else:
-        system_info = '{} {} {} {} / {}'.format(
+        system_info = '{} {} {} {}'.format(
             platform.system(),
             '_'.join(platform.architecture()),
             platform.release(),
-            platform.machine(),
-            ' '.join(part for part in platform.linux_distribution() if part)
+            platform.machine()
         )
 
     system_spec = dict(
@@ -282,3 +295,7 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
 
 def is_frozen():
     return getattr(sys, 'frozen', False)
+
+
+def event_decoder(event: Log, contract_translator: ContractTranslator):
+    return contract_translator.decode_event(event.topics, event.data)

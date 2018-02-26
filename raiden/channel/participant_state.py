@@ -5,9 +5,11 @@ from itertools import chain
 from ethereum import slogging
 
 from raiden.exceptions import InvalidLocksRoot
-from raiden.transfer.merkle_tree import (
+from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
     EMPTY_MERKLE_ROOT,
+)
+from raiden.transfer.merkle_tree import (
     LEAVES,
     compute_layers,
     compute_merkleproof_for,
@@ -32,13 +34,13 @@ UnlockPartialProof = namedtuple('UnlockPartialProof', ('lock', 'lockhashed', 'se
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
 
 
-class ChannelEndState(object):
+class ChannelEndState:
     """ Tracks the state of one of the participants in a channel. """
 
     def __init__(self, participant_address, participant_balance, balance_proof, merkletree):
 
         # since ethereum only uses integral values we cannot use float/Decimal
-        if not isinstance(participant_balance, (int, long)):
+        if not isinstance(participant_balance, int):
             raise ValueError('participant_balance must be an integer.')
 
         # This participant's on-chain balance
@@ -291,7 +293,7 @@ class ChannelEndState(object):
                 partialproof.lock,
                 tree,
             )
-            for partialproof in self.hashlocks_to_unclaimedlocks.itervalues()
+            for partialproof in self.hashlocks_to_unclaimedlocks.values()
         ]
 
     def compute_proof_for_lock(self, secret, lock, tree=None):

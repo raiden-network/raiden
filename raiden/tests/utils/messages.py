@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """ Utilities to track and assert transferred messages. """
-from __future__ import print_function
 
 import string
 
@@ -8,8 +7,8 @@ from raiden.network.transport import DummyTransport
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.tests.utils.factories import make_privkey_address
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     MediatedTransfer,
@@ -19,13 +18,13 @@ from raiden.messages import (
 
 PRIVKEY, ADDRESS = make_privkey_address()
 INVALID_ADDRESSES = [
-    ' ',
-    ' ' * 19,
-    ' ' * 21,
+    b' ',
+    b' ' * 19,
+    b' ' * 21,
 ]
 
 VALID_SECRETS = [
-    letter * 32
+    letter.encode() * 32
     for letter in string.ascii_uppercase[:7]
 ]
 HASHLOCKS_SECRESTS = {

@@ -14,13 +14,12 @@ InternalEvent = namedtuple(
 # TODO:
 # - snapshots should be used to reduce the log file size
 
-class StateChangeLogSerializer(object):
+class StateChangeLogSerializer(object, metaclass=ABCMeta):
     """ StateChangeLogSerializer
 
         An abstract class defining the serialization interface for the
         Transaction log. Allows for pluggable serializer backends.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def serialize(self, transaction):
@@ -48,13 +47,12 @@ class PickleTransactionSerializer(StateChangeLogSerializer):
         return pickle.loads(data)
 
 
-class StateChangeLogStorageBackend(object):
+class StateChangeLogStorageBackend(object, metaclass=ABCMeta):
     """ StateChangeLogStorageBackend
 
         An abstract class defining the storage backend for the transaction log.
         Allows for pluggable storage backends.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def write_state_change(self, data):
@@ -219,7 +217,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         self.conn.close()
 
 
-class StateChangeLog(object):
+class StateChangeLog:
 
     def __init__(
             self,

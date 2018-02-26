@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from __future__ import absolute_import
 
 from raiden.transfer.architecture import StateChange
 from .state import LockedTransferState
@@ -73,11 +72,12 @@ class ActionInitTarget(StateChange):
         config (dict): This node configuration.
     """
 
-    def __init__(self,
-                 our_address,
-                 from_route,
-                 from_transfer,
-                 block_number):
+    def __init__(
+            self,
+            our_address,
+            from_route,
+            from_transfer,
+            block_number):
 
         self.our_address = our_address
         self.from_route = from_route

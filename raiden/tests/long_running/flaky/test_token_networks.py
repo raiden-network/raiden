@@ -3,7 +3,6 @@ import logging
 
 import pytest
 import gevent
-from flaky import flaky
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.blockchain import wait_until_block
@@ -16,7 +15,7 @@ log = logging.getLogger(__name__)
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels
 
-@flaky
+@pytest.mark.xfail(reason='Some issues in this test, see raiden #691')
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('cached_genesis', [False])
@@ -57,10 +56,10 @@ def test_participant_selection(raiden_network, token_addresses):
 
     assert all(open_channels_count(connection_managers))
 
-    def not_saturated(connection_managers):
+    def not_saturated(connection_managers_):
         return [
-            1 for connection_manager in connection_managers
-            if connection_manager.open_channels < connection_manager.initial_channel_target
+            1 for connection_manager_ in connection_managers_
+            if len(connection_manager_.open_channels) < connection_manager_.initial_channel_target
         ]
 
     chain = raiden_network[-1].raiden.chain
@@ -86,7 +85,7 @@ def test_participant_selection(raiden_network, token_addresses):
     # average channel count
     acc = (
         sum(len(connection_manager.open_channels) for connection_manager in connection_managers) /
-        float(len(connection_managers))
+        len(connection_managers)
     )
 
     try:

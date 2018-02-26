@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import socket
+from typing import Tuple
 
 from ethereum import slogging
 
 from raiden.exceptions import UnknownAddress
+from raiden.network import proxies
 from raiden.utils import (
     host_port_to_endpoint,
     isaddress,
@@ -15,13 +17,13 @@ from raiden.exceptions import InvalidAddress
 log = slogging.getLogger(__name__)
 
 
-class Discovery(object):
+class Discovery:
     """ Mock mapping address: host, port """
 
     def __init__(self):
         self.nodeid_to_hostport = dict()
 
-    def register(self, node_address, host, port):
+    def register(self, node_address: bytes, host: str, port: int):
         if not isaddress(node_address):
             raise ValueError('node_address must be a valid address')
 
@@ -30,12 +32,12 @@ class Discovery(object):
         except OSError:
             raise ValueError('invalid ip address provided: {}'.format(host))
 
-        if not isinstance(port, (int, long)):
+        if not isinstance(port, int):
             raise ValueError('port must be a valid number')
 
         self.nodeid_to_hostport[node_address] = (host, port)
 
-    def get(self, node_address):
+    def get(self, node_address: bytes):
         try:
             return self.nodeid_to_hostport[node_address]
         except KeyError:
@@ -54,13 +56,17 @@ class ContractDiscovery(Discovery):
     Allows registering and looking up by endpoint (host, port) for node_address.
     """
 
-    def __init__(self, node_address, discovery_proxy):
-        super(ContractDiscovery, self).__init__()
+    def __init__(
+            self,
+            node_address: bytes,
+            discovery_proxy: proxies.Discovery):
+
+        super().__init__()
 
         self.node_address = node_address
         self.discovery_proxy = discovery_proxy
 
-    def register(self, node_address, host, port):
+    def register(self, node_address: bytes, host: str, port: int):
         if node_address != self.node_address:
             raise ValueError('You can only register your own endpoint.')
 
@@ -72,7 +78,7 @@ class ContractDiscovery(Discovery):
         except OSError:
             raise ValueError('invalid ip address provided: {}'.format(host))
 
-        if not isinstance(port, (int, long)):
+        if not isinstance(port, int):
             raise ValueError('port must be a valid number')
 
         try:
@@ -97,12 +103,12 @@ class ContractDiscovery(Discovery):
                 port=port
             )
 
-    def get(self, node_address):
+    def get(self, node_address: bytes):
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
-        host_port = split_endpoint(endpoint)
+        host_port = split_endpoint(endpoint.decode())
         return host_port
 
-    def nodeid_by_host_port(self, host_port):
+    def nodeid_by_host_port(self, host_port: Tuple[str, int]):
         host, port = host_port
         endpoint = host_port_to_endpoint(host, port)
         return self.discovery_proxy.address_by_endpoint(endpoint)

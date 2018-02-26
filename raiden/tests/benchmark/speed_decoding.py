@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-
 import contextlib
 import timeit
 
@@ -13,10 +11,10 @@ from raiden.messages import (
     RefundTransfer, Secret, SecretRequest,
 )
 
-PRIVKEY_BIN = 'x' * 32
+PRIVKEY_BIN = b'x' * 32
 PRIVKEY = coincurve.PrivateKey(PRIVKEY_BIN)
 ADDRESS = privatekey_to_address(PRIVKEY_BIN)
-HASH = sha3(PRIVKEY)
+HASH = sha3(PRIVKEY_BIN)
 ITERATIONS = 1000000  # timeit default
 
 

@@ -8,6 +8,7 @@ from gevent.event import AsyncResult
 from gevent.queue import (
     Queue,
 )
+from raiden.exceptions import RaidenShuttingDown
 
 REMOVE_CALLBACK = object()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -21,7 +22,7 @@ class Task(gevent.Greenlet):
     """
 
     def __init__(self):
-        super(Task, self).__init__()
+        super().__init__()
         self.response_queue = Queue()
 
 
@@ -29,7 +30,7 @@ class AlarmTask(Task):
     """ Task to notify when a block is mined. """
 
     def __init__(self, chain):
-        super(AlarmTask, self).__init__()
+        super().__init__()
 
         self.callbacks = list()
         self.stop_event = AsyncResult()
@@ -64,7 +65,10 @@ class AlarmTask(Task):
 
         sleep_time = 0
         while self.stop_event.wait(sleep_time) is not True:
-            self.poll_for_new_block()
+            try:
+                self.poll_for_new_block()
+            except RaidenShuttingDown:
+                break
 
             # we want this task to iterate in the tick of `wait_time`, so take
             # into account how long we spent executing one tick.
@@ -105,6 +109,8 @@ class AlarmTask(Task):
             for callback in self.callbacks:
                 try:
                     result = callback(current_block)
+                except RaidenShuttingDown:
+                    break
                 except:  # pylint: disable=bare-except # noqa
                     log.exception('unexpected exception on alarm')
                 else:
@@ -116,7 +122,7 @@ class AlarmTask(Task):
 
     def start(self):
         self.last_block_number = self.chain.block_number()
-        super(AlarmTask, self).start()
+        super().start()
 
     def stop_and_wait(self):
         self.stop_event.set(True)

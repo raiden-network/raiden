@@ -3,7 +3,7 @@ import random
 import sys
 random.seed(42)
 # sys.setrecursionlimit(2000)
-print "use pypy"
+print("use pypy")
 DEBUG = False
 
 
@@ -22,7 +22,7 @@ def get_closest_node_id(target_id, nodeids):
 def get_closest_node_idx(target_id, nodeids):
     start, end = 0, len(nodeids) - 1
     while end - start > 1:
-        idx = start + (end - start) / 2
+        idx = start + (end - start) // 2
         if nodeids[idx] > target_id:
             end = idx
         else:
@@ -34,7 +34,7 @@ def get_closest_node_idx(target_id, nodeids):
     return idx
 
 
-class Node(object):
+class Node:
     """
     a node with `num_channels` actively opens half of them with other nodes
     and has `deposit`.
@@ -113,7 +113,7 @@ class Node(object):
             if d < 0:
                 d += self.sim.max_id
             return d
-        nodeids = sorted(self.channels.keys(), lambda a, b: cmp(_distance(a), _distance(b)))
+        nodeids = sorted(self.channels.keys(), key=_distance)
         assert len(nodeids) < 2 or _distance(nodeids[0]) <= _distance(nodeids[1])
         return [nid for nid in nodeids if self.channels[nid] >= amount]
 
@@ -139,7 +139,7 @@ class Node(object):
                 distance_channel.append((_distance(nodeid), nodeid))
         distance_channel.sort()
         if DEBUG:
-            print 'closest d,nodeid', distance_channel[0]
+            print('closest d,nodeid', distance_channel[0])
         return [n for d, n in distance_channel]
 
     def transfer(self, transfer, proactive_routing=False):
@@ -161,9 +161,9 @@ class Node(object):
 
         if len(transfer.tried) > self.sim.max_tried:
             if DEBUG:
-                print target_id
-                print [n.id for n in transfer.path]
-                print [n.id for n in transfer.tried]
+                print(target_id)
+                print([n.id for n in transfer.path])
+                print([n.id for n in transfer.tried])
             return False
 
         if not proactive_routing:
@@ -172,10 +172,10 @@ class Node(object):
             candidates = self._channels_by_distance_plus(target_id, transfer.amount)
             if DEBUG:
                 candidates2 = self._channels_by_distance(target_id, transfer.amount)
-                print
-                print "node:", self.id, "target", target_id
-                print candidates
-                print candidates2
+                print()
+                print("node:", self.id, "target", target_id)
+                print(candidates)
+                print(candidates2)
                 assert len(candidates2) >= len(candidates)
             # candidates = candidates2
         res = False
@@ -196,7 +196,7 @@ class Node(object):
         return True
 
 
-class Transfer(object):
+class Transfer:
 
     def __init__(self, sender, receiver, amount):
         self.sender = sender
@@ -240,7 +240,7 @@ def mk_power_distribution_func(v_min, v_max):
 # assert False
 
 
-class Simulation(object):
+class Simulation:
     num_nodes = 10000
     max_id = 2**32
     num_channels = 32
@@ -278,7 +278,7 @@ class Simulation(object):
                 yield nid, c
 
     def setup_network(self):
-        print 'setting up nodes'
+        print('setting up nodes')
         for i in range(self.num_nodes):
             node_id = random.randrange(self.max_id)
             if node_id in self.node_by_id:
@@ -287,9 +287,9 @@ class Simulation(object):
             node = Node(self, node_id, self.num_channels, capacity)
             self.node_by_id[node.id] = node
         self.nodeids = sorted(self.node_by_id.keys())
-        print 'num_nodes', len(self.nodeids)
+        print('num_nodes', len(self.nodeids))
 
-        print 'setting up channels'
+        print('setting up channels')
 
         for node_id in self.nodeids:  # sorted by capacity dec
             node = self.node_by_id[node_id]
@@ -300,25 +300,25 @@ class Simulation(object):
         capacities = [c for nid, c in self._iteredges()]
         num_edges = len(capacities)
         median_num_edges_per_node = sorted(len(n.channels)
-                                           for n in self.node_by_id.values())[self.num_nodes / 2]
-        avg_capacity = sum(capacities) / float(len(capacities))
-        median_capacity = sorted(capacities)[len(capacities) / 2]
+                                           for n in self.node_by_id.values())[self.num_nodes // 2]
+        avg_capacity = sum(capacities) / len(capacities)
+        median_capacity = sorted(capacities)[len(capacities) // 2]
 
         fmt = 'num_edges:{} per node:{:.1f} median per node:{:.1f}'
-        print fmt.format(num_edges, num_edges / float(len(self.nodeids)),
-                         median_num_edges_per_node)
-        print 'avg_capacity:{} median capacity:{}'.format(avg_capacity, median_capacity)
+        print(fmt.format(num_edges, num_edges / len(self.nodeids),
+                         median_num_edges_per_node))
+        print('avg_capacity:{} median capacity:{}'.format(avg_capacity, median_capacity))
 
     def dump_nodes(self, num=4):
         # dump some nodes and their channels
         for nodeid in self.nodeids[:num]:
-            print
+            print()
             node = self.node_by_id[nodeid]
             assert len(node.targets) < len(node.channels)
             # print node, zip(sorted(node.channels.keys()), sorted(node.targets))
-            print 'targets:', sorted(node.targets)
-            print 'edges:', sorted(node.channels.keys())
-            print 'capacities:', sorted(node.channels.values())
+            print('targets:', sorted(node.targets))
+            print('edges:', sorted(node.channels.keys()))
+            print('capacities:', sorted(node.channels.values()))
 
     def rand_transfer(self, amount):
         candidates = [n for n in self.node_by_id.values() if n.capacity_per_channel >= amount]
@@ -328,8 +328,8 @@ class Simulation(object):
         while receiver is sender:
             receiver = random.choice(candidates)
         if DEBUG:
-            print
-            print "new transfer", receiver
+            print()
+            print("new transfer", receiver)
         t = Transfer(sender.id, receiver.id, amount)
         res = sender.transfer(t, self.proactive_routing)
         t.success = res
@@ -341,9 +341,9 @@ class Simulation(object):
         total_successful = 0
 
         for i in range(steps):
-            value = self._capacity_distribution(i / float(steps)) / 2
+            value = self._capacity_distribution(i / steps) // 2
             usable_nodes = len([n for n in self.node_by_id.values()
-                                if n.capacity_per_channel >= value]) / float(len(self.nodeids))
+                                if n.capacity_per_channel >= value]) / len(self.nodeids)
             transfers = []
             for i in range(samples):
                 _ = self.rand_transfer(value)
@@ -352,26 +352,26 @@ class Simulation(object):
             successful = [t for t in transfers if t.success]
             num_successful = len(successful)
             total_successful += num_successful
-            pct_successful = num_successful / float(len(transfers))
+            pct_successful = num_successful / len(transfers)
 
             if num_successful > 0:
-                avg_path_len = sum([len(t.path) for t in successful]) / float(num_successful)
+                avg_path_len = sum([len(t.path) for t in successful]) / num_successful
                 median_path_len = sorted([len(t.path) for t in successful])[num_successful // 2]
                 max_path_len = max([len(t.path) for t in successful])
             else:
                 avg_path_len = median_path_len = max_path_len = 0
-            avg_tried_len = sum([len(t.tried) for t in transfers]) / float(len(transfers))
+            avg_tried_len = sum([len(t.tried) for t in transfers]) / len(transfers)
             median_tried_len = sorted([len(t.tried) for t in transfers])[len(transfers) // 2]
             max_tried_len = max([len(t.tried) for t in transfers])
 
             fmt = 'value:{:-5.2f}{:-5.2f} success:{:.2f} p_len:{:-4.0f} {:-4.0f} {:-4.0f} ' + \
                 'tried:{:-4.0f} {:-4.0f} {:-4.0f}'
-            print fmt.format(value, usable_nodes, pct_successful, avg_path_len,
+            print(fmt.format(value, usable_nodes, pct_successful, avg_path_len,
                              median_path_len, max_path_len, avg_tried_len,
-                             median_tried_len, max_tried_len)
+                             median_tried_len, max_tried_len))
         num_transfers = steps * samples
         pct_successful = (100 * total_successful) / num_transfers
-        print 'Of {} transfers {}% successful'.format(num_transfers, pct_successful)
+        print('Of {} transfers {}% successful'.format(num_transfers, pct_successful))
 
 
 if __name__ == '__main__':

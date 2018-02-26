@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-from future import standard_library
-standard_library.install_aliases()
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 import os
 import time
 import json
@@ -12,21 +10,27 @@ import distutils.spawn
 import pdb
 import traceback
 import requests
-import http.client
+from http import HTTPStatus
 from string import Template
 
-from ethereum._solidity import get_solidity
+from ethereum.tools._solidity import get_solidity
 
 from raiden.tests.utils.tester_client import (
     tester_deploy_contract,
     BlockChainServiceTesterMock,
     NettingChannelTesterMock,
 )
-from raiden.utils import get_contract_path, get_project_root, fix_tester_storage
+from raiden.utils import (
+    get_contract_path,
+    get_project_root,
+    fix_tester_storage,
+    address_encoder,
+    address_decoder,
+)
 from raiden.blockchain.abi import contract_checksum
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.tests.utils.tester import create_tester_state
+from raiden.tests.utils.tester import create_tester_chain
 from raiden.network.utils import get_free_port
 from raiden.connection_manager import ConnectionManager
 
@@ -95,16 +99,14 @@ TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44
 
 def run_restapi_smoketests(raiden_service, test_config):
     """Test if REST api works. """
-    url = (
-        'http://localhost:{port}/api/1/channels'
-    ).format(port=5001)
+    url = 'http://localhost:{port}/api/1/channels'.format(port=5001)
     response = requests.get(url)
 
-    assert response.status_code == http.client.OK
+    assert response.status_code == HTTPStatus.OK
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            '0x' + hexlify(str(ConnectionManager.BOOTSTRAP_ADDR)))
+            '0x' + hexlify(ConnectionManager.BOOTSTRAP_ADDR).decode())
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
@@ -116,23 +118,23 @@ def run_smoketests(raiden_service, test_config, debug=False):
         chain = raiden_service.chain
         assert (
             raiden_service.default_registry.address ==
-            test_config['contracts']['registry_address'].decode('hex')
+            address_decoder(test_config['contracts']['registry_address'])
         )
         assert (
             raiden_service.default_registry.token_addresses() ==
-            [test_config['contracts']['token_address'].decode('hex')]
+            [address_decoder(test_config['contracts']['token_address'])]
         )
         assert len(chain.address_to_discovery.keys()) == 1
         assert (
-            chain.address_to_discovery.keys()[0] ==
-            test_config['contracts']['discovery_address'].decode('hex')
+            list(chain.address_to_discovery.keys())[0] ==
+            address_decoder(test_config['contracts']['discovery_address'])
         )
-        discovery = chain.address_to_discovery.values()[0]
+        discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
         assert len(raiden_service.token_to_channelgraph.values()) == 1
-        graph = raiden_service.token_to_channelgraph.values()[0]
-        channel = graph.partneraddress_to_channel[TEST_PARTNER_ADDRESS.decode('hex')]
+        graph = list(raiden_service.token_to_channelgraph.values())[0]
+        channel = graph.partneraddress_to_channel[unhexlify(TEST_PARTNER_ADDRESS)]
         assert channel.can_transfer
         assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
         assert channel.state == CHANNEL_STATE_OPENED
@@ -156,7 +158,7 @@ def load_or_create_smoketest_config():
             [get_solidity().compiler_available(), '--version'],
             stdout=subprocess.PIPE
         ).communicate()
-        versions['solc'] = solc_version_out.split()[-1]
+        versions['solc'] = solc_version_out.split()[-1].decode()
 
     smoketest_config_path = os.path.join(
         get_project_root(),
@@ -168,7 +170,11 @@ def load_or_create_smoketest_config():
         with open(smoketest_config_path) as handler:
             smoketest_config = json.load(handler)
         # if the file versions still fit, return the genesis config (ignore solc if not available)
-        if all(versions[key] == smoketest_config['versions'][key] for key in versions.keys()):
+        config_matches = [
+            versions[key] == smoketest_config['versions'][key]
+            for key in versions.keys()
+        ]
+        if all(config_matches):
             return smoketest_config
 
     # something did not fit -- we will create the genesis
@@ -192,8 +198,8 @@ def deploy_and_open_channel_alloc(deployment_key):
         - dump the complete state in a genesis['alloc'] compatible format
         - return the state dump and the contract addresses
     """
-    deployment_key_bin = deployment_key.decode('hex')
-    state = create_tester_state(
+    deployment_key_bin = unhexlify(deployment_key)
+    state = create_tester_chain(
         deployment_key_bin,
         [deployment_key_bin],
         6 * 10 ** 6
@@ -224,22 +230,14 @@ def deploy_and_open_channel_alloc(deployment_key):
         registry,
         'HumanStandardToken',
         get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(
-            100,
-            'smoketesttoken',
-            2,
-            'RST'
-        )
+        constructor_parameters=(100, 'smoketesttoken', 2, 'RST')
     )
 
     manager = registry.manager_by_token(token_address)
-
     assert manager.private_key == deployment_key_bin
-    our_address = TEST_ACCOUNT['address']
 
     channel_address = manager.new_netting_channel(
-        our_address.decode('hex'),
-        TEST_PARTNER_ADDRESS.decode('hex'),
+        unhexlify(TEST_PARTNER_ADDRESS),
         50
     )
 
@@ -255,21 +253,18 @@ def deploy_and_open_channel_alloc(deployment_key):
     discovery.proxy.registerEndpoint(TEST_ENDPOINT)
 
     contracts = dict(
-        registry_address=registry_address,
-        token_address=token_address,
-        discovery_address=discovery_address,
-        channel_address=channel_address,
+        registry_address=address_encoder(registry_address),
+        token_address=address_encoder(token_address),
+        discovery_address=address_encoder(discovery_address),
+        channel_address=address_encoder(channel_address),
     )
-    for k, v in contracts.iteritems():
-        contracts[k] = hexlify(v)
 
     alloc = dict()
     # preserve all accounts and contracts
-    for address in state.block.state.to_dict().keys():
-        address = hexlify(address)
-        alloc[address] = state.block.account_to_dict(address)
+    for address in state.head_state.to_dict().keys():
+        alloc[address] = state.head_state.account_to_dict(address)
 
-    for account, content in alloc.iteritems():
+    for account, content in alloc.items():
         alloc[account]['storage'] = fix_tester_storage(content['storage'])
 
     return dict(
@@ -282,7 +277,7 @@ def complete_genesis():
     smoketest_genesis = GENESIS_STUB.copy()
     smoketest_genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
     smoketest_genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
-        hexlify('raiden'),
+        hexlify(b'raiden').decode(),
         TEST_ACCOUNT['address'],
     )
     smoketest_genesis['alloc'][TEST_ACCOUNT['address']] = dict(balance=hex(10 ** 18))
@@ -295,7 +290,7 @@ def complete_genesis():
 
 
 def init_with_genesis(smoketest_genesis):
-    with open(GENESIS_PATH, 'wb') as handler:
+    with open(GENESIS_PATH, 'w') as handler:
         json.dump(smoketest_genesis, handler)
 
     cmd = '$RST_GETH_BINARY --datadir $RST_DATADIR init {}'.format(GENESIS_PATH)
@@ -309,7 +304,7 @@ def init_with_genesis(smoketest_genesis):
     )
     out, err = init.communicate()
     assert init.returncode == 0
-    return (out, err)
+    return out, err
 
 
 def start_ethereum(smoketest_genesis):
@@ -323,17 +318,21 @@ def start_ethereum(smoketest_genesis):
     keystore = os.path.join(os.environ['RST_DATADIR'], 'keystore')
     if not os.path.exists(keystore):
         os.makedirs(keystore)
-    with open(os.path.join(keystore, 'account.json'), 'wb') as handler:
+    with open(os.path.join(keystore, 'account.json'), 'w') as handler:
         json.dump(TEST_ACCOUNT, handler)
+    with open(os.path.join(keystore, 'password'), 'w') as handler:
+        handler.write(TEST_ACCOUNT_PASSWORD)
 
     init_out, init_err = init_with_genesis(smoketest_genesis)
 
+    args.extend(['--password', os.path.join(keystore, 'password')])
     ethereum_node = subprocess.Popen(
         args,
         universal_newlines=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding='UTF-8',
     )
     ethereum_node.stdin.write(TEST_ACCOUNT_PASSWORD + os.linesep)
     time.sleep(.1)

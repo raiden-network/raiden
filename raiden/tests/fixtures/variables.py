@@ -146,11 +146,11 @@ def nat_keepalive_timeout():
 
 
 @pytest.fixture
-def privatekey_seed():
+def privatekey_seed(request):
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.
     """
-    return 'key:{}'
+    return request.node.name + ':{}'
 
 
 @pytest.fixture
@@ -166,7 +166,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
     # Note: The fixtures depend on the order of the private keys
     result = [
-        sha3(privatekey_seed.format(position))
+        sha3(privatekey_seed.format(position).encode())
         for position in range(number_of_nodes)
     ]
 
@@ -178,7 +178,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
 @pytest.fixture
 def deploy_key(privatekey_seed):
-    return sha3(privatekey_seed.format('deploykey'))
+    return sha3(privatekey_seed.format('deploykey').encode())
 
 
 @pytest.fixture
@@ -208,7 +208,7 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     raiden's private key.
     """
     return [
-        sha3(blockchain_key_seed.format(position))
+        sha3(blockchain_key_seed.format(position).encode())
         for position in range(blockchain_number_of_nodes)
     ]
 

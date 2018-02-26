@@ -9,7 +9,7 @@ from raiden.network import upnpsock, stunsock
 log = slogging.getLogger(__name__)
 
 
-class PortMappedSocket(object):
+class PortMappedSocket:
     """Wrapper around a socket instance with port mapping information.
     """
     def __init__(self, sock, method, external_ip, external_port, **meta):
@@ -28,7 +28,7 @@ class PortMappedSocket(object):
         )
 
 
-class SocketFactory(object):
+class SocketFactory:
     STRATEGY_TO_METHODS = {
         'auto': ['upnp', 'stun', 'none'],
         'upnp': ['upnp', 'none'],

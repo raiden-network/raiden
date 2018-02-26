@@ -5,9 +5,10 @@ import os
 import sys
 from binascii import hexlify, unhexlify
 
-from bitcoin import privtopub
-from ethereum import keys
+from ethereum.tools import keys
 from ethereum.slogging import get_logger
+
+from raiden.utils import privtopub, privatekey_to_address
 
 log = get_logger(__name__)
 
@@ -43,7 +44,7 @@ def find_keystoredir():
     return keystore_path
 
 
-class AccountManager(object):
+class AccountManager:
     def __init__(self, keystore_path=None):
         self.keystore_path = keystore_path
         self.accounts = {}
@@ -106,7 +107,7 @@ class AccountManager(object):
         return acc.privkey
 
 
-class Account(object):
+class Account:
     """Represents an account.  """
 
     def __init__(self, keystore, password=None, path=None):
@@ -161,9 +162,10 @@ class Account(object):
             include_address: flag denoting if the address should be included or not
             include_id: flag denoting if the id should be included or not
         """
-        d = {}
-        d['crypto'] = self.keystore['crypto']
-        d['version'] = self.keystore['version']
+        d = {
+            'crypto': self.keystore['crypto'],
+            'version': self.keystore['version']
+        }
         if include_address and self.address is not None:
             d['address'] = hexlify(self.address)
         if include_id and self.uuid is not None:
@@ -219,7 +221,7 @@ class Account(object):
         elif 'address' in self.keystore:
             self._address = unhexlify(self.keystore['address'])
         elif not self.locked:
-            self._address = keys.privtoaddr(self.privkey)
+            self._address = privatekey_to_address(self.privkey)
         else:
             return None
         return self._address

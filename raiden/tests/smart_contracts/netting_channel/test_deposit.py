@@ -1,22 +1,19 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-
 import pytest
 from ethereum import abi
-from ethereum.utils import encode_hex
 
 from raiden.tests.utils.tester import new_nettingcontract
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, address_encoder, event_decoder
 
 
-def test_deposit(private_keys, tester_channelmanager, tester_state, tester_token):
+def test_deposit(private_keys, tester_channelmanager, tester_chain, tester_token):
     """ A call to deposit must increase the available token amount in the
     netting channel.
     """
     pkey0 = private_keys[0]
     pkey1 = private_keys[1]
-    address0 = encode_hex(privatekey_to_address(pkey0))
-    address1 = encode_hex(privatekey_to_address(pkey1))
+    address0 = address_encoder(privatekey_to_address(pkey0))
+    address1 = address_encoder(privatekey_to_address(pkey1))
 
     settle_timeout = 10
     events = list()
@@ -25,7 +22,7 @@ def test_deposit(private_keys, tester_channelmanager, tester_state, tester_token
     channel = new_nettingcontract(
         pkey0,
         pkey1,
-        tester_state,
+        tester_chain,
         events.append,
         tester_channelmanager,
         settle_timeout,
@@ -64,7 +61,7 @@ def test_deposit(private_keys, tester_channelmanager, tester_state, tester_token
 def test_deposit_events(
         private_keys,
         settle_timeout,
-        tester_state,
+        tester_chain,
         tester_channelmanager,
         tester_token,
         tester_events):
@@ -76,7 +73,7 @@ def test_deposit_events(
     nettingchannel = new_nettingcontract(
         private_key,
         private_keys[1],
-        tester_state,
+        tester_chain,
         tester_events.append,
         tester_channelmanager,
         settle_timeout,
@@ -88,17 +85,17 @@ def test_deposit_events(
     assert tester_token.approve(nettingchannel.address, deposit_amount, sender=private_key) is True
     assert nettingchannel.deposit(deposit_amount, sender=private_key) is True
 
-    transfer_event = tester_events[-2]
-    newbalance_event = tester_events[-1]
+    transfer_event = event_decoder(tester_events[-2], tester_token.translator)
+    newbalance_event = event_decoder(tester_events[-1], nettingchannel.translator)
 
     assert transfer_event == {
-        '_event_type': 'Transfer',
-        '_from': encode_hex(address),
+        '_event_type': b'Transfer',
+        '_from': address_encoder(address),
         '_to': nettingchannel.address,
         '_value': deposit_amount,
     }
 
-    assert newbalance_event['_event_type'] == 'ChannelNewBalance'
-    assert newbalance_event['token_address'] == encode_hex(tester_token.address)
-    assert newbalance_event['participant'] == encode_hex(address)
+    assert newbalance_event['_event_type'] == b'ChannelNewBalance'
+    assert newbalance_event['token_address'] == address_encoder(tester_token.address)
+    assert newbalance_event['participant'] == address_encoder(address)
     assert newbalance_event['balance'] == deposit_amount

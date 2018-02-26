@@ -3,7 +3,6 @@ import gevent
 import pytest
 
 from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
     RevealSecret,
     Secret,
 )
@@ -13,9 +12,8 @@ from raiden.tests.fixtures.raiden_network import (
 )
 from raiden.tests.utils.network import setup_channels
 from raiden.tests.utils.transfer import channel
-from raiden.transfer.mediated_transfer.events import (
-    SendRevealSecret,
-)
+from raiden.transfer.mediated_transfer.events import SendRevealSecret
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
 
 # pylint: disable=too-many-locals
@@ -127,7 +125,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     token = token_addresses[0]
 
     identifier = 1
-    secret = sha3('test_regression_multiple_revealsecret')
+    secret = sha3(b'test_regression_multiple_revealsecret')
     hashlock = sha3(secret)
     expiration = app0.raiden.get_block_number() + 100
     amount = 10

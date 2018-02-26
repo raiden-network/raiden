@@ -16,6 +16,10 @@ class HashLengthNot32(RaidenError):
     pass
 
 
+class InvalidFunctionName(RaidenError):
+    """ Raised by the rpc proxy when a call to an unknown function is made. """
+
+
 # Exceptions raised due to user interaction (the user may be another software)
 
 class ChannelNotFound(RaidenError):
@@ -40,8 +44,8 @@ class InvalidAddress(RaidenError):
 
 
 class InvalidAmount(RaidenError):
-    """ Raised when the user provided value is not a integer and cannot be used
-    to defined a transfer value.
+    """ Raised when the user provided value is not an integer and cannot be
+    used to defined a transfer value.
     """
     pass
 
@@ -78,7 +82,7 @@ class InvalidState(RaidenError):
 
 
 class TransferWhenClosed(RaidenError):
-    """ Raised when a user tries to request a transfer is a closed channel. """
+    """ Raised when a user tries to request a transfer in a closed channel. """
     pass
 
 
@@ -89,14 +93,14 @@ class UnknownAddress(RaidenError):
 
 
 # Exceptions raised due to protocol errors (this includes messages received
-# from a bizantine node)
+# from a byzantine node)
 
 
 class InsufficientBalance(RaidenError):
-    """ Raised when the netting channel doesn't enough available capacity to
-    pay for the transfer.
+    """ Raised when the netting channel doesn't have enough available capacity
+    to pay for the transfer.
 
-    Used for the validation of an *incoming* messages.
+    Used for the validation of *incoming* messages.
     """
     pass
 
@@ -105,7 +109,7 @@ class InvalidLocksRoot(RaidenError):
     """ Raised when the received message has an invalid locksroot.
 
     Used to reject a message when a pending lock is missing from the locksroot,
-    otherwise if the message is accepted there is a pontential loss of token.
+    otherwise if the message is accepted there is a potential loss of token.
     """
     def __init__(self, expected_locksroot, got_locksroot):
         msg = 'Locksroot mismatch. Expected {} but got {}'.format(
@@ -113,7 +117,7 @@ class InvalidLocksRoot(RaidenError):
             pex(got_locksroot),
         )
 
-        super(InvalidLocksRoot, self).__init__(msg)
+        super().__init__(msg)
 
 
 class InvalidNonce(RaidenError):
@@ -130,22 +134,27 @@ class TransferUnwanted(RaidenError):
 
 
 class UnknownTokenAddress(RaidenError):
-    def __init__(self, address):
-        super(UnknownTokenAddress, self).__init__(
-            'Message with unknown token address {} received'.format(pex(address))
-        )
-
-        self.address = address
+    """ Raised when the token address in unknown. """
+    pass
 
 
 class STUNUnavailableException(RaidenError):
     pass
 
 
+class RaidenShuttingDown(RaidenError):
+    """ Raised when Raiden is in the process of shutting down to help with a
+    clean shutdown and not have exceptions thrown in all greenlets when there
+    is a connection timeout with the rpc client before shutting down."""
+    pass
+
+
 class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""
-    pass
+    def __init__(self, error_msg, error_code=None):
+        super().__init__(error_msg)
+        self.error_code = error_code
 
 
 class AddressWithoutCode(RaidenError):
@@ -165,6 +174,10 @@ class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""
     def __init__(self, txname, receipt):
-        super(TransactionThrew, self).__init__(
+        super().__init__(
             '{} transaction threw. Receipt={}'.format(txname, receipt)
         )
+
+
+class InvalidProtocolMessage(RaidenError):
+    """Raised on an invalid or an unknown Raiden protocol message"""

@@ -12,13 +12,17 @@ from raiden.channel import (
     ChannelExternalState,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
+from raiden.exceptions import (
+    InvalidAddress,
+    InvalidSettleTimeout,
+    UnknownTokenAddress,
+)
 from raiden.tests.utils.factories import make_address
-from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_TREE,
 )
 from raiden.utils import (
     address_decoder,
@@ -27,7 +31,7 @@ from raiden.utils import (
 )
 
 
-class NettingChannelMock(object):
+class NettingChannelMock:
 
     def __init__(self, channel_address):
         self.address = channel_address
@@ -41,7 +45,7 @@ class NettingChannelMock(object):
         return self.state == CHANNEL_STATE_CLOSED or self.state == CHANNEL_STATE_SETTLED
 
 
-class ConnectionManagerMock(object):
+class ConnectionManagerMock:
     def __init__(self, token_address, funds):
         self.token_address = token_address
         self.funds = funds
@@ -49,7 +53,7 @@ class ConnectionManagerMock(object):
         self.open_channels = []
 
 
-class ApiTestContext():
+class ApiTestContext:
 
     def __init__(self, reveal_timeout):
         self.events = list()
@@ -92,7 +96,7 @@ class ApiTestContext():
     def get_network_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
-            expected_event_type = event['_event_type'] == 'TokenAdded'
+            expected_event_type = event['_event_type'] == b'TokenAdded'
             in_block_range = (
                 event['block_number'] >= from_block and
                 event['block_number'] <= to_block
@@ -104,13 +108,15 @@ class ApiTestContext():
 
     def get_token_network_events(self, token_address, from_block, to_block):
         return_list = list()
-        if token_address != self.token_for_channelnew:
-            raise ValueError(
+        # if this happens the token hasn't been registered yet
+        # in the API the lookup would fail with a UnknownTokenAddress, return the same here
+        if not hasattr(self, 'token_for_channelnew') or token_address != self.token_for_channelnew:
+            raise UnknownTokenAddress(
                 'Unexpected token address: "{}"  during channelnew '
                 'query'.format(pex(token_address))
             )
         for event in self.events:
-            expected_event_type = event['_event_type'] == 'ChannelNew'
+            expected_event_type = event['_event_type'] == b'ChannelNew'
             in_block_range = (
                 event['block_number'] >= from_block and
                 event['block_number'] <= to_block
@@ -130,11 +136,11 @@ class ApiTestContext():
 
         for event in self.events:
             is_channel_event = (
-                event['_event_type'] == 'ChannelNewBalance' or
-                event['_event_type'] == 'ChannelClosed' or
-                event['_event_type'] == 'TransferUpdated' or
-                event['_event_type'] == 'ChannelSettled' or
-                event['_event_type'] == 'ChannelSecretRevealed'
+                event['_event_type'] == b'ChannelNewBalance' or
+                event['_event_type'] == b'ChannelClosed' or
+                event['_event_type'] == b'TransferUpdated' or
+                event['_event_type'] == b'ChannelSettled' or
+                event['_event_type'] == b'ChannelSecretRevealed'
             )
             in_block_range = (
                 event['block_number'] >= from_block and

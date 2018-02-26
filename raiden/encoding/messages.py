@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import struct
-
 from ethereum import slogging
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
@@ -13,14 +11,6 @@ from raiden.encoding.format import (
 )
 
 
-def to_bigendian(number):
-    return struct.pack('>B', number)
-
-
-def from_bigendian(number):
-    return struct.unpack('>B', number)
-
-
 def cmdid(id_):
     return make_field('cmdid', 1, 'B', integer(id_, id_))
 
@@ -28,7 +18,6 @@ def cmdid(id_):
 def make_message(message, **attrs):
     klass = CMDID_MESSAGE[message]
     message = klass(buffer_for(klass))
-    message.cmdid = from_bigendian(message)
 
     for name, value in attrs.items():
         setattr(message, name, value)
@@ -36,23 +25,14 @@ def make_message(message, **attrs):
     return message
 
 
-ACK_CMDID = 0
-PING_CMDID = 1
-SECRETREQUEST_CMDID = 3
-SECRET_CMDID = 4
-DIRECTTRANSFER_CMDID = 5
-MEDIATEDTRANSFER_CMDID = 7
-REFUNDTRANSFER_CMDID = 8
-REVEALSECRET_CMDID = 11
-
-ACK = to_bigendian(ACK_CMDID)
-PING = to_bigendian(PING_CMDID)
-SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
-SECRET = to_bigendian(SECRET_CMDID)
-REVEALSECRET = to_bigendian(REVEALSECRET_CMDID)
-DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
-MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
-REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
+ACK = 0
+PING = 1
+SECRETREQUEST = 3
+SECRET = 4
+DIRECTTRANSFER = 5
+MEDIATEDTRANSFER = 7
+REFUNDTRANSFER = 8
+REVEALSECRET = 11
 
 
 # pylint: disable=invalid-name
@@ -222,17 +202,17 @@ CMDID_MESSAGE = {
 
 
 def wrap(data):
-    ''' Try to decode data into a message, might return None if the data is invalid. '''
+    """ Try to decode data into a message, might return None if the data is invalid. """
     try:
-        first_byte = data[0]
-    except KeyError:
+        cmdid = data[0]
+    except IndexError:
         log.warn('data is empty')
         return
 
     try:
-        message_type = CMDID_MESSAGE[first_byte]
+        message_type = CMDID_MESSAGE[cmdid]
     except KeyError:
-        log.error('unknown cmdid %s', first_byte)
+        log.error('unknown cmdid %s', cmdid)
         return
 
     try:

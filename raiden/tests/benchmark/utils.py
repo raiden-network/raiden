@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 
 
 def print_serialization(pstats):  # pylint: disable=too-many-locals
@@ -24,15 +23,15 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
             else:
                 calls = str(primitive_calls)
 
-            pct = (total_time / float(pstats.total_tt)) * 100
+            pct = (total_time / pstats.total_tt) * 100
             total_pct += pct
             print('{:<14} {:<8.3f} {:<8.3f} {:<3.2f} {:<8.3f} {:<8.3f} {}'.format(
                 calls,
                 total_time,
-                float(total_time) / total_calls,
+                total_time / total_calls,
                 pct,
                 acc_time,
-                float(acc_time) / total_calls,
+                acc_time / total_calls,
                 func,
             ))
 

@@ -34,18 +34,18 @@ class EventsList(FlatList):
     pass
 
 
-class Address(object):
+class Address:
     def __init__(self, token_address):
         self.address = token_address
 
 
-class PartnersPerToken(object):
+class PartnersPerToken:
     def __init__(self, partner_address, channel):
         self.partner_address = partner_address
         self.channel = channel
 
 
-class Channel(object):
+class Channel:
     def __init__(
             self,
             channel_address,
@@ -64,7 +64,7 @@ class Channel(object):
         self.state = state
 
 
-class ChannelNew(object):
+class ChannelNew:
 
     def __init__(self, netting_channel_address, participant1, participant2, settle_timeout):
         self.netting_channel_address = netting_channel_address
@@ -73,7 +73,7 @@ class ChannelNew(object):
         self.settle_timeout = settle_timeout
 
 
-class ChannelNewBalance(object):
+class ChannelNewBalance:
 
     def __init__(
             self,
@@ -90,7 +90,7 @@ class ChannelNewBalance(object):
         self.block_number = block_number
 
 
-class ChannelClosed(object):
+class ChannelClosed:
 
     def __init__(self, netting_channel_address, closing_address, block_number):
         self.netting_channel_address = netting_channel_address
@@ -98,14 +98,14 @@ class ChannelClosed(object):
         self.block_number = block_number
 
 
-class ChannelSettled(object):
+class ChannelSettled:
 
     def __init__(self, netting_channel_address, block_number):
         self.netting_channel_address = netting_channel_address
         self.block_number = block_number
 
 
-class ChannelSecretRevealed(object):
+class ChannelSecretRevealed:
 
     def __init__(self, netting_channel_address, secret):
         self.netting_channel_address = netting_channel_address

@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
 import pytest
-from ethereum import tester
-from ethereum.tester import TransactionFailed
-from ethereum.utils import encode_hex
+from ethereum.tools import tester
+from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
-    DirectTransfer,
-)
+from raiden.messages import DirectTransfer
 from raiden.tests.utils.messages import (
     make_direct_transfer,
 )
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 from raiden.tests.utils.factories import make_address
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 
 
-def test_close_event(tester_state, tester_nettingcontracts, tester_events):
+def test_close_event(tester_chain, tester_nettingcontracts, tester_events):
     """ The event ChannelClosed is emitted when close is called. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
     address = privatekey_to_address(pkey0)
@@ -26,35 +23,35 @@ def test_close_event(tester_state, tester_nettingcontracts, tester_events):
     nettingchannel.close(sender=pkey0)
     assert len(previous_events) + 1 == len(tester_events)
 
-    close_event = tester_events[-1]
+    close_event = event_decoder(tester_events[-1], nettingchannel.translator)
     assert close_event == {
-        '_event_type': 'ChannelClosed',
-        'closing_address': encode_hex(address),
+        '_event_type': b'ChannelClosed',
+        'closing_address': address_encoder(address),
     }
 
 
-def test_close_first_participant_can_close(tester_state, tester_nettingcontracts):
+def test_close_first_participant_can_close(tester_chain, tester_nettingcontracts):
     """ First participant can close an unused channel. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
     address0 = privatekey_to_address(pkey0)
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     nettingchannel.close(sender=pkey0)
 
     assert nettingchannel.closed(sender=pkey0) == block_number
-    assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
+    assert nettingchannel.closingAddress(sender=pkey0) == address_encoder(address0)
 
 
-def test_close_second_participant_can_close(tester_state, tester_nettingcontracts):
+def test_close_second_participant_can_close(tester_chain, tester_nettingcontracts):
     """ Second participant can close an unused channel. """
     _, pkey1, nettingchannel = tester_nettingcontracts[0]
     address1 = privatekey_to_address(pkey1)
 
-    closed_block_number = tester_state.block.number
+    closed_block_number = tester_chain.block.number
     nettingchannel.close(sender=pkey1)
 
     assert nettingchannel.closed(sender=pkey1) == closed_block_number
-    assert nettingchannel.closingAddress(sender=pkey1) == encode_hex(address1)
+    assert nettingchannel.closingAddress(sender=pkey1) == address_encoder(address1)
 
 
 def test_close_only_participant_can_close(tester_nettingcontracts):
@@ -67,11 +64,11 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
         nettingchannel.close(sender=nonparticipant_key)
 
 
-def test_close_first_argument_is_for_partner_transfer(tester_state, tester_channels):
+def test_close_first_argument_is_for_partner_transfer(tester_chain, tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -159,12 +156,12 @@ def test_close_wrong_channel(tester_channels):
         )
 
 
-def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
+def test_close_called_multiple_times(tester_chain, tester_nettingcontracts):
     """ A channel can be closed only once. """
     pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
     address0 = privatekey_to_address(pkey0)
 
-    closed_block_number = tester_state.block.number
+    closed_block_number = tester_chain.block.number
     nettingchannel.close(sender=pkey0)
 
     with pytest.raises(TransactionFailed):
@@ -174,12 +171,12 @@ def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
         nettingchannel.close(sender=pkey1)
 
     assert nettingchannel.closed(sender=pkey0) == closed_block_number
-    assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
+    assert nettingchannel.closingAddress(sender=pkey0) == address_encoder(address0)
 
 
 @pytest.mark.xfail(reason='Issue: #292')
 def test_close_valid_tranfer_different_token(
-        tester_state,
+        tester_chain,
         tester_nettingcontracts,
         token_amount,
         tester_events):
@@ -195,8 +192,8 @@ def test_close_valid_tranfer_different_token(
     other_token = tester_token(
         token_amount,
         private_keys,
-        tester_state,
-        tester_token_address(private_keys, token_amount, tester_state),
+        tester_chain,
+        tester_token_address(private_keys, token_amount, tester_chain),
         tester_events,
     )
 
@@ -223,11 +220,11 @@ def test_close_valid_tranfer_different_token(
         )
 
 
-def test_close_tampered_identifier(tester_state, tester_channels):
+def test_close_tampered_identifier(tester_chain, tester_channels):
     """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
@@ -252,11 +249,11 @@ def test_close_tampered_identifier(tester_state, tester_channels):
         )
 
 
-def test_close_tampered_nonce(tester_state, tester_channels):
+def test_close_tampered_nonce(tester_chain, tester_channels):
     """ Messages with a tampered nonce must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_state.block.number
+    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
         block_number,
         channel0,
