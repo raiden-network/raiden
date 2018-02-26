@@ -6,11 +6,11 @@ from gevent import Greenlet  # flake8: noqa
 from gevent.pywsgi import WSGIServer
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
-from pathfinder.pathfinder import Pathfinder
+from pathfinder.pathfinding_service import PathfindingService
 
 
 class PathfinderResource(Resource):
-    def __init__(self, pathfinder: Pathfinder):
+    def __init__(self, pathfinder: PathfindingService):
         self.pathfinder = pathfinder
 
 
@@ -70,11 +70,11 @@ class PaymentInfoResource(Resource):
 
 
 class ServiceApi:
-    def __init__(self, pathfinder: Pathfinder):
+    def __init__(self, pathfinder: PathfindingService):
         self.flask_app = Flask(__name__)
         self.api = Api(self.flask_app)
-        self.rest_server = None  # type: WSGIServer
-        self.server_greenlet = None  # type: Greenlet
+        self.rest_server: WSGIServer = None
+        self.server_greenlet: Greenlet = None
 
         resources = [
             ('/channels/<channel_id>/balance', ChannelBalanceResource, {}),
