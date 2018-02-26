@@ -5,7 +5,6 @@ import logging
 import sys
 
 import click
-from gevent import monkey
 
 from pathfinder.blockchain import BlockchainMonitor
 from pathfinder.no_ssl_patch import no_ssl_verification
@@ -45,9 +44,6 @@ def main(
     matrix_password
 ):
     """Console script for pathfinder."""
-
-    # gevent monkey patching
-    monkey.patch_all()
 
     # setup logging
     logging.basicConfig(level=logging.INFO)
