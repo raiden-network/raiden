@@ -146,7 +146,7 @@ def get_all_netting_channel_events(
         from_block=0,
         to_block='latest'):
     """ Helper to get all events of a NettingChannelContract at
-    `netting_channel_address`.
+    `channel_identifier`.
     """
 
     return get_contract_events(
@@ -159,6 +159,21 @@ def get_all_netting_channel_events(
     )
 
 
+def get_channel_proxies(chain, node_address, channel_manager):
+    participating_channels = channel_manager.channels_by_participant(node_address)
+    netting_channels = []
+    for channel_identifier in participating_channels:
+        # FIXME: implement proper cleanup of self-killed channel after close+settle
+        try:
+            netting_channels.append(chain.netting_channel(channel_identifier))
+        except AddressWithoutCode:
+            log.debug(
+                'Settled channel found when starting raiden. Safely ignored',
+                channel_identifier=pex(channel_identifier)
+            )
+    return netting_channels
+
+
 def get_relevant_proxies(chain, node_address, registry_address):
     registry = chain.registry(registry_address)
 
@@ -169,18 +184,8 @@ def get_relevant_proxies(chain, node_address, registry_address):
         channel_manager = registry.manager(channel_manager_address)
         channel_managers.append(channel_manager)
 
-        participating_channels = channel_manager.channels_by_participant(node_address)
-        netting_channels = []
-        for channel_address in participating_channels:
-            # FIXME: implement proper cleanup of self-killed channel after close+settle
-            try:
-                netting_channels.append(chain.netting_channel(channel_address))
-            except AddressWithoutCode:
-                log.debug(
-                    'Settled channel found when starting raiden. Safely ignored',
-                    channel_address=pex(channel_address)
-                )
-        manager_channels[channel_manager_address] = netting_channels
+        netting_channel_proxies = get_channel_proxies(chain, node_address, channel_manager)
+        manager_channels[channel_manager_address] = netting_channel_proxies
 
     proxies = Proxies(
         registry,
