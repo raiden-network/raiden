@@ -249,6 +249,34 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
     return result
 
 
+def decode_event(event):
+    """ Enforce the binary encoding of address for internal usage. """
+    data = event.event_data
+    assert isinstance(data['_event_type'], bytes)
+
+    # Note: All addresses inside the event_data must be decoded.
+    if data['_event_type'] == b'TokenAdded':
+        data['channel_manager_address'] = address_decoder(data['channel_manager_address'])
+        data['token_address'] = address_decoder(data['token_address'])
+
+    elif data['_event_type'] == b'ChannelNew':
+        data['participant1'] = address_decoder(data['participant1'])
+        data['participant2'] = address_decoder(data['participant2'])
+        data['netting_channel'] = address_decoder(data['netting_channel'])
+
+    elif data['_event_type'] == b'ChannelNewBalance':
+        data['token_address'] = address_decoder(data['token_address'])
+        data['participant'] = address_decoder(data['participant'])
+
+    elif data['_event_type'] == b'ChannelClosed':
+        data['closing_address'] = address_decoder(data['closing_address'])
+
+    elif data['_event_type'] == b'ChannelSecretRevealed':
+        data['receiver_address'] = address_decoder(data['receiver_address'])
+
+    return event
+
+
 class Event:
     def __init__(self, originating_contract, event_data):
         self.originating_contract = originating_contract
