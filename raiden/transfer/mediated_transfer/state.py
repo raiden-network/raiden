@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from ethereum.utils import encode_hex
 
 from raiden.transfer.architecture import State
-from raiden.utils import typing
+from raiden.utils import pex, sha3, typing
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     BalanceProofState,
     BalanceProofUnsignedState,
     HashTimeLockState,
 )
-# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
 def lockedtransfer_from_message(message):
@@ -26,6 +26,171 @@ def lockedtransfer_from_message(message):
     )
 
     return transfer_state
+
+
+class InitiatorPaymentState(State):
+    """ State of a payment for the initiator node.
+    A single payment may have multiple transfers. E.g. because if one of the
+    transfers fails or timeouts another one will started with a different
+    hashlock.
+    """
+    __slots__ = (
+        'initiator',
+        'cancelled_channels',
+    )
+
+    def __init__(self, initiator: typing.address):
+        # TODO: Allow multiple concurrent transfers and unlock refunds (issue #1091).
+        self.initiator = initiator
+        self.cancelled_channels = list()
+
+    def __repr__(self):
+        return '<InitiatorPaymentState initiator:{}>'.format(
+            self.initiator,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, InitiatorPaymentState) and
+            self.initiator == other.initiator and
+            self.cancelled_channels == other.cancelled_channels
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class InitiatorTransferState(State):
+    """ State of a transfer for the initiator node. """
+
+    __slots__ = (
+        'transfer_description',
+        'channel_identifier',
+        'transfer',
+        'secretrequest',
+        'revealsecret',
+    )
+
+    def __init__(
+            self,
+            transfer_description: 'TransferDescriptionWithSecretState',
+            channel_identifier):
+
+        if not isinstance(transfer_description, TransferDescriptionWithSecretState):
+            raise ValueError(
+                'transfer_description must be an instance of TransferDescriptionWithSecretState'
+            )
+
+        # This is the user's description of the transfer. It does not contain a
+        # balance proof and it's not related to any channel.
+        self.transfer_description = transfer_description
+
+        # This it the channel used to satisfy the above transfer.
+        self.channel_identifier = channel_identifier
+        self.transfer = None
+        self.secretrequest = None
+        self.revealsecret = None
+
+    def __repr__(self):
+        return '<InitiatorTransferState transfer:{} channel:{}>'.format(
+            self.transfer,
+            pex(self.channel_identifier),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, InitiatorTransferState) and
+            self.transfer_description == other.transfer_description and
+            self.channel_identifier == other.channel_identifier and
+            self.transfer == other.transfer and
+            self.secretrequest == other.secretrequest and
+            self.revealsecret == other.revealsecret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class MediatorTransferState(State):
+    """ State of a transfer for the mediator node.
+    A mediator may manage multiple channels because of refunds, but all these
+    channels will be used for the same transfer (not for different payments).
+    Args:
+        hashlock (bin): The hashlock used for this transfer.
+    """
+
+    __slots__ = (
+        'hashlock',
+        'secret',
+        'transfers_pair',
+    )
+
+    def __init__(self, hashlock: typing.keccak256):
+        # for convenience
+        self.hashlock = hashlock
+        self.secret = None
+        self.transfers_pair = list()
+
+    def __repr__(self):
+        return '<MediatorTransferState hashlock:{} qtd_transfers:{}>'.format(
+            pex(self.hashlock),
+            len(self.transfers_pair),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MediatorTransferState) and
+            self.hashlock == other.hashlock and
+            self.secret == other.secret and
+            self.transfers_pair == other.transfers_pair
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class TargetTransferState(State):
+    """ State of a transfer for the target node. """
+
+    __slots__ = (
+        'route',
+        'transfer',
+        'secret',
+        'hahslock',
+        'state',
+    )
+
+    valid_states = (
+        'secret_request',
+        'reveal_secret',
+        'waiting_close',
+        'expired',
+    )
+
+    def __init__(self, route: 'RouteState', transfer: 'LockedTransferState'):
+        self.route = route
+        self.transfer = transfer
+
+        self.secret = None
+        self.state = 'secret_request'
+
+    def __repr__(self):
+        return '<TargetTransferState transfer:{} state:{}>'.format(
+            self.transfer,
+            self.state,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TargetTransferState) and
+            self.route == other.route and
+            self.transfer == other.transfer and
+            self.secret == other.secret and
+            self.state == other.state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class InitiatorState(State):
@@ -393,6 +558,70 @@ class LockedTransferState(State):
             )
 
         return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class TransferDescriptionWithSecretState(State):
+    """ Describes a transfer (target, amount, and token) and contains an
+    additional secret that can be used with a hash-time-lock.
+    """
+
+    __slots__ = (
+        'identifier',
+        'amount',
+        'registry',
+        'token',
+        'initiator',
+        'target',
+        'secret',
+        'hashlock',
+    )
+
+    def __init__(
+            self,
+            identifier,
+            amount: typing.token_amount,
+            registry: typing.address,
+            token: typing.address,
+            initiator: typing.address,
+            target: typing.address,
+            secret: typing.secret):
+
+        hashlock = sha3(secret)
+
+        self.identifier = identifier
+        self.amount = amount
+        self.registry = registry
+        self.token = token
+        self.initiator = initiator
+        self.target = target
+        self.secret = secret
+        self.hashlock = hashlock
+
+    def __repr__(self):
+        return (
+            '<TransferDescriptionWithSecretState network:{} token:{} amount:{} hashlock:{}>'
+        ).format(
+            pex(self.registry),
+            pex(self.token),
+            self.amount,
+            pex(self.hashlock),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TransferDescriptionWithSecretState) and
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.registry == other.registry and
+            self.token == other.token and
+            self.initiator == other.initiator and
+            self.target == other.target and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
