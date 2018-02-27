@@ -1,12 +1,13 @@
 import gevent
 from eth_utils import is_address, is_checksum_address
-from flask import Flask
+from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
-from gevent import Greenlet  # flake8: noqa
+from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
 from pathfinder.pathfinding_service import PathfindingService
+from pathfinder.utils.types import Json
 
 
 class PathfinderResource(Resource):
@@ -15,8 +16,15 @@ class PathfinderResource(Resource):
 
 
 class ChannelBalanceResource(PathfinderResource):
+    @staticmethod
+    def _validate_body(body: Json):
+        return None
+
     def put(self, channel_id: str):
-        pass
+        body = request.json()
+        error = self._validate_body(body)
+        if error is not None:
+            return error
 
 
 class ChannelFeeResource(PathfinderResource):

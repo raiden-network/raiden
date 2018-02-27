@@ -3,7 +3,6 @@
 
 """Tests for `pathfinder` package."""
 
-import pytest
 from click.testing import CliRunner
 
 from pathfinder import cli

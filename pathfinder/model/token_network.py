@@ -2,8 +2,17 @@
 
 import collections
 from itertools import islice
+from typing import List
 
 import networkx as nx
+from eth_utils import is_checksum_address
+from networkx import DiGraph
+
+
+from pathfinder.model.balance_proof import BalanceProof
+from pathfinder.model.channel_view import ChannelView
+from pathfinder.model.lock import Lock
+from pathfinder.utils.types import Address, ChannelId
 
 
 def k_shortest_paths(G, source, target, k, weight=None):
@@ -19,7 +28,7 @@ Balance = collections.namedtuple(
 )
 
 
-class TokenNetwork:
+class TokenNetwork(object):
     """
     Manages a token network for pathfinding.
 
@@ -31,62 +40,94 @@ class TokenNetwork:
     - Do we represent the state as a undirected graph or directed graph
     """
 
-    def __init__(self, token_address, contract_address, contract_deployment_block):
+    def __init__(
+        self,
+        token_address: Address,
+        contract_address: Address,
+        contract_deployment_block: int
+    ):
         """
         Initializes a new TokenNetwork.
         """
+        self.token_address = token_address
+        self.contract_address = contract_address
+        self.G = DiGraph()
 
     # Contract event listener functions
 
-    def handle_channel_opened_event(self, channel_ident, participient1, participient2):
+    def handle_channel_opened_event(self, channel_id: ChannelId):
         # TODO: do we need the timeout here?
         """
         Register the channel in the graph, add participents to graph if necessary.
 
         Corresponds to the ChannelOpened event. Called by the contract event listener.
         """
-        pass
+        view1, view2 = ChannelView.from_id(channel_id)
 
-    def handle_channel_new_balance_event(self, channel_ident, benificiary, balance):
+        assert is_checksum_address(view1.self)
+        assert is_checksum_address(view2.self)
+        assert view1.token == self.token_address
+        assert view2.token == self.token_address
+
+        self.G.add_edge(view1.self, view2.self, data=view1)
+        self.G.add_edge(view2.self, view1.self, data=view2)
+
+    def handle_channel_new_balance_event(
+        self,
+        channel_id: ChannelId,
+        receiver: Address,
+        balance: int
+    ):
         """
-        Register a new balance for the benificiary.
+        Register a new balance for the beneficiary.
 
         Corresponds to the ChannelNewBalance event. Called by the contract event listener.
         """
         pass
 
-    def handle_channel_closed_event(self, channel_ident):
+    def handle_channel_closed_event(self, channel_id: ChannelId):
         """
         Close a channel. This doesn't mean that the channel is settled yet, but it cannot transfer
         any more.
 
         Corresponds to the ChannelClosed event. Called by the contract event listener.
         """
-        pass
+        view1, view2 = ChannelView.from_id(channel_id)
 
-    def handle_channel_settled_event(self, channel_ident):
-        """
-        Settle a channel. This is nonessential as 'close_channel' has already removed the channel
-        from the graph.
+        assert is_checksum_address(view1.self)
+        assert is_checksum_address(view2.self)
+        assert view1.token == self.token_address
+        assert view2.token == self.token_address
 
-        TODO: do we need this?
-
-        Corresponds to the ChannelSettled event. Called by the contract event listener.
-        """
-        pass
+        self.G.remove_edge(view1.self, view2.self)
+        self.G.remove_edge(view2.self, view1.self)
 
     # pathfinding endpoints
 
-    def update_balance(self, channel_ident, balance_proof):
+    def update_balance(
+        self,
+        balance_proof: BalanceProof,
+        locks: List[Lock]
+    ):
         """
         Update the channel balance with the new balance proof.
         This needs to check that the balance proof is valid.
 
         Called by the public interface.
         """
-        pass
+        # FIXME: directly recover sender and receiver addresses from channel IDs
+        view1, view2 = ChannelView.from_id(balance_proof.channel_id)
+        view: ChannelView = self.G[view1.self][view2.self]['data']
 
-    def update_fee(self, channel_ident, new_fee, signature):
+        assert view.transferred_amount < balance_proof.transferred_amount
+
+        # TODO: reconstruct Merkle tree of locks and check against balance proof lock root
+        view.update_capacity(
+            transferred_amount=balance_proof.transferred_amount,
+            locked_amount=sum(lock.amount_locked for lock in locks)
+        )
+
+    def update_fee(self, channel_id: ChannelId, new_fee, signature):
         """
         Update the channel fee.
         This needs to check that the signature is valid.
