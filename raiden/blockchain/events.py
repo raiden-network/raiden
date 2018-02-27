@@ -336,6 +336,10 @@ class BlockchainEvents:
         for event in self.poll_all_event_listeners(from_block):
             yield event_to_state_change(event)
 
+    def poll_blockchain_events(self, from_block=None):
+        for event in self.poll_all_event_listeners(from_block):
+            yield decode_event(event)
+
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
             listener.filter.uninstall()
