@@ -10,6 +10,7 @@ class BalanceProof:
         self,
         nonce: int,
         transferred_amount: int,
+        locksroot: bytes,
         channel_id: ChannelId,
         token_network_contract: Address,
         additional_hash: bytes,
@@ -17,6 +18,7 @@ class BalanceProof:
     ):
         self.nonce = nonce
         self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
         self.channel_id = channel_id
         self.token_network_contract = token_network_contract
         self.additional_hash = additional_hash

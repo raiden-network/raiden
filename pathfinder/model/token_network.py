@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import collections
 from itertools import islice
 from typing import List
@@ -13,6 +12,10 @@ from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
 from pathfinder.utils.types import Address, ChannelId
+from pathfinder.utils.crypto import (
+    compute_merkle_tree,
+    get_merkle_root
+)
 
 
 def k_shortest_paths(G, source, target, k, weight=None):
@@ -121,7 +124,13 @@ class TokenNetwork:
 
         assert view.transferred_amount < balance_proof.transferred_amount
 
-        # TODO: reconstruct Merkle tree of locks and check against balance proof lock root
+        # FIXME: decide how to handle empty trees
+        reconstructed_merkle_tree = compute_merkle_tree(lock.lock_hash for lock in locks)
+        reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
+
+        if not reconstructed_merkle_root == balance_proof.locksroot:
+            raise ValueError('Supplied locks do not match the provided locksroot')
+
         view.update_capacity(
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=sum(lock.amount_locked for lock in locks)
