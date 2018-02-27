@@ -534,6 +534,20 @@ class DirectTransfer(EnvelopeMessage):
         packed.locksroot = self.locksroot
         packed.signature = self.signature
 
+    @staticmethod
+    def from_event(event):
+        balance_proof = event.balance_proof
+
+        return DirectTransfer(
+            event.identifier,
+            balance_proof.nonce,
+            event.token,
+            balance_proof.channel_address,
+            balance_proof.transferred_amount,
+            event.recipient,
+            balance_proof.locksroot,
+        )
+
     def __repr__(self):
         representation = (
             '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
@@ -597,6 +611,10 @@ class Lock(MessageHashable):
         # convert bytearray to bytes
         return bytes(self._asbytes)
 
+    @property
+    def lockhash(self):
+        return sha3(self.as_bytes)
+
     @classmethod
     def from_bytes(cls, serialized):
         packed = messages.Lock(serialized)
@@ -606,6 +624,16 @@ class Lock(MessageHashable):
             packed.expiration,
             packed.hashlock,
         )
+
+    @staticmethod
+    def from_state(state):
+        lock = Lock(
+            state.amount,
+            state.expiration,
+            state.hashlock,
+        )
+
+        return lock
 
     def __eq__(self, other):
         if isinstance(other, Lock):
@@ -851,6 +879,51 @@ class MediatedTransfer(LockedTransfer):
 
         packed.signature = self.signature
 
+    @staticmethod
+    def from_statechange(state_change):
+        balance_proof = state_change.balance_proof
+
+        lock = Lock.from_state(state_change.lock)
+
+        return MediatedTransfer(
+            state_change.identifier,
+            balance_proof.nonce,
+            state_change.token,
+            balance_proof.channel_address,
+            balance_proof.transferred_amount,
+            state_change.recipient,
+            balance_proof.locksroot,
+            lock,
+            state_change.target,
+            state_change.initiator,
+        )
+
+    @staticmethod
+    def from_event(event: 'SendMediatedTransfer') -> 'MediatedTransfer':
+        transfer = event.transfer
+        lock = transfer.lock
+        balance_proof = transfer.balance_proof
+        lock = Lock(
+            lock.amount,
+            lock.expiration,
+            lock.hashlock,
+        )
+        fee = 0
+
+        return MediatedTransfer(
+            transfer.identifier,
+            balance_proof.nonce,
+            transfer.token,
+            balance_proof.channel_address,
+            balance_proof.transferred_amount,
+            event.recipient,
+            balance_proof.locksroot,
+            lock,
+            transfer.target,
+            transfer.initiator,
+            fee,
+        )
+
 
 class RefundTransfer(MediatedTransfer):
     """ A special MediatedTransfer sent from a payee to a payer indicating that
@@ -882,6 +955,30 @@ class RefundTransfer(MediatedTransfer):
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
+
+    @staticmethod
+    def from_event(event):
+        balance_proof = event.balance_proof
+        lock = Lock(
+            event.lock.amount,
+            event.lock.expiration,
+            event.lock.hashlock,
+        )
+        fee = 0
+
+        return RefundTransfer(
+            event.identifier,
+            balance_proof.nonce,
+            event.token,
+            balance_proof.channel_address,
+            balance_proof.transferred_amount,
+            event.recipient,
+            balance_proof.locksroot,
+            lock,
+            event.target,
+            event.initiator,
+            fee,
+        )
 
 
 CMDID_TO_CLASS = {
