@@ -148,6 +148,25 @@ class ActionTransferDirect(StateChange):
         )
 
 
+class ContractReceiveChannelNew(StateChange):
+    """ A new channel was created and this node IS a participant. """
+
+    def __init__(self, channel_state):
+        self.channel_state = channel_state
+
+    def __repr__(self):
+        return '<ContractReceiveChannelNew state:{}>'.format(self.channel_state)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelNew) and
+            self.channel_state == other.channel_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelClosed(StateChange):
     """ A channel to which this node IS a participant was closed. """
 
@@ -465,6 +484,36 @@ class ContractReceiveNewRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveNewRoute) and
+            self.participant1 == other.participant1 and
+            self.participant2 == other.participant2
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractReceiveRouteNew(StateChange):
+    """ New channel was created and this node is NOT a participant. """
+
+    def __init__(self, participant1: address, participant2: address):
+        if not isinstance(participant1, address):
+            raise ValueError('participant1 must be of type address')
+
+        if not isinstance(participant2, address):
+            raise ValueError('participant2 must be of type address')
+
+        self.participant1 = participant1
+        self.participant2 = participant2
+
+    def __repr__(self):
+        return '<ContractReceiveRouteNew node1:{} node2:{}>'.format(
+            pex(self.participant1),
+            pex(self.participant2),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveRouteNew) and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2
         )
