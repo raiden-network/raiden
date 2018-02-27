@@ -30,10 +30,6 @@ EventListener = namedtuple(
     'EventListener',
     ('event_name', 'filter', 'translator', 'filter_creation_function'),
 )
-Event = namedtuple(
-    'BlockchainEvent',
-    ('originating_contract', 'event_data'),
-)
 Proxies = namedtuple(
     'Proxies',
     ('registry', 'channel_managers', 'channelmanager_nettingchannels'),
@@ -251,6 +247,18 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
         result = None
 
     return result
+
+
+class Event:
+    def __init__(self, originating_contract, event_data):
+        self.originating_contract = originating_contract
+        self.event_data = event_data
+
+    def __repr__(self):
+        return '<Event contract: {} event: {}>'.format(
+            pex(self.originating_contract),
+            self.event_data,
+        )
 
 
 class BlockchainEvents:
