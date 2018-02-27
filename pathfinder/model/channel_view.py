@@ -6,7 +6,7 @@ from eth_utils import is_checksum_address
 from pathfinder.utils.types import ChannelId, Address
 
 
-class ChannelView(object):
+class ChannelView:
     """
     Unidirectional view of a bidirectional channel.
     """

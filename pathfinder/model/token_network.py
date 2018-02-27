@@ -28,7 +28,7 @@ Balance = collections.namedtuple(
 )
 
 
-class TokenNetwork(object):
+class TokenNetwork:
     """
     Manages a token network for pathfinding.
 

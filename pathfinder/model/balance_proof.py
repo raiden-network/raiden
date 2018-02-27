@@ -2,7 +2,7 @@ from pathfinder.utils.exceptions import InvalidSignatureError
 from pathfinder.utils.types import ChannelId, Address
 
 
-class BalanceProof(object):
+class BalanceProof:
     """
     TODO: adopt final balance proof format
     """
