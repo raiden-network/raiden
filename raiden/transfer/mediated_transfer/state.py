@@ -31,8 +31,8 @@ def lockedtransfer_from_message(message):
 class InitiatorPaymentState(State):
     """ State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the
-    transfers fails or timeouts another one will started with a different
-    hashlock.
+    transfers fails or timeouts another transfer will be started with a
+    different hashlock.
     """
     __slots__ = (
         'initiator',
@@ -81,7 +81,7 @@ class InitiatorTransferState(State):
                 'transfer_description must be an instance of TransferDescriptionWithSecretState'
             )
 
-        # This is the user's description of the transfer. It does not contain a
+        # This is the users description of the transfer. It does not contain a
         # balance proof and it's not related to any channel.
         self.transfer_description = transfer_description
 
@@ -116,7 +116,7 @@ class MediatorTransferState(State):
     A mediator may manage multiple channels because of refunds, but all these
     channels will be used for the same transfer (not for different payments).
     Args:
-        hashlock (bin): The hashlock used for this transfer.
+        hashlock: The hashlock used for this transfer.
     """
 
     __slots__ = (
