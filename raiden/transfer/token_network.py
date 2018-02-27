@@ -90,7 +90,7 @@ def handle_action_transfer_direct(token_network_state, state_change, block_numbe
     else:
         failure = EventTransferSentFailed(
             state_change.identifier,
-            'Unkown partner channel',
+            'Unknown partner channel',
         )
         events = [failure]
 
