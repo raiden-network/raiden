@@ -173,7 +173,6 @@ contract TokenNetwork is Utils {
         address beneficiary,
         uint256 added_amount)
         public
-        returns (bool)
     {
         Channel storage channel = channels[channel_identifier];
 
@@ -194,8 +193,6 @@ contract TokenNetwork is Utils {
         require(token.transferFrom(msg.sender, address(this), added_amount));
 
         ChannelNewBalance(channel_identifier, beneficiary, channel.participants[beneficiary].balance);
-
-        return true;
     }
 
     /// @notice Close a channel between two parties that was used bidirectionally.
