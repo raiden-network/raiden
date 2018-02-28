@@ -35,6 +35,30 @@ class Block(StateChange):
         return not self.__eq__(other)
 
 
+class ActionCancelPayment(StateChange):
+    """ The user requests the transfer to be cancelled.
+    This state change can fail, it depends on the node's role and the current
+    state of the transfer.
+    """
+
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+    def __repr__(self):
+        return '<ActionCancelPayment identifier:{}>'.format(
+            self.identifier,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionCancelPayment) and
+            self.identifier == other.identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ActionChannelClose(StateChange):
     """ User is closing an existing channel. """
 
