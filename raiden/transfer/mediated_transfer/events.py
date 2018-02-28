@@ -143,6 +143,61 @@ class SendRevealSecret(Event):
         return not self.__eq__(other)
 
 
+class SendRevealSecret2(Event):
+    """ Sends a RevealSecret to another node.
+    This event is used once the secret is known locally and an action must be
+    performed on the receiver:
+        - For receivers in the payee role, it informs the node that the lock has
+            been released and the token can be withdrawn, either on-chain or
+            off-chain.
+        - For receivers in the payer role, it tells the payer that the payee
+            knows the secret and wants to withdraw the lock off-chain, so the payer
+            may unlock the lock and send an up-to-date balance proof to the payee,
+            avoiding on-chain payments which would require the channel to be
+            closed.
+    For any mediated transfer:
+        - The initiator will only perform the payer role.
+        - The target will only perform the payee role.
+        - The mediators will have `n` channels at the payee role and `n` at the
+          payer role, where `n` is equal to `1 + number_of_refunds`.
+    Note:
+        The payee must only update its local balance once the payer sends an
+        up-to-date balance-proof message. This is a requirement for keeping the
+        nodes synchronized. The reveal secret message flows from the receiver
+        to the sender, so when the secret is learned it is not yet time to
+        update the balance.
+    """
+    def __init__(self, identifier, secret, token, receiver):
+        hashlock = sha3(secret)
+
+        self.identifier = identifier
+        self.secret = secret
+        self.hashlock = hashlock
+        self.token = token
+        self.receiver = receiver
+
+    def __str__(self):
+        return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+            pex(self.token),
+            pex(self.receiver),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendRevealSecret) and
+            self.identifier == other.identifier and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock and
+            self.token == other.token and
+            self.receiver == other.receiver
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class SendBalanceProof(Event):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to withdraw.
