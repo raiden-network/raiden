@@ -207,7 +207,7 @@ def retry_with_recovery(
             stop_or_unhealthy.clear()
 
             if event_stop.is_set():
-                return
+                return acknowledged
 
         acknowledged = retry(
             protocol,
@@ -755,7 +755,8 @@ class RaidenProtocol:
         # Repeat the ACK if the message has been handled before
         echohash = sha3(data + self.raiden.address)
         if echohash in self.receivedhashes_to_acks:
-            return self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
+            self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
+            return
 
         message = decode(data)
 
