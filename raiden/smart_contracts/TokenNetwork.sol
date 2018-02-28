@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.17;
 
 import "./Token.sol";
 import "./Utils.sol";

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.17;
 
 contract Utils {
     string constant public contract_version = "0.3._";
