@@ -99,12 +99,12 @@ contract TokenNetwork is Utils {
     }
 
     modifier stillTimeout(uint256 channel_identifier) {
-        require(closing_requests[channel_identifier].settle_block_number > block.number);
+        require(closing_requests[channel_identifier].settle_block_number >= block.number);
         _;
     }
 
     modifier timeoutOver(uint256 channel_identifier) {
-        require(closing_requests[channel_identifier].settle_block_number <= block.number);
+        require(closing_requests[channel_identifier].settle_block_number < block.number);
         _;
     }
 
