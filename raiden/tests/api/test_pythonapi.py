@@ -3,7 +3,7 @@ import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidState
-from raiden.network.protocol import (
+from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
 )

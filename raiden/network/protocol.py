@@ -27,13 +27,14 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     RaidenShuttingDown,
 )
-from raiden.constants import (
-    UDP_MAX_MESSAGE_SIZE,
-)
-from raiden.settings import (
-    CACHE_TTL,
-)
+from raiden.constants import UDP_MAX_MESSAGE_SIZE
 from raiden.messages import decode, Ack, Ping, SignedMessage
+from raiden.settings import CACHE_TTL
+from raiden.transfer.state import (
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNKNOWN,
+    NODE_NETWORK_UNREACHABLE,
+)
 from raiden.utils import isaddress, sha3, pex
 from raiden.utils.notifying_queue import NotifyingQueue
 
@@ -52,10 +53,6 @@ HealthEvents = namedtuple('HealthEvents', (
     'event_healthy',
     'event_unhealthy',
 ))
-
-NODE_NETWORK_UNKNOWN = 'unknown'
-NODE_NETWORK_UNREACHABLE = 'unreachable'
-NODE_NETWORK_REACHABLE = 'reachable'
 
 # GOALS:
 # - Each netting channel must have the messages processed in-order, the

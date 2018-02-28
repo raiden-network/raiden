@@ -36,6 +36,10 @@ CHANNEL_AFTER_CLOSE_STATES = (
     CHANNEL_STATE_SETTLED,
 )
 
+NODE_NETWORK_UNKNOWN = 'unknown'
+NODE_NETWORK_UNREACHABLE = 'unreachable'
+NODE_NETWORK_REACHABLE = 'reachable'
+
 
 def balanceproof_from_envelope(envelope_message):
     return BalanceProofSignedState(
