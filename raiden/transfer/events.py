@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import Event
 from raiden.utils import pex
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -131,11 +132,16 @@ class EventTransferSentSuccess(Event):
         self.amount = amount
         self.target = target
 
-    def __eq__(self, other):
-        if not isinstance(other, EventTransferSentSuccess):
-            return False
+    def __repr__(self):
+        return '<EventTransferSentSuccess identifier:{} amount:{} target:{}>'.format(
+            self.identifier,
+            self.amount,
+            pex(self.target),
+        )
 
+    def __eq__(self, other):
         return (
+            isinstance(other, EventTransferSentSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
             self.target == other.target
@@ -157,11 +163,15 @@ class EventTransferSentFailed(Event):
         self.identifier = identifier
         self.reason = reason
 
-    def __eq__(self, other):
-        if not isinstance(other, EventTransferSentFailed):
-            return False
+    def __repr__(self):
+        return '<EventTransferSentFailed id:{} reason:{}>'.format(
+            self.identifier,
+            self.reason,
+        )
 
+    def __eq__(self, other):
         return (
+            isinstance(other, EventTransferSentFailed) and
             self.identifier == other.identifier and
             self.reason == other.reason
         )
@@ -181,15 +191,26 @@ class EventTransferReceivedSuccess(Event):
     """
 
     def __init__(self, identifier, amount, initiator):
+        if amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if amount > UINT256_MAX:
+            raise ValueError('transferred_amount is too large')
+
         self.identifier = identifier
         self.amount = amount
         self.initiator = initiator
 
-    def __eq__(self, other):
-        if not isinstance(other, EventTransferReceivedSuccess):
-            return False
+    def __repr__(self):
+        return '<EventTransferReceivedSuccess identifier:{} amount:{} initiator:{}>'.format(
+            self.identifier,
+            self.amount,
+            pex(self.initiator),
+        )
 
+    def __eq__(self, other):
         return (
+            isinstance(other, EventTransferReceivedSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
             self.initiator == other.initiator
