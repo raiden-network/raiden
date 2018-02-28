@@ -4,21 +4,26 @@ import "./Token.sol";
 import "./Utils.sol";
 
 contract TokenNetwork is Utils {
+
+    /*
+     *  Data structures
+     */
+
     string constant public contract_version = "0.3._";
 
-    // Instance of the token used as digital currency by the channels.
+    // Instance of the token used as digital currency by the channels
     Token public token;
 
-    // Each channel identifier is a uint
+    // Channel identifier is a uint, incremented after each new channel
     mapping (uint => Channel) public channels;
-    uint public last_channel_index;
+
+    // Used for determining the next channel identifier
+    // Start from 1 instead of 0, otherwise the first channel will have an additional
+    // 15000 gas cost than the rest
+    uint public last_channel_index = 1;
 
     // The ClosingRequest identfier must be THE SAME as the channel identifier from `channels`
     mapping (uint => ClosingRequest) public closing_requests;
-
-    /*
-     *  Data Structures
-     */
 
     struct Participant
     {
@@ -80,7 +85,7 @@ contract TokenNetwork is Utils {
 
     event ChannelUnlocked(uint channel_identifier, address participant, uint transferred_amount);
 
-    event TransferUpdated(uint channel_identifier, address participant);
+    event TransferUpdated(uint channel_identifier, address caller);
 
     event ChannelSettled(uint channel_identifier);
 

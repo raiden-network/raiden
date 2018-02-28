@@ -5,16 +5,29 @@ import "./TokenNetwork.sol";
 import "./Utils.sol";
 
 contract TokenNetworkRegistry is Utils {
+
+    /*
+     *  Data structures
+     */
+
     string constant public contract_version = "0.3._";
 
     // Token address => TokenNetwork address
     mapping(address => address) public token_to_token_networks;
 
+    /*
+     *  Events
+     */
+
     event TokenNetworkCreated(address token_address, address token_network_address);
+
+    /*
+     *  External Functions
+     */
 
     function createERC20TokenNetwork(
         address _token_address)
-        public
+        external
         returns (address token_network_address)
     {
         require(_token_address != 0x0);
@@ -22,7 +35,6 @@ contract TokenNetworkRegistry is Utils {
         require(token_to_token_networks[_token_address] == 0x0);
 
         // Check if the contract is indeed a token contract
-        // TODO we might want to also check for the transfer function/ERC that we support
         require(Token(_token_address).totalSupply() > 0);
 
         token_network_address = new TokenNetwork(_token_address);
