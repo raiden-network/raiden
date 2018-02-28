@@ -346,7 +346,6 @@ contract TokenNetwork is Utils {
         // Finally change the amount of owed tokens
         // This implementation allows for each transfer to be set only once, so
         // it's safe to update the transferred_amount in place.
-        //
         partner_state.transferred_amount += locked_amount;
 
         ChannelUnlocked(channel_identifier, partner, partner_state.transferred_amount);
@@ -396,6 +395,8 @@ contract TokenNetwork is Utils {
         participant2_amount = total_deposit - participant1_amount;
 
         // Remove the channel data from storage
+        delete channels[channel_identifier].participants[participant1];
+        delete channels[channel_identifier].participants[participant2];
         delete channels[channel_identifier];
         delete closing_requests[channel_identifier];
 
