@@ -156,6 +156,43 @@ class ReceiveSecretReveal(StateChange):
         return not self.__eq__(other)
 
 
+class ReceiveTransferRefundCancelRoute(StateChange):
+    """ A RefundTransfer message received by initiator will cancel the current
+    route.
+    """
+
+    def __init__(self, sender, routes, transfer, secret):
+        if not isinstance(transfer, LockedTransferState):
+            raise ValueError('transfer must be an instance of LockedTransferState')
+
+        hashlock = sha3(secret)
+
+        self.sender = sender
+        self.transfer = transfer
+        self.routes = routes
+        self.hashlock = hashlock
+        self.secret = secret
+
+    def __str__(self):
+        return '<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>'.format(
+            pex(self.sender),
+            self.transfer
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveTransferRefundCancelRoute) and
+            self.sender == other.sender and
+            self.transfer == other.transfer and
+            self.routes == other.routes and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
     def __init__(self, sender, transfer):
