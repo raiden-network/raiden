@@ -48,6 +48,14 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
+def lockstate_from_lock(lock):
+    return HashTimeLockState(
+        lock.amount,
+        lock.expiration,
+        lock.hashlock,
+    )
+
+
 class NodeState(State):
     """ Umbrella object that stores all the node state.
     For each registry smart contract there must be a payment network. Within the
