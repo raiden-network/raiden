@@ -315,7 +315,7 @@ contract TokenNetwork is Utils {
         bytes32 hashlock,
         bytes merkle_proof,
         bytes32 secret)
-        isClosed(channel_identifier)
+        stillTimeout(channel_identifier)
         public
     {
         bytes32 key;
