@@ -743,3 +743,106 @@ class MediationPairState(State):
             payee_transfer=self.payee_transfer,
             payee_state=self.payee_state
         )
+
+
+class MediationPairState2(State):
+    """ State for a mediated transfer.
+    A mediator will pay payee node knowing that there is a payer node to cover
+    the token expenses. This state keeps track of the routes and transfer for
+    the payer and payee, and the current state of the payment.
+    """
+
+    __slots__ = (
+        'payee_address',
+        'payee_transfer',
+        'payee_state',
+        'payer_transfer',
+        'payer_state',
+    )
+
+    # payee_pending:
+    #   Initial state.
+    #
+    # payee_secret_revealed:
+    #   The payee is following the raiden protocol and has sent a SecretReveal.
+    #
+    # payee_refund_withdraw:
+    #   The corresponding refund transfer was withdrawn on-chain, the payee has
+    #   /not/ withdrawn the lock yet, it only learned the secret through the
+    #   blockchain.
+    #   Note: This state is reachable only if there is a refund transfer, that
+    #   is represented by a different MediationPairState, and the refund
+    #   transfer is at 'payer_contract_withdraw'.
+    #
+    # payee_contract_withdraw:
+    #   The payee received the token on-chain. A transition to this state is
+    #   valid from all but the `payee_expired` state.
+    #
+    # payee_balance_proof:
+    #   This node has sent a SendBalanceProof to the payee with the balance
+    #   updated.
+    #
+    # payee_expired:
+    #   The lock has expired.
+    valid_payee_states = (
+        'payee_pending',
+        'payee_secret_revealed',
+        'payee_refund_withdraw',
+        'payee_contract_withdraw',
+        'payee_balance_proof',
+        'payee_expired',
+    )
+
+    valid_payer_states = (
+        'payer_pending',
+        'payer_secret_revealed',    # SendRevealSecret was sent
+        'payer_waiting_close',      # ContractSendChannelClose was sent
+        'payer_waiting_withdraw',   # ContractSendWithdraw was sent
+        'payer_contract_withdraw',  # ContractChannelReceiveWithdraw for the above send received
+        'payer_balance_proof',      # ReceiveBalanceProof was received
+        'payer_expired',            # None of the above happened and the lock expired
+    )
+
+    def __init__(
+            self,
+            payer_transfer: LockedTransferState,
+            payee_address: typing.address,
+            payee_transfer: LockedTransferUnsignedState):
+
+        if not isinstance(payer_transfer, LockedTransferState):
+            raise ValueError('payer_transfer must be a LockedTransferState instance')
+
+        if not isinstance(payee_address, typing.address):
+            raise ValueError('payee_address must be an address')
+
+        if not isinstance(payee_transfer, LockedTransferUnsignedState):
+            raise ValueError('payee_transfer must be a LockedTransferUnsignedState instance')
+
+        self.payer_transfer = payer_transfer
+        self.payee_address = payee_address
+        self.payee_transfer = payee_transfer
+
+        # these transfers are settled on different payment channels. These are
+        # the states of each mediated transfer in respect to each channel.
+        self.payer_state = 'payer_pending'
+        self.payee_state = 'payee_pending'
+
+    def __repr__(self):
+        return '<MediationPairState payee:{} {} payer:{}>'.format(
+            self.payer_transfer,
+            pex(self.payee_address),
+            self.payee_transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MediationPairState) and
+            self.payee_address == other.payee_address and
+            self.payee_transfer == other.payee_transfer and
+            self.payee_state == other.payee_state and
+            self.payer_transfer == other.payer_transfer and
+            self.payer_state == other.payer_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
