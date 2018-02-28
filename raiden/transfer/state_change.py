@@ -2,6 +2,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import (
+    BalanceProofSignedState,
     PaymentNetworkState,
     TokenNetworkState,
     RouteState,
@@ -590,6 +591,35 @@ class ReceiveTransferDirect(StateChange):
             self.amount == other.amount and
             self.token_address == other.token_address and
             self.sender == other.sender
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ReceiveUnlock(StateChange):
+    def __init__(self, secret, balance_proof: BalanceProofSignedState):
+        if not isinstance(balance_proof, BalanceProofSignedState):
+            raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
+
+        hashlock = sha3(secret)
+
+        self.secret = secret
+        self.hashlock = hashlock
+        self.balance_proof = balance_proof
+
+    def __str(self):
+        return '<ReceiveUnlock hashlock: {} balance_proof: {}>'.format(
+            pex(self.hashlock),
+            self.balance_proof,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveUnlock) and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock and
+            self.balance_proof == other.balance_proof
         )
 
     def __ne__(self, other):
