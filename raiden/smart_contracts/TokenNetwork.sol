@@ -183,7 +183,6 @@ contract TokenNetwork is Utils {
         require(closing_requests[channel_identifier].settle_block_number == 0);
 
         // Sender should have enough balance
-        // TODO: is this necessary? token.transfer should fail anyway if implemented correctly
         require(token.balanceOf(msg.sender) >= added_amount);
 
         // Change the state
