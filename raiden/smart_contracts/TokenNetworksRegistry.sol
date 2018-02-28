@@ -30,15 +30,11 @@ contract TokenNetworkRegistry is Utils {
         external
         returns (address token_network_address)
     {
-        require(_token_address != 0x0);
-        require(contractExists(_token_address));
         require(token_to_token_networks[_token_address] == 0x0);
 
-        // Check if the contract is indeed a token contract
-        require(Token(_token_address).totalSupply() > 0);
+        // Token contract checks are in the corresponding TokenNetwork contract
 
         token_network_address = new TokenNetwork(_token_address);
-
         TokenNetworkCreated(_token_address, token_network_address);
 
         return token_network_address;
