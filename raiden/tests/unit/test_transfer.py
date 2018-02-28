@@ -42,7 +42,7 @@ from raiden.utils import (
 )
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
-from raiden.network.protocol import (
+from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
