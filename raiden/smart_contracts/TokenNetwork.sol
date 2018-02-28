@@ -329,7 +329,7 @@ contract TokenNetwork is Utils {
 
         // The lock must not have expired, it does not matter how far in the
         // future it would have expired
-        require(expiration_block >= block.number);
+        require(expiration_block > block.number);
         require(hashlock == keccak256(secret));
 
         locked_encoded = encodeLock(expiration_block, locked_amount, hashlock);
