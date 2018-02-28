@@ -5,6 +5,7 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
+    LockedTransferUnsignedState,
     MediationPairState,
     MediatorState,
 )
@@ -108,6 +109,36 @@ def is_valid_refund(original_transfer, refund_sender, refund_transfer):
     )
 
 
+def is_valid_refund2(
+        original_transfer: LockedTransferUnsignedState,
+        refund_transfer: LockedTransferState):
+    """ True if the refund transfer matches the original transfer. """
+    refund_transfer_sender = refund_transfer.balance_proof.sender
+
+    # Ignore a refund from the target
+    if refund_transfer_sender == original_transfer.target:
+        return False
+
+    return (
+        original_transfer.identifier == refund_transfer.identifier and
+        original_transfer.lock.amount == refund_transfer.lock.amount and
+        original_transfer.lock.hashlock == refund_transfer.lock.hashlock and
+        original_transfer.target == refund_transfer.target and
+
+        # The refund transfer is not tied to the other direction of the same
+        # channel, it may reach this node through a different route depending
+        # on the path finding strategy
+        # original_receiver == refund_transfer_sender and
+        original_transfer.token == refund_transfer.token and
+
+        # A larger-or-equal expiration is byzantine behavior that favors the
+        # receiver node, neverthless it's being ignored since the only reason
+        # for the other node to use an invalid expiration is to play the
+        # protocol.
+        original_transfer.lock.expiration > refund_transfer.lock.expiration
+    )
+
+
 def is_channel_close_needed(transfer_pair, block_number):
     """ True if this node needs to close the channel to withdraw on-chain.
 
@@ -179,6 +210,40 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
     safe_payer_timeout = min(
         blocks_until_settlement,
         payer_transfer.expiration - block_number,
+    )
+    timeout_blocks = safe_payer_timeout - TRANSIT_BLOCKS
+
+    return timeout_blocks
+
+
+def get_timeout_blocks2(settle_timeout, closed_block_number, payer_lock_expiration, block_number):
+    """ Return the timeout blocks, it's the base value from which the payee's
+    lock timeout must be computed.
+    The payee lock timeout is crucial for safety of the mediated transfer, the
+    value must be chosen so that the payee hop is forced to reveal the secret
+    with sufficient time for this node to claim the received lock from the
+    payer hop.
+    The timeout blocks must be the smallest of:
+    - payer_lock_expiration: The payer lock expiration, to force the payee
+      to reveal the secret before the lock expires.
+    - settle_timeout: Lock expiration must be lower than
+      the settlement period since the lock cannot be claimed after the channel is
+      settled.
+    - closed_block_number: If the channel is closed then the settlement
+      period is running and the lock expiration must be lower than number of
+      blocks left.
+    """
+    blocks_until_settlement = settle_timeout
+
+    if closed_block_number is not None:
+        assert block_number >= closed_block_number > 0
+
+        elapsed_blocks = block_number - closed_block_number
+        blocks_until_settlement -= elapsed_blocks
+
+    safe_payer_timeout = min(
+        blocks_until_settlement,
+        payer_lock_expiration - block_number,
     )
     timeout_blocks = safe_payer_timeout - TRANSIT_BLOCKS
 
