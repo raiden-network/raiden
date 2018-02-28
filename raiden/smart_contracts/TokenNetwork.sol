@@ -22,7 +22,7 @@ contract TokenNetwork is Utils {
     // 15000 gas cost than the rest
     uint256 public last_channel_index = 1;
 
-    // The ClosingRequest identfier must be THE SAME as the channel identifier from `channels`
+    // The ClosingRequest identfier must be THE SAME as the channel identifier (mapping key) from `channels`
     mapping (uint256 => ClosingRequest) public closing_requests;
 
     struct Participant
