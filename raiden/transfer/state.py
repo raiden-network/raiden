@@ -6,6 +6,7 @@ from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State
+from raiden.transfer.merkle_tree import merkleroot
 from raiden.utils import lpex, pex, sha3, typing
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -825,6 +826,11 @@ class TransactionExecutionStatus(State):
 class MerkleTreeState(State):
     def __init__(self, layers):
         self.layers = layers
+
+    def __repr__(self):
+        return '<MerkleTreeState root:{}>'.format(
+            pex(merkleroot(self)),
+        )
 
     def __eq__(self, other):
         if isinstance(other, MerkleTreeState):
