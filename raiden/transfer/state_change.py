@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import (
     PaymentNetworkState,
@@ -7,27 +8,26 @@ from raiden.transfer.state import (
 )
 from raiden.utils import pex, sha3
 from raiden.utils.typing import address
-# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
 class Block(StateChange):
     """ Transition used when a new block is mined.
-
     Args:
         block_number: The current block_number.
     """
 
-    def __init__(self, block_number):
+    def __init__(self, block_number: int):
+        if not isinstance(block_number, int):
+            raise ValueError('block_number must be int')
+
         self.block_number = block_number
 
     def __repr__(self):
         return '<Block {}>'.format(self.block_number)
 
     def __eq__(self, other):
-        if not isinstance(other, Block):
-            return False
-
         return (
+            isinstance(other, Block) and
             self.block_number == other.block_number
         )
 
