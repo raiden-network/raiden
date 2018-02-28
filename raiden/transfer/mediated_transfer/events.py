@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-arguments,too-few-public-methods
 from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
-from raiden.utils import pex
-# pylint: disable=too-many-arguments,too-few-public-methods
+from raiden.utils import pex, sha3
 
 
 def refund_from_sendmediated(send_mediatedtransfer_event):
@@ -65,7 +65,7 @@ class SendMediatedTransfer2(Event):
         self.transfer = transfer
         self.recipient = recipient
 
-    def __str__(self):
+    def __repr__(self):
         return '<SendMediatedTransfer transfer:{} recipient:{}>'.format(
             self.transfer,
             pex(self.recipient),
@@ -112,11 +112,35 @@ class SendRevealSecret(Event):
         update the balance.
     """
     def __init__(self, identifier, secret, token, receiver, sender):
+        hashlock = sha3(secret)
+
         self.identifier = identifier
         self.secret = secret
+        self.hashlock = hashlock
         self.token = token
         self.receiver = receiver
         self.sender = sender
+
+    def __str__(self):
+        return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+            pex(self.token),
+            pex(self.receiver),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendRevealSecret) and
+            self.identifier == other.identifier and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock and
+            self.token == other.token and
+            self.receiver == other.receiver
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class SendBalanceProof(Event):
@@ -167,6 +191,27 @@ class SendBalanceProof2(Event):
         self.secret = secret
         self.balance_proof = balance_proof
 
+    def __repr__(self):
+        return '<SendBalanceProof id: {} token: {} receiver: {} balance_proof: {}>'.format(
+            self.identifier,
+            pex(self.token),
+            pex(self.receiver),
+            self.balance_proof,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendBalanceProof2) and
+            self.identifier == other.identifier and
+            self.token == other.token and
+            self.receiver == other.receiver and
+            self.secret == other.secret and
+            self.balance_proof == other.balance_proof
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class SendSecretRequest(Event):
     """ Event used by a target node to request the secret from the initiator
@@ -177,6 +222,26 @@ class SendSecretRequest(Event):
         self.amount = amount
         self.hashlock = hashlock
         self.receiver = receiver
+
+    def __repr__(self):
+        return '<SendSecretRequest id:{} amount:{} hashlock:{} receiver:{}>'.format(
+            self.identifier,
+            self.amount,
+            pex(self.hashlock),
+            pex(self.receiver),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendSecretRequest) and
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.hashlock == other.hashlock and
+            self.receiver == other.receiver
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class SendRefundTransfer(Event):
@@ -292,6 +357,22 @@ class EventUnlockSuccess(Event):
         self.identifier = identifier
         self.hashlock = hashlock
 
+    def __repr__(self):
+        return '<EventUnlockSuccess id:{} hashlock:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventUnlockSuccess) and
+            self.identifier == other.identifier and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
@@ -300,12 +381,45 @@ class EventUnlockFailed(Event):
         self.hashlock = hashlock
         self.reason = reason
 
+    def __repr__(self):
+        return '<EventUnlockFailed id:{} hashlock:{} reason:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+            self.reason,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventUnlockFailed) and
+            self.identifier == other.identifier and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class EventWithdrawSuccess(Event):
     """ Event emitted when a lock withdraw succeded. """
     def __init__(self, identifier, hashlock):
         self.identifier = identifier
         self.hashlock = hashlock
+
+    def __repr__(self):
+        return '<EventWithdrawSuccess id:{} hashlock:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventWithdrawSuccess) and
+            self.identifier == other.identifier and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class EventWithdrawFailed(Event):
@@ -314,3 +428,20 @@ class EventWithdrawFailed(Event):
         self.identifier = identifier
         self.hashlock = hashlock
         self.reason = reason
+
+    def __repr__(self):
+        return '<EventWithdrawFailed id:{} hashlock:{} reason:{}>'.format(
+            self.identifier,
+            pex(self.hashlock),
+            self.reason,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventWithdrawFailed) and
+            self.identifier == other.identifier and
+            self.hashlock == other.hashlock
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

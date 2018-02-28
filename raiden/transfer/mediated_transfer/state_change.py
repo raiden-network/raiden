@@ -2,6 +2,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 from raiden.transfer.architecture import StateChange
+from raiden.utils import pex, sha3
 from .state import LockedTransferState
 
 
@@ -106,12 +107,53 @@ class ReceiveSecretRequest(StateChange):
         self.sender = sender
         self.revealsecret = None
 
+    def __repr__(self):
+        return '<ReceiveSecretRequest id:{} amount:{} hashlock:{} sender:{}>'.format(
+            self.identifier,
+            self.amount,
+            pex(self.hashlock),
+            pex(self.sender),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveSecretRequest) and
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.hashlock == other.hashlock and
+            self.sender == other.sender and
+            self.revealsecret == other.revealsecret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
     def __init__(self, secret, sender):
+        hashlock = sha3(secret)
+
         self.secret = secret
+        self.hashlock = hashlock
         self.sender = sender
+
+    def __repr__(self):
+        return '<ReceiveSecretReveal hashlock:{} sender:{}>'.format(
+            pex(self.hashlock),
+            pex(self.sender),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveSecretReveal) and
+            self.secret == other.secret and
+            self.hashlock == other.hashlock and
+            self.sender == other.sender
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ReceiveTransferRefund(StateChange):

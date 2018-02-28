@@ -20,6 +20,9 @@ class Block(StateChange):
     def __init__(self, block_number):
         self.block_number = block_number
 
+    def __repr__(self):
+        return '<Block {}>'.format(self.block_number)
+
     def __eq__(self, other):
         if not isinstance(other, Block):
             return False
@@ -30,9 +33,6 @@ class Block(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __repr__(self):
-        return 'Block({})'.format(self.block_number)
 
 
 class ActionChannelClose(StateChange):
@@ -91,6 +91,11 @@ class ActionCancelTransfer(StateChange):
     def __init__(self, identifier):
         self.identifier = identifier
 
+    def __repr__(self):
+        return 'ActionCancelTransfer(identifier:{})'.format(
+            self.identifier,
+        )
+
     def __eq__(self, other):
         if not isinstance(other, ActionCancelTransfer):
             return False
@@ -101,11 +106,6 @@ class ActionCancelTransfer(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __repr__(self):
-        return 'ActionCancelTransfer(identifier:{})'.format(
-            self.identifier,
-        )
 
 
 class ActionTransferDirect(StateChange):
@@ -121,6 +121,18 @@ class ActionTransferDirect(StateChange):
         self.token_address = token_address
         self.node_address = node_address
 
+    def __repr__(self):
+        return (
+            'ActionTransferDirect('
+            'identifier:{} amount:{} token_address:{} node_address:{}'
+            ')'
+        ).format(
+            self.identifier,
+            self.amount,
+            self.token_address,
+            self.node_address,
+        )
+
     def __eq__(self, other):
         if not isinstance(other, ActionTransferDirect):
             return False
@@ -134,18 +146,6 @@ class ActionTransferDirect(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __repr__(self):
-        return (
-            'ActionTransferDirect('
-            'identifier:{} amount:{} token_address:{} node_address:{}'
-            ')'
-        ).format(
-            self.identifier,
-            self.amount,
-            self.token_address,
-            self.node_address,
-        )
 
 
 class ContractReceiveChannelNew(StateChange):
@@ -535,6 +535,18 @@ class ReceiveTransferDirect(StateChange):
         self.token_address = token_address
         self.sender = sender
 
+    def __repr__(self):
+        return (
+            'ReceiveTransferDirect('
+            'identifier:{} amount:{} token_address:{} sender:{}'
+            ')'
+        ).format(
+            self.identifier,
+            self.amount,
+            self.token_address,
+            self.sender,
+        )
+
     def __eq__(self, other):
         if not isinstance(other, ReceiveTransferDirect):
             return False
@@ -548,15 +560,3 @@ class ReceiveTransferDirect(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __repr__(self):
-        return (
-            'ReceiveTransferDirect('
-            'identifier:{} amount:{} token_address:{} sender:{}'
-            ')'
-        ).format(
-            self.identifier,
-            self.amount,
-            self.token_address,
-            self.sender,
-        )
