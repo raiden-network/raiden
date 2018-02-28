@@ -2,9 +2,8 @@ pragma solidity ^0.4.17;
 
 import "./Token.sol";
 import "./TokenNetwork.sol";
-import "./Utils.sol";
 
-contract TokenNetworkRegistry is Utils {
+contract TokenNetworkRegistry {
 
     /*
      *  Data structures
