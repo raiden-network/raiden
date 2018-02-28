@@ -14,16 +14,16 @@ contract TokenNetwork is Utils {
     // Instance of the token used as digital currency by the channels
     Token public token;
 
-    // Channel identifier is a uint, incremented after each new channel
-    mapping (uint => Channel) public channels;
+    // Channel identifier is a uint256, incremented after each new channel
+    mapping (uint256 => Channel) public channels;
 
     // Used for determining the next channel identifier
     // Start from 1 instead of 0, otherwise the first channel will have an additional
     // 15000 gas cost than the rest
-    uint public last_channel_index = 1;
+    uint256 public last_channel_index = 1;
 
     // The ClosingRequest identfier must be THE SAME as the channel identifier from `channels`
-    mapping (uint => ClosingRequest) public closing_requests;
+    mapping (uint256 => ClosingRequest) public closing_requests;
 
     struct Participant
     {
@@ -57,7 +57,7 @@ contract TokenNetwork is Utils {
     struct Channel {
         // We also use the settle_timeout to verify that
         // the channel is open
-        uint settle_timeout;
+        uint256 settle_timeout;
         mapping(address => Participant) participants;
     }
 
@@ -65,7 +65,7 @@ contract TokenNetwork is Utils {
         address closing_address;
 
         // Block number at which the settlement window ends.
-        uint settle_block_number;
+        uint256 settle_block_number;
     }
 
     /*
@@ -73,43 +73,43 @@ contract TokenNetwork is Utils {
      */
 
     event ChannelOpened(
-        uint channel_identifier,
+        uint256 channel_identifier,
         address participant1,
         address participant2,
-        uint settle_timeout
+        uint256 settle_timeout
     );
 
-    event ChannelNewBalance(uint channel_identifier, address participant, uint balance);
+    event ChannelNewBalance(uint256 channel_identifier, address participant, uint256 balance);
 
-    event ChannelClosed(uint channel_identifier, address closing_address);
+    event ChannelClosed(uint256 channel_identifier, address closing_address);
 
-    event ChannelUnlocked(uint channel_identifier, address participant, uint transferred_amount);
+    event ChannelUnlocked(uint256 channel_identifier, address participant, uint256 transferred_amount);
 
-    event TransferUpdated(uint channel_identifier, address caller);
+    event TransferUpdated(uint256 channel_identifier, address caller);
 
-    event ChannelSettled(uint channel_identifier);
+    event ChannelSettled(uint256 channel_identifier);
 
     /*
      * Modifiers
      */
 
-    modifier isClosed(uint channel_identifier) {
+    modifier isClosed(uint256 channel_identifier) {
         require(closing_requests[channel_identifier].settle_block_number > 0);
         _;
     }
 
-    modifier stillTimeout(uint channel_identifier) {
+    modifier stillTimeout(uint256 channel_identifier) {
         require(closing_requests[channel_identifier].settle_block_number > block.number);
         _;
     }
 
-    modifier timeoutOver(uint channel_identifier) {
+    modifier timeoutOver(uint256 channel_identifier) {
         require(closing_requests[channel_identifier].settle_block_number <= block.number);
         _;
     }
 
     // Note: we use the settleTimeout to check if the channel is open. It must always be > 0.
-    modifier settleTimeoutValid(uint timeout) {
+    modifier settleTimeoutValid(uint256 timeout) {
         require(timeout >= 6 && timeout <= 2700000);
         _;
     }
@@ -137,10 +137,10 @@ contract TokenNetwork is Utils {
     function openChannel(
         address participant1,
         address participant2,
-        uint settle_timeout)
+        uint256 settle_timeout)
         settleTimeoutValid(settle_timeout)
         public
-        returns (uint)
+        returns (uint256)
     {
         require(participant1 != 0x0);
         require(participant2 != 0x0);
@@ -169,7 +169,7 @@ contract TokenNetwork is Utils {
     /// @notice Deposit tokens to an already existent channel.
     /// Can be called by anyone.
     function deposit(
-        uint channel_identifier,
+        uint256 channel_identifier,
         address beneficiary,
         uint256 added_amount)
         public
@@ -208,7 +208,7 @@ contract TokenNetwork is Utils {
     /// @param additional_hash Computed from the message. Used for message authentication.
     /// @param signature Partner's signature of the balance proof data.
     function closeChannel(
-        uint channel_identifier,
+        uint256 channel_identifier,
         uint64 nonce,
         uint256 transferred_amount,
         bytes32 locksroot,
@@ -261,7 +261,7 @@ contract TokenNetwork is Utils {
     /// to provide the last balance proof, which modifies the closing participant's state.
     /// Can be called multiple times, by anyone.
     function updateTransfer(
-        uint channel_identifier,
+        uint256 channel_identifier,
         uint64 nonce,
         uint256 transferred_amount,
         bytes32 locksroot,
@@ -308,10 +308,10 @@ contract TokenNetwork is Utils {
     /// with the transfer value. A lock can be unlocked only once per participant.
     // Anyone can call unlock a transfer on behalf of a channel participant.
     function unlock(
-        uint channel_identifier,
+        uint256 channel_identifier,
         address partner,
         uint64 expiration_block,
-        uint amount,
+        uint256 locked_amount,
         bytes32 hashlock,
         bytes merkle_proof,
         bytes32 secret)
@@ -335,7 +335,7 @@ contract TokenNetwork is Utils {
         require(expiration_block >= block.number);
         require(hashlock == keccak256(secret));
 
-        locked_encoded = encodeLock(expiration_block, amount, hashlock);
+        locked_encoded = encodeLock(expiration_block, locked_amount, hashlock);
         computed_locksroot = computeMerkleRoot(locked_encoded, merkle_proof);
 
         // Note that unlocked locks have to be re-unlocked after a `transferUpdate` with a
@@ -351,23 +351,23 @@ contract TokenNetwork is Utils {
         // This implementation allows for each transfer to be set only once, so
         // it's safe to update the transferred_amount in place.
         //
-        partner_state.transferred_amount += amount;
+        partner_state.transferred_amount += locked_amount;
 
         ChannelUnlocked(channel_identifier, partner, partner_state.transferred_amount);
     }
 
     /// @notice Settles the balance between the two parties
     function settleChannel(
-        uint channel_identifier,
+        uint256 channel_identifier,
         address participant1,
         address participant2)
         isClosed(channel_identifier)
         timeoutOver(channel_identifier)
         public
     {
-        uint participant1_amount;
-        uint participant2_amount;
-        uint total_deposit;
+        uint256 participant1_amount;
+        uint256 participant2_amount;
+        uint256 total_deposit;
 
         Participant memory participant1_state = channels[channel_identifier].participants[participant1];
         Participant memory participant2_state = channels[channel_identifier].participants[participant2];
@@ -412,7 +412,7 @@ contract TokenNetwork is Utils {
 
     // TODO
     /*function cooperativeSettle(
-        uint channel_identifier,
+        uint256 channel_identifier,
         uint256 balance1,
         uint256 balance2,
         bytes signature1,
@@ -427,7 +427,7 @@ contract TokenNetwork is Utils {
      */
 
     function updateParticipantStruct(
-        uint channel_identifier,
+        uint256 channel_identifier,
         address participant,
         uint64 nonce,
         bytes32 locksroot,
@@ -450,7 +450,7 @@ contract TokenNetwork is Utils {
     }
 
     function recoverAddressFromSignature(
-        uint channel_identifier,
+        uint256 channel_identifier,
         uint64 nonce,
         uint256 transferred_amount,
         bytes32 locksroot,
@@ -501,7 +501,7 @@ contract TokenNetwork is Utils {
     // TODO - implement this
     function encodeLock(
         uint64 expiration_block,
-        uint amount,
+        uint256 amount,
         bytes32 hashlock)
         pure
         internal
@@ -514,7 +514,7 @@ contract TokenNetwork is Utils {
     function decodeLock(bytes lock)
         pure
         internal
-        returns (uint64 expiration, uint amount, bytes32 hashlock)
+        returns (uint64 expiration, uint256 amount, bytes32 hashlock)
     {
         require(lock.length == 72);
 
@@ -536,7 +536,7 @@ contract TokenNetwork is Utils {
     {
         require(merkle_proof.length % 32 == 0);
 
-        uint i;
+        uint256 i;
         bytes32 h;
         bytes32 el;
 
@@ -556,12 +556,12 @@ contract TokenNetwork is Utils {
         return h;
     }
 
-    function min(uint a, uint b) pure internal returns (uint)
+    function min(uint256 a, uint256 b) pure internal returns (uint256)
     {
         return a > b ? b : a;
     }
 
-    function max(uint a, uint b) pure internal returns (uint)
+    function max(uint256 a, uint256 b) pure internal returns (uint256)
     {
         return a > b ? a : b;
     }
