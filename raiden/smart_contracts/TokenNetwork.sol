@@ -437,7 +437,8 @@ contract TokenNetwork is Utils {
         require(nonce > channel.participants[participant].nonce);
         // Transfers can have 0 value
         require(transferred_amount >= channel.participants[participant].transferred_amount);
-        require(locksroot != channel.participants[participant].locksroot);
+
+        // Note, locksroot may be 0x0 and it may not change between two balance proofs.
 
         // Update the partner's structure with the data provided
         // by the closing participant.
