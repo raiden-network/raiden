@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from typing import List, Tuple
 from heapq import heappush, heappop
 
 import networkx
@@ -11,21 +12,22 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
-from raiden.utils import isaddress, pex
+from raiden.utils import isaddress, pex, typing
 from raiden.transfer.state import RouteState
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def make_graph(edge_list):
-    """ Return a graph that represents the connections among the netting
+def make_graph(
+    edge_list: List[Tuple[typing.address, typing.address]]
+) -> networkx.Graph:
+    """ Returns a graph that represents the connections among the netting
     contracts.
     Args:
-        edge_list (List[(address1, address2)]): All the channels that compose
-            the graph.
+        edge_list: All the channels that compose the graph.
     Returns:
-        Graph A networkx.Graph instance were the graph nodes are nodes in the
-            network and the edges are nodes that have a channel between them.
+        A graph where the nodes are nodes in the network and the edges are
+        nodes that have a channel between them.
     """
 
     for edge in edge_list:
@@ -45,7 +47,11 @@ def make_graph(edge_list):
     return graph
 
 
-def get_ordered_partners(network_graph, from_address, to_address):
+def get_ordered_partners(
+    network_graph: networkx.Graph,
+    from_address: typing.address,
+    to_address: typing.address
+) -> List:
     paths = list()
 
     try:
@@ -70,13 +76,14 @@ def get_ordered_partners(network_graph, from_address, to_address):
 
 
 def get_best_routes(
-        node_state,
-        payment_network_id,
-        token_address,
-        from_address,
-        to_address,
-        amount,
-        previous_address):
+    node_state: 'NodeState',
+    payment_network_id: typing.address,
+    token_address: typing.address,
+    from_address: typing.address,
+    to_address: typing.address,
+    amount: int,
+    previous_address: typing.address,
+) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 
     This will filter out channels that are not open and don't have enough
