@@ -1,11 +1,7 @@
-from pathfinder.utils.exceptions import InvalidSignatureError
 from pathfinder.utils.types import ChannelId, Address
 
 
 class BalanceProof:
-    """
-    TODO: adopt final balance proof format
-    """
     def __init__(
         self,
         nonce: int,
@@ -23,7 +19,8 @@ class BalanceProof:
         self.token_network_contract = token_network_contract
         self.additional_hash = additional_hash
         self.signature = signature
-        self._verify()
+        self.sender = self._recover_sender()
 
-    def _verify(self):
-        raise InvalidSignatureError()
+    def _recover_sender(self) -> Address:
+        # TODO: reconstruct balance proof message and ecrecover
+        return None

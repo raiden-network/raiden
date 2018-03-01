@@ -4,13 +4,15 @@ from itertools import islice
 from typing import List
 
 import networkx as nx
-from eth_utils import is_checksum_address
+from eth_utils import is_checksum_address, is_same_address
 from networkx import DiGraph
 
 from pathfinder.config import EMPTY_MERKLE_ROOT
+from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
+from pathfinder.model.network_cache import NetworkCache
 from pathfinder.utils.types import Address, ChannelId
 from pathfinder.utils.crypto import (
     compute_merkle_tree,
@@ -41,19 +43,20 @@ class TokenNetwork:
     - Are fees absolute or relative to the transferred value (or base + relative)?
     - Can we somehow incorporate locked amounts from channels?
     - Do we represent the state as a undirected graph or directed graph
+    TODO: test all these methods once we have sample data, DO NOT let these crucial functions
+    remain uncovered!
     """
 
     def __init__(
         self,
-        token_address: Address,
-        contract_address: Address,
-        contract_deployment_block: int
+        token_network_contract: TokenNetworkContract
     ):
         """
         Initializes a new TokenNetwork.
         """
-        self.token_address = token_address
-        self.contract_address = contract_address
+        self.token_network_contract = token_network_contract
+        self.token_address = token_network_contract.get_token_address()
+        self.network_cache = NetworkCache(self.token_network_contract)
         self.G = DiGraph()
 
     # Contract event listener functions
@@ -65,15 +68,13 @@ class TokenNetwork:
 
         Corresponds to the ChannelOpened event. Called by the contract event listener.
         """
-        view1, view2 = ChannelView.from_id(channel_id)
+        view1, view2 = ChannelView.from_id(self.network_cache, channel_id)
 
         assert is_checksum_address(view1.self)
         assert is_checksum_address(view2.self)
-        assert view1.token == self.token_address
-        assert view2.token == self.token_address
 
-        self.G.add_edge(view1.self, view2.self, data=view1)
-        self.G.add_edge(view2.self, view1.self, data=view2)
+        self.G.add_edge(view1.self, view2.self, view=view1)
+        self.G.add_edge(view2.self, view1.self, view=view2)
 
     def handle_channel_new_balance_event(
         self,
@@ -95,12 +96,10 @@ class TokenNetwork:
 
         Corresponds to the ChannelClosed event. Called by the contract event listener.
         """
-        view1, view2 = ChannelView.from_id(channel_id)
+        view1, view2 = ChannelView.from_id(self.network_cache, channel_id)
 
         assert is_checksum_address(view1.self)
         assert is_checksum_address(view2.self)
-        assert view1.token == self.token_address
-        assert view2.token == self.token_address
 
         self.G.remove_edge(view1.self, view2.self)
         self.G.remove_edge(view2.self, view1.self)
@@ -118,11 +117,22 @@ class TokenNetwork:
 
         Called by the public interface.
         """
-        # FIXME: directly recover sender and receiver addresses from channel IDs
-        view1, view2 = ChannelView.from_id(balance_proof.channel_id)
-        view: ChannelView = self.G[view1.self][view2.self]['data']
+        participant1, participant2 = self.token_network_contract.get_channel_participants(
+            balance_proof.channel_id
+        )
+        if is_same_address(participant1, balance_proof.sender):
+            receiver = participant2
+        elif is_same_address(participant2, balance_proof.sender):
+            receiver = participant1
+        else:
+            raise ValueError('Balance proof signature does not match any of the participants.')
 
-        assert view.transferred_amount < balance_proof.transferred_amount
+        view1: ChannelView = self.G[balance_proof.sender][receiver]['view']
+        view2: ChannelView = self.G[receiver][balance_proof.sender]['view']
+
+        if view1.transferred_amount >= balance_proof.transferred_amount:
+            # FIXME: use nonce instead for this check?
+            raise ValueError('Balance proof is outdated.')
 
         if locks:
             reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
@@ -134,9 +144,12 @@ class TokenNetwork:
             if balance_proof.locksroot is not EMPTY_MERKLE_ROOT:
                 raise ValueError('Locks specified but the lock Merkle tree is empty.')
 
-        view.update_capacity(
+        view1.update_capacity(
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=sum(lock.amount_locked for lock in locks)
+        )
+        view2.update_capacity(
+            received_amount=balance_proof.transferred_amount
         )
 
     def update_fee(self, channel_id: ChannelId, new_fee, signature):

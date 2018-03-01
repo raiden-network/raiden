@@ -6,5 +6,6 @@ flask_restful
 gevent
 networkx
 requests
+web3
 
 git+https://github.com/matrix-org/matrix-python-sdk.git
