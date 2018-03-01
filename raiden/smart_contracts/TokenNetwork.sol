@@ -50,8 +50,8 @@ contract TokenNetwork is Utils {
         // This is uint8 and it gets packed with the nonce.
         bool initialized;
 
-        // A mapping to keep track of locks that have been withdrawn.
-        mapping(bytes32 => bool) withdrawn_locks;
+        // A mapping to keep track of locks that have been unlocked.
+        mapping(bytes32 => bool) unlocked_locks;
     }
 
     struct Channel {
@@ -278,9 +278,6 @@ contract TokenNetwork is Utils {
             signature
         );
 
-        uint64 old_nonce = channels[channel_identifier].participants[partner_address].nonce;
-        bytes32 old_locksroot = channels[channel_identifier].participants[partner_address].locksroot;
-
         // This will reset the transferred amount, invalidating any unlocked locks that were
         // unlocked but not included in the new locksroot
         updateParticipantStruct(
@@ -290,12 +287,6 @@ contract TokenNetwork is Utils {
             locksroot,
             transferred_amount
         );
-
-        // Clean up storage for the old (nonce, locksroot)
-        // after the locksroot has been replaced.
-        // This cannot be used anymore to unlock locks anyway.
-        bytes32 old_key = keccak256(old_nonce, old_locksroot);
-        delete channels[channel_identifier].participants[partner_address].withdrawn_locks[old_key];
 
         TransferUpdated(channel_identifier, msg.sender);
     }
@@ -338,10 +329,15 @@ contract TokenNetwork is Utils {
         // locksroot that does not contain this lock.
         require(partner_state.locksroot == computed_locksroot);
 
-        // A lock can be withdrawn only once per participant
-        key = keccak256(partner_state.nonce, partner_state.locksroot);
-        require(!partner_state.withdrawn_locks[key]);
-        partner_state.withdrawn_locks[key] = true;
+        // A lock can be unlocked only once per participant and per balance proof. In case there
+        // is another updateTransfer that has occured after the locks have been initially
+        // unlocked, we have to unlock those locks again. This is why the mapping key contains
+        // the nonce (to account for the updateTransfer balance proof) and the lock hashlock.
+        // Note that we cannot clear the storage for the locks that have been previously
+        // unlocked but have been invalidated by a new balance proof.
+        key = keccak256(partner_state.nonce, hashlock);
+        require(!partner_state.unlocked_locks[key]);
+        partner_state.unlocked_locks[key] = true;
 
         // Finally change the amount of owed tokens
         // This implementation allows for each transfer to be set only once, so
