@@ -3,8 +3,9 @@ from itertools import zip_longest
 from collections import namedtuple
 
 from coincurve import PrivateKey, PublicKey
-
 from eth_utils import to_checksum_address, encode_hex, keccak, remove_0x_prefix
+
+from pathfinder.config import EMPTY_MERKLE_ROOT
 
 
 def public_key_to_address(pubkey) -> str:
@@ -44,11 +45,13 @@ def compute_merkle_tree(items: Iterable[bytes]) -> MerkleTree:
         raise ValueError('Not all items are hashes')
 
     leaves = sorted(items)
+    if len(leaves) == 0:
+        return MerkleTree(layers=[[EMPTY_MERKLE_ROOT]])
+
     if not len(leaves) == len(set(leaves)):
         raise ValueError('The items must not cointain duplicate items')
 
     tree = [leaves]
-
     layer = leaves
     while len(layer) > 1:
         # [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]

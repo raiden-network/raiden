@@ -7,7 +7,6 @@ import networkx as nx
 from eth_utils import is_checksum_address, is_same_address
 from networkx import DiGraph
 
-from pathfinder.config import EMPTY_MERKLE_ROOT
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
@@ -134,15 +133,11 @@ class TokenNetwork:
             # FIXME: use nonce instead for this check?
             raise ValueError('Balance proof is outdated.')
 
-        if locks:
-            reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
-            reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
+        reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
+        reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
 
-            if not reconstructed_merkle_root == balance_proof.locksroot:
-                raise ValueError('Supplied locks do not match the provided locksroot')
-        else:
-            if balance_proof.locksroot is not EMPTY_MERKLE_ROOT:
-                raise ValueError('Locks specified but the lock Merkle tree is empty.')
+        if not reconstructed_merkle_root == balance_proof.locksroot:
+            raise ValueError('Supplied locks do not match the provided locksroot')
 
         view1.update_capacity(
             transferred_amount=balance_proof.transferred_amount,

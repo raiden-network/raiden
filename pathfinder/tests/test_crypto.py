@@ -2,6 +2,7 @@
 import pytest
 from eth_utils import keccak
 
+from pathfinder.config import EMPTY_MERKLE_ROOT
 from pathfinder.utils.crypto import compute_merkle_tree, get_merkle_root
 
 
@@ -24,11 +25,18 @@ def test_compute_merkle_tree_duplicated():
         compute_merkle_tree([hash_0, hash_1, hash_0])
 
 
+def test_compute_merkle_tree_no_entry():
+    merkle_tree = compute_merkle_tree([])
+
+    assert merkle_tree.layers[-1][0] == EMPTY_MERKLE_ROOT
+    assert get_merkle_root(merkle_tree) == EMPTY_MERKLE_ROOT
+
+
 def test_compute_merkle_tree_single_entry():
     hash_0 = keccak(b'x')
     merkle_tree = compute_merkle_tree([hash_0])
-    assert merkle_tree.layers[-1][0] == hash_0
 
+    assert merkle_tree.layers[-1][0] == hash_0
     assert get_merkle_root(merkle_tree) == hash_0
 
 
