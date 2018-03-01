@@ -307,7 +307,7 @@ contract TokenNetwork is Utils {
     {
         bytes32 key;
         bytes32 computed_locksroot;
-        bytes memory locked_encoded;
+        bytes32 lockhash;
 
         // Check that the partner is a channel participant.
         require(channels[channel_identifier].participants[partner].initialized);
@@ -322,8 +322,8 @@ contract TokenNetwork is Utils {
         require(expiration_block > block.number);
         require(hashlock == keccak256(secret));
 
-        locked_encoded = encodeLock(expiration_block, locked_amount, hashlock);
-        computed_locksroot = computeMerkleRoot(locked_encoded, merkle_proof);
+        lockhash = keccak256(expiration_block, locked_amount, hashlock);
+        computed_locksroot = computeMerkleRoot(lockhash, merkle_proof);
 
         // Note that unlocked locks have to be re-unlocked after a `transferUpdate` with a
         // locksroot that does not contain this lock.
@@ -492,18 +492,6 @@ contract TokenNetwork is Utils {
         require(v == 27 || v == 28);
     }
 
-    // TODO - implement this
-    function encodeLock(
-        uint64 expiration_block,
-        uint256 amount,
-        bytes32 hashlock)
-        pure
-        internal
-        returns (bytes lock)
-    {
-
-    }
-
     // TODO - not used anymore now
     function decodeLock(bytes lock)
         pure
@@ -523,7 +511,7 @@ contract TokenNetwork is Utils {
         }
     }
 
-    function computeMerkleRoot(bytes lock, bytes merkle_proof)
+    function computeMerkleRoot(bytes32 lockhash, bytes merkle_proof)
         pure
         internal
         returns (bytes32)
@@ -531,23 +519,21 @@ contract TokenNetwork is Utils {
         require(merkle_proof.length % 32 == 0);
 
         uint256 i;
-        bytes32 h;
         bytes32 el;
 
-        h = keccak256(lock);
         for (i = 32; i <= merkle_proof.length; i += 32) {
             assembly {
                 el := mload(add(merkle_proof, i))
             }
 
-            if (h < el) {
-                h = keccak256(h, el);
+            if (lockhash < el) {
+                lockhash = keccak256(lockhash, el);
             } else {
-                h = keccak256(el, h);
+                lockhash = keccak256(el, lockhash);
             }
         }
 
-        return h;
+        return lockhash;
     }
 
     function min(uint256 a, uint256 b) pure internal returns (uint256)
