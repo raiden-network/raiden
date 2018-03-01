@@ -125,7 +125,7 @@ class TokenNetwork:
         assert view.transferred_amount < balance_proof.transferred_amount
 
         # FIXME: decide how to handle empty trees
-        reconstructed_merkle_tree = compute_merkle_tree(lock.lock_hash for lock in locks)
+        reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
         reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
 
         if not reconstructed_merkle_root == balance_proof.locksroot:
