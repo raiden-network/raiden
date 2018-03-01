@@ -196,7 +196,7 @@ contract TokenNetwork is Utils {
 
     /// @notice Close a channel between two parties that was used bidirectionally.
     /// Only a participant may close the channel, providing a balance proof signed by its partner. Callable only once.
-    /// @param channel_identifier The channel identifier.
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`
     /// @param nonce Strictly monotonic value used to order transfers.
     /// @param transferred_amount Total amount of tokens transferred by the channel partner
     /// to the channel participant who calls the function.
@@ -255,8 +255,94 @@ contract TokenNetwork is Utils {
 
     /// @notice Called on a closed channel, the function allows the non-closing participant
     /// to provide the last balance proof, which modifies the closing participant's state.
-    /// Can be called multiple times, by anyone.
+    /// Can be called multiple times, only by the non-closing participant.
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`.
+    /// @param nonce Strictly monotonic value used to order transfers.
+    /// @param transferred_amount Total amount of tokens transferred by the channel partner
+    /// to the channel participant who calls the function.
+    /// @param locksroot Root of the partner's merkle tree of all pending lock lockhashes.
+    /// @param additional_hash Computed from the message. Used for message authentication.
+    /// @param signature Partner's signature of the balance proof data.
     function updateTransfer(
+        uint256 channel_identifier,
+        uint64 nonce,
+        uint256 transferred_amount,
+        bytes32 locksroot,
+        bytes32 additional_hash,
+        bytes signature)
+        public
+    {
+        // The caller has to be a channel participant
+        require(channels[channel_identifier].participants[msg.sender].initialized);
+
+        // The closer is not allowed to call updateTransfer
+        require(closing_requests[channel_identifier].closing_address != msg.sender);
+
+        // Call the private function for the actual logic and constraints of updateTransfer
+        updateTransferPrivate(
+            channel_identifier,
+            nonce,
+            transferred_amount,
+            locksroot,
+            additional_hash,
+            signature
+        );
+    }
+
+    /// @notice Called on a closed channel, the function allows the non-closing participant to
+    // provide the last balance proof, which modifies the closing participant's state. Can be
+    // called multiple times by anyone, as long as they provide signatures from both participants.
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`.
+    /// @param nonce Strictly monotonic value used to order transfers.
+    /// @param transferred_amount Total amount of tokens transferred by the channel partner
+    /// to the channel participant who calls the function.
+    /// @param locksroot Root of the partner's merkle tree of all pending lock lockhashes.
+    /// @param additional_hash Computed from the message. Used for message authentication.
+    /// @param closing_signature Closing participant's signature of the balance proof data.
+    /// @param non_closing_signature Non-closing participant signature of the balance proof data.
+    function updateTransferDelegate(
+        uint256 channel_identifier,
+        uint64 nonce,
+        uint256 transferred_amount,
+        bytes32 locksroot,
+        bytes32 additional_hash,
+        bytes closing_signature,
+        bytes non_closing_signature)
+        public
+    {
+        // We also need the signature from the non-closing participant on behalf of which the 3rd
+        // party makes the transaction. This signature will be provided to the 3rd party
+        //  together with the balance proof.
+        address non_closing_address = recoverAddressFromSignature(
+            channel_identifier,
+            nonce,
+            transferred_amount,
+            locksroot,
+            additional_hash,
+            non_closing_signature
+        );
+
+        // Make sure the second signature is from a channel participant
+        require(channels[channel_identifier].participants[non_closing_address].initialized);
+
+        // Make sure the second signature is from the non-closing participant
+        require(closing_requests[channel_identifier].closing_address != non_closing_address);
+
+        // Call the private function for the actual logic and constraints of updateTransfer
+        updateTransferPrivate(
+            channel_identifier,
+            nonce,
+            transferred_amount,
+            locksroot,
+            additional_hash,
+            closing_signature
+        );
+    }
+
+    /// @notice Called on a closed channel, the function allows the non-closing participant
+    /// to provide the last balance proof, which modifies the closing participant's state.
+    /// Can be called multiple times, only by the non-closing participant.
+    function updateTransferPrivate(
         uint256 channel_identifier,
         uint64 nonce,
         uint256 transferred_amount,
@@ -265,11 +351,9 @@ contract TokenNetwork is Utils {
         bytes signature)
         isClosed(channel_identifier)
         stillTimeout(channel_identifier)
-        public
+        internal
     {
-        address partner_address;
-
-        partner_address = recoverAddressFromSignature(
+        address partner_address = recoverAddressFromSignature(
             channel_identifier,
             nonce,
             transferred_amount,
@@ -290,6 +374,8 @@ contract TokenNetwork is Utils {
 
         TransferUpdated(channel_identifier, msg.sender);
     }
+
+
 
     /// @notice Unlocks a pending transfer and increases the partner's transferred amount
     /// with the transfer value. A lock can be unlocked only once per participant.
