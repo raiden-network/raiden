@@ -7,7 +7,7 @@ import networkx as nx
 from eth_utils import is_checksum_address
 from networkx import DiGraph
 
-
+from pathfinder.config import EMPTY_MERKLE_ROOT
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
@@ -124,12 +124,15 @@ class TokenNetwork:
 
         assert view.transferred_amount < balance_proof.transferred_amount
 
-        # FIXME: decide how to handle empty trees
-        reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
-        reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
+        if locks:
+            reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
+            reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
 
-        if not reconstructed_merkle_root == balance_proof.locksroot:
-            raise ValueError('Supplied locks do not match the provided locksroot')
+            if not reconstructed_merkle_root == balance_proof.locksroot:
+                raise ValueError('Supplied locks do not match the provided locksroot')
+        else:
+            if balance_proof.locksroot is not EMPTY_MERKLE_ROOT:
+                raise ValueError('Locks specified but the lock Merkle tree is empty.')
 
         view.update_capacity(
             transferred_amount=balance_proof.transferred_amount,

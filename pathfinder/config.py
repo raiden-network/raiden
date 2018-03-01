@@ -1,3 +1,4 @@
 API_PATH = '/api/1'
 API_HOST = 'localhost'
 API_DEFAULT_PORT = 5002
+EMPTY_MERKLE_ROOT = b'\x00' * 32
