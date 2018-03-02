@@ -17,10 +17,13 @@ contract SecretRegistry {
 
     event SecretRevealed(bytes32 secret);
 
-    function registerSecret(bytes32 secret) public {
-        require(secret_to_block[secret] == 0);
+    function registerSecret(bytes32 secret) public returns (bool) {
+        if (secret_to_block[secret] > 0) {
+            return false;
+        }
         secret_to_block[secret] = uint64(block.number);
         SecretRevealed(secret);
+        return true;
     }
 
     function getSecretBlockHeight(bytes32 secret) public constant returns (uint64) {

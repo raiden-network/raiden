@@ -429,7 +429,7 @@ contract TokenNetwork is Utils {
 
     /// @notice Registers the lock secret in the SecretRegistry contract.
     function registerSecret(bytes32 secret) public {
-        secret_registry.registerSecret(secret);
+        require(secret_registry.registerSecret(secret));
     }
 
     /// @notice Unlocks a pending transfer and increases the partner's transferred amount
