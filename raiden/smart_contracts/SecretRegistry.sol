@@ -15,12 +15,12 @@ contract SecretRegistry {
      *  Events
      */
 
-    event ChannelSecretRevealed(bytes32 secret, address receiver_address);
+    event SecretRevealed(bytes32 secret);
 
-    function registerSecret(bytes32 secret, address receiver_address) public {
+    function registerSecret(bytes32 secret) public {
         require(secret_to_block[secret] == 0);
         secret_to_block[secret] = uint64(block.number);
-        ChannelSecretRevealed(secret, receiver_address);
+        SecretRevealed(secret);
     }
 
     function getSecretBlockHeight(bytes32 secret) public constant returns (uint64) {

@@ -87,7 +87,7 @@ contract TokenNetwork is Utils {
 
     event ChannelClosed(uint256 channel_identifier, address closing_address);
 
-    event ChannelUnlocked(uint256 channel_identifier, address participant, uint256 transferred_amount);
+    event ChannelUnlocked(uint256 channel_identifier, address payer_address, uint256 transferred_amount);
 
     event TransferUpdated(uint256 channel_identifier, address caller);
 
@@ -142,6 +142,9 @@ contract TokenNetwork is Utils {
 
     /// @notice Opens a new channel between `participant1` and `participant2`.
     /// Can be called by anyone.
+    /// @param participant1 Ethereum address of a channel participant.
+    /// @param participant2 Ethereum address of the other channel participant.
+    /// @param settle_timeout Number of blocks that need to be mined between a call to closeChannel and settleChannel.
     function openChannel(
         address participant1,
         address participant2,
@@ -165,7 +168,7 @@ contract TokenNetwork is Utils {
         channels[last_channel_index] = Channel({settle_timeout: settle_timeout});
 
         // Mark the channel participants
-        // We use this in deposit to ensure the beneficiary is a channel participant
+        // We use this in setDeposit to ensure the beneficiary is a channel participant
         channels[last_channel_index].participants[participant1].initialized = true;
         channels[last_channel_index].participants[participant2].initialized = true;
 
@@ -177,37 +180,37 @@ contract TokenNetwork is Utils {
     /// @notice Sets the channel participant total deposit value.
     /// Can be called by anyone.
     /// @param channel_identifier The channel identifier - mapping key used for `channels`
-    /// @param beneficiary Channel participant who's deposit is being set.
-    /// @param total_deposit Idempotent function which sets the total amount of tokens that the beneficiary will have as a deposit.
+    /// @param participant Channel participant who's deposit is being set.
+    /// @param total_deposit Idempotent function which sets the total amount of tokens that the participant will have as a deposit.
     function setDeposit(
         uint256 channel_identifier,
-        address beneficiary,
+        address participant,
         uint256 total_deposit)
         public
     {
         uint256 added_deposit;
         Channel storage channel = channels[channel_identifier];
 
-        // Channel must be open and beneficiary must be one of the participants
-        require(channel.participants[beneficiary].initialized);
+        // Channel must be open and participant must be part of the channel.
+        require(channel.participants[participant].initialized);
 
         // Channel cannot be closed
         require(closing_requests[channel_identifier].settle_block_number == 0);
 
-        require(channel.participants[beneficiary].deposit < total_deposit);
+        require(channel.participants[participant].deposit < total_deposit);
 
-        added_deposit = total_deposit - channel.participants[beneficiary].deposit;
+        added_deposit = total_deposit - channel.participants[participant].deposit;
 
         // Sender should have enough balance
         require(token.balanceOf(msg.sender) >= added_deposit);
 
         // Change the state
-        channel.participants[beneficiary].deposit += added_deposit;
+        channel.participants[participant].deposit += added_deposit;
 
         // Do the transfer
         require(token.transferFrom(msg.sender, address(this), added_deposit));
 
-        ChannelNewDeposit(channel_identifier, beneficiary, channel.participants[beneficiary].deposit);
+        ChannelNewDeposit(channel_identifier, participant, channel.participants[participant].deposit);
     }
 
     /// @notice Close a channel between two parties that was used bidirectionally.
@@ -395,7 +398,6 @@ contract TokenNetwork is Utils {
     /// with the transfer value. A lock can be unlocked only once per participant.
     // Anyone can call unlock a transfer on behalf of a channel participant.
     /// @param channel_identifier The channel identifier - mapping key used for `channels`.
-    /// @param participant Address of the participant who is owed the locked tokens and has received the secret.
     /// @param partner Address of the participant who owes the locked tokens.
     /// @param expiration_block Block height at which the lock expires.
     /// @param locked_amount Amount of tokens that the locked transfer values.
@@ -404,7 +406,6 @@ contract TokenNetwork is Utils {
     /// @param secret A value used as a preimage in a HTL Transfer
     function registerSecretAndUnlock(
         uint256 channel_identifier,
-        address participant,
         address partner,
         uint64 expiration_block,
         uint256 locked_amount,
@@ -414,7 +415,7 @@ contract TokenNetwork is Utils {
         stillTimeout(channel_identifier)
         external
     {
-        registerSecret(secret, participant);
+        registerSecret(secret);
         unlock(
             channel_identifier,
             partner,
@@ -427,8 +428,8 @@ contract TokenNetwork is Utils {
     }
 
     /// @notice Registers the lock secret in the SecretRegistry contract.
-    function registerSecret(bytes32 secret, address receiver_address) public {
-        secret_registry.registerSecret(secret, receiver_address);
+    function registerSecret(bytes32 secret) public {
+        secret_registry.registerSecret(secret);
     }
 
     /// @notice Unlocks a pending transfer and increases the partner's transferred amount
