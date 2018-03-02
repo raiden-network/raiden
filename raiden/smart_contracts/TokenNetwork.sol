@@ -32,9 +32,9 @@ contract TokenNetwork is Utils {
     struct Participant
     {
         // Total amount of token transferred to this smart contract through the
-        // `deposit` function, note that direct token transfer cannot be
+        // `setDeposit` function, note that direct token transfer cannot be
         // tracked and will be burned.
-        uint256 balance;
+        uint256 deposit;
 
         // The latest known merkle root of the pending hash-time locks, used to
         // validate the withdrawn proofs.
@@ -83,7 +83,7 @@ contract TokenNetwork is Utils {
         uint256 settle_timeout
     );
 
-    event ChannelNewBalance(uint256 channel_identifier, address participant, uint256 balance);
+    event ChannelNewDeposit(uint256 channel_identifier, address participant, uint256 deposit);
 
     event ChannelClosed(uint256 channel_identifier, address closing_address);
 
@@ -174,14 +174,18 @@ contract TokenNetwork is Utils {
         return last_channel_index;
     }
 
-    /// @notice Deposit tokens to an already existent channel.
+    /// @notice Sets the channel participant total deposit value.
     /// Can be called by anyone.
-    function deposit(
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`
+    /// @param beneficiary Channel participant who's deposit is being set.
+    /// @param total_deposit Idempotent function which sets the total amount of tokens that the beneficiary will have as a deposit.
+    function setDeposit(
         uint256 channel_identifier,
         address beneficiary,
-        uint256 added_amount)
+        uint256 total_deposit)
         public
     {
+        uint256 added_deposit;
         Channel storage channel = channels[channel_identifier];
 
         // Channel must be open and beneficiary must be one of the participants
@@ -190,16 +194,20 @@ contract TokenNetwork is Utils {
         // Channel cannot be closed
         require(closing_requests[channel_identifier].settle_block_number == 0);
 
+        require(channel.participants[beneficiary].deposit < total_deposit);
+
+        added_deposit = total_deposit - channel.participants[beneficiary].deposit;
+
         // Sender should have enough balance
-        require(token.balanceOf(msg.sender) >= added_amount);
+        require(token.balanceOf(msg.sender) >= added_deposit);
 
         // Change the state
-        channel.participants[beneficiary].balance += added_amount;
+        channel.participants[beneficiary].deposit += added_deposit;
 
         // Do the transfer
-        require(token.transferFrom(msg.sender, address(this), added_amount));
+        require(token.transferFrom(msg.sender, address(this), added_deposit));
 
-        ChannelNewBalance(channel_identifier, beneficiary, channel.participants[beneficiary].balance);
+        ChannelNewDeposit(channel_identifier, beneficiary, channel.participants[beneficiary].deposit);
     }
 
     /// @notice Close a channel between two parties that was used bidirectionally.
@@ -511,10 +519,10 @@ contract TokenNetwork is Utils {
         // cannot be accounted for, these superfluous tokens will be burned,
         // this is because there is no way to tell which participant (if any)
         // had ownership over the token.
-        total_deposit = participant1_state.balance + participant2_state.balance;
+        total_deposit = participant1_state.deposit + participant2_state.deposit;
 
         participant1_amount = (
-            participant1_state.balance
+            participant1_state.deposit
             + participant2_state.transferred_amount
             - participant1_state.transferred_amount
         );
