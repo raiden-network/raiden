@@ -2,6 +2,7 @@ pragma solidity ^0.4.17;
 
 import "./Token.sol";
 import "./Utils.sol";
+import "./SecretRegistry.sol";
 
 contract TokenNetwork is Utils {
 
@@ -13,6 +14,9 @@ contract TokenNetwork is Utils {
 
     // Instance of the token used as digital currency by the channels
     Token public token;
+
+    // Instance of SecretRegistry used for storing secrets revealed in a mediating transfer.
+    SecretRegistry public secret_registry;
 
     // Channel identifier is a uint256, incremented after each new channel
     mapping (uint256 => Channel) public channels;
@@ -118,14 +122,18 @@ contract TokenNetwork is Utils {
      *  Constructor
      */
 
-    function TokenNetwork(address _token_address) public {
+    function TokenNetwork(address _token_address, address _secret_registry) public {
         require(_token_address != 0x0);
+        require(_secret_registry != 0x0);
         require(contractExists(_token_address));
+        require(contractExists(_secret_registry));
 
         token = Token(_token_address);
 
         // Check if the contract is indeed a token contract
         require(token.totalSupply() > 0);
+
+        secret_registry = SecretRegistry(_secret_registry);
     }
 
     /*
@@ -308,7 +316,7 @@ contract TokenNetwork is Utils {
         bytes32 additional_hash,
         bytes closing_signature,
         bytes non_closing_signature)
-        public
+        external
     {
         // We also need the signature from the non-closing participant on behalf of which the 3rd
         // party makes the transaction. This signature will be provided to the 3rd party
@@ -375,11 +383,56 @@ contract TokenNetwork is Utils {
         TransferUpdated(channel_identifier, msg.sender);
     }
 
+    /// @notice Registers the lock secret in the SecretRegistry contract. Unlocks a pending transfer and increases the partner's transferred amount
+    /// with the transfer value. A lock can be unlocked only once per participant.
+    // Anyone can call unlock a transfer on behalf of a channel participant.
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`.
+    /// @param participant Address of the participant who is owed the locked tokens and has received the secret.
+    /// @param partner Address of the participant who owes the locked tokens.
+    /// @param expiration_block Block height at which the lock expires.
+    /// @param locked_amount Amount of tokens that the locked transfer values.
+    /// @param hashlock The hash of the secret
+    /// @param merkle_proof The merkle proof needed to compute the merkle root.
+    /// @param secret A value used as a preimage in a HTL Transfer
+    function registerSecretAndUnlock(
+        uint256 channel_identifier,
+        address participant,
+        address partner,
+        uint64 expiration_block,
+        uint256 locked_amount,
+        bytes32 hashlock,
+        bytes merkle_proof,
+        bytes32 secret)
+        stillTimeout(channel_identifier)
+        external
+    {
+        registerSecret(secret, participant);
+        unlock(
+            channel_identifier,
+            partner,
+            expiration_block,
+            locked_amount,
+            hashlock,
+            merkle_proof,
+            secret
+        );
+    }
 
+    /// @notice Registers the lock secret in the SecretRegistry contract.
+    function registerSecret(bytes32 secret, address receiver_address) public {
+        secret_registry.registerSecret(secret, receiver_address);
+    }
 
     /// @notice Unlocks a pending transfer and increases the partner's transferred amount
     /// with the transfer value. A lock can be unlocked only once per participant.
     // Anyone can call unlock a transfer on behalf of a channel participant.
+    /// @param channel_identifier The channel identifier - mapping key used for `channels`.
+    /// @param partner Address of the participant who owes the locked tokens.
+    /// @param expiration_block Block height at which the lock expires.
+    /// @param locked_amount Amount of tokens that the locked transfer values.
+    /// @param hashlock The hash of the secret
+    /// @param merkle_proof The merkle proof needed to compute the merkle root.
+    /// @param secret A value used as a preimage in a HTL Transfer
     function unlock(
         uint256 channel_identifier,
         address partner,
@@ -403,9 +456,10 @@ contract TokenNetwork is Utils {
         // An empty locksroot means there are no pending locks
         require(partner_state.locksroot != 0);
 
-        // The lock must not have expired, it does not matter how far in the
-        // future it would have expired
-        require(expiration_block > block.number);
+        // The lock must not have expired, it does not matter how far in the future it would
+        // have expired. We compare the expiration block with the block at which
+        // the secret has been registered on chain.
+        require(expiration_block > secret_registry.getSecretBlockHeight(secret));
         require(hashlock == keccak256(secret));
 
         lockhash = keccak256(expiration_block, locked_amount, hashlock);
