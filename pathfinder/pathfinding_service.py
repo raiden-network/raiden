@@ -6,11 +6,13 @@ from typing import Dict
 
 import gevent
 
-from pathfinder.blockchain import BlockchainMonitor
 from pathfinder.gevent_error_handler import register_error_handler
 from pathfinder.token_network import TokenNetwork
 from pathfinder.transport import MatrixTransport
 from pathfinder.utils.types import Address
+
+# from raiden_libs.blockchain import BlockchainListener
+
 
 log = logging.getLogger(__name__)
 
@@ -29,11 +31,11 @@ class PathfindingService(gevent.Greenlet):
     def __init__(
         self,
         transport: MatrixTransport,
-        blockchain: BlockchainMonitor
+        # blockchain_listener: BlockchainListener
     ) -> None:
         super().__init__()
         self.transport = transport
-        self.blockchain = blockchain
+        # self.blockchain_listener = blockchain_listener
         self.is_running = gevent.event.Event()
         self.transport.add_message_callback(lambda message: self.on_message_event(message))
         self.token_networks: Dict[Address, TokenNetwork] = {}
@@ -41,7 +43,7 @@ class PathfindingService(gevent.Greenlet):
     def _run(self):
         register_error_handler(error_handler)
         self.transport.start()
-        # self.blockchain.start()
+        # self.blockchain_listener.start()
 
         self.is_running.wait()
 

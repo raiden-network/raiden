@@ -1,7 +1,7 @@
 from eth_utils import is_checksum_address
 
 from pathfinder.utils.exceptions import InvalidAddressChecksumError
-from pathfinder.utils.types import ChannelId, Address
+from pathfinder.utils.types import Address, ChannelId
 
 
 class BalanceProof:

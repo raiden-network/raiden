@@ -8,8 +8,13 @@ from setuptools import find_packages, setup
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
+install_requires_replacements = {
+    'git+https://github.com/matrix-org/matrix-python-sdk.git': 'matrix-client',
+    'git+https://github.com/raiden-network/raiden-libs.git': 'raiden-libs',
+}
+
 requirements = list(set(
-    requirement
+    install_requires_replacements.get(requirement.strip(), requirement.strip())
     for requirement in open('requirements.txt') if not requirement.lstrip().startswith('#')
 ))
 

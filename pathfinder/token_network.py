@@ -12,11 +12,8 @@ from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
 from pathfinder.model.network_cache import NetworkCache
+from pathfinder.utils.crypto import compute_merkle_tree, get_merkle_root
 from pathfinder.utils.types import Address, ChannelId
-from pathfinder.utils.crypto import (
-    compute_merkle_tree,
-    get_merkle_root
-)
 
 
 def k_shortest_paths(G, source, target, k, weight=None):

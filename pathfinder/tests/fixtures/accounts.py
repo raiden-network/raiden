@@ -1,7 +1,8 @@
 from typing import List
 
 import pytest
-from eth_utils import keccak, encode_hex, is_hex, remove_0x_prefix
+from eth_utils import encode_hex, is_hex, keccak, remove_0x_prefix
+
 from pathfinder.utils import private_key_to_address
 from pathfinder.utils.types import Address
 
@@ -23,7 +24,7 @@ def faucet_address(faucet_private_key: str):
 @pytest.fixture(scope='session')
 def private_keys() -> List[str]:
     offset = 14789632
-    return [encode_hex(keccak(str(offset + i))) for i in range(2)]
+    return [encode_hex(keccak(offset + i)) for i in range(2)]
 
 
 @pytest.fixture(scope='session')

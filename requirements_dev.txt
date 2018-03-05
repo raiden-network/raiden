@@ -9,7 +9,7 @@ coverage==4.5.1
 Sphinx==1.7.1
 sphinx_rtd_theme==0.2.4
 
-pytest==3.4.1
+pytest==3.4.2
 pytest-runner==4.0
 
 ipython

@@ -1,7 +1,7 @@
 import gevent
-from eth_utils import is_address, is_checksum_address, decode_hex
+from eth_utils import decode_hex, is_address, is_checksum_address
 from flask import Flask, request
-from flask_restful import Resource, Api, reqparse
+from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 

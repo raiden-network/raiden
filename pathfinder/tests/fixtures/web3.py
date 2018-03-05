@@ -1,7 +1,7 @@
-import ethereum
 import pytest
-from eth_utils import decode_hex
-from web3 import EthereumTesterProvider, Web3, HTTPProvider
+from eth_tester import EthereumTester, PyEthereum21Backend
+from web3 import HTTPProvider, Web3
+from web3.providers.eth_tester import EthereumTesterProvider
 
 from pathfinder.config import WEB3_PROVIDER_DEFAULT
 from pathfinder.tests.config import FAUCET_ALLOWANCE
@@ -15,12 +15,14 @@ def use_tester(request):
 @pytest.fixture(scope='session')
 def web3(use_tester: bool, faucet_private_key: str, faucet_address: str):
     if use_tester:
-        provider = EthereumTesterProvider()
+        tester = EthereumTester(PyEthereum21Backend())
+
+        provider = EthereumTesterProvider(tester)
         web3 = Web3(provider)
 
         # add faucet account to tester
-        ethereum.tester.accounts.append(decode_hex(faucet_address))
-        ethereum.tester.keys.append(decode_hex(faucet_private_key))
+        res = tester.add_account(faucet_private_key)
+        assert res == faucet_address
 
         # make faucet rich
         web3.eth.sendTransaction({'to': faucet_address, 'value': FAUCET_ALLOWANCE})
@@ -30,7 +32,3 @@ def web3(use_tester: bool, faucet_private_key: str, faucet_address: str):
         web3 = Web3(rpc)
 
     yield web3
-
-    if use_tester:
-        ethereum.tester.accounts.remove(decode_hex(faucet_address))
-        ethereum.tester.keys.remove(decode_hex(faucet_private_key))

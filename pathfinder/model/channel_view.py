@@ -4,7 +4,7 @@ from typing import Tuple
 from eth_utils import is_checksum_address
 
 from pathfinder.model.network_cache import NetworkCache
-from pathfinder.utils.types import ChannelId, Address
+from pathfinder.utils.types import Address, ChannelId
 
 
 class ChannelView:

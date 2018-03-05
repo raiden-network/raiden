@@ -1,19 +1,18 @@
-import json
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
-import os
 from web3.contract import Contract
+from toolz.functoolz import compose
 
 from pathfinder.utils.types import Address, ChannelId
 
 
-class TokenNetworkContract(Contract):
-    def __init__(self, *args, **kwargs):
-        abi_path = os.path.splitext(__file__)[0] + '.json'
-        with open(abi_path) as abi_file:
-            abi = json.load(abi_file)
-        kwargs['abi'] = abi
-        Contract.__init__(self, *args, **kwargs)
+class TokenNetworkContract:
+    def __init__(self, contract: Contract):
+        self.contract = contract
+        self.address = self.contract.address
+
+    def __repr__(self):
+        return '<TokenNetworkContract addr={}>'.format(self.address)
 
     def get_channel_participants(self, channel_id: ChannelId) -> Tuple[Address, Address]:
         # FIXME: filter event log for participants on given channel ID

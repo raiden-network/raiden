@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.utils.types import Address, ChannelId

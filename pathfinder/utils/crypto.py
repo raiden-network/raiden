@@ -1,9 +1,9 @@
-from typing import Iterable
-from itertools import zip_longest
 from collections import namedtuple
+from itertools import zip_longest
+from typing import Iterable
 
 from coincurve import PrivateKey, PublicKey
-from eth_utils import to_checksum_address, encode_hex, keccak, remove_0x_prefix
+from eth_utils import encode_hex, keccak, remove_0x_prefix, to_checksum_address
 
 from pathfinder.config import EMPTY_MERKLE_ROOT
 
