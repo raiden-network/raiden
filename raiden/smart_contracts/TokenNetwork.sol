@@ -66,7 +66,7 @@ contract TokenNetwork is Utils {
     }
 
     struct ClosingRequest {
-        address closing_address;
+        address closing_participant;
 
         // Block number at which the settlement window ends.
         uint256 settle_block_number;
@@ -85,11 +85,11 @@ contract TokenNetwork is Utils {
 
     event ChannelNewDeposit(uint256 channel_identifier, address participant, uint256 deposit);
 
-    event ChannelClosed(uint256 channel_identifier, address closing_address);
+    event ChannelClosed(uint256 channel_identifier, address closing_participant);
 
-    event ChannelUnlocked(uint256 channel_identifier, address payer_address, uint256 transferred_amount);
+    event ChannelUnlocked(uint256 channel_identifier, address payer_participant, uint256 transferred_amount);
 
-    event TransferUpdated(uint256 channel_identifier, address caller);
+    event TransferUpdated(uint256 channel_identifier, address closing_participant);
 
     event ChannelSettled(uint256 channel_identifier);
 
@@ -242,7 +242,7 @@ contract TokenNetwork is Utils {
         require(channel.participants[msg.sender].initialized);
 
         // Store the closing request data
-        closing_requests[channel_identifier].closing_address = msg.sender;
+        closing_requests[channel_identifier].closing_participant = msg.sender;
         closing_requests[channel_identifier].settle_block_number = channel.settle_timeout + block.number;
 
         // An empty value means that the closer never received a transfer, or
@@ -281,21 +281,21 @@ contract TokenNetwork is Utils {
     /// to the channel participant who calls the function.
     /// @param locksroot Root of the partner's merkle tree of all pending lock lockhashes.
     /// @param additional_hash Computed from the message. Used for message authentication.
-    /// @param signature Partner's signature of the balance proof data.
+    /// @param closing_signature Signature of the closing participant on the balance proof data.
     function updateTransfer(
         uint256 channel_identifier,
         uint64 nonce,
         uint256 transferred_amount,
         bytes32 locksroot,
         bytes32 additional_hash,
-        bytes signature)
+        bytes closing_signature)
         public
     {
         // The caller has to be a channel participant
         require(channels[channel_identifier].participants[msg.sender].initialized);
 
         // The closer is not allowed to call updateTransfer
-        require(closing_requests[channel_identifier].closing_address != msg.sender);
+        require(closing_requests[channel_identifier].closing_participant != msg.sender);
 
         // Call the private function for the actual logic and constraints of updateTransfer
         updateTransferPrivate(
@@ -304,7 +304,7 @@ contract TokenNetwork is Utils {
             transferred_amount,
             locksroot,
             additional_hash,
-            signature
+            closing_signature
         );
     }
 
@@ -332,7 +332,7 @@ contract TokenNetwork is Utils {
         // We also need the signature from the non-closing participant on behalf of which the 3rd
         // party makes the transaction. This signature will be provided to the 3rd party
         //  together with the balance proof.
-        address non_closing_address = recoverAddressFromSignature(
+        address non_closing_participant = recoverAddressFromSignature(
             channel_identifier,
             nonce,
             transferred_amount,
@@ -342,10 +342,10 @@ contract TokenNetwork is Utils {
         );
 
         // Make sure the second signature is from a channel participant
-        require(channels[channel_identifier].participants[non_closing_address].initialized);
+        require(channels[channel_identifier].participants[non_closing_participant].initialized);
 
         // Make sure the second signature is from the non-closing participant
-        require(closing_requests[channel_identifier].closing_address != non_closing_address);
+        require(closing_requests[channel_identifier].closing_participant != non_closing_participant);
 
         // Call the private function for the actual logic and constraints of updateTransfer
         updateTransferPrivate(
@@ -372,7 +372,7 @@ contract TokenNetwork is Utils {
         stillTimeout(channel_identifier)
         internal
     {
-        address partner_address = recoverAddressFromSignature(
+        address closing_participant = recoverAddressFromSignature(
             channel_identifier,
             nonce,
             transferred_amount,
@@ -385,13 +385,13 @@ contract TokenNetwork is Utils {
         // unlocked but not included in the new locksroot
         updateParticipantStruct(
             channel_identifier,
-            partner_address,
+            closing_participant,
             nonce,
             locksroot,
             transferred_amount
         );
 
-        TransferUpdated(channel_identifier, msg.sender);
+        TransferUpdated(channel_identifier, closing_participant);
     }
 
     /// @notice Registers the lock secret in the SecretRegistry contract. Unlocks a pending transfer and increases the partner's transferred amount
