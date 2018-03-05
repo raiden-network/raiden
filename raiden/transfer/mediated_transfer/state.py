@@ -7,6 +7,7 @@ from raiden.utils import pex, sha3, typing
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     BalanceProofState,
+    BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
 )
@@ -444,8 +445,8 @@ class LockedTransferSignedState(State):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
-        if not isinstance(balance_proof, BalanceProofState):
-            raise ValueError('balance_proof must be a BalanceProofState instance')
+        if not isinstance(balance_proof, BalanceProofSignedState):
+            raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
