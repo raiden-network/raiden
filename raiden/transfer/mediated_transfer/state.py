@@ -540,16 +540,16 @@ class LockedTransferState(State):
 
     def almost_equal(self, other):
         """ True if both transfers are for the same mediated transfer. """
-        if isinstance(other, LockedTransferState):
+        return (
+            isinstance(other, LockedTransferState) and
             # the only value that may change for each hop is the expiration
-            return (
-                self.identifier == other.identifier and
-                self.amount == other.amount and
-                self.token == other.token and
-                self.target == other.target and
-                self.hashlock == other.hashlock and
-                self.secret == other.secret
-            )
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.token == other.token and
+            self.target == other.target and
+            self.hashlock == other.hashlock and
+            self.secret == other.secret
+        )
 
     def __eq__(self, other):
         if isinstance(other, LockedTransferState):
