@@ -52,7 +52,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
-    ReceiveTransferDirect,
+    ReceiveTransferDirect2,
 )
 from raiden.utils import publickey_to_address, typing
 
@@ -1178,7 +1178,7 @@ def state_transition(channel_state, state_change, block_number):
     elif isinstance(state_change, ContractReceiveChannelWithdraw):
         iteration = handle_channel_withdraw(channel_state, state_change)
 
-    elif isinstance(state_change, ReceiveTransferDirect):
+    elif isinstance(state_change, ReceiveTransferDirect2):
         iteration = handle_receive_directtransfer(channel_state, state_change)
 
     return iteration
