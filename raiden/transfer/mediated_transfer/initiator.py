@@ -395,8 +395,8 @@ def handle_secretrequest2(initiator_state, state_change):
     )
 
     if valid_secretrequest:
-        # Reveal the secret to the target node and wait for its confirmation,
-        # at this point the transfer is not cancellable anymore either the lock
+        # Reveal the secret to the target node and wait for its confirmation.
+        # At this point the transfer is not cancellable anymore as either the lock
         # timeouts or a secret reveal is received.
         #
         # Note: The target might be the first hop

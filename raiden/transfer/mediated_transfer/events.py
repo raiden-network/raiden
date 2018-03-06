@@ -177,7 +177,7 @@ class SendRevealSecret2(Event):
         self.receiver = receiver
 
     def __str__(self):
-        return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
+        return '<SendRevealSecret2 id:{} hashlock:{} token:{} receiver:{}>'.format(
             self.identifier,
             pex(self.hashlock),
             pex(self.token),
@@ -186,7 +186,7 @@ class SendRevealSecret2(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRevealSecret) and
+            isinstance(other, SendRevealSecret2) and
             self.identifier == other.identifier and
             self.secret == other.secret and
             self.hashlock == other.hashlock and

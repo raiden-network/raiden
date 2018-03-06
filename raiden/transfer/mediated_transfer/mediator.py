@@ -217,7 +217,7 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
 
 
 def get_timeout_blocks2(settle_timeout, closed_block_number, payer_lock_expiration, block_number):
-    """ Return the timeout blocks, it's the base value from which the payee's
+    """ Return the timeout blocks, it's the base value from which the payees
     lock timeout must be computed.
     The payee lock timeout is crucial for safety of the mediated transfer, the
     value must be chosen so that the payee hop is forced to reveal the secret
