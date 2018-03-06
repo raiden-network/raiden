@@ -1,8 +1,23 @@
 from typing import List
 
 import pytest
-from eth_utils import keccak, encode_hex
+from eth_utils import keccak, encode_hex, is_hex, remove_0x_prefix
 from pathfinder.utils import private_key_to_address
+from pathfinder.utils.types import Address
+
+
+@pytest.fixture(scope='session')
+def faucet_private_key(request) -> str:
+    private_key = request.config.getoption('faucet_private_key')
+    if is_hex(private_key):
+        assert len(remove_0x_prefix(private_key)) == 64
+        return private_key
+    # TODO: support private keys from file
+
+
+@pytest.fixture(scope='session')
+def faucet_address(faucet_private_key: str):
+    return private_key_to_address(faucet_private_key)
 
 
 @pytest.fixture(scope='session')
@@ -12,7 +27,7 @@ def private_keys() -> List[str]:
 
 
 @pytest.fixture(scope='session')
-def addresses(private_keys: List[str]) -> List[str]:
+def addresses(private_keys: List[str]) -> List[Address]:
     return [private_key_to_address(private_key) for private_key in private_keys]
 
 
@@ -27,10 +42,10 @@ def target_private_key(private_keys: List[str]) -> str:
 
 
 @pytest.fixture(scope='session')
-def initiator_address(initiator_private_key: str) -> str:
+def initiator_address(initiator_private_key: str) -> Address:
     return private_key_to_address(initiator_private_key)
 
 
 @pytest.fixture(scope='session')
-def target_address(target_private_key: str) -> str:
+def target_address(target_private_key: str) -> Address:
     return private_key_to_address(target_private_key)

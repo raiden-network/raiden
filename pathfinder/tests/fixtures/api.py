@@ -1,9 +1,8 @@
-from unittest.mock import Mock
-
 import pytest
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.config import API_DEFAULT_PORT, API_PATH
+from pathfinder.pathfinding_service import PathfindingService
 
 
 @pytest.fixture(scope='session')
@@ -22,7 +21,7 @@ def api_url(api_schema: str, api_port: int) -> str:
 
 
 @pytest.fixture
-def api_sut() -> ServiceApi:
-    api = ServiceApi(Mock())
+def api_sut(pathfinding_service: PathfindingService) -> ServiceApi:
+    api = ServiceApi(pathfinding_service)
     api.run()
     return api

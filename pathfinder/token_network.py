@@ -4,7 +4,7 @@ from itertools import islice
 from typing import List
 
 import networkx as nx
-from eth_utils import is_checksum_address, is_same_address
+from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
 
 from pathfinder.contract.token_network_contract import TokenNetworkContract
@@ -54,7 +54,8 @@ class TokenNetwork:
         Initializes a new TokenNetwork.
         """
         self.token_network_contract = token_network_contract
-        self.token_address = token_network_contract.get_token_address()
+        self.address = to_checksum_address(self.token_network_contract.address)
+        self.token_address = self.token_network_contract.get_token_address()
         self.network_cache = NetworkCache(self.token_network_contract)
         self.G = DiGraph()
 

@@ -2,12 +2,15 @@
 import logging
 import sys
 import traceback
+from typing import Dict
 
 import gevent
 
 from pathfinder.blockchain import BlockchainMonitor
 from pathfinder.gevent_error_handler import register_error_handler
+from pathfinder.token_network import TokenNetwork
 from pathfinder.transport import MatrixTransport
+from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +36,7 @@ class PathfindingService(gevent.Greenlet):
         self.blockchain = blockchain
         self.is_running = gevent.event.Event()
         self.transport.add_message_callback(lambda message: self.on_message_event(message))
+        self.token_networks: Dict[Address, TokenNetwork] = {}
 
     def _run(self):
         register_error_handler(error_handler)

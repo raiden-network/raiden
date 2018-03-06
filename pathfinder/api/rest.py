@@ -1,30 +1,73 @@
 import gevent
-from eth_utils import is_address, is_checksum_address
+from eth_utils import is_address, is_checksum_address, decode_hex
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
+from pathfinder.model.balance_proof import BalanceProof
+from pathfinder.model.lock import Lock
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.utils.types import Json
+from pathfinder.utils.exceptions import InvalidAddressChecksumError
 
 
 class PathfinderResource(Resource):
-    def __init__(self, pathfinder: PathfindingService):
-        self.pathfinder = pathfinder
+    def __init__(self, pathfinding_service: PathfindingService):
+        self.pathfinding_service = pathfinding_service
 
 
 class ChannelBalanceResource(PathfinderResource):
-    @staticmethod
-    def _validate_body(body: Json):
-        return None
 
-    def put(self, channel_id: str):
-        body = request.json()
-        error = self._validate_body(body)
-        if error is not None:
-            return error
+    def put(self):
+        body = request.json
+
+        balance_proof_json = body.get('balance_proof')
+        if balance_proof_json is None:
+            return {'error': 'No balance proof specified.'}, 400
+        try:
+            balance_proof = BalanceProof(
+                nonce=balance_proof_json['nonce'],
+                transferred_amount=balance_proof_json['transferred_amount'],
+                locksroot=decode_hex(balance_proof_json['locksroot']),
+                channel_id=balance_proof_json['channel_identifier'],
+                token_network_address=balance_proof_json['token_network_address'],
+                chain_id=balance_proof_json['chain_id'],
+                additional_hash=decode_hex(balance_proof_json['additional_hash']),
+                signature=decode_hex(balance_proof_json['signature'])
+            )
+        except InvalidAddressChecksumError as err:
+            return {'error': str(err)}, 400
+        except KeyError as err:
+            return {'error': 'Invalid balance proof format. Missing parameter: {}'.format(
+                str(err)
+            )}, 400
+
+        locks_json = body.get('locks')
+        if locks_json is None or not isinstance(locks_json, list):
+            return {'error': 'No lock list specified.'}, 400
+        locks = [
+            Lock(
+                amount_locked=lock_json['amount_locked'],
+                expiration=lock_json['expiration'],
+                hashlock=decode_hex(lock_json['hashlock'])
+            )
+            for lock_json in locks_json
+        ]
+
+        # Note: signature and lock checks are performed by the TokenNetwork.
+        token_network = self.pathfinding_service.token_networks.get(
+            balance_proof.token_network_address
+        )
+        if token_network is None:
+            return {'error': 'Unsupported token network: {}'.format(
+                balance_proof.token_network_address
+            )}, 400
+
+        try:
+            token_network.update_balance(balance_proof, locks)
+        except ValueError as err:
+            return {'error': str(err)}, 400
 
 
 class ChannelFeeResource(PathfinderResource):
@@ -78,14 +121,14 @@ class PaymentInfoResource(Resource):
 
 
 class ServiceApi:
-    def __init__(self, pathfinder: PathfindingService):
+    def __init__(self, pathfinding_service: PathfindingService):
         self.flask_app = Flask(__name__)
         self.api = Api(self.flask_app)
         self.rest_server: WSGIServer = None
         self.server_greenlet: Greenlet = None
 
         resources = [
-            ('/channels/<channel_id>/balance', ChannelBalanceResource, {}),
+            ('/balance', ChannelBalanceResource, {}),
             ('/channels/<channel_id>/fee', ChannelFeeResource, {}),
             ('/paths', PathsResource, {}),
             ('/payment/info', PaymentInfoResource, {})
@@ -93,7 +136,7 @@ class ServiceApi:
 
         for endpoint_url, resource, kwargs in resources:
             endpoint_url = API_PATH + endpoint_url
-            kwargs['pathfinder'] = pathfinder
+            kwargs['pathfinding_service'] = pathfinding_service
             self.api.add_resource(resource, endpoint_url, resource_class_kwargs=kwargs)
 
     def run(self, port: int = API_DEFAULT_PORT):
