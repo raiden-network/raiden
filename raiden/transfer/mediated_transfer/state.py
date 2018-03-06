@@ -828,7 +828,7 @@ class MediationPairState2(State):
         self.payee_state = 'payee_pending'
 
     def __repr__(self):
-        return '<MediationPairState payee:{} {} payer:{}>'.format(
+        return '<MediationPairState2 payee:{} {} payer:{}>'.format(
             self.payer_transfer,
             pex(self.payee_address),
             self.payee_transfer,
@@ -836,7 +836,7 @@ class MediationPairState2(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, MediationPairState) and
+            isinstance(other, MediationPairState2) and
             self.payee_address == other.payee_address and
             self.payee_transfer == other.payee_transfer and
             self.payee_state == other.payee_state and
