@@ -59,7 +59,7 @@ authorship submitted we can not accept your contribution.
 
 #### Debian/Ubuntu
 
-Raiden requires Python 2, Geth (Ethereum client), and the Solidity compiler
+Raiden requires Python >=3.6, Geth (Ethereum client), and the Solidity compiler
 `solc`. The easiest way to get the last two is to add the official Ethereum ppa
 to your repositories:
 
