@@ -608,7 +608,7 @@ class ReceiveUnlock(StateChange):
         self.hashlock = hashlock
         self.balance_proof = balance_proof
 
-    def __str(self):
+    def __repr__(self):
         return '<ReceiveUnlock hashlock: {} balance_proof: {}>'.format(
             pex(self.hashlock),
             self.balance_proof,
