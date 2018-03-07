@@ -66,7 +66,7 @@ PartnerStateModel = namedtuple(
 
 
 def assert_partner_state(end_state, partner_state, model):
-    """Checks taht the stored data for both ends corresponds to the model."""
+    """Checks that the stored data for both ends correspond to the model."""
     assert end_state.address == model.participant_address
     assert channel.get_amount_locked(end_state) == model.amount_locked
     assert channel.get_balance(end_state, partner_state) == model.balance
@@ -152,7 +152,7 @@ def make_receive_transfer_direct(
 
     address = privatekey_to_address(privkey.secret)
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
-        raise ValueError('Private key doesnt match any of the participants.')
+        raise ValueError('Private key does not match any of the participants.')
 
     identifier = nonce
     mediated_transfer_msg = DirectTransfer(
@@ -190,7 +190,7 @@ def make_receive_transfer_mediated(
 
     address = privatekey_to_address(privkey.secret)
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
-        raise ValueError('Private key doesnt match any of the participants.')
+        raise ValueError('Private key does not match any of the participants.')
 
     if merkletree_leaves is None:
         layers = [[lock.lockhash]]
@@ -232,7 +232,7 @@ def make_receive_transfer_mediated(
 
 
 def test_new_end_state():
-    """Test the defaults for a end state object."""
+    """Test the defaults for an end state object."""
     balance1 = 101
     node_address = factories.make_address()
     end_state = NettingChannelEndState(node_address, balance1)
@@ -268,7 +268,7 @@ def test_endstate_update_contract_balance():
 
 def test_channelstate_update_contract_balance():
     """A blockchain event for a new balance must increase the respective
-    participant's balance.
+    participants balance.
     """
     block_number = 10
 
@@ -371,7 +371,7 @@ def test_channelstate_repeated_contract_balance():
 def test_channelstate_send_mediatedtransfer():
     """Sending a mediated transfer must update the participant state.
 
-    This test only the state of the sending node, without synchroniation.
+    This tests only the state of the sending node, without synchronisation.
     """
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -417,7 +417,7 @@ def test_channelstate_send_mediatedtransfer():
 def test_channelstate_send_direct_transfer():
     """Sending a direct transfer must update the participant state.
 
-    This test only the state of the sending node, without synchroniation.
+    This tests only the state of the sending node, without synchronisation.
     """
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -446,10 +446,10 @@ def test_channelstate_send_direct_transfer():
 
 
 def test_channelstate_receive_mediatedtransfer():
-    """Test receiving a mediated transfer.
+    """Tests receiving a mediated transfer.
 
     The transfer is done in three steps:
-        - a mediated transfer including a lock in it's balance proof is sent
+        - a mediated transfer including a lock in its balance proof is sent
         - the secret is revealed
         - the unlocked balance proof is sent updating the transferred_amount
     """
@@ -565,7 +565,7 @@ def test_channelstate_directtransfer_overspent():
         channel_state.partner_state,
         channel_state.our_state,
     )
-    assert not is_valid, 'message is invalid because its spending more than the distributable'
+    assert not is_valid, 'message is invalid because it is spending more than the distributable'
 
     iteration = channel.handle_receive_directtransfer(
         channel_state,
@@ -610,7 +610,7 @@ def test_channelstate_mediatedtransfer_overspent():
         channel_state,
         receive_mediatedtransfer,
     )
-    assert not is_valid, 'message is invalid because its spending more than the distributable'
+    assert not is_valid, 'message is invalid because it is spending more than the distributable'
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
@@ -903,7 +903,7 @@ def test_channel_must_accept_expired_locks():
 
     If a N node goes offline for a number B of blocks, and the partner does not
     close the channel, when N comes back online some of the messages from its
-    partner may become expired. Neverthless these messages are ordered and must
+    partner may become expired. Nevertheless these messages are ordered and must
     be accepted for the partner to make progress with its queue.
 
     Note: Accepting a message with an expired lock does *not* imply the token
@@ -994,8 +994,8 @@ def test_receive_mediatedtransfer_before_deposit():
 
 
 def test_receive_directdtransfer_before_deposit():
-    """Regression test that ensures we accept incoming direct transfers, even
-    if we don't have any balance on the channel.
+    """Regression test that ensures that we accept incoming direct transfers,
+    even if we don't have any balance on the channel.
     """
     our_model1, _ = create_model(0)  # our deposit is 0
     partner_model1, privkey2 = create_model(100)
@@ -1019,7 +1019,7 @@ def test_receive_directdtransfer_before_deposit():
 
 
 def test_channelstate_withdraw_without_locks():
-    """event close must be properly handle if there are no locks to unlock"""
+    """Event close must be properly handled if there are no locks to unlock"""
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
@@ -1035,7 +1035,7 @@ def test_channelstate_withdraw_without_locks():
 
 
 def test_channelstate_withdraw():
-    """event close must be properly handle if there are no locks to unlock"""
+    """Event close must be properly handled if there are no locks to unlock"""
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
