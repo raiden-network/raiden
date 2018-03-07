@@ -205,7 +205,7 @@ def is_channel_close_needed2(payer_channel, transfer_pair, block_number):
     payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
     already_closing = channel.get_status(payer_channel) == CHANNEL_STATE_CLOSING
 
-    safe_to_wait = is_safe_to_wait(
+    safe_to_wait = is_safe_to_wait2(
         transfer_pair.payer_transfer.lock.expiration,
         payer_channel.reveal_timeout,
         block_number,
@@ -435,10 +435,10 @@ def clear_if_finalized(iteration):
 
 
 def next_channel_from_routes(
-    available_routes: List['RouteState'],
-    channelidentifiers_to_channels: Dict,
-    transfer_amount: int,
-    timeout_blocks: int
+        available_routes: List['RouteState'],
+        channelidentifiers_to_channels: Dict,
+        transfer_amount: int,
+        timeout_blocks: int
 ) -> 'NettingChannelState':
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
