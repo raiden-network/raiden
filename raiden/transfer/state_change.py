@@ -619,7 +619,7 @@ class ReceiveTransferDirect2(StateChange):
 
     def __repr__(self):
         return (
-            'ReceiveTransferDirect('
+            'ReceiveTransferDirect2('
             'id:{} token_address:{} balance_proof:{}'
             ')'
         ).format(
