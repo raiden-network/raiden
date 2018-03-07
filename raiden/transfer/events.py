@@ -35,30 +35,6 @@ class ContractSendChannelClose(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelWithdraw(Event):
-    """ Event emitted when the lock must be withdrawn on-chain. """
-
-    def __init__(self, channel_identifier, unlock_proofs):
-        self.channel_identifier = channel_identifier
-        self.unlock_proofs = unlock_proofs
-
-    def __repr__(self):
-        return '<ContractSendChannelWithdraw channel:{} unlock_proofs:{}>'.format(
-            pex(self.channel_identifier),
-            self.unlock_proofs,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ContractSendChannelWithdraw) and
-            self.channel_identifier == other.channel_identifier and
-            self.unlock_proofs == other.unlock_proofs
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class ContractSendChannelSettle(Event):
     """ Event emitted if the netting channel must be settled. """
 
