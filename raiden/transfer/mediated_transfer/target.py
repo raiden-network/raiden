@@ -61,7 +61,7 @@ def events_for_close(state):
 
 
 def events_for_close2(target_state, channel_state, block_number):
-    """ Emits the event for closing the netting channel if transfer needs
+    """ Emits the event for closing the netting channel if the transfer needs
     to be settled on-chain.
     """
     transfer = target_state.transfer
@@ -84,7 +84,7 @@ def events_for_close2(target_state, channel_state, block_number):
 
 
 def events_for_withdraw(from_transfer, from_route):
-    """ Withdraw from the from_channel if it is closed and the secret is known. """
+    """ Withdraws from the from_channel if it is closed and the secret is known. """
     channel_open = from_route.state == CHANNEL_STATE_OPENED
 
     if not channel_open and from_transfer.secret is not None:
@@ -98,7 +98,7 @@ def events_for_withdraw(from_transfer, from_route):
 
 
 def handle_inittarget(state_change):
-    """ Handle an ActionInitTarget state change. """
+    """ Handles an ActionInitTarget state change. """
     from_transfer = state_change.from_transfer
     from_route = state_change.from_route
     block_number = state_change.block_number
@@ -134,7 +134,7 @@ def handle_inittarget(state_change):
 
 
 def handle_inittarget2(state_change, channel_state, block_number):
-    """ Handle an ActionInitTarget state change. """
+    """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
 
@@ -173,7 +173,7 @@ def handle_inittarget2(state_change, channel_state, block_number):
 
 
 def handle_secretreveal(state, state_change):
-    """ Validate and handle a ReceiveSecretReveal state change. """
+    """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = sha3(state_change.secret) == state.from_transfer.hashlock
 
     if valid_secret:
@@ -200,7 +200,7 @@ def handle_secretreveal(state, state_change):
 
 
 def handle_secretreveal2(target_state, state_change, channel_state):
-    """ Validate and handle a ReceiveSecretReveal state change. """
+    """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.hashlock == target_state.transfer.lock.hashlock
 
     if valid_secret:
@@ -232,7 +232,7 @@ def handle_secretreveal2(target_state, state_change, channel_state):
 
 
 def handle_balanceproof(state, state_change):
-    """ Handle a ReceiveBalanceProof state change. """
+    """ Handles a ReceiveBalanceProof state change. """
     iteration = TransitionResult(state, list())
 
     # TODO: byzantine behavior event when the sender doesn't match
@@ -243,7 +243,7 @@ def handle_balanceproof(state, state_change):
 
 
 def handle_unlock(target_state, state_change, channel_state):
-    """ Handle a ReceiveBalanceProof state change. """
+    """ Handles a ReceiveBalanceProof state change. """
     iteration = TransitionResult(target_state, list())
 
     if state_change.balance_proof.sender == target_state.route.node_address:
@@ -320,7 +320,7 @@ def handle_block2(target_state, channel_state, block_number):
 
 
 def handle_routechange(state, state_change):
-    """ Handle an ActionRouteChange state change. """
+    """ Handles an ActionRouteChange state change. """
     updated_route = state_change.route
     assert updated_route.node_address == state.from_route.node_address
 
@@ -340,7 +340,7 @@ def handle_routechange(state, state_change):
 
 
 def clear_if_finalized(iteration):
-    """ Clear the state if the transfer was either completed or failed. """
+    """ Clears the state if the transfer was either completed or failed. """
     state = iteration.new_state
 
     if state is None:
