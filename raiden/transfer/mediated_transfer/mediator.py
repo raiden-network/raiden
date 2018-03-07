@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import itertools
+from typing import List, Dict
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
@@ -434,25 +435,26 @@ def clear_if_finalized(iteration):
 
 
 def next_channel_from_routes(
-        available_routes,
-        channelidentifiers_to_channels,
-        transfer_amount,
-        timeout_blocks):
+    available_routes: List['RouteState'],
+    channelidentifiers_to_channels: Dict,
+    transfer_amount: int,
+    timeout_blocks: int
+) -> 'NettingChannelState':
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
     Args:
-        available_routes (List[RouteState]): Current available routes that may be used,
-            it's assumed that the available_routes list is ordered from best to
+        available_routes: Current available routes that may be used, it's
+            assumed that the available_routes list is ordered from best to
             worst.
-        channelidentifiers_to_channels (Dict): Mapping from channel identifier
+        channelidentifiers_to_channels: Mapping from channel identifier
             to NettingChannelState.
-        transfer_amount (int): The amount of tokens that will be transferred
+        transfer_amount: The amount of tokens that will be transferred
             through the given route.
-        timeout_blocks (int): Base number of available blocks used to compute
+        timeout_blocks: Base number of available blocks used to compute
             the lock timeout.
     Returns:
-        NettingChannelState: The next route.
+        The next route.
     """
     for route in available_routes:
         channel_identifier = route.channel_identifier
@@ -569,21 +571,19 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
 
 
 def next_transfer_pair2(
-        payer_transfer,
-        available_routes,
-        channelidentifiers_to_channels,
-        timeout_blocks,
-        block_number):
+        payer_transfer: LockedTransferState,
+        available_routes: List['RouteState'],
+        channelidentifiers_to_channels: Dict,
+        timeout_blocks: int,
+        block_number: int):
     """ Given a payer transfer tries a new route to proceed with the mediation.
     Args:
-        payer_transfer (LockedTransferState): The transfer received from the
-            payer_channel.
-        routes (List[RouteState]): Current available routes that may be used,
-            it's assumed that the routes list is ordered from best to
-            worst.
-        timeout_blocks (int): Base number of available blocks used to compute
+        payer_transfer: The transfer received from the payer_channel.
+        routes: Current available routes that may be used, it's assumed that
+            the routes list is ordered from best to worst.
+        timeout_blocks: Base number of available blocks used to compute
             the lock timeout.
-        block_number (int): The current block number.
+        block_number: The current block number.
     """
     assert timeout_blocks > 0
     assert timeout_blocks <= payer_transfer.lock.expiration - block_number
