@@ -392,6 +392,33 @@ class ActionLeaveAllNetworks(StateChange):
         return not self.__eq__(other)
 
 
+class ActionChangeNodeNetworkState(StateChange):
+    """ The network state of `node_address` changed. """
+
+    def __init__(self, node_address: typing.address, network_state):
+        if not isinstance(node_address, typing.address):
+            raise ValueError('node_address must be an address instance')
+
+        self.node_address = node_address
+        self.network_state = network_state
+
+    def __repr__(self):
+        return '<ActionChangeNodeNetworkState node:{} state:{}>'.format(
+            pex(self.node_address),
+            self.network_state,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionChangeNodeNetworkState) and
+            self.node_address == other.node_address and
+            self.network_state == other.network_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveNewPaymentNetwork(StateChange):
     """ Registers a new payment network.
     A payment network corresponds to a registry smart contract.
