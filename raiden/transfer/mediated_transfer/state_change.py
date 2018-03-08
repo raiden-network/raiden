@@ -108,14 +108,14 @@ class ActionInitInitiator2(StateChange):
         self.routes = routes
 
     def __repr__(self):
-        return '<ActionInitInitiator network:{} transfer:{}>'.format(
+        return '<ActionInitInitiator2 network:{} transfer:{}>'.format(
             self.payment_network_identifier,
             self.transfer,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionInitInitiator) and
+            isinstance(other, ActionInitInitiator2) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.transfer == other.transfer and
             self.routes == other.routes
@@ -153,7 +153,7 @@ class ActionInitMediator2(StateChange):
         self.from_transfer = from_transfer
 
     def __repr__(self):
-        return '<ActionInitMediator network:{} from_route:{} from_transfer:{}>'.format(
+        return '<ActionInitMediator2 network:{} from_route:{} from_transfer:{}>'.format(
             self.payment_network_identifier,
             self.from_route,
             self.from_transfer,
@@ -161,7 +161,7 @@ class ActionInitMediator2(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionInitMediator) and
+            isinstance(other, ActionInitMediator2) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.routes == other.routes and
             self.from_route == other.from_route and
@@ -192,7 +192,7 @@ class ActionInitTarget2(StateChange):
         self.transfer = transfer
 
     def __repr__(self):
-        return '<ActionInitTarget network:{} route:{} transfer:{}>'.format(
+        return '<ActionInitTarget2 network:{} route:{} transfer:{}>'.format(
             self.payment_network_identifier,
             self.route,
             self.transfer,
@@ -200,7 +200,7 @@ class ActionInitTarget2(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionInitTarget) and
+            isinstance(other, ActionInitTarget2) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.route == other.route and
             self.transfer == other.transfer
