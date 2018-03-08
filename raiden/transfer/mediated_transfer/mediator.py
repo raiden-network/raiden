@@ -16,6 +16,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
+    ActionInitMediator2,
     ContractReceiveWithdraw,
     ReceiveBalanceProof,
     ReceiveSecretReveal,
@@ -1868,7 +1869,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
 
     iteration = TransitionResult(mediator_state, list())
 
-    if isinstance(state_change, ActionInitMediator):
+    if isinstance(state_change, ActionInitMediator2):
         if mediator_state is None:
             iteration = handle_init(
                 state_change,

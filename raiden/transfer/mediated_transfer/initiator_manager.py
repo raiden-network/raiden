@@ -6,7 +6,7 @@ from raiden.transfer.mediated_transfer.events import EventUnlockFailed
 from raiden.transfer.mediated_transfer import initiator, mediator
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
-    ActionInitInitiator,
+    ActionInitInitiator2,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
@@ -223,7 +223,7 @@ def handle_secretreveal(payment_state, state_change, channelidentifiers_to_chann
 
 
 def state_transition(payment_state, state_change, channelidentifiers_to_channels, block_number):
-    if isinstance(state_change, ActionInitInitiator):
+    if isinstance(state_change, ActionInitInitiator2):
         iteration = handle_init(
             payment_state,
             state_change,

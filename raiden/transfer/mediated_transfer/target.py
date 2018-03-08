@@ -13,6 +13,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
+    ActionInitTarget2,
     ReceiveBalanceProof,
     ReceiveSecretReveal,
 )
@@ -404,7 +405,7 @@ def state_transition2(target_state, state_change, channel_state, block_number):
     """ State machine for the target node of a mediated transfer. """
     iteration = TransitionResult(target_state, list())
 
-    if isinstance(state_change, ActionInitTarget):
+    if isinstance(state_change, ActionInitTarget2):
         iteration = handle_inittarget2(
             state_change,
             channel_state,

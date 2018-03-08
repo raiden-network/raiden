@@ -2,8 +2,12 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 from raiden.transfer.architecture import StateChange
-from raiden.utils import pex, sha3
-from .state import LockedTransferState
+from raiden.transfer.state import RouteState
+from raiden.transfer.mediated_transfer.state import (
+    LockedTransferState,
+    TransferDescriptionWithSecretState,
+)
+from raiden.utils import pex, sha3, typing
 
 
 # Note: The init states must contain all the required data for trying doing
@@ -84,6 +88,126 @@ class ActionInitTarget(StateChange):
         self.from_route = from_route
         self.from_transfer = from_transfer
         self.block_number = block_number
+
+
+class ActionInitInitiator2(StateChange):
+    """ Initial state of a new mediated transfer.
+
+    Args:
+        transfer: A state object containing the transfer details.
+        routes: A list of possible routes provided by a routing service.
+        secret: The secret that must be used with the transfer.
+    """
+
+    def __init__(self, payment_network_identifier, transfer_description, routes):
+        if not isinstance(transfer_description, TransferDescriptionWithSecretState):
+            raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.transfer = transfer_description
+        self.routes = routes
+
+    def __repr__(self):
+        return '<ActionInitInitiator network:{} transfer:{}>'.format(
+            self.payment_network_identifier,
+            self.transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionInitInitiator) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.transfer == other.transfer and
+            self.routes == other.routes
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ActionInitMediator2(StateChange):
+    """ Initial state for a new mediator.
+
+    Args:
+        routes: A list of possible routes provided by a routing service.
+        from_route: The payee route.
+        from_transfer: The payee transfer.
+    """
+
+    def __init__(
+            self,
+            payment_network_identifier,
+            routes: typing.List[RouteState],
+            from_route: RouteState,
+            from_transfer: LockedTransferState):
+
+        if not isinstance(from_route, RouteState):
+            raise ValueError('from_route must be a RouteState instance')
+
+        if not isinstance(from_transfer, LockedTransferState):
+            raise ValueError('from_transfer must be a LockedTransferState instance')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.routes = routes
+        self.from_route = from_route
+        self.from_transfer = from_transfer
+
+    def __repr__(self):
+        return '<ActionInitMediator network:{} from_route:{} from_transfer:{}>'.format(
+            self.payment_network_identifier,
+            self.from_route,
+            self.from_transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionInitMediator) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.routes == other.routes and
+            self.from_route == other.from_route and
+            self.from_transfer == other.from_transfer
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ActionInitTarget2(StateChange):
+    """ Initial state for a new target.
+
+    Args:
+        route: The payee route.
+        transfer: The payee transfer.
+    """
+
+    def __init__(self, payment_network_identifier, route, transfer):
+        if not isinstance(route, RouteState):
+            raise ValueError('route must be a RouteState instance')
+
+        if not isinstance(transfer, LockedTransferState):
+            raise ValueError('transfer must be a LockedTransferState instance')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.route = route
+        self.transfer = transfer
+
+    def __repr__(self):
+        return '<ActionInitTarget network:{} route:{} transfer:{}>'.format(
+            self.payment_network_identifier,
+            self.route,
+            self.transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionInitTarget) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.route == other.route and
+            self.transfer == other.transfer
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ActionCancelRoute(StateChange):
