@@ -329,6 +329,14 @@ class SecretRequest(SignedMessage):
         packed.amount = self.amount
         packed.signature = self.signature
 
+    @staticmethod
+    def from_event(event):
+        return SecretRequest(
+            event.identifier,
+            event.hashlock,
+            event.amount,
+        )
+
 
 class Secret(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
@@ -415,6 +423,17 @@ class Secret(EnvelopeMessage):
         packed.secret = self.secret
         packed.signature = self.signature
 
+    @staticmethod
+    def from_event(event):
+        return Secret(
+            event.identifier,
+            event.balance_proof.nonce,
+            event.balance_proof.channel_address,
+            event.balance_proof.transferred_amount,
+            event.balance_proof.locksroot,
+            event.secret,
+        )
+
 
 class RevealSecret(SignedMessage):
     """Message used to reveal a secret to party known to have interest in it.
@@ -453,6 +472,12 @@ class RevealSecret(SignedMessage):
     def pack(self, packed):
         packed.secret = self.secret
         packed.signature = self.signature
+
+    @staticmethod
+    def from_event(event):
+        return RevealSecret(
+            event.secret,
+        )
 
 
 class DirectTransfer(EnvelopeMessage):

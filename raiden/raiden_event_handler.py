@@ -68,7 +68,7 @@ def handle_send_directtransfer(
 def handle_send_revealsecret(
         raiden: 'RaidenService',
         reveal_secret_event: SendRevealSecret):
-    reveal_secret_message = RevealSecret(reveal_secret_event.secret)
+    reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
     raiden.send_async(
         reveal_secret_event.receiver,
@@ -79,14 +79,7 @@ def handle_send_revealsecret(
 def handle_send_balanceproof(
         raiden: 'RaidenService',
         balance_proof_event: SendBalanceProof):
-    secret_message = Secret(
-        balance_proof_event.identifier,
-        balance_proof_event.balance_proof.nonce,
-        balance_proof_event.balance_proof.channel_address,
-        balance_proof_event.balance_proof.transferred_amount,
-        balance_proof_event.balance_proof.locksroot,
-        balance_proof_event.secret,
-    )
+    secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
     raiden.send_async(
         balance_proof_event.receiver,
@@ -97,11 +90,7 @@ def handle_send_balanceproof(
 def handle_send_secretrequest(
         raiden: 'RaidenService',
         secret_request_event: SendSecretRequest):
-    secret_request_message = SecretRequest(
-        secret_request_event.identifier,
-        secret_request_event.hashlock,
-        secret_request_event.amount,
-    )
+    secret_request_message = SecretRequest.from_event(secret_request_event)
     raiden.sign(secret_request_message)
     raiden.send_async(
         secret_request_event.receiver,
