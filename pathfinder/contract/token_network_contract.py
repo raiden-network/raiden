@@ -1,7 +1,6 @@
 from typing import Dict, Tuple
 
 from web3.contract import Contract
-from toolz.functoolz import compose
 
 from pathfinder.utils.types import Address, ChannelId
 
@@ -23,4 +22,4 @@ class TokenNetworkContract:
         return {None: None, None: None}
 
     def get_token_address(self) -> Address:
-        return self.call().token()
+        return self.contract.functions.token().call()
