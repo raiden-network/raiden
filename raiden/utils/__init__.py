@@ -31,6 +31,10 @@ def safe_address_decode(address):
     return address
 
 
+def random_secret():
+    return os.urandom(32)
+
+
 def sha3(data: bytes) -> bytes:
     """
     Raises:
