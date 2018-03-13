@@ -14,3 +14,4 @@ pytest-runner==4.0
 
 ipython
 pdbpp
+psutil
