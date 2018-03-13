@@ -15,7 +15,8 @@ from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
-from raiden.utils.typing import address
+from raiden.transfer import channel
+from raiden.utils import typing
 
 
 LETTERS = string.printable
@@ -55,7 +56,7 @@ def isaddress(data: bytes) -> bool:
     return isinstance(data, bytes) and len(data) == 20
 
 
-def address_decoder(addr: str) -> address:
+def address_decoder(addr: str) -> typing.address:
     if addr[:2] == '0x':
         addr = addr[2:]
 
@@ -64,7 +65,7 @@ def address_decoder(addr: str) -> address:
     return addr
 
 
-def address_encoder(address: address) -> str:
+def address_encoder(address: typing.address) -> str:
     assert len(address) in (20, 0)
     return '0x' + hexlify(address).decode()
 
@@ -155,7 +156,7 @@ def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key_bin: bytes) -> address:
+def privatekey_to_address(private_key_bin: bytes) -> typing.address:
     return publickey_to_address(privatekey_to_publickey(private_key_bin))
 
 
@@ -206,24 +207,23 @@ def snake_to_camel_case(snake_string):
     return snake_string.title().replace('_', '')
 
 
-def channel_to_api_dict(channel):
+def channel_to_api_dict(channel_):
     """Takes in a Channel Object and turns it into a dictionary for
     usage in the REST API. Decoding from binary to hex happens through
     the marshmallow AddressField in encoding.py.
     """
     return {
-        'channel_address': channel.channel_address,
-        'token_address': channel.token_address,
-        'partner_address': channel.partner_address,
-        'settle_timeout': channel.settle_timeout,
-        'reveal_timeout': channel.reveal_timeout,
-        'balance': channel.distributable,
-        'state': channel.state
+        'channel_address': channel_.channel_address,
+        'token_address': channel_.token_address,
+        'partner_address': channel_.partner_address,
+        'settle_timeout': channel_.settle_timeout,
+        'reveal_timeout': channel_.reveal_timeout,
+        'balance': channel_.distributable,
+        'state': channel_.state
     }
 
 
 def channelstate_to_api_dict(channel_state):
-    from raiden.transfer import channel
     balance = channel.get_distributable(
         channel_state.our_state,
         channel_state.partner_state,
