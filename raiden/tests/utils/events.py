@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+NOVALUE = object()
+
 
 def check_nested_attrs(item, data):
     for name, value in data.items():
-        item_value = getattr(item, name)
+        item_value = getattr(item, name, NOVALUE)
 
         if isinstance(value, dict):
             if not check_nested_attrs(item_value, value):
@@ -35,6 +37,28 @@ def must_contain_entry(item_list, type_, data):
     for item in item_list:
         if isinstance(item, type_):
             if check_nested_attrs(item, data):
-                return True
+                return item
+    return None
 
-    return False
+
+def check_dict_nested_attrs(item, dict_data):
+    for key, value in dict_data.items():
+        if key not in item:
+            return False
+
+        item_value = item[key]
+
+        if isinstance(item_value, dict):
+            if not check_dict_nested_attrs(item_value, value):
+                return False
+        elif item_value != value:
+            return False
+
+    return True
+
+
+def must_have_event(event_list, dict_data):
+    for item in event_list:
+        if isinstance(item, dict) and check_dict_nested_attrs(item, dict_data):
+            return item
+    return None
