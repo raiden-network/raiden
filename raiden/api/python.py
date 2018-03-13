@@ -29,6 +29,7 @@ from raiden.transfer.state_change import (
     ActionChannelClose,
 )
 from raiden.exceptions import (
+    AlreadyRegisteredTokenAddress,
     ChannelNotFound,
     EthNodeCommunicationError,
     InsufficientFunds,
@@ -118,7 +119,7 @@ class RaidenAPI:
             self.raiden.register_channel_manager(channel_manager_address)
             return channel_manager_address
 
-        raise ValueError('Token already registered')
+        raise AlreadyRegisteredTokenAddress('Token already registered')
 
     def connect_token_network(
             self,
@@ -252,7 +253,7 @@ class RaidenAPI:
 
         graph = self.raiden.token_to_channelgraph.get(token_address)
         if graph is None:
-            raise InvalidAddress('Unknown token address')
+            raise UnknownTokenAddress('Unknown token address')
 
         channel = graph.partneraddress_to_channel.get(partner_address)
         if channel is None:
@@ -741,7 +742,7 @@ class RaidenAPI2:
 
         Raises:
             InvalidAddress: If the token_address is not a valid address.
-            ValueError: If the token is already registered.
+            AlreadyRegisteredTokenAddress: If the token is already registered.
             TransactionThrew: If the register transaction failed, this may
                 happen because the account has not enough balance to pay for the
                 gas or this register call raced with another transaction and lost.
@@ -751,7 +752,7 @@ class RaidenAPI2:
             raise InvalidAddress('token_address must be a valid address in binary')
 
         if token_address in self.get_tokens_list():
-            raise ValueError('Token already registered')
+            raise AlreadyRegisteredTokenAddress('Token already registered')
 
         try:
             return self.raiden.default_registry.add_token(token_address)
@@ -795,7 +796,7 @@ class RaidenAPI2:
             raise InvalidAddress('token_address must be a valid address in binary')
 
         if token_address not in self.get_tokens_list():
-            raise ValueError('token_address unknown')
+            raise UnknownTokenAddress('token_address unknown')
 
         connection_manager = self.raiden.connection_manager_for_token(token_address)
         return connection_manager.leave(only_receiving)
@@ -892,7 +893,7 @@ class RaidenAPI2:
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
         if token_address not in token_networks:
-            raise InvalidAddress('Unknown token address')
+            raise UnknownTokenAddress('Unknown token address')
 
         if channel_state is None:
             raise InvalidAddress('No channel with partner_address for the given token')

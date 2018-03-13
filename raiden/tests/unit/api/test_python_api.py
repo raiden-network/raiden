@@ -8,6 +8,7 @@ from raiden.tests.utils.transfer import (
     direct_transfer,
 )
 from raiden.exceptions import (
+    AlreadyRegisteredTokenAddress,
     NoPathError,
     InsufficientFunds,
 )
@@ -64,7 +65,7 @@ def test_register_token(raiden_chain, token_addresses):
     assert manager_0token == api0.manager_address_if_token_registered(token_addresses[0])
 
     # Exception if we try to reregister
-    with pytest.raises(ValueError):
+    with pytest.raises(AlreadyRegisteredTokenAddress):
         api0.register_token(token_addresses[0])
 
 
