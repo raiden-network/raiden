@@ -222,6 +222,23 @@ def channel_to_api_dict(channel):
     }
 
 
+def channelstate_to_api_dict(channel_state):
+    from raiden.transfer import channel
+    balance = channel.get_distributable(
+        channel_state.our_state,
+        channel_state.partner_state,
+    )
+    return {
+        'channel_address': channel_state.identifier,
+        'token_address': channel_state.token_address,
+        'partner_address': channel_state.partner_state.address,
+        'settle_timeout': channel_state.settle_timeout,
+        'reveal_timeout': channel_state.reveal_timeout,
+        'balance': balance,
+        'state': channel.get_status(channel_state),
+    }
+
+
 def fix_tester_storage(storage):
     """ pyethereum tester doesn't follow the canonical storage encoding:
     Both keys and values of the account storage associative array must be encoded with 64 hex
