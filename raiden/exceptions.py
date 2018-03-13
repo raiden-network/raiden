@@ -92,6 +92,16 @@ class UnknownAddress(RaidenError):
     pass
 
 
+class UnknownTokenAddress(RaidenError):
+    """ Raised when the token address in unknown. """
+    pass
+
+
+class AlreadyRegisteredTokenAddress(RaidenError):
+    """ Raised when the token address in already registered with the given network. """
+    pass
+
+
 # Exceptions raised due to protocol errors (this includes messages received
 # from a byzantine node)
 
@@ -130,11 +140,6 @@ class InvalidNonce(RaidenError):
 
 class TransferUnwanted(RaidenError):
     """ Raised when the node is not receiving new transfers. """
-    pass
-
-
-class UnknownTokenAddress(RaidenError):
-    """ Raised when the token address in unknown. """
     pass
 
 
