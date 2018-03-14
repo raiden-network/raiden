@@ -173,6 +173,37 @@ class ActionTransferDirect(StateChange):
         return not self.__eq__(other)
 
 
+class ActionTransferDirect2(StateChange):
+    def __init__(self, receiver_address: typing.address, identifier, amount: int):
+        if not isinstance(receiver_address, typing.address):
+            raise ValueError('receiver_address must be address')
+
+        if not isinstance(amount, int):
+            raise ValueError('amount must be int')
+
+        self.identifier = identifier
+        self.amount = amount
+        self.receiver_address = receiver_address
+
+    def __repr__(self):
+        return '<ActionTransferDirect receiver_address:{} identifier:{} amount:{}>'.format(
+            pex(self.receiver_address),
+            self.identifier,
+            self.amount,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionTransferDirect) and
+            self.receiver_address == other.receiver_address and
+            self.identifier == other.identifier and
+            self.amount == other.amount
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelNew(StateChange):
     """ A new channel was created and this node IS a participant. """
 
