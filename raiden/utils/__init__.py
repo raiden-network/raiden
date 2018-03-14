@@ -15,7 +15,6 @@ from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
-from raiden.transfer import channel
 from raiden.utils import typing
 
 
@@ -220,22 +219,6 @@ def channel_to_api_dict(channel_):
         'reveal_timeout': channel_.reveal_timeout,
         'balance': channel_.distributable,
         'state': channel_.state
-    }
-
-
-def channelstate_to_api_dict(channel_state):
-    balance = channel.get_distributable(
-        channel_state.our_state,
-        channel_state.partner_state,
-    )
-    return {
-        'channel_address': channel_state.identifier,
-        'token_address': channel_state.token_address,
-        'partner_address': channel_state.partner_state.address,
-        'settle_timeout': channel_state.settle_timeout,
-        'reveal_timeout': channel_state.reveal_timeout,
-        'balance': balance,
-        'state': channel.get_status(channel_state),
     }
 
 
