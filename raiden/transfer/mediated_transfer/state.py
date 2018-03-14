@@ -29,6 +29,36 @@ def lockedtransfer_from_message(message):
     return transfer_state
 
 
+def lockedtransfersigned_from_message(message):
+    """ Create LockedTransferState from a MediatedTransfer message. """
+    balance_proof = BalanceProofSignedState(
+        message.nonce,
+        message.transferred_amount,
+        message.locksroot,
+        message.channel,
+        message.message_hash,
+        message.signature,
+        message.sender,
+    )
+
+    lock = HashTimeLockState(
+        message.lock.amount,
+        message.lock.expiration,
+        message.lock.hashlock,
+    )
+
+    transfer_state = LockedTransferSignedState(
+        message.identifier,
+        message.token,
+        balance_proof,
+        lock,
+        message.initiator,
+        message.target,
+    )
+
+    return transfer_state
+
+
 class InitiatorPaymentState(State):
     """ State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the

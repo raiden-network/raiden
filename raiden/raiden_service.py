@@ -14,6 +14,7 @@ from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
 
+from raiden import routing
 from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
@@ -26,16 +27,14 @@ from raiden.blockchain.events import (
 )
 from raiden.event_handler import StateMachineEventHandler
 from raiden.message_handler import RaidenMessageHandler
-from raiden.tasks import (
-    AlarmTask,
-)
-from raiden.transfer import node
+from raiden.tasks import AlarmTask
 from raiden.token_swap import GreenletTasksDispatcher
+from raiden.transfer import views, node
 from raiden.transfer.architecture import StateManager
-from raiden.transfer.state_change import Block
 from raiden.transfer.state import (
-    RoutesState,
     CHANNEL_STATE_SETTLED,
+    RoutesState,
+    RouteState2,
 )
 from raiden.transfer.mediated_transfer import (
     initiator,
@@ -44,15 +43,21 @@ from raiden.transfer.mediated_transfer import (
 from raiden.transfer.mediated_transfer import target as target_task
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfer_from_message,
+    lockedtransfersigned_from_message,
     LockedTransferState,
+    TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state_change import (
     ActionTransferDirect,
+    Block,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
+    ActionInitInitiator2,
     ActionInitMediator,
+    ActionInitMediator2,
     ActionInitTarget,
+    ActionInitTarget2,
 )
 from raiden.transfer.events import (
     EventTransferSentSuccess,
@@ -97,6 +102,81 @@ from raiden.utils import (
 from raiden.storage import wal, serialize, sqlite
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def initiator_init(
+        raiden,
+        transfer_identifier,
+        transfer_amount,
+        transfer_secret,
+        token_address,
+        target_address):
+    registry_address = raiden.default_registry.address
+    transfer_state = TransferDescriptionWithSecretState(
+        transfer_identifier,
+        transfer_amount,
+        registry_address,
+        token_address,
+        raiden.address,
+        target_address,
+        transfer_secret,
+    )
+    previous_address = None
+    routes = routing.get_best_routes(
+        views.state_from_raiden(raiden),
+        registry_address,
+        token_address,
+        raiden.address,
+        target_address,
+        transfer_amount,
+        previous_address,
+    )
+    init_initiator_statechange = ActionInitInitiator2(
+        registry_address,
+        transfer_state,
+        routes,
+    )
+    return init_initiator_statechange
+
+
+def mediator_init(raiden, transfer):
+    from_transfer = lockedtransfersigned_from_message(transfer)
+    registry_address = raiden.default_registry.address
+    routes = routing.get_best_routes(
+        views.state_from_raiden(raiden),
+        registry_address,
+        from_transfer.token,
+        raiden.address,
+        from_transfer.target,
+        from_transfer.lock.amount,
+        transfer.sender,
+    )
+    from_route = RouteState2(
+        transfer.sender,
+        from_transfer.balance_proof.channel_address,
+    )
+    init_mediator_statechange = ActionInitMediator2(
+        registry_address,
+        routes,
+        from_route,
+        from_transfer,
+    )
+    return init_mediator_statechange
+
+
+def target_init(raiden, transfer):
+    from_transfer = lockedtransfersigned_from_message(transfer)
+    from_route = RouteState2(
+        transfer.sender,
+        from_transfer.balance_proof.channel_address,
+    )
+    registry_address = raiden.default_registry.address
+    init_target_statechange = ActionInitTarget2(
+        registry_address,
+        from_route,
+        from_transfer,
+    )
+    return init_target_statechange
 
 
 def create_default_identifier():
