@@ -2,8 +2,8 @@ from typing import List
 
 import pytest
 from eth_utils import encode_hex, is_hex, keccak, remove_0x_prefix
+from raiden_libs.utils import private_key_to_address
 
-from pathfinder.utils import private_key_to_address
 from pathfinder.utils.types import Address
 
 

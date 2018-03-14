@@ -6,13 +6,13 @@ from typing import List
 import networkx as nx
 from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
+from raiden_libs.utils import compute_merkle_tree, get_merkle_root
 
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
 from pathfinder.model.network_cache import NetworkCache
-from pathfinder.utils.crypto import compute_merkle_tree, get_merkle_root
 from pathfinder.utils.types import Address, ChannelId
 
 
