@@ -1,16 +1,24 @@
 from typing import List
 
+import os
 import pytest
 from web3 import Web3
 from raiden_libs.contracts import ContractManager
 
+import pathfinder
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.utils.types import Address
 
 
 @pytest.fixture(scope='session')
-def contract_manager():
-    return ContractManager('pathfinder/contract/contracts_12032018.json')
+def contracts_path() -> str:
+    module_dir = os.path.dirname(pathfinder.__file__)
+    return os.path.join(module_dir, 'contract')
+
+
+@pytest.fixture(scope='session')
+def contract_manager(contracts_path: str):
+    return ContractManager(os.path.join(contracts_path, 'contracts_12032018.json'))
 
 
 @pytest.fixture(scope='session')
@@ -94,9 +102,10 @@ def token_network_contracts(
     web3: Web3,
     token_addresses: List[Address],
     token_network_addresses: List[Address],
+    contracts_path: str
 ) -> List[TokenNetworkContract]:
 
-    cm = ContractManager('pathfinder/contract/contracts_12032018.json')
+    cm = ContractManager(os.path.join(contracts_path, 'contracts_12032018.json'))
     contracts = [
         TokenNetworkContract(
             web3.eth.contract(
