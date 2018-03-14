@@ -369,6 +369,45 @@ class RouteState(State):
         return not self.__eq__(other)
 
 
+class RouteState2(State):
+    """ A possible route provided by a routing service.
+
+    Args:
+        node_address (address): The address of the next_hop.
+        channel_identifier: The channel identifier.
+    """
+
+    __slots__ = (
+        'node_address',
+        'channel_identifier',
+    )
+
+    def __init__(self, node_address: typing.address, channel_identifier):
+        if not isinstance(node_address, typing.address):
+            raise ValueError('node_address must be an address instance')
+
+        self.node_address = node_address
+        self.channel_identifier = channel_identifier
+
+    def __repr__(self):
+        return (
+            '<RouteState hop:{node} channel:{channel}>'
+        ).format(
+            node=pex(self.node_address),
+            channel=pex(self.channel_identifier),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, RouteState) and
+            self.node_address == other.node_address and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class RoutesState(State):
     """ Routing state.
 
