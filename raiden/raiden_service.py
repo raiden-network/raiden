@@ -189,6 +189,8 @@ def load_snapshot(serialization_file):
         with open(serialization_file, 'rb') as handler:
             return pickle.load(handler)
 
+    return None
+
 
 def save_snapshot(serialization_file, raiden):
     all_channels = [
@@ -253,7 +255,6 @@ class RandomSecretGenerator:  # pylint: disable=too-few-public-methods
 
 class RaidenService:
     """ A Raiden node. """
-    # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
     def __init__(self, chain, default_registry, private_key_bin, transport, discovery, config):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
@@ -919,7 +920,7 @@ class RaidenService:
 
     def leave_all_token_networks_async(self):
         leave_results = []
-        for token_address in self.token_to_channelgraph.keys():
+        for token_address in self.token_to_channelgraph:
             try:
                 connection_manager = self.connection_manager_for_token(token_address)
                 leave_results.append(connection_manager.leave_async())
