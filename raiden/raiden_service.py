@@ -29,6 +29,7 @@ from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import (
     AlarmTask,
 )
+from raiden.transfer import node
 from raiden.token_swap import GreenletTasksDispatcher
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import Block
@@ -93,6 +94,7 @@ from raiden.utils import (
     privatekey_to_address,
     sha3,
 )
+from raiden.storage import wal, serialize, sqlite
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -248,9 +250,11 @@ class RaidenService:
                 database_path=config['database_path']
             )
         )
+        self.wal = None
 
-        if config['database_path'] != ':memory:':
-            self.database_dir = os.path.dirname(config['database_path'])
+        self.database_path = config['database_path']
+        if self.database_path != ':memory:':
+            self.database_dir = os.path.dirname(self.database_path)
             self.lock_file = os.path.join(self.database_dir, '.lock')
             self.snapshot_dir = os.path.join(self.database_dir, 'snapshots')
             self.serialization_file = os.path.join(self.snapshot_dir, 'data.pickle')
@@ -299,6 +303,10 @@ class RaidenService:
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked
             self.restore_from_snapshots()
+
+        # The database may be :memory:
+        storage = sqlite.SQLiteStorage(self.database_path, serialize.PickleSerializer())
+        self.wal = wal.WriteAheadLog(node.state_transition, storage)
 
         # Start the protocol after the registry is queried to avoid warning
         # about unknown channels.
