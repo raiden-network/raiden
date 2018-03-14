@@ -51,6 +51,8 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionTransferDirect,
+    ActionTransferDirect2,
+    ActionForTokenNetwork,
     Block,
 )
 from raiden.transfer.mediated_transfer.state_change import (
@@ -99,6 +101,7 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
+    random_secret,
     sha3,
 )
 from raiden.storage import wal, serialize, sqlite
@@ -1240,3 +1243,83 @@ class RaidenService:
 
         identifier = message.identifier
         self.identifier_to_statemanagers[identifier].append(state_manager)
+
+    def direct_transfer_async2(self, token_address, amount, target, identifier):
+        """ Do a direct transfer with target.
+
+        Direct transfers are non cancellable and non expirable, since these
+        transfers are a signed balance proof with the transferred amount
+        incremented.
+
+        Because the transfer is non cancellable, there is a level of trust with
+        the target. After the message is sent the target is effectively paid
+        and then it is not possible to revert.
+
+        The async result will be set to False iff there is no direct channel
+        with the target or the payer does not have balance to complete the
+        transfer, otherwise because the transfer is non expirable the async
+        result *will never be set to False* and if the message is sent it will
+        hang until the target node acknowledge the message.
+
+        This transfer should be used as an optimization, since only two packets
+        are required to complete the transfer (from the payer's perspective),
+        whereas the mediated transfer requires 6 messages.
+        """
+
+        self.protocol.start_health_check(target)
+
+        if identifier is None:
+            identifier = create_default_identifier()
+
+        direct_transfer = ActionTransferDirect2(
+            target,
+            identifier,
+            amount,
+        )
+
+        registry_address = self.default_registry.address
+        state_change = ActionForTokenNetwork(
+            registry_address,
+            token_address,
+            direct_transfer,
+        )
+
+        self.handle_state_change(state_change)
+
+    def start_mediated_transfer2(self, token_address, amount, identifier, target):
+        self.protocol.start_health_check(target)
+
+        if identifier is None:
+            identifier = create_default_identifier()
+
+        assert identifier not in self.identifier_to_results
+
+        async_result = AsyncResult()
+        self.identifier_to_results[identifier].append(async_result)
+
+        secret = random_secret()
+        init_initiator_statechange = initiator_init(
+            self,
+            identifier,
+            amount,
+            secret,
+            token_address,
+            target,
+        )
+
+        # TODO: implement the network timeout raiden.config['msg_timeout'] and
+        # cancel the current transfer if it hapens (issue #374)
+        #
+        # Dispatch the state change even if there are no routes to create the
+        # wal entry.
+        self.handle_state_change(init_initiator_statechange)
+
+        return async_result
+
+    def mediate_mediated_transfer2(self, transfer):
+        init_mediator_statechange = mediator_init(self, transfer)
+        self.handle_state_change(init_mediator_statechange)
+
+    def target_mediated_transfer2(self, transfer):
+        init_target_statechange = target_init(self, transfer)
+        self.handle_state_change(init_target_statechange)
