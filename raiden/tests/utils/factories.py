@@ -3,6 +3,7 @@
 import os
 import random
 import string
+import binascii
 
 from coincurve import PrivateKey
 
@@ -112,8 +113,7 @@ def make_route(
         channel_address (address): The correspoding channel address.
     """
     if channel_address is None:
-        channel_address = ('channel' + node_address)[:40]
-
+        channel_address = ('channel' + binascii.hexlify(node_address).decode())[:40]
     state = CHANNEL_STATE_OPENED
     route = RouteState(
         state,
