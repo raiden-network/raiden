@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
-import os
-import sys
 import itertools
+import logging
+import os
 import pickle as pickle
 import random
+import sys
 from collections import defaultdict
 
 import filelock
@@ -25,6 +26,7 @@ from raiden.blockchain.events import (
     get_relevant_proxies,
     BlockchainEvents,
 )
+from raiden.raiden_event_handler import on_raiden_event
 from raiden.event_handler import StateMachineEventHandler
 from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import AlarmTask
@@ -491,6 +493,25 @@ class RaidenService:
         # To avoid races, only update the internal cache after all the state
         # tasks have been updated.
         self._block_number = block_number
+
+    def handle_state_change(self, state_change, block_number=None):
+        is_logging = log.isEnabledFor(logging.DEBUG)
+
+        if is_logging:
+            log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
+
+        if block_number is None:
+            block_number = self.get_block_number()
+
+        event_list = self.wal.log_and_dispatch(state_change, block_number)
+
+        for event in event_list:
+            if is_logging:
+                log.debug('EVENT', node=pex(self.address), event=event)
+
+            on_raiden_event(self, event)
+
+        return event_list
 
     def set_node_network_state(self, node_address, network_state):
         for graph in self.token_to_channelgraph.values():
