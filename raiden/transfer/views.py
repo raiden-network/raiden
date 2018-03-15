@@ -73,6 +73,62 @@ def get_node_network_status(
     )
 
 
+def get_participants_addresses(
+        node_state: NodeState,
+        payment_network_id: typing.address,
+        token_address: typing.address
+) -> typing.Set[typing.address]:
+    token_network = get_token_network_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    if token_network is not None:
+        addresses = set(token_network.network_graph.network.nodes())
+    else:
+        addresses = set()
+
+    return addresses
+
+
+def get_our_capacity_for_token_network(
+        node_state: NodeState,
+        payment_network_id: typing.address,
+        token_address: typing.address
+) -> int:
+    open_channels = get_channelstate_open(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    total_deposit = 0
+    for channel_state in open_channels:
+        total_deposit += channel_state.our_state.contract_balance
+
+    return total_deposit
+
+
+def total_deposit_by_token_network(
+        node_state: NodeState,
+        payment_network_id: typing.address,
+        token_address: typing.address
+) -> int:
+    token_network = get_token_network_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    total_deposit = 0
+    if token_network:
+        for channel_state in token_network.channelidentifiers_to_channels.values():
+            total_deposit += channel_state.our_state.contract_balance
+
+    return total_deposit
+
+
 def get_token_network_addresses_for(
         node_state: NodeState,
         payment_network_id: typing.address
