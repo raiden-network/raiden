@@ -31,6 +31,25 @@ def block_number(node_state: NodeState) -> int:
     return node_state.block_number
 
 
+def count_token_network_channels(
+        node_state: NodeState,
+        payment_network_id: typing.address,
+        token_address: typing.address
+) -> int:
+    token_network = get_token_network_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    if token_network is not None:
+        count = len(token_network.network_graph.network)
+    else:
+        count = 0
+
+    return count
+
+
 def state_from_raiden(raiden):
     return raiden.wal.state_manager.current_state
 
