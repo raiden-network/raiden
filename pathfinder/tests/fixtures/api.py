@@ -1,8 +1,8 @@
 from itertools import count
 from typing import Iterator
 
-import pytest
 import psutil
+import pytest
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.config import API_DEFAULT_PORT, API_PATH

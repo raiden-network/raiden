@@ -37,7 +37,6 @@ class TokenNetwork:
     - Do we set a default fee? Otherwise we estimate all opened channels with a zero fee.
       The other options to just take channels into account once a fee has been set.
     - Are fees absolute or relative to the transferred value (or base + relative)?
-    - Can we somehow incorporate locked amounts from channels?
     - Do we represent the state as a undirected graph or directed graph
     TODO: test all these methods once we have sample data, DO NOT let these crucial functions
     remain uncovered!
@@ -59,7 +58,6 @@ class TokenNetwork:
     # Contract event listener functions
 
     def handle_channel_opened_event(self, channel_id: ChannelId):
-        # TODO: do we need the timeout here?
         """
         Register the channel in the graph, add participents to graph if necessary.
 
@@ -73,11 +71,11 @@ class TokenNetwork:
         self.G.add_edge(view1.self, view2.self, view=view1)
         self.G.add_edge(view2.self, view1.self, view=view2)
 
-    def handle_channel_new_balance_event(
+    def handle_channel_new_deposit_event(
         self,
         channel_id: ChannelId,
         receiver: Address,
-        balance: int
+        total_deposit: int
     ):
         """
         Register a new balance for the beneficiary.

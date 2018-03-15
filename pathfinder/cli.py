@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """Console script for pathfinder."""
-
-from gevent import monkey  # noqa
-monkey.patch_all()  # noqa
+from gevent import monkey  # isort:skip # noqa
+monkey.patch_all()  # isort:skip # noqa
 
 import logging
+import os
 import sys
 
 import click
-# from web3 import HTTPProvider, Web3
+from raiden_libs.blockchain import BlockchainListener
+from raiden_libs.contracts import ContractManager
+from web3 import HTTPProvider, Web3
 
+import pathfinder
 from pathfinder.no_ssl_patch import no_ssl_verification
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.transport import MatrixTransport
-
-
-# from raiden_libs.blockchain import BlockchainListener
-
 
 log = logging.getLogger(__name__)
 
@@ -77,18 +76,27 @@ def main(
             )
 
             log.info('Starting Web3 client...')
-            # w3 = Web3(HTTPProvider(eth_rpc))
+            web3 = Web3(HTTPProvider(eth_rpc))
+
+            module_dir = os.path.dirname(pathfinder.__file__)
+            contracts_path = os.path.join(module_dir, 'contract', 'contracts_12032018.json')
+            contract_manager = ContractManager(contracts_path)
 
             log.info('Starting Blockchain Monitor...')
-            # monitor = BlockchainListener(w3)
+            listener = BlockchainListener(
+                web3,
+                '0x0',  # TODO: make this configurable or remove from API
+                contract_manager.get_contract_abi('TokenNetwork')
+            )
 
             log.info('Starting Pathfinding Service...')
-            service = PathfindingService(transport)
+            service = PathfindingService(transport, listener)
 
             service.run()
         except (KeyboardInterrupt, SystemExit):
             print('Exiting...')
         finally:
+            log.info('Stopping Pathfinding Service...')
             service.stop()
 
     return 0

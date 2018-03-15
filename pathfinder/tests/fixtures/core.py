@@ -21,6 +21,7 @@ def pathfinding_service(token_networks: List[TokenNetwork]) -> PathfindingServic
     # TODO: replace with a pathfinding service that actually syncs with the tester chain.
     pathfinding_service = PathfindingService(
         transport=Mock(),
+        blockchain_listener=Mock()
     )
     pathfinding_service.token_networks = {
         token_network.address: token_network

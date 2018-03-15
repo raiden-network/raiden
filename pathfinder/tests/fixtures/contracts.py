@@ -1,9 +1,9 @@
+import os
 from typing import List
 
-import os
 import pytest
-from web3 import Web3
 from raiden_libs.contracts import ContractManager
+from web3 import Web3
 
 import pathfinder
 from pathfinder.contract.token_network_contract import TokenNetworkContract
