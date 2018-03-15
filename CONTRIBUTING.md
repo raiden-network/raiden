@@ -179,16 +179,61 @@ and instead you should
 ```python
 
 def function_with_many_args(
-    argument1,
-    argument2,
-    argument3,
-    argument4,
-    argument5,
-    argument6,
-    argument7):
+        argument1,
+        argument2,
+        argument3,
+        argument4,
+        argument5,
+        argument6,
+        argument7,
+):
     pass
 ```
 
+That means 8 spaces (double indentation after the opening parentheses of the function.
+
+**Functions with type annotations**
+
+When using type annotations the function should be just like in the above section but also include
+the types of the arguments and the return type.
+
+```python
+def a(
+        b: B,
+        c: C,
+) -> D:
+    pass
+```
+
+**Docstrings**
+
+For docstrings we follow [PEP 0257](https://www.python.org/dev/peps/pep-0257/#multi-line-docstrings).
+
+A single line docstring should be like this:
+```python
+def a(
+        b: B,
+        c: C,
+) -> D:
+    """ Here be docs """
+    pass
+```
+
+A multiline docstring should have a short title and then a body. So like this:
+
+```python
+def a(
+        b: B,
+        c: C,
+) -> D:
+    """ Function Title
+
+        body comes
+        here"""
+    pass
+```
+
+If in doubt consult the PEP.
 
 **Breaking function calls when line is above 99 characters**
 
