@@ -187,7 +187,7 @@ class ConnectionManager:
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
-        node. It will fund the channel with up to the partners deposit, but
+        node. It will fund the channel with up to the partner's deposit, but
         not more than remaining funds or the initial funding per channel.
 
         If the connection manager has no funds, this is a noop.
@@ -472,8 +472,7 @@ class ConnectionManager2:
                 self._open_channels()
 
     def leave_async(self, only_receiving=True):
-        """ Async version of `leave()`
-        """
+        """ Async version of `leave()` """
         leave_result = AsyncResult()
         gevent.spawn(self.leave, only_receiving).link(leave_result)
         return leave_result
@@ -484,8 +483,8 @@ class ConnectionManager2:
         This implies closing all channels and waiting for all channels to be
         settled.
 
-        Note: By default we're just discarding all channels we haven't received
-        anything.  This potentially leaves deposits locked in channels after
+        Note: By default we're just discarding all channels for which we haven't
+        received anything.  This potentially leaves deposits locked in channels after
         `closing`. This is "safe" from an accounting point of view (deposits
         can not be lost), but may still be undesirable from a liquidity point
         of view (deposits will only be freed after manually closing or after
@@ -616,7 +615,7 @@ class ConnectionManager2:
 
     def _open_channels(self):
         """ Open channels until there are `self.initial_channel_target`
-        channels open, do nothing if there are enough channels open already.
+        channels open. Do nothing if there are enough channels open already.
 
         Note:
             - This method must be called with the lock held.
