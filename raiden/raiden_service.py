@@ -1262,7 +1262,7 @@ class RaidenService:
         hang until the target node acknowledge the message.
 
         This transfer should be used as an optimization, since only two packets
-        are required to complete the transfer (from the payer's perspective),
+        are required to complete the transfer (from the payers perspective),
         whereas the mediated transfer requires 6 messages.
         """
 
@@ -1308,7 +1308,7 @@ class RaidenService:
         )
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
-        # cancel the current transfer if it hapens (issue #374)
+        # cancel the current transfer if it happens (issue #374)
         #
         # Dispatch the state change even if there are no routes to create the
         # wal entry.
