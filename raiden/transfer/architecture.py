@@ -29,7 +29,54 @@ from typing import List
 # outputs are separated under different class hierarquies (StateChange and Event).
 
 
-class State:
+class FlatInheritance(type):
+    """ Nested inheritance is forbidden for architecture classes.
+
+    The design choices adopted by this architecture rely heavily on dynamic
+    dispatching based on type checking, e.g.::
+
+        if isintance(obj, StopStateChange):
+            handle_stop(state, obj)
+        elif isintance(obj, StopWithCareStateChange):
+            handle_stop_with_care(state, obj)
+
+    For the above snippet to work, it's important for StopWithCareStateChange
+    to not be a subclass of StopStateChange, otherwise the order of the
+    statements used for the dynamic dispatch matter, leading to subtle bugs
+    like the one above.
+    """
+
+    def __new__(mcs, name, bases, namespace, **kwds):  # pylint: disable=unused-argument
+        # A marker is a special class type, used to describe one of the
+        # components in the architecture, e.g. the State class.
+        is_new_marker = not bases
+
+        if not is_new_marker:
+            # Enforce inheritance of at most one marker.
+            #
+            # Only one kind of marker may be used::
+            #
+            #      class Incorrect(State, StateChange): pass
+            #
+            # And a marker may be used at most once::
+            #
+            #      class Incorrect(State, State): pass
+            #
+            markers = [base for base in bases if isinstance(base, FlatInheritance)]
+            assert len(markers) == 1, FlatInheritance.__doc__
+
+            # Enforce a flat inheritance for the marker::
+            #
+            #      class Correct(State): pass
+            #      class Incorrect(Correct): pass
+            marker = markers[0]
+            is_nested = any(isinstance(base, FlatInheritance) for base in marker.__bases__)
+            assert not is_nested, FlatInheritance.__doc__
+
+        return type.__new__(mcs, name, bases, dict(namespace))
+
+
+class State(metaclass=FlatInheritance):
     """ An isolated state, modified by StateChange messages.
 
     Notes:
@@ -44,7 +91,7 @@ class State:
     __slots__ = ()
 
 
-class StateChange:
+class StateChange(metaclass=FlatInheritance):
     """ Declare the transition to be applied in a state object.
 
     StateChanges are incoming events that change this node state (eg. a
@@ -63,7 +110,7 @@ class StateChange:
     __slots__ = ()
 
 
-class Event:
+class Event(metaclass=FlatInheritance):
     """ Events produced by the execution of a state change.
 
     Nomenclature convention:
