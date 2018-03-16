@@ -56,7 +56,7 @@ class PathfindingService(gevent.Greenlet):
     def _run(self):
         register_error_handler(error_handler)
         self.transport.start()
-        self.blockchain_listener.start()
+        self.blockchain_listener.run()
 
         self.is_running.wait()
 
@@ -90,10 +90,9 @@ class PathfindingService(gevent.Greenlet):
                 token_network.address
             ))
 
-            # TODO: read channel identifier
-            channel_id = 0
+            channel_identifier = event['args']['channel_identifier']
 
-            token_network.handle_channel_opened(channel_id)
+            token_network.handle_channel_opened(channel_identifier)
 
     def handle_channel_net_deposit(self, event):
         token_network = self._get_token_network(event)
@@ -103,13 +102,12 @@ class PathfindingService(gevent.Greenlet):
                 token_network.address
             ))
 
-            # TODO: read channel identifier, participant and deposit
-            channel_id = 0
-            participant_address = '0x0'
-            total_deposit = 0
+            channel_identifier = event['args']['channel_identifier']
+            participant_address = event['args']['participant']
+            total_deposit = event['args']['total_deposit']
 
             token_network.handle_channel_new_deposit_event(
-                channel_id,
+                channel_identifier,
                 participant_address,
                 total_deposit
             )
@@ -122,7 +120,6 @@ class PathfindingService(gevent.Greenlet):
                 token_network.address
             ))
 
-            # TODO: read channel identifier
-            channel_id = 0
+            channel_identifier = event['args']['channel_identifier']
 
-            token_network.handle_channel_closed_event(channel_id)
+            token_network.handle_channel_closed_event(channel_identifier)
