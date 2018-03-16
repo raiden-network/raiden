@@ -391,7 +391,7 @@ class RouteState2(State):
 
     def __repr__(self):
         return (
-            '<RouteState hop:{node} channel:{channel}>'
+            '<RouteState2 hop:{node} channel:{channel}>'
         ).format(
             node=pex(self.node_address),
             channel=pex(self.channel_identifier),
@@ -399,7 +399,7 @@ class RouteState2(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, RouteState) and
+            isinstance(other, RouteState2) and
             self.node_address == other.node_address and
             self.channel_identifier == other.channel_identifier
         )

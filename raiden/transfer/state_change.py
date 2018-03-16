@@ -186,7 +186,7 @@ class ActionTransferDirect2(StateChange):
         self.receiver_address = receiver_address
 
     def __repr__(self):
-        return '<ActionTransferDirect receiver_address:{} identifier:{} amount:{}>'.format(
+        return '<ActionTransferDirect2 receiver_address:{} identifier:{} amount:{}>'.format(
             pex(self.receiver_address),
             self.identifier,
             self.amount,
@@ -194,7 +194,7 @@ class ActionTransferDirect2(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionTransferDirect) and
+            isinstance(other, ActionTransferDirect2) and
             self.receiver_address == other.receiver_address and
             self.identifier == other.identifier and
             self.amount == other.amount
