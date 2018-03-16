@@ -85,8 +85,8 @@ def main(
             log.info('Starting Blockchain Monitor...')
             listener = BlockchainListener(
                 web3,
-                '0x0',  # TODO: make this configurable or remove from API
-                contract_manager.get_contract_abi('TokenNetwork')
+                contract_manager,
+                'TokenNetwork',
             )
 
             log.info('Starting Pathfinding Service...')
