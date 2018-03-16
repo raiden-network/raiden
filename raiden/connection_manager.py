@@ -187,7 +187,7 @@ class ConnectionManager:
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
-        node. It will fund the channel with up to the partner's deposit, but
+        node. It will fund the channel with up to the partners deposit, but
         not more than remaining funds or the initial funding per channel.
 
         If the connection manager has no funds, this is a noop.
@@ -537,7 +537,7 @@ class ConnectionManager2:
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
-        node. It will fund the channel with up to the partner's deposit, but
+        node. It will fund the channel with up to the partners deposit, but
         not more than remaining funds or the initial funding per channel.
 
         If the connection manager has no funds, this is a noop.
@@ -660,7 +660,7 @@ class ConnectionManager2:
         overall funding of the ConnectionManager.
 
         Note:
-            - This attributed must be accessed with the lock held.
+            - This attribute must be accessed with the lock held.
         """
         if self.initial_channel_target:
             return int(
@@ -675,7 +675,7 @@ class ConnectionManager2:
         """The remaining funds after subtracting the already deposited amounts.
 
         Note:
-            - This attributed must be accessed with the lock held.
+            - This attribute must be accessed with the lock held.
         """
         if self.funds > 0:
             payment_network_id = self.raiden.default_registry.address
@@ -695,6 +695,6 @@ class ConnectionManager2:
         """True if the node is leaving the token network.
 
         Note:
-            - This attributed must be accessed with the lock held.
+            - This attribute must be accessed with the lock held.
         """
         return self.initial_channel_target < 1
