@@ -88,9 +88,9 @@ STATE_TRANSFER_FINAL = (
 )
 
 
-def is_lock_valid(transfer, block_number):
+def is_lock_valid(expiration, block_number):
     """ True if the lock has not expired. """
-    return block_number <= transfer.expiration
+    return block_number <= expiration
 
 
 def is_safe_to_wait(transfer, reveal_timeout, block_number):
@@ -925,7 +925,7 @@ def events_for_balanceproof(transfers_pair, block_number):
         # for sending a balance proof to a node that knowns the secret but has
         # not gone on-chain while near the expiration? (The problem is how to
         # define the unsafe region, since that is a local configuration)
-        lock_valid = is_lock_valid(pair.payee_transfer, block_number)
+        lock_valid = is_lock_valid(pair.payee_transfer.expiration, block_number)
 
         if payee_channel_open and payee_knows_secret and not payee_payed and lock_valid:
             pair.payee_state = 'payee_balance_proof'
