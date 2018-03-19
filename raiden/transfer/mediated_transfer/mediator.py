@@ -703,6 +703,37 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
     return list()
 
 
+def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
+        transfers_pair,
+        payee_address,
+        new_payee_state):
+    """ Set the state of a transfer *sent* to a payee and check the secret is
+    being revealed backwards.
+    Note:
+        The elements from transfers_pair are changed in place, the list must
+        contain all the known transfers to properly check reveal order.
+    """
+    assert new_payee_state in MediationPairState.valid_payee_states
+
+    wrong_reveal_order = False
+    for back in reversed(transfers_pair):
+        if back.payee_address == payee_address:
+            back.payee_state = new_payee_state
+            break
+
+        elif back.payee_state not in STATE_SECRET_KNOWN:
+            wrong_reveal_order = True
+
+    if wrong_reveal_order:
+        # TODO: Append an event for byzantine behavior.
+        # XXX: With the current events_for_withdraw implementation this may
+        # happen, should the notification about byzantine behavior removed or
+        # fix the events_for_withdraw function fixed?
+        return list()
+
+    return list()
+
+
 def set_expired_pairs(transfers_pair, block_number):
     """ Set the state of expired transfers, and return the failed events. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
@@ -731,6 +762,42 @@ def set_expired_pairs(transfers_pair, block_number):
                 unlock_failed = EventUnlockFailed(
                     pair.payee_transfer.identifier,
                     pair.payee_transfer.hashlock,
+                    'lock expired',
+                )
+                events.append(unlock_failed)
+
+    return events
+
+
+def set_expired_pairs2(transfers_pair, block_number):
+    """ Set the state of expired transfers, and return the failed events. """
+    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
+
+    events = list()
+    for pair in pending_transfers_pairs:
+        if block_number > pair.payer_transfer.lock.expiration:
+            assert pair.payee_state == 'payee_expired'
+            assert pair.payee_transfer.lock.expiration < pair.payer_transfer.lock.expiration
+
+            if pair.payer_state != 'payer_expired':
+                pair.payer_state = 'payer_expired'
+                # XXX: emit the event only once
+                withdraw_failed = EventWithdrawFailed(
+                    pair.payer_transfer.identifier,
+                    pair.payer_transfer.lock.hashlock,
+                    'lock expired',
+                )
+                events.append(withdraw_failed)
+
+        elif block_number > pair.payee_transfer.lock.expiration:
+            assert pair.payee_state not in STATE_TRANSFER_PAID
+            assert pair.payee_transfer.lock.expiration < pair.payer_transfer.lock.expiration
+
+            if pair.payee_state != 'payee_expired':
+                pair.payee_state = 'payee_expired'
+                unlock_failed = EventUnlockFailed(
+                    pair.payee_transfer.identifier,
+                    pair.payee_transfer.lock.hashlock,
                     'lock expired',
                 )
                 events.append(unlock_failed)
@@ -1184,7 +1251,7 @@ def secret_learned2(
     else:
         withdraw = []
 
-    wrong_order = set_payee_state_and_check_reveal_order(
+    wrong_order = set_payee_state_and_check_reveal_order2(
         state.transfers_pair,
         payee_address,
         new_payee_state,
@@ -1429,7 +1496,7 @@ def handle_block2(channelidentifiers_to_channels, state, state_change, block_num
     #     state.transfers_pair,
     # )
 
-    unlock_fail_events = set_expired_pairs(
+    unlock_fail_events = set_expired_pairs2(
         state.transfers_pair,
         block_number,
     )
