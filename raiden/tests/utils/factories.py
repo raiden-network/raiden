@@ -29,7 +29,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
-    lockedtransfer_from_message,
+    lockedtransfersigned_from_message,
     HashTimeLockState,
     TransferDescriptionWithSecretState,
     LockedTransferUnsignedState,
@@ -319,7 +319,7 @@ def make_signed_transfer(
     )
     transfer.sign(pkey, sender)
 
-    return lockedtransfer_from_message(transfer)
+    return lockedtransfersigned_from_message(transfer)
 
 
 def make_signed_balance_proof(
