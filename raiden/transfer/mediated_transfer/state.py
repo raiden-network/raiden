@@ -30,7 +30,7 @@ def lockedtransfer_from_message(message):
 
 
 def lockedtransfersigned_from_message(message):
-    """ Create LockedTransferState from a MediatedTransfer message. """
+    """ Create LockedTransferSignedState from a MediatedTransfer message. """
     balance_proof = BalanceProofSignedState(
         message.nonce,
         message.transferred_amount,
@@ -492,7 +492,7 @@ class LockedTransferSignedState(State):
 
     def __repr__(self):
         return (
-            '<LockedTransferState id:{} token:{} lock:{} target:{}>'
+            '<LockedTransferSignedState id:{} token:{} lock:{} target:{}>'
         ).format(
             self.identifier,
             encode_hex(self.token),
@@ -502,7 +502,7 @@ class LockedTransferSignedState(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, LockedTransferState) and
+            isinstance(other, LockedTransferSignedState) and
             self.identifier == other.identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
@@ -836,12 +836,12 @@ class MediationPairState2(State):
 
     def __init__(
             self,
-            payer_transfer: LockedTransferState,
+            payer_transfer: LockedTransferSignedState,
             payee_address: typing.address,
             payee_transfer: LockedTransferUnsignedState):
 
-        if not isinstance(payer_transfer, LockedTransferState):
-            raise ValueError('payer_transfer must be a LockedTransferState instance')
+        if not isinstance(payer_transfer, LockedTransferSignedState):
+            raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
         if not isinstance(payee_address, typing.address):
             raise ValueError('payee_address must be an address')
