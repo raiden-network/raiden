@@ -23,6 +23,7 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     RouteState,
+    RouteState2,
     TransactionExecutionStatus,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
@@ -94,6 +95,14 @@ def make_privkey_address():
     pubkey = privkey.public_key.format(compressed=False)
     address = publickey_to_address(pubkey)
     return privkey, address
+
+
+def route_from_channel(channel_state):
+    route = RouteState2(
+        channel_state.partner_state.address,
+        channel_state.identifier,
+    )
+    return route
 
 
 def make_route(
