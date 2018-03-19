@@ -32,10 +32,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def handle_message_secretrequest(
-        raiden: 'RaidenService',
-        message: SecretRequest
-):
+def handle_message_secretrequest(raiden: 'RaidenService', message: SecretRequest):
     secret_request = ReceiveSecretRequest(
         message.identifier,
         message.amount,
@@ -45,10 +42,7 @@ def handle_message_secretrequest(
     raiden.handle_state_change(secret_request)
 
 
-def handle_message_revealsecret(
-        raiden: 'RaidenService',
-        message: RevealSecret
-):
+def handle_message_revealsecret(raiden: 'RaidenService', message: RevealSecret):
     state_change = ReceiveSecretReveal(
         message.secret,
         message.sender,
@@ -56,10 +50,7 @@ def handle_message_revealsecret(
     raiden.handle_state_change(state_change)
 
 
-def handle_message_secret(
-        raiden: 'RaidenService',
-        message: Secret
-):
+def handle_message_secret(raiden: 'RaidenService', message: Secret):
     balance_proof = balanceproof_from_envelope(message)
     state_change = ReceiveUnlock(
         message.secret,
@@ -68,10 +59,7 @@ def handle_message_secret(
     raiden.handle_state_change(state_change)
 
 
-def handle_message_refundtransfer(
-        raiden: 'RaidenService',
-        message: RefundTransfer
-):
+def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransfer):
     registry_address = raiden.default_registry.address
     from_transfer = lockedtransfer_from_message(message)
     node_state = views.state_from_raiden(raiden)
@@ -108,10 +96,7 @@ def handle_message_refundtransfer(
     raiden.handle_state_change(state_change)
 
 
-def handle_message_directtransfer(
-        raiden: 'RaidenService',
-        message: DirectTransfer
-):
+def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransfer):
     payment_network_identifier = raiden.default_registry.address
     token_address = message.token
     balance_proof = balanceproof_from_envelope(message)
@@ -130,20 +115,14 @@ def handle_message_directtransfer(
     raiden.handle_state_change(state_change)
 
 
-def handle_message_mediatedtransfer(
-        raiden: 'RaidenService',
-        message: MediatedTransfer
-):
+def handle_message_mediatedtransfer(raiden: 'RaidenService', message: MediatedTransfer):
     if message.target == raiden.address:
         raiden.target_mediated_transfer(message)
     else:
         raiden.mediate_mediated_transfer(message)
 
 
-def on_udp_message(
-        raiden: 'RaidenService',
-        message: Message
-):
+def on_udp_message(raiden: 'RaidenService', message: Message):
     if isinstance(message, SecretRequest):
         handle_message_secretrequest(raiden, message)
     elif isinstance(message, RevealSecret):
