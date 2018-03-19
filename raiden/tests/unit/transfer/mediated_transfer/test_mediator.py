@@ -129,16 +129,17 @@ def make_mediator_state(
 
 
 def test_is_lock_valid():
-    """ A hash time lock is valid up to the expiraiton block. """
+    """ A hash time lock is valid up to the expiration block. """
     amount = 10
     expiration = 10
     initiator = factories.HOP1
     target = factories.HOP2
     transfer = factories.make_transfer(amount, initiator, target, expiration)
 
-    assert mediator.is_lock_valid(transfer, 5) is True
-    assert mediator.is_lock_valid(transfer, 10) is True, 'lock is expired at the next block'
-    assert mediator.is_lock_valid(transfer, 11) is False
+    msg = 'lock is expired at the next block'
+    assert mediator.is_lock_valid(transfer.expiration, 5) is True
+    assert mediator.is_lock_valid(transfer.expiration, 10) is True, msg
+    assert mediator.is_lock_valid(transfer.expiration, 11) is False
 
 
 def test_is_safe_to_wait():
