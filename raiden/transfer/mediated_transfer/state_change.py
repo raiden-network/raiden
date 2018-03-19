@@ -2,7 +2,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import RouteState2
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
     LockedTransferSignedState,
@@ -138,15 +138,15 @@ class ActionInitMediator2(StateChange):
     def __init__(
             self,
             payment_network_identifier,
-            routes: typing.List[RouteState],
-            from_route: RouteState,
-            from_transfer: LockedTransferState):
+            routes: typing.List[RouteState2],
+            from_route: RouteState2,
+            from_transfer: LockedTransferSignedState):
 
-        if not isinstance(from_route, RouteState):
-            raise ValueError('from_route must be a RouteState instance')
+        if not isinstance(from_route, RouteState2):
+            raise ValueError('from_route must be a RouteState2 instance')
 
-        if not isinstance(from_transfer, LockedTransferState):
-            raise ValueError('from_transfer must be a LockedTransferState instance')
+        if not isinstance(from_transfer, LockedTransferSignedState):
+            raise ValueError('from_transfer must be a LockedTransferSignedState instance')
 
         self.payment_network_identifier = payment_network_identifier
         self.routes = routes
@@ -182,11 +182,11 @@ class ActionInitTarget2(StateChange):
     """
 
     def __init__(self, payment_network_identifier, route, transfer):
-        if not isinstance(route, RouteState):
-            raise ValueError('route must be a RouteState instance')
+        if not isinstance(route, RouteState2):
+            raise ValueError('route must be a RouteState2 instance')
 
-        if not isinstance(transfer, LockedTransferState):
-            raise ValueError('transfer must be a LockedTransferState instance')
+        if not isinstance(transfer, LockedTransferSignedState):
+            raise ValueError('transfer must be a LockedTransferSignedState instance')
 
         self.payment_network_identifier = payment_network_identifier
         self.route = route

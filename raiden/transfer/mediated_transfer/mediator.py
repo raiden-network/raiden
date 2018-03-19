@@ -7,6 +7,7 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import ContractSendChannelWithdraw
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
+    LockedTransferSignedState,
     LockedTransferState,
     LockedTransferUnsignedState,
     MediationPairState,
@@ -224,12 +225,12 @@ def is_channel_close_needed2(payer_channel, transfer_pair, block_number):
 
 def is_send_transfer_almost_equal(
         send: LockedTransferUnsignedState,
-        received: LockedTransferState):
+        received: LockedTransferSignedState):
     """ True if both transfers are for the same mediated transfer. """
     # the only value that may change for each hop is the expiration
     return (
         isinstance(send, LockedTransferUnsignedState) and
-        isinstance(received, LockedTransferState) and
+        isinstance(received, LockedTransferSignedState) and
         send.identifier == received.identifier and
         send.token == received.token and
         send.lock.amount == received.lock.amount and
@@ -572,7 +573,7 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
 
 
 def next_transfer_pair2(
-        payer_transfer: LockedTransferState,
+        payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         timeout_blocks: int,
@@ -854,7 +855,7 @@ def events_for_refund_transfer2(refund_channel, refund_transfer, timeout_blocks,
     Args:
         refund_route (RouteState): The original route that sent the mediated
             transfer to this node.
-        refund_transfer (LockedTransferState): The original mediated transfer
+        refund_transfer (LockedTransferSignedState): The original mediated transfer
             from the refund_route.
         timeout_blocks (int): The number of blocks available from the /latest
             transfer/ received by this node, this transfer might be the
@@ -1227,6 +1228,7 @@ def secret_learned2(
     SendBalanceProof, and Withdraws.
     """
     assert new_payee_state in STATE_SECRET_KNOWN
+    assert payee_address in (pair.payee_address for pair in state.transfers_pair)
 
     # TODO: if any of the transfers is in expired state, event for byzantine
     # behavior
