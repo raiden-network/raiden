@@ -221,6 +221,33 @@ class ActionCancelRoute(StateChange):
         self.identifier = identifier
 
 
+class ActionCancelRoute2(StateChange):
+    """ Cancel the current route.
+    Notes:
+        Used to cancel a specific route but not the transfer, may be used for
+        timeouts.
+    """
+
+    def __init__(self, identifier, routes):
+        self.identifier = identifier
+        self.routes = routes
+
+    def __repr__(self):
+        return '<ActionCancelRoute2 id:{}>'.format(
+            self.identifier,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionCancelRoute2) and
+            self.identifier == other.identifier and
+            self.routes == other.routes
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
