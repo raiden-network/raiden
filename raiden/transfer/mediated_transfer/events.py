@@ -377,7 +377,7 @@ class SendRefundTransfer2(Event):
     def __str__(self):
         return (
             '<'
-            'SendRefundTransfer id:{} token:{} balance_proof:{} lock:{} '
+            'SendRefundTransfer2 id:{} token:{} balance_proof:{} lock:{} '
             'initiator:{} target:{} recipient:{}'
             '>'
         ).format(
@@ -392,7 +392,7 @@ class SendRefundTransfer2(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRefundTransfer) and
+            isinstance(other, SendRefundTransfer2) and
             self.identifier == other.identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
