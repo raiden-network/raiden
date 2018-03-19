@@ -95,7 +95,7 @@ def get_best_routes(
 
     available_routes = list()
 
-    token_network = views.get_token_network(
+    token_network = views.get_token_network_by_token_address(
         node_state,
         payment_network_id,
         token_address,
