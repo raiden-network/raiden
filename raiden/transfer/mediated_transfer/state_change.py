@@ -5,6 +5,7 @@ from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
+    LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
 from raiden.utils import pex, sha3, typing
@@ -313,8 +314,8 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     """
 
     def __init__(self, sender, routes, transfer, secret):
-        if not isinstance(transfer, LockedTransferState):
-            raise ValueError('transfer must be an instance of LockedTransferState')
+        if not isinstance(transfer, LockedTransferSignedState):
+            raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         hashlock = sha3(secret)
 

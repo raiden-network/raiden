@@ -231,7 +231,7 @@ def state_transition(payment_state, state_change, channelidentifiers_to_channels
             block_number,
         )
     elif isinstance(state_change, ReceiveSecretRequest):
-        sub_iteration = initiator.handle_secretrequest(
+        sub_iteration = initiator.handle_secretrequest2(
             payment_state.initiator,
             state_change,
         )
