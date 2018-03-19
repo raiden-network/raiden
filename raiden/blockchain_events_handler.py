@@ -133,7 +133,7 @@ def handle_channel_new_balance(raiden, event):
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
 
-        new_balance = ContractReceiveChannelNewBalance(
+        newbalance_statechange = ContractReceiveChannelNewBalance(
             channel_identifier,
             participant_address,
             new_balance,
@@ -141,7 +141,7 @@ def handle_channel_new_balance(raiden, event):
         state_change = ActionForTokenNetwork(
             payment_network_identifier,
             token_address,
-            new_balance,
+            newbalance_statechange,
         )
         raiden.handle_state_change(state_change)
 
