@@ -699,9 +699,9 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
 
     if wrong_reveal_order:
         # TODO: Append an event for byzantine behavior.
-        # XXX: With the current events_for_withdraw implementation this may
-        # happen, should the notification about byzantine behavior removed or
-        # fix the events_for_withdraw function fixed?
+        # XXX: This can happen if a mediator in the middle of the chain of hops
+        # learns the secret faster than its subsequent nodes. Should a byzantine
+        # behavior notification be added or should we fix the events_for_withdraw function?
         return list()
 
     return list()
@@ -731,9 +731,9 @@ def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
 
     if wrong_reveal_order:
         # TODO: Append an event for byzantine behavior.
-        # XXX: With the current events_for_withdraw implementation this may
-        # happen, should the notification about byzantine behavior removed or
-        # fix the events_for_withdraw function fixed?
+        # XXX: This can happen if a mediator in the middle of the chain of hops
+        # learns the secret faster than its subsequent nodes. Should a byzantine
+        # behavior notification be added or should we fix the events_for_withdraw function?
         return list()
 
     return list()
