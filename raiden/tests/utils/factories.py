@@ -196,7 +196,8 @@ def make_channel(
         partner_address=None,
         token_address=None,
         channel_address=None,
-        reveal_timeout=10):
+        reveal_timeout=10,
+        settle_timeout=50):
 
     our_address = our_address or make_address()
     partner_address = partner_address or make_address()
@@ -206,9 +207,7 @@ def make_channel(
     our_state = make_endstate(our_address, our_balance)
     partner_state = make_endstate(partner_address, partner_balance)
 
-    settle_timeout = 50
     opened_block_number = 10
-
     open_transaction = TransactionExecutionStatus(
         None,
         opened_block_number,

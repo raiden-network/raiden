@@ -399,6 +399,7 @@ def test_get_timeout_blocks():
     )
     assert equal_block == 25 - mediator.TRANSIT_BLOCKS
 
+    # This is the fix for test_lock_timeout_lower_than_previous_channel_settlement_period
     large_expire = 70
     large_block = mediator.get_timeout_blocks2(
         settle_timeout,
@@ -1347,7 +1348,6 @@ def test_no_valid_routes():
     assert isinstance(iteration.events[0], SendRefundTransfer2)
 
 
-@pytest.mark.xfail(reason='Not implemented')
 def test_lock_timeout_lower_than_previous_channel_settlement_period():
     # For a path A-B-C, B cannot forward a mediated transfer to C with
     # a lock timeout larger than the settlement timeout of the A-B
@@ -1374,7 +1374,77 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     # (block=5) C call unlock on channel B-C (C is forced to unlock)
     # (block=6) B learns the secret
     # (block=7) B call unlock on channel A-B (settle_timeout is over)
-    raise NotImplementedError()
+    amount = UNIT_TRANSFER_AMOUNT
+    target = HOP2
+    high_from_expiration = 20
+    low_reveal_timeout = 5
+    low_settlement_expiration = 10
+
+    from_channel = factories.make_channel(
+        our_balance=amount,
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+        reveal_timeout=low_reveal_timeout,
+        settle_timeout=low_settlement_expiration,
+    )
+    from_route = factories.route_from_channel(from_channel)
+
+    from_transfer = factories.make_signed_transfer_for(
+        from_channel,
+        amount,
+        HOP1,
+        target,
+        high_from_expiration,
+        UNIT_SECRET,
+    )
+
+    # Assert the precondition for the test. The message is still valid, and the
+    # receiver cannot control the received lock expiration
+    assert from_transfer.lock.expiration >= from_channel.settle_timeout
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        reveal_timeout=low_reveal_timeout,
+        settle_timeout=low_settlement_expiration,
+    )
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+    ]
+    channelmap = {
+        from_channel.identifier: from_channel,
+        channel1.identifier: channel1,
+    }
+
+    block_number = 1
+    payment_network_identifier = factories.make_address()
+    init_state_change = ActionInitMediator2(
+        payment_network_identifier,
+        available_routes,
+        from_route,
+        from_transfer,
+    )
+
+    mediator_state = None
+    iteration = mediator.state_transition2(
+        mediator_state,
+        init_state_change,
+        channelmap,
+        block_number,
+    )
+
+    assert isinstance(iteration.new_state, MediatorTransferState)
+    assert iteration.events
+
+    mediated_transfers = [e for e in iteration.events if isinstance(e, SendMediatedTransfer2)]
+    assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
+    send_transfer = mediated_transfers[0]
+    mediated_transfer = send_transfer.transfer
+
+    msg = 'transfer expiration must be lower than the funding channel settlement window'
+    assert mediated_transfer.lock.expiration < low_settlement_expiration, msg
 
 
 @pytest.mark.xfail(reason='Not implemented. Issue: #382')
