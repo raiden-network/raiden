@@ -1590,8 +1590,7 @@ def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeo
     raise NotImplementedError()
 
 
-@pytest.mark.xfail(reason='Not implemented. Issue: #382')
-def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
+def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     # The payee could reveal the secret on its lock expiration block, the
     # mediator node will respond with a balance-proof to the payee since the
     # lock is valid and the mediator can safely get the token from the payer.
@@ -1601,16 +1600,10 @@ def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #
     # T2.expiration cannot be equal to T1.expiration - reveal_timeout:
     #
-    # T1 |---|
-    # T2     |---|
-    #        ^- reveal the secret
-    #        T1.expiration - reveal_timeout == current_block -> withdraw on chain
-    #
-    # If T2.expiration cannot be equal to T1.expiration - reveal_timeout minus ONE:
-    #
-    # T1 |---|
-    # T2      |---|
-    #         ^- reveal the secret
+    #           v- T1.expiration - reveal_timeout
+    # T1 |------****|
+    # T2 |--****|   ^- T1.expiration
+    #           ^- T2.expiration
     #
     # Race:
     #  1> Secret is learned
@@ -1621,4 +1614,47 @@ def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #
     # The race is depending on the handling of 3 before 4.
     #
-    raise NotImplementedError()
+    block_number = 5
+    expiration = 30
+
+    payer_channel = factories.make_channel(
+        partner_balance=UNIT_TRANSFER_AMOUNT,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+
+    payer_transfer = factories.make_signed_transfer_for(
+        payer_channel,
+        UNIT_TRANSFER_AMOUNT,
+        HOP1,
+        UNIT_TRANSFER_TARGET,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    channel1 = factories.make_channel(
+        our_balance=UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    channelmap = {
+        channel1.identifier: channel1,
+        payer_channel.identifier: payer_channel,
+    }
+    possible_routes = [factories.route_from_channel(channel1)]
+
+    mediator_state = MediatorTransferState(UNIT_HASHLOCK)
+    iteration = mediator.mediate_transfer2(
+        mediator_state,
+        possible_routes,
+        payer_channel,
+        channelmap,
+        payer_transfer,
+        block_number,
+    )
+
+    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer2))
+    assert isinstance(send_mediated, SendMediatedTransfer2)
+
+    race_block = payer_transfer.lock.expiration - channel1.reveal_timeout - mediator.TRANSIT_BLOCKS
+    assert mediator.TRANSIT_BLOCKS > 0
+    assert send_mediated.transfer.lock.expiration == race_block
