@@ -10,8 +10,12 @@ from raiden.transfer.mediated_transfer.state import (
     MediationPairState2,
     MediatorTransferState,
 )
-from raiden.transfer.mediated_transfer.state_change import ActionInitMediator2
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitMediator2,
+    ReceiveSecretReveal,
+)
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof2,
     SendMediatedTransfer2,
@@ -23,6 +27,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     TransactionExecutionStatus,
 )
+from raiden.transfer.state_change import Block
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     ADDR,
@@ -1447,7 +1452,6 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     assert mediated_transfer.lock.expiration < low_settlement_expiration, msg
 
 
-@pytest.mark.xfail(reason='Not implemented. Issue: #382')
 def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # For a path A1-B-C-A2, an attacker controlling A1 and A2 should not be
     # able to force B-C to close the channel by burning token.
@@ -1460,7 +1464,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     #   amount from A1 through B and C to A2
     # - Since the attacker controls A1 and A2 it knows the secret, she can choose
     #   when the secret is revealed
-    # - The secret is held back until the hash time lock B->C is almost expiring,
+    # - The secret is held back until the hash time lock B->C has *expired*,
     #   then it's revealed (meaning that the attacker is losing token, that's why
     #   it's using the lowest possible amount)
     # - C wants the token from B. It will reveal the secret and close the channel
@@ -1472,7 +1476,110 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # - C should only close the channel B-C if he has paid A2, since this may
     #   only happen if the lock for the transfer C-A2 has not yet expired then C
     #   has enough time to follow the protocol without closing the channel B-C.
-    raise NotImplementedError()
+    amount = UNIT_TRANSFER_AMOUNT
+    block_number = 1
+    from_expiration = HOP1_TIMEOUT
+
+    # C's channel with the Attacker node A2
+    attacked_channel = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    target_attacker2 = attacked_channel.partner_state.address
+
+    bc_channel = factories.make_channel(
+        our_balance=amount,
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    from_route = factories.route_from_channel(bc_channel)
+
+    from_transfer = factories.make_signed_transfer_for(
+        bc_channel,
+        amount,
+        HOP1,
+        target_attacker2,
+        from_expiration,
+        UNIT_SECRET,
+    )
+
+    available_routes = [
+        factories.route_from_channel(attacked_channel),
+    ]
+    channelmap = {
+        bc_channel.identifier: bc_channel,
+        attacked_channel.identifier: attacked_channel,
+    }
+
+    payment_network_identifier = factories.make_address()
+    init_state_change = ActionInitMediator2(
+        payment_network_identifier,
+        available_routes,
+        from_route,
+        from_transfer,
+    )
+
+    mediator_state = None
+    iteration = mediator.state_transition2(
+        mediator_state,
+        init_state_change,
+        channelmap,
+        block_number,
+    )
+
+    attack_block_number = from_transfer.lock.expiration - attacked_channel.reveal_timeout
+    assert not mediator.is_safe_to_wait2(
+        from_transfer.lock.expiration,
+        attacked_channel.reveal_timeout,
+        attack_block_number,
+    )
+
+    # Wait until it's not safe to wait for the off-chain unlock for B-C (and expire C-A2)
+    new_iteration = iteration
+    for new_block_number in range(block_number, attack_block_number + 1):
+        new_iteration = mediator.state_transition2(
+            new_iteration.new_state,
+            Block(new_block_number),
+            channelmap,
+            new_block_number,
+        )
+
+        assert not any(
+            event
+            for event in new_iteration.events
+            if not isinstance(event, EventUnlockFailed)
+        )
+
+    # and reveal the secret
+    receive_secret = ReceiveSecretReveal(
+        UNIT_SECRET,
+        target_attacker2,
+    )
+    attack_iteration = mediator.state_transition2(
+        new_iteration.new_state,
+        receive_secret,
+        channelmap,
+        attack_block_number,
+    )
+    assert not any(
+        isinstance(event, ContractSendChannelClose)
+        for event in attack_iteration.events
+    )
+
+    # don't go on-chain since the balance proof was not received
+    for new_block_number in range(block_number, from_transfer.lock.expiration + 1):
+        new_iteration = mediator.state_transition2(
+            new_iteration.new_state,
+            Block(new_block_number),
+            channelmap,
+            new_block_number,
+        )
+        assert not any(
+            event
+            for event in new_iteration.events
+            if not isinstance(event, EventUnlockFailed)
+        )
 
 
 @pytest.mark.xfail(reason='Not implemented. Issue: #382')
