@@ -111,7 +111,8 @@ def make_route(
         settle_timeout=UNIT_SETTLE_TIMEOUT,
         reveal_timeout=UNIT_REVEAL_TIMEOUT,
         closed_block=None,
-        channel_address=None):
+        channel_address=None
+):
     """ Helper for creating a route.
 
     Args:
@@ -144,7 +145,8 @@ def make_transfer(
         secret=None,
         hashlock=UNIT_HASHLOCK,
         identifier=1,
-        token=UNIT_TOKEN_ADDRESS):
+        token=UNIT_TOKEN_ADDRESS
+):
 
     if secret is not None:
         assert sha3(secret) == hashlock
@@ -197,7 +199,8 @@ def make_channel(
         token_address=None,
         channel_address=None,
         reveal_timeout=10,
-        settle_timeout=50):
+        settle_timeout=50
+):
 
     our_address = our_address or make_address()
     partner_address = partner_address or make_address()
@@ -251,7 +254,8 @@ def make_transfer2(
         transferred_amount=0,
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         locksroot=None,
-        token=UNIT_TOKEN_ADDRESS):
+        token=UNIT_TOKEN_ADDRESS
+):
 
     hashlock = sha3(secret)
     lock = HashTimeLockState(
@@ -295,7 +299,8 @@ def make_signed_transfer(
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         token=UNIT_TOKEN_ADDRESS,
         pkey=UNIT_TRANSFER_PKEY,
-        sender=UNIT_TRANSFER_SENDER):
+        sender=UNIT_TRANSFER_SENDER
+):
 
     hashlock = sha3(secret)
     lock = Lock(
@@ -328,7 +333,8 @@ def make_signed_balance_proof(
         locksroot,
         extra_hash,
         private_key,
-        sender_address):
+        sender_address
+):
 
     data_to_sign = balance_proof.signing_data(
         nonce,
@@ -363,7 +369,8 @@ def make_signed_transfer_for(
         nonce=1,
         transferred_amount=0,
         pkey=UNIT_TRANSFER_PKEY,
-        sender=UNIT_TRANSFER_SENDER):
+        sender=UNIT_TRANSFER_SENDER
+):
 
     pubkey = pkey.public_key.format(compressed=False)
     assert publickey_to_address(pubkey) == sender
@@ -411,7 +418,8 @@ def make_transfer_description(
         initiator=None,
         target=None,
         token_address=UNIT_TOKEN_ADDRESS,
-        registry=UNIT_REGISTRY_IDENTIFIER):
+        registry=UNIT_REGISTRY_IDENTIFIER
+):
 
     initiator = initiator or make_address()
     target = target or make_address()
