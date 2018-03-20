@@ -225,7 +225,8 @@ def is_channel_close_needed2(payer_channel, transfer_pair, block_number):
 
 def is_send_transfer_almost_equal(
         send: LockedTransferUnsignedState,
-        received: LockedTransferSignedState):
+        received: LockedTransferSignedState
+):
     """ True if both transfers are for the same mediated transfer. """
     # the only value that may change for each hop is the expiration
     return (
@@ -577,7 +578,8 @@ def next_transfer_pair2(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         timeout_blocks: int,
-        block_number: int):
+        block_number: int
+):
     """ Given a payer transfer tries a new route to proceed with the mediation.
     Args:
         payer_transfer: The transfer received from the payer_channel.
@@ -675,7 +677,8 @@ def set_secret2(state, channelidentifiers_to_channels, secret, hashlock):
 def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         transfers_pair,
         payee_address,
-        new_payee_state):
+        new_payee_state
+):
     """ Set the state of a transfer *sent* to a payee and check the secret is
     being revealed backwards.
 
@@ -707,11 +710,12 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
 def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
         transfers_pair,
         payee_address,
-        new_payee_state):
+        new_payee_state
+):
     """ Set the state of a transfer *sent* to a payee and check the secret is
     being revealed backwards.
     Note:
-        The elements from transfers_pair are changed in place, the list must
+        The elements or transfers_pair are changed in place, the list must
         contain all the known transfers to properly check reveal order.
     """
     assert new_payee_state in MediationPairState.valid_payee_states
