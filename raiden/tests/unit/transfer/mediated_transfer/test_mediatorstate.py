@@ -139,14 +139,14 @@ def make_transfers_pair(privatekeys, amount):
         channelmap[pay_channel.identifier] = pay_channel
 
         # assumes that the node sending the refund will follow the protocol and
-        # decrement the expiration for it's lock
+        # decrement the expiration for its lock
         next_expiration = next_expiration - UNIT_REVEAL_TIMEOUT
 
     return channelmap, transfers_pair
 
 
 def test_is_lock_valid():
-    """ A hash time lock is valid up to the expiraiton block. """
+    """ A hash time lock is valid up to the expiration block. """
     expiration = 10
     assert mediator.is_lock_valid(expiration, 5) is True
     assert mediator.is_lock_valid(expiration, 10) is True, 'lock is expired at the next block'
@@ -164,12 +164,12 @@ def test_is_safe_to_wait():
     reveal_timeout = 10
     assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
 
-    # expiration is in 30 blocks, 09 blocks safe for waiting
+    # expiration is in 20 blocks, 10 blocks safe for waiting
     block_number = 20
     reveal_timeout = 10
     assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
 
-    # expiration is in 30 blocks, 1 block safe for waiting
+    # expiration is in 11 blocks, 1 block safe for waiting
     block_number = 29
     reveal_timeout = 10
     assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
@@ -446,51 +446,51 @@ def test_next_route_amount():
 
     # the first available route should be used
     available_routes = [factories.route_from_channel(channel1)]
-    choosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = mediator.next_channel_from_routes(
         available_routes,
         channelmap,
         amount,
         timeout_blocks,
     )
-    assert choosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channel1.identifier
 
-    # additional routes does not change the order
+    # additional routes do not change the order
     available_routes = [
         factories.route_from_channel(channel1),
         factories.route_from_channel(channel2),
     ]
-    choosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = mediator.next_channel_from_routes(
         available_routes,
         channelmap,
         amount,
         timeout_blocks,
     )
-    assert choosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channel1.identifier
 
     available_routes = [
         factories.route_from_channel(channel3),
         factories.route_from_channel(channel1),
     ]
-    choosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = mediator.next_channel_from_routes(
         available_routes,
         channelmap,
         amount,
         timeout_blocks,
     )
-    assert choosen_channel.identifier == channel3.identifier
+    assert chosen_channel.identifier == channel3.identifier
 
     # a channel without capacity must be skipped
     available_routes = [
         factories.route_from_channel(channel2),
         factories.route_from_channel(channel1),
     ]
-    choosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = mediator.next_channel_from_routes(
         available_routes,
         channelmap,
         amount,
         timeout_blocks,
     )
-    assert choosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channel1.identifier
 
 
 def test_next_route_reveal_timeout():
@@ -517,13 +517,13 @@ def test_next_route_reveal_timeout():
         factories.route_from_channel(channel3),
         factories.route_from_channel(channel4),
     ]
-    choosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = mediator.next_channel_from_routes(
         available_routes,
         channelmap,
         amount,
         timeout_blocks,
     )
-    assert choosen_channel.identifier == channel3.identifier
+    assert chosen_channel.identifier == channel3.identifier
 
 
 def test_next_transfer_pair():
@@ -759,8 +759,8 @@ def test_events_for_revealsecret():
         UNIT_SECRET,
     )
 
-    # the last known hop sent a secret reveal message, this node learned the
-    # secret and now must reveal to the payer node from the transfer pair
+    # the last known hop sent a secret reveal message. This node learned the
+    # secret and now must reveal it to the payer node from the transfer pair
     assert len(events) == 1
     assert events[0].secret == UNIT_SECRET
     assert events[0].receiver == last_pair.payer_transfer.balance_proof.sender
@@ -788,7 +788,7 @@ def test_events_for_revealsecret():
 
 
 def test_events_for_revealsecret_secret_unknown():
-    """ When the secret is not know there is nothing to do. """
+    """ When the secret is not known there is nothing to do. """
     amount = 10
     _, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
@@ -834,8 +834,8 @@ def test_events_for_revealsecret_all_states():
 
 
 def test_events_for_balanceproof():
-    """ Test the simple case were the last hop has learned the secret and sent
-    to the mediator node.
+    """ Test the simple case where the last hop has learned the secret and sent
+    it to the mediator node.
     """
     amount = 10
 
@@ -867,7 +867,7 @@ def test_events_for_balanceproof():
 
 
 def test_events_for_balanceproof_channel_closed():
-    """ Balance proofs are useless if the channel is closed/settled, the payee
+    """ Balance proofs are useless if the channel is closed/settled. The payee
     needs to go on-chain and use the latest known balance proof which includes
     this lock in the locksroot.
     """
@@ -904,10 +904,10 @@ def test_events_for_balanceproof_channel_closed():
 def test_events_for_balanceproof_middle_secret():
     """ Even though the secret should only propagate from the end of the chain
     to the front, if there is a payee node in the middle that knows the secret
-    the Balance Proof is sent neverthless.
+    the Balance Proof is nevertheless sent.
 
-    This can be done safely because the secret is know to the mediator and
-    there is reveal_timeout blocks to withdraw the lock on-chain with the payer.
+    This can be done safely because the secret is known to the mediator and
+    there is `reveal_timeout` blocks to withdraw the lock on-chain with the payer.
     """
     amount = 10
     channelmap, transfers_pair = make_transfers_pair(
@@ -956,7 +956,7 @@ def test_events_for_balanceproof_secret_unknown():
 
 
 def test_events_for_balanceproof_lock_expired():
-    """ The balance proof should not be sent if the lock has expird. """
+    """ The balance proof should not be sent if the lock has expired. """
     amount = 10
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
@@ -981,9 +981,9 @@ def test_events_for_balanceproof_lock_expired():
     middle_pair.payee_state = 'payee_secret_revealed'
 
     # Even though the last node did not receive the payment we should send the
-    # balance proof to the middle node to avoid unnecessarely closing the
-    # middle channel. This state should not be reached under normal operation,
-    # the last hop needs to choose a proper reveal_timeout and must go on-chain
+    # balance proof to the middle node to avoid unnecessarily closing the
+    # middle channel. This state should not be reached under normal operation.
+    # The last hop needs to choose a proper reveal_timeout and must go on-chain
     # to withdraw the token before the lock expires.
     events = mediator.events_for_balanceproof2(
         channelmap,
@@ -1032,9 +1032,9 @@ def test_events_for_close():
 
 
 def test_events_for_close_hold_for_unpaid_payee():
-    """ If the secret is known but the payee transfer has not being paid the
+    """ If the secret is known but the payee transfer has not been paid the
     node must not settle on-chain, otherwise the payee can burn tokens to
-    induce the mediator to close a channel.
+    force the mediator to close a channel.
     """
 
     amount = 10
@@ -1270,7 +1270,7 @@ def test_init_mediator():
     assert isinstance(iteration.new_state, MediatorTransferState)
     assert iteration.new_state.transfers_pair[0].payer_transfer == from_transfer
 
-    msg = 'we have a valid route, the mediated transfer event must be emited'
+    msg = 'we have a valid route, the mediated transfer event must be emitted'
     assert iteration.events, msg
 
     mediated_transfers = [e for e in iteration.events if isinstance(e, SendMediatedTransfer2)]
@@ -1390,10 +1390,10 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     #   amount from A1 through B and C to A2
     # - Since the attacker controls A1 and A2 it knows the secret, she can choose
     #   when the secret is revealed
-    # - The secret is hold back until the hash time lock B->C is almost expiring,
+    # - The secret is held back until the hash time lock B->C is almost expiring,
     #   then it's revealed (meaning that the attacker is losing token, that's why
     #   it's using the lowest possible amount)
-    # - C wants the token from B, it will reveal the secret and close the channel
+    # - C wants the token from B. It will reveal the secret and close the channel
     #   (because it must assume the balance proof won't make in time and it needs
     #   to unlock on-chain)
     #
@@ -1415,10 +1415,10 @@ def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeo
 
 @pytest.mark.xfail(reason='Not implemented. Issue: #382')
 def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
-    # The payee could reveal the secret on it's lock expiration block, the
+    # The payee could reveal the secret on its lock expiration block, the
     # mediator node will respond with a balance-proof to the payee since the
-    # lock is valid and the mediator can safely get the token from the payer,
-    # the secret is know and if there are no additional blocks the mediator
+    # lock is valid and the mediator can safely get the token from the payer.
+    # The secret is known and if there are no additional blocks the mediator
     # will be at risk of not being able to withdraw on-chain, so the channel
     # will be closed to safely withdraw.
     #
@@ -1429,7 +1429,7 @@ def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #        ^- reveal the secret
     #        T1.expiration - reveal_timeout == current_block -> withdraw on chain
     #
-    # If T2.expiration canot be equal to T1.expiration - reveal_timeout minus ONE:
+    # If T2.expiration cannot be equal to T1.expiration - reveal_timeout minus ONE:
     #
     # T1 |---|
     # T2      |---|
@@ -1439,7 +1439,7 @@ def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #  1> Secret is learned
     #  2> balance-proof is sent to payee (payee transfer is paid)
     #  3! New block is mined and Raiden learns about it
-    #  4> Now the secret is know, the payee is paid, and the current block is
+    #  4> Now the secret is known, the payee is paid, and the current block is
     #     equal to the payer.expiration - reveal-timeout -> withdraw on chain
     #
     # The race is depending on the handling of 3 before 4.
