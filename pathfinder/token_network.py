@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import collections
 from itertools import islice
-from typing import List
+from typing import List, Dict, Any
 
 import networkx as nx
 from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
 from raiden_libs.utils import compute_merkle_tree, get_merkle_root
 
+from pathfinder.config import DIVERSITY_PEN_DEFAULT as DIV_PEN
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
@@ -143,22 +144,43 @@ class TokenNetwork:
             received_amount=balance_proof.transferred_amount
         )
 
-    def update_fee(self, channel_id: ChannelId, new_fee, signature):
-        """
-        Update the channel fee.
-        This needs to check that the signature is valid.
+    def update_fee(
+        self,
+        channel_id: ChannelId,
+        new_fee: float,
+        signature
+    ):
+        # FIXME: Signature on fee update not checked !!
+        # msg = new_fee
+        # signer = from_signature_and_message(signature, msg)
+        # <-- this verifies the signature of the fee-update!
+        signer = signature
+        participant1, participant2 = self.token_network_contract.get_channel_participants(channel_id)
+        if is_same_address(participant1, signer):
+            receiver = participant2
+            self.G[participant1][receiver]['view'].fee = new_fee
+        elif is_same_address(participant2, signer):
+            receiver = participant1
+            self.G[participant2][receiver]['view'].fee = new_fee
+        else:
+            raise ValueError('Signature does not match any of the participants.')
 
-        Called by the public interface.
-        """
-        pass
-
-    def get_paths(self, from_address, to_address, value, num_paths, extra_data):
-        """
-        Returns at most num_paths paths for the payment.
-
-        Called by the public interface.
-        """
-        pass
+    def get_paths(self, source: Address, target: Address, value: int, k: int, extra_data=None):
+        visited: Dict[ChannelId, float] = {}
+        paths = []
+        for i in range(k):
+            def weight(u: Address, v: Address, attr: Dict[str, Any]):
+                view: ChannelView = attr['view']
+                if view.capacity < value:
+                    return None
+                else:
+                    view.fee + visited.get(view.channel_id, 0)
+            path = nx.dijkstra_path(self.G, source, target, weight=weight)
+            for node1, node2 in zip(path[:-1], path[1:]):
+                channel_id = self.G[node1][node2]['view'].channel_id
+                visited[channel_id] = visited.get(channel_id, 0) + DIV_PEN
+            paths.append(path)
+        return paths
 
     # functions for persistence
 

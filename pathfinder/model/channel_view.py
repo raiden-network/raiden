@@ -3,6 +3,7 @@ from typing import Tuple
 
 from eth_utils import is_checksum_address
 
+from pathfinder.config import DEFAULT_FEE
 from pathfinder.model.network_cache import NetworkCache
 from pathfinder.utils.types import Address, ChannelId
 
@@ -25,12 +26,13 @@ class ChannelView:
         deposit1 = network_cache.get_channel_deposit(channel_id, participant1)
         deposit2 = network_cache.get_channel_deposit(channel_id, participant2)
         return (
-            ChannelView(participant1, participant2, deposit1),
-            ChannelView(participant2, participant1, deposit2)
+            ChannelView(channel_id, participant1, participant2, deposit1),
+            ChannelView(channel_id, participant2, participant1, deposit2)
         )
 
     def __init__(
         self,
+        channel_id: ChannelId,
         participant1: Address,
         participant2: Address,
         deposit: int = 0
@@ -45,8 +47,10 @@ class ChannelView:
         self._transferred_amount = 0
         self._received_amount = 0
         self._locked_amount = 0
+        self.fee = DEFAULT_FEE
         self._capacity = deposit
         self.state = ChannelView.State.OPEN
+        self.channel_id = channel_id
 
     def update_capacity(
         self,
@@ -83,3 +87,7 @@ class ChannelView:
     @property
     def locked_amount(self):
         return self._locked_amount
+
+    @property
+    def capacity(self):
+        return self._capacity
