@@ -121,7 +121,7 @@ class SendRevealSecret(Event):
         self.receiver = receiver
         self.sender = sender
 
-    def __str__(self):
+    def __repr__(self):
         return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
             self.identifier,
             pex(self.hashlock),
@@ -176,7 +176,7 @@ class SendRevealSecret2(Event):
         self.token = token
         self.receiver = receiver
 
-    def __str__(self):
+    def __repr__(self):
         return '<SendRevealSecret2 id:{} hashlock:{} token:{} receiver:{}>'.format(
             self.identifier,
             pex(self.hashlock),
@@ -374,7 +374,7 @@ class SendRefundTransfer2(Event):
         self.target = target
         self.recipient = recipient
 
-    def __str__(self):
+    def __repr__(self):
         return (
             '<'
             'SendRefundTransfer2 id:{} token:{} balance_proof:{} lock:{} '
