@@ -1,5 +1,5 @@
 import pytest
-from eth_tester import EthereumTester, PyEthereum21Backend
+from eth_tester import EthereumTester, PyEthereum16Backend
 from web3 import HTTPProvider, Web3
 from web3.providers.eth_tester import EthereumTesterProvider
 
@@ -15,7 +15,7 @@ def use_tester(request):
 @pytest.fixture(scope='session')
 def web3(use_tester: bool, faucet_private_key: str, faucet_address: str):
     if use_tester:
-        tester = EthereumTester(PyEthereum21Backend())
+        tester = EthereumTester(PyEthereum16Backend())
 
         provider = EthereumTesterProvider(tester)
         web3 = Web3(provider)
