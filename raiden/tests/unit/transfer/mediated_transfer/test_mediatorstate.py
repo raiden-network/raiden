@@ -1443,13 +1443,11 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     assert isinstance(iteration.new_state, MediatorTransferState)
     assert iteration.events
 
-    mediated_transfers = [e for e in iteration.events if isinstance(e, SendMediatedTransfer2)]
-    assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
-    send_transfer = mediated_transfers[0]
-    mediated_transfer = send_transfer.transfer
+    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer2))
+    assert send_mediated
 
     msg = 'transfer expiration must be lower than the funding channel settlement window'
-    assert mediated_transfer.lock.expiration < low_settlement_expiration, msg
+    assert send_mediated.transfer.lock.expiration < low_settlement_expiration, msg
 
 
 def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
