@@ -225,7 +225,7 @@ class ActionCancelRoute(StateChange):
 class ActionCancelRoute2(StateChange):
     """ Cancel the current route.
     Notes:
-        Used to cancel a specific route but not the transfer, may be used for
+        Used to cancel a specific route but not the transfer. May be used for
         timeouts.
     """
 

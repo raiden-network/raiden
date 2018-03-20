@@ -90,7 +90,7 @@ def test_next_route():
         block_number,
     )
 
-    msg = 'a initialized state must use the first valid route'
+    msg = 'an initialized state must use the first valid route'
     assert state.initiator.channel_identifier == channel1.identifier, msg
     assert not state.cancelled_channels
 
