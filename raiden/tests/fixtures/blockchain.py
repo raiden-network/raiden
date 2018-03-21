@@ -103,7 +103,7 @@ def cached_genesis(request):
         dict: A dictionary representing the genesis block.
     """
 
-    if not request.config.option.blockchain_cache:
+    if not request.getfixturevalue('blockchain_cache'):
         return
 
     # this will create the tester _and_ deploy the Registry
