@@ -98,8 +98,8 @@ class Message(MessageHashable):
         )
 
     @classmethod
-    def decode(cls, packed):
-        packed = messages.wrap(packed)
+    def decode(cls, data):
+        packed = messages.wrap(data)
         return cls.unpack(packed)
 
     def encode(self):
@@ -146,7 +146,7 @@ class SignedMessage(Message):
         packed = messages.wrap(data)
 
         if packed is None:
-            return
+            return None
 
         # signature must be at the end
         message_type = type(packed)
@@ -212,7 +212,7 @@ class EnvelopeMessage(SignedMessage):
         packed = messages.wrap(data)
 
         if packed is None:
-            return
+            return None
 
         # signature must be at the end
         message_type = type(packed)
