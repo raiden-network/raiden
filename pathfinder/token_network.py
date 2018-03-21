@@ -168,13 +168,14 @@ class TokenNetwork:
     def get_paths(self, source: Address, target: Address, value: int, k: int, extra_data=None):
         visited: Dict[ChannelId, float] = {}
         paths = []
+
+        def weight(u: Address, v: Address, attr: Dict[str, Any]):
+            view: ChannelView = attr['view']
+            if view.capacity < value:
+                return None
+            else:
+                return view.fee + visited.get(view.channel_id, 0)
         for i in range(k):
-            def weight(u: Address, v: Address, attr: Dict[str, Any]):
-                view: ChannelView = attr['view']
-                if view.capacity < value:
-                    return None
-                else:
-                    view.fee + visited.get(view.channel_id, 0)
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id

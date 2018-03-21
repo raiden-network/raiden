@@ -20,9 +20,9 @@ def test_routing_benchmark(token_networks: List[TokenNetwork], populate_token_ne
         times.append(toc - tic)
     end = time.time()
     for path in paths:
-        fees = sum(G[A][B]['view'].fee for A, B in zip(path[:-1], path[1:]))
-        for A, B in zip(path[:-1], path[1:]):     # <- inefficient
-            print('fee = ', G[A][B]['view'].fee, 'capacity = ', G[A][B]['view'].capacity)
+        fees = sum(G[node1][node2]['view'].fee for node1, node2 in zip(path[:-1], path[1:]))
+        for node1, node2 in zip(path[:-1], path[1:]):     # <- inefficient
+            print('fee = ', G[node1][node2]['view'].fee, 'capacity = ', G[node1][node2]['view'].capacity)
         print('fee sum = ', fees)
     print(paths)
     print(np.mean(np.array(times)), np.min(np.array(times)), np.max(np.array(times)))
