@@ -3,6 +3,7 @@ import gevent
 import pytest
 from ethereum import slogging
 
+from raiden.exceptions import RaidenShuttingDown
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
@@ -19,7 +20,10 @@ def _raiden_cleanup(request, raiden_apps):
     """ Helper to do cleanup a Raiden App. """
     def _cleanup():
         for app in raiden_apps:
-            app.stop(leave_channels=False)
+            try:
+                app.stop(leave_channels=False)
+            except RaidenShuttingDown:
+                pass
 
         # Two tests in sequence could run a UDP server on the same port, a hanging
         # greenlet from the previous tests could send packet to the new server and
