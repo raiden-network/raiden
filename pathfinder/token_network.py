@@ -8,7 +8,7 @@ from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
 from raiden_libs.utils import compute_merkle_tree, get_merkle_root
 
-from pathfinder.config import DIVERSITY_PEN_DEFAULT as DIV_PEN
+from pathfinder.config import DIVERSITY_PEN_DEFAULT
 from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
@@ -55,6 +55,7 @@ class TokenNetwork:
         self.token_address = self.token_network_contract.get_token_address()
         self.network_cache = NetworkCache(self.token_network_contract)
         self.G = DiGraph()
+        self.max_fee = 0.0
 
     # Contract event listener functions
 
@@ -155,31 +156,54 @@ class TokenNetwork:
         # signer = from_signature_and_message(signature, msg)
         # <-- this verifies the signature of the fee-update!
         signer = signature
-        participant1, participant2 = self.token_network_contract.get_channel_participants(channel_id)
+        participant1, participant2 = self.token_network_contract.get_channel_participants(
+            channel_id
+        )
         if is_same_address(participant1, signer):
+            sender = participant1
             receiver = participant2
-            self.G[participant1][receiver]['view'].fee = new_fee
         elif is_same_address(participant2, signer):
+            sender = participant2
             receiver = participant1
-            self.G[participant2][receiver]['view'].fee = new_fee
         else:
             raise ValueError('Signature does not match any of the participants.')
 
-    def get_paths(self, source: Address, target: Address, value: int, k: int, extra_data=None):
+        channel_view = self.G[sender][receiver]['view']
+
+        if new_fee >= self.max_fee:
+            # Equal case is included to avoid a recalculation of the max fee.
+            self.max_fee = new_fee
+            channel_view.fee = new_fee
+        elif channel_view.fee == self.max_fee:
+            # O(n) operation but rarely called, amortized likely constant.
+            channel_view.fee = new_fee
+            self.max_fee = max(
+                edge_data['view'].fee
+                for _, _, edge_data in self.G.edges(data=True)
+            )
+
+        channel_view.fee = new_fee
+
+    def get_paths(self, source: Address, target: Address, value: int, k: int, **kwargs):
         visited: Dict[ChannelId, float] = {}
         paths = []
+        hop_bias = kwargs.get('bias', 0)
 
         def weight(u: Address, v: Address, attr: Dict[str, Any]):
             view: ChannelView = attr['view']
+            assert 0 <= hop_bias <= 1
             if view.capacity < value:
                 return None
             else:
-                return view.fee + visited.get(view.channel_id, 0)
+                return hop_bias*self.max_fee + (1-hop_bias)*view.fee + visited.get(
+                    view.channel_id,
+                    0
+                )
         for i in range(k):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
-                visited[channel_id] = visited.get(channel_id, 0) + DIV_PEN
+                visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
             paths.append(path)
         return paths
 

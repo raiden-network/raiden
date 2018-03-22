@@ -61,8 +61,9 @@ def populate_token_networks(
             signer1, signer2 = token_network.token_network_contract.get_channel_participants(
                 channel_id
             )
-            token_network.update_fee(channel_id, random.uniform(0, 0.05), signer1)
-            token_network.update_fee(channel_id, random.uniform(0, 0.05), signer2)
+            # cuts negative values of probability distribution, fix with > 0 distribution
+            token_network.update_fee(channel_id, abs(random.gauss(0.0002, 0.0001)), signer1)
+            token_network.update_fee(channel_id, abs(random.gauss(0.0002, 0.0001)), signer2)
 
 
 @pytest.fixture
