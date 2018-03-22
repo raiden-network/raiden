@@ -157,9 +157,3 @@ class ConnectionsResource(BaseResource):
             token_address=token_address,
             only_receiving=only_receiving_channels
         )
-
-
-class ConnectionManagersResource(BaseResource):
-
-    def get(self):
-        return self.rest_api.get_connection_managers_info()
