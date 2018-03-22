@@ -48,10 +48,8 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenEventsResource,
     ChannelEventsResource,
-    TokenSwapsResource,
     TransferToTargetResource,
     ConnectionsResource,
-    ConnectionManagersResource,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -84,7 +82,6 @@ URLS_V1 = [
     ('/events/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
     ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
-    ('/token_swaps/<hexaddress:target_address>/<int:identifier>', TokenSwapsResource),
     (
         '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
         TransferToTargetResource,
@@ -618,42 +615,3 @@ class RestAPI:
             )
 
         return result
-
-    def token_swap(
-            self,
-            target_address,
-            identifier,
-            role,
-            sending_token,
-            sending_amount,
-            receiving_token,
-            receiving_amount):
-
-        if role == 'maker':
-            self.raiden_api.token_swap(
-                identifier=identifier,
-                maker_token=sending_token,
-                maker_amount=sending_amount,
-                maker_address=self.raiden_api.address,
-                taker_token=receiving_token,
-                taker_amount=receiving_amount,
-                taker_address=target_address,
-            )
-        elif role == 'taker':
-            self.raiden_api.expect_token_swap(
-                identifier=identifier,
-                maker_token=receiving_token,
-                maker_amount=receiving_amount,
-                maker_address=target_address,
-                taker_token=sending_token,
-                taker_amount=sending_amount,
-                taker_address=self.raiden_api.address
-            )
-        else:
-            # should never happen, role is validated in the schema
-            return api_error(
-                errors='Provided invalid token swap role {}'.format(role),
-                status_code=HTTPStatus.BAD_REQUEST,
-            )
-
-        return api_response(result=dict(), status_code=HTTPStatus.CREATED)

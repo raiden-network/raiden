@@ -903,63 +903,6 @@ def test_break_blockchain_events(
     }
 
 
-def test_api_token_swaps(
-        api_backend,
-        api_test_context,
-        api_raiden_service):
-
-    tokenswap_obj = {
-        'role': 'maker',
-        'sending_amount': 42,
-        'sending_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'receiving_amount': 76,
-        'receiving_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    }
-    target_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    identifier = 1337
-    api_test_context.specify_tokenswap_input(
-        tokenswap_obj,
-        target_address,
-        identifier
-    )
-    request = grequests.put(
-        api_url_for(
-            api_backend,
-            'tokenswapsresource',
-            target_address=target_address,
-            identifier=identifier
-        ),
-        json=tokenswap_obj
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    tokenswap_obj = {
-        'role': 'taker',
-        'sending_amount': 76,
-        'sending_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'receiving_amount': 42,
-        'receiving_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    }
-    target_address = '0xbbc5ee8be95683983df67260b0ab033c237bde60'
-    api_test_context.specify_tokenswap_input(
-        tokenswap_obj,
-        target_address,
-        identifier
-    )
-    request = grequests.put(
-        api_url_for(
-            api_backend,
-            'tokenswapsresource',
-            target_address=target_address,
-            identifier=identifier
-        ),
-        json=tokenswap_obj
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-
 def test_api_transfers(
         api_backend,
         api_test_context,
