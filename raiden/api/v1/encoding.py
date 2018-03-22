@@ -228,26 +228,6 @@ class ChannelListSchema(BaseListSchema):
         decoding_class = ChannelList
 
 
-class TokenSwapsSchema(BaseSchema):
-    # The identifier is actually returned properly without this, but if this
-    # is included we get a "missing" error.
-    # XXX: Lef does not like this. Find out why flask behaves like that.
-    # identifier = fields.Integer(required=True)
-
-    role = fields.String(
-        required=True,
-        validate=validate.OneOf(['maker', 'taker']),
-    )
-    sending_amount = fields.Integer(required=True)
-    sending_token = AddressField(required=True)
-    receiving_amount = fields.Integer(required=True)
-    receiving_token = AddressField(required=True)
-
-    class Meta:
-        strict = True
-        decoding_class = dict
-
-
 class TransferSchema(BaseSchema):
     initiator_address = AddressField(missing=None)
     target_address = AddressField(missing=None)
