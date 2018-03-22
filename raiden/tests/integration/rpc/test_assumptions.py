@@ -202,3 +202,41 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
         from_block=block_number_event_1 + 1,
     )
     assert get_list_of_block_numbers(result_3) == [block_number_event_2]
+
+
+def test_filter_end_block_inclusive(deploy_client, blockchain_backend):
+    """ A filter includes events from the block given in from_block """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    # call the create event function twice and wait for confirmation each time
+    gas = contract_proxy.estimate_gas('createEvent') * 2
+    transaction_hex_1 = contract_proxy.transact('createEvent', 1, startgas=gas)
+    deploy_client.poll(unhexlify(transaction_hex_1))
+    transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
+    deploy_client.poll(unhexlify(transaction_hex_2))
+
+    # create a new filter in the node
+    new_filter(deploy_client, contract_proxy.contract_address, None)
+
+    result_1 = get_filter_events(deploy_client, contract_proxy.contract_address, None)
+    block_number_events = get_list_of_block_numbers(result_1)
+    block_number_event_1 = block_number_events[0]
+    block_number_event_2 = block_number_events[1]
+
+    # inclusive to_block should return first event
+    result_2 = get_filter_events(
+        deploy_client,
+        contract_proxy.contract_address,
+        None,
+        to_block=block_number_event_1,
+    )
+    assert get_list_of_block_numbers(result_2) == [block_number_event_1]
+
+    # this should include the second event
+    result_3 = get_filter_events(
+        deploy_client,
+        contract_proxy.contract_address,
+        None,
+        to_block=block_number_event_2,
+    )
+    assert get_list_of_block_numbers(result_3) == block_number_events
