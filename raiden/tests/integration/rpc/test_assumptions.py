@@ -205,7 +205,8 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
 
 
 def test_filter_end_block_inclusive(deploy_client, blockchain_backend):
-    """ A filter includes events from the block given in from_block """
+    """ A filter includes events from the block given in from_block
+    until and including end_block. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
