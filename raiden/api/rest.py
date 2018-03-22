@@ -87,7 +87,6 @@ URLS_V1 = [
         TransferToTargetResource,
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
-    ('/connections', ConnectionManagersResource),
 ]
 
 
@@ -410,16 +409,6 @@ class RestAPI:
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
         return api_response(result=result.data)
-
-    def get_connection_managers_info(self):
-        raiden_service_result = self.raiden_api.get_connection_managers_info()
-        assert isinstance(raiden_service_result, dict)
-        # encode token addresses indexes
-        result = {
-            address_encoder(token_address): info
-            for token_address, info in raiden_service_result.items()
-        }
-        return api_response(result=result)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)

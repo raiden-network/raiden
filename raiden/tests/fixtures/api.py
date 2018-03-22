@@ -105,11 +105,6 @@ def api_raiden_service(
     monkeypatch.setattr(api, 'transfer', api_test_context.transfer)
     monkeypatch.setattr(api, 'connect_token_network', api_test_context.connect)
     monkeypatch.setattr(api, 'leave_token_network', api_test_context.leave)
-    monkeypatch.setattr(
-        api,
-        'get_connection_managers_info',
-        api_test_context.get_connection_managers_info
-    )
     monkeypatch.setattr(api, 'register_token', api_test_context.register_token)
     monkeypatch.setattr(
         api,
