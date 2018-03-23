@@ -4,6 +4,7 @@ import pytest
 from eth_utils import encode_hex, is_hex, keccak, remove_0x_prefix
 from raiden_libs.utils import private_key_to_address
 
+from pathfinder.tests.config import NUMBER_OF_NODES
 from pathfinder.utils.types import Address
 
 
@@ -24,7 +25,7 @@ def faucet_address(faucet_private_key: str):
 @pytest.fixture(scope='session')
 def private_keys() -> List[str]:
     offset = 14789632
-    return [encode_hex(keccak(offset + i)) for i in range(2)]
+    return [encode_hex(keccak(offset + i)) for i in range(NUMBER_OF_NODES)]
 
 
 @pytest.fixture(scope='session')
