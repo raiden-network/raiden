@@ -18,7 +18,7 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
-from raiden.network.transport import UDPTransport, TokenBucket
+from raiden.network.transport import TokenBucket
 from raiden.utils import (
     pex,
     privatekey_to_address
@@ -50,21 +50,10 @@ class App:  # pylint: disable=too-few-public-methods
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
     }
 
-    def __init__(self, config, chain, default_registry, discovery, transport_class=UDPTransport):
+    def __init__(self, config, chain, default_registry, discovery, transport):
+        self.transport = transport
         self.config = config
         self.discovery = discovery
-
-        if config.get('socket'):
-            transport = transport_class(
-                None,
-                None,
-                socket=config['socket'],
-            )
-        else:
-            transport = transport_class(
-                config['host'],
-                config['port'],
-            )
 
         transport.throttle_policy = TokenBucket(
             config['protocol']['throttle_capacity'],
@@ -107,3 +96,9 @@ class App:  # pylint: disable=too-few-public-methods
             self.raiden.close_and_settle()
 
         self.raiden.stop()
+
+    def transport_instantiation(self, config, transport):
+        if config.get('socket'):
+            return transport(None, None, socket=config['socket'],)
+        else:
+            return transport(config['host'], config['port'],)
