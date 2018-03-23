@@ -14,9 +14,9 @@ from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.contracts import ContractManager
 from web3 import HTTPProvider, Web3
 from eth_utils import is_checksum_address
+from raiden_libs.no_ssl_patch import no_ssl_verification
 
 import pathfinder
-from pathfinder.no_ssl_patch import no_ssl_verification
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.transport import MatrixTransport
 from pathfinder.utils.types import Address
