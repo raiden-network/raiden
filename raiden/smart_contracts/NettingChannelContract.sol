@@ -115,7 +115,13 @@ contract NettingChannelContract {
         );
         TransferUpdated(msg.sender);
     }
-
+    /// @notice unwithdraw a locked transfer, when refunding.
+    /// @param locked_encoded The locked transfer which should be discarded.
+    /// @param signature  receiver's sign of this transfer to prove that it should be discarded.
+    function unwithdraw(bytes locked_encoded, bytes signature) public {
+        // throws if sender is not a participant
+        data.unwithdraw(locked_encoded, signature);
+    }
     /// @notice Unlock a locked transfer.
     /// @param locked_encoded The locked transfer to be unlocked.
     /// @param merkle_proof The merke_proof for the locked transfer.
