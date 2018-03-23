@@ -13,7 +13,6 @@ from web3 import Web3
 from pathfinder.gevent_error_handler import register_error_handler
 from pathfinder.token_network import TokenNetwork
 from pathfinder.transport import MatrixTransport
-from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
@@ -65,7 +64,7 @@ class PathfindingService(gevent.Greenlet):
         )
         self.token_network_listener.add_confirmed_listener(
             'ChannelNewDeposit',
-            self.handle_channel_net_deposit
+            self.handle_channel_new_deposit
         )
         self.token_network_listener.add_confirmed_listener(
             'ChannelClosed',
@@ -120,14 +119,20 @@ class PathfindingService(gevent.Greenlet):
             ))
 
             channel_identifier = event['args']['channel_identifier']
+            participant1 = event['args']['participant1']
+            participant2 = event['args']['participant2']
 
-            token_network.handle_channel_opened(channel_identifier)
+            token_network.handle_channel_opened(
+                channel_identifier,
+                participant1,
+                participant2
+            )
 
-    def handle_channel_net_deposit(self, event):
+    def handle_channel_new_deposit(self, event):
         token_network = self._get_token_network(event)
 
         if token_network:
-            log.debug('Received ChannelNetDeposit event for token network {}'.format(
+            log.debug('Received ChannelNewDeposit event for token network {}'.format(
                 token_network.address
             ))
 
@@ -169,7 +174,6 @@ class PathfindingService(gevent.Greenlet):
             abi=self.contract_manager.get_contract_abi('TokenNetwork')
         )
 
-        network_contract = TokenNetworkContract(contract)
-        network = TokenNetwork(network_contract)
+        token_network = TokenNetwork(contract)
 
-        self.token_networks[token_network_address] = network
+        self.token_networks[token_network_address] = token_network
