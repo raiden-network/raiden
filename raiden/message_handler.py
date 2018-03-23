@@ -9,10 +9,6 @@ from raiden.exceptions import (
     TransferUnwanted,
     UnknownTokenAddress,
 )
-from raiden.token_swap import (
-    SwapKey,
-    TakerTokenSwapTask,
-)
 from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
@@ -90,21 +86,12 @@ class RaidenMessageHandler:
         secret = message.secret
         sender = message.sender
 
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
         self.raiden.register_secret(secret)
 
         state_change = ReceiveSecretReveal(secret, sender)
         self.raiden.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
     def message_secretrequest(self, message):
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
-
         state_change = ReceiveSecretRequest(
             message.identifier,
             message.amount,
@@ -140,8 +127,6 @@ class RaidenMessageHandler:
                 hashlock,
             )
 
-        self.raiden.greenlet_task_dispatcher.dispatch_message(message, hashlock)
-
         state_change = ReceiveSecretReveal(
             secret,
             message.sender,
@@ -168,11 +153,6 @@ class RaidenMessageHandler:
         channel.register_transfer(
             self.raiden.get_block_number(),
             message,
-        )
-
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.lock.hashlock,
         )
 
         transfer_state = LockedTransferState(
@@ -254,20 +234,8 @@ class RaidenMessageHandler:
         # TODO: Reject mediated transfer that the hashlock/identifier is known,
         # this is a downstream bug and the transfer is going in cycles (issue #490)
 
-        key = SwapKey(
-            message.identifier,
-            message.token,
-            message.lock.amount,
-        )
-
         if message.token in self.blocked_tokens:
             raise TransferUnwanted()
-
-        # TODO: add a separate message for token swaps to simplify message
-        # handling (issue #487)
-        if key in self.raiden.swapkey_to_tokenswap:
-            self.message_tokenswap(message)
-            return
 
         graph = self.raiden.token_to_channelgraph[message.token]
         if not graph.has_channel(self.raiden.address, message.sender):
@@ -296,29 +264,3 @@ class RaidenMessageHandler:
             self.raiden.target_mediated_transfer(message)
         else:
             self.raiden.mediate_mediated_transfer(message)
-
-    def message_tokenswap(self, message):
-        key = SwapKey(
-            message.identifier,
-            message.token,
-            message.lock.amount,
-        )
-
-        # If we are the maker the task is already running and waiting for the
-        # taker's MediatedTransfer
-        task = self.raiden.swapkey_to_greenlettask.get(key)
-        if task:
-            task.response_queue.put(message)
-
-        # If we are the taker we are receiving the maker transfer and should
-        # start our new task
-        else:
-            token_swap = self.raiden.swapkey_to_tokenswap[key]
-            task = TakerTokenSwapTask(
-                self.raiden,
-                token_swap,
-                message,
-            )
-            task.start()
-
-            self.raiden.swapkey_to_greenlettask[key] = task

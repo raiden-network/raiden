@@ -140,6 +140,7 @@ def test_transfer_to_unknownchannel(raiden_network):
         )
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [2])
 @pytest.mark.parametrize('settle_timeout', [TEST_TOKEN_SWAP_SETTLE_TIMEOUT])

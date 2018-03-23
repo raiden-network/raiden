@@ -80,19 +80,6 @@ class ApiTestContext:
         makes it through the REST api"""
         self.channel_for_events = address_decoder(channel_address)
 
-    def specify_tokenswap_input(self, tokenswap_input, target_address, identifier):
-        """We don't test the actual tokenswap but only that the input makes it
-        to the backend in the expected format"""
-        self.tokenswap_input = dict(tokenswap_input)
-        self.tokenswap_input['sending_token'] = address_decoder(
-            self.tokenswap_input['sending_token']
-        )
-        self.tokenswap_input['receiving_token'] = address_decoder(
-            self.tokenswap_input['receiving_token']
-        )
-        self.tokenswap_input['identifier'] = identifier
-        self.tokenswap_input['target_address'] = address_decoder(target_address)
-
     def get_network_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
@@ -292,28 +279,6 @@ class ApiTestContext:
 
     def get_channel(self, channel_address):
         return self.find_channel_by_address(channel_address)
-
-    def _check_tokenswap_input(self, argname, input_argname, kwargs):
-        if kwargs[argname] != self.tokenswap_input[input_argname]:
-            raise ValueError(
-                'Expected "{}" for {} but got "{}"'.format(
-                    self.tokenswap_input[input_argname],
-                    input_argname,
-                    kwargs[argname])
-            )
-
-    def token_swap(self, **kwargs):
-        self._check_tokenswap_input('maker_token', 'sending_token', kwargs)
-        self._check_tokenswap_input('maker_amount', 'sending_amount', kwargs)
-        self._check_tokenswap_input('taker_token', 'receiving_token', kwargs)
-        self._check_tokenswap_input('taker_amount', 'receiving_amount', kwargs)
-
-    def expect_token_swap(self, **kwargs):
-        self._check_tokenswap_input('identifier', 'identifier', kwargs)
-        self._check_tokenswap_input('maker_token', 'receiving_token', kwargs)
-        self._check_tokenswap_input('maker_amount', 'receiving_amount', kwargs)
-        self._check_tokenswap_input('taker_token', 'sending_token', kwargs)
-        self._check_tokenswap_input('taker_amount', 'sending_amount', kwargs)
 
     def transfer(self, token_address, amount, target, identifier):
         # Do nothing. These tests only test the api endpoints, so nothing to do here

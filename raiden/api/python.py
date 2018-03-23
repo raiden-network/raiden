@@ -2,7 +2,6 @@
 from binascii import hexlify
 
 import gevent
-from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.tools.tester import TransactionFailed
 
@@ -12,11 +11,6 @@ from raiden.blockchain.events import (
     get_all_channel_manager_events,
     get_all_registry_events,
     get_all_netting_channel_events,
-)
-from raiden.token_swap import (
-    MakerTokenSwapTask,
-    SwapKey,
-    TokenSwap,
 )
 from raiden.transfer import views
 from raiden.transfer.events import (
@@ -301,166 +295,6 @@ class RaidenAPI:
 
         return channel
 
-    def token_swap_and_wait(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Start an atomic swap operation by sending a MediatedTransfer with
-        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
-        new valid MediatedTransfer is received with `taker_amount` of
-        `taker_token`.
-        """
-
-        async_result = self.token_swap_async(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-        async_result.wait()
-
-    def token_swap_async(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Start a token swap operation by sending a MediatedTransfer with
-        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
-        new valid MediatedTransfer is received with `taker_amount` of
-        `taker_token`.
-        """
-        if not isaddress(maker_token):
-            raise InvalidAddress(
-                'Address for maker token is not in expected binary format in token swap'
-            )
-        if not isaddress(maker_address):
-            raise InvalidAddress(
-                'Address for maker is not in expected binary format in token swap'
-            )
-
-        if not isaddress(taker_token):
-            raise InvalidAddress(
-                'Address for taker token is not in expected binary format in token swap'
-            )
-        if not isaddress(taker_address):
-            raise InvalidAddress(
-                'Address for taker is not in expected binary format in token swap'
-            )
-
-        channelgraphs = self.raiden.token_to_channelgraph
-
-        if taker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(taker_token)))
-            return
-
-        if maker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(maker_token)))
-            return
-
-        token_swap = TokenSwap(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-
-        async_result = AsyncResult()
-        task = MakerTokenSwapTask(
-            self.raiden,
-            token_swap,
-            async_result,
-        )
-        task.start()
-
-        # the maker is expecting the taker transfer
-        key = SwapKey(
-            identifier,
-            taker_token,
-            taker_amount,
-        )
-        self.raiden.swapkey_to_greenlettask[key] = task
-        self.raiden.swapkey_to_tokenswap[key] = token_swap
-
-        return async_result
-
-    def expect_token_swap(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Register an expected transfer for this node.
-
-        If a MediatedMessage is received for the `maker_asset` with
-        `maker_amount` then proceed to send a MediatedTransfer to
-        `maker_address` for `taker_asset` with `taker_amount`.
-        """
-
-        if not isaddress(maker_token):
-            raise InvalidAddress(
-                'Address for maker token is not in expected binary format in expect_token_swap'
-            )
-        if not isaddress(maker_address):
-            raise InvalidAddress(
-                'Address for maker is not in expected binary format in expect_token_swap'
-            )
-
-        if not isaddress(taker_token):
-            raise InvalidAddress(
-                'Address for taker token is not in expected binary format in expect_token_swap'
-            )
-        if not isaddress(taker_address):
-            raise InvalidAddress(
-                'Address for taker is not in expected binary format in expect_token_swap'
-            )
-
-        channelgraphs = self.raiden.token_to_channelgraph
-
-        if taker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(taker_token)))
-            return
-
-        if maker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(maker_token)))
-            return
-
-        # the taker is expecting the maker transfer
-        key = SwapKey(
-            identifier,
-            maker_token,
-            maker_amount,
-        )
-
-        token_swap = TokenSwap(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-
-        self.raiden.swapkey_to_tokenswap[key] = token_swap
-
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
            `token_address` and/or `partner_address`.
@@ -550,7 +384,6 @@ class RaidenAPI:
         return async_result.wait(timeout=timeout)
 
     # expose a synchronous interface to the user
-    token_swap = token_swap_and_wait
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
     def transfer_async(

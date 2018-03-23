@@ -30,7 +30,6 @@ from raiden.raiden_event_handler import on_raiden_event
 from raiden.event_handler import StateMachineEventHandler
 from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import AlarmTask
-from raiden.token_swap import GreenletTasksDispatcher
 from raiden.transfer import views, node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
@@ -277,8 +276,6 @@ class RaidenService:
         self.token_to_channelgraph = dict()
         self.tokens_to_connectionmanagers = dict()
         self.manager_to_token = dict()
-        self.swapkey_to_tokenswap = dict()
-        self.swapkey_to_greenlettask = dict()
 
         self.identifier_to_statemanagers = defaultdict(list)
         self.identifier_to_results = defaultdict(list)
@@ -322,7 +319,6 @@ class RaidenService:
         self.message_handler = RaidenMessageHandler(self)
         self.state_machine_event_handler = StateMachineEventHandler(self)
         self.blockchain_events = BlockchainEvents()
-        self.greenlet_task_dispatcher = GreenletTasksDispatcher()
         self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
@@ -418,7 +414,6 @@ class RaidenService:
 
         wait_for = [self.alarm]
         wait_for.extend(self.protocol.greenlets)
-        wait_for.extend(self.greenlet_task_dispatcher.stop())
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         gevent.wait(wait_for, timeout=self.shutdown_timeout)
