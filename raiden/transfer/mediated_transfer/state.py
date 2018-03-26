@@ -6,27 +6,10 @@ from raiden.transfer.architecture import State
 from raiden.utils import pex, sha3, typing
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
-    BalanceProofState,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
 )
-
-
-def lockedtransfer_from_message(message):
-    """ Create LockedTransferState from a MediatedTransfer message. """
-    transfer_state = LockedTransferState(
-        identifier=message.identifier,
-        amount=message.lock.amount,
-        token=message.token,
-        initiator=message.initiator,
-        target=message.target,
-        expiration=message.lock.expiration,
-        hashlock=message.lock.hashlock,
-        secret=None,
-    )
-
-    return transfer_state
 
 
 def lockedtransfersigned_from_message(message):
@@ -198,7 +181,7 @@ class TargetTransferState(State):
         'expired',
     )
 
-    def __init__(self, route: 'RouteState', transfer: 'LockedTransferState'):
+    def __init__(self, route: 'RouteState', transfer: 'LockedTransferSignedState'):
         self.route = route
         self.transfer = transfer
 
@@ -251,7 +234,7 @@ class LockedTransferUnsignedState(State):
             raise ValueError('lock must be a HashTimeLockState instance')
 
         if not isinstance(balance_proof, BalanceProofUnsignedState):
-            raise ValueError('balance_proof must be a BalanceProofState instance')
+            raise ValueError('balance_proof must be a BalanceProofUnsignedState instance')
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
@@ -308,7 +291,7 @@ class LockedTransferSignedState(State):
             self,
             identifier,
             token: typing.address,
-            balance_proof: BalanceProofState,
+            balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
             initiator: typing.address,
             target: typing.address):
@@ -351,85 +334,6 @@ class LockedTransferSignedState(State):
             self.initiator == other.initiator and
             self.target == other.target
         )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class LockedTransferState(State):
-    """ State of a transfer that is time hash locked.
-
-    Args:
-        identifier (int): A unique identifer for the transfer.
-        amount (int): Amount of `token` being transferred.
-        token (address): Token being transferred.
-        target (address): Transfer target address.
-        expiration (int): The absolute block number that the lock expires.
-        hashlock (bin): The hashlock.
-        secret (bin): The secret that unlocks the lock, may be None.
-    """
-    __slots__ = (
-        'identifier',
-        'amount',
-        'token',
-        'initiator',
-        'target',
-        'expiration',
-        'hashlock',
-        'secret',
-    )
-
-    def __init__(
-            self,
-            identifier,
-            amount,
-            token,
-            initiator,
-            target,
-            expiration,
-            hashlock,
-            secret):
-
-        self.identifier = identifier
-        self.amount = amount
-        self.token = token
-        self.initiator = initiator
-        self.target = target
-        self.expiration = expiration
-        self.hashlock = hashlock
-        self.secret = secret
-
-    def __repr__(self):
-        return '<HashTimeLocked id={} amount={} token={} target={} expire={} hashlock={}>'.format(
-            self.identifier,
-            self.amount,
-            encode_hex(self.token),
-            encode_hex(self.target),
-            self.expiration,
-            encode_hex(self.hashlock),
-        )
-
-    def almost_equal(self, other):
-        """ True if both transfers are for the same mediated transfer. """
-        return (
-            isinstance(other, LockedTransferState) and
-            # the only value that may change for each hop is the expiration
-            self.identifier == other.identifier and
-            self.amount == other.amount and
-            self.token == other.token and
-            self.target == other.target and
-            self.hashlock == other.hashlock and
-            self.secret == other.secret
-        )
-
-    def __eq__(self, other):
-        if isinstance(other, LockedTransferState):
-            return (
-                self.almost_equal(other) and
-                self.expiration == other.expiration
-            )
-
-        return False
 
     def __ne__(self, other):
         return not self.__eq__(other)

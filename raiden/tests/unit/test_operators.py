@@ -6,16 +6,11 @@ from raiden.transfer.state_change import (
     Block,
     ReceiveTransferDirect,
 )
-from raiden.transfer.state import (
-    RouteState,
-    RoutesState,
-)
 from raiden.transfer.events import (
     EventTransferSentSuccess,
     EventTransferSentFailed,
     EventTransferReceivedSuccess,
 )
-from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.messages import Ack
 
 
@@ -59,36 +54,6 @@ def test_transfer_statechange_operators():
     a = ReceiveTransferDirect(2, 2, ADDRESS, ADDRESS)
     b = ReceiveTransferDirect(2, 2, ADDRESS, ADDRESS)
     c = ReceiveTransferDirect(3, 4, ADDRESS, ADDRESS2)
-
-    assert a == b
-    assert not a != b
-    assert a != c
-    assert not a == c
-
-
-def test_state_operators():
-    a_route = RouteState('opened', ADDRESS, ADDRESS2, 5, 5, 5, 5)
-    b_route = RouteState('opened', ADDRESS, ADDRESS2, 5, 5, 5, 5)
-    c_route = RouteState('closed', ADDRESS3, ADDRESS2, 1, 2, 3, 4)
-
-    assert a_route == b_route
-    assert not a_route != b_route
-    assert a_route != c_route
-    assert not a_route == c_route
-
-    d_route = RouteState('opened', ADDRESS4, ADDRESS, 1, 2, 3, 4)
-    a = RoutesState([a_route, d_route])
-    b = RoutesState([a_route, d_route])
-    c = RoutesState([a_route, c_route])
-
-    assert a == b
-    assert not a != b
-    assert a != c
-    assert not a == c
-
-    a = LockedTransferState(1, 2, ADDRESS, ADDRESS2, ADDRESS3, 4, HASH, 'secret')
-    b = LockedTransferState(1, 2, ADDRESS, ADDRESS2, ADDRESS3, 4, HASH, 'secret')
-    c = LockedTransferState(2, 4, ADDRESS3, ADDRESS4, ADDRESS, 4, HASH, 'secret')
 
     assert a == b
     assert not a != b

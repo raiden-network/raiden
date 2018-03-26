@@ -4,7 +4,6 @@
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState2
 from raiden.transfer.mediated_transfer.state import (
-    LockedTransferState,
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
@@ -271,9 +270,9 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
-    def __init__(self, sender, transfer):
-        if not isinstance(transfer, LockedTransferState):
-            raise ValueError('transfer must be an instance of LockedTransferState')
+    def __init__(self, sender, transfer: LockedTransferSignedState):
+        if not isinstance(transfer, LockedTransferSignedState):
+            raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         self.sender = sender
         self.transfer = transfer
