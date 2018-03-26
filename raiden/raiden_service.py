@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
-import itertools
 import logging
 import os
 import pickle as pickle
@@ -15,13 +14,15 @@ from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
 
-from raiden import routing
+from raiden import routing, waiting
+from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
     ROPSTEN_REGISTRY_ADDRESS,
 )
+from raiden.blockchain.state import get_token_network_state_from_proxies
 from raiden.blockchain.events import (
     get_relevant_proxies,
     BlockchainEvents,
@@ -31,39 +32,27 @@ from raiden.event_handler import StateMachineEventHandler
 from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
-from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
-    CHANNEL_STATE_SETTLED,
-    RoutesState,
     RouteState2,
+    PaymentNetworkState,
 )
-from raiden.transfer.mediated_transfer import (
-    initiator,
-    mediator,
-)
-from raiden.transfer.mediated_transfer import target as target_task
 from raiden.transfer.mediated_transfer.state import (
-    lockedtransfer_from_message,
     lockedtransfersigned_from_message,
-    LockedTransferState,
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state_change import (
-    ActionTransferDirect,
-    ActionTransferDirect2,
+    ActionChangeNodeNetworkState,
     ActionForTokenNetwork,
+    ActionInitNode,
+    ActionLeaveAllNetworks,
+    ActionTransferDirect2,
     Block,
+    ContractReceiveNewPaymentNetwork,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator,
     ActionInitInitiator2,
-    ActionInitMediator,
     ActionInitMediator2,
-    ActionInitTarget,
     ActionInitTarget2,
-)
-from raiden.transfer.events import (
-    EventTransferSentSuccess,
 )
 from raiden.transfer.log import (
     StateChangeLog,
@@ -76,10 +65,8 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import InvalidAddress, AddressWithoutCode, RaidenShuttingDown
+from raiden.exceptions import AddressWithoutCode, InvalidAddress, RaidenShuttingDown
 from raiden.network.channelgraph import (
-    get_best_routes,
-    channel_to_routestate,
     ChannelGraph,
     ChannelDetails,
 )
@@ -95,7 +82,7 @@ from raiden.transfer.merkle_tree import compute_layers
 from raiden.network.protocol import (
     RaidenProtocol,
 )
-from raiden.connection_manager import ConnectionManager
+from raiden.connection_manager import ConnectionManager, ConnectionManager2
 from raiden.utils import (
     isaddress,
     pex,
@@ -367,28 +354,36 @@ class RaidenService:
         if self.stop_event and self.stop_event.is_set():
             self.stop_event.clear()
 
-        self.alarm.start()
-
-        # Prime the block number cache and set the callbacks
-        self._block_number = self.alarm.last_block_number
-        self.alarm.register_callback(self.poll_blockchain_events)
-        self.alarm.register_callback(self.set_block_number)
-
-        # Registry registration must start *after* the alarm task, this avoid
-        # corner cases were the registry is queried in block A, a new block B
-        # is mined, and the alarm starts polling at block C.
-        self.register_registry(self.default_registry.address)
-
         # Restore from snapshot must come after registering the registry as we
         # need to know the registered tokens to populate `token_to_channelgraph`
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked
-            self.restore_from_snapshots()
 
         # The database may be :memory:
         storage = sqlite.SQLiteStorage(self.database_path, serialize.PickleSerializer())
         self.wal = wal.WriteAheadLog(node.state_transition, storage)
+
+        # First run, initialize the basic state
+        if self.wal.state_manager.current_state is None:
+            block_number = self.chain.block_number()
+            first_run = True
+
+            state_change = ActionInitNode(block_number)
+            self.wal.log_and_dispatch(state_change, block_number)
+
+        # The alarm task must be started after the snapshot is loaded or the
+        # state is primed, the callbacks assume the node is initialized.
+        self.alarm.start()
+        self.alarm.register_callback(self.poll_blockchain_events)
+        self.alarm.register_callback(self.set_block_number)
+        self._block_number = self.chain.block_number()
+
+        # Registry registration must start *after* the alarm task, this
+        # avoid corner cases were the registry is queried in block A, a new
+        # block B is mined, and the alarm starts polling at block C.
+        if first_run:
+            self.register_payment_network(self.default_registry.address)
 
         # Start the protocol after the registry is queried to avoid warning
         # about unknown channels.
@@ -400,10 +395,9 @@ class RaidenService:
         self.start_event.set()
 
     def start_neighbours_healthcheck(self):
-        for graph in self.token_to_channelgraph.values():
-            for neighbour in graph.get_neighbours():
-                if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                    self.start_health_check_for(neighbour)
+        for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
+            if neighbour != ConnectionManager2.BOOTSTRAP_ADDR:
+                self.start_health_check_for(neighbour)
 
     def stop(self):
         """ Stop the node. """
@@ -430,10 +424,6 @@ class RaidenService:
                 self.blockchain_events.uninstall_all_event_listeners()
         except (gevent.timeout.Timeout, RaidenShuttingDown):
             pass
-
-        # save the state after all tasks are done
-        if self.serialization_file:
-            save_snapshot(self.serialization_file, self)
 
         if self.db_lock is not None:
             self.db_lock.release()
@@ -482,7 +472,7 @@ class RaidenService:
 
     def set_block_number(self, block_number):
         state_change = Block(block_number)
-        self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
+        self.handle_state_change(state_change, block_number)
 
         for graph in self.token_to_channelgraph.values():
             for channel in graph.address_to_channel.values():
@@ -512,24 +502,19 @@ class RaidenService:
         return event_list
 
     def set_node_network_state(self, node_address, network_state):
-        for graph in self.token_to_channelgraph.values():
-            channel = graph.partneraddress_to_channel.get(node_address)
-
-            if channel:
-                channel.network_state = network_state
+        state_change = ActionChangeNodeNetworkState(node_address, network_state)
+        self.wal.log_and_dispatch(state_change, self.get_block_number())
 
     def start_health_check_for(self, node_address):
         self.protocol.start_health_check(node_address)
 
     def get_block_number(self):
-        return self._block_number
+        return views.block_number(self.wal.state_manager.current_state)
 
     def poll_blockchain_events(self, current_block=None):
         # pylint: disable=unused-argument
-        on_statechange = self.state_machine_event_handler.on_blockchain_statechange
-
-        for state_change in self.blockchain_events.poll_state_change(self._block_number):
-            on_statechange(state_change)
+        for event in self.blockchain_events.poll_blockchain_events():
+            on_blockchain_event(self, event)
 
     def find_channel_by_address(self, netting_channel_address_bin):
         for graph in self.token_to_channelgraph.values():
@@ -580,6 +565,32 @@ class RaidenService:
             raise ValueError('recipient is not a valid address.')
 
         self.protocol.send_and_wait(recipient, message, timeout)
+
+    def register_payment_network(self, registry_address):
+        proxies = get_relevant_proxies(
+            self.chain,
+            self.address,
+            registry_address,
+        )
+
+        # Install the filters first to avoid missing changes, as a consequence
+        # some events might be applied twice.
+        self.blockchain_events.add_proxies_listeners(proxies)
+
+        token_network_list = list()
+        for manager in proxies.channel_managers:
+            manager_address = manager.address
+            netting_channel_proxies = proxies.channelmanager_nettingchannels[manager_address]
+            network = get_token_network_state_from_proxies(self, manager, netting_channel_proxies)
+            token_network_list.append(network)
+
+        payment_network = PaymentNetworkState(
+            registry_address,
+            token_network_list,
+        )
+
+        state_change = ContractReceiveNewPaymentNetwork(payment_network)
+        self.handle_state_change(state_change)
 
     def register_secret(self, secret: bytes):
         """ Register the secret with any channel that has a hashlock on it.
@@ -931,11 +942,27 @@ class RaidenService:
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
-        if token_address in self.tokens_to_connectionmanagers.keys():
-            manager = self.tokens_to_connectionmanagers[token_address]
-        else:
+
+        registry_address = self.default_registry.address
+        known_token_networks = views.get_token_network_addresses_for(
+            self.wal.state_manager.current_state,
+            registry_address,
+        )
+
+        if token_address not in known_token_networks:
             raise InvalidAddress('token is not registered.')
+
+        manager = self.tokens_to_connectionmanagers.get(token_address)
+
+        if manager is None:
+            manager = ConnectionManager2(self, token_address)
+            self.tokens_to_connectionmanagers[token_address] = manager
+
         return manager
+
+    def leave_all_token_networks(self):
+        state_change = ActionLeaveAllNetworks()
+        self.wal.log_and_dispatch(state_change, self.get_block_number())
 
     def leave_all_token_networks_async(self):
         leave_results = []
@@ -952,66 +979,17 @@ class RaidenService:
     def close_and_settle(self):
         log.info('raiden will close and settle all channels now')
 
+        self.leave_all_token_networks()
+
         connection_managers = [
-            self.connection_manager_for_token(token_address) for
-            token_address in self.token_to_channelgraph
+            self.tokens_to_connectionmanagers[token_address]
+            for token_address in self.tokens_to_connectionmanagers
         ]
 
-        def blocks_to_wait():
-            return max(
-                connection_manager.min_settle_blocks
-                for connection_manager in connection_managers
-            )
-
-        all_channels = list(
-            itertools.chain.from_iterable(
-                [connection_manager.open_channels for connection_manager in connection_managers]
-            )
-        )
-
-        leaving_greenlet = self.leave_all_token_networks_async()
-        # using the un-cached block number here
-        last_block = self.chain.block_number()
-
-        earliest_settlement = last_block + blocks_to_wait()
-
-        # TODO: estimate and set a `timeout` parameter in seconds
-        # based on connection_manager.min_settle_blocks and an average
-        # blocktime from the past
-
-        current_block = last_block
-        while current_block < earliest_settlement:
-            gevent.sleep(self.alarm.wait_time)
-            last_block = self.chain.block_number()
-            if last_block != current_block:
-                current_block = last_block
-                avg_block_time = self.chain.estimate_blocktime()
-                wait_blocks_left = blocks_to_wait()
-                not_settled = sum(
-                    1 for channel in all_channels
-                    if not channel.state == CHANNEL_STATE_SETTLED
-                )
-                if not_settled == 0:
-                    log.debug('nothing left to settle')
-                    break
-                log.info(
-                    'waiting at least %s more blocks (~%s sec) for settlement'
-                    '(%s channels not yet settled)' % (
-                        wait_blocks_left,
-                        wait_blocks_left * avg_block_time,
-                        not_settled
-                    )
-                )
-
-            leaving_greenlet.wait(timeout=blocks_to_wait() * self.chain.estimate_blocktime() * 1.5)
-
-        if any(channel.state != CHANNEL_STATE_SETTLED for channel in all_channels):
-            log.error(
-                'Some channels were not settled!',
-                channels=[
-                    pex(channel.channel_address) for channel in all_channels
-                    if channel.state != CHANNEL_STATE_SETTLED
-                ]
+        if connection_managers:
+            waiting.wait_for_settle_all_channels(
+                self,
+                self.alarm.wait_time,
             )
 
     def mediated_transfer_async(self, token_address, amount, target, identifier):
@@ -1036,210 +1014,6 @@ class RaidenService:
         return async_result
 
     def direct_transfer_async(self, token_address, amount, target, identifier):
-        """ Do a direct tranfer with target.
-
-        Direct transfers are non cancellable and non expirable, since these
-        transfers are a signed balance proof with the transferred amount
-        incremented.
-
-        Because the transfer is non cancellable, there is a level of trust with
-        the target. After the message is sent the target is effectively paid
-        and then it is not possible to revert.
-
-        The async result will be set to False iff there is no direct channel
-        with the target or the payer does not have balance to complete the
-        transfer, otherwise because the transfer is non expirable the async
-        result *will never be set to False* and if the message is sent it will
-        hang until the target node acknowledge the message.
-
-        This transfer should be used as an optimization, since only two packets
-        are required to complete the transfer (from the payer's perspective),
-        whereas the mediated transfer requires 6 messages.
-        """
-        graph = self.token_to_channelgraph[token_address]
-        direct_channel = graph.partneraddress_to_channel.get(target)
-
-        direct_channel_with_capacity = (
-            direct_channel and
-            direct_channel.can_transfer and
-            amount <= direct_channel.distributable
-        )
-
-        if direct_channel_with_capacity:
-            direct_transfer = direct_channel.create_directtransfer(amount, identifier)
-            self.sign(direct_transfer)
-            direct_channel.register_transfer(
-                self.get_block_number(),
-                direct_transfer,
-            )
-
-            direct_transfer_state_change = ActionTransferDirect(
-                identifier,
-                amount,
-                token_address,
-                direct_channel.partner_state.address,
-            )
-            # TODO: add the transfer sent event
-            state_change_id = self.transaction_log.log(direct_transfer_state_change)
-
-            # TODO: This should be set once the direct transfer is acknowledged
-            transfer_success = EventTransferSentSuccess(
-                identifier,
-                amount,
-                target,
-            )
-            self.transaction_log.log_events(
-                state_change_id,
-                [transfer_success],
-                self.get_block_number()
-            )
-
-            async_result = self.protocol.send_async(
-                direct_channel.partner_state.address,
-                direct_transfer,
-            )
-
-        else:
-            async_result = AsyncResult()
-            async_result.set(False)
-
-        return async_result
-
-    def start_mediated_transfer(self, token_address, amount, identifier, target):
-        # pylint: disable=too-many-locals
-
-        async_result = AsyncResult()
-        graph = self.token_to_channelgraph[token_address]
-
-        available_routes = get_best_routes(
-            graph,
-            self.protocol.nodeaddresses_networkstatuses,
-            self.address,
-            target,
-            amount,
-            None,
-        )
-
-        if not available_routes:
-            async_result.set(False)
-            return async_result
-
-        self.protocol.start_health_check(target)
-
-        if identifier is None:
-            identifier = create_default_identifier()
-
-        route_state = RoutesState(available_routes)
-        our_address = self.address
-        block_number = self.get_block_number()
-
-        transfer_state = LockedTransferState(
-            identifier=identifier,
-            amount=amount,
-            token=token_address,
-            initiator=self.address,
-            target=target,
-            expiration=None,
-            hashlock=None,
-            secret=None,
-        )
-
-        # Issue #489
-        #
-        # Raiden may fail after a state change using the random generator is
-        # handled but right before the snapshot is taken. If that happens on
-        # the next initialization when raiden is recovering and applying the
-        # pending state changes a new secret will be generated and the
-        # resulting events won't match, this breaks the architecture model,
-        # since it's assumed the re-execution of a state change will always
-        # produce the same events.
-        #
-        # TODO: Removed the secret generator from the InitiatorState and add
-        # the secret into all state changes that require one, this way the
-        # secret will be serialized with the state change and the recovery will
-        # use the same /random/ secret.
-        random_generator = RandomSecretGenerator()
-
-        init_initiator = ActionInitInitiator(
-            our_address=our_address,
-            transfer=transfer_state,
-            routes=route_state,
-            random_generator=random_generator,
-            block_number=block_number,
-        )
-
-        state_manager = StateManager(initiator.state_transition, None)
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_initiator)
-
-        # TODO: implement the network timeout raiden.config['msg_timeout'] and
-        # cancel the current transfer if it hapens (issue #374)
-        self.identifier_to_statemanagers[identifier].append(state_manager)
-        self.identifier_to_results[identifier].append(async_result)
-
-        return async_result
-
-    def mediate_mediated_transfer(self, message):
-        # pylint: disable=too-many-locals
-        identifier = message.identifier
-        amount = message.lock.amount
-        target = message.target
-        token = message.token
-        graph = self.token_to_channelgraph[token]
-
-        available_routes = get_best_routes(
-            graph,
-            self.protocol.nodeaddresses_networkstatuses,
-            self.address,
-            target,
-            amount,
-            message.sender,
-        )
-
-        from_channel = graph.partneraddress_to_channel[message.sender]
-        from_route = channel_to_routestate(from_channel, message.sender)
-
-        our_address = self.address
-        from_transfer = lockedtransfer_from_message(message)
-        route_state = RoutesState(available_routes)
-        block_number = self.get_block_number()
-
-        init_mediator = ActionInitMediator(
-            our_address,
-            from_transfer,
-            route_state,
-            from_route,
-            block_number,
-        )
-
-        state_manager = StateManager(mediator.state_transition, None)
-
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
-
-        self.identifier_to_statemanagers[identifier].append(state_manager)
-
-    def target_mediated_transfer(self, message):
-        graph = self.token_to_channelgraph[message.token]
-        from_channel = graph.partneraddress_to_channel[message.sender]
-        from_route = channel_to_routestate(from_channel, message.sender)
-
-        from_transfer = lockedtransfer_from_message(message)
-        our_address = self.address
-        block_number = self.get_block_number()
-
-        init_target = ActionInitTarget(
-            our_address,
-            from_route,
-            from_transfer,
-            block_number,
-        )
-
-        state_manager = StateManager(target_task.state_transition, None)
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_target)
-
-        identifier = message.identifier
-        self.identifier_to_statemanagers[identifier].append(state_manager)
-
-    def direct_transfer_async2(self, token_address, amount, target, identifier):
         """ Do a direct transfer with target.
 
         Direct transfers are non cancellable and non expirable, since these
@@ -1281,7 +1055,7 @@ class RaidenService:
 
         self.handle_state_change(state_change)
 
-    def start_mediated_transfer2(self, token_address, amount, identifier, target):
+    def start_mediated_transfer(self, token_address, amount, identifier, target):
         self.protocol.start_health_check(target)
 
         if identifier is None:
@@ -1311,10 +1085,10 @@ class RaidenService:
 
         return async_result
 
-    def mediate_mediated_transfer2(self, transfer):
+    def mediate_mediated_transfer(self, transfer):
         init_mediator_statechange = mediator_init(self, transfer)
         self.handle_state_change(init_mediator_statechange)
 
-    def target_mediated_transfer2(self, transfer):
+    def target_mediated_transfer(self, transfer):
         init_target_statechange = target_init(self, transfer)
         self.handle_state_change(init_target_statechange)
