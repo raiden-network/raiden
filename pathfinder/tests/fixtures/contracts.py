@@ -7,7 +7,6 @@ from web3 import Web3
 from web3.contract import get_event_data, Contract
 
 import pathfinder
-from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.utils.types import Address
 
 
@@ -144,14 +143,12 @@ def token_network_contracts(
     token_network_addresses: List[Address],
     contracts_path: str,
     token_network_addresses_from_registry: List[Address],
-) -> List[TokenNetworkContract]:
+) -> List[Contract]:
 
     contracts = [
-        TokenNetworkContract(
-            web3.eth.contract(
-                token_network_address,
-                abi=contract_manager.get_contract_abi('TokenNetwork')
-            )
+        web3.eth.contract(
+            token_network_address,
+            abi=contract_manager.get_contract_abi('TokenNetwork')
         )
         for token_network_address in token_network_addresses
     ]

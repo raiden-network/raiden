@@ -1,77 +1,68 @@
 # -*- coding: utf-8 -*-
-import collections
-from itertools import islice
+import logging
 from typing import List, Dict, Any
 
 import networkx as nx
 from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
 from raiden_libs.utils import compute_merkle_tree, get_merkle_root
+from web3.contract import Contract
 
 from pathfinder.config import DIVERSITY_PEN_DEFAULT
-from pathfinder.contract.token_network_contract import TokenNetworkContract
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
-from pathfinder.model.network_cache import NetworkCache
 from pathfinder.utils.types import Address, ChannelId
 
 
-def k_shortest_paths(G, source, target, k, weight=None):
-    return list(islice(nx.shortest_simple_paths(G, source, target, weight=weight), k))
-
-
-Balance = collections.namedtuple(
-    'Balance',
-    ['deposit_a', 'deposit_b',
-     'received_a', 'received_b',
-     'locked_a', 'locked_b',
-     'available_a', 'available_b']
-)
+log = logging.getLogger(__name__)
 
 
 class TokenNetwork:
-    """
-    Manages a token network for pathfinding.
+    """ Manages a token network for pathfinding.
 
     Problems:
     - Do we set a default fee? Otherwise we estimate all opened channels with a zero fee.
       The other options to just take channels into account once a fee has been set.
     - Are fees absolute or relative to the transferred value (or base + relative)?
-    - Do we represent the state as a undirected graph or directed graph
     TODO: test all these methods once we have sample data, DO NOT let these crucial functions
-    remain uncovered!
-    """
+    remain uncovered! """
 
     def __init__(
         self,
-        token_network_contract: TokenNetworkContract
+        token_network_contract: Contract
     ):
-        """
-        Initializes a new TokenNetwork.
-        """
+        """ Initializes a new TokenNetwork. """
+
         self.token_network_contract = token_network_contract
         self.address = to_checksum_address(self.token_network_contract.address)
-        self.token_address = self.token_network_contract.get_token_address()
-        self.network_cache = NetworkCache(self.token_network_contract)
+        self.token_address = self.token_network_contract.functions.token().call()
+        self.channel_id_to_addresses = dict()
         self.G = DiGraph()
         self.max_fee = 0.0
 
     # Contract event listener functions
 
-    def handle_channel_opened_event(self, channel_id: ChannelId):
-        """
-        Register the channel in the graph, add participents to graph if necessary.
+    def handle_channel_opened_event(
+        self,
+        channel_id: ChannelId,
+        participant1: Address,
+        participant2: Address,
+    ):
+        """ Register the channel in the graph, add participents to graph if necessary.
 
-        Corresponds to the ChannelOpened event. Called by the contract event listener.
-        """
-        view1, view2 = ChannelView.from_id(self.network_cache, channel_id)
+        Corresponds to the ChannelOpened event. Called by the contract event listener. """
 
-        assert is_checksum_address(view1.self)
-        assert is_checksum_address(view2.self)
+        assert is_checksum_address(participant1)
+        assert is_checksum_address(participant2)
 
-        self.G.add_edge(view1.self, view2.self, view=view1)
-        self.G.add_edge(view2.self, view1.self, view=view2)
+        self.channel_id_to_addresses[channel_id] = (participant1, participant2)
+
+        view1 = ChannelView(channel_id, participant1, participant2, deposit=0)
+        view2 = ChannelView(channel_id, participant2, participant1, deposit=0)
+
+        self.G.add_edge(participant1, participant2, view=view1)
+        self.G.add_edge(participant2, participant1, view=view2)
 
     def handle_channel_new_deposit_event(
         self,
@@ -79,27 +70,48 @@ class TokenNetwork:
         receiver: Address,
         total_deposit: int
     ):
-        """
-        Register a new balance for the beneficiary.
+        """ Register a new balance for the beneficiary.
 
-        Corresponds to the ChannelNewBalance event. Called by the contract event listener.
-        """
-        pass
+        Corresponds to the ChannelNewDeposit event. Called by the contract event listener. """
+
+        assert is_checksum_address(receiver)
+
+        try:
+            participant1, participant2 = self.channel_id_to_addresses[channel_id]
+
+            if receiver == participant1:
+                self.G[participant1][participant2]['view'].update_capacity(deposit=total_deposit)
+            elif receiver == participant2:
+                self.G[participant2][participant1]['view'].update_capacity(deposit=total_deposit)
+            else:
+                log.error(
+                    "Receiver in ChannelNewDeposit does not fit the internal channel"
+                )
+        except KeyError as ke:
+            log.error(
+                "Received ChannelNewDeposit event for unknown channel '{}'".format(
+                    channel_id
+                )
+            )
 
     def handle_channel_closed_event(self, channel_id: ChannelId):
-        """
-        Close a channel. This doesn't mean that the channel is settled yet, but it cannot transfer
-        any more.
+        """ Close a channel. This doesn't mean that the channel is settled yet, but it cannot
+        transfer any more.
 
-        Corresponds to the ChannelClosed event. Called by the contract event listener.
-        """
-        view1, view2 = ChannelView.from_id(self.network_cache, channel_id)
+        Corresponds to the ChannelClosed event. Called by the contract event listener. """
 
-        assert is_checksum_address(view1.self)
-        assert is_checksum_address(view2.self)
+        try:
+            # we need to unregister the channel_id here
+            participant1, participant2 = self.channel_id_to_addresses.pop(channel_id)
 
-        self.G.remove_edge(view1.self, view2.self)
-        self.G.remove_edge(view2.self, view1.self)
+            self.G.remove_edge(participant1, participant2)
+            self.G.remove_edge(participant2, participant1)
+        except KeyError as ke:
+            log.error(
+                "Received ChannelClosed event for unknown channel '{}'".format(
+                    channel_id
+                )
+            )
 
     # pathfinding endpoints
 
@@ -108,15 +120,12 @@ class TokenNetwork:
         balance_proof: BalanceProof,
         locks: List[Lock]
     ):
-        """
-        Update the channel balance with the new balance proof.
+        """ Update the channel balance with the new balance proof.
         This needs to check that the balance proof is valid.
 
-        Called by the public interface.
-        """
-        participant1, participant2 = self.token_network_contract.get_channel_participants(
-            balance_proof.channel_id
-        )
+        Called by the public interface. """
+
+        participant1, participant2 = self.channel_id_to_addresses(balance_proof.channel_id)
         if is_same_address(participant1, balance_proof.sender):
             receiver = participant2
         elif is_same_address(participant2, balance_proof.sender):
@@ -149,16 +158,18 @@ class TokenNetwork:
         self,
         channel_id: ChannelId,
         new_fee: float,
-        signature
+        signature: Address
     ):
+        """ Update the channel with a new fee.
+
+        Called by the public interface. """
+
         # FIXME: Signature on fee update not checked !!
         # msg = new_fee
         # signer = from_signature_and_message(signature, msg)
         # <-- this verifies the signature of the fee-update!
         signer = signature
-        participant1, participant2 = self.token_network_contract.get_channel_participants(
-            channel_id
-        )
+        participant1, participant2 = self.channel_id_to_addresses[channel_id]
         if is_same_address(participant1, signer):
             sender = participant1
             receiver = participant2
@@ -184,7 +195,14 @@ class TokenNetwork:
 
         channel_view.fee = new_fee
 
-    def get_paths(self, source: Address, target: Address, value: int, k: int, **kwargs):
+    def get_paths(
+        self,
+        source: Address,
+        target: Address,
+        value: int,
+        k: int,
+        **kwargs
+    ):
         visited: Dict[ChannelId, float] = {}
         paths = []
         hop_bias = kwargs.get('bias', 0)
@@ -199,6 +217,7 @@ class TokenNetwork:
                     view.channel_id,
                     0
                 )
+
         for i in range(k):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
             for node1, node2 in zip(path[:-1], path[1:]):
@@ -210,17 +229,13 @@ class TokenNetwork:
     # functions for persistence
 
     def save_snapshot(self, filename):
-        """
-        Serializes the token network so it doesn't need to sync from scratch when the snapshot is
-        loaded.
+        """ Serializes the token network so it doesn't need to sync from scratch when
+        the snapshot is loaded.
 
-        We probably need to save the lasts synced block here.
-        """
+        We probably need to save the lasts synced block here. """
         pass
 
     @staticmethod
     def load_snapshot(filename):
-        """
-        Deserializes the token network so it doesn't need to sync from scratch
-        """
+        """ Deserializes the token network so it doesn't need to sync from scratch """
         pass

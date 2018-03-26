@@ -1,10 +1,8 @@
 from enum import Enum
-from typing import Tuple
 
 from eth_utils import is_checksum_address
 
 from pathfinder.config import DEFAULT_FEE
-from pathfinder.model.network_cache import NetworkCache
 from pathfinder.utils.types import Address, ChannelId
 
 
@@ -16,19 +14,6 @@ class ChannelView:
         OPEN = 1,
         SETTLING = 2,
         SETTLED = 3
-
-    @staticmethod
-    def from_id(
-        network_cache: NetworkCache,
-        channel_id: ChannelId
-    ) -> Tuple['ChannelView', 'ChannelView']:
-        participant1, participant2 = network_cache.get_channel_participants(channel_id)
-        deposit1 = network_cache.get_channel_deposit(channel_id, participant1)
-        deposit2 = network_cache.get_channel_deposit(channel_id, participant2)
-        return (
-            ChannelView(channel_id, participant1, participant2, deposit1),
-            ChannelView(channel_id, participant2, participant1, deposit2)
-        )
 
     def __init__(
         self,
