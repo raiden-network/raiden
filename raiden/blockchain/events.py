@@ -10,21 +10,12 @@ from raiden.blockchain.abi import (
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
 )
-from raiden.utils import address_decoder, pex
-from raiden.network.rpc.filters import get_filter_events
-
-from raiden.transfer.mediated_transfer.state_change import (
-    ContractReceiveTokenAdded,
-    ContractReceiveBalance,
-    ContractReceiveClosed,
-    ContractReceiveNewChannel,
-    ContractReceiveSettled,
-    ContractReceiveWithdraw,
-)
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
 )
+from raiden.network.rpc.filters import get_filter_events
+from raiden.utils import address_decoder, pex
 
 EventListener = namedtuple(
     'EventListener',
@@ -192,63 +183,6 @@ def get_relevant_proxies(chain, node_address, registry_address):
     return proxies
 
 
-def event_to_state_change(event):  # pylint: disable=too-many-return-statements
-    contract_address = event.originating_contract
-    event = event.event_data
-
-    # Note: All addresses inside the event_data must be decoded.
-
-    if event['_event_type'] == b'TokenAdded':
-        result = ContractReceiveTokenAdded(
-            contract_address,
-            address_decoder(event['token_address']),
-            address_decoder(event['channel_manager_address']),
-        )
-
-    elif event['_event_type'] == b'ChannelNew':
-        result = ContractReceiveNewChannel(
-            contract_address,
-            address_decoder(event['netting_channel']),
-            address_decoder(event['participant1']),
-            address_decoder(event['participant2']),
-            event['settle_timeout'],
-        )
-
-    elif event['_event_type'] == b'ChannelNewBalance':
-        result = ContractReceiveBalance(
-            contract_address,
-            address_decoder(event['token_address']),
-            address_decoder(event['participant']),
-            event['balance'],
-            event['block_number'],
-        )
-
-    elif event['_event_type'] == b'ChannelClosed':
-        result = ContractReceiveClosed(
-            contract_address,
-            address_decoder(event['closing_address']),
-            event['block_number'],
-        )
-
-    elif event['_event_type'] == b'ChannelSettled':
-        result = ContractReceiveSettled(
-            contract_address,
-            event['block_number'],
-        )
-
-    elif event['_event_type'] == b'ChannelSecretRevealed':
-        result = ContractReceiveWithdraw(
-            contract_address,
-            event['secret'],
-            address_decoder(event['receiver_address']),
-        )
-
-    else:
-        result = None
-
-    return result
-
-
 def decode_event(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data
@@ -331,10 +265,6 @@ class BlockchainEvents:
                     raise e
 
         return result
-
-    def poll_state_change(self, from_block=None):
-        for event in self.poll_all_event_listeners(from_block):
-            yield event_to_state_change(event)
 
     def poll_blockchain_events(self, from_block=None):
         for event in self.poll_all_event_listeners(from_block):
