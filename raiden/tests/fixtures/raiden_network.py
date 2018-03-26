@@ -4,6 +4,7 @@ import pytest
 from ethereum import slogging
 
 from raiden.exceptions import RaidenShuttingDown
+from raiden.transfer import views
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
@@ -38,11 +39,15 @@ def wait_for_partners(app_list, sleep=0.5, timeout=10):
 
     while waiting:
         # Poll the events to register the new channels
-        waiting[0].raiden.poll_blockchain_events()
+        app = waiting[0]
+        app.raiden.poll_blockchain_events()
+
+        node_state = views.state_from_app(app)
+        network_statuses = views.get_networkstatuses(node_state)
 
         all_healthy = all(
             status == NODE_NETWORK_REACHABLE
-            for status in waiting[0].raiden.protocol.nodeaddresses_networkstatuses.values()
+            for status in network_statuses.values()
         )
 
         if timeout <= 0:
@@ -77,7 +82,7 @@ def raiden_chain(
         nat_keepalive_retries,
         nat_keepalive_timeout):
 
-    if len(token_addresses) > 1:
+    if len(token_addresses) != 1:
         raise ValueError('raiden_chain only works with a single token')
 
     assert channels_per_node in (0, 1, 2, CHAIN), (
@@ -113,7 +118,7 @@ def raiden_chain(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.default_registry.address)
+        app.raiden.register_payment_network(app.raiden.default_registry.address)
 
     wait_for_partners(raiden_apps)
     _raiden_cleanup(request, raiden_apps)

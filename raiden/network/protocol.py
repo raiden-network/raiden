@@ -2,10 +2,7 @@
 from binascii import hexlify
 import logging
 import random
-from collections import (
-    namedtuple,
-    defaultdict,
-)
+from collections import namedtuple
 from itertools import repeat
 
 import cachetools
@@ -30,13 +27,16 @@ from raiden.exceptions import (
 from raiden.constants import UDP_MAX_MESSAGE_SIZE
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.settings import CACHE_TTL
+from raiden.utils import isaddress, sha3, pex
+from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.udp_message_handler import on_udp_message
+from raiden.transfer import views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
 )
-from raiden.utils import isaddress, sha3, pex
-from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.transfer.state_change import ActionChangeNodeNetworkState
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 healthcheck_log = slogging.get_logger(__name__ + '.healthcheck')
@@ -321,6 +321,7 @@ def healthcheck(
         ping_nonce):
 
     """ Sends a periodical Ping to `receiver_address` to check its health. """
+    # pylint: disable=too-many-branches
 
     if log.isEnabledFor(logging.DEBUG):
         log.debug(
@@ -331,9 +332,10 @@ def healthcheck(
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
+    last_state = NODE_NETWORK_UNKNOWN
     protocol.set_node_network_state(
         receiver_address,
-        NODE_NETWORK_UNKNOWN,
+        last_state,
     )
 
     # Always call `clear` before `set`, since only `set` does context-switches
@@ -403,7 +405,7 @@ def healthcheck(
                     'node is unresponsive',
                     node=pex(protocol.raiden.address),
                     to=pex(receiver_address),
-                    current_state=protocol.get_node_network_state(receiver_address),
+                    current_state=last_state,
                     new_state=NODE_NETWORK_UNREACHABLE,
                     retries=nat_keepalive_retries,
                     timeout=nat_keepalive_timeout,
@@ -411,9 +413,10 @@ def healthcheck(
 
             # The node is not healthy, clear the event to stop all queue
             # tasks
+            last_state = NODE_NETWORK_UNREACHABLE
             protocol.set_node_network_state(
                 receiver_address,
-                NODE_NETWORK_UNREACHABLE,
+                last_state,
             )
             event_healthy.clear()
             event_unhealthy.set()
@@ -434,20 +437,26 @@ def healthcheck(
 
         if acknowledged:
             if log.isEnabledFor(logging.DEBUG):
+                current_state = views.get_node_network_status(
+                    views.state_from_raiden(protocol.raiden),
+                    receiver_address,
+                )
                 log.debug(
                     'node answered',
                     node=pex(protocol.raiden.address),
                     to=pex(receiver_address),
-                    current_state=protocol.get_node_network_state(receiver_address),
+                    current_state=current_state,
                     new_state=NODE_NETWORK_REACHABLE,
                 )
 
-            event_unhealthy.clear()
-            event_healthy.set()
-            protocol.set_node_network_state(
-                receiver_address,
-                NODE_NETWORK_REACHABLE,
-            )
+            if last_state != NODE_NETWORK_REACHABLE:
+                last_state = NODE_NETWORK_REACHABLE
+                protocol.set_node_network_state(
+                    receiver_address,
+                    last_state,
+                )
+                event_unhealthy.clear()
+                event_healthy.set()
 
 
 class RaidenProtocol:
@@ -487,7 +496,6 @@ class RaidenProtocol:
         self.channel_queue = dict()  # TODO: Change keys to the channel address
         self.greenlets = list()
         self.addresses_events = dict()
-        self.nodeaddresses_networkstatuses = defaultdict(lambda: NODE_NETWORK_UNKNOWN)
 
         # Maps the echohash of received and *sucessfully* processed messages to
         # its Ack, used to ignored duplicate messages and resend the Ack.
@@ -546,11 +554,6 @@ class RaidenProtocol:
                 receiver_address,
                 {'nonce': 0},  # HACK: Allows the task to mutate the object
             )
-
-            # set the value right away to create the key in the dictionary,
-            # this is /not/ necessary for normal execution, but for fixture
-            # setup
-            self.nodeaddresses_networkstatuses[receiver_address] = NODE_NETWORK_UNREACHABLE
 
             events = HealthEvents(
                 event_healthy=Event(),
@@ -739,10 +742,8 @@ class RaidenProtocol:
         return async_result
 
     def set_node_network_state(self, node_address, node_state):
-        self.nodeaddresses_networkstatuses[node_address] = node_state
-
-    def get_node_network_state(self, node_address):
-        return self.nodeaddresses_networkstatuses[node_address]
+        state_change = ActionChangeNodeNetworkState(node_address, node_state)
+        self.raiden.handle_state_change(state_change)
 
     def receive(self, data):
         if len(data) > UDP_MAX_MESSAGE_SIZE:
@@ -828,7 +829,7 @@ class RaidenProtocol:
             )
 
         try:
-            self.raiden.on_message(message, echohash)
+            on_udp_message(self.raiden, message)
 
             # only send the Ack if the message was handled without exceptions
             ack = Ack(

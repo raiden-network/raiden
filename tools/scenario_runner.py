@@ -123,7 +123,7 @@ def run(
         listen_port,
     )
 
-    app.raiden.register_registry(app.raiden.default_registry.address)
+    app.raiden.register_payment_network(app.raiden.default_registry.address)
 
     if scenario:
         script = json.load(scenario)
@@ -194,7 +194,7 @@ def run(
                 our_index = nodes.index(our_node)
                 peer = nodes[our_index + 1]
 
-                tools.register_token(token_address)
+                tools.token_network_register(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
                 while True:
