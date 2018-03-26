@@ -186,13 +186,6 @@ def endpoint_registry_exception_handler(greenlet):
         sys.exit(1)
 
 
-class RandomSecretGenerator:  # pylint: disable=too-few-public-methods
-    def __next__(self):  # pylint: disable=no-self-use
-        return os.urandom(32)
-
-    next = __next__
-
-
 class RaidenService:
     """ A Raiden node. """
 
