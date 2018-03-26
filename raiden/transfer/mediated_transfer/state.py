@@ -224,56 +224,6 @@ class TargetTransferState(State):
         return not self.__eq__(other)
 
 
-class TargetState(State):
-    """ State of mediated transfer target.  """
-    __slots__ = (
-        'our_address',
-        'from_route',
-        'from_transfer',
-        'block_number',
-        'secret',
-        'state',
-    )
-
-    valid_states = (
-        'secret_request',
-        'reveal_secret',
-        'balance_proof',
-        'waiting_close',
-    )
-
-    def __init__(
-            self,
-            our_address,
-            from_route,
-            from_transfer,
-            block_number):
-
-        self.our_address = our_address
-        self.from_route = from_route
-        self.from_transfer = from_transfer
-        self.block_number = block_number
-
-        self.secret = None
-        self.state = 'secret_request'
-
-    def __eq__(self, other):
-        if isinstance(other, TargetState):
-            return (
-                self.our_address == other.our_address and
-                self.from_route == other.from_route and
-                self.from_transfer == other.from_transfer and
-                self.block_number == other.block_number and
-                self.secret == other.secret and
-                self.state == other.state
-            )
-
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class LockedTransferUnsignedState(State):
     """ State for a transfer created by the local node which contains a hash
     time lock and may be sent.
