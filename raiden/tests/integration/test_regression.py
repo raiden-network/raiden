@@ -12,7 +12,7 @@ from raiden.tests.fixtures.raiden_network import (
 )
 from raiden.tests.utils.network import setup_channels
 from raiden.tests.utils.transfer import channel
-from raiden.transfer.mediated_transfer.events import SendRevealSecret
+from raiden.transfer.mediated_transfer.events import SendRevealSecret2
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
 
@@ -89,7 +89,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
     secret = None
     for log in all_logs:
         event = log.event_object
-        if isinstance(event, SendRevealSecret):
+        if isinstance(event, SendRevealSecret2):
             secret = event.secret
             break
     assert secret

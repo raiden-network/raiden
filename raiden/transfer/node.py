@@ -28,9 +28,9 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator,
-    ActionInitMediator,
-    ActionInitTarget,
+    ActionInitInitiator2,
+    ActionInitMediator2,
+    ActionInitTarget2,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
@@ -596,17 +596,17 @@ def state_transition(node_state, state_change):
         iteration = handle_leave_all_networks(
             node_state,
         )
-    elif isinstance(state_change, ActionInitInitiator):
+    elif isinstance(state_change, ActionInitInitiator2):
         iteration = handle_init_initiator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitMediator):
+    elif isinstance(state_change, ActionInitMediator2):
         iteration = handle_init_mediator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitTarget):
+    elif isinstance(state_change, ActionInitTarget2):
         iteration = handle_init_target(
             node_state,
             state_change,

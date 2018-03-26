@@ -66,14 +66,14 @@ class SendMediatedTransfer2(Event):
         self.recipient = recipient
 
     def __repr__(self):
-        return '<SendMediatedTransfer transfer:{} recipient:{}>'.format(
+        return '<SendMediatedTransfer2 transfer:{} recipient:{}>'.format(
             self.transfer,
             pex(self.recipient),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendMediatedTransfer) and
+            isinstance(other, SendMediatedTransfer2) and
             self.transfer == other.transfer and
             self.recipient == other.recipient
         )

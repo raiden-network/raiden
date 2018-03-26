@@ -26,10 +26,10 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
     EventWithdrawFailed,
     EventWithdrawSuccess,
-    SendBalanceProof,
-    SendMediatedTransfer,
-    SendRefundTransfer,
-    SendRevealSecret,
+    SendBalanceProof2,
+    SendMediatedTransfer2,
+    SendRefundTransfer2,
+    SendRevealSecret2,
     SendSecretRequest,
 )
 from raiden.utils import pex
@@ -45,7 +45,7 @@ UNEVENTFUL_EVENTS = (
 
 def handle_send_mediatedtransfer(
         raiden: 'RaidenService',
-        send_mediated_transfer: SendMediatedTransfer):
+        send_mediated_transfer: SendMediatedTransfer2):
     mediated_transfer_message = MediatedTransfer.from_event(send_mediated_transfer)
     raiden.sign(mediated_transfer_message)
     raiden.send_async(
@@ -67,7 +67,7 @@ def handle_send_directtransfer(
 
 def handle_send_revealsecret(
         raiden: 'RaidenService',
-        reveal_secret_event: SendRevealSecret):
+        reveal_secret_event: SendRevealSecret2):
     reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
     raiden.send_async(
@@ -78,7 +78,7 @@ def handle_send_revealsecret(
 
 def handle_send_balanceproof(
         raiden: 'RaidenService',
-        balance_proof_event: SendBalanceProof):
+        balance_proof_event: SendBalanceProof2):
     secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
     raiden.send_async(
@@ -100,7 +100,7 @@ def handle_send_secretrequest(
 
 def handle_send_refundtransfer(
         raiden: 'RaidenService',
-        refund_transfer_event: SendRefundTransfer):
+        refund_transfer_event: SendRefundTransfer2):
     refund_transfer_message = RefundTransfer.from_event(refund_transfer_event)
     raiden.sign(refund_transfer_message)
     raiden.send_async(
@@ -200,17 +200,17 @@ def handle_contract_channelsettle(
 def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
     # pylint: disable=too-many-branches
 
-    if isinstance(event, SendMediatedTransfer):
+    if isinstance(event, SendMediatedTransfer2):
         handle_send_mediatedtransfer(raiden, event)
     elif isinstance(event, SendDirectTransfer):
         handle_send_directtransfer(raiden, event)
-    elif isinstance(event, SendRevealSecret):
+    elif isinstance(event, SendRevealSecret2):
         handle_send_revealsecret(raiden, event)
-    elif isinstance(event, SendBalanceProof):
+    elif isinstance(event, SendBalanceProof2):
         handle_send_balanceproof(raiden, event)
     elif isinstance(event, SendSecretRequest):
         handle_send_secretrequest(raiden, event)
-    elif isinstance(event, SendRefundTransfer):
+    elif isinstance(event, SendRefundTransfer2):
         handle_send_refundtransfer(raiden, event)
     elif isinstance(event, EventTransferSentSuccess):
         handle_transfersentsuccess(raiden, event)

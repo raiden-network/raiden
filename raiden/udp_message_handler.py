@@ -12,7 +12,6 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
-from raiden.transfer.mediated_transfer.state import lockedtransfer_from_message
 from raiden.messages import (
     DirectTransfer,
     MediatedTransfer,
@@ -22,6 +21,7 @@ from raiden.messages import (
     Secret,
     SecretRequest,
 )
+from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretRequest,
     ReceiveSecretReveal,
@@ -61,7 +61,7 @@ def handle_message_secret(raiden: 'RaidenService', message: Secret):
 
 def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransfer):
     registry_address = raiden.default_registry.address
-    from_transfer = lockedtransfer_from_message(message)
+    from_transfer = lockedtransfersigned_from_message(message)
     node_state = views.state_from_raiden(raiden)
 
     routes = get_best_routes(
