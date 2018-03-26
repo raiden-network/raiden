@@ -2,7 +2,6 @@
 # pylint: disable=too-many-lines
 import logging
 import os
-import pickle as pickle
 import random
 import sys
 from collections import defaultdict
@@ -20,7 +19,6 @@ from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-    ROPSTEN_REGISTRY_ADDRESS,
 )
 from raiden.blockchain.state import get_token_network_state_from_proxies
 from raiden.blockchain.events import (
@@ -62,10 +60,7 @@ from raiden.channel import (
     ChannelEndState,
     ChannelExternalState,
 )
-from raiden.channel.netting_channel import (
-    ChannelSerialization,
-)
-from raiden.exceptions import AddressWithoutCode, InvalidAddress, RaidenShuttingDown
+from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.network.channelgraph import (
     ChannelGraph,
     ChannelDetails,
@@ -74,11 +69,7 @@ from raiden.messages import (
     RevealSecret,
     SignedMessage,
 )
-from raiden.transfer.state import (
-    EMPTY_MERKLE_TREE,
-    MerkleTreeState,
-)
-from raiden.transfer.merkle_tree import compute_layers
+from raiden.transfer.state import EMPTY_MERKLE_TREE
 from raiden.network.protocol import (
     RaidenProtocol,
 )
@@ -173,48 +164,6 @@ def target_init(raiden, transfer):
 def create_default_identifier():
     """ Generates a random identifier. """
     return random.randint(0, UINT64_MAX)
-
-
-def load_snapshot(serialization_file):
-    if os.path.exists(serialization_file):
-        with open(serialization_file, 'rb') as handler:
-            return pickle.load(handler)
-
-    return None
-
-
-def save_snapshot(serialization_file, raiden):
-    all_channels = [
-        ChannelSerialization(channel)
-        for network in raiden.token_to_channelgraph.values()
-        for channel in network.address_to_channel.values()
-    ]
-
-    all_queues = list()
-    for key, queue in raiden.protocol.channel_queue.items():
-        queue_data = {
-            'receiver_address': key[0],
-            'token_address': key[1],
-            'messages': queue.copy(),
-        }
-        all_queues.append(queue_data)
-
-    data = {
-        'channels': all_channels,
-        'queues': all_queues,
-        'receivedhashes_to_acks': raiden.protocol.receivedhashes_to_acks,
-        'nodeaddresses_to_nonces': raiden.protocol.nodeaddresses_to_nonces,
-        'transfers': raiden.identifier_to_statemanagers,
-        'registry_address': ROPSTEN_REGISTRY_ADDRESS,
-    }
-
-    with open(serialization_file, 'wb') as handler:
-        # __slots__ without __getstate__ require `-1`
-        pickle.dump(
-            data,
-            handler,
-            protocol=-1,
-        )
 
 
 def endpoint_registry_exception_handler(greenlet):
@@ -325,18 +274,12 @@ class RaidenService:
         if self.database_path != ':memory:':
             self.database_dir = os.path.dirname(self.database_path)
             self.lock_file = os.path.join(self.database_dir, '.lock')
-            self.snapshot_dir = os.path.join(self.database_dir, 'snapshots')
-            self.serialization_file = os.path.join(self.snapshot_dir, 'data.pickle')
-
-            if not os.path.exists(self.snapshot_dir):
-                os.makedirs(self.snapshot_dir)
 
             # Prevent concurrent acces to the same db
             self.db_lock = filelock.FileLock(self.lock_file)
         else:
             self.database_dir = None
             self.lock_file = None
-            self.snapshot_dir = None
             self.serialization_file = None
             self.db_lock = None
 
@@ -430,45 +373,6 @@ class RaidenService:
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
-
-    def restore_from_snapshots(self):
-        data = load_snapshot(self.serialization_file)
-        data_exists_and_is_recent = (
-            data is not None and
-            'registry_address' in data and
-            data['registry_address'] == ROPSTEN_REGISTRY_ADDRESS
-        )
-
-        if data_exists_and_is_recent:
-            first_channel = True
-            for channel in data['channels']:
-                try:
-                    self.restore_channel(channel)
-                    first_channel = False
-                except AddressWithoutCode as e:
-                    log.warn(
-                        'Channel without code while restoring. Must have been '
-                        'already settled while we were offline.',
-                        error=str(e)
-                    )
-                except AttributeError as e:
-                    if first_channel:
-                        log.warn(
-                            'AttributeError during channel restoring. If code has changed'
-                            ' then this is fine. If not then please report a bug.',
-                            error=str(e)
-                        )
-                        break
-                    else:
-                        raise
-
-            for restored_queue in data['queues']:
-                self.restore_queue(restored_queue)
-
-            self.protocol.receivedhashes_to_acks = data['receivedhashes_to_acks']
-            self.protocol.nodeaddresses_to_nonces = data['nodeaddresses_to_nonces']
-
-            self.restore_transfer_states(data['transfers'])
 
     def set_block_number(self, block_number):
         state_change = Block(block_number)
@@ -767,90 +671,6 @@ class RaidenService:
         )
 
         return channel_detail
-
-    def restore_channel(self, serialized_channel):
-        token_address = serialized_channel.token_address
-
-        netting_channel = self.chain.netting_channel(
-            serialized_channel.channel_address,
-        )
-
-        # restoring balances from the blockchain since the serialized
-        # value could be falling behind.
-        channel_details = netting_channel.detail()
-
-        # our_address is checked by detail
-        assert channel_details['partner_address'] == serialized_channel.partner_address
-
-        if serialized_channel.our_leaves:
-            our_layers = compute_layers(serialized_channel.our_leaves)
-            our_tree = MerkleTreeState(our_layers)
-        else:
-            our_tree = EMPTY_MERKLE_TREE
-
-        our_state = ChannelEndState(
-            channel_details['our_address'],
-            channel_details['our_balance'],
-            serialized_channel.our_balance_proof,
-            our_tree,
-        )
-
-        if serialized_channel.partner_leaves:
-            partner_layers = compute_layers(serialized_channel.partner_leaves)
-            partner_tree = MerkleTreeState(partner_layers)
-        else:
-            partner_tree = EMPTY_MERKLE_TREE
-
-        partner_state = ChannelEndState(
-            channel_details['partner_address'],
-            channel_details['partner_balance'],
-            serialized_channel.partner_balance_proof,
-            partner_tree,
-        )
-
-        def register_channel_for_hashlock(channel, hashlock):
-            self.register_channel_for_hashlock(
-                token_address,
-                channel,
-                hashlock,
-            )
-
-        external_state = ChannelExternalState(
-            register_channel_for_hashlock,
-            netting_channel,
-        )
-        details = ChannelDetails(
-            serialized_channel.channel_address,
-            our_state,
-            partner_state,
-            external_state,
-            serialized_channel.reveal_timeout,
-            channel_details['settle_timeout'],
-        )
-
-        graph = self.token_to_channelgraph[token_address]
-        graph.add_channel(details)
-        channel = graph.address_to_channel.get(
-            serialized_channel.channel_address,
-        )
-
-        channel.our_state.balance_proof = serialized_channel.our_balance_proof
-        channel.partner_state.balance_proof = serialized_channel.partner_balance_proof
-
-    def restore_queue(self, serialized_queue):
-        receiver_address = serialized_queue['receiver_address']
-        token_address = serialized_queue['token_address']
-
-        queue = self.protocol.get_channel_queue(
-            receiver_address,
-            token_address,
-        )
-
-        for messagedata in serialized_queue['messages']:
-            queue.put(messagedata)
-
-    def restore_transfer_states(self, transfer_states):
-        self.identifier_to_statemanagers = transfer_states
 
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
