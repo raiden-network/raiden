@@ -10,7 +10,7 @@ from gevent import Greenlet
 
 from raiden.app import App
 from raiden.api.rest import RestAPI, APIServer
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
@@ -91,7 +91,7 @@ def api_raiden_service(
         Discovery(),
         config
     )
-    api = RaidenAPI(raiden_service)
+    api = RaidenAPI2(raiden_service)
     monkeypatch.setattr(api, 'get_channel_list', api_test_context.query_channels)
     monkeypatch.setattr(api, 'get_tokens_list', api_test_context.query_tokens)
     monkeypatch.setattr(api, 'open', api_test_context.open_channel)
@@ -103,8 +103,8 @@ def api_raiden_service(
     monkeypatch.setattr(api, 'get_token_network_events', api_test_context.get_token_network_events)
     monkeypatch.setattr(api, 'get_channel_events', api_test_context.get_channel_events)
     monkeypatch.setattr(api, 'transfer', api_test_context.transfer)
-    monkeypatch.setattr(api, 'connect_token_network', api_test_context.connect)
-    monkeypatch.setattr(api, 'leave_token_network', api_test_context.leave)
+    monkeypatch.setattr(api, 'token_network_connect', api_test_context.connect)
+    monkeypatch.setattr(api, 'token_network_leave', api_test_context.leave)
     monkeypatch.setattr(api, 'register_token', api_test_context.register_token)
 
     # also make sure that the test server's raiden_api uses this mock

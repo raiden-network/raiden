@@ -18,7 +18,7 @@ from gevent import Greenlet
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 from raiden.utils import get_contract_path, safe_address_decode
 
 ENTER_CONSOLE_TIMEOUT = 3
@@ -289,11 +289,10 @@ class ConsoleTools:
     def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
-        self._api = RaidenAPI(raiden_service)
+        self._api = RaidenAPI2(raiden_service)
         self._discovery = discovery
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.deposit = self._api.deposit
 
     def create_token(
             self,
@@ -385,14 +384,14 @@ class ConsoleTools:
             print('Error: peer {} not found in discovery'.format(peer_address_hex))
             return
 
-        self._api.open(
+        self._api.channel_open(
             token_address,
             peer_address,
             settle_timeout=settle_timeout,
             reveal_timeout=reveal_timeout,
         )
 
-        return self._api.deposit(token_address, peer_address, amount)
+        return self._api.channel_deposit(token_address, peer_address, amount)
 
     def wait_for_contract(self, contract_address_hex, timeout=None):
         """ Wait until a contract is mined
