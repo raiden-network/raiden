@@ -56,7 +56,7 @@ from raiden.transfer.log import (
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
-from raiden.connection_manager import ConnectionManager2
+from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
     pex,
@@ -305,7 +305,7 @@ class RaidenService:
 
     def start_neighbours_healthcheck(self):
         for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
-            if neighbour != ConnectionManager2.BOOTSTRAP_ADDR:
+            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
     def stop(self):
@@ -465,7 +465,7 @@ class RaidenService:
         manager = self.tokens_to_connectionmanagers.get(token_address)
 
         if manager is None:
-            manager = ConnectionManager2(self, token_address)
+            manager = ConnectionManager(self, token_address)
             self.tokens_to_connectionmanagers[token_address] = manager
 
         return manager
