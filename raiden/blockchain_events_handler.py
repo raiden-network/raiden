@@ -9,7 +9,7 @@ from raiden.blockchain.state import (
     get_channel_state,
     get_token_network_state_from_proxies,
 )
-from raiden.connection_manager import ConnectionManager2
+from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ActionForTokenNetwork,
@@ -83,7 +83,7 @@ def handle_channel_new(raiden, event):
         partner_address = channel_state.partner_state.address
         connection_manager = raiden.connection_manager_for_token(token_address)
 
-        if ConnectionManager2.BOOTSTRAP_ADDR != partner_address:
+        if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
         gevent.spawn(connection_manager.retry_connect)

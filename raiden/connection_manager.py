@@ -43,7 +43,7 @@ def log_open_channels(raiden, token_address, funds):
         )
 
 
-class ConnectionManager2:
+class ConnectionManager:
     """The ConnectionManager provides a high level abstraction for connecting to a
     Token network.
 
