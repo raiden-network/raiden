@@ -15,32 +15,6 @@ from raiden.utils import pex, sha3, typing
 # useful work, ie. there must /not/ be an event for requesting new data.
 
 
-class ActionInitInitiator(StateChange):
-    """ Initial state of a new mediated transfer.
-
-    Args:
-        our_address (address): This node address.
-        transfer (LockedTransferState): A state object containing the transfer details.
-        routes (RoutesState): The current available routes.
-        random_generator (generator): A generator for secrets.
-        block_number (int): The current block number.
-    """
-
-    def __init__(
-            self,
-            our_address,
-            transfer,
-            routes,
-            random_generator,
-            block_number):
-
-        self.our_address = our_address
-        self.transfer = transfer
-        self.routes = routes
-        self.random_generator = random_generator
-        self.block_number = block_number
-
-
 class ActionInitMediator(StateChange):
     """ Initial state for a new mediator.
 
