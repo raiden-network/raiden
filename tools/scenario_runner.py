@@ -74,8 +74,7 @@ def run(
         logging,
         logfile,
         scenario,
-        stage_prefix,
-        results_filename):  # pylint: disable=unused-argument
+        stage_prefix):  # pylint: disable=unused-argument
 
     # TODO: only enabled logging on "initiators"
     slogging.configure(logging, log_file=logfile)
@@ -285,18 +284,6 @@ def run(
         event = gevent.event.Event()
         gevent.signal(signal.SIGUSR2, event.set)
         event.wait()
-
-        results = tools.channel_stats_for(token_address, peer)
-        if transfer_results['total_time'] != 0:
-            results['total_time'] = transfer_results['total_time']
-        if len(transfer_results['timestamps']) > 0:
-            results['timestamps'] = transfer_results['timestamps']
-        results['channel'] = repr(results['channel'])  # FIXME
-
-        log.warning("Results: {}".format(results))
-
-        with open(results_filename, 'w') as fp:
-            json.dump(results, fp, indent=2)
 
         open('{}.stage3'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()

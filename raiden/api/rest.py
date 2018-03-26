@@ -280,21 +280,7 @@ class RestAPI:
         return api_response(result=dict(our_address=address_encoder(self.raiden_api.address)))
 
     def register_token(self, token_address):
-        manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
-
-        if manager_address is not None:
-            return api_error(
-                errors='Token is already registered',
-                status_code=HTTPStatus.CONFLICT
-            )
-
-        if manager_address is None:
-            manager_address = self.raiden_api.register_token(token_address)
-
-        return api_response(
-            result=dict(channel_manager_address=address_encoder(manager_address)),
-            status_code=HTTPStatus.CREATED
-        )
+        raise NotImplementedError()
 
     def open(
             self,

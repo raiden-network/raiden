@@ -185,12 +185,6 @@ class ApiTestContext:
         self.tokens_to_manager_address[token_address] = manager_address
         return manager_address
 
-    def manager_address_if_token_registered(self, token_address):
-        if token_address not in self.tokens:
-            return None
-
-        return self.tokens_to_manager_address[token_address]
-
     def make_channel_and_add(self):
         channel = self.make_channel()
         self.channels.append(channel)
@@ -199,13 +193,6 @@ class ApiTestContext:
         for channel in self.channels:
             if (channel.token_address == token_address and
                     channel.partner_state.address == partner_address):
-                return channel
-
-        raise ValueError('Could not find channel')
-
-    def find_channel_by_address(self, channel_address):
-        for channel in self.channels:
-            if channel.channel_address == channel_address:
                 return channel
 
         raise ValueError('Could not find channel')
@@ -276,9 +263,6 @@ class ApiTestContext:
         channel.external_state.netting_channel.state = CHANNEL_STATE_SETTLED
         channel.external_state._settled_block = 1
         return channel
-
-    def get_channel(self, channel_address):
-        return self.find_channel_by_address(channel_address)
 
     def transfer(self, token_address, amount, target, identifier):
         # Do nothing. These tests only test the api endpoints, so nothing to do here

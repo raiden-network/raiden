@@ -37,32 +37,6 @@ def test_token_addresses(raiden_network, token_addresses):
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_REACHABLE
 
 
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('number_of_tokens', [0])
-def test_token_registration(raiden_network, tester_chain):
-    node1 = raiden_network[0]
-    token_amount = 1000
-
-    token_address = node1.raiden.chain.deploy_contract(
-        contract_name='HumanStandardToken',
-        contract_path=get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
-    )
-
-    api1 = RaidenAPI(node1.raiden)
-    assert not api1.get_tokens_list()
-
-    assert api1.manager_address_if_token_registered(token_address) is None
-
-    node1.raiden.poll_blockchain_events()
-    assert not api1.get_tokens_list()
-
-    api1.register_token(token_address)
-
-    assert api1.manager_address_if_token_registered(token_address) is not None
-    assert api1.get_tokens_list() == [token_address]
-
-
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_channel_lifecycle(raiden_network, token_addresses, deposit):
