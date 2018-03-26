@@ -23,7 +23,7 @@ from raiden.ui.cli import (
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.utils import pex, get_system_spec
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 
 log = slogging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ TRANSFER_MEMORY = 4096
 class EchoNode:
 
     def __init__(self, api, token_address):
-        assert isinstance(api, RaidenAPI)
+        assert isinstance(api, RaidenAPI2)
         self.ready = Event()
 
         self.api = api
@@ -51,7 +51,7 @@ class EchoNode:
                     pex(self.api.raiden.address),
                     pex(self.token_address),
                 ))
-            self.api.connect_token_network(
+            self.api.token_network_connect(
                 self.token_address,
                 token.balance_of(self.api.raiden.address),
                 initial_channel_target=10,
@@ -262,7 +262,7 @@ class EchoNode:
 def runner(ctx, **kwargs):
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
     # This is largely a copy&paste job from `raiden.ui.cli::run`, with the difference that
-    # an `EchoNode` is instantiated from the App's `RaidenAPI`.
+    # an `EchoNode` is instantiated from the App's `RaidenAPI2`.
     print('Welcome to Raiden, version {} [Echo Node]'.format(get_system_spec()['raiden']))
     slogging.configure(
         kwargs['logging'],
@@ -293,7 +293,7 @@ def runner(ctx, **kwargs):
             else:
                 domain_list.append(str(kwargs['rpccorsdomain']))
 
-        raiden_api = RaidenAPI(app_.raiden)
+        raiden_api = RaidenAPI2(app_.raiden)
         if ctx.params['rpc']:
             rest_api = RestAPI(raiden_api)
             api_server = APIServer(

@@ -5,7 +5,7 @@ from raiden.exceptions import (
     NoPathError,
     InsufficientFunds,
 )
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
@@ -27,7 +27,7 @@ def test_transfer_to_unknownchannel(raiden_network):
     assert app1.raiden.address in graph0.partneraddress_to_channel
 
     with pytest.raises(NoPathError):
-        RaidenAPI(app0.raiden).transfer(
+        RaidenAPI2(app0.raiden).transfer(
             graph0.token_address,
             10,
             # sending to an unknown/non-existant address
@@ -51,7 +51,7 @@ def test_insufficient_funds(raiden_network):
     assert app1.raiden.address in graph0.partneraddress_to_channel
 
     with pytest.raises(InsufficientFunds):
-        RaidenAPI(app0.raiden).transfer(
+        RaidenAPI2(app0.raiden).transfer(
             graph0.token_address,
             99999999999999999999,
             target=app1.raiden.address,
