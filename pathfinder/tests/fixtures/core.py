@@ -14,8 +14,8 @@ from pathfinder.token_network import TokenNetwork
 
 @pytest.fixture
 def populate_token_networks(
-    token_networks: List[TokenNetwork],
-    token_network_contracts: List[Contract],
+        token_networks: List[TokenNetwork],
+        token_network_contracts: List[Contract],
 ) -> None:
 
     for token_network in token_networks:
@@ -62,9 +62,7 @@ def populate_token_networks(
 
 
 @pytest.fixture
-def token_networks(
-    token_network_contracts: List[Contract]
-) -> List[TokenNetwork]:
+def token_networks(token_network_contracts: List[Contract]) -> List[TokenNetwork]:
     return [
         TokenNetwork(token_network_contract)
         for token_network_contract in token_network_contracts
@@ -73,9 +71,9 @@ def token_networks(
 
 @pytest.fixture
 def pathfinding_service(
-    web3: Web3,
-    contract_manager: ContractManager,
-    token_networks: List[TokenNetwork]
+        web3: Web3,
+        contract_manager: ContractManager,
+        token_networks: List[TokenNetwork]
 ) -> PathfindingService:
     # TODO: replace with a pathfinding service that actually syncs with the tester chain.
     pathfinding_service = PathfindingService(
