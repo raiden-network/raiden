@@ -4,11 +4,8 @@ import pytest
 
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
-    channel,
-    pending_mediated_transfer,
 )
 from raiden.tests.utils.blockchain import wait_until_block
-from raiden.tests.utils.network import CHAIN
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     EVENT_CHANNEL_CLOSED,
@@ -21,7 +18,7 @@ from raiden.blockchain.events import (
     get_all_netting_channel_events,
     get_all_registry_events,
 )
-from raiden.utils import sha3, address_encoder
+from raiden.utils import address_encoder
 
 
 def event_dicts_are_equal(dict1, dict2):
@@ -286,61 +283,3 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     assert event_dicts_are_equal(all_netting_channel_events[-1], settled_event)
     assert event_dicts_are_equal(events[0], settled_event)
-
-
-@pytest.mark.xfail(reason='out-of-gas for unlock and settle')
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_timeout):
-    app0, app1, app2 = raiden_chain
-
-    token_address = app0.raiden.default_registry.token_addresses()[0]
-    amount = 10
-
-    channel21 = channel(app2, app1, token_address)
-    netting_channel = channel21.external_state.netting_channel
-
-    identifier = 1
-    expiration = app2.raiden.get_block_number() + settle_timeout - 3
-
-    secret = pending_mediated_transfer(
-        raiden_chain,
-        token_address,
-        amount,
-        identifier,
-        expiration,
-    )
-    hashlock = sha3(secret)
-
-    gevent.sleep(.1)  # wait for the messages
-
-    lock = channel21.our_state.get_lock_by_hashlock(hashlock)
-    proof = channel21.our_state.compute_proof_for_lock(secret, lock)
-
-    # the secret hasn't been revealed yet (through messages)
-    assert len(channel21.our_state.hashlocks_to_pendinglocks) == 1
-    proofs = list(channel21.our_state.get_known_unlocks())
-    assert len(proofs) == 0
-
-    netting_channel.close(channel21.our_state.balance_proof)
-
-    # reveal it through the blockchain (this needs to emit the SecretRevealed event)
-    netting_channel.withdraw(
-        app2.raiden.address,
-        [proof],
-    )
-
-    settle_expiration = app0.raiden.chain.block_number() + settle_timeout
-    wait_until_block(app0.raiden.chain, settle_expiration)
-
-    channel21.settle_event.wait(timeout=10)
-
-    assert_synched_channels(
-        channel(app1, app2, token_address), deposit - amount, [],
-        channel(app2, app1, token_address), deposit + amount, [],
-    )
-
-    assert_synched_channels(
-        channel(app0, app1, token_address), deposit - amount, [],
-        channel(app1, app2, token_address), deposit + amount, [],
-    )
