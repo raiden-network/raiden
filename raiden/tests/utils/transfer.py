@@ -1,7 +1,7 @@
 """ Utilities to make and assert transfers. """
-import gevent
 from coincurve import PrivateKey
 
+from raiden.transfer import views
 from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
@@ -19,6 +19,17 @@ def get_sent_transfer(app_channel, transfer_number):
 
 def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
+
+
+def get_channelstate(app0, app1, token_address) -> 'NettingChannelState':
+    registry_address = app0.raiden.default_registry.address
+    channel_state = views.get_channelstate_for(
+        views.state_from_app(app0),
+        registry_address,
+        token_address,
+        app1.raiden.address,
+    )
+    return channel_state
 
 
 def transfer(initiator_app, target_app, token, amount, identifier):

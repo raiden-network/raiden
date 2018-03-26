@@ -206,19 +206,24 @@ def snake_to_camel_case(snake_string):
     return snake_string.title().replace('_', '')
 
 
-def channel_to_api_dict(channel_):
+def channelstate_to_api_dict(channel_state):
     """Takes in a Channel Object and turns it into a dictionary for
     usage in the REST API. Decoding from binary to hex happens through
     the marshmallow AddressField in encoding.py.
     """
+    from raiden.transfer import channel
+    balance = channel.get_distributable(
+        channel_state.our_state,
+        channel_state.partner_state,
+    )
     return {
-        'channel_address': channel_.channel_address,
-        'token_address': channel_.token_address,
-        'partner_address': channel_.partner_address,
-        'settle_timeout': channel_.settle_timeout,
-        'reveal_timeout': channel_.reveal_timeout,
-        'balance': channel_.distributable,
-        'state': channel_.state
+        'channel_address': channel_state.identifier,
+        'token_address': channel_state.token_address,
+        'partner_address': channel_state.partner_state.address,
+        'settle_timeout': channel_state.settle_timeout,
+        'reveal_timeout': channel_state.reveal_timeout,
+        'balance': balance,
+        'state': channel.get_status(channel_state),
     }
 
 

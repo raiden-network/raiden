@@ -14,7 +14,7 @@ from ethereum import slogging
 from ethereum.utils import decode_hex
 
 from raiden.app import App
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -171,7 +171,7 @@ def run(
 
             log.warning("Waiting for all nodes to come online")
 
-            api = RaidenAPI(app.raiden)
+            api = RaidenAPI2(app.raiden)
 
             for node in partner_nodes:
                 api.start_health_check_for(node)
@@ -207,7 +207,7 @@ def run(
                 while True:
                     try:
                         log.warning("Opening channel with {} for {}".format(peer, token_address))
-                        api.open(token_address, peer)
+                        api.channel_open(token_address, peer)
                         break
                     except KeyError:
                         log.warning("Error: could not open channel with {}".format(peer))
@@ -216,7 +216,7 @@ def run(
                 while True:
                     try:
                         log.warning("Funding channel with {} for {}".format(peer, token_address))
-                        api.deposit(token_address, peer, amount)
+                        api.channel_deposit(token_address, peer, amount)
                         break
                     except Exception:
                         log.warning("Error: could not deposit {} for {}".format(amount, peer))
@@ -243,7 +243,7 @@ def run(
                 initial_time = time.time()
                 times = [0] * total_transfers
                 for index in range(total_transfers):
-                    RaidenAPI(app.raiden).transfer(
+                    RaidenAPI2(app.raiden).transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,
