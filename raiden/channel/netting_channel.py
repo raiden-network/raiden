@@ -30,7 +30,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
     ContractReceiveSettled,
 )
-from raiden.transfer.merkle_tree import LEAVES, merkleroot
+from raiden.transfer.merkle_tree import merkleroot
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -814,47 +814,6 @@ class Channel:
 
             if channel_state.contract_balance != balance:
                 channel_state.update_contract_balance(balance)
-
-    def serialize(self):
-        return ChannelSerialization(self)
-
-    def __eq__(self, other):
-        if isinstance(other, Channel):
-            return self.serialize() == other.serialize()
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class ChannelSerialization:
-
-    def __init__(self, channel_instance):
-        self.channel_address = channel_instance.channel_address
-        self.token_address = channel_instance.token_address
-        self.partner_address = channel_instance.partner_address
-        self.our_address = channel_instance.our_address
-        self.reveal_timeout = channel_instance.reveal_timeout
-
-        self.our_balance_proof = channel_instance.our_state.balance_proof
-        self.partner_balance_proof = channel_instance.partner_state.balance_proof
-        self.our_leaves = channel_instance.our_state.merkletree.layers[LEAVES]
-        self.partner_leaves = channel_instance.our_state.merkletree.layers[LEAVES]
-
-    def __eq__(self, other):
-        if isinstance(other, ChannelSerialization):
-            return (
-                self.channel_address == other.channel_address and
-                self.token_address == other.token_address and
-                self.partner_address == other.partner_address and
-                self.our_address == other.our_address and
-                self.reveal_timeout == other.reveal_timeout and
-                self.our_balance_proof == other.our_balance_proof and
-                self.partner_balance_proof == other.partner_balance_proof and
-                self.our_leaves == other.our_leaves and
-                self.partner_leaves == other.partner_leaves
-            )
-        return False
 
     def __ne__(self, other):
         return not self.__eq__(other)
