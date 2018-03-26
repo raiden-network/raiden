@@ -13,7 +13,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNKNOWN,
 )
 from raiden.utils import isaddress, pex, typing
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import RouteState2
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -83,7 +83,7 @@ def get_best_routes(
     to_address: typing.address,
     amount: int,
     previous_address: typing.address,
-) -> List[RouteState]:
+) -> List[RouteState2]:
     """ Returns a list of channels that can be used to make a transfer.
 
     This will filter out channels that are not open and don't have enough
@@ -165,7 +165,7 @@ def get_best_routes(
                 )
             continue
 
-        route_state = RouteState(partner_address, channel_state.identifier)
+        route_state = RouteState2(partner_address, channel_state.identifier)
         available_routes.append(route_state)
 
     return available_routes

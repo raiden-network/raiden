@@ -982,7 +982,7 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
 
 def handle_receive_mediatedtransfer(
         channel_state: 'NettingChannelState',
-        mediated_transfer: 'LockedTransferState'):
+        mediated_transfer: 'LockedTransferSignedState'):
     """Register the latest known transfer.
 
     The receiver needs to use this method to update the container with a

@@ -5,7 +5,6 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     PaymentNetworkState,
     TokenNetworkState,
-    RouteState,
 )
 from raiden.utils import pex, sha3
 from raiden.utils import typing
@@ -79,31 +78,6 @@ class ActionChannelClose(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-
-class ActionRouteChange(StateChange):
-    """ A route change.
-
-    State change used for:
-        - when a new route is added.
-        - when the counter party is unresponsive (fails the healthcheck) and the
-          route cannot be used.
-        - when a different transfer uses the channel, changing the available
-          balance.
-    """
-
-    def __init__(self, identifier, route):
-        if not isinstance(route, RouteState):
-            raise ValueError('route must be a RouteState')
-
-        self.identifier = identifier
-        self.route = route
-
-    def __repr__(self):
-        return 'ActionRouteChange(identifier:{} route:{})'.format(
-            self.identifier,
-            self.route,
-        )
 
 
 class ActionCancelTransfer(StateChange):
