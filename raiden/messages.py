@@ -924,7 +924,7 @@ class MediatedTransfer(LockedTransfer):
         )
 
     @staticmethod
-    def from_event(event: 'SendMediatedTransfer') -> 'MediatedTransfer':
+    def from_event(event: 'SendMediatedTransfer2') -> 'MediatedTransfer':
         transfer = event.transfer
         lock = transfer.lock
         balance_proof = transfer.balance_proof
