@@ -7,7 +7,6 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import ContractSendChannelWithdraw
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
-    LockedTransferState,
     LockedTransferUnsignedState,
     MediationPairState2,
     MediatorTransferState,
@@ -97,7 +96,7 @@ def is_safe_to_wait2(lock_expiration, reveal_timeout, block_number):
 
 def is_valid_refund2(
         original_transfer: LockedTransferUnsignedState,
-        refund_transfer: LockedTransferState):
+        refund_transfer: LockedTransferSignedState):
     """ True if the refund transfer matches the original transfer. """
     refund_transfer_sender = refund_transfer.balance_proof.sender
 

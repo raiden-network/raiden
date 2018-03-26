@@ -15,7 +15,7 @@ from raiden.transfer.merkle_tree import (
     compute_merkleproof_for,
     merkleroot,
 )
-from raiden.transfer.state import BalanceProofState, MerkleTreeState
+from raiden.transfer.state import MerkleTreeState
 from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -228,9 +228,6 @@ class ChannelEndState:
 
         lock = pendinglock.lock
         lockhashed = sha3(lock.as_bytes)
-
-        if not isinstance(balance_proof, BalanceProofState):
-            raise ValueError('balance_proof must be a BalanceProof instance')
 
         if not self.is_known(lock.hashlock):
             raise ValueError('hashlock is not registered')
