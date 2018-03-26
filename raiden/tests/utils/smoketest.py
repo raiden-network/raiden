@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
-import os
-import time
-import json
-import subprocess
-import shlex
-import tempfile
-import distutils.spawn
-import pdb
-import traceback
-import requests
+from binascii import hexlify
+from binascii import unhexlify
 from http import HTTPStatus
 from string import Template
+import distutils.spawn  # pylint: disable=import-error,no-name-in-module
+import json
+import os
+import pdb
+import requests
+import shlex
+import subprocess
+import tempfile
+import time
+import traceback
 
 from ethereum.tools._solidity import get_solidity
 
@@ -28,6 +29,7 @@ from raiden.utils import (
     address_decoder,
 )
 from raiden.blockchain.abi import contract_checksum
+from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.tests.utils.tester import create_tester_chain
@@ -132,12 +134,26 @@ def run_smoketests(raiden_service, test_config, debug=False):
         discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        assert len(raiden_service.token_to_channelgraph.values()) == 1
-        graph = list(raiden_service.token_to_channelgraph.values())[0]
-        channel = graph.partneraddress_to_channel[unhexlify(TEST_PARTNER_ADDRESS)]
-        assert channel.can_transfer
-        assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
-        assert channel.state == CHANNEL_STATE_OPENED
+        token_networks = views.get_token_network_addresses_for(
+            views.state_from_raiden(raiden_service),
+            raiden_service.default_registry.address,
+        )
+        assert len(token_networks) == 1
+
+        channel_state = views.get_channelstate_for(
+            views.state_from_raiden(raiden_service),
+            raiden_service.default_registry.address,
+            token_networks[0],
+            unhexlify(TEST_PARTNER_ADDRESS),
+        )
+
+        distributable = channel.get_distributable(
+            channel_state.our_state,
+            channel_state.partner_state,
+        )
+        assert distributable == TEST_DEPOSIT_AMOUNT
+        assert distributable == channel_state.our_state.contract_balance
+        assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
         run_restapi_smoketests(raiden_service, test_config)
     except Exception:
         error = traceback.format_exc()
