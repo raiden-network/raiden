@@ -49,10 +49,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator2,
     ActionInitTarget2,
 )
-from raiden.transfer.log import (
-    StateChangeLog,
-    StateChangeLogSQLiteBackend,
-)
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
@@ -231,11 +227,6 @@ class RaidenService:
         self.start_event = Event()
         self.chain.client.inject_stop_event(self.stop_event)
 
-        self.transaction_log = StateChangeLog(
-            storage_instance=StateChangeLogSQLiteBackend(
-                database_path=config['database_path']
-            )
-        )
         self.wal = None
 
         self.database_path = config['database_path']
