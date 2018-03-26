@@ -34,7 +34,7 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.tests.utils.tester import create_tester_chain
 from raiden.network.utils import get_free_port
-from raiden.connection_manager import ConnectionManager
+from raiden.connection_manager import ConnectionManager2
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -108,7 +108,7 @@ def run_restapi_smoketests(raiden_service, test_config):
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            '0x' + hexlify(ConnectionManager.BOOTSTRAP_ADDR).decode())
+            '0x' + hexlify(ConnectionManager2.BOOTSTRAP_ADDR).decode())
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 

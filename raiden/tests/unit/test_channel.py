@@ -19,7 +19,7 @@ from raiden.messages import (
 )
 from raiden.tests.utils.factories import make_address, make_privkey_address
 from raiden.tests.utils.messages import make_mediated_transfer
-from raiden.tests.utils.transfer import assert_synched_channels, channel
+from raiden.tests.utils.transfer import assert_synched_channels
 from raiden.transfer.merkle_tree import (
     compute_layers,
     merkleroot,
@@ -582,30 +582,6 @@ def test_channel_increase_nonce_and_transferred_amount():
         previous_transferred = new_transferred
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-def test_setup(raiden_network, deposit, token_addresses):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    tokens0 = list(app0.raiden.token_to_channelgraph.keys())
-    tokens1 = list(app1.raiden.token_to_channelgraph.keys())
-
-    assert len(tokens0) == 1
-    assert len(tokens1) == 1
-    assert tokens0 == tokens1
-    assert tokens0[0] == token_addresses[0]
-
-    token_address = tokens0[0]
-    channel0 = channel(app0, app1, token_address)
-    channel1 = channel(app1, app0, token_address)
-
-    assert channel0 and channel1
-
-    assert_synched_channels(
-        channel0, deposit, [],
-        channel1, deposit, [],
-    )
-
-
 @pytest.mark.parametrize('deposit', [2 ** 30])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
@@ -728,73 +704,6 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
                 channel1, contract_balance1 + claimed_amount, unclaimed_locks,
             )
             assert channel0.distributable == contract_balance0 - distributed_amount
-
-
-@pytest.mark.parametrize('number_of_nodes', [2])
-def test_transfer(raiden_network, token_addresses):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    channel0 = channel(app0, app1, token_addresses[0])
-    channel1 = channel(app1, app0, token_addresses[0])
-
-    contract_balance0 = channel0.contract_balance
-    contract_balance1 = channel1.contract_balance
-
-    app0_token = list(app0.raiden.token_to_channelgraph.keys())[0]
-    app1_token = list(app1.raiden.token_to_channelgraph.keys())[0]
-
-    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
-    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
-
-    app0_partners = list(graph0.partneraddress_to_channel.keys())
-    app1_partners = list(graph1.partneraddress_to_channel.keys())
-
-    assert channel0.token_address == channel1.token_address
-    assert app0_token == app1_token
-    assert app1.raiden.address in app0_partners
-    assert app0.raiden.address in app1_partners
-
-    netting_address = channel0.external_state.netting_channel.address
-    netting_channel = app0.raiden.chain.netting_channel(netting_address)
-
-    # check balances of channel and contract are equal
-    details0 = netting_channel.detail()
-    details1 = netting_channel.detail()
-
-    assert contract_balance0 == details0['our_balance']
-    assert contract_balance1 == details1['our_balance']
-
-    assert_synched_channels(
-        channel0, contract_balance0, [],
-        channel1, contract_balance1, [],
-    )
-
-    amount = 10
-    direct_transfer = channel0.create_directtransfer(
-        amount,
-        identifier=1,
-    )
-    app0.raiden.sign(direct_transfer)
-    channel0.register_transfer(
-        app0.raiden.get_block_number(),
-        direct_transfer,
-    )
-    channel1.register_transfer(
-        app1.raiden.get_block_number(),
-        direct_transfer,
-    )
-
-    # check the contract is intact
-    assert details0 == netting_channel.detail()
-    assert details1 == netting_channel.detail()
-
-    assert channel0.contract_balance == contract_balance0
-    assert channel1.contract_balance == contract_balance1
-
-    assert_synched_channels(
-        channel0, contract_balance0 - amount, [],
-        channel1, contract_balance1 + amount, [],
-    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

@@ -11,7 +11,6 @@ import gevent
 from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
 from ethereum import slogging
-from ethereum.utils import encode_hex
 
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
@@ -26,8 +25,6 @@ from raiden.blockchain.events import (
     BlockchainEvents,
 )
 from raiden.raiden_event_handler import on_raiden_event
-from raiden.event_handler import StateMachineEventHandler
-from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
 from raiden.transfer.state import (
@@ -56,30 +53,15 @@ from raiden.transfer.log import (
     StateChangeLog,
     StateChangeLogSQLiteBackend,
 )
-from raiden.channel import (
-    ChannelEndState,
-    ChannelExternalState,
-)
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
-from raiden.network.channelgraph import (
-    ChannelGraph,
-    ChannelDetails,
-)
-from raiden.messages import (
-    RevealSecret,
-    SignedMessage,
-)
-from raiden.transfer.state import EMPTY_MERKLE_TREE
-from raiden.network.protocol import (
-    RaidenProtocol,
-)
-from raiden.connection_manager import ConnectionManager, ConnectionManager2
+from raiden.messages import SignedMessage
+from raiden.network.protocol import RaidenProtocol
+from raiden.connection_manager import ConnectionManager2
 from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
     random_secret,
-    sha3,
 )
 from raiden.storage import wal, serialize, sqlite
 
@@ -202,11 +184,7 @@ class RaidenService:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
-        self.token_to_channelgraph = dict()
         self.tokens_to_connectionmanagers = dict()
-        self.manager_to_token = dict()
-
-        self.identifier_to_statemanagers = defaultdict(list)
         self.identifier_to_results = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
@@ -245,10 +223,7 @@ class RaidenService:
         # TODO: remove this cyclic dependency
         transport.protocol = self.protocol
 
-        self.message_handler = RaidenMessageHandler(self)
-        self.state_machine_event_handler = StateMachineEventHandler(self)
         self.blockchain_events = BlockchainEvents()
-        self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
         self._block_number = None
@@ -290,8 +265,6 @@ class RaidenService:
         if self.stop_event and self.stop_event.is_set():
             self.stop_event.clear()
 
-        # Restore from snapshot must come after registering the registry as we
-        # need to know the registered tokens to populate `token_to_channelgraph`
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked
@@ -371,10 +344,6 @@ class RaidenService:
         state_change = Block(block_number)
         self.handle_state_change(state_change, block_number)
 
-        for graph in self.token_to_channelgraph.values():
-            for channel in graph.address_to_channel.values():
-                channel.state_transition(state_change)
-
         # To avoid races, only update the internal cache after all the state
         # tasks have been updated.
         self._block_number = block_number
@@ -412,15 +381,6 @@ class RaidenService:
         # pylint: disable=unused-argument
         for event in self.blockchain_events.poll_blockchain_events():
             on_blockchain_event(self, event)
-
-    def find_channel_by_address(self, netting_channel_address_bin):
-        for graph in self.token_to_channelgraph.values():
-            channel = graph.address_to_channel.get(netting_channel_address_bin)
-
-            if channel is not None:
-                return channel
-
-        raise ValueError('unknown channel {}'.format(encode_hex(netting_channel_address_bin)))
 
     def sign(self, message):
         """ Sign message inplace. """
@@ -489,269 +449,6 @@ class RaidenService:
         state_change = ContractReceiveNewPaymentNetwork(payment_network)
         self.handle_state_change(state_change)
 
-    def register_secret(self, secret: bytes):
-        """ Register the secret with any channel that has a hashlock on it.
-
-        This must search through all channels registered for a given hashlock
-        and ignoring the tokens. Useful for refund transfer, split transfer,
-        and token swaps.
-
-        Raises:
-            TypeError: If secret is unicode data.
-        """
-        if not isinstance(secret, bytes):
-            raise TypeError('secret must be bytes')
-
-        hashlock = sha3(secret)
-        revealsecret_message = RevealSecret(secret)
-        self.sign(revealsecret_message)
-
-        for hash_channel in self.token_to_hashlock_to_channels.values():
-            for channel in hash_channel[hashlock]:
-                channel.register_secret(secret)
-
-                # The protocol ignores duplicated messages.
-                self.send_async(
-                    channel.partner_state.address,
-                    revealsecret_message,
-                )
-
-    def register_channel_for_hashlock(self, token_address, channel, hashlock):
-        channels_registered = self.token_to_hashlock_to_channels[token_address][hashlock]
-
-        if channel not in channels_registered:
-            channels_registered.append(channel)
-
-    def handle_secret(  # pylint: disable=too-many-arguments
-            self,
-            identifier,
-            token_address,
-            secret,
-            partner_secret_message,
-            hashlock):
-        """ Unlock/Witdraws locks, register the secret, and send Secret
-        messages as necessary.
-
-        This function will:
-            - Unlock the locks created by this node and send a Secret message to
-            the corresponding partner so that she can withdraw the token.
-            - Withdraw the lock from sender.
-            - Register the secret for the locks received and reveal the secret
-            to the senders
-
-
-        Note:
-            The channel needs to be registered with
-            `raiden.register_channel_for_hashlock`.
-        """
-        # handling the secret needs to:
-        # - unlock the token for all `forward_channel` (the current one
-        #   and the ones that failed with a refund)
-        # - send a message to each of the forward nodes allowing them
-        #   to withdraw the token
-        # - register the secret for the `originating_channel` so that a
-        #   proof can be made, if necessary
-        # - reveal the secret to the `sender` node (otherwise we
-        #   cannot withdraw the token)
-        channels_list = self.token_to_hashlock_to_channels[token_address][hashlock]
-        channels_to_remove = list()
-
-        revealsecret_message = RevealSecret(secret)
-        self.sign(revealsecret_message)
-
-        messages_to_send = []
-        for channel in channels_list:
-            # unlock a pending lock
-            if channel.our_state.is_known(hashlock):
-                secret = channel.create_secret(identifier, secret)
-                self.sign(secret)
-
-                channel.register_transfer(
-                    self.get_block_number(),
-                    secret,
-                )
-
-                messages_to_send.append((
-                    channel.partner_state.address,
-                    secret,
-                ))
-
-                channels_to_remove.append(channel)
-
-            # withdraw a pending lock
-            elif channel.partner_state.is_known(hashlock):
-                if partner_secret_message:
-                    is_balance_proof = (
-                        partner_secret_message.sender == channel.partner_state.address and
-                        partner_secret_message.channel == channel.channel_address
-                    )
-
-                    if is_balance_proof:
-                        channel.register_transfer(
-                            self.get_block_number(),
-                            partner_secret_message,
-                        )
-                        channels_to_remove.append(channel)
-                    else:
-                        channel.register_secret(secret)
-                        messages_to_send.append((
-                            channel.partner_state.address,
-                            revealsecret_message,
-                        ))
-                else:
-                    channel.register_secret(secret)
-                    messages_to_send.append((
-                        channel.partner_state.address,
-                        revealsecret_message,
-                    ))
-
-            else:
-                log.error(
-                    'Channel is registered for a given lock but the lock is not contained in it.'
-                )
-
-        for channel in channels_to_remove:
-            channels_list.remove(channel)
-
-        if not channels_list:
-            del self.token_to_hashlock_to_channels[token_address][hashlock]
-
-        # send the messages last to avoid races
-        for recipient, message in messages_to_send:
-            self.send_async(
-                recipient,
-                message,
-            )
-
-    def get_channel_details(self, token_address, netting_channel):
-        channel_details = netting_channel.detail()
-        our_state = ChannelEndState(
-            channel_details['our_address'],
-            channel_details['our_balance'],
-            None,
-            EMPTY_MERKLE_TREE,
-        )
-        partner_state = ChannelEndState(
-            channel_details['partner_address'],
-            channel_details['partner_balance'],
-            None,
-            EMPTY_MERKLE_TREE,
-        )
-
-        def register_channel_for_hashlock(channel, hashlock):
-            self.register_channel_for_hashlock(
-                token_address,
-                channel,
-                hashlock,
-            )
-
-        channel_address = netting_channel.address
-        reveal_timeout = self.config['reveal_timeout']
-        settle_timeout = channel_details['settle_timeout']
-
-        external_state = ChannelExternalState(
-            register_channel_for_hashlock,
-            netting_channel,
-        )
-
-        channel_detail = ChannelDetails(
-            channel_address,
-            our_state,
-            partner_state,
-            external_state,
-            reveal_timeout,
-            settle_timeout,
-        )
-
-        return channel_detail
-
-    def register_registry(self, registry_address):
-        proxies = get_relevant_proxies(
-            self.chain,
-            self.address,
-            registry_address,
-        )
-
-        # Install the filters first to avoid missing changes, as a consequence
-        # some events might be applied twice.
-        self.blockchain_events.add_proxies_listeners(proxies)
-
-        for manager in proxies.channel_managers:
-            token_address = manager.token_address()
-            manager_address = manager.address
-
-            channels_detail = list()
-            netting_channels = proxies.channelmanager_nettingchannels[manager_address]
-            for channel in netting_channels:
-                detail = self.get_channel_details(token_address, channel)
-                channels_detail.append(detail)
-
-            edge_list = manager.channels_addresses()
-            graph = ChannelGraph(
-                self.address,
-                manager_address,
-                token_address,
-                edge_list,
-                channels_detail,
-            )
-
-            self.manager_to_token[manager_address] = token_address
-            self.token_to_channelgraph[token_address] = graph
-
-            self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
-                self,
-                token_address,
-                graph
-            )
-
-    def channel_manager_is_registered(self, manager_address):
-        return manager_address in self.manager_to_token
-
-    def register_channel_manager(self, manager_address):
-        manager = self.default_registry.manager(manager_address)
-        netting_channels = [
-            self.chain.netting_channel(channel_address)
-            for channel_address in manager.channels_by_participant(self.address)
-        ]
-
-        # Install the filters first to avoid missing changes, as a consequence
-        # some events might be applied twice.
-        self.blockchain_events.add_channel_manager_listener(manager)
-        for channel in netting_channels:
-            self.blockchain_events.add_netting_channel_listener(channel)
-
-        token_address = manager.token_address()
-        edge_list = manager.channels_addresses()
-        channels_detail = [
-            self.get_channel_details(token_address, channel)
-            for channel in netting_channels
-        ]
-
-        graph = ChannelGraph(
-            self.address,
-            manager_address,
-            token_address,
-            edge_list,
-            channels_detail,
-        )
-
-        self.manager_to_token[manager_address] = token_address
-        self.token_to_channelgraph[token_address] = graph
-
-        self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
-            self,
-            token_address,
-            graph
-        )
-
-    def register_netting_channel(self, token_address, channel_address):
-        netting_channel = self.chain.netting_channel(channel_address)
-        self.blockchain_events.add_netting_channel_listener(netting_channel)
-
-        detail = self.get_channel_details(token_address, netting_channel)
-        graph = self.token_to_channelgraph[token_address]
-        graph.add_channel(detail)
-
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
@@ -776,18 +473,6 @@ class RaidenService:
     def leave_all_token_networks(self):
         state_change = ActionLeaveAllNetworks()
         self.wal.log_and_dispatch(state_change, self.get_block_number())
-
-    def leave_all_token_networks_async(self):
-        leave_results = []
-        for token_address in self.token_to_channelgraph:
-            try:
-                connection_manager = self.connection_manager_for_token(token_address)
-                leave_results.append(connection_manager.leave_async())
-            except InvalidAddress:
-                pass
-        combined_result = AsyncResult()
-        gevent.spawn(gevent.wait, leave_results).link(combined_result)
-        return combined_result
 
     def close_and_settle(self):
         log.info('raiden will close and settle all channels now')
