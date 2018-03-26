@@ -224,62 +224,6 @@ class TargetTransferState(State):
         return not self.__eq__(other)
 
 
-class InitiatorState(State):
-    """ State of a node initiating a mediated transfer.
-
-    Args:
-        our_address (address): This node address.
-        transfer (LockedTransferState): The description of the mediated transfer.
-        routes (RoutesState): Routes available for this transfer.
-        block_number (int): Latest known block number.
-        random_generator (generator): A generator that yields valid secrets.
-    """
-    __slots__ = (
-        'our_address',
-        'transfer',
-        'routes',
-        'block_number',
-        'random_generator',
-        'message',
-        'route',
-        'secretrequest',
-        'revealsecret',
-        'canceled_transfers',
-    )
-
-    def __init__(self, our_address, transfer, routes, block_number, random_generator):
-        self.our_address = our_address
-        self.transfer = transfer
-        self.routes = routes
-        self.block_number = block_number
-        self.random_generator = random_generator
-
-        self.message = None  #: current message in-transit
-        self.route = None  #: current route being used
-        self.secretrequest = None
-        self.revealsecret = None
-        self.canceled_transfers = list()
-
-    def __eq__(self, other):
-        if isinstance(other, InitiatorState):
-            return (
-                self.our_address == other.our_address and
-                self.transfer == other.transfer and
-                self.routes == other.routes and
-                self.random_generator == other.random_generator and
-                self.block_number == other.block_number and
-                self.message == other.message and
-                self.route == other.route and
-                self.secretrequest == other.secretrequest and
-                self.revealsecret == other.revealsecret and
-                self.canceled_transfers == other.canceled_transfers
-            )
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class MediatorState(State):
     """ State of a node mediating a transfer.
 
