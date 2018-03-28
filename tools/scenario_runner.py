@@ -74,7 +74,8 @@ def run(
         logging,
         logfile,
         scenario,
-        stage_prefix):  # pylint: disable=unused-argument
+        stage_prefix
+):  # pylint: disable=unused-argument
 
     # TODO: only enabled logging on "initiators"
     slogging.configure(logging, log_file=logfile)

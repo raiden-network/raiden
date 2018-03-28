@@ -13,7 +13,7 @@ from raiden.transfer.state import (
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_close_regression(raiden_network, token_addresses):
     """ The python api was using the wrong balance proof to close the channel,
-    thus the close was failling if a transfer was made.
+    thus the close was failing if a transfer was made.
     """
     node1, node2 = raiden_network
     token_address = token_addresses[0]
@@ -49,7 +49,7 @@ def test_close_regression(raiden_network, token_addresses):
     node1_withdraw_amount = channel12.balance
     node2_withdraw_amount = channel_balance - node1_withdraw_amount
 
-    ndoe2_expected_balance = node2_balance_before + node2_withdraw_amount
+    node2_expected_balance = node2_balance_before + node2_withdraw_amount
 
     assert token_proxy.balance_of(api1.address) == node1_balance_before + node1_withdraw_amount
-    assert token_proxy.balance_of(node2.raiden.address) == ndoe2_expected_balance
+    assert token_proxy.balance_of(node2.raiden.address) == node2_expected_balance
