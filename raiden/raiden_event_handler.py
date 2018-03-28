@@ -45,7 +45,8 @@ UNEVENTFUL_EVENTS = (
 
 def handle_send_mediatedtransfer(
         raiden: 'RaidenService',
-        send_mediated_transfer: SendMediatedTransfer2):
+        send_mediated_transfer: SendMediatedTransfer2
+):
     mediated_transfer_message = MediatedTransfer.from_event(send_mediated_transfer)
     raiden.sign(mediated_transfer_message)
     raiden.send_async(
@@ -56,7 +57,8 @@ def handle_send_mediatedtransfer(
 
 def handle_send_directtransfer(
         raiden: 'RaidenService',
-        send_direct_transfer: SendDirectTransfer):
+        send_direct_transfer: SendDirectTransfer
+):
     direct_transfer_message = DirectTransfer.from_event(send_direct_transfer)
     raiden.sign(direct_transfer_message)
     raiden.send_async(
@@ -67,7 +69,8 @@ def handle_send_directtransfer(
 
 def handle_send_revealsecret(
         raiden: 'RaidenService',
-        reveal_secret_event: SendRevealSecret2):
+        reveal_secret_event: SendRevealSecret2
+):
     reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
     raiden.send_async(
@@ -78,7 +81,8 @@ def handle_send_revealsecret(
 
 def handle_send_balanceproof(
         raiden: 'RaidenService',
-        balance_proof_event: SendBalanceProof2):
+        balance_proof_event: SendBalanceProof2
+):
     secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
     raiden.send_async(
@@ -89,7 +93,8 @@ def handle_send_balanceproof(
 
 def handle_send_secretrequest(
         raiden: 'RaidenService',
-        secret_request_event: SendSecretRequest):
+        secret_request_event: SendSecretRequest
+):
     secret_request_message = SecretRequest.from_event(secret_request_event)
     raiden.sign(secret_request_message)
     raiden.send_async(
@@ -100,7 +105,8 @@ def handle_send_secretrequest(
 
 def handle_send_refundtransfer(
         raiden: 'RaidenService',
-        refund_transfer_event: SendRefundTransfer2):
+        refund_transfer_event: SendRefundTransfer2
+):
     refund_transfer_message = RefundTransfer.from_event(refund_transfer_event)
     raiden.sign(refund_transfer_message)
     raiden.send_async(
@@ -111,7 +117,8 @@ def handle_send_refundtransfer(
 
 def handle_transfersentsuccess(
         raiden: 'RaidenService',
-        transfer_sent_success_event: EventTransferSentSuccess):
+        transfer_sent_success_event: EventTransferSentSuccess
+):
     for result in raiden.identifier_to_results[transfer_sent_success_event.identifier]:
         result.set(True)
 
@@ -120,7 +127,8 @@ def handle_transfersentsuccess(
 
 def handle_transfersentfailed(
         raiden: 'RaidenService',
-        transfer_sent_failed_event: EventTransferSentFailed):
+        transfer_sent_failed_event: EventTransferSentFailed
+):
     for result in raiden.identifier_to_results[transfer_sent_failed_event.identifier]:
         result.set(False)
     del raiden.identifier_to_results[transfer_sent_failed_event.identifier]
@@ -128,7 +136,8 @@ def handle_transfersentfailed(
 
 def handle_unlockfailed(
         raiden: 'RaidenService',
-        unlock_failed_event: EventUnlockFailed):
+        unlock_failed_event: EventUnlockFailed
+):
     # pylint: disable=unused-argument
     log.error(
         'UnlockFailed!',
@@ -139,7 +148,8 @@ def handle_unlockfailed(
 
 def handle_contract_channelclose(
         raiden: 'RaidenService',
-        channel_close_event: ContractSendChannelClose):
+        channel_close_event: ContractSendChannelClose
+):
     balance_proof = channel_close_event.balance_proof
 
     if balance_proof:
@@ -169,7 +179,8 @@ def handle_contract_channelclose(
 
 def handle_contract_channelupdate(
         raiden: 'RaidenService',
-        channel_update_event: ContractSendChannelUpdateTransfer):
+        channel_update_event: ContractSendChannelUpdateTransfer
+):
     balance_proof = channel_update_event.balance_proof
 
     if balance_proof:
@@ -185,14 +196,16 @@ def handle_contract_channelupdate(
 
 def handle_contract_channelwithdraw(
         raiden: 'RaidenService',
-        channel_withdraw_event: ContractSendChannelWithdraw):
+        channel_withdraw_event: ContractSendChannelWithdraw
+):
     channel = raiden.chain.netting_channel(channel_withdraw_event.channel_identifier)
     channel.withdraw(channel_withdraw_event.unlock_proofs)
 
 
 def handle_contract_channelsettle(
         raiden: 'RaidenService',
-        channel_settle_event: ContractSendChannelSettle):
+        channel_settle_event: ContractSendChannelSettle
+):
     channel = raiden.chain.netting_channel(channel_settle_event.channel_identifier)
     channel.settle()
 

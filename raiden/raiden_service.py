@@ -279,8 +279,8 @@ class RaidenService:
         self.alarm.register_callback(self.set_block_number)
         self._block_number = self.chain.block_number()
 
-        # Registry registration must start *after* the alarm task, this
-        # avoid corner cases were the registry is queried in block A, a new
+        # Registry registration must start *after* the alarm task. This
+        # avoids corner cases where the registry is queried in block A, a new
         # block B is mined, and the alarm starts polling at block C.
         if first_run:
             self.register_payment_network(self.default_registry.address)
