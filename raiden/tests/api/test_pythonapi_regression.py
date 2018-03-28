@@ -9,7 +9,7 @@ from raiden.api.python import RaidenAPI2
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_close_regression(raiden_network, deposit, token_addresses):
     """ The python api was using the wrong balance proof to close the channel,
-    thus the close was failling if a transfer was made.
+    thus the close was failing if a transfer was made.
     """
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -37,7 +37,6 @@ def test_close_regression(raiden_network, deposit, token_addresses):
         [channel12.identifier],
         app0.raiden.alarm.wait_time,
     )
-
     node1_expected_balance = node1_balance_before + deposit - amount
     node2_expected_balance = node2_balance_before + deposit + amount
     assert token_proxy.balance_of(api1.address) == node1_expected_balance
