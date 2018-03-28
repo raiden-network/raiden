@@ -4,13 +4,19 @@ language: python
 python: 3.6
 cache: pip
 
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+env:
+  global:
+    - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.19/solc-static-linux'
+    - SOLC_VERSION='v0.4.19'
+
+before_install:
+  - mkdir -p $HOME/.bin
+  - export PATH=$PATH:$HOME/.bin
+  - ./.travis/download_solc.sh
+
 install: pip install -r requirements_dev.txt
 
-# Command to run tests, e.g. python setup.py test
 script:
   - make lint
   - make typecheck
   - make test
-
-
