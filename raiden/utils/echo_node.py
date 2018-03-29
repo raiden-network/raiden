@@ -10,7 +10,11 @@ from gevent.timeout import Timeout
 from ethereum import slogging
 import click
 
+from raiden.api.python import RaidenAPI2
 from raiden.network.sockfactory import SocketFactory
+from raiden.tasks import REMOVE_CALLBACK
+from raiden.transfer import channel
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.cli import (
     options,
     app,
@@ -20,10 +24,7 @@ from raiden.ui.cli import (
     RestAPI,
     ADDRESS_TYPE
 )
-from raiden.tasks import REMOVE_CALLBACK
 from raiden.utils import pex, get_system_spec
-from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.api.python import RaidenAPI2
 
 log = slogging.getLogger(__name__)
 
@@ -42,8 +43,11 @@ class EchoNode:
 
         existing_channels = self.api.get_channel_list(self.token_address)
         open_channels = [
-            channel for channel in existing_channels if channel.state == CHANNEL_STATE_OPENED
+            channel_state
+            for channel_state in existing_channels
+            if channel.get_status(channel_state) == CHANNEL_STATE_OPENED
         ]
+
         if len(open_channels) == 0:
             token = self.api.raiden.chain.token(self.token_address)
             if not token.balance_of(self.api.raiden.address) > 0:
@@ -51,7 +55,7 @@ class EchoNode:
                     pex(self.api.raiden.address),
                     pex(self.token_address),
                 ))
-            self.api.token_network_connect(
+            self.api.connect_token_network(
                 self.token_address,
                 token.balance_of(self.api.raiden.address),
                 initial_channel_target=10,
@@ -99,9 +103,9 @@ class EchoNode:
                 else:
                     channels = self.api.get_channel_list(token_address=self.token_address)
                     received_transfers = list()
-                    for channel in channels:
+                    for channel_state in channels:
                         channel_events = self.api.get_channel_events(
-                            channel.channel_address,
+                            channel_state.identifier,
                             self.last_poll_block
                         )
                         received_transfers.extend([
