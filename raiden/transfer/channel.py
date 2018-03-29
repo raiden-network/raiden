@@ -46,7 +46,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionTransferDirect,
+    ActionTransferDirect2,
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
@@ -1163,7 +1163,7 @@ def state_transition(channel_state, state_change, block_number):
     elif isinstance(state_change, ActionChannelClose):
         iteration = handle_action_close(channel_state, state_change, block_number)
 
-    elif isinstance(state_change, ActionTransferDirect):
+    elif isinstance(state_change, ActionTransferDirect2):
         iteration = handle_send_directtransfer(channel_state, state_change)
 
     elif isinstance(state_change, ContractReceiveChannelClosed):

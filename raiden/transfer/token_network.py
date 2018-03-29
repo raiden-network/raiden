@@ -4,13 +4,13 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionTransferDirect,
+    ActionTransferDirect2,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveRouteNew,
-    ReceiveTransferDirect,
+    ReceiveTransferDirect2,
 )
 
 
@@ -160,13 +160,13 @@ def state_transition(token_network_state, state_change, block_number):
             token_network_state,
             state_change,
         )
-    elif isinstance(state_change, ActionTransferDirect):
+    elif isinstance(state_change, ActionTransferDirect2):
         iteration = handle_action_transfer_direct(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ReceiveTransferDirect):
+    elif isinstance(state_change, ReceiveTransferDirect2):
         iteration = handle_receive_transfer_direct(
             token_network_state,
             state_change,
