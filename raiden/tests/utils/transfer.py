@@ -2,11 +2,21 @@
 import gevent
 from coincurve import PrivateKey
 
-from raiden.messages import DirectTransfer
-from raiden.messages import MediatedTransfer
+from raiden.messages import (
+    DirectTransfer,
+    MediatedTransfer,
+    Secret,
+)
+from raiden.raiden_service import (
+    initiator_init,
+    mediator_init,
+    target_init,
+)
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
+from raiden.transfer.mediated_transfer.events import SendMediatedTransfer2
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import compute_layers
@@ -18,6 +28,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ActionTransferDirect2,
     ReceiveTransferDirect2,
+    ReceiveUnlock,
 )
 from raiden.utils import sha3, privatekey_to_address
 from raiden.udp_message_handler import on_udp_message
@@ -89,6 +100,101 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
     )
     assert async_result.wait(timeout)
     gevent.sleep(0.3)  # let the other nodes synch
+
+
+def pending_mediated_transfer(app_chain, token, amount, identifier):
+    """ Nice to read shortcut to make a MediatedTransfer were the secret is
+    _not_ revealed.
+    While the secret is not revealed all apps will be synchronized, meaning
+    they are all going to receive the MediatedTransfer message.
+    Returns:
+        The secret used to generate the MediatedTransfer
+    """
+    # pylint: disable=too-many-locals
+
+    if len(app_chain) < 2:
+        raise ValueError('Cannot make a MediatedTransfer with less than two apps')
+
+    target = app_chain[-1].raiden.address
+
+    # Generate a secret
+    initiator_channel = get_channelstate(app_chain[0], app_chain[1], token)
+    address = initiator_channel.identifier
+    nonce_int = channel.get_next_nonce(initiator_channel.our_state)
+    nonce_bytes = nonce_int.to_bytes(2, 'big')
+    secret = sha3(address + nonce_bytes)
+
+    initiator_app = app_chain[0]
+    init_initiator_statechange = initiator_init(
+        initiator_app.raiden,
+        identifier,
+        amount,
+        secret,
+        token,
+        target,
+    )
+    events = initiator_app.raiden.wal.log_and_dispatch(
+        init_initiator_statechange,
+        initiator_app.raiden.get_block_number(),
+    )
+    send_transfermessage = must_contain_entry(events, SendMediatedTransfer2, {})
+    transfermessage = MediatedTransfer.from_event(send_transfermessage)
+    initiator_app.raiden.sign(transfermessage)
+
+    for mediator_app in app_chain[1:-1]:
+        mediator_init_statechange = mediator_init(mediator_app.raiden, transfermessage)
+        events = mediator_app.raiden.wal.log_and_dispatch(
+            mediator_init_statechange,
+            mediator_app.raiden.get_block_number(),
+        )
+        send_transfermessage = must_contain_entry(events, SendMediatedTransfer2, {})
+        transfermessage = MediatedTransfer.from_event(send_transfermessage)
+        mediator_app.raiden.sign(transfermessage)
+
+    target_app = app_chain[-1]
+    mediator_init_statechange = target_init(target_app.raiden, transfermessage)
+    events = target_app.raiden.wal.log_and_dispatch(
+        mediator_init_statechange,
+        target_app.raiden.get_block_number(),
+    )
+    return secret
+
+
+def claim_lock(app_chain, identifier, token, secret):
+    """ Unlock a pending transfer. """
+    hashlock = sha3(secret)
+    for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
+        from_channel = get_channelstate(from_, to_, token)
+        partner_channel = get_channelstate(to_, from_, token)
+
+        unlock_lock = channel.send_unlock(
+            from_channel,
+            identifier,
+            secret,
+            hashlock,
+        )
+
+        secret_message = Secret(
+            unlock_lock.identifier,
+            unlock_lock.balance_proof.nonce,
+            unlock_lock.balance_proof.channel_address,
+            unlock_lock.balance_proof.transferred_amount,
+            unlock_lock.balance_proof.locksroot,
+            unlock_lock.secret,
+        )
+        from_.raiden.sign(secret_message)
+
+        balance_proof = balanceproof_from_envelope(secret_message)
+        receive_unlock = ReceiveUnlock(
+            unlock_lock.secret,
+            balance_proof,
+        )
+
+        is_valid, msg = channel.handle_unlock(
+            partner_channel,
+            receive_unlock,
+        )
+        assert is_valid, msg
 
 
 def assert_synched_channel_state(
