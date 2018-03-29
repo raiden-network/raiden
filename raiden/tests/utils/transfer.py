@@ -1,4 +1,5 @@
 """ Utilities to make and assert transfers. """
+import gevent
 from coincurve import PrivateKey
 
 from raiden.messages import DirectTransfer
@@ -56,33 +57,64 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     assert async_result.wait()
 
 
-def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,
-                            balance1, outstanding_locks1):
-    """ Assert the values of two synched channels.
+def direct_transfer(initiator_app, target_app, token_address, amount, identifier=None, timeout=5):
+    """ Nice to read shortcut to make a DirectTransfer. """
+    channel_state = get_channelstate(initiator_app, target_app, token_address)
+    assert channel_state, 'there is not a direct channel'
+    initiator_app.raiden.direct_transfer_async(
+        token_address,
+        amount,
+        target_app.raiden.address,
+        identifier,
+    )
+    # direct transfers don't have confirmation
+    gevent.sleep(timeout)
 
+
+def assert_synched_channel_state(
+        token_address,
+        app0,
+        balance0,
+        pending_locks0,
+        app1,
+        balance1,
+        pending_locks1):
+
+    """ Assert the values of two synched channels.
     Note:
         This assert does not work if for a intermediate state, were one message
         hasn't being delivered yet or has been completely lost.
     """
     # pylint: disable=too-many-arguments
 
-    total_token = channel0.contract_balance + channel1.contract_balance
-    assert total_token == channel0.balance + channel1.balance
+    channel0 = get_channelstate(app0, app1, token_address)
+    channel1 = get_channelstate(app1, app0, token_address)
 
-    locked_amount0 = sum(lock.amount for lock in outstanding_locks0)
-    locked_amount1 = sum(lock.amount for lock in outstanding_locks1)
+    assert channel0.our_state.contract_balance == channel1.partner_state.contract_balance
+    assert channel0.partner_state.contract_balance == channel1.our_state.contract_balance
 
-    assert_balance(channel0, balance0, locked_amount0, channel0.balance - locked_amount1)
-    assert_balance(channel1, balance1, locked_amount1, channel1.balance - locked_amount0)
+    total_token = channel0.our_state.contract_balance + channel1.our_state.contract_balance
+
+    our_balance0 = channel.get_balance(channel0.our_state, channel0.partner_state)
+    partner_balance0 = channel.get_balance(channel0.partner_state, channel0.our_state)
+    assert our_balance0 + partner_balance0 == total_token
+
+    our_balance1 = channel.get_balance(channel1.our_state, channel1.partner_state)
+    partner_balance1 = channel.get_balance(channel1.partner_state, channel1.our_state)
+    assert our_balance1 + partner_balance1 == total_token
+
+    locked_amount0 = sum(lock.amount for lock in pending_locks0)
+    locked_amount1 = sum(lock.amount for lock in pending_locks1)
+
+    assert_balance(channel0, balance0, locked_amount0)
+    assert_balance(channel1, balance1, locked_amount1)
 
     # a participant's outstanding is the other's pending locks.
-    pending_locks0 = outstanding_locks1
-    pending_locks1 = outstanding_locks0
-
     assert_locked(channel0, pending_locks0)
     assert_locked(channel1, pending_locks1)
 
     assert_mirror(channel0, channel1)
+    assert_mirror(channel1, channel0)
 
 
 def assert_mirror(channel0, channel1):
@@ -140,25 +172,23 @@ def assert_locked(from_channel, pending_locks):
         assert lock.hashlock in from_channel.our_state.hashlocks_to_pendinglocks
 
 
-def assert_balance(from_channel, balance, outstanding, distributable):
+def assert_balance(from_channel, balance, locked):
     """ Assert the from_channel overall token values. """
-    assert from_channel.balance == balance
-    assert from_channel.distributable == distributable
-    assert from_channel.outstanding == outstanding
+    assert balance >= 0
+    assert locked >= 0
 
-    # the amount of token locked in the partner end of the from_channel is equal to how much
-    # we have outstanding
-    assert from_channel.partner_state.amount_locked == outstanding
+    distributable = balance - locked
+    channel_distributable = channel.get_distributable(
+        from_channel.our_state,
+        from_channel.partner_state,
+    )
 
-    assert from_channel.balance == from_channel.our_state.balance(from_channel.partner_state)
+    assert channel.get_balance(from_channel.our_state, from_channel.partner_state) == balance
+    assert channel_distributable == distributable
+    assert channel.get_amount_locked(from_channel.our_state) == locked
 
-    distributable = from_channel.our_state.distributable(from_channel.partner_state)
-    assert from_channel.distributable == distributable
-
-    assert from_channel.balance >= 0
-    assert from_channel.distributable >= 0
-    assert from_channel.locked >= 0
-    assert from_channel.balance == from_channel.locked + from_channel.distributable
+    amount_locked = channel.get_amount_locked(from_channel.our_state)
+    assert balance == amount_locked + distributable
 
 
 def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
