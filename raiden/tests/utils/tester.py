@@ -16,9 +16,16 @@ from raiden.blockchain.abi import (
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
 )
-from raiden.channel import Channel, ChannelEndState
-from raiden.utils import privatekey_to_address, get_contract_path
-from raiden.transfer.state import EMPTY_MERKLE_TREE
+from raiden.utils import (
+    address_decoder,
+    get_contract_path,
+    privatekey_to_address,
+)
+from raiden.transfer.state import (
+    NettingChannelState,
+    NettingChannelEndState,
+    TransactionExecutionStatus,
+)
 
 
 class InvalidKey(str):
@@ -216,7 +223,6 @@ def create_nettingchannel_proxy(tester_chain, tester_nettingchannel_address, log
 def channel_from_nettingcontract(
         our_key,
         netting_contract,
-        external_state,
         reveal_timeout):
     """ Create a `channel.Channel` for the `netting_contract`.
 
@@ -231,6 +237,11 @@ def channel_from_nettingcontract(
     address_balance = netting_contract.addressAndBalance(sender=our_key)
     address1_hex, balance1, address2_hex, balance2 = address_balance
 
+    opened_block_number = netting_contract.opened(sender=our_key)
+    closed_block_number = netting_contract.closed(sender=our_key)
+    settled_block_number = None
+
+    identifier = address_decoder(netting_contract.address)
     token_address = normalize_address(token_address_hex)
     address1 = normalize_address(address1_hex)
     address2 = normalize_address(address2_hex)
@@ -244,26 +255,47 @@ def channel_from_nettingcontract(
         partner_address = address1
         partner_balance = balance1
 
-    our_state = ChannelEndState(
+    our_state = NettingChannelEndState(
         our_address,
         our_balance,
-        None,
-        EMPTY_MERKLE_TREE,
     )
-    partner_state = ChannelEndState(
+    partner_state = NettingChannelEndState(
         partner_address,
         partner_balance,
-        None,
-        EMPTY_MERKLE_TREE,
     )
 
-    channel = Channel(
-        our_state,
-        partner_state,
-        external_state,
+    open_transaction = TransactionExecutionStatus(
+        None,
+        opened_block_number,
+        TransactionExecutionStatus.SUCCESS,
+    )
+
+    close_transaction = None
+    if closed_block_number:
+        close_transaction = TransactionExecutionStatus(
+            None,
+            closed_block_number,
+            TransactionExecutionStatus.SUCCESS,
+        )
+
+    settle_transaction = None
+    if settled_block_number:
+        settle_transaction = TransactionExecutionStatus(
+            None,
+            settled_block_number,
+            TransactionExecutionStatus.SUCCESS,
+        )
+
+    channel = NettingChannelState(
+        identifier,
         token_address,
         reveal_timeout,
         settle_timeout,
+        our_state,
+        partner_state,
+        open_transaction,
+        close_transaction,
+        settle_transaction,
     )
 
     return channel
