@@ -4,7 +4,7 @@ git+https://github.com/LefterisJP/pystun@develop#egg=pystun
 bitcoin==1.1.42
 cachetools==2.0.1
 coincurve==7.1.0
-ethereum==2.3.0
+ethereum==2.3.1
 filelock==3.0
 Flask-Cors==3.0.3
 Flask-Restful==0.3.6
