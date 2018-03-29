@@ -9,12 +9,9 @@ from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.merkle_tree import (
-    compute_layers,
-    merkleroot,
-)
+from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import (
-    EMPTY_MERKLE_ROOT,
+    EMPTY_MERKLE_TREE,
     MerkleTreeState,
     balanceproof_from_envelope,
 )
@@ -23,6 +20,13 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect2,
 )
 from raiden.utils import sha3, privatekey_to_address
+from raiden.udp_message_handler import on_udp_message
+
+
+def sign_and_inject(message, key, address, app):
+    """Sign the message with key and inject it directly in the app protocol layer."""
+    message.sign(key, address)
+    on_udp_message(app.raiden, message)
 
 
 def get_received_transfer(app_channel, transfer_number):
@@ -71,6 +75,22 @@ def direct_transfer(initiator_app, target_app, token_address, amount, identifier
     gevent.sleep(timeout)
 
 
+def mediated_transfer(initiator_app, target_app, token, amount, identifier=None, timeout=5):
+    """ Nice to read shortcut to make a MediatedTransfer.
+    The secret will be revealed and the apps will be synchronized.
+    """
+    # pylint: disable=too-many-arguments
+
+    async_result = initiator_app.raiden.mediated_transfer_async(
+        token,
+        amount,
+        target_app.raiden.address,
+        identifier,
+    )
+    assert async_result.wait(timeout)
+    gevent.sleep(0.3)  # let the other nodes synch
+
+
 def assert_synched_channel_state(
         token_address,
         app0,
@@ -117,59 +137,43 @@ def assert_synched_channel_state(
     assert_mirror(channel1, channel0)
 
 
-def assert_mirror(channel0, channel1):
-    """ Assert that `channel0` has a correct `partner_state` to represent
-    `channel1` and vice-versa.
+def assert_mirror(original, mirror):
+    """ Assert that `mirror` has a correct `partner_state` to represent
+    `original`.
     """
-    unclaimed0 = merkleroot(channel0.our_state.merkletree)
-    unclaimed1 = merkleroot(channel1.partner_state.merkletree)
-    assert unclaimed0 == unclaimed1
+    original_locked_amount = channel.get_amount_locked(original.our_state)
+    mirror_locked_amount = channel.get_amount_locked(mirror.partner_state)
+    assert original_locked_amount == mirror_locked_amount
 
-    assert channel0.our_state.amount_locked == channel1.partner_state.amount_locked
-    assert channel0.transferred_amount == channel1.partner_state.transferred_amount
-
-    balance0 = channel0.our_state.balance(channel0.partner_state)
-    balance1 = channel1.partner_state.balance(channel1.our_state)
+    balance0 = channel.get_balance(original.our_state, original.partner_state)
+    balance1 = channel.get_balance(mirror.partner_state, mirror.our_state)
     assert balance0 == balance1
 
-    assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
-    assert channel0.distributable == channel1.partner_state.distributable(channel1.our_state)
+    balanceproof0 = channel.get_current_balanceproof(original.our_state)
+    balanceproof1 = channel.get_current_balanceproof(mirror.partner_state)
+    assert balanceproof0 == balanceproof1
 
-    unclaimed1 = merkleroot(channel1.our_state.merkletree)
-    unclaimed0 = merkleroot(channel0.partner_state.merkletree)
-    assert unclaimed1 == unclaimed0
-
-    assert channel1.our_state.amount_locked == channel0.partner_state.amount_locked
-    assert channel1.transferred_amount == channel0.partner_state.transferred_amount
-
-    balance1 = channel1.our_state.balance(channel1.partner_state)
-    balance0 = channel0.partner_state.balance(channel0.our_state)
-    assert balance1 == balance0
-
-    assert channel1.distributable == channel1.our_state.distributable(channel1.partner_state)
-    assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)
+    distributable0 = channel.get_distributable(original.our_state, original.partner_state)
+    distributable1 = channel.get_distributable(mirror.partner_state, mirror.our_state)
+    assert distributable0 == distributable1
 
 
 def assert_locked(from_channel, pending_locks):
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        leaves = [sha3(lock.as_bytes) for lock in pending_locks]
+        leaves = [sha3(lock.encoded) for lock in pending_locks]
         layers = compute_layers(leaves)
         tree = MerkleTreeState(layers)
-        root = merkleroot(tree)
     else:
-        root = EMPTY_MERKLE_ROOT
+        tree = EMPTY_MERKLE_TREE
 
-    assert len(from_channel.our_state.hashlocks_to_pendinglocks) == len(
-        pending_locks
-    )
-    assert merkleroot(from_channel.our_state.merkletree) == root
-    assert from_channel.our_state.amount_locked == sum(lock.amount for lock in pending_locks)
-    assert from_channel.locked == sum(lock.amount for lock in pending_locks)
+    assert from_channel.our_state.merkletree == tree
 
     for lock in pending_locks:
-        assert lock.hashlock in from_channel.our_state.hashlocks_to_pendinglocks
+        pending = lock.hashlock in from_channel.our_state.hashlocks_to_pendinglocks
+        unclaimed = lock.hashlock in from_channel.our_state.hashlocks_to_unclaimedlocks
+        assert pending or unclaimed
 
 
 def assert_balance(from_channel, balance, locked):
