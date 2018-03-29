@@ -161,6 +161,12 @@ def token_amount(number_of_nodes, deposit):
 
 
 @pytest.fixture
+def network_wait():
+    """Time is miliseconds used to wait for network events."""
+    return 0.3
+
+
+@pytest.fixture
 def private_keys(number_of_nodes, privatekey_seed):
     """ Private keys for each raiden node. """
 
