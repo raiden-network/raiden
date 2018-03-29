@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging
 from typing import List, Dict, Any
-
 import networkx as nx
+from coincurve import PublicKey
+from coincurve.utils import sha256
 from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
-from raiden_libs.utils import compute_merkle_tree, get_merkle_root
+from raiden_libs.utils import compute_merkle_tree, get_merkle_root, public_key_to_address
 from web3.contract import Contract
-
 from pathfinder.config import DIVERSITY_PEN_DEFAULT
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
@@ -155,20 +155,22 @@ class TokenNetwork:
         )
 
     def update_fee(
-        self,
-        channel_id: ChannelId,
-        new_fee: float,
-        signature: Address
+            self,
+            channel_id: ChannelId,
+            new_fee: bytes,
+            signature: bytes
     ):
-        """ Update the channel with a new fee.
+        """ Update the channel with a new fee. New_fee bytes are of the form '0.0012'.encode()"""
+        # Fixme: I need a nonce for replay protection
+        msg = new_fee
+        signer = public_key_to_address(
+            PublicKey.from_signature_and_message(
+                signature,
+                msg,
+                hasher=sha256
+            )
+        )
 
-        Called by the public interface. """
-
-        # FIXME: Signature on fee update not checked !!
-        # msg = new_fee
-        # signer = from_signature_and_message(signature, msg)
-        # <-- this verifies the signature of the fee-update!
-        signer = signature
         participant1, participant2 = self.channel_id_to_addresses[channel_id]
         if is_same_address(participant1, signer):
             sender = participant1
@@ -179,6 +181,7 @@ class TokenNetwork:
         else:
             raise ValueError('Signature does not match any of the participants.')
 
+        new_fee = float(new_fee)
         channel_view = self.G[sender][receiver]['view']
 
         if new_fee >= self.max_fee:
@@ -196,20 +199,24 @@ class TokenNetwork:
         channel_view.fee = new_fee
 
     def get_paths(
-        self,
-        source: Address,
-        target: Address,
-        value: int,
-        k: int,
-        **kwargs
+            self,
+            source: Address,
+            target: Address,
+            value: int,
+            k: int,
+            **kwargs
     ):
         visited: Dict[ChannelId, float] = {}
         paths = []
         hop_bias = kwargs.get('bias', 0)
+        assert 0 <= hop_bias <= 1
 
-        def weight(u: Address, v: Address, attr: Dict[str, Any]):
+        def weight(
+                u: Address,
+                v: Address,
+                attr: Dict[str, Any]
+        ):
             view: ChannelView = attr['view']
-            assert 0 <= hop_bias <= 1
             if view.capacity < value:
                 return None
             else:
