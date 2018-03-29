@@ -9,7 +9,7 @@ from raiden.transfer import views
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import (
     ActionForTokenNetwork,
-    ReceiveTransferDirect,
+    ReceiveTransferDirect2,
     ReceiveUnlock,
 )
 from raiden.messages import (
@@ -101,7 +101,7 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     token_address = message.token
     balance_proof = balanceproof_from_envelope(message)
 
-    direct_transfer = ReceiveTransferDirect(
+    direct_transfer = ReceiveTransferDirect2(
         message.identifier,
         balance_proof,
     )

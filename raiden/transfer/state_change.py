@@ -107,46 +107,6 @@ class ActionCancelTransfer(StateChange):
         return not self.__eq__(other)
 
 
-class ActionTransferDirect(StateChange):
-    def __init__(
-            self,
-            identifier,
-            amount,
-            token_address,
-            node_address):
-
-        self.identifier = identifier
-        self.amount = amount
-        self.token_address = token_address
-        self.node_address = node_address
-
-    def __repr__(self):
-        return (
-            'ActionTransferDirect('
-            'identifier:{} amount:{} token_address:{} node_address:{}'
-            ')'
-        ).format(
-            self.identifier,
-            self.amount,
-            self.token_address,
-            self.node_address,
-        )
-
-    def __eq__(self, other):
-        if not isinstance(other, ActionTransferDirect):
-            return False
-
-        return (
-            self.identifier == other.identifier and
-            self.amount == other.amount and
-            self.token_address == other.token_address and
-            self.node_address == other.node_address
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class ActionTransferDirect2(StateChange):
     def __init__(self, receiver_address: typing.address, identifier, amount: int):
         if not isinstance(receiver_address, typing.address):
@@ -583,46 +543,6 @@ class ContractReceiveRouteNew(StateChange):
             isinstance(other, ContractReceiveRouteNew) and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class ReceiveTransferDirect(StateChange):
-    def __init__(
-            self,
-            identifier,
-            amount,
-            token_address,
-            sender):
-
-        self.identifier = identifier
-        self.amount = amount
-        self.token_address = token_address
-        self.sender = sender
-
-    def __repr__(self):
-        return (
-            'ReceiveTransferDirect('
-            'identifier:{} amount:{} token_address:{} sender:{}'
-            ')'
-        ).format(
-            self.identifier,
-            self.amount,
-            self.token_address,
-            self.sender,
-        )
-
-    def __eq__(self, other):
-        if not isinstance(other, ReceiveTransferDirect):
-            return False
-
-        return (
-            self.identifier == other.identifier and
-            self.amount == other.amount and
-            self.token_address == other.token_address and
-            self.sender == other.sender
         )
 
     def __ne__(self, other):
