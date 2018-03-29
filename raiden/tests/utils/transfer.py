@@ -1,7 +1,6 @@
 """ Utilities to make and assert transfers. """
 from coincurve import PrivateKey
 
-from raiden.channel.netting_channel import Channel
 from raiden.messages import DirectTransfer
 from raiden.messages import MediatedTransfer
 from raiden.tests.utils.factories import make_address
@@ -23,11 +22,6 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect2,
 )
 from raiden.utils import sha3, privatekey_to_address
-
-
-def get_sent_transfer(app_channel, transfer_number):
-    assert isinstance(app_channel, Channel)
-    return app_channel.sent_transfers[transfer_number]
 
 
 def get_received_transfer(app_channel, transfer_number):
