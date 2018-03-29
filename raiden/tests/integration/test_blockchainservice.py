@@ -6,13 +6,16 @@ import itertools
 import pytest
 from ethereum.tools import _solidity
 from ethereum.tools._solidity import compile_file
-from ethereum.utils import denoms, normalize_address
+from ethereum.utils import normalize_address
 
+from raiden import waiting
+from raiden.api.python import RaidenAPI2
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.blockchain import wait_until_block
+from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path, topic_decoder
 
 
@@ -24,8 +27,9 @@ solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 @pytest.mark.parametrize('number_of_tokens', [0])
 def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements,too-many-locals
-
     app0, app1, app2 = raiden_network
+    registry_address = app0.raiden.default_registry.address
+
     peer0_address = app0.raiden.address
     peer1_address = app1.raiden.address
     peer2_address = app2.raiden.address
@@ -138,17 +142,15 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail()['our_balance'] == 70
     assert netting_channel_02.detail()['partner_balance'] == 130
 
-    # open channel with same peer again after settling
-    netting_channel_01.close(
-        nonce=0,
-        transferred_amount=0,
-        locksroot='',
-        extra_hash='',
-        signature='',
-    )
+    RaidenAPI2(app1.raiden).channel_close(token_address, app0.raiden.address)
 
-    wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + settle_timeout + 1)
-    netting_channel_01.settle()
+    waiting.wait_for_settle(
+        app1.raiden,
+        registry_address,
+        token_address,
+        [netting_address_01],
+        app1.raiden.alarm.wait_time,
+    )
 
     with pytest.raises(AddressWithoutCode):
         netting_channel_01.closed()
@@ -259,7 +261,6 @@ def test_blockchain(
     transaction_hash = registry_proxy.transact(
         'addToken',
         token_proxy.contract_address,
-        gasprice=denoms.wei,
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
@@ -304,7 +305,6 @@ def test_blockchain(
         'newChannel',
         addresses[1],
         10,
-        gasprice=denoms.wei,
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
@@ -321,12 +321,18 @@ def test_blockchain(
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_with_self(raiden_network, settle_timeout):
+def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     app0, = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    token_address = app0.raiden.default_registry.token_addresses()[0]
+    registry_address = app0.raiden.default_registry.address
+    token_address = token_addresses[0]
 
-    assert not app0.raiden.token_to_channelgraph[token_address].address_to_channel
+    current_chanels = views.list_channelstate_for_tokennetwork(
+        views.state_from_app(app0),
+        registry_address,
+        token_address,
+    )
+    assert not current_chanels
 
     graph0 = app0.raiden.default_registry.manager_by_token(token_address)
 
