@@ -10,7 +10,7 @@ from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.contracts import ContractManager
 from web3 import Web3
 
-from pathfinder.gevent_error_handler import register_error_handler
+from raiden_libs.gevent_error_handler import register_error_handler
 from pathfinder.token_network import TokenNetwork
 from pathfinder.transport import MatrixTransport
 from pathfinder.utils.types import Address
