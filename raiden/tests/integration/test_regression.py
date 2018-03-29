@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
+import gevent
 import pytest
 
-from raiden.messages import RevealSecret
+from raiden.messages import (
+    Lock,
+    MediatedTransfer,
+    RevealSecret,
+    Secret,
+)
 from raiden.tests.fixtures.raiden_network import (
     CHAIN,
     wait_for_partners,
 )
 from raiden.tests.utils.network import setup_channels
+from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer.mediated_transfer.events import SendRevealSecret2
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
+from raiden.utils import sha3
 
 # pylint: disable=too-many-locals
 
@@ -74,21 +83,100 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
     )
     assert transfer.wait()
 
-    all_logs = app1.raiden.transaction_log.get_events_in_block_range(
-        0,
-        app1.raiden.get_block_number(),
-    )
-
-    secret = None
-    for log in all_logs:
-        event = log.event_object
+    event = None
+    for _, event in app1.raiden.wal.storage.get_events_by_block(0, 'latest'):
         if isinstance(event, SendRevealSecret2):
-            secret = event.secret
             break
-    assert secret
+    assert event
 
-    reveal_secret = RevealSecret(secret)
+    reveal_secret = RevealSecret(event.secret)
     app2.raiden.sign(reveal_secret)
 
     reveal_data = reveal_secret.encode()
     app1.raiden.protocol.receive(reveal_data)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_regression_multiple_revealsecret(raiden_network, token_addresses):
+    """ Multiple RevealSecret messages arriving at the same time must be
+    handled properly.
+
+    Secret handling followed these steps:
+
+        The Secret message arrives
+        The secret is registered
+        The channel is updated and the correspoding lock is removed
+        * A balance proof for the new channel state is created and sent to the
+          payer
+        The channel is unregistered for the given hashlock
+
+    The step marked with an asterisk above introduced a context-switch, this
+    allowed a second Reveal Secret message to be handled before the channel was
+    unregistered, because the channel was already updated an exception was raised
+    for an unknown secret.
+    """
+    app0, app1 = raiden_network
+    token = token_addresses[0]
+    channelstate_0_1 = get_channelstate(app0, app1, token)
+
+    identifier = 1
+    secret = sha3(b'test_regression_multiple_revealsecret')
+    hashlock = sha3(secret)
+    expiration = app0.raiden.get_block_number() + 100
+    amount = 10
+    lock = Lock(
+        amount,
+        expiration,
+        hashlock,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    mediated_transfer = MediatedTransfer(
+        identifier,
+        nonce,
+        token,
+        channelstate_0_1.identifier,
+        transferred_amount,
+        app1.raiden.address,
+        lock.hashlock,
+        lock,
+        app1.raiden.address,
+        app0.raiden.address,
+    )
+    app0.raiden.sign(mediated_transfer)
+
+    message_data = mediated_transfer.encode()
+    app1.raiden.protocol.receive(message_data)
+
+    reveal_secret = RevealSecret(secret)
+    app0.raiden.sign(reveal_secret)
+    reveal_secret_data = reveal_secret.encode()
+
+    secret = Secret(
+        identifier=identifier,
+        nonce=mediated_transfer.nonce + 1,
+        channel=channelstate_0_1.identifier,
+        transferred_amount=amount,
+        locksroot=EMPTY_MERKLE_ROOT,
+        secret=secret,
+    )
+    app0.raiden.sign(secret)
+    secret_data = secret.encode()
+
+    messages = [
+        secret_data,
+        reveal_secret_data,
+    ]
+
+    wait = [
+        gevent.spawn_later(
+            .1,
+            app1.raiden.protocol.receive,
+            data,
+        )
+        for data in messages
+    ]
+
+    gevent.joinall(wait)
