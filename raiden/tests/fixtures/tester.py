@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pytest
-from ethereum.utils import normalize_address
 
 from raiden.utils import privatekey_to_address
 from raiden.tests.utils.tester import (
@@ -16,7 +15,8 @@ from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,
 )
-from raiden.tests.utils.tester_client import ChannelExternalStateTester
+
+# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture
@@ -190,30 +190,19 @@ def tester_nettingcontracts(
 
 
 @pytest.fixture
-def tester_channels(tester_chain, tester_nettingcontracts, reveal_timeout):
+def tester_channels(tester_nettingcontracts, reveal_timeout):
     result = list()
+
     for first_key, second_key, nettingcontract in tester_nettingcontracts:
-        first_externalstate = ChannelExternalStateTester(
-            tester_chain,
-            first_key,
-            normalize_address(nettingcontract.address),
-        )
         first_channel = channel_from_nettingcontract(
             first_key,
             nettingcontract,
-            first_externalstate,
             reveal_timeout,
         )
 
-        second_externalstate = ChannelExternalStateTester(
-            tester_chain,
-            second_key,
-            normalize_address(nettingcontract.address),
-        )
         second_channel = channel_from_nettingcontract(
             second_key,
             nettingcontract,
-            second_externalstate,
             reveal_timeout,
         )
 

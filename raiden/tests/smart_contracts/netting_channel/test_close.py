@@ -5,16 +5,14 @@ from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
 from raiden.messages import DirectTransfer
-from raiden.tests.utils.messages import (
-    make_direct_transfer,
-)
-from raiden.tests.utils.transfer import make_direct_transfer_from_channel
-from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.messages import make_direct_transfer
+from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
+from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 
 
-def test_close_event(tester_chain, tester_nettingcontracts, tester_events):
+def test_close_event(tester_nettingcontracts, tester_events):
     """ The event ChannelClosed is emitted when close is called. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
     address = privatekey_to_address(pkey0)
@@ -64,13 +62,11 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
         nettingchannel.close(sender=nonparticipant_key)
 
 
-def test_close_first_argument_is_for_partner_transfer(tester_chain, tester_channels):
+def test_close_first_argument_is_for_partner_transfer(tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
-        block_number,
         channel0,
         channel1,
         amount=90,
@@ -101,9 +97,9 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
-        channel=channel0.channel_address,
+        channel=channel0.identifier,
         transferred_amount=10,
-        recipient=channel0.our_address,
+        recipient=channel0.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
 
@@ -138,7 +134,7 @@ def test_close_wrong_channel(tester_channels):
         token=channel0.token_address,
         channel=wrong_address,
         transferred_amount=10,
-        recipient=channel0.our_address,
+        recipient=channel0.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
 
@@ -220,13 +216,11 @@ def test_close_valid_tranfer_different_token(
         )
 
 
-def test_close_tampered_identifier(tester_chain, tester_channels):
+def test_close_tampered_identifier(tester_channels):
     """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
-        block_number,
         channel0,
         channel1,
         amount=90,
@@ -249,13 +243,11 @@ def test_close_tampered_identifier(tester_chain, tester_channels):
         )
 
 
-def test_close_tampered_nonce(tester_chain, tester_channels):
+def test_close_tampered_nonce(tester_channels):
     """ Messages with a tampered nonce must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    block_number = tester_chain.block.number
     transfer0 = make_direct_transfer_from_channel(
-        block_number,
         channel0,
         channel1,
         amount=90,

@@ -1,15 +1,28 @@
 """ Utilities to make and assert transfers. """
 from coincurve import PrivateKey
 
-from raiden.transfer import views
-from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
-from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
 from raiden.messages import DirectTransfer
+from raiden.messages import MediatedTransfer
+from raiden.tests.utils.factories import make_address
+from raiden.transfer import channel, views
+from raiden.transfer.events import SendDirectTransfer
+from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
+from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import (
     compute_layers,
     merkleroot,
 )
+from raiden.transfer.state import (
+    EMPTY_MERKLE_ROOT,
+    MerkleTreeState,
+    balanceproof_from_envelope,
+)
+from raiden.transfer.state_change import (
+    ActionTransferDirect2,
+    ReceiveTransferDirect2,
+)
+from raiden.utils import sha3, privatekey_to_address
 
 
 def get_sent_transfer(app_channel, transfer_number):
@@ -154,58 +167,82 @@ def assert_balance(from_channel, balance, outstanding, distributable):
     assert from_channel.balance == from_channel.locked + from_channel.distributable
 
 
-def increase_transferred_amount(from_channel, to_channel, amount):
+def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
     # increasing the transferred amount by a value larger than distributable
     # would put one end of the channel in a negative balance, which is
     # forbidden
-    assert from_channel.distributable >= amount, 'operation would end up in a incosistent state'
+    distributable_from_to = channel.get_distributable(
+        from_channel.our_state,
+        from_channel.partner_state,
+    )
+    assert distributable_from_to >= amount, 'operation would end up in a incosistent state'
 
     identifier = 1
-    nonce = from_channel.get_next_nonce()
-    direct_transfer_message = DirectTransfer(
-        identifier=identifier,
-        nonce=nonce,
-        token=from_channel.token_address,
-        channel=from_channel.channel_address,
-        transferred_amount=from_channel.transferred_amount + amount,
-        recipient=from_channel.partner_state.address,
-        locksroot=merkleroot(from_channel.partner_state.merkletree),
+    event = channel.send_directtransfer(
+        from_channel,
+        amount,
+        identifier,
     )
 
-    # skipping the netting channel register_transfer because the message is not
-    # signed
-    from_channel.our_state.register_direct_transfer(direct_transfer_message)
-    to_channel.partner_state.register_direct_transfer(direct_transfer_message)
+    direct_transfer_message = DirectTransfer.from_event(event)
+    address = privatekey_to_address(pkey)
+    sign_key = PrivateKey(pkey)
+    direct_transfer_message.sign(sign_key, address)
+
+    # if this fails it's not the right key for the current `from_channel`
+    assert direct_transfer_message.sender == from_channel.our_state.address
+
+    balance_proof = balanceproof_from_envelope(direct_transfer_message)
+    receive_direct = ReceiveTransferDirect2(
+        identifier,
+        balance_proof,
+    )
+
+    channel.handle_receive_directtransfer(
+        partner_channel,
+        receive_direct,
+    )
+
+    return direct_transfer_message
 
 
-def make_direct_transfer_from_channel(block_number, from_channel, partner_channel, amount, pkey):
+def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pkey):
     """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`.
     """
-    identifier = from_channel.get_next_nonce()
+    identifier = channel.get_next_nonce(from_channel.our_state)
 
-    direct_transfer_msg = from_channel.create_directtransfer(
+    state_change = ActionTransferDirect2(
+        from_channel.partner_state.address,
+        identifier,
         amount,
-        identifier=identifier,
     )
+    iteration = channel.handle_send_directtransfer(
+        from_channel,
+        state_change,
+    )
+    assert isinstance(iteration.events[0], SendDirectTransfer)
+    direct_transfer_message = DirectTransfer.from_event(iteration.events[0])
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    direct_transfer_msg.sign(sign_key, address)
+    direct_transfer_message.sign(sign_key, address)
 
     # if this fails it's not the right key for the current `from_channel`
-    assert direct_transfer_msg.sender == from_channel.our_state.address
+    assert direct_transfer_message.sender == from_channel.our_state.address
 
-    from_channel.register_transfer(
-        block_number,
-        direct_transfer_msg,
-    )
-    partner_channel.register_transfer(
-        block_number,
-        direct_transfer_msg,
+    balance_proof = balanceproof_from_envelope(direct_transfer_message)
+    receive_direct = ReceiveTransferDirect2(
+        identifier,
+        balance_proof,
     )
 
-    return direct_transfer_msg
+    channel.handle_receive_directtransfer(
+        partner_channel,
+        receive_direct,
+    )
+
+    return direct_transfer_message
 
 
 def make_mediated_transfer(
@@ -215,45 +252,47 @@ def make_mediated_transfer(
         target,
         lock,
         pkey,
-        block_number,
         secret=None):
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`.
     """
-    identifier = from_channel.get_next_nonce()
-    fee = 0
+    identifier = channel.get_next_nonce(from_channel.our_state)
 
-    mediated_transfer_msg = from_channel.create_mediatedtransfer(
+    mediatedtransfer = channel.send_mediatedtransfer(
+        from_channel,
         initiator,
         target,
-        fee,
         lock.amount,
         identifier,
         lock.expiration,
         lock.hashlock,
     )
+    mediated_transfer_msg = MediatedTransfer.from_event(mediatedtransfer)
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
     mediated_transfer_msg.sign(sign_key, address)
 
-    from_channel.block_number = block_number
-    partner_channel.block_number = block_number
+    # compute the signature
+    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
+    mediatedtransfer.balance_proof = balance_proof
 
     # if this fails it's not the right key for the current `from_channel`
     assert mediated_transfer_msg.sender == from_channel.our_state.address
+    receive_mediatedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
 
-    from_channel.register_transfer(
-        block_number,
-        mediated_transfer_msg,
-    )
-    partner_channel.register_transfer(
-        block_number,
-        mediated_transfer_msg,
+    channel.handle_receive_mediatedtransfer(
+        partner_channel,
+        receive_mediatedtransfer,
     )
 
     if secret is not None:
-        from_channel.register_secret(secret)
-        partner_channel.register_secret(secret)
+        random_sender = make_address()
+
+        from_secretreveal = ReceiveSecretReveal(secret, random_sender)
+        channel.handle_receive_secretreveal(from_channel, from_secretreveal)
+
+        partner_secretreveal = ReceiveSecretReveal(secret, random_sender)
+        channel.handle_receive_secretreveal(partner_channel, partner_secretreveal)
 
     return mediated_transfer_msg

@@ -630,19 +630,17 @@ class ReceiveTransferDirect(StateChange):
 
 
 class ReceiveTransferDirect2(StateChange):
-    def __init__(self, transfer_identifier, token_address, balance_proof):
+    def __init__(self, transfer_identifier, balance_proof):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
         self.transfer_identifier = transfer_identifier
-        self.token_address = token_address
         self.balance_proof = balance_proof
 
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferDirect2) and
             self.transfer_identifier == other.transfer_identifier and
-            self.token_address == other.token_address and
             self.balance_proof == other.balance_proof
         )
 
@@ -652,11 +650,10 @@ class ReceiveTransferDirect2(StateChange):
     def __repr__(self):
         return (
             'ReceiveTransferDirect2('
-            'id:{} token_address:{} balance_proof:{}'
+            'id:{} balance_proof:{}'
             ')'
         ).format(
             self.transfer_identifier,
-            pex(self.token_address),
             self.balance_proof,
         )
 
