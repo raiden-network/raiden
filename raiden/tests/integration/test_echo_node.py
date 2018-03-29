@@ -11,6 +11,7 @@ from raiden.tests.utils import get_channel_events_for_token
 
 
 # `RaidenAPI2.get_channel_events` is not supported in tester
+@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -59,6 +60,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
 
 
 # `RaidenAPI2.get_channel_events` is not supported in tester
+@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -112,6 +114,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
 
 
 # `RaidenAPI2.get_channel_events` is not supported in tester
+@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [8])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
