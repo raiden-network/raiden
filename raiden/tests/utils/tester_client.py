@@ -118,65 +118,6 @@ def tester_deploy_contract(
     return contract_address
 
 
-class ChannelExternalStateTester:
-    def __init__(self, tester_chain, private_key, address):
-        self.tester_chain = tester_chain
-        self.netting_channel = NettingChannelTesterMock(
-            tester_chain,
-            private_key,
-            address,
-        )
-        self.settled_block = 0
-
-        self.callbacks_on_opened = list()
-        self.callbacks_on_closed = list()
-        self.callbacks_on_settled = list()
-        self.hashlocks_channels = defaultdict(list)
-
-    def get_block_number(self):
-        return self.tester_chain.block.number
-
-    @property
-    def opened_block(self):
-        return self.netting_channel.opened()
-
-    @property
-    def closed_block(self):
-        return self.netting_channel.closed()
-
-    def can_transfer(self):
-        return self.netting_channel.can_transfer()
-
-    def update_transfer(self, partner_transfer):
-        nonce = partner_transfer.nonce
-        transferred_amount = partner_transfer.transferred_amount
-        locksroot = partner_transfer.locksroot
-        signature = partner_transfer.signature
-
-        packed = partner_transfer.packed()
-        message_hash = sha3(packed.data[:-65])
-
-        return self.netting_channel.update_transfer(
-            nonce,
-            transferred_amount,
-            locksroot,
-            message_hash,
-            signature,
-        )
-
-    def withdraw(self, unlock_proofs):
-        return self.netting_channel.withdraw(unlock_proofs)
-
-    def settle(self):
-        return self.netting_channel.settle()
-
-    def register_channel_for_hashlock(self, channel, hashlock):
-        channels_registered = self.hashlocks_channels[hashlock]
-
-        if channel not in channels_registered:
-            channels_registered.append(channel)
-
-
 class FilterTesterMock:
     def __init__(self, tester_chain, contract_address, topics, filter_id_raw):
         self.tester_chain = tester_chain
