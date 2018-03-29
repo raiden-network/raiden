@@ -25,6 +25,7 @@ from raiden.network.rpc.transactions import (
 )
 from raiden.exceptions import (
     DuplicatedChannelError,
+    InvalidSettleTimeout,
     SamePeerAddress,
 )
 from raiden.settings import (
@@ -87,7 +88,7 @@ class ChannelManager:
             settle_timeout > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
         )
         if invalid_timeout:
-            raise ValueError('settle_timeout must be in range [{}, {}]'.format(
+            raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}]'.format(
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 

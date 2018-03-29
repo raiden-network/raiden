@@ -27,7 +27,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-    sha3,
 )
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
