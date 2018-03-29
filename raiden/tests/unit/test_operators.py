@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from raiden.utils import sha3
 from raiden.transfer.state_change import (
-    ActionCancelTransfer,
-    ActionTransferDirect,
+    ActionCancelPayment,
+    ActionTransferDirect2,
     Block,
-    ReceiveTransferDirect,
 )
 from raiden.transfer.events import (
     EventTransferSentSuccess,
@@ -24,6 +23,7 @@ HASH2 = sha3(b'joo')
 
 
 def test_transfer_statechange_operators():
+    # pylint: disable=unneeded-not
     a = Block(2)
     b = Block(2)
     c = Block(3)
@@ -33,27 +33,30 @@ def test_transfer_statechange_operators():
     assert a != c
     assert not a == c
 
-    a = ActionCancelTransfer(2)
-    b = ActionCancelTransfer(2)
-    c = ActionCancelTransfer(3)
+    a = ActionCancelPayment(2)
+    b = ActionCancelPayment(2)
+    c = ActionCancelPayment(3)
 
     assert a == b
     assert not a != b
     assert a != c
     assert not a == c
 
-    a = ActionTransferDirect(2, 2, ADDRESS, ADDRESS)
-    b = ActionTransferDirect(2, 2, ADDRESS, ADDRESS)
-    c = ActionTransferDirect(3, 4, ADDRESS, ADDRESS2)
-
-    assert a == b
-    assert not a != b
-    assert a != c
-    assert not a == c
-
-    a = ReceiveTransferDirect(2, 2, ADDRESS, ADDRESS)
-    b = ReceiveTransferDirect(2, 2, ADDRESS, ADDRESS)
-    c = ReceiveTransferDirect(3, 4, ADDRESS, ADDRESS2)
+    a = ActionTransferDirect2(
+        receiver_address=ADDRESS,
+        identifier=2,
+        amount=2,
+    )
+    b = ActionTransferDirect2(
+        receiver_address=ADDRESS,
+        identifier=2,
+        amount=2,
+    )
+    c = ActionTransferDirect2(
+        receiver_address=ADDRESS2,  # different recipient
+        identifier=2,
+        amount=2,
+    )
 
     assert a == b
     assert not a != b
@@ -67,6 +70,7 @@ def test_event_operators():
     c = EventTransferSentSuccess(3, 4, sha3(b'target'))
     d = EventTransferSentSuccess(3, 4, sha3(b'differenttarget'))
 
+    # pylint: disable=unneeded-not
     assert a == b
     assert not a != b
     assert a != c
@@ -100,6 +104,7 @@ def test_message_operators():
     b = Ack(ADDRESS, HASH)
     c = Ack(ADDRESS2, HASH2)
 
+    # pylint: disable=unneeded-not
     assert a == b
     assert not a != b
     assert a != c
