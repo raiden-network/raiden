@@ -124,49 +124,49 @@ def handle_receive_transfer_refund(token_network_state, state_change, block_numb
 
 
 def state_transition(token_network_state, state_change, block_number):
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,unidiomatic-typecheck
 
-    if isinstance(state_change, ActionChannelClose):
+    if type(state_change) == ActionChannelClose:
         iteration = handle_channel_close(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ContractReceiveChannelNew):
+    elif type(state_change) == ContractReceiveChannelNew:
         iteration = handle_channelnew(
             token_network_state,
             state_change,
         )
-    elif isinstance(state_change, ContractReceiveChannelNewBalance):
+    elif type(state_change) == ContractReceiveChannelNewBalance:
         iteration = handle_balance(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ContractReceiveChannelClosed):
+    elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_closed(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ContractReceiveChannelSettled):
+    elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_settled(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ContractReceiveRouteNew):
+    elif type(state_change) == ContractReceiveRouteNew:
         iteration = handle_newroute(
             token_network_state,
             state_change,
         )
-    elif isinstance(state_change, ActionTransferDirect):
+    elif type(state_change) == ActionTransferDirect:
         iteration = handle_action_transfer_direct(
             token_network_state,
             state_change,
             block_number,
         )
-    elif isinstance(state_change, ReceiveTransferDirect):
+    elif type(state_change) == ReceiveTransferDirect:
         iteration = handle_receive_transfer_direct(
             token_network_state,
             state_change,
