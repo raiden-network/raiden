@@ -30,9 +30,10 @@ from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
 )
+from raiden.transfer import channel
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
 from raiden.utils import (
@@ -197,6 +198,32 @@ class ChannelSchema(BaseSchema):
         decoding_class = Channel
 
 
+class ChannelStateSchema(BaseSchema):
+    channel_address = AddressField(attribute='identifier')
+    token_address = AddressField()
+    partner_address = fields.Method('get_partner_address')
+    settle_timeout = fields.Integer()
+    reveal_timeout = fields.Integer()
+    balance = fields.Method('get_balance')
+    state = fields.Method('get_state')
+
+    def get_partner_address(self, channel_state):  # pylint: disable=no-self-use
+        return address_encoder(channel_state.partner_state.address)
+
+    def get_balance(self, channel_state):  # pylint: disable=no-self-use
+        return channel.get_balance(
+            channel_state.our_state,
+            channel_state.partner_state,
+        )
+
+    def get_state(self, channel_state):
+        return channel.get_status(channel_state)
+
+    class Meta:
+        strict = True
+        decoding_class = Channel
+
+
 class ChannelRequestSchema(BaseSchema):
     channel_address = AddressField(missing=None)
     token_address = AddressField(required=True)
@@ -221,7 +248,7 @@ class ChannelRequestSchema(BaseSchema):
 
 
 class ChannelListSchema(BaseListSchema):
-    data = fields.Nested(ChannelSchema, many=True)
+    data = fields.Nested(ChannelStateSchema, many=True)
 
     class Meta:
         strict = True

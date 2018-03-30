@@ -1,7 +1,7 @@
 """ Utilities to make and assert transfers. """
-import gevent
 from coincurve import PrivateKey
 
+from raiden.transfer import views
 from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
@@ -12,28 +12,6 @@ from raiden.transfer.merkle_tree import (
 )
 
 
-def channel(app0, app1, token):
-    """ Nice to read shortcut to get the channel. """
-    graph = app0.raiden.token_to_channelgraph[token]
-    return graph.partneraddress_to_channel[app1.raiden.address]
-
-
-def sleep(initiator_app, target_app, token, multiplier=1):
-    """ Sleep long enough to conclude a transfer from `initiator_app` to
-    `target_app`.
-    """
-    graph = initiator_app.raiden.token_to_channelgraph[token]
-    path = list(graph.channelgraph.get_shortest_paths(
-        initiator_app.raiden.address,
-        target_app.raiden.address,
-    ))
-
-    # 0.2 should be rougly how long it takes to process the transfer in a
-    # single node
-    sleep_time = 0.2 * len(path) * multiplier
-    gevent.sleep(sleep_time)
-
-
 def get_sent_transfer(app_channel, transfer_number):
     assert isinstance(app_channel, Channel)
     return app_channel.sent_transfers[transfer_number]
@@ -41,6 +19,17 @@ def get_sent_transfer(app_channel, transfer_number):
 
 def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
+
+
+def get_channelstate(app0, app1, token_address) -> 'NettingChannelState':
+    registry_address = app0.raiden.default_registry.address
+    channel_state = views.get_channelstate_for(
+        views.state_from_app(app0),
+        registry_address,
+        token_address,
+        app1.raiden.address,
+    )
+    return channel_state
 
 
 def transfer(initiator_app, target_app, token, amount, identifier):
@@ -58,124 +47,6 @@ def transfer(initiator_app, target_app, token, amount, identifier):
         identifier
     )
     assert async_result.wait()
-
-
-def direct_transfer(initiator_app, target_app, token, amount, identifier):
-    """ Nice to read shortcut to make a DirectTransfer. """
-    graph = initiator_app.raiden.token_to_channelgraph[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_to_channel
-    assert has_channel, 'there is not a direct channel'
-
-    async_result = initiator_app.raiden.direct_transfer_async(
-        token,
-        amount,
-        target_app.raiden.address,
-        identifier,
-    )
-    assert async_result.wait()
-
-
-def mediated_transfer(initiator_app, target_app, token, amount, identifier=None):
-    """ Nice to read shortcut to make a MediatedTransfer.
-
-    The secret will be revealed and the apps will be synchronized.
-    """
-    # pylint: disable=too-many-arguments
-
-    graph = initiator_app.raiden.token_to_channelgraph[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_to_channel
-
-    if has_channel:
-        raise NotImplementedError(
-            'There is a direct channel with the target, skipping mediated transfer.'
-        )
-
-    else:
-        async_result = initiator_app.raiden.mediated_transfer_async(
-            token,
-            amount,
-            target_app.raiden.address,
-            identifier,
-        )
-        assert async_result.wait()
-
-
-def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
-    """ Nice to read shortcut to make a MediatedTransfer were the secret is
-    _not_ revealed.
-
-    While the secret is not revealed all apps will be synchronized, meaning
-    they are all going to receive the MediatedTransfer message.
-
-    Returns:
-        The secret used to generate the MediatedTransfer
-    """
-    # pylint: disable=too-many-locals
-
-    if len(app_chain) < 2:
-        raise ValueError('Cannot make a MediatedTransfer with less than two apps')
-
-    fee = 0
-    secret = None
-    hashlock = None
-    initiator_app = app_chain[0]
-    target_app = app_chain[0]
-
-    for from_app, to_app in zip(app_chain[:-1], app_chain[1:]):
-        from_channel = channel(from_app, to_app, token)
-        to_channel = channel(to_app, from_app, token)
-
-        # use the initiator channel to generate a secret
-        if secret is None:
-            address = from_channel.external_state.netting_channel.address
-            nonce = str(from_channel.our_state.nonce)
-            secret = sha3(address + nonce.encode())
-            hashlock = sha3(secret)
-
-        transfer_ = from_channel.create_mediatedtransfer(
-            initiator_app.raiden.address,
-            target_app.raiden.address,
-            fee,
-            amount,
-            identifier,
-            expiration,
-            hashlock,
-        )
-        from_app.raiden.sign(transfer_)
-
-        from_channel.register_transfer(
-            from_app.raiden.get_block_number(),
-            transfer_,
-        )
-        to_channel.register_transfer(
-            to_app.raiden.get_block_number(),
-            transfer_,
-        )
-
-    return secret
-
-
-def claim_lock(app_chain, identifier, token, secret):
-    """ Unlock a pending transfer. """
-    for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
-        from_channel = channel(from_, to_, token)
-        to_channel = channel(to_, from_, token)
-
-        secret_message = from_channel.create_secret(
-            identifier,
-            secret,
-        )
-        from_.raiden.sign(secret_message)
-
-        from_channel.register_transfer(
-            from_.raiden.get_block_number(),
-            secret_message,
-        )
-
-        to_channel.register_transfer(
-            to_.raiden.get_block_number(),
-            secret_message,
-        )
 
 
 def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,

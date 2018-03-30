@@ -14,7 +14,7 @@ from ethereum import slogging
 from ethereum.utils import decode_hex
 
 from raiden.app import App
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI2
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -74,8 +74,8 @@ def run(
         logging,
         logfile,
         scenario,
-        stage_prefix,
-        results_filename):  # pylint: disable=unused-argument
+        stage_prefix
+):  # pylint: disable=unused-argument
 
     # TODO: only enabled logging on "initiators"
     slogging.configure(logging, log_file=logfile)
@@ -123,7 +123,7 @@ def run(
         listen_port,
     )
 
-    app.raiden.register_registry(app.raiden.default_registry.address)
+    app.raiden.register_payment_network(app.raiden.default_registry.address)
 
     if scenario:
         script = json.load(scenario)
@@ -172,7 +172,7 @@ def run(
 
             log.warning("Waiting for all nodes to come online")
 
-            api = RaidenAPI(app.raiden)
+            api = RaidenAPI2(app.raiden)
 
             for node in partner_nodes:
                 api.start_health_check_for(node)
@@ -194,7 +194,7 @@ def run(
                 our_index = nodes.index(our_node)
                 peer = nodes[our_index + 1]
 
-                tools.register_token(token_address)
+                tools.token_network_register(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
                 while True:
@@ -208,7 +208,7 @@ def run(
                 while True:
                     try:
                         log.warning("Opening channel with {} for {}".format(peer, token_address))
-                        api.open(token_address, peer)
+                        api.channel_open(token_address, peer)
                         break
                     except KeyError:
                         log.warning("Error: could not open channel with {}".format(peer))
@@ -217,7 +217,7 @@ def run(
                 while True:
                     try:
                         log.warning("Funding channel with {} for {}".format(peer, token_address))
-                        api.deposit(token_address, peer, amount)
+                        api.channel_deposit(token_address, peer, amount)
                         break
                     except Exception:
                         log.warning("Error: could not deposit {} for {}".format(amount, peer))
@@ -244,7 +244,7 @@ def run(
                 initial_time = time.time()
                 times = [0] * total_transfers
                 for index in range(total_transfers):
-                    RaidenAPI(app.raiden).transfer(
+                    RaidenAPI2(app.raiden).transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,
@@ -285,18 +285,6 @@ def run(
         event = gevent.event.Event()
         gevent.signal(signal.SIGUSR2, event.set)
         event.wait()
-
-        results = tools.channel_stats_for(token_address, peer)
-        if transfer_results['total_time'] != 0:
-            results['total_time'] = transfer_results['total_time']
-        if len(transfer_results['timestamps']) > 0:
-            results['timestamps'] = transfer_results['timestamps']
-        results['channel'] = repr(results['channel'])  # FIXME
-
-        log.warning("Results: {}".format(results))
-
-        with open(results_filename, 'w') as fp:
-            json.dump(results, fp, indent=2)
 
         open('{}.stage3'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()

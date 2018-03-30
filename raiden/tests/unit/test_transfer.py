@@ -10,7 +10,6 @@ from raiden.messages import (
     Lock,
     MediatedTransfer,
     Ping,
-    RefundTransfer,
     RevealSecret,
     Secret,
     SecretRequest,
@@ -20,15 +19,7 @@ from raiden.tests.utils.messages import (
     setup_messages_cb,
     make_refund_transfer,
 )
-from raiden.tests.utils.transport import (
-    MessageLoggerTransport,
-)
-from raiden.tests.utils.transfer import (
-    assert_synched_channels,
-    channel,
-    direct_transfer,
-    transfer,
-)
+from raiden.tests.utils.transfer import assert_synched_channels
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.factories import (
     UNIT_SECRET,
@@ -291,136 +282,6 @@ def test_direct_transfer_exceeding_distributable(raiden_network, token_addresses
     assert not result.wait(timeout=10)
 
 
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [3])
-def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, deposit):
-    alice_app, bob_app, charlie_app = raiden_network
-    token_address = token_addresses[0]
-
-    result = alice_app.raiden.mediated_transfer_async(
-        token_address,
-        deposit,
-        charlie_app.raiden.address,
-        identifier=1,
-    )
-
-    channel_ab = channel(alice_app, bob_app, token_address)
-    assert channel_ab.locked == deposit
-    assert channel_ab.outstanding == 0
-    assert channel_ab.distributable == 0
-
-    assert result.wait(timeout=10)
-    gevent.sleep(.1)  # wait for charlie to sync
-
-    result = charlie_app.raiden.mediated_transfer_async(
-        token_address,
-        deposit * 2,
-        alice_app.raiden.address,
-        identifier=1,
-    )
-    assert result.wait(timeout=10)
-
-
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
-def test_cancel_transfer(raiden_chain, token_addresses, deposit):
-    """ A failed transfer must send a refund back.
-
-    TODO:
-        - Unlock the token on refund #1091
-        - Clear the merkletree and update the locked amount #193
-        - Remove the refund message type #490
-    """
-    # Topology:
-    #
-    #  0 -> 1 -> 2
-    #
-    app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-
-    token = token_addresses[0]
-
-    assert_synched_channels(
-        channel(app0, app1, token), deposit, [],
-        channel(app1, app0, token), deposit, []
-    )
-
-    assert_synched_channels(
-        channel(app1, app2, token), deposit, [],
-        channel(app2, app1, token), deposit, []
-    )
-
-    # make a transfer to test the path app0 -> app1 -> app2
-    identifier_path = 1
-    amount_path = 1
-    transfer(app0, app2, token, amount_path, identifier_path)
-
-    # drain the channel app1 -> app2
-    identifier_drain = 2
-    amount_drain = int(deposit * 0.8)
-    direct_transfer(app1, app2, token, amount_drain, identifier_drain)
-
-    # wait for the nodes to sync
-    gevent.sleep(0.2)
-
-    assert_synched_channels(
-        channel(app0, app1, token), deposit - amount_path, [],
-        channel(app1, app0, token), deposit + amount_path, []
-    )
-
-    assert_synched_channels(
-        channel(app1, app2, token), deposit - amount_path - amount_drain, [],
-        channel(app2, app1, token), deposit + amount_path + amount_drain, []
-    )
-
-    # app0 -> app1 -> app2 is the only available path but the channel app1 ->
-    # app2 doesnt have resources and needs to send a RefundTransfer down the
-    # path
-    identifier_refund = 3
-    amount_refund = 50
-    async_result = app0.raiden.mediated_transfer_async(
-        token,
-        amount_refund,
-        app2.raiden.address,
-        identifier_refund,
-    )
-    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
-
-    gevent.sleep(0.2)
-
-    # A lock structure with the correct amount
-    app0_messages = app0.raiden.protocol.transport.get_sent_messages(app0.raiden.address)
-    mediated_message = list(
-        message
-        for message in app0_messages
-        if isinstance(message, MediatedTransfer) and message.target == app2.raiden.address
-    )[-1]
-    assert mediated_message
-
-    app1_messages = app1.raiden.protocol.transport.get_sent_messages(app1.raiden.address)
-    refund_message = next(
-        message
-        for message in app1_messages
-        if isinstance(message, RefundTransfer) and message.recipient == app0.raiden.address
-    )
-    assert refund_message
-
-    assert mediated_message.lock.amount == refund_message.lock.amount
-    assert mediated_message.lock.hashlock == refund_message.lock.hashlock
-    assert mediated_message.lock.expiration > refund_message.lock.expiration
-
-    # Both channels have the amount locked because of the refund message
-    assert_synched_channels(
-        channel(app0, app1, token), deposit - amount_path, [refund_message.lock],
-        channel(app1, app0, token), deposit + amount_path, [mediated_message.lock],
-    )
-
-    assert_synched_channels(
-        channel(app1, app2, token), deposit - amount_path - amount_drain, [],
-        channel(app2, app1, token), deposit + amount_path + amount_drain, []
-    )
-
-
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_healthcheck_with_normal_peer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -630,100 +491,6 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
-
-
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
-    alice_app = raiden_network[0]
-    bob_app = raiden_network[1]
-    charlie_app = raiden_network[2]
-
-    graph = list(alice_app.raiden.token_to_channelgraph.values())[0]
-    token_address = graph.token_address
-
-    channel0 = channel(
-        alice_app,
-        bob_app,
-        token_address,
-    )
-
-    amount = 10
-    result = alice_app.raiden.mediated_transfer_async(
-        token_address,
-        amount,
-        charlie_app.raiden.address,
-        identifier=1,
-    )
-
-    assert result.wait(timeout=10)
-
-    lock = Lock(amount, 1, UNIT_HASHLOCK)
-    identifier = create_default_identifier()
-    mediated_transfer = MediatedTransfer(
-        identifier=identifier,
-        nonce=1,
-        token=token_address,
-        channel=channel0.channel_address,
-        transferred_amount=amount,
-        recipient=bob_app.raiden.address,
-        locksroot=UNIT_HASHLOCK,
-        lock=lock,
-        target=charlie_app.raiden.address,
-        initiator=alice_app.raiden.address,
-        fee=0
-    )
-    alice_key = PrivateKey(private_keys[0])
-
-    # send the invalid mediated transfer from alice to bob with the same nonce
-    sign_and_send(
-        mediated_transfer,
-        alice_key,
-        alice_app.raiden.address,
-        bob_app,
-    )
-
-
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_receive_mediatedtransfer_invalid_address(raiden_chain, token_addresses):
-    app0, app1, app2 = raiden_chain
-    token_address = token_addresses[0]
-
-    amount = 10
-    result = app0.raiden.mediated_transfer_async(
-        token_address,
-        amount,
-        app2.raiden.address,
-        identifier=1,
-    )
-    assert result.wait(timeout=10)
-
-    # and now send one more mediated transfer with the same nonce, simulating
-    # an out-of-order/resent message that arrives late
-    channel0 = channel(app0, app1, token_address)
-    lock = Lock(amount, 1, UNIT_HASHLOCK)
-    identifier = create_default_identifier()
-    mediated_transfer = MediatedTransfer(
-        identifier=identifier,
-        nonce=1,
-        token=token_address,
-        channel=channel0.channel_address,
-        transferred_amount=amount,
-        recipient=app1.raiden.address,
-        locksroot=UNIT_HASHLOCK,
-        lock=lock,
-        target=app2.raiden.address,
-        initiator=app0.raiden.address,
-        fee=0
-    )
-
-    sign_and_send(
-        mediated_transfer,
-        app0.raiden.private_key,
-        app0.raiden.address,
-        app1,
-    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

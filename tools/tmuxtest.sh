@@ -228,9 +228,9 @@ am2=raiden.default_registry.get_manager_by_token_address('${TOKEN2}'.decode('hex
 
     # assume the genesis file alredy has distributed token to all nodes
 
-    tmux send-keys -t raiden:3 "tools.register_token('${TOKEN1}')" C-m
-    tmux send-keys -t raiden:3 "tools.register_token('${TOKEN2}')" C-m
-    # tmux send-keys -t raiden:3 "tools.register_token('${TOKEN3}')" C-m
+    tmux send-keys -t raiden:3 "tools.token_network_register('${TOKEN1}')" C-m
+    tmux send-keys -t raiden:3 "tools.token_network_register('${TOKEN2}')" C-m
+    # tmux send-keys -t raiden:3 "tools.token_network_register('${TOKEN3}')" C-m
 
     tmux send-keys -t raiden:4 "import time; time.sleep(10)  # wait for token registration"  C-m
     tmux send-keys -t raiden:5 "import time; time.sleep(10 + 10)  # wait for token registration and channel openning"  C-m

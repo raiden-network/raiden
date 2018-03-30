@@ -357,30 +357,29 @@ class NettingChannel:
             )
 
         failed = False
-        for merkle_proof, locked_encoded, secret in unlock_proofs:
-            if isinstance(locked_encoded, messages.Lock):
+        for unlock_proof in unlock_proofs:
+            if isinstance(unlock_proof.lock_encoded, messages.Lock):
                 raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
 
-            merkleproof_encoded = ''.join(merkle_proof)
+            merkleproof_encoded = ''.join(unlock_proof.merkle_proof)
 
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'withdraw',
-                locked_encoded,
+                unlock_proof.lock_encoded,
                 merkleproof_encoded,
-                secret,
+                unlock_proof.secret,
             )
 
             self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            lock = messages.Lock.from_bytes(locked_encoded)
+
             if receipt_or_none:
-                lock = messages.Lock.from_bytes(locked_encoded)
                 log.critical(
                     'withdraw failed',
                     node=pex(self.node_address),
                     contract=pex(self.address),
-                    lock=lock,
+                    lock=unlock_proof,
                 )
                 self._check_exists()
                 failed = True
@@ -390,7 +389,7 @@ class NettingChannel:
                     'withdraw sucessfull',
                     node=pex(self.node_address),
                     contract=pex(self.address),
-                    lock=lock,
+                    lock=unlock_proof,
                 )
 
         if failed:
