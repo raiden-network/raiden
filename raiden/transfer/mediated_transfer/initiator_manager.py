@@ -223,38 +223,38 @@ def handle_secretreveal(payment_state, state_change, channelidentifiers_to_chann
 
 
 def state_transition(payment_state, state_change, channelidentifiers_to_channels, block_number):
-    if isinstance(state_change, ActionInitInitiator):
+    if type(state_change) == ActionInitInitiator:
         iteration = handle_init(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
             block_number,
         )
-    elif isinstance(state_change, ReceiveSecretRequest):
+    elif type(state_change) == ReceiveSecretRequest:
         sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
-    elif isinstance(state_change, ActionCancelRoute):
+    elif type(state_change) == ActionCancelRoute:
         iteration = handle_cancelroute(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
             block_number,
         )
-    elif isinstance(state_change, ReceiveTransferRefundCancelRoute):
+    elif type(state_change) == ReceiveTransferRefundCancelRoute:
         iteration = handle_transferrefund(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
             block_number,
         )
-    elif isinstance(state_change, ActionCancelPayment):
+    elif type(state_change) == ActionCancelPayment:
         iteration = handle_cancelpayment(
             payment_state,
         )
-    elif isinstance(state_change, ReceiveSecretReveal):
+    elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secretreveal(
             payment_state,
             state_change,

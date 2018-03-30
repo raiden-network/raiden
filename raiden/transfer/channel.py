@@ -1155,31 +1155,33 @@ def handle_channel_withdraw(channel_state, state_change):
 
 
 def state_transition(channel_state, state_change, block_number):
+    # pylint: disable=too-many-branches,unidiomatic-typecheck
+
     events = list()
     iteration = TransitionResult(channel_state, events)
 
-    if isinstance(state_change, Block):
+    if type(state_change) == Block:
         iteration = handle_block(channel_state, state_change)
 
-    elif isinstance(state_change, ActionChannelClose):
+    elif type(state_change) == ActionChannelClose:
         iteration = handle_action_close(channel_state, state_change, block_number)
 
-    elif isinstance(state_change, ActionTransferDirect):
+    elif type(state_change) == ActionTransferDirect:
         iteration = handle_send_directtransfer(channel_state, state_change)
 
-    elif isinstance(state_change, ContractReceiveChannelClosed):
+    elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_channel_closed(channel_state, state_change)
 
-    elif isinstance(state_change, ContractReceiveChannelSettled):
+    elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_channel_settled(channel_state, state_change)
 
-    elif isinstance(state_change, ContractReceiveChannelNewBalance):
+    elif type(state_change) == ContractReceiveChannelNewBalance:
         iteration = handle_channel_newbalance(channel_state, state_change)
 
-    elif isinstance(state_change, ContractReceiveChannelWithdraw):
+    elif type(state_change) == ContractReceiveChannelWithdraw:
         iteration = handle_channel_withdraw(channel_state, state_change)
 
-    elif isinstance(state_change, ReceiveTransferDirect):
+    elif type(state_change) == ReceiveTransferDirect:
         iteration = handle_receive_directtransfer(channel_state, state_change)
 
     return iteration

@@ -565,93 +565,93 @@ def handle_receive_unlock(node_state, state_change):
 
 
 def state_transition(node_state, state_change):
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,unidiomatic-typecheck
 
-    if isinstance(state_change, Block):
+    if type(state_change) == Block:
         iteration = handle_block(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitNode):
+    elif type(state_change) == ActionInitNode:
         iteration = handle_node_init(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionForTokenNetwork):
+    elif type(state_change) == ActionForTokenNetwork:
         iteration = handle_token_network_action(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionNewTokenNetwork):
+    elif type(state_change) == ActionNewTokenNetwork:
         iteration = handle_new_token_network(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionChangeNodeNetworkState):
+    elif type(state_change) == ActionChangeNodeNetworkState:
         iteration = handle_node_change_network_state(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionLeaveAllNetworks):
+    elif type(state_change) == ActionLeaveAllNetworks:
         iteration = handle_leave_all_networks(
             node_state,
         )
-    elif isinstance(state_change, ActionInitInitiator):
+    elif type(state_change) == ActionInitInitiator:
         iteration = handle_init_initiator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitMediator):
+    elif type(state_change) == ActionInitMediator:
         iteration = handle_init_mediator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitTarget):
+    elif type(state_change) == ActionInitTarget:
         iteration = handle_init_target(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ContractReceiveNewPaymentNetwork):
+    elif type(state_change) == ContractReceiveNewPaymentNetwork:
         iteration = handle_new_payment_network(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ContractReceiveNewTokenNetwork):
+    elif type(state_change) == ContractReceiveNewTokenNetwork:
         iteration = handle_tokenadded(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ContractReceiveChannelWithdraw):
+    elif type(state_change) == ContractReceiveChannelWithdraw:
         iteration = handle_channel_withdraw(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveSecretReveal):
+    elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secret_reveal(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveTransferRefundCancelRoute):
+    elif type(state_change) == ReceiveTransferRefundCancelRoute:
         iteration = handle_receive_transfer_refund_cancel_route(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveTransferRefund):
+    elif type(state_change) == ReceiveTransferRefund:
         iteration = handle_receive_transfer_refund(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveSecretRequest):
+    elif type(state_change) == ReceiveSecretRequest:
         iteration = handle_receive_secret_request(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveSecretReveal):
+    elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_receive_secret_reveal(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ReceiveUnlock):
+    elif type(state_change) == ReceiveUnlock:
         iteration = handle_receive_unlock(
             node_state,
             state_change,
