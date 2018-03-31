@@ -24,7 +24,8 @@ from raiden.tests.utils.transfer import (
 def test_failsfast_directtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
-        deposit):
+        deposit
+):
 
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -40,10 +41,7 @@ def test_failsfast_directtransfer_exceeding_distributable(
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_receive_directtransfer_invalidtoken(
-        raiden_network,
-        deposit,
-        token_addresses):
+def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addresses):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -148,10 +146,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_receive_directtransfer_invalidnonce(
-        raiden_network,
-        deposit,
-        token_addresses):
+def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addresses):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]

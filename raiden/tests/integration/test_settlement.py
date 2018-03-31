@@ -190,8 +190,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, deposit):
     """ Any transfer following a secret revealed must update the locksroot, so
-    that an attacker cannot reuse a secret to double claim a lock.
-    """
+    that an attacker cannot reuse a secret to double claim a lock."""
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     amount = 30
@@ -258,7 +257,8 @@ def test_close_channel_lack_of_balance_proof(
         raiden_chain,
         reveal_timeout,
         deposit,
-        token_addresses):
+        token_addresses
+):
 
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
@@ -309,14 +309,13 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     path.
 
     The attacker needs to use two addresses (A1 and A2) and connect both to the
-    hub H, once connected a mediated transfer is initialized from A1 to A2
-    through H, once the node A2 receives the mediated transfer the attacker
-    uses the known secret and reveal to close and settles the channel H-A2,
+    hub H. Once connected a mediated transfer is initialized from A1 to A2
+    through H. Once the node A2 receives the mediated transfer the attacker
+    uses the known secret and reveal to close and settle the channel H-A2,
     without revealing the secret to H's raiden node.
 
     The intention is to make the hub transfer the token but for him to be
-    unable to require the token A1.
-    """
+    unable to require the token A1."""
     amount = 30
 
     token = token_addresses[0]
@@ -355,15 +354,15 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     )
     # XXX: verify that the secret was publicized
 
-    # at this point the hub might not know yet the secret, and won't be able to
+    # at this point the hub might not know the secret yet, and won't be able to
     # claim the token from the channel A1 - H
 
-    # the attacker settle the contract
+    # the attacker settles the contract
     app2.raiden.chain.next_block()
 
     attack_channel.netting_channel.settle(token, attack_contract)
 
-    # at this point the attack has the "stolen" funds
+    # at this point the attacker has the "stolen" funds
     attack_contract = app2.raiden.chain.token_hashchannel[token][attack_contract]
     assert attack_contract.participants[app2.raiden.address]['netted'] == deposit + amount
     assert attack_contract.participants[app1.raiden.address]['netted'] == deposit - amount
@@ -374,9 +373,9 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     assert hub_contract.participants[app1.raiden.address]['netted'] == deposit
 
     # to mitigate the attack the Hub _needs_ to use a lower expiration for the
-    # locked transfer between H-A2 than A1-H, since for A2 to acquire the token
-    # it needs to make the secret public in the block chain we publish the
-    # secret through an event and the Hub will be able to require it's funds
+    # locked transfer between H-A2 than A1-H. For A2 to acquire the token
+    # it needs to make the secret public in the blockchain so it publishes the
+    # secret through an event and the Hub is able to require its funds
     app1.raiden.chain.next_block()
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
@@ -426,8 +425,8 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     # use the one with the largest transferred_amount.
     RaidenAPI2(app0.raiden).channel_close(token_address, app1.raiden.address)
 
-    # Bob needs to provide a transfer otherwise it's netted balance will be
-    # wrong, so he is incetivized to use Alice's transfer with the largest
+    # Bob needs to provide a transfer otherwise its netted balance will be
+    # wrong, so he is incentivised to use Alice's transfer with the largest
     # transferred_amount.
     #
     # This is done automatically

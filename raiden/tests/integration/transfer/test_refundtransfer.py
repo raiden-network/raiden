@@ -83,8 +83,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     TODO:
         - Unlock the token on refund #1091
         - Clear the merkletree and update the locked amount #193
-        - Remove the refund message type #490
-    """
+        - Remove the refund message type #490"""
     # Topology:
     #
     #  0 -> 1 -> 2

@@ -111,9 +111,9 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
           payer
         The channel is unregistered for the given hashlock
 
-    The step marked with an asterisk above introduced a context-switch, this
+    The step marked with an asterisk above introduced a context-switch. This
     allowed a second Reveal Secret message to be handled before the channel was
-    unregistered, because the channel was already updated an exception was raised
+    unregistered. And because the channel was already updated an exception was raised
     for an unknown secret.
     """
     app0, app1 = raiden_network

@@ -8,11 +8,8 @@ from raiden.transfer.state_change import ActionForTokenNetwork
 
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_log_directransfer(
-        raiden_chain,
-        token_addresses,
-        deposit):
-    """The action that start a direct transfer must be logged in the WAL."""
+def test_log_directransfer(raiden_chain, token_addresses, deposit):
+    """The action that starts a direct transfer must be logged in the WAL."""
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = token_addresses[0]
 

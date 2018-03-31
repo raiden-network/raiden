@@ -88,8 +88,8 @@ def direct_transfer(initiator_app, target_app, token_address, amount, identifier
 
 def mediated_transfer(initiator_app, target_app, token, amount, identifier=None, timeout=5):
     """ Nice to read shortcut to make a MediatedTransfer.
-    The secret will be revealed and the apps will be synchronized.
-    """
+
+    The secret will be revealed and the apps will be synchronized."""
     # pylint: disable=too-many-arguments
 
     async_result = initiator_app.raiden.mediated_transfer_async(
@@ -103,8 +103,8 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
 
 
 def pending_mediated_transfer(app_chain, token, amount, identifier):
-    """ Nice to read shortcut to make a MediatedTransfer were the secret is
-    _not_ revealed.
+    """ Nice to read shortcut to make a MediatedTransfer where the secret is _not_ revealed.
+
     While the secret is not revealed all apps will be synchronized, meaning
     they are all going to receive the MediatedTransfer message.
     Returns:
@@ -204,13 +204,13 @@ def assert_synched_channel_state(
         pending_locks0,
         app1,
         balance1,
-        pending_locks1):
-
+        pending_locks1
+):
     """ Assert the values of two synched channels.
+
     Note:
-        This assert does not work if for a intermediate state, were one message
-        hasn't being delivered yet or has been completely lost.
-    """
+        This assert does not work for an intermediate state, where one message
+        hasn't been delivered yet or has been completely lost."""
     # pylint: disable=too-many-arguments
 
     channel0 = get_channelstate(app0, app1, token_address)
@@ -244,9 +244,7 @@ def assert_synched_channel_state(
 
 
 def assert_mirror(original, mirror):
-    """ Assert that `mirror` has a correct `partner_state` to represent
-    `original`.
-    """
+    """ Assert that `mirror` has a correct `partner_state` to represent `original`."""
     original_locked_amount = channel.get_amount_locked(original.our_state)
     mirror_locked_amount = channel.get_amount_locked(mirror.partner_state)
     assert original_locked_amount == mirror_locked_amount
@@ -303,8 +301,7 @@ def assert_balance(from_channel, balance, locked):
 
 def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
     # increasing the transferred amount by a value larger than distributable
-    # would put one end of the channel in a negative balance, which is
-    # forbidden
+    # would put one end of the channel in a negative balance, which is forbidden
     distributable_from_to = channel.get_distributable(
         from_channel.our_state,
         from_channel.partner_state,
@@ -342,8 +339,7 @@ def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
 
 def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pkey):
     """ Helper to create and register a direct transfer from `from_channel` to
-    `partner_channel`.
-    """
+    `partner_channel`."""
     identifier = channel.get_next_nonce(from_channel.our_state)
 
     state_change = ActionTransferDirect2(
@@ -386,10 +382,10 @@ def make_mediated_transfer(
         target,
         lock,
         pkey,
-        secret=None):
+        secret=None
+):
     """ Helper to create and register a mediated transfer from `from_channel` to
-    `partner_channel`.
-    """
+    `partner_channel`."""
     identifier = channel.get_next_nonce(from_channel.our_state)
 
     mediatedtransfer = channel.send_mediatedtransfer(
