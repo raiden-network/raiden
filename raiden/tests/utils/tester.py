@@ -220,15 +220,11 @@ def create_nettingchannel_proxy(tester_chain, tester_nettingchannel_address, log
     return netting_channel_abi
 
 
-def channel_from_nettingcontract(
-        our_key,
-        netting_contract,
-        reveal_timeout):
+def channel_from_nettingcontract(our_key, netting_contract, reveal_timeout):
     """ Create a `channel.Channel` for the `netting_contract`.
 
     Use this to make sure that both implementations (the smart contract and the
-    python code) work in tandem.
-    """
+    python code) work in tandem."""
     our_address = privatekey_to_address(our_key)
 
     token_address_hex = netting_contract.tokenAddress(sender=our_key)

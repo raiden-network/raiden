@@ -12,10 +12,7 @@ from raiden.transfer.events import (
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('privatekey_seed', ['test_initiator_log_directransfer_success:{}'])
-def test_initiator_log_directransfer_success(
-        raiden_chain,
-        token_addresses,
-        deposit):
+def test_initiator_log_directransfer_success(raiden_chain, token_addresses, deposit):
 
     token_address = token_addresses[0]
     amount = int(deposit / 2.)

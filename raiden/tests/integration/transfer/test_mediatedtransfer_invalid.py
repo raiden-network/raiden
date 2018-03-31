@@ -26,7 +26,8 @@ from raiden.tests.utils.transfer import (
 def test_failsfast_mediatedtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
-        deposit):
+        deposit
+):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -72,7 +73,8 @@ def test_receive_mediatedtransfer_invalidnonce(
         deposit,
         token_addresses,
         reveal_timeout,
-        network_wait):
+        network_wait
+):
 
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -125,7 +127,8 @@ def test_receive_mediatedtransfer_invalidsender(
         raiden_network,
         token_addresses,
         deposit,
-        reveal_timeout):
+        reveal_timeout
+):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -168,7 +171,8 @@ def test_receive_mediatedtransfer_invalidrecipient(
         raiden_network,
         token_addresses,
         reveal_timeout,
-        deposit):
+        deposit
+):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -213,7 +217,8 @@ def test_received_mediatedtransfer_closedchannel(
         raiden_network,
         reveal_timeout,
         token_addresses,
-        deposit):
+        deposit
+):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]

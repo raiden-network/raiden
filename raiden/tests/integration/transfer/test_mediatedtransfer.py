@@ -41,7 +41,8 @@ def test_mediated_transfer_with_entire_deposit(
         raiden_network,
         token_addresses,
         deposit,
-        network_wait):
+        network_wait
+):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
