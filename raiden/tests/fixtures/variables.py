@@ -162,7 +162,7 @@ def token_amount(number_of_nodes, deposit):
 
 @pytest.fixture
 def network_wait():
-    """Time is miliseconds used to wait for network events."""
+    """Time in seconds used to wait for network events."""
     return 0.3
 
 
