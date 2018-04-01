@@ -18,7 +18,6 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidLocksRoot,
     InvalidNonce,
-    TransferWhenClosed,
     TransferUnwanted,
     UnknownAddress,
     UnknownTokenAddress,
@@ -853,7 +852,7 @@ class RaidenProtocol:
             except (InvalidAddress, UnknownAddress) as e:
                 log.debug("Couldn't send the ACK", e=e)
 
-        except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
+        except (UnknownAddress, InvalidNonce, TransferUnwanted) as e:
             if log.isEnabledFor(logging.WARN):
                 log.warn('maybe unwanted transfer', e=e)
 
