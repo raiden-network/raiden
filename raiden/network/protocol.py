@@ -16,7 +16,6 @@ from ethereum import slogging
 
 from raiden.exceptions import (
     InvalidAddress,
-    TransferUnwanted,
     UnknownAddress,
     UnknownTokenAddress,
     RaidenShuttingDown,
@@ -850,7 +849,7 @@ class RaidenProtocol:
             except (InvalidAddress, UnknownAddress) as e:
                 log.debug("Couldn't send the ACK", e=e)
 
-        except (UnknownAddress, TransferUnwanted) as e:
+        except UnknownAddress as e:
             if log.isEnabledFor(logging.WARN):
                 log.warn('maybe unwanted transfer', e=e)
 
