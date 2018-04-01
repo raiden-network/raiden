@@ -11,12 +11,12 @@ from raiden.utils import (
     topic_decoder,
     topic_encoder,
 )
-from raiden.utils.typing import address
+from raiden.utils.typing import Address
 
 
 def new_filter(
         jsonrpc_client: JSONRPCClient,
-        contract_address: address,
+        contract_address: Address,
         topics: Optional[List[int]],
         from_block: Union[str, int] = 0,
         to_block: Union[str, int] = 'latest'):
@@ -44,7 +44,7 @@ def new_filter(
 
 def get_filter_events(
         jsonrpc_client: JSONRPCClient,
-        contract_address: address,
+        contract_address: Address,
         topics: Optional[List[int]],
         from_block: Union[str, int] = 0,
         to_block: Union[str, int] = 'latest') -> List[Dict]:

@@ -16,8 +16,8 @@ class Block(StateChange):
         block_number: The current block_number.
     """
 
-    def __init__(self, block_number: typing.block_number):
-        if not isinstance(block_number, typing.block_number):
+    def __init__(self, block_number: typing.BlockNumber):
+        if not isinstance(block_number, typing.BlockNumber):
             raise ValueError('block_number must be of type block_number')
 
         self.block_number = block_number
@@ -108,8 +108,8 @@ class ActionCancelTransfer(StateChange):
 
 
 class ActionTransferDirect(StateChange):
-    def __init__(self, receiver_address: typing.address, identifier, amount: int):
-        if not isinstance(receiver_address, typing.address):
+    def __init__(self, receiver_address: typing.Address, identifier, amount: int):
+        if not isinstance(receiver_address, typing.Address):
             raise ValueError('receiver_address must be address')
 
         if not isinstance(amount, int):
@@ -163,13 +163,13 @@ class ContractReceiveChannelClosed(StateChange):
     def __init__(
             self,
             channel_identifier,
-            closing_address: typing.address,
-            closed_block_number: typing.block_number):
+            closing_address: typing.Address,
+            closed_block_number: typing.BlockNumber):
 
-        if not isinstance(closing_address, typing.address):
+        if not isinstance(closing_address, typing.Address):
             raise ValueError('closing_address must be of type address')
 
-        if not isinstance(closed_block_number, typing.block_number):
+        if not isinstance(closed_block_number, typing.BlockNumber):
             raise ValueError('closed_block_number must be of type block_number')
 
         self.channel_identifier = channel_identifier
@@ -250,13 +250,13 @@ class ContractReceiveChannelNewBalance(StateChange):
     def __init__(
             self,
             channel_identifier,
-            participant_address: typing.address,
-            contract_balance: typing.block_number):
+            participant_address: typing.Address,
+            contract_balance: typing.BlockNumber):
 
-        if not isinstance(participant_address, typing.address):
+        if not isinstance(participant_address, typing.Address):
             raise ValueError('participant_address must be of type address')
 
-        if not isinstance(contract_balance, typing.block_number):
+        if not isinstance(contract_balance, typing.BlockNumber):
             raise ValueError('contract_balance must be of type block_number')
 
         self.channel_identifier = channel_identifier
@@ -360,8 +360,8 @@ class ActionLeaveAllNetworks(StateChange):
 class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
-    def __init__(self, node_address: typing.address, network_state):
-        if not isinstance(node_address, typing.address):
+    def __init__(self, node_address: typing.Address, network_state):
+        if not isinstance(node_address, typing.Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -455,9 +455,9 @@ class ContractReceiveChannelWithdraw(StateChange):
             token_network_identifier,
             channel_identifier,
             secret,
-            receiver: typing.address):
+            receiver: typing.Address):
 
-        if not isinstance(receiver, typing.address):
+        if not isinstance(receiver, typing.Address):
             raise ValueError('receiver must be of type address')
 
         hashlock = sha3(secret)
@@ -492,11 +492,11 @@ class ContractReceiveChannelWithdraw(StateChange):
 class ContractReceiveNewRoute(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
-    def __init__(self, participant1: typing.address, participant2: typing.address):
-        if not isinstance(participant1, typing.address):
+    def __init__(self, participant1: typing.Address, participant2: typing.Address):
+        if not isinstance(participant1, typing.Address):
             raise ValueError('participant1 must be of type address')
 
-        if not isinstance(participant2, typing.address):
+        if not isinstance(participant2, typing.Address):
             raise ValueError('participant2 must be of type address')
 
         self.participant1 = participant1
@@ -522,11 +522,11 @@ class ContractReceiveNewRoute(StateChange):
 class ContractReceiveRouteNew(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
-    def __init__(self, participant1: typing.address, participant2: typing.address):
-        if not isinstance(participant1, typing.address):
+    def __init__(self, participant1: typing.Address, participant2: typing.Address):
+        if not isinstance(participant1, typing.Address):
             raise ValueError('participant1 must be of type address')
 
-        if not isinstance(participant2, typing.address):
+        if not isinstance(participant2, typing.Address):
             raise ValueError('participant2 must be of type address')
 
         self.participant1 = participant1

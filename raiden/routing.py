@@ -19,7 +19,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def make_graph(
-    edge_list: List[Tuple[typing.address, typing.address]]
+    edge_list: List[Tuple[typing.Address, typing.Address]]
 ) -> networkx.Graph:
     """ Returns a graph that represents the connections among the netting
     contracts.
@@ -49,8 +49,8 @@ def make_graph(
 
 def get_ordered_partners(
     network_graph: networkx.Graph,
-    from_address: typing.address,
-    to_address: typing.address
+    from_address: typing.Address,
+    to_address: typing.Address
 ) -> List:
     paths = list()
 
@@ -77,12 +77,12 @@ def get_ordered_partners(
 
 def get_best_routes(
     node_state: 'NodeState',
-    payment_network_id: typing.address,
-    token_address: typing.address,
-    from_address: typing.address,
-    to_address: typing.address,
+    payment_network_id: typing.Address,
+    token_address: typing.Address,
+    from_address: typing.Address,
+    to_address: typing.Address,
     amount: int,
-    previous_address: typing.address,
+    previous_address: typing.Address,
 ) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 
