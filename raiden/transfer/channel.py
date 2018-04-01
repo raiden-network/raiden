@@ -476,7 +476,7 @@ def get_known_unlocks(end_state):
 
 def get_lock(
         end_state: 'NettingChannelEndState',
-        hashlock: typing.keccak256,
+        hashlock: typing.Keccak256,
 ) -> HashTimeLockState:
     """Return the lock correspoding to `hashlock` or None if the lock is
     unknown.
@@ -577,7 +577,7 @@ def update_contract_balance(end_state: 'NettingChannelEndState', contract_balanc
 
 def compute_proof_for_lock(
         end_state: 'NettingChannelEndState',
-        secret: typing.secret,
+        secret: typing.Secret,
         lock: HashTimeLockState
 ) -> UnlockProofState:
     # forcing bytes because ethereum.abi doesn't work with bytearray
@@ -592,7 +592,7 @@ def compute_proof_for_lock(
 
 def compute_merkletree_with(
         merkletree: MerkleTreeState,
-        lockhash: typing.keccak256,
+        lockhash: typing.Keccak256,
 ) -> typing.Optional[MerkleTreeState]:
     """Register the given lockhash with the existing merkle tree."""
     # Use None to inform the caller the lockshash is already known

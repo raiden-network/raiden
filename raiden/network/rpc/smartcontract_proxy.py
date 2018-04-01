@@ -5,7 +5,7 @@ from ethereum.abi import ContractTranslator
 from ethereum.utils import normalize_address
 
 from raiden.exceptions import InvalidFunctionName
-from raiden.utils.typing import address
+from raiden.utils.typing import Address
 
 
 class ContractProxy:
@@ -13,9 +13,9 @@ class ContractProxy:
 
     def __init__(
             self,
-            sender: address,
+            sender: Address,
             abi: Dict,
-            contract_address: address,
+            contract_address: Address,
             call_function: Callable,
             transact_function: Callable,
             estimate_function: Optional[Callable] = None):

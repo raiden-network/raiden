@@ -76,7 +76,7 @@ def is_supported_client(client_version):
     return False
 
 
-def address_decoder(addr: str) -> typing.address:
+def address_decoder(addr: str) -> typing.Address:
     if addr[:2] == '0x':
         addr = addr[2:]
 
@@ -85,7 +85,7 @@ def address_decoder(addr: str) -> typing.address:
     return addr
 
 
-def address_encoder(address: typing.address) -> str:
+def address_encoder(address: typing.Address) -> str:
     assert len(address) in (20, 0)
     return '0x' + hexlify(address).decode()
 
@@ -176,7 +176,7 @@ def publickey_to_address(publickey: bytes) -> bytes:
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key_bin: bytes) -> typing.address:
+def privatekey_to_address(private_key_bin: bytes) -> typing.Address:
     return publickey_to_address(privatekey_to_publickey(private_key_bin))
 
 

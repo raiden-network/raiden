@@ -53,7 +53,7 @@ class InitiatorPaymentState(State):
         'cancelled_channels',
     )
 
-    def __init__(self, initiator: typing.address):
+    def __init__(self, initiator: typing.Address):
         # TODO: Allow multiple concurrent transfers and unlock refunds (issue #1091).
         self.initiator = initiator
         self.cancelled_channels = list()
@@ -139,7 +139,7 @@ class MediatorTransferState(State):
         'transfers_pair',
     )
 
-    def __init__(self, hashlock: typing.keccak256):
+    def __init__(self, hashlock: typing.Keccak256):
         # for convenience
         self.hashlock = hashlock
         self.secret = None
@@ -224,11 +224,11 @@ class LockedTransferUnsignedState(State):
     def __init__(
             self,
             identifier,
-            token: typing.address,
+            token: typing.Address,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
-            initiator: typing.address,
-            target: typing.address):
+            initiator: typing.Address,
+            target: typing.Address):
 
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
@@ -290,11 +290,11 @@ class LockedTransferSignedState(State):
     def __init__(
             self,
             identifier,
-            token: typing.address,
+            token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
-            initiator: typing.address,
-            target: typing.address):
+            initiator: typing.Address,
+            target: typing.Address):
 
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
@@ -358,12 +358,12 @@ class TransferDescriptionWithSecretState(State):
     def __init__(
             self,
             identifier,
-            amount: typing.token_amount,
-            registry: typing.address,
-            token: typing.address,
-            initiator: typing.address,
-            target: typing.address,
-            secret: typing.secret):
+            amount: typing.TokenAmount,
+            registry: typing.Address,
+            token: typing.Address,
+            initiator: typing.Address,
+            target: typing.Address,
+            secret: typing.Secret):
 
         hashlock = sha3(secret)
 
@@ -464,13 +464,13 @@ class MediationPairState(State):
     def __init__(
             self,
             payer_transfer: LockedTransferSignedState,
-            payee_address: typing.address,
+            payee_address: typing.Address,
             payee_transfer: LockedTransferUnsignedState):
 
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
-        if not isinstance(payee_address, typing.address):
+        if not isinstance(payee_address, typing.Address):
             raise ValueError('payee_address must be an address')
 
         if not isinstance(payee_transfer, LockedTransferUnsignedState):

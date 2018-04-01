@@ -47,7 +47,7 @@ from raiden.utils import (
     topic_decoder,
     topic_encoder,
 )
-from raiden.utils.typing import address
+from raiden.utils.typing import Address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
@@ -55,7 +55,7 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 def check_address_has_code(
         client,
-        address: address,
+        address: Address,
         contract_name: str = ''):
     """ Checks that the given address contains code. """
     result = client.eth_getCode(address, 'latest')
@@ -123,8 +123,8 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
 
 def format_data_for_call(
-        sender: address = b'',
-        to: address = b'',
+        sender: Address = b'',
+        to: Address = b'',
         value: int = 0,
         data: bytes = b'',
         startgas: int = GAS_LIMIT,
@@ -293,7 +293,7 @@ class JSONRPCClient:
     def inject_stop_event(self, event):
         self.stop_event = event
 
-    def balance(self, account: address):
+    def balance(self, account: Address):
         """ Return the balance of the account of given address. """
         res = self.call('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
@@ -315,7 +315,7 @@ class JSONRPCClient:
             return self.gaslimit()
         return startgas
 
-    def new_contract_proxy(self, contract_interface, contract_address: address):
+    def new_contract_proxy(self, contract_interface, contract_address: Address):
         """ Return a proxy for interacting with a smart contract.
 
         Args:
@@ -529,8 +529,8 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            sender: address,
-            to: address,
+            sender: Address,
+            to: Address,
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
@@ -586,8 +586,8 @@ class JSONRPCClient:
 
     def eth_sendTransaction(
             self,
-            sender: address = b'',
-            to: address = b'',
+            sender: Address = b'',
+            to: Address = b'',
             value: int = 0,
             data: bytes = b'',
             gas: int = GAS_LIMIT,
@@ -641,8 +641,8 @@ class JSONRPCClient:
 
     def eth_call(
             self,
-            sender: address = b'',
-            to: address = b'',
+            sender: Address = b'',
+            to: Address = b'',
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
@@ -679,8 +679,8 @@ class JSONRPCClient:
 
     def eth_estimateGas(
             self,
-            sender: address = b'',
-            to: address = b'',
+            sender: Address = b'',
+            to: Address = b'',
             value: int = 0,
             data: bytes = b'',
             startgas: int = None
@@ -744,7 +744,7 @@ class JSONRPCClient:
         transaction_hash = data_encoder(transaction_hash)
         return self.call('eth_getTransactionReceipt', transaction_hash)
 
-    def eth_getCode(self, code_address: address, block: Union[int, str] = 'latest') -> bytes:
+    def eth_getCode(self, code_address: Address, block: Union[int, str] = 'latest') -> bytes:
         """ Returns code at a given address.
 
         Args:
