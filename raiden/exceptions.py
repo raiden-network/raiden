@@ -82,11 +82,6 @@ class AlreadyRegisteredTokenAddress(RaidenError):
 # from a byzantine node)
 
 
-class TransferUnwanted(RaidenError):
-    """ Raised when the node is not receiving new transfers. """
-    pass
-
-
 class STUNUnavailableException(RaidenError):
     pass
 
