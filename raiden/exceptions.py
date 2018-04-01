@@ -62,14 +62,6 @@ class SamePeerAddress(RaidenError):
     """
 
 
-# TODO: Use more descriptive exceptions than this
-class InvalidState(RaidenError):
-    """ Raised when the user requested action cannot be done due to the current
-    state of the channel.
-    """
-    pass
-
-
 class TransferWhenClosed(RaidenError):
     """ Raised when a user tries to request a transfer in a closed channel. """
     pass
