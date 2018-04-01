@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from raiden.utils import pex
 
 
 class RaidenError(Exception):
