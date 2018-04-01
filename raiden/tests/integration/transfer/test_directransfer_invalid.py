@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.messages import DirectTransfer
 from raiden.transfer import channel
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -202,7 +202,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     token_address = token_addresses[0]
     channel0 = get_channelstate(app0, app1, token_address)
 
-    RaidenAPI2(app1.raiden).channel_close(
+    RaidenAPI(app1.raiden).channel_close(
         token_address,
         app0.raiden.address,
     )

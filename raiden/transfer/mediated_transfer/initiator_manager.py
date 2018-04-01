@@ -5,8 +5,8 @@ from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.mediated_transfer.events import EventUnlockFailed
 from raiden.transfer.mediated_transfer import initiator, mediator
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionCancelRoute2,
-    ActionInitInitiator2,
+    ActionCancelRoute,
+    ActionInitInitiator,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
@@ -73,7 +73,7 @@ def cancel_current_route(payment_state):
 
 def handle_init(payment_state, state_change, channelidentifiers_to_channels, block_number):
     if payment_state is None:
-        sub_iteration = initiator.try_new_route2(
+        sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
             state_change.routes,
             state_change.transfer,
@@ -99,7 +99,7 @@ def handle_cancelroute(payment_state, state_change, channelidentifiers_to_channe
 
         msg = 'The previous transfer must be cancelled prior to trying a new route'
         assert payment_state.initiator is None, msg
-        sub_iteration = initiator.try_new_route2(
+        sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
             state_change.routes,
             transfer_description,
@@ -154,7 +154,7 @@ def handle_transferrefund(
 
     # This is overcommiting, since the initiator knows the secret it doesn't
     # need to wait for reveal_timeout blocks.
-    timeout_blocks = mediator.get_timeout_blocks2(
+    timeout_blocks = mediator.get_timeout_blocks(
         channel_state.settle_timeout,
         closed_block_number,
         original_transfer.lock.expiration,
@@ -169,7 +169,7 @@ def handle_transferrefund(
         refund_transfer.lock.expiration <= maximum_expiration
     )
 
-    is_valid_refund = mediator.is_valid_refund2(
+    is_valid_refund = mediator.is_valid_refund(
         original_transfer,
         refund_transfer,
     )
@@ -213,7 +213,7 @@ def handle_transferrefund(
 def handle_secretreveal(payment_state, state_change, channelidentifiers_to_channels):
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
-    sub_iteration = initiator.handle_secretreveal2(
+    sub_iteration = initiator.handle_secretreveal(
         payment_state.initiator,
         state_change,
         channel_state,
@@ -223,7 +223,7 @@ def handle_secretreveal(payment_state, state_change, channelidentifiers_to_chann
 
 
 def state_transition(payment_state, state_change, channelidentifiers_to_channels, block_number):
-    if isinstance(state_change, ActionInitInitiator2):
+    if isinstance(state_change, ActionInitInitiator):
         iteration = handle_init(
             payment_state,
             state_change,
@@ -231,12 +231,12 @@ def state_transition(payment_state, state_change, channelidentifiers_to_channels
             block_number,
         )
     elif isinstance(state_change, ReceiveSecretRequest):
-        sub_iteration = initiator.handle_secretrequest2(
+        sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
-    elif isinstance(state_change, ActionCancelRoute2):
+    elif isinstance(state_change, ActionCancelRoute):
         iteration = handle_cancelroute(
             payment_state,
             state_change,

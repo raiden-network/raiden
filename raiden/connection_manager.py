@@ -9,7 +9,7 @@ from ethereum import slogging
 
 from raiden import waiting
 from raiden.exceptions import DuplicatedChannelError
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -58,7 +58,7 @@ class ConnectionManager:
 
     def __init__(self, raiden, token_address):
         # TODO:
-        # - Add timeout for transaction polling, used to overwrite the RaidenAPI2
+        # - Add timeout for transaction polling, used to overwrite the RaidenAPI
         # defaults
         # - Add a proper selection strategy (#576)
         self.funds = 0
@@ -69,7 +69,7 @@ class ConnectionManager:
         self.token_address = token_address
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
-        self.api = RaidenAPI2(raiden)
+        self.api = RaidenAPI(raiden)
 
     def connect(
             self,

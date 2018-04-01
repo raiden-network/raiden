@@ -20,8 +20,8 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer import initiator_manager
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionCancelRoute2,
-    ActionInitInitiator2,
+    ActionCancelRoute,
+    ActionInitInitiator,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
@@ -29,9 +29,9 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof2,
-    SendMediatedTransfer2,
-    SendRevealSecret2,
+    SendBalanceProof,
+    SendMediatedTransfer,
+    SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.transfer.state_change import ActionCancelPayment
@@ -47,7 +47,7 @@ def make_initiator_state(
     if payment_network_identifier is None:
         payment_network_identifier = factories.make_address()
 
-    init_state_change = ActionInitInitiator2(
+    init_state_change = ActionInitInitiator(
         payment_network_identifier,
         transfer_description,
         routes,
@@ -94,7 +94,7 @@ def test_next_route():
     assert state.initiator.channel_identifier == channel1.identifier, msg
     assert not state.cancelled_channels
 
-    state_change = ActionCancelRoute2(
+    state_change = ActionCancelRoute(
         channel1.identifier,
         available_routes,
     )
@@ -118,7 +118,7 @@ def test_init_with_usable_routes():
     available_routes = [factories.route_from_channel(channel1)]
 
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitInitiator2(
+    init_state_change = ActionInitInitiator(
         payment_network_identifier,
         factories.UNIT_TRANSFER_DESCRIPTION,
         available_routes,
@@ -138,7 +138,7 @@ def test_init_with_usable_routes():
     payment_state = transition.new_state
     assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
-    mediated_transfers = [e for e in transition.events if isinstance(e, SendMediatedTransfer2)]
+    mediated_transfers = [e for e in transition.events if isinstance(e, SendMediatedTransfer)]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
 
     send_mediated_transfer = mediated_transfers[0]
@@ -156,7 +156,7 @@ def test_init_without_routes():
     block_number = 1
     routes = []
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitInitiator2(
+    init_state_change = ActionInitInitiator(
         payment_network_identifier,
         factories.UNIT_TRANSFER_DESCRIPTION,
         routes,
@@ -206,7 +206,7 @@ def test_state_wait_secretrequest_valid():
     )
 
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRevealSecret2)
+    assert isinstance(iteration.events[0], SendRevealSecret)
 
 
 def test_state_wait_unlock_valid():
@@ -227,7 +227,7 @@ def test_state_wait_unlock_valid():
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret2(
+    current_state.initiator.revealsecret = SendRevealSecret(
         UNIT_TRANSFER_IDENTIFIER,
         UNIT_SECRET,
         UNIT_TOKEN_ADDRESS,
@@ -246,11 +246,11 @@ def test_state_wait_unlock_valid():
     )
 
     assert len(iteration.events) == 3
-    assert any(isinstance(e, SendBalanceProof2) for e in iteration.events)
+    assert any(isinstance(e, SendBalanceProof) for e in iteration.events)
     assert any(isinstance(e, EventTransferSentSuccess) for e in iteration.events)
     assert any(isinstance(e, EventUnlockSuccess) for e in iteration.events)
 
-    balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProof2))
+    balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProof))
     complete = next(e for e in iteration.events if isinstance(e, EventTransferSentSuccess))
 
     assert balance_proof.receiver == channel1.partner_state.address
@@ -278,7 +278,7 @@ def test_state_wait_unlock_invalid():
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret2(
+    current_state.initiator.revealsecret = SendRevealSecret(
         identifier,
         UNIT_SECRET,
         token,
@@ -381,7 +381,7 @@ def test_refund_transfer_next_route():
     assert len(iteration.events) == 2
 
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer2))
+    new_transfer = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer))
 
     assert route_cancelled, 'The previous transfer must be cancelled'
     assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'

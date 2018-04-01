@@ -9,7 +9,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
-    SendRevealSecret2,
+    SendRevealSecret,
 )
 
 
@@ -53,7 +53,7 @@ def next_channel_from_routes(available_routes, channelidentifiers_to_channels, t
         return channel_state
 
 
-def try_new_route2(
+def try_new_route(
         channelidentifiers_to_channels,
         available_routes,
         transfer_description,
@@ -127,7 +127,7 @@ def send_mediatedtransfer(initiator_state, channel_state, block_number):
     return mediatedtransfer_event
 
 
-def handle_secretrequest2(initiator_state, state_change):
+def handle_secretrequest(initiator_state, state_change):
     request_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
         state_change.hashlock == initiator_state.transfer_description.hashlock
@@ -152,7 +152,7 @@ def handle_secretrequest2(initiator_state, state_change):
         # Note: The target might be the first hop
         #
         transfer_description = initiator_state.transfer_description
-        reveal_secret = SendRevealSecret2(
+        reveal_secret = SendRevealSecret(
             transfer_description.identifier,
             transfer_description.secret,
             transfer_description.token,
@@ -175,7 +175,7 @@ def handle_secretrequest2(initiator_state, state_change):
     return iteration
 
 
-def handle_secretreveal2(initiator_state, state_change, channel_state):
+def handle_secretreveal(initiator_state, state_change, channel_state):
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.
     """

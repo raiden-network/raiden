@@ -4,7 +4,7 @@ import logging
 import pytest
 import gevent
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer.state import CHANNEL_STATE_SETTLED
 
@@ -27,11 +27,11 @@ def test_participant_selection(raiden_network, token_addresses):
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
-    RaidenAPI2(raiden_network[0].raiden).token_network_connect(token_address, 100)
+    RaidenAPI(raiden_network[0].raiden).token_network_connect(token_address, 100)
 
     # connect the other nodes
     connect_greenlets = [
-        gevent.spawn(RaidenAPI2(app.raiden).token_network_connect, token_address, 100)
+        gevent.spawn(RaidenAPI(app.raiden).token_network_connect, token_address, 100)
         for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
@@ -104,7 +104,7 @@ def test_participant_selection(raiden_network, token_addresses):
     receiver = raiden_network[0].raiden
 
     # assert there is a direct channel receiver -> sender (vv)
-    receiver_channel = RaidenAPI2(receiver).get_channel_list(
+    receiver_channel = RaidenAPI(receiver).get_channel_list(
         token_address=token_address,
         partner_address=sender.address
     )
@@ -114,7 +114,7 @@ def test_participant_selection(raiden_network, token_addresses):
     assert not receiver_channel.received_transfers
 
     # assert there is a direct channel sender -> receiver
-    sender_channel = RaidenAPI2(sender).get_channel_list(
+    sender_channel = RaidenAPI(sender).get_channel_list(
         token_address=token_address,
         partner_address=receiver.address
     )
@@ -123,7 +123,7 @@ def test_participant_selection(raiden_network, token_addresses):
     assert sender_channel.can_transfer
     assert sender_channel.external_state.opened_block != 0
 
-    RaidenAPI2(sender).transfer_and_wait(
+    RaidenAPI(sender).transfer_and_wait(
         token_address,
         1,
         receiver.address
@@ -145,7 +145,7 @@ def test_participant_selection(raiden_network, token_addresses):
     assert timeout > 0
     with gevent.timeout.Timeout(timeout):
         try:
-            RaidenAPI2(raiden_network[0].raiden).token_network_leave(token_address)
+            RaidenAPI(raiden_network[0].raiden).token_network_leave(token_address)
         except gevent.timeout.Timeout:
             log.error('timeout while waiting for leave')
 

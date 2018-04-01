@@ -14,7 +14,7 @@ from ethereum import slogging
 from ethereum.utils import decode_hex
 
 from raiden.app import App
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -172,7 +172,7 @@ def run(
 
             log.warning("Waiting for all nodes to come online")
 
-            api = RaidenAPI2(app.raiden)
+            api = RaidenAPI(app.raiden)
 
             for node in partner_nodes:
                 api.start_health_check_for(node)
@@ -244,7 +244,7 @@ def run(
                 initial_time = time.time()
                 times = [0] * total_transfers
                 for index in range(total_transfers):
-                    RaidenAPI2(app.raiden).transfer(
+                    RaidenAPI(app.raiden).transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,

@@ -2,7 +2,7 @@
 import pytest
 
 from raiden import waiting
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -14,8 +14,8 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    api1 = RaidenAPI2(app0.raiden)
-    api2 = RaidenAPI2(app1.raiden)
+    api1 = RaidenAPI(app0.raiden)
+    api2 = RaidenAPI(app1.raiden)
 
     channel_list = api1.get_channel_list(token_address, app1.raiden.address)
     channel12 = channel_list[0]

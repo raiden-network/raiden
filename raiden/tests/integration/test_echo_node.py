@@ -3,14 +3,14 @@ import pytest
 import gevent
 
 from raiden.utils.echo_node import EchoNode
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils import get_channel_events_for_token
 
 # pylint: disable=too-many-locals
 
 
-# `RaidenAPI2.get_channel_events` is not supported in tester
+# `RaidenAPI.get_channel_events` is not supported in tester
 @pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
@@ -26,7 +26,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
 
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
-        transfer_event = RaidenAPI2(app.raiden).transfer_async(
+        transfer_event = RaidenAPI(app.raiden).transfer_async(
             token_address,
             amount,
             receiver_app.raiden.address,
@@ -59,7 +59,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
     assert set(without_receiver_app) == set(transfer_initiators)
 
 
-# `RaidenAPI2.get_channel_events` is not supported in tester
+# `RaidenAPI.get_channel_events` is not supported in tester
 @pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
@@ -70,7 +70,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
-    echo_api = RaidenAPI2(echo_app.raiden)
+    echo_api = RaidenAPI(echo_app.raiden)
 
     echo_node = EchoNode(echo_api, token_address)
     echo_node.ready.wait(timeout=30)
@@ -81,7 +81,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
     # Create some transfers
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
-        transfer_event = RaidenAPI2(app.raiden).transfer_async(
+        transfer_event = RaidenAPI(app.raiden).transfer_async(
             token_address,
             amount,
             echo_app.raiden.address,
@@ -113,7 +113,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
     echo_node.stop()
 
 
-# `RaidenAPI2.get_channel_events` is not supported in tester
+# `RaidenAPI.get_channel_events` is not supported in tester
 @pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [8])
 @pytest.mark.parametrize('number_of_tokens', [1])
@@ -124,7 +124,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
-    echo_api = RaidenAPI2(echo_app.raiden)
+    echo_api = RaidenAPI(echo_app.raiden)
 
     echo_node = EchoNode(echo_api, token_address)
     echo_node.ready.wait(timeout=30)
@@ -135,7 +135,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     # Let 6 participants enter the pool
     amount = 7
     for num, app in enumerate([app0, app1, app2, app3, app4, app5]):
-        transfer_event = RaidenAPI2(app.raiden).transfer_async(
+        transfer_event = RaidenAPI(app.raiden).transfer_async(
             token_address,
             amount,
             echo_app.raiden.address,
@@ -145,7 +145,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         expected.append(amount)
 
     # test duplicated identifier + amount is ignored
-    transfer_event = RaidenAPI2(app5.raiden).transfer_async(
+    transfer_event = RaidenAPI(app5.raiden).transfer_async(
         token_address,
         amount,  # same amount as before
         echo_app.raiden.address,
@@ -154,7 +154,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
 
     # test pool size querying
     pool_query_identifier = 77  # unused identifier different from previous one
-    transfer_event = RaidenAPI2(app5.raiden).transfer_async(
+    transfer_event = RaidenAPI(app5.raiden).transfer_async(
         token_address,
         amount,
         echo_app.raiden.address,
@@ -163,7 +163,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     expected.append(amount)
 
     # fill the pool
-    transfer_event = RaidenAPI2(app6.raiden).transfer_async(
+    transfer_event = RaidenAPI(app6.raiden).transfer_async(
         token_address,
         amount,
         echo_app.raiden.address,

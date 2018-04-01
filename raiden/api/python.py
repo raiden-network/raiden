@@ -47,7 +47,7 @@ EVENTS_EXTERNALLY_VISIBLE = (
 )
 
 
-class RaidenAPI2:
+class RaidenAPI:
     # pylint: disable=too-many-public-methods
 
     def __init__(self, raiden):

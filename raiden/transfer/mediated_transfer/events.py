@@ -7,7 +7,7 @@ from raiden.utils import pex, sha3
 
 def refund_from_sendmediated(send_mediatedtransfer_event):
     transfer = send_mediatedtransfer_event.transfer
-    return SendRefundTransfer2(
+    return SendRefundTransfer(
         transfer.identifier,
         transfer.token,
         transfer.balance_proof,
@@ -18,7 +18,7 @@ def refund_from_sendmediated(send_mediatedtransfer_event):
     )
 
 
-class SendMediatedTransfer2(Event):
+class SendMediatedTransfer(Event):
     """ A locked transfer that must be sent to `recipient`. """
 
     def __init__(self, transfer, recipient):
@@ -29,14 +29,14 @@ class SendMediatedTransfer2(Event):
         self.recipient = recipient
 
     def __repr__(self):
-        return '<SendMediatedTransfer2 transfer:{} recipient:{}>'.format(
+        return '<SendMediatedTransfer transfer:{} recipient:{}>'.format(
             self.transfer,
             pex(self.recipient),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendMediatedTransfer2) and
+            isinstance(other, SendMediatedTransfer) and
             self.transfer == other.transfer and
             self.recipient == other.recipient
         )
@@ -45,7 +45,7 @@ class SendMediatedTransfer2(Event):
         return not self.__eq__(other)
 
 
-class SendRevealSecret2(Event):
+class SendRevealSecret(Event):
     """ Sends a RevealSecret to another node.
     This event is used once the secret is known locally and an action must be
     performed on the receiver:
@@ -79,7 +79,7 @@ class SendRevealSecret2(Event):
         self.receiver = receiver
 
     def __repr__(self):
-        return '<SendRevealSecret2 id:{} hashlock:{} token:{} receiver:{}>'.format(
+        return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
             self.identifier,
             pex(self.hashlock),
             pex(self.token),
@@ -88,7 +88,7 @@ class SendRevealSecret2(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRevealSecret2) and
+            isinstance(other, SendRevealSecret) and
             self.identifier == other.identifier and
             self.secret == other.secret and
             self.hashlock == other.hashlock and
@@ -100,7 +100,7 @@ class SendRevealSecret2(Event):
         return not self.__eq__(other)
 
 
-class SendBalanceProof2(Event):
+class SendBalanceProof(Event):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to withdraw.
     Used by payers: The initiator and mediator nodes.
@@ -122,7 +122,7 @@ class SendBalanceProof2(Event):
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<SendBalanceProof2 id: {} token: {} receiver: {} balance_proof: {}>'.format(
+        return '<SendBalanceProof id: {} token: {} receiver: {} balance_proof: {}>'.format(
             self.identifier,
             pex(self.token),
             pex(self.receiver),
@@ -131,7 +131,7 @@ class SendBalanceProof2(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendBalanceProof2) and
+            isinstance(other, SendBalanceProof) and
             self.identifier == other.identifier and
             self.token == other.token and
             self.receiver == other.receiver and
@@ -174,7 +174,7 @@ class SendSecretRequest(Event):
         return not self.__eq__(other)
 
 
-class SendRefundTransfer2(Event):
+class SendRefundTransfer(Event):
     """ Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the receiver to
     the sender, allowing the sender to try a different route without the risk
@@ -201,7 +201,7 @@ class SendRefundTransfer2(Event):
     def __repr__(self):
         return (
             '<'
-            'SendRefundTransfer2 id:{} token:{} balance_proof:{} lock:{} '
+            'SendRefundTransfer id:{} token:{} balance_proof:{} lock:{} '
             'initiator:{} target:{} recipient:{}'
             '>'
         ).format(
@@ -216,7 +216,7 @@ class SendRefundTransfer2(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRefundTransfer2) and
+            isinstance(other, SendRefundTransfer) and
             self.identifier == other.identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and

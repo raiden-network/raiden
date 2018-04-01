@@ -2,7 +2,7 @@
 from raiden.utils import sha3
 from raiden.transfer.state_change import (
     ActionCancelPayment,
-    ActionTransferDirect2,
+    ActionTransferDirect,
     Block,
 )
 from raiden.transfer.events import (
@@ -42,17 +42,17 @@ def test_transfer_statechange_operators():
     assert a != c
     assert not a == c
 
-    a = ActionTransferDirect2(
+    a = ActionTransferDirect(
         receiver_address=ADDRESS,
         identifier=2,
         amount=2,
     )
-    b = ActionTransferDirect2(
+    b = ActionTransferDirect(
         receiver_address=ADDRESS,
         identifier=2,
         amount=2,
     )
-    c = ActionTransferDirect2(
+    c = ActionTransferDirect(
         receiver_address=ADDRESS2,  # different recipient
         identifier=2,
         amount=2,

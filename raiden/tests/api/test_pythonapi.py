@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import channel
@@ -19,7 +19,7 @@ from raiden.utils import address_encoder
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_token_addresses(raiden_network, token_addresses):
     app = raiden_network[0]
-    api = RaidenAPI2(app.raiden)
+    api = RaidenAPI(app.raiden)
     assert set(api.get_tokens_list()) == set(token_addresses)
 
 
@@ -29,8 +29,8 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
 
-    api1 = RaidenAPI2(node1.raiden)
-    api2 = RaidenAPI2(node2.raiden)
+    api1 = RaidenAPI(node1.raiden)
+    api2 = RaidenAPI(node2.raiden)
 
     # nodes don't have a channel, so they are not healthchecking
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNKNOWN

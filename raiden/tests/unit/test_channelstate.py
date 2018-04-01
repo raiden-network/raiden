@@ -31,7 +31,7 @@ from raiden.transfer.events import (
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
-    ReceiveTransferDirect2,
+    ReceiveTransferDirect,
     ReceiveUnlock,
 )
 from raiden.transfer.state import (
@@ -168,7 +168,7 @@ def make_receive_transfer_direct(
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
-    receive_directtransfer = ReceiveTransferDirect2(
+    receive_directtransfer = ReceiveTransferDirect(
         identifier,
         balance_proof,
     )

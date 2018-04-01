@@ -14,7 +14,7 @@ from raiden.tests.fixtures.raiden_network import (
 )
 from raiden.tests.utils.network import setup_channels
 from raiden.tests.utils.transfer import get_channelstate
-from raiden.transfer.mediated_transfer.events import SendRevealSecret2
+from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
 
@@ -85,7 +85,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
 
     event = None
     for _, event in app1.raiden.wal.storage.get_events_by_block(0, 'latest'):
-        if isinstance(event, SendRevealSecret2):
+        if isinstance(event, SendRevealSecret):
             break
     assert event
 

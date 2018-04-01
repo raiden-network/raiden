@@ -7,7 +7,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitTarget2,
+    ActionInitTarget,
     ReceiveSecretReveal,
 )
 from raiden.transfer.events import (
@@ -16,19 +16,19 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
-    SendRevealSecret2,
+    SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait2
+from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
 
 
-def events_for_close2(target_state, channel_state, block_number):
+def events_for_close(target_state, channel_state, block_number):
     """ Emits the event for closing the netting channel if the transfer needs
     to be settled on-chain.
     """
     transfer = target_state.transfer
 
-    safe_to_wait = is_safe_to_wait2(
+    safe_to_wait = is_safe_to_wait(
         transfer.lock.expiration,
         channel_state.reveal_timeout,
         block_number,
@@ -45,8 +45,8 @@ def events_for_close2(target_state, channel_state, block_number):
     return list()
 
 
-def handle_inittarget2(state_change, channel_state, block_number):
-    """ Handles an ActionInitTarget2 state change. """
+def handle_inittarget(state_change, channel_state, block_number):
+    """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
 
@@ -61,7 +61,7 @@ def handle_inittarget2(state_change, channel_state, block_number):
         transfer,
     )
 
-    safe_to_wait = is_safe_to_wait2(
+    safe_to_wait = is_safe_to_wait(
         transfer.lock.expiration,
         channel_state.reveal_timeout,
         block_number,
@@ -84,7 +84,7 @@ def handle_inittarget2(state_change, channel_state, block_number):
     return iteration
 
 
-def handle_secretreveal2(target_state, state_change, channel_state):
+def handle_secretreveal(target_state, state_change, channel_state):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.hashlock == target_state.transfer.lock.hashlock
 
@@ -100,7 +100,7 @@ def handle_secretreveal2(target_state, state_change, channel_state):
 
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
-        reveal = SendRevealSecret2(
+        reveal = SendRevealSecret(
             transfer.identifier,
             target_state.secret,
             transfer.token,
@@ -144,7 +144,7 @@ def handle_unlock(target_state, state_change, channel_state):
     return iteration
 
 
-def handle_block2(target_state, channel_state, block_number):
+def handle_block(target_state, channel_state, block_number):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
     """
@@ -165,7 +165,7 @@ def handle_block2(target_state, channel_state, block_number):
         events = [failed]
 
     elif target_state.state != 'waiting_close':  # only emit the close event once
-        events = events_for_close2(target_state, channel_state, block_number)
+        events = events_for_close(target_state, channel_state, block_number)
     else:
         events = list()
 
@@ -173,12 +173,12 @@ def handle_block2(target_state, channel_state, block_number):
     return iteration
 
 
-def state_transition2(target_state, state_change, channel_state, block_number):
+def state_transition(target_state, state_change, channel_state, block_number):
     """ State machine for the target node of a mediated transfer. """
     iteration = TransitionResult(target_state, list())
 
-    if isinstance(state_change, ActionInitTarget2):
-        iteration = handle_inittarget2(
+    if isinstance(state_change, ActionInitTarget):
+        iteration = handle_inittarget(
             state_change,
             channel_state,
             block_number,
@@ -186,13 +186,13 @@ def state_transition2(target_state, state_change, channel_state, block_number):
     elif isinstance(state_change, Block):
         assert state_change.block_number == block_number
 
-        iteration = handle_block2(
+        iteration = handle_block(
             target_state,
             channel_state,
             state_change.block_number,
         )
     elif isinstance(state_change, ReceiveSecretReveal):
-        iteration = handle_secretreveal2(
+        iteration = handle_secretreveal(
             target_state,
             state_change,
             channel_state,

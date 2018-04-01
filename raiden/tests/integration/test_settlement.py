@@ -2,7 +2,7 @@
 import pytest
 
 from raiden import waiting, udp_message_handler
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.messages import RevealSecret
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.blockchain import wait_until_block
@@ -33,7 +33,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    RaidenAPI2(app1.raiden).channel_close(token_address, app0.raiden.address)
+    RaidenAPI(app1.raiden).channel_close(token_address, app0.raiden.address)
 
     waiting.wait_for_settle(
         app0.raiden,
@@ -136,7 +136,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    RaidenAPI2(bob_app.raiden).channel_close(
+    RaidenAPI(bob_app.raiden).channel_close(
         token_address,
         alice_app.raiden.address,
     )
@@ -228,7 +228,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
     # Make a new transfer
     direct_transfer(app0, app1, token_address, amount, identifier=1)
-    RaidenAPI2(app1.raiden).channel_close(token_address, app0.raiden.address)
+    RaidenAPI(app1.raiden).channel_close(token_address, app0.raiden.address)
 
     # The direct transfer locksroot must not contain the unlocked lock, the
     # withdraw must fail.
@@ -423,7 +423,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to
     # use the one with the largest transferred_amount.
-    RaidenAPI2(app0.raiden).channel_close(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_close(token_address, app1.raiden.address)
 
     # Bob needs to provide a transfer otherwise its netted balance will be
     # wrong, so he is incentivised to use Alice's transfer with the largest

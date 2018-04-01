@@ -403,7 +403,7 @@ class TransferDescriptionWithSecretState(State):
         return not self.__eq__(other)
 
 
-class MediationPairState2(State):
+class MediationPairState(State):
     """ State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
     the token expenses. This state keeps track of the routes and transfer for
@@ -429,7 +429,7 @@ class MediationPairState2(State):
     #   /not/ withdrawn the lock yet, it only learned the secret through the
     #   blockchain.
     #   Note: This state is reachable only if there is a refund transfer, that
-    #   is represented by a different MediationPairState2, and the refund
+    #   is represented by a different MediationPairState, and the refund
     #   transfer is at 'payer_contract_withdraw'.
     #
     # payee_contract_withdraw:
@@ -486,7 +486,7 @@ class MediationPairState2(State):
         self.payee_state = 'payee_pending'
 
     def __repr__(self):
-        return '<MediationPairState2 payee:{} {} payer:{}>'.format(
+        return '<MediationPairState payee:{} {} payer:{}>'.format(
             self.payer_transfer,
             pex(self.payee_address),
             self.payee_transfer,
@@ -494,7 +494,7 @@ class MediationPairState2(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, MediationPairState2) and
+            isinstance(other, MediationPairState) and
             self.payee_address == other.payee_address and
             self.payee_transfer == other.payee_transfer and
             self.payee_state == other.payee_state and

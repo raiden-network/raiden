@@ -9,7 +9,7 @@ from ethereum.tools._solidity import compile_file
 from ethereum.utils import normalize_address
 
 from raiden import waiting
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
@@ -142,7 +142,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail()['our_balance'] == 70
     assert netting_channel_02.detail()['partner_balance'] == 130
 
-    RaidenAPI2(app1.raiden).channel_close(token_address, app0.raiden.address)
+    RaidenAPI(app1.raiden).channel_close(token_address, app0.raiden.address)
 
     waiting.wait_for_settle(
         app1.raiden,

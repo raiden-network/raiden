@@ -7,20 +7,20 @@ from raiden.transfer import channel
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
-    MediationPairState2,
+    MediationPairState,
     MediatorTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitMediator2,
+    ActionInitMediator,
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof2,
-    SendMediatedTransfer2,
-    SendRefundTransfer2,
-    SendRevealSecret2,
+    SendBalanceProof,
+    SendMediatedTransfer,
+    SendRefundTransfer,
+    SendRevealSecret,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
@@ -65,10 +65,10 @@ def make_transfer_pair(
     payer_expiration = expiration
     payee_expiration = expiration - reveal_timeout
 
-    return MediationPairState2(
+    return MediationPairState(
         factories.make_signed_transfer(amount, initiator, target, payer_expiration, secret=secret),
         payee,
-        factories.make_transfer2(amount, initiator, target, payee_expiration, secret=secret),
+        factories.make_transfer(amount, initiator, target, payee_expiration, secret=secret),
     )
 
 
@@ -133,7 +133,7 @@ def make_transfers_pair(privatekeys, amount):
         assert mediatedtransfer_event
         sent_transfer = mediatedtransfer_event.transfer
 
-        pair = MediationPairState2(
+        pair = MediationPairState(
             received_transfer,
             mediatedtransfer_event.recipient,
             sent_transfer,
@@ -167,30 +167,30 @@ def test_is_safe_to_wait():
     # expiration is in 30 blocks, 19 blocks safe for waiting
     block_number = 10
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is True
 
     # expiration is in 20 blocks, 10 blocks safe for waiting
     block_number = 20
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is True
 
     # expiration is in 11 blocks, 1 block safe for waiting
     block_number = 29
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is True
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is True
 
     # at the block 30 it's not safe to wait anymore
     block_number = 30
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is False
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is False
 
     block_number = 40
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is False
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is False
 
     block_number = 50
     reveal_timeout = 10
-    assert mediator.is_safe_to_wait2(expiration, reveal_timeout, block_number) is False
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number) is False
 
 
 def test_is_channel_close_needed_unpaid():
@@ -216,8 +216,8 @@ def test_is_channel_close_needed_unpaid():
         )
 
         unpaid_pair.payer_state = unpaid_state
-        assert mediator.is_channel_close_needed2(channel_state, unpaid_pair, safe_block) is False
-        assert mediator.is_channel_close_needed2(channel_state, unpaid_pair, unsafe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, unpaid_pair, safe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, unpaid_pair, unsafe_block) is False
 
 
 def test_is_channel_close_needed_paid():
@@ -241,8 +241,8 @@ def test_is_channel_close_needed_paid():
         )
 
         paid_pair.payee_state = paid_state
-        assert mediator.is_channel_close_needed2(channel_state, paid_pair, safe_block) is False
-        assert mediator.is_channel_close_needed2(channel_state, paid_pair, unsafe_block) is True
+        assert mediator.is_channel_close_needed(channel_state, paid_pair, safe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, paid_pair, unsafe_block) is True
 
 
 def test_is_channel_close_needed_channel_closing():
@@ -256,7 +256,7 @@ def test_is_channel_close_needed_channel_closing():
     channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
     channel_state.close_transaction = TransactionExecutionStatus(5, None, None)
 
-    for state in MediationPairState2.valid_payee_states:
+    for state in MediationPairState.valid_payee_states:
         pair = make_transfer_pair(
             payee=HOP2,
             initiator=HOP3,
@@ -268,8 +268,8 @@ def test_is_channel_close_needed_channel_closing():
         )
 
         pair.payee_state = state
-        assert mediator.is_channel_close_needed2(channel_state, pair, safe_block) is False
-        assert mediator.is_channel_close_needed2(channel_state, pair, unsafe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, pair, safe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, pair, unsafe_block) is False
 
 
 def test_is_channel_close_needed_channel_closed():
@@ -286,7 +286,7 @@ def test_is_channel_close_needed_channel_closed():
         TransactionExecutionStatus.SUCCESS,
     )
 
-    for state in MediationPairState2.valid_payee_states:
+    for state in MediationPairState.valid_payee_states:
         pair = make_transfer_pair(
             payee=HOP2,
             initiator=HOP3,
@@ -298,8 +298,8 @@ def test_is_channel_close_needed_channel_closed():
         )
 
         pair.payee_state = state
-        assert mediator.is_channel_close_needed2(channel_state, pair, safe_block) is False
-        assert mediator.is_channel_close_needed2(channel_state, pair, unsafe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, pair, safe_block) is False
+        assert mediator.is_channel_close_needed(channel_state, pair, unsafe_block) is False
 
 
 def test_is_channel_close_needed_closed():
@@ -321,15 +321,15 @@ def test_is_channel_close_needed_closed():
     )
     paid_pair.payee_state = 'payee_balance_proof'
 
-    assert mediator.is_channel_close_needed2(channel_state, paid_pair, safe_block) is False
-    assert mediator.is_channel_close_needed2(channel_state, paid_pair, unsafe_block) is True
+    assert mediator.is_channel_close_needed(channel_state, paid_pair, safe_block) is False
+    assert mediator.is_channel_close_needed(channel_state, paid_pair, unsafe_block) is True
 
 
 def test_is_valid_refund():
     amount = 30
     expiration = 50
 
-    transfer = factories.make_transfer2(
+    transfer = factories.make_transfer(
         amount,
         UNIT_TRANSFER_INITIATOR,
         UNIT_TRANSFER_TARGET,
@@ -345,7 +345,7 @@ def test_is_valid_refund():
         UNIT_SECRET,
     )
 
-    assert mediator.is_valid_refund2(transfer, refund_lower_expiration) is True
+    assert mediator.is_valid_refund(transfer, refund_lower_expiration) is True
 
     refund_same_expiration = factories.make_signed_transfer(
         amount,
@@ -354,14 +354,14 @@ def test_is_valid_refund():
         expiration,
         UNIT_SECRET,
     )
-    assert mediator.is_valid_refund2(transfer, refund_same_expiration) is False
+    assert mediator.is_valid_refund(transfer, refund_same_expiration) is False
 
 
 def test_refund_from_target_is_invalid():
     amount = 30
     expiration = 50
     target = UNIT_TRANSFER_SENDER
-    transfer = factories.make_transfer2(
+    transfer = factories.make_transfer(
         amount,
         UNIT_TRANSFER_INITIATOR,
         target,
@@ -378,7 +378,7 @@ def test_refund_from_target_is_invalid():
     )
 
     # target cannot refund
-    assert not mediator.is_valid_refund2(transfer, refund_from_target)
+    assert not mediator.is_valid_refund(transfer, refund_from_target)
 
 
 def test_get_timeout_blocks():
@@ -387,7 +387,7 @@ def test_get_timeout_blocks():
     not_closed = None
 
     early_expire = 10
-    early_block = mediator.get_timeout_blocks2(
+    early_block = mediator.get_timeout_blocks(
         settle_timeout,
         not_closed,
         early_expire,
@@ -396,7 +396,7 @@ def test_get_timeout_blocks():
     assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
 
     equal_expire = 30
-    equal_block = mediator.get_timeout_blocks2(
+    equal_block = mediator.get_timeout_blocks(
         settle_timeout,
         not_closed,
         equal_expire,
@@ -406,7 +406,7 @@ def test_get_timeout_blocks():
 
     # This is the fix for test_lock_timeout_lower_than_previous_channel_settlement_period
     large_expire = 70
-    large_block = mediator.get_timeout_blocks2(
+    large_block = mediator.get_timeout_blocks(
         settle_timeout,
         not_closed,
         large_expire,
@@ -415,7 +415,7 @@ def test_get_timeout_blocks():
     assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
 
     closed_block_number = 2
-    large_block = mediator.get_timeout_blocks2(
+    large_block = mediator.get_timeout_blocks(
         settle_timeout,
         closed_block_number,
         large_expire,
@@ -425,7 +425,7 @@ def test_get_timeout_blocks():
 
     # the computed timeout may be negative, in which case the calling code must /not/ use it
     negative_block_number = large_expire
-    negative_block = mediator.get_timeout_blocks2(
+    negative_block = mediator.get_timeout_blocks(
         settle_timeout,
         not_closed,
         large_expire,
@@ -553,7 +553,7 @@ def test_next_transfer_pair():
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    pair, events = mediator.next_transfer_pair2(
+    pair, events = mediator.next_transfer_pair(
         payer_transfer,
         available_routes,
         channelmap,
@@ -565,7 +565,7 @@ def test_next_transfer_pair():
     assert pair.payee_address == channel1.partner_state.address
     assert pair.payee_transfer.lock.expiration < pair.payer_transfer.lock.expiration
 
-    assert isinstance(events[0], SendMediatedTransfer2)
+    assert isinstance(events[0], SendMediatedTransfer)
     send_transfer = events[0]
     assert send_transfer.recipient == pair.payee_address
 
@@ -597,7 +597,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_payee_state_and_check_reveal_order2(
+    mediator.set_payee_state_and_check_reveal_order(
         transfers_pair,
         HOP2,
         'payee_secret_revealed',
@@ -610,7 +610,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_payee_state_and_check_reveal_order2(
+    mediator.set_payee_state_and_check_reveal_order(
         transfers_pair,
         HOP3,
         'payee_secret_revealed',
@@ -636,7 +636,7 @@ def test_set_expired_pairs():
 
     # do not generate events if the secret is not known
     first_unsafe_block = pair.payer_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT
-    mediator.set_expired_pairs2(
+    mediator.set_expired_pairs(
         transfers_pair,
         first_unsafe_block,
     )
@@ -645,7 +645,7 @@ def test_set_expired_pairs():
 
     # edge case for the payee lock expiration
     payee_expiration_block = pair.payee_transfer.lock.expiration
-    mediator.set_expired_pairs2(
+    mediator.set_expired_pairs(
         transfers_pair,
         payee_expiration_block,
     )
@@ -653,7 +653,7 @@ def test_set_expired_pairs():
     assert pair.payer_state == 'payer_pending'
 
     # payee lock expired
-    mediator.set_expired_pairs2(
+    mediator.set_expired_pairs(
         transfers_pair,
         payee_expiration_block + 1,
     )
@@ -662,7 +662,7 @@ def test_set_expired_pairs():
 
     # edge case for the payer lock expiration
     payer_expiration_block = pair.payer_transfer.lock.expiration
-    mediator.set_expired_pairs2(
+    mediator.set_expired_pairs(
         transfers_pair,
         payer_expiration_block,
     )
@@ -670,7 +670,7 @@ def test_set_expired_pairs():
     assert pair.payer_state == 'payer_pending'
 
     # payer lock has expired
-    mediator.set_expired_pairs2(
+    mediator.set_expired_pairs(
         transfers_pair,
         payer_expiration_block + 1,
     )
@@ -705,7 +705,7 @@ def test_events_for_refund():
     )
     assert is_valid, msg
 
-    refund_transfer = factories.make_transfer2(
+    refund_transfer = factories.make_transfer(
         amount,
         UNIT_TRANSFER_INITIATOR,
         UNIT_TRANSFER_TARGET,
@@ -714,7 +714,7 @@ def test_events_for_refund():
     )
 
     small_timeout_blocks = refund_channel.reveal_timeout
-    small_refund_events = mediator.events_for_refund_transfer2(
+    small_refund_events = mediator.events_for_refund_transfer(
         refund_channel,
         refund_transfer,
         small_timeout_blocks,
@@ -722,7 +722,7 @@ def test_events_for_refund():
     )
     assert not small_refund_events
 
-    events = mediator.events_for_refund_transfer2(
+    events = mediator.events_for_refund_transfer(
         refund_channel,
         refund_transfer,
         timeout_blocks,
@@ -747,7 +747,7 @@ def test_events_for_revealsecret():
         amount,
     )
 
-    events = mediator.events_for_revealsecret2(
+    events = mediator.events_for_revealsecret(
         transfers_pair,
         our_address,
     )
@@ -760,7 +760,7 @@ def test_events_for_revealsecret():
     last_pair = transfers_pair[1]
 
     last_pair.payee_state = 'payee_secret_revealed'
-    events = mediator.events_for_revealsecret2(
+    events = mediator.events_for_revealsecret(
         transfers_pair,
         UNIT_SECRET,
     )
@@ -772,7 +772,7 @@ def test_events_for_revealsecret():
     assert events[0].receiver == last_pair.payer_transfer.balance_proof.sender
     assert last_pair.payer_state == 'payer_secret_revealed'
 
-    events = mediator.events_for_revealsecret2(
+    events = mediator.events_for_revealsecret(
         transfers_pair,
         our_address,
     )
@@ -782,7 +782,7 @@ def test_events_for_revealsecret():
     assert not events
 
     first_pair.payee_state = 'payee_secret_revealed'
-    events = mediator.events_for_revealsecret2(
+    events = mediator.events_for_revealsecret(
         transfers_pair,
         UNIT_SECRET,
     )
@@ -801,7 +801,7 @@ def test_events_for_revealsecret_secret_unknown():
         amount,
     )
 
-    events = mediator.events_for_revealsecret2(
+    events = mediator.events_for_revealsecret(
         transfers_pair,
         ADDR,
     )
@@ -830,7 +830,7 @@ def test_events_for_revealsecret_all_states():
         pair = transfers_pair[0]
         pair.payee_state = state
 
-        events = mediator.events_for_revealsecret2(
+        events = mediator.events_for_revealsecret(
             transfers_pair,
             UNIT_SECRET,
         )
@@ -855,7 +855,7 @@ def test_events_for_balanceproof():
     # the lock has not expired yet
     block_number = last_pair.payee_transfer.lock.expiration
 
-    events = mediator.events_for_balanceproof2(
+    events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
         block_number,
@@ -864,7 +864,7 @@ def test_events_for_balanceproof():
     )
     assert len(events) == 2
 
-    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof2))
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
     unlock = next(e for e in events if isinstance(e, EventUnlockSuccess))
     assert unlock
     assert balance_proof
@@ -896,7 +896,7 @@ def test_events_for_balanceproof_channel_closed():
             channel.set_settled(last_channel, block_number)
 
         last_pair.payee_state = 'payee_secret_revealed'
-        events = mediator.events_for_balanceproof2(
+        events = mediator.events_for_balanceproof(
             channelmap,
             transfers_pair,
             block_number,
@@ -925,7 +925,7 @@ def test_events_for_balanceproof_middle_secret():
     middle_pair = transfers_pair[1]
     middle_pair.payee_state = 'payee_secret_revealed'
 
-    events = mediator.events_for_balanceproof2(
+    events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
         block_number,
@@ -933,7 +933,7 @@ def test_events_for_balanceproof_middle_secret():
         UNIT_HASHLOCK,
     )
 
-    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof2))
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
 
     assert len(events) == 2
     assert any(isinstance(e, EventUnlockSuccess) for e in events)
@@ -951,7 +951,7 @@ def test_events_for_balanceproof_secret_unknown():
     )
 
     # the secret is not known, so no event should be used
-    events = mediator.events_for_balanceproof2(
+    events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
         block_number,
@@ -974,7 +974,7 @@ def test_events_for_balanceproof_lock_expired():
     block_number = last_pair.payee_transfer.lock.expiration + 1
 
     # the lock has expired, do not send a balance proof
-    events = mediator.events_for_balanceproof2(
+    events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
         block_number,
@@ -991,7 +991,7 @@ def test_events_for_balanceproof_lock_expired():
     # middle channel. This state should not be reached under normal operation.
     # The last hop needs to choose a proper reveal_timeout and must go on-chain
     # to withdraw the token before the lock expires.
-    events = mediator.events_for_balanceproof2(
+    events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
         block_number,
@@ -999,7 +999,7 @@ def test_events_for_balanceproof_lock_expired():
         UNIT_HASHLOCK,
     )
 
-    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof2))
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
 
     assert len(events) == 2
     assert any(isinstance(e, EventUnlockSuccess) for e in events)
@@ -1026,7 +1026,7 @@ def test_events_for_close():
             pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
         )
 
-        events = mediator.events_for_close2(
+        events = mediator.events_for_close(
             channelmap,
             transfers_pair,
             block_number,
@@ -1060,7 +1060,7 @@ def test_events_for_close_hold_for_unpaid_payee():
     channel_identifier = pair.payer_transfer.balance_proof.channel_address
     channel_state = channelmap[channel_identifier]
     first_unsafe_block = pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
-    events = mediator.events_for_close2(
+    events = mediator.events_for_close(
         channelmap,
         transfers_pair,
         first_unsafe_block,
@@ -1071,7 +1071,7 @@ def test_events_for_close_hold_for_unpaid_payee():
     assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
 
     payer_expiration_block = pair.payer_transfer.lock.expiration
-    events = mediator.events_for_close2(
+    events = mediator.events_for_close(
         channelmap,
         transfers_pair,
         payer_expiration_block,
@@ -1081,7 +1081,7 @@ def test_events_for_close_hold_for_unpaid_payee():
     assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
 
     payer_expiration_block = pair.payer_transfer.lock.expiration
-    events = mediator.events_for_close2(
+    events = mediator.events_for_close(
         channelmap,
         transfers_pair,
         payer_expiration_block + 1,
@@ -1124,7 +1124,7 @@ def test_secret_learned():
 
     block_number = 1
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitMediator2(
+    init_state_change = ActionInitMediator(
         payment_network_identifier,
         available_routes,
         from_route,
@@ -1132,14 +1132,14 @@ def test_secret_learned():
     )
 
     initial_state = None
-    iteration = mediator.state_transition2(
+    iteration = mediator.state_transition(
         initial_state,
         init_state_change,
         channelmap,
         block_number,
     )
 
-    iteration = mediator.secret_learned2(
+    iteration = mediator.secret_learned(
         iteration.new_state,
         channelmap,
         block_number,
@@ -1162,10 +1162,10 @@ def test_secret_learned():
     assert transfer_pair.payee_state == 'payee_balance_proof'
     assert transfer_pair.payer_state == 'payer_secret_revealed'
 
-    reveal_events = [e for e in iteration.events if isinstance(e, SendRevealSecret2)]
+    reveal_events = [e for e in iteration.events if isinstance(e, SendRevealSecret)]
     assert len(reveal_events) == 1
 
-    balance_events = [e for e in iteration.events if isinstance(e, SendBalanceProof2)]
+    balance_events = [e for e in iteration.events if isinstance(e, SendBalanceProof)]
     assert len(balance_events) == 1
 
 
@@ -1201,7 +1201,7 @@ def test_mediate_transfer():
     possible_routes = [factories.route_from_channel(channel1)]
 
     mediator_state = MediatorTransferState(UNIT_HASHLOCK)
-    iteration = mediator.mediate_transfer2(
+    iteration = mediator.mediate_transfer(
         mediator_state,
         possible_routes,
         payer_channel,
@@ -1212,7 +1212,7 @@ def test_mediate_transfer():
     assert len(iteration.events) == 1
 
     send_transfer = iteration.events[0]
-    assert isinstance(send_transfer, SendMediatedTransfer2)
+    assert isinstance(send_transfer, SendMediatedTransfer)
 
     transfer = send_transfer.transfer
     assert transfer.identifier == payer_transfer.identifier
@@ -1258,7 +1258,7 @@ def test_init_mediator():
 
     block_number = 1
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitMediator2(
+    init_state_change = ActionInitMediator(
         payment_network_identifier,
         available_routes,
         from_route,
@@ -1266,7 +1266,7 @@ def test_init_mediator():
     )
 
     mediator_state = None
-    iteration = mediator.state_transition2(
+    iteration = mediator.state_transition(
         mediator_state,
         init_state_change,
         channelmap,
@@ -1279,7 +1279,7 @@ def test_init_mediator():
     msg = 'we have a valid route, the mediated transfer event must be emitted'
     assert iteration.events, msg
 
-    mediated_transfers = [e for e in iteration.events if isinstance(e, SendMediatedTransfer2)]
+    mediated_transfers = [e for e in iteration.events if isinstance(e, SendMediatedTransfer)]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
     send_transfer = mediated_transfers[0]
     mediated_transfer = send_transfer.transfer
@@ -1333,7 +1333,7 @@ def test_no_valid_routes():
 
     block_number = 1
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitMediator2(
+    init_state_change = ActionInitMediator(
         payment_network_identifier,
         available_routes,
         from_route,
@@ -1341,7 +1341,7 @@ def test_no_valid_routes():
     )
 
     mediator_state = None
-    iteration = mediator.state_transition2(
+    iteration = mediator.state_transition(
         mediator_state,
         init_state_change,
         channelmap,
@@ -1350,7 +1350,7 @@ def test_no_valid_routes():
     assert iteration.new_state is None
 
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRefundTransfer2)
+    assert isinstance(iteration.events[0], SendRefundTransfer)
 
 
 def test_lock_timeout_lower_than_previous_channel_settlement_period():
@@ -1425,7 +1425,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
 
     block_number = 1
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitMediator2(
+    init_state_change = ActionInitMediator(
         payment_network_identifier,
         available_routes,
         from_route,
@@ -1433,7 +1433,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     )
 
     mediator_state = None
-    iteration = mediator.state_transition2(
+    iteration = mediator.state_transition(
         mediator_state,
         init_state_change,
         channelmap,
@@ -1443,7 +1443,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     assert isinstance(iteration.new_state, MediatorTransferState)
     assert iteration.events
 
-    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer2))
+    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer))
     assert send_mediated
 
     msg = 'transfer expiration must be lower than the funding channel settlement window'
@@ -1511,7 +1511,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     }
 
     payment_network_identifier = factories.make_address()
-    init_state_change = ActionInitMediator2(
+    init_state_change = ActionInitMediator(
         payment_network_identifier,
         available_routes,
         from_route,
@@ -1519,7 +1519,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     )
 
     mediator_state = None
-    iteration = mediator.state_transition2(
+    iteration = mediator.state_transition(
         mediator_state,
         init_state_change,
         channelmap,
@@ -1527,7 +1527,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     )
 
     attack_block_number = from_transfer.lock.expiration - attacked_channel.reveal_timeout
-    assert not mediator.is_safe_to_wait2(
+    assert not mediator.is_safe_to_wait(
         from_transfer.lock.expiration,
         attacked_channel.reveal_timeout,
         attack_block_number,
@@ -1536,7 +1536,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # Wait until it's not safe to wait for the off-chain unlock for B-C (and expire C-A2)
     new_iteration = iteration
     for new_block_number in range(block_number, attack_block_number + 1):
-        new_iteration = mediator.state_transition2(
+        new_iteration = mediator.state_transition(
             new_iteration.new_state,
             Block(new_block_number),
             channelmap,
@@ -1554,7 +1554,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
         UNIT_SECRET,
         target_attacker2,
     )
-    attack_iteration = mediator.state_transition2(
+    attack_iteration = mediator.state_transition(
         new_iteration.new_state,
         receive_secret,
         channelmap,
@@ -1567,7 +1567,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
 
     # don't go on-chain since the balance proof was not received
     for new_block_number in range(block_number, from_transfer.lock.expiration + 1):
-        new_iteration = mediator.state_transition2(
+        new_iteration = mediator.state_transition(
             new_iteration.new_state,
             Block(new_block_number),
             channelmap,
@@ -1641,7 +1641,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     possible_routes = [factories.route_from_channel(channel1)]
 
     mediator_state = MediatorTransferState(UNIT_HASHLOCK)
-    iteration = mediator.mediate_transfer2(
+    iteration = mediator.mediate_transfer(
         mediator_state,
         possible_routes,
         payer_channel,
@@ -1650,8 +1650,8 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
         block_number,
     )
 
-    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer2))
-    assert isinstance(send_mediated, SendMediatedTransfer2)
+    send_mediated = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer))
+    assert isinstance(send_mediated, SendMediatedTransfer)
 
     race_block = payer_transfer.lock.expiration - channel1.reveal_timeout - mediator.TRANSIT_BLOCKS
     assert mediator.TRANSIT_BLOCKS > 0
