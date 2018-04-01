@@ -62,11 +62,6 @@ class SamePeerAddress(RaidenError):
     """
 
 
-class TransferWhenClosed(RaidenError):
-    """ Raised when a user tries to request a transfer in a closed channel. """
-    pass
-
-
 class UnknownAddress(RaidenError):
     """ Raised when the user provided address is valid but is not from a known
     node. """
