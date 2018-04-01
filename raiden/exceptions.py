@@ -82,14 +82,6 @@ class AlreadyRegisteredTokenAddress(RaidenError):
 # from a byzantine node)
 
 
-class InvalidNonce(RaidenError):
-    """ Raised when the received messages has an invalid value for the nonce.
-
-    The nonce field must change incrementally.
-    """
-    pass
-
-
 class TransferUnwanted(RaidenError):
     """ Raised when the node is not receiving new transfers. """
     pass
