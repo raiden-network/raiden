@@ -82,21 +82,6 @@ class AlreadyRegisteredTokenAddress(RaidenError):
 # from a byzantine node)
 
 
-class InvalidLocksRoot(RaidenError):
-    """ Raised when the received message has an invalid locksroot.
-
-    Used to reject a message when a pending lock is missing from the locksroot,
-    otherwise if the message is accepted there is a potential loss of token.
-    """
-    def __init__(self, expected_locksroot, got_locksroot):
-        msg = 'Locksroot mismatch. Expected {} but got {}'.format(
-            pex(expected_locksroot),
-            pex(got_locksroot),
-        )
-
-        super().__init__(msg)
-
-
 class InvalidNonce(RaidenError):
     """ Raised when the received messages has an invalid value for the nonce.
 
