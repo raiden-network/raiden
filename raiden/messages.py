@@ -700,36 +700,6 @@ class LockedTransfer(EnvelopeMessage):
         self.locksroot = locksroot
         self.lock = lock
 
-    def to_mediatedtransfer(self, target, initiator='', fee=0):
-        return MediatedTransfer(
-            self.identifier,
-            self.nonce,
-            self.token,
-            self.channel,
-            self.transferred_amount,
-            self.recipient,
-            self.locksroot,
-            self.lock,
-            target,
-            initiator,
-            fee,
-        )
-
-    def to_refundtransfer(self, target, initiator='', fee=0):
-        return RefundTransfer(
-            self.identifier,
-            self.nonce,
-            self.token,
-            self.channel,
-            self.transferred_amount,
-            self.recipient,
-            self.locksroot,
-            self.lock,
-            target,
-            initiator,
-            fee,
-        )
-
     @staticmethod
     def unpack(packed):
         lock = Lock(
@@ -889,25 +859,6 @@ class MediatedTransfer(LockedTransfer):
         packed.hashlock = lock.hashlock
 
         packed.signature = self.signature
-
-    @staticmethod
-    def from_statechange(state_change):
-        balance_proof = state_change.balance_proof
-
-        lock = Lock.from_state(state_change.lock)
-
-        return MediatedTransfer(
-            state_change.identifier,
-            balance_proof.nonce,
-            state_change.token,
-            balance_proof.channel_address,
-            balance_proof.transferred_amount,
-            state_change.recipient,
-            balance_proof.locksroot,
-            lock,
-            state_change.target,
-            state_change.initiator,
-        )
 
     @staticmethod
     def from_event(event: 'SendMediatedTransfer') -> 'MediatedTransfer':
