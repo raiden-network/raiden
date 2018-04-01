@@ -68,11 +68,7 @@ def decode(data):
     return klass.decode(data)
 
 
-class MessageHashable:
-    pass
-
-
-class Message(MessageHashable):
+class Message:
     # pylint: disable=no-member
 
     @property
@@ -580,7 +576,7 @@ class DirectTransfer(EnvelopeMessage):
         return representation
 
 
-class Lock(MessageHashable):
+class Lock:
     """ Describes a locked `amount`.
 
     Args:
@@ -589,8 +585,8 @@ class Lock(MessageHashable):
         hashlock: Hashed secret `sha3(secret)` used to register the transfer,
         the real `secret` is necessary to release the locked amount.
     """
-    # Lock extends MessageHashable but it is not a message, it is a
-    # serializable structure that is reused in some messages
+    # Lock is not a message, it is a serializable structure that is reused in
+    # some messages
 
     def __init__(self, amount, expiration, hashlock):
         # guarantee that `amount` can be serialized using the available bytes
