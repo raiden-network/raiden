@@ -28,7 +28,7 @@ from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
 from raiden.transfer.state import (
-    RouteState2,
+    RouteState,
     PaymentNetworkState,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -40,14 +40,14 @@ from raiden.transfer.state_change import (
     ActionForTokenNetwork,
     ActionInitNode,
     ActionLeaveAllNetworks,
-    ActionTransferDirect2,
+    ActionTransferDirect,
     Block,
     ContractReceiveNewPaymentNetwork,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator2,
-    ActionInitMediator2,
-    ActionInitTarget2,
+    ActionInitInitiator,
+    ActionInitMediator,
+    ActionInitTarget,
 )
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import SignedMessage
@@ -91,7 +91,7 @@ def initiator_init(
         transfer_amount,
         previous_address,
     )
-    init_initiator_statechange = ActionInitInitiator2(
+    init_initiator_statechange = ActionInitInitiator(
         registry_address,
         transfer_state,
         routes,
@@ -111,11 +111,11 @@ def mediator_init(raiden, transfer):
         from_transfer.lock.amount,
         transfer.sender,
     )
-    from_route = RouteState2(
+    from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_address,
     )
-    init_mediator_statechange = ActionInitMediator2(
+    init_mediator_statechange = ActionInitMediator(
         registry_address,
         routes,
         from_route,
@@ -126,12 +126,12 @@ def mediator_init(raiden, transfer):
 
 def target_init(raiden, transfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
-    from_route = RouteState2(
+    from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_address,
     )
     registry_address = raiden.default_registry.address
-    init_target_statechange = ActionInitTarget2(
+    init_target_statechange = ActionInitTarget(
         registry_address,
         from_route,
         from_transfer,
@@ -529,7 +529,7 @@ class RaidenService:
         if identifier is None:
             identifier = create_default_identifier()
 
-        direct_transfer = ActionTransferDirect2(
+        direct_transfer = ActionTransferDirect(
             target,
             identifier,
             amount,

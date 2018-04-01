@@ -683,7 +683,7 @@ def run(ctx, **kwargs):
     if ctx.invoked_subcommand is None:
         print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
         from raiden.ui.console import Console
-        from raiden.api.python import RaidenAPI2
+        from raiden.api.python import RaidenAPI
 
         slogging.configure(
             kwargs['logging'],
@@ -717,7 +717,7 @@ def run(ctx, **kwargs):
                         domain_list.append(str(kwargs['rpccorsdomain']))
 
                 if ctx.params['rpc']:
-                    raiden_api = RaidenAPI2(app_.raiden)
+                    raiden_api = RaidenAPI(app_.raiden)
                     rest_api = RestAPI(raiden_api)
                     api_server = APIServer(
                         rest_api,
@@ -796,7 +796,7 @@ def version(short, **kwargs):
 def smoketest(ctx, debug, **kwargs):
     """ Test, that the raiden installation is sane.
     """
-    from raiden.api.python import RaidenAPI2
+    from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.utils import get_contract_path
 
@@ -866,7 +866,7 @@ def smoketest(ctx, debug, **kwargs):
     # invoke the raiden app
     app_ = ctx.invoke(app, **args)
 
-    raiden_api = RaidenAPI2(app_.raiden)
+    raiden_api = RaidenAPI(app_.raiden)
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api)
     (api_host, api_port) = split_endpoint(args['api_address'])

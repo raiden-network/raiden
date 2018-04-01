@@ -10,7 +10,7 @@ from gevent.timeout import Timeout
 from ethereum import slogging
 import click
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.network.sockfactory import SocketFactory
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
@@ -35,7 +35,7 @@ TRANSFER_MEMORY = 4096
 class EchoNode:
 
     def __init__(self, api, token_address):
-        assert isinstance(api, RaidenAPI2)
+        assert isinstance(api, RaidenAPI)
         self.ready = Event()
 
         self.api = api
@@ -266,7 +266,7 @@ class EchoNode:
 def runner(ctx, **kwargs):
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
     # This is largely a copy&paste job from `raiden.ui.cli::run`, with the difference that
-    # an `EchoNode` is instantiated from the App's `RaidenAPI2`.
+    # an `EchoNode` is instantiated from the App's `RaidenAPI`.
     print('Welcome to Raiden, version {} [Echo Node]'.format(get_system_spec()['raiden']))
     slogging.configure(
         kwargs['logging'],
@@ -297,7 +297,7 @@ def runner(ctx, **kwargs):
             else:
                 domain_list.append(str(kwargs['rpccorsdomain']))
 
-        raiden_api = RaidenAPI2(app_.raiden)
+        raiden_api = RaidenAPI(app_.raiden)
         if ctx.params['rpc']:
             rest_api = RestAPI(raiden_api)
             api_server = APIServer(

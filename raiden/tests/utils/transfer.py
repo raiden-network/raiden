@@ -16,7 +16,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
-from raiden.transfer.mediated_transfer.events import SendMediatedTransfer2
+from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import compute_layers
@@ -26,8 +26,8 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.transfer.state_change import (
-    ActionTransferDirect2,
-    ReceiveTransferDirect2,
+    ActionTransferDirect,
+    ReceiveTransferDirect,
     ReceiveUnlock,
 )
 from raiden.utils import sha3, privatekey_to_address
@@ -137,7 +137,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         init_initiator_statechange,
         initiator_app.raiden.get_block_number(),
     )
-    send_transfermessage = must_contain_entry(events, SendMediatedTransfer2, {})
+    send_transfermessage = must_contain_entry(events, SendMediatedTransfer, {})
     transfermessage = MediatedTransfer.from_event(send_transfermessage)
     initiator_app.raiden.sign(transfermessage)
 
@@ -147,7 +147,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
             mediator_init_statechange,
             mediator_app.raiden.get_block_number(),
         )
-        send_transfermessage = must_contain_entry(events, SendMediatedTransfer2, {})
+        send_transfermessage = must_contain_entry(events, SendMediatedTransfer, {})
         transfermessage = MediatedTransfer.from_event(send_transfermessage)
         mediator_app.raiden.sign(transfermessage)
 
@@ -324,7 +324,7 @@ def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
     assert direct_transfer_message.sender == from_channel.our_state.address
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
-    receive_direct = ReceiveTransferDirect2(
+    receive_direct = ReceiveTransferDirect(
         identifier,
         balance_proof,
     )
@@ -342,7 +342,7 @@ def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pke
     `partner_channel`."""
     identifier = channel.get_next_nonce(from_channel.our_state)
 
-    state_change = ActionTransferDirect2(
+    state_change = ActionTransferDirect(
         from_channel.partner_state.address,
         identifier,
         amount,
@@ -362,7 +362,7 @@ def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pke
     assert direct_transfer_message.sender == from_channel.our_state.address
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
-    receive_direct = ReceiveTransferDirect2(
+    receive_direct = ReceiveTransferDirect(
         identifier,
         balance_proof,
     )

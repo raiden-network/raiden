@@ -2,7 +2,7 @@
 import gevent
 import pytest
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     EVENT_CHANNEL_CLOSED,
@@ -57,7 +57,7 @@ def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
         token_address,
     )
 
-    RaidenAPI2(app0.raiden).channel_open(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
     gevent.sleep(events_poll_timeout)
 
     # The channel is created but without funds
@@ -81,7 +81,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     assert channel0 is None
     assert channel1 is None
 
-    RaidenAPI2(app0.raiden).channel_open(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -90,7 +90,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI2(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
+    RaidenAPI(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -99,7 +99,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI2(app1.raiden).channel_deposit(token_address, app0.raiden.address, deposit)
+    RaidenAPI(app1.raiden).channel_deposit(token_address, app0.raiden.address, deposit)
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -150,7 +150,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
     assert not events
 
-    channel_address = RaidenAPI2(app0.raiden).channel_open(token_address, app1.raiden.address)
+    channel_address = RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
     gevent.sleep(events_poll_timeout * 2)
 
     events = get_all_channel_manager_events(
@@ -194,7 +194,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         app1, 0, [],
     )
 
-    RaidenAPI2(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
+    RaidenAPI(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
     gevent.sleep(events_poll_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(
@@ -224,7 +224,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
     assert event_dicts_are_equal(events[0], new_balance_event)
 
-    RaidenAPI2(app0.raiden).channel_close(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_close(token_address, app1.raiden.address)
     gevent.sleep(events_poll_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(

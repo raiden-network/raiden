@@ -21,7 +21,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelEndState,
     NettingChannelState,
-    RouteState2,
+    RouteState,
     TransactionExecutionStatus,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
@@ -94,7 +94,7 @@ def make_privkey_address():
 
 
 def route_from_channel(channel_state):
-    route = RouteState2(
+    route = RouteState(
         channel_state.partner_state.address,
         channel_state.identifier,
     )
@@ -162,7 +162,7 @@ def make_channel_mapping(channels_descriptions):
     return mapping
 
 
-def make_transfer2(
+def make_transfer(
         amount,
         initiator,
         target,

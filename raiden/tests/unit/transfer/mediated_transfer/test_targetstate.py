@@ -7,11 +7,11 @@ from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitTarget2,
+    ActionInitTarget,
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
-    SendRevealSecret2,
+    SendRevealSecret,
     SendSecretRequest,
 )
 from raiden.transfer.state_change import (
@@ -90,10 +90,10 @@ def test_events_for_close():
     unsafe_to_wait = expiration - from_channel.reveal_timeout
 
     state = TargetTransferState(from_route, from_transfer)
-    events = target.events_for_close2(state, from_channel, safe_to_wait)
+    events = target.events_for_close(state, from_channel, safe_to_wait)
     assert not events
 
-    events = target.events_for_close2(state, from_channel, unsafe_to_wait)
+    events = target.events_for_close(state, from_channel, unsafe_to_wait)
     assert events
     assert isinstance(events[0], ContractSendChannelClose)
     assert events[0].channel_identifier == from_route.channel_identifier
@@ -132,7 +132,7 @@ def test_events_for_close_secret_unknown():
 
     state = TargetTransferState(from_route, from_transfer)
 
-    events = target.events_for_close2(state, from_channel, expiration)
+    events = target.events_for_close(state, from_channel, expiration)
     assert not events
 
 
@@ -161,13 +161,13 @@ def test_handle_inittarget():
         channel_identifier=from_channel.identifier,
     )
 
-    state_change = ActionInitTarget2(
+    state_change = ActionInitTarget(
         payment_network_identifier,
         from_route,
         from_transfer,
     )
 
-    iteration = target.handle_inittarget2(state_change, from_channel, block_number)
+    iteration = target.handle_inittarget(state_change, from_channel, block_number)
 
     events = iteration.events
     assert events
@@ -209,8 +209,8 @@ def test_handle_inittarget_bad_expiration():
         from_transfer,
     )
 
-    state_change = ActionInitTarget2(payment_network_identifier, from_route, from_transfer)
-    iteration = target.handle_inittarget2(state_change, from_channel, block_number)
+    state_change = ActionInitTarget(payment_network_identifier, from_route, from_transfer)
+    iteration = target.handle_inittarget(state_change, from_channel, block_number)
     assert not iteration.events
 
 
@@ -234,7 +234,7 @@ def test_handle_secretreveal():
     )
     state_change = ReceiveSecretReveal(secret, initiator)
 
-    iteration = target.handle_secretreveal2(
+    iteration = target.handle_secretreveal(
         state,
         state_change,
         channel_state,
@@ -242,7 +242,7 @@ def test_handle_secretreveal():
     assert len(iteration.events) == 1
 
     reveal = iteration.events[0]
-    assert isinstance(reveal, SendRevealSecret2)
+    assert isinstance(reveal, SendRevealSecret)
 
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.identifier == state.transfer.identifier
@@ -265,7 +265,7 @@ def test_handle_block():
     )
 
     new_block = Block(block_number + 1)
-    iteration = target.state_transition2(
+    iteration = target.state_transition(
         state,
         new_block,
         from_channel,
@@ -290,7 +290,7 @@ def test_handle_block_equal_block_number():
     )
 
     new_block = Block(block_number)
-    iteration = target.state_transition2(
+    iteration = target.state_transition(
         state,
         new_block,
         from_channel,
@@ -315,7 +315,7 @@ def test_handle_block_lower_block_number():
     )
 
     new_block = Block(block_number - 1)
-    iteration = target.state_transition2(
+    iteration = target.state_transition(
         state,
         new_block,
         from_channel,
@@ -354,13 +354,13 @@ def test_state_transition():
         UNIT_SECRET,
     )
 
-    init = ActionInitTarget2(
+    init = ActionInitTarget(
         payment_network_identifier,
         from_route,
         from_transfer,
     )
 
-    init_transition = target.state_transition2(
+    init_transition = target.state_transition(
         None,
         init,
         from_channel,
@@ -371,7 +371,7 @@ def test_state_transition():
     assert init_transition.new_state.transfer == from_transfer
 
     first_new_block = Block(block_number + 1)
-    first_block_iteration = target.state_transition2(
+    first_block_iteration = target.state_transition(
         init_transition.new_state,
         first_new_block,
         from_channel,
@@ -379,7 +379,7 @@ def test_state_transition():
     )
 
     secret_reveal = ReceiveSecretReveal(factories.UNIT_SECRET, initiator)
-    reveal_iteration = target.state_transition2(
+    reveal_iteration = target.state_transition(
         first_block_iteration.new_state,
         secret_reveal,
         from_channel,
@@ -388,7 +388,7 @@ def test_state_transition():
     assert reveal_iteration.events
 
     second_new_block = Block(block_number + 2)
-    iteration = target.state_transition2(
+    iteration = target.state_transition(
         init_transition.new_state,
         second_new_block,
         from_channel,
@@ -417,7 +417,7 @@ def test_state_transition():
         balance_proof,
     )
 
-    proof_iteration = target.state_transition2(
+    proof_iteration = target.state_transition(
         init_transition.new_state,
         balance_proof_state_change,
         from_channel,

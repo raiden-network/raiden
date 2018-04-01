@@ -28,9 +28,9 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator2,
-    ActionInitMediator2,
-    ActionInitTarget2,
+    ActionInitInitiator,
+    ActionInitMediator,
+    ActionInitTarget,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
@@ -120,7 +120,7 @@ def subdispatch_to_paymenttask(node_state, state_change, hashlock):
             )
 
             if token_network_state:
-                sub_iteration = mediator.state_transition2(
+                sub_iteration = mediator.state_transition(
                     sub_task.mediator_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
@@ -141,7 +141,7 @@ def subdispatch_to_paymenttask(node_state, state_change, hashlock):
             )
 
             if channel_state:
-                sub_iteration = target.state_transition2(
+                sub_iteration = target.state_transition(
                     sub_task.target_state,
                     state_change,
                     channel_state,
@@ -231,7 +231,7 @@ def subdispatch_mediatortask(
             payment_network_identifier,
             token_network_identifier,
         )
-        iteration = mediator.state_transition2(
+        iteration = mediator.state_transition(
             mediator_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
@@ -285,7 +285,7 @@ def subdispatch_targettask(
         )
 
     if channel_state:
-        iteration = target.state_transition2(
+        iteration = target.state_transition(
             target_state,
             state_change,
             channel_state,
@@ -596,17 +596,17 @@ def state_transition(node_state, state_change):
         iteration = handle_leave_all_networks(
             node_state,
         )
-    elif isinstance(state_change, ActionInitInitiator2):
+    elif isinstance(state_change, ActionInitInitiator):
         iteration = handle_init_initiator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitMediator2):
+    elif isinstance(state_change, ActionInitMediator):
         iteration = handle_init_mediator(
             node_state,
             state_change,
         )
-    elif isinstance(state_change, ActionInitTarget2):
+    elif isinstance(state_change, ActionInitTarget):
         iteration = handle_init_target(
             node_state,
             state_change,

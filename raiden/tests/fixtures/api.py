@@ -6,7 +6,7 @@ import psutil
 import gevent
 from gevent import Greenlet
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.api.rest import RestAPI, APIServer
 
 
@@ -31,7 +31,7 @@ def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
 #       been invoked.
 @pytest.fixture
 def api_backend(raiden_network, rest_api_port_number):
-    raiden_api = RaidenAPI2(raiden_network[0].raiden)
+    raiden_api = RaidenAPI(raiden_network[0].raiden)
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api)
     api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)

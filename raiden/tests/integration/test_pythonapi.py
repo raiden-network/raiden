@@ -2,7 +2,7 @@
 import pytest
 import gevent
 
-from raiden.api.python import RaidenAPI2
+from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     InvalidAddress,
@@ -36,7 +36,7 @@ def test_register_token(raiden_network, token_amount):
         constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
     )
 
-    api1 = RaidenAPI2(app1.raiden)
+    api1 = RaidenAPI(app1.raiden)
     assert token_address not in api1.get_tokens_list()
 
     app1.raiden.poll_blockchain_events()
@@ -58,8 +58,8 @@ def test_token_registered_race(raiden_chain, token_amount):
     https://github.com/raiden-network/raiden/issues/784"""
     app0, app1 = raiden_chain
 
-    api0 = RaidenAPI2(app0.raiden)
-    api1 = RaidenAPI2(app1.raiden)
+    api0 = RaidenAPI(app0.raiden)
+    api1 = RaidenAPI(app1.raiden)
 
     # Recreate the race condition by making sure the non-registering app won't
     # register at all by watching for the TokenAdded blockchain event.
@@ -100,7 +100,7 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
-    api0 = RaidenAPI2(app0.raiden)
+    api0 = RaidenAPI(app0.raiden)
 
     old_state = get_channelstate(app0, app1, token_address)
     api0.channel_deposit(token_address, app1.raiden.address, 10)
@@ -118,7 +118,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
 
     with pytest.raises(InvalidAddress):
         # sending to an unknown/non-existant address
-        RaidenAPI2(app0.raiden).transfer(
+        RaidenAPI(app0.raiden).transfer(
             token_address,
             10,
             target=non_existing_address,
@@ -141,7 +141,7 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     taker_amount = 30
 
     identifier = 313
-    RaidenAPI2(app1.raiden).expect_token_swap(  # pylint: disable=no-member
+    RaidenAPI(app1.raiden).expect_token_swap(  # pylint: disable=no-member
         identifier,
         maker_token,
         maker_amount,
@@ -151,7 +151,7 @@ def test_token_swap(raiden_network, deposit, token_addresses):
         taker_address,
     )
 
-    async_result = RaidenAPI2(app0.raiden).token_swap_async(  # pylint: disable=no-member
+    async_result = RaidenAPI(app0.raiden).token_swap_async(  # pylint: disable=no-member
         identifier,
         maker_token,
         maker_amount,
@@ -198,7 +198,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
 
     channel_0_1 = get_channelstate(app0, app1, token_address)
-    app0_events = RaidenAPI2(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
+    app0_events = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
 
     assert must_have_event(app0_events, {'_event_type': b'ChannelNewBalance'})
 
@@ -208,14 +208,14 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
     max_block = max(event[0] for event in app0_events)
-    results = RaidenAPI2(app0.raiden).get_channel_events(
+    results = RaidenAPI(app0.raiden).get_channel_events(
         channel_0_1.identifier,
         max_block + 1,
         max_block + 100,
     )
     assert not results
 
-    app1_events = RaidenAPI2(app1.raiden).get_channel_events(channel_0_1.identifier, 0)
+    app1_events = RaidenAPI(app1.raiden).get_channel_events(channel_0_1.identifier, 0)
     assert must_have_event(app1_events, {'_event_type': b'ChannelNewBalance'})
     assert must_have_event(app1_events, {'_event_type': b'EventTransferReceivedSuccess'})
 
@@ -225,12 +225,12 @@ def test_api_channel_events(raiden_chain, token_addresses):
 @pytest.mark.xfail
 def test_insufficient_funds(raiden_network, token_addresses, deposit):
     """Test transfer on a channel with insufficient funds. It is expected to
-    fail, as at the moment RaidenAPI2 is mocked and will always succeed."""
+    fail, as at the moment RaidenAPI is mocked and will always succeed."""
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
     with pytest.raises(InsufficientFunds):
-        RaidenAPI2(app0.raiden).transfer(
+        RaidenAPI(app0.raiden).transfer(
             token_address,
             deposit + 1,
             target=app1.raiden.address,

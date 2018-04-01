@@ -164,7 +164,7 @@ class APIServer:
     The API is wrapped in multiple layers, and the Server should be invoked this way::
 
         # instance of the raiden-api
-        raiden_api = RaidenAPI2(...)
+        raiden_api = RaidenAPI(...)
 
         # wrap the raiden-api with rest-logic and encoding
         rest_api = RestAPI(raiden_api)
@@ -263,9 +263,9 @@ class APIServer:
 
 class RestAPI:
     """
-    This wraps around the actual RaidenAPI2 in api/python.
+    This wraps around the actual RaidenAPI in api/python.
     It will provide the additional, neccessary RESTful logic and
-    the proper JSON-encoding of the Objects provided by the RaidenAPI2
+    the proper JSON-encoding of the Objects provided by the RaidenAPI
     """
     version = 1
 

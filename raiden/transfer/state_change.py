@@ -107,7 +107,7 @@ class ActionCancelTransfer(StateChange):
         return not self.__eq__(other)
 
 
-class ActionTransferDirect2(StateChange):
+class ActionTransferDirect(StateChange):
     def __init__(self, receiver_address: typing.address, identifier, amount: int):
         if not isinstance(receiver_address, typing.address):
             raise ValueError('receiver_address must be address')
@@ -120,7 +120,7 @@ class ActionTransferDirect2(StateChange):
         self.receiver_address = receiver_address
 
     def __repr__(self):
-        return '<ActionTransferDirect2 receiver_address:{} identifier:{} amount:{}>'.format(
+        return '<ActionTransferDirect receiver_address:{} identifier:{} amount:{}>'.format(
             pex(self.receiver_address),
             self.identifier,
             self.amount,
@@ -128,7 +128,7 @@ class ActionTransferDirect2(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionTransferDirect2) and
+            isinstance(other, ActionTransferDirect) and
             self.receiver_address == other.receiver_address and
             self.identifier == other.identifier and
             self.amount == other.amount
@@ -549,7 +549,7 @@ class ContractReceiveRouteNew(StateChange):
         return not self.__eq__(other)
 
 
-class ReceiveTransferDirect2(StateChange):
+class ReceiveTransferDirect(StateChange):
     def __init__(self, transfer_identifier, balance_proof):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
@@ -559,7 +559,7 @@ class ReceiveTransferDirect2(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ReceiveTransferDirect2) and
+            isinstance(other, ReceiveTransferDirect) and
             self.transfer_identifier == other.transfer_identifier and
             self.balance_proof == other.balance_proof
         )
@@ -569,7 +569,7 @@ class ReceiveTransferDirect2(StateChange):
 
     def __repr__(self):
         return (
-            'ReceiveTransferDirect2('
+            'ReceiveTransferDirect('
             'id:{} balance_proof:{}'
             ')'
         ).format(

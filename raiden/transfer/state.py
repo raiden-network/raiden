@@ -286,7 +286,7 @@ class PaymentMappingState(State):
         return not self.__eq__(other)
 
 
-class RouteState2(State):
+class RouteState(State):
     """ A possible route provided by a routing service.
 
     Args:
@@ -308,7 +308,7 @@ class RouteState2(State):
 
     def __repr__(self):
         return (
-            '<RouteState2 hop:{node} channel:{channel}>'
+            '<RouteState hop:{node} channel:{channel}>'
         ).format(
             node=pex(self.node_address),
             channel=pex(self.channel_identifier),
@@ -316,7 +316,7 @@ class RouteState2(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, RouteState2) and
+            isinstance(other, RouteState) and
             self.node_address == other.node_address and
             self.channel_identifier == other.channel_identifier
         )

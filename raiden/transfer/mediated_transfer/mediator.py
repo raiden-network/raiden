@@ -8,11 +8,11 @@ from raiden.transfer.events import ContractSendChannelWithdraw
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     LockedTransferUnsignedState,
-    MediationPairState2,
+    MediationPairState,
     MediatorTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitMediator2,
+    ActionInitMediator,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
@@ -26,7 +26,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
     EventWithdrawFailed,
     EventWithdrawSuccess,
-    SendRevealSecret2,
+    SendRevealSecret,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
@@ -80,7 +80,7 @@ def is_lock_valid(expiration, block_number):
     return block_number <= expiration
 
 
-def is_safe_to_wait2(lock_expiration, reveal_timeout, block_number):
+def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
     """ True if there are more than enough blocks to safely settle on chain and
     waiting is safe.
     """
@@ -94,7 +94,7 @@ def is_safe_to_wait2(lock_expiration, reveal_timeout, block_number):
     return block_number < lock_expiration - reveal_timeout
 
 
-def is_valid_refund2(
+def is_valid_refund(
         original_transfer: LockedTransferUnsignedState,
         refund_transfer: LockedTransferSignedState
 ):
@@ -125,7 +125,7 @@ def is_valid_refund2(
     )
 
 
-def is_channel_close_needed2(payer_channel, transfer_pair, block_number):
+def is_channel_close_needed(payer_channel, transfer_pair, block_number):
     """ True if this node needs to close the channel to withdraw on-chain.
     Only close the channel to withdraw on chain if the corresponding payee node
     has received, this prevents attacks were the payee node burns it's payment
@@ -137,7 +137,7 @@ def is_channel_close_needed2(payer_channel, transfer_pair, block_number):
     payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
     already_closing = channel.get_status(payer_channel) == CHANNEL_STATE_CLOSING
 
-    safe_to_wait = is_safe_to_wait2(
+    safe_to_wait = is_safe_to_wait(
         transfer_pair.payer_transfer.lock.expiration,
         payer_channel.reveal_timeout,
         block_number,
@@ -215,7 +215,7 @@ def get_pending_transfer_pairs(transfers_pair):
     return pending_pairs
 
 
-def get_timeout_blocks2(settle_timeout, closed_block_number, payer_lock_expiration, block_number):
+def get_timeout_blocks(settle_timeout, closed_block_number, payer_lock_expiration, block_number):
     """ Return the timeout blocks, it's the base value from which the payees
     lock timeout must be computed.
     The payee lock timeout is crucial for safety of the mediated transfer, the
@@ -249,7 +249,7 @@ def get_timeout_blocks2(settle_timeout, closed_block_number, payer_lock_expirati
     return timeout_blocks
 
 
-def sanity_check2(state):
+def sanity_check(state):
     """ Check invariants that must hold. """
 
     # if a transfer is paid we must know the secret
@@ -344,7 +344,7 @@ def next_channel_from_routes(
         return channel_state
 
 
-def next_transfer_pair2(
+def next_transfer_pair(
         payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
@@ -391,7 +391,7 @@ def next_transfer_pair2(
         )
         assert mediatedtransfer_event
 
-        transfer_pair = MediationPairState2(
+        transfer_pair = MediationPairState(
             payer_transfer,
             payee_channel.partner_state.address,
             mediatedtransfer_event.transfer,
@@ -405,7 +405,7 @@ def next_transfer_pair2(
     )
 
 
-def set_secret2(state, channelidentifiers_to_channels, secret, hashlock):
+def set_secret(state, channelidentifiers_to_channels, secret, hashlock):
     """ Set the secret to all mediated transfers.
     It doesn't matter if the secret was learned through the blockchain or a
     secret reveal message.
@@ -432,7 +432,7 @@ def set_secret2(state, channelidentifiers_to_channels, secret, hashlock):
         )
 
 
-def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
+def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         transfers_pair,
         payee_address,
         new_payee_state
@@ -443,7 +443,7 @@ def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
         The elements or transfers_pair are changed in place, the list must
         contain all the known transfers to properly check reveal order.
     """
-    assert new_payee_state in MediationPairState2.valid_payee_states
+    assert new_payee_state in MediationPairState.valid_payee_states
 
     wrong_reveal_order = False
     for back in reversed(transfers_pair):
@@ -464,7 +464,7 @@ def set_payee_state_and_check_reveal_order2(  # pylint: disable=invalid-name
     return list()
 
 
-def set_expired_pairs2(transfers_pair, block_number):
+def set_expired_pairs(transfers_pair, block_number):
     """ Set the state of expired transfers, and return the failed events. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
@@ -500,7 +500,7 @@ def set_expired_pairs2(transfers_pair, block_number):
     return events
 
 
-def events_for_refund_transfer2(refund_channel, refund_transfer, timeout_blocks, block_number):
+def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, block_number):
     """ Refund the transfer.
     Args:
         refund_route (RouteState): The original route that sent the mediated
@@ -546,7 +546,7 @@ def events_for_refund_transfer2(refund_channel, refund_transfer, timeout_blocks,
     return list()
 
 
-def events_for_revealsecret2(transfers_pair, secret):
+def events_for_revealsecret(transfers_pair, secret):
     """ Reveal the secret backwards.
     This node is named N, suppose there is a mediated transfer with two refund
     transfers, one from B and one from C:
@@ -573,7 +573,7 @@ def events_for_revealsecret2(transfers_pair, secret):
         if payee_secret and not payer_secret:
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
-            reveal_secret = SendRevealSecret2(
+            reveal_secret = SendRevealSecret(
                 payer_transfer.identifier,
                 secret,
                 payer_transfer.token,
@@ -584,7 +584,7 @@ def events_for_revealsecret2(transfers_pair, secret):
     return events
 
 
-def events_for_balanceproof2(
+def events_for_balanceproof(
         channelidentifiers_to_channels,
         transfers_pair,
         block_number,
@@ -627,7 +627,7 @@ def events_for_balanceproof2(
     return events
 
 
-def events_for_close2(channelidentifiers_to_channels, transfers_pair, block_number):
+def events_for_close(channelidentifiers_to_channels, transfers_pair, block_number):
     """ Close the channels that are in the unsafe region prior to an on-chain
     withdraw.
     """
@@ -637,7 +637,7 @@ def events_for_close2(channelidentifiers_to_channels, transfers_pair, block_numb
     for pair in reversed(pending_transfers_pairs):
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
 
-        if is_channel_close_needed2(payer_channel, pair, block_number):
+        if is_channel_close_needed(payer_channel, pair, block_number):
             pair.payer_state = 'payer_waiting_close'
             close_events = channel.events_for_close(payer_channel, block_number)
             events.extend(close_events)
@@ -690,7 +690,7 @@ def events_for_withdraw_if_closed(
     return events
 
 
-def secret_learned2(
+def secret_learned(
         state,
         channelidentifiers_to_channels,
         block_number,
@@ -709,7 +709,7 @@ def secret_learned2(
     # behavior
 
     if state.secret is None:
-        set_secret2(
+        set_secret(
             state,
             channelidentifiers_to_channels,
             secret,
@@ -728,18 +728,18 @@ def secret_learned2(
     else:
         withdraw = []
 
-    wrong_order = set_payee_state_and_check_reveal_order2(
+    wrong_order = set_payee_state_and_check_reveal_order(
         state.transfers_pair,
         payee_address,
         new_payee_state,
     )
 
-    secret_reveal = events_for_revealsecret2(
+    secret_reveal = events_for_revealsecret(
         state.transfers_pair,
         secret,
     )
 
-    balance_proof = events_for_balanceproof2(
+    balance_proof = events_for_balanceproof(
         channelidentifiers_to_channels,
         state.transfers_pair,
         block_number,
@@ -755,7 +755,7 @@ def secret_learned2(
     return iteration
 
 
-def mediate_transfer2(
+def mediate_transfer(
         state,
         possible_routes,
         payer_channel,
@@ -777,7 +777,7 @@ def mediate_transfer2(
     else:
         closed_block_number = None
 
-    timeout_blocks = get_timeout_blocks2(
+    timeout_blocks = get_timeout_blocks(
         payer_channel.settle_timeout,
         closed_block_number,
         payer_transfer.lock.expiration,
@@ -792,7 +792,7 @@ def mediate_transfer2(
     if timeout_blocks > 0:
         assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
 
-        transfer_pair, mediated_events = next_transfer_pair2(
+        transfer_pair, mediated_events = next_transfer_pair(
             payer_transfer,
             available_routes,
             channelidentifiers_to_channels,
@@ -813,7 +813,7 @@ def mediate_transfer2(
             original_channel = payer_channel
             original_transfer = payer_transfer
 
-        refund_events = events_for_refund_transfer2(
+        refund_events = events_for_refund_transfer(
             original_channel,
             original_transfer,
             timeout_blocks,
@@ -851,7 +851,7 @@ def handle_init(state_change, channelidentifiers_to_channels, block_number):
     if not is_valid:
         return TransitionResult(None, [])
 
-    iteration = mediate_transfer2(
+    iteration = mediate_transfer(
         mediator_state,
         routes,
         payer_channel,
@@ -862,7 +862,7 @@ def handle_init(state_change, channelidentifiers_to_channels, block_number):
     return iteration
 
 
-def handle_block2(channelidentifiers_to_channels, state, state_change, block_number):
+def handle_block(channelidentifiers_to_channels, state, state_change, block_number):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time locks.
     Args:
@@ -870,7 +870,7 @@ def handle_block2(channelidentifiers_to_channels, state, state_change, block_num
     Return:
         TransitionResult: The resulting iteration
     """
-    close_events = events_for_close2(
+    close_events = events_for_close(
         channelidentifiers_to_channels,
         state.transfers_pair,
         block_number,
@@ -882,7 +882,7 @@ def handle_block2(channelidentifiers_to_channels, state, state_change, block_num
     #     state.transfers_pair,
     # )
 
-    unlock_fail_events = set_expired_pairs2(
+    unlock_fail_events = set_expired_pairs(
         state.transfers_pair,
         block_number,
     )
@@ -895,7 +895,7 @@ def handle_block2(channelidentifiers_to_channels, state, state_change, block_num
     return iteration
 
 
-def handle_refundtransfer2(
+def handle_refundtransfer(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
@@ -923,7 +923,7 @@ def handle_refundtransfer2(
         transfer_pair = mediator_state.transfers_pair[-1]
         payee_transfer = transfer_pair.payee_transfer
 
-        is_valid = is_valid_refund2(
+        is_valid = is_valid_refund(
             payee_transfer,
             mediator_state_change.transfer,
         )
@@ -932,7 +932,7 @@ def handle_refundtransfer2(
             channel_address = payer_transfer.balance_proof.channel_address
             payer_channel = channelidentifiers_to_channels[channel_address]
 
-            iteration = mediate_transfer2(
+            iteration = mediate_transfer(
                 mediator_state,
                 mediator_state_change.routes,
                 payer_channel,
@@ -946,7 +946,7 @@ def handle_refundtransfer2(
     return iteration
 
 
-def handle_secretreveal2(
+def handle_secretreveal(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
@@ -961,7 +961,7 @@ def handle_secretreveal2(
     is_valid_reveal = mediator_state_change.hashlock == mediator_state.hashlock
 
     if is_secret_unknown and is_valid_reveal:
-        iteration = secret_learned2(
+        iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
             block_number,
@@ -977,7 +977,7 @@ def handle_secretreveal2(
     return iteration
 
 
-def handle_contractwithdraw2(state, state_change, channelidentifiers_to_channels, block_number):
+def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels, block_number):
     """ Handle a NettingChannelUnlock state change. """
     assert sha3(state.secret) == state.hashlock, 'secret must be validated by the smart contract'
 
@@ -1024,7 +1024,7 @@ def handle_contractwithdraw2(state, state_change, channelidentifiers_to_channels
 
                 pair.payee_state = 'payee_contract_withdraw'
 
-    iteration = secret_learned2(
+    iteration = secret_learned(
         state,
         channelidentifiers_to_channels,
         block_number,
@@ -1068,7 +1068,7 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
     return iteration
 
 
-def state_transition2(mediator_state, state_change, channelidentifiers_to_channels, block_number):
+def state_transition(mediator_state, state_change, channelidentifiers_to_channels, block_number):
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches
     # Notes:
@@ -1079,7 +1079,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
 
     iteration = TransitionResult(mediator_state, list())
 
-    if isinstance(state_change, ActionInitMediator2):
+    if isinstance(state_change, ActionInitMediator):
         if mediator_state is None:
             iteration = handle_init(
                 state_change,
@@ -1088,7 +1088,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
             )
 
     elif isinstance(state_change, Block):
-        iteration = handle_block2(
+        iteration = handle_block(
             channelidentifiers_to_channels,
             mediator_state,
             state_change,
@@ -1096,7 +1096,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
         )
 
     elif isinstance(state_change, ReceiveTransferRefund):
-        iteration = handle_refundtransfer2(
+        iteration = handle_refundtransfer(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
@@ -1104,7 +1104,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
         )
 
     elif isinstance(state_change, ReceiveSecretReveal):
-        iteration = handle_secretreveal2(
+        iteration = handle_secretreveal(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
@@ -1112,7 +1112,7 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
         )
 
     elif isinstance(state_change, ContractReceiveChannelWithdraw):
-        iteration = handle_contractwithdraw2(
+        iteration = handle_contractwithdraw(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
@@ -1128,6 +1128,6 @@ def state_transition2(mediator_state, state_change, channelidentifiers_to_channe
 
     # this is the place for paranoia
     if iteration.new_state is not None:
-        sanity_check2(iteration.new_state)
+        sanity_check(iteration.new_state)
 
     return clear_if_finalized(iteration)

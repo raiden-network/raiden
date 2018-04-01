@@ -18,8 +18,8 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.mediated_transfer.events import (
     refund_from_sendmediated,
-    SendBalanceProof2,
-    SendMediatedTransfer2,
+    SendBalanceProof,
+    SendMediatedTransfer,
 )
 from raiden.transfer.merkle_tree import (
     LEAVES,
@@ -46,13 +46,13 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionTransferDirect2,
+    ActionTransferDirect,
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
-    ReceiveTransferDirect2,
+    ReceiveTransferDirect,
 )
 from raiden.utils import publickey_to_address, typing
 
@@ -712,7 +712,7 @@ def create_sendmediatedtransfer(
         target,
     )
 
-    mediatedtransfer = SendMediatedTransfer2(
+    mediatedtransfer = SendMediatedTransfer(
         locked_transfer,
         recipient,
     )
@@ -747,7 +747,7 @@ def create_unlock(channel_state, identifier, secret, lock):
         channel_state.identifier,
     )
 
-    unlock_lock = SendBalanceProof2(
+    unlock_lock = SendBalanceProof(
         identifier,
         token,
         recipient,
@@ -1164,7 +1164,7 @@ def state_transition(channel_state, state_change, block_number):
     elif isinstance(state_change, ActionChannelClose):
         iteration = handle_action_close(channel_state, state_change, block_number)
 
-    elif isinstance(state_change, ActionTransferDirect2):
+    elif isinstance(state_change, ActionTransferDirect):
         iteration = handle_send_directtransfer(channel_state, state_change)
 
     elif isinstance(state_change, ContractReceiveChannelClosed):
@@ -1179,7 +1179,7 @@ def state_transition(channel_state, state_change, block_number):
     elif isinstance(state_change, ContractReceiveChannelWithdraw):
         iteration = handle_channel_withdraw(channel_state, state_change)
 
-    elif isinstance(state_change, ReceiveTransferDirect2):
+    elif isinstance(state_change, ReceiveTransferDirect):
         iteration = handle_receive_directtransfer(channel_state, state_change)
 
     return iteration

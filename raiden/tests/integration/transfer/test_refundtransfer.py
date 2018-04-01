@@ -14,8 +14,8 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.transport import MessageLoggerTransport
 from raiden.transfer.mediated_transfer.events import (
-    SendMediatedTransfer2,
-    SendRefundTransfer2,
+    SendMediatedTransfer,
+    SendRefundTransfer,
 )
 from raiden.transfer.state import lockstate_from_lock
 
@@ -50,13 +50,13 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     send_mediatedtransfer = next(
         event
         for _, event in app0.raiden.wal.storage.get_events_by_block(0, 'latest')
-        if isinstance(event, SendMediatedTransfer2)
+        if isinstance(event, SendMediatedTransfer)
     )
 
     send_refundtransfer = next(
         event
         for _, event in app1.raiden.wal.storage.get_events_by_block(0, 'latest')
-        if isinstance(event, SendRefundTransfer2)
+        if isinstance(event, SendRefundTransfer)
     )
 
     assert_synched_channel_state(
