@@ -56,17 +56,6 @@ class InvalidSettleTimeout(RaidenError):
     pass
 
 
-class NoPathError(RaidenError):
-    """ Raised when there is no path to the requested target address in the
-    payment network.
-
-    This exception is raised if there is not a single path in the network to
-    reach the target, it's not used if there is a path but the transfre failed
-    because of the lack of capacity or network problems.
-    """
-    pass
-
-
 class SamePeerAddress(RaidenError):
     """ Raised when a user tries to create a channel where the address of both
     peers is the same.
