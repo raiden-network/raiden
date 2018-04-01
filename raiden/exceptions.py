@@ -82,15 +82,6 @@ class AlreadyRegisteredTokenAddress(RaidenError):
 # from a byzantine node)
 
 
-class InsufficientBalance(RaidenError):
-    """ Raised when the netting channel doesn't have enough available capacity
-    to pay for the transfer.
-
-    Used for the validation of *incoming* messages.
-    """
-    pass
-
-
 class InvalidLocksRoot(RaidenError):
     """ Raised when the received message has an invalid locksroot.
 
