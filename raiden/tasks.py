@@ -14,19 +14,7 @@ REMOVE_CALLBACK = object()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class Task(gevent.Greenlet):
-    """ Base class used to created tasks.
-
-    Note:
-        Always call super().__init__().
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.response_queue = Queue()
-
-
-class AlarmTask(Task):
+class AlarmTask(gevent.Greenlet):
     """ Task to notify when a block is mined. """
 
     def __init__(self, chain):
@@ -36,6 +24,7 @@ class AlarmTask(Task):
         self.stop_event = AsyncResult()
         self.chain = chain
         self.last_block_number = None
+        self.response_queue = Queue()
 
         # TODO: Start with a larger wait_time and decrease it as the
         # probability of a new block increases.
@@ -111,7 +100,7 @@ class AlarmTask(Task):
                     result = callback(current_block)
                 except RaidenShuttingDown:
                     break
-                except:  # pylint: disable=bare-except # noqa
+                except:  # NOQA pylint: disable=bare-except
                     log.exception('unexpected exception on alarm')
                 else:
                     if result is REMOVE_CALLBACK:
