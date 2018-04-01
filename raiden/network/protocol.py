@@ -815,7 +815,9 @@ class RaidenProtocol:
             log.debug("Couldn't send the ACK", e=e)
 
     def receive_message(self, message, echohash):
-        if log.isEnabledFor(logging.INFO):
+        is_debug_log_enabled = log.isEnabledFor(logging.DEBUG)
+
+        if is_debug_log_enabled:
             log.info(
                 'MESSAGE RECEIVED',
                 node=pex(self.raiden.address),
@@ -833,26 +835,18 @@ class RaidenProtocol:
                 echohash,
             )
 
-            try:
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug(
-                        'SENDING ACK',
-                        node=pex(self.raiden.address),
-                        to=pex(message.sender),
-                        echohash=pex(echohash),
-                    )
-
-                self.maybe_send_ack(
-                    message.sender,
-                    ack,
-                )
-            except (InvalidAddress, UnknownAddress) as e:
-                log.debug("Couldn't send the ACK", e=e)
-
-        except UnknownAddress as e:
-            if log.isEnabledFor(logging.WARN):
-                log.warn('maybe unwanted transfer', e=e)
-
-        except UnknownTokenAddress as e:
-            if log.isEnabledFor(logging.WARN):
+            self.maybe_send_ack(
+                message.sender,
+                ack,
+            )
+        except (InvalidAddress, UnknownAddress, UnknownTokenAddress) as e:
+            if is_debug_log_enabled:
                 log.warn(str(e))
+        else:
+            if is_debug_log_enabled:
+                log.debug(
+                    'ACK',
+                    node=pex(self.raiden.address),
+                    to=pex(message.sender),
+                    echohash=pex(echohash),
+                )
