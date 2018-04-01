@@ -16,7 +16,6 @@ from ethereum import slogging
 
 from raiden.exceptions import (
     InvalidAddress,
-    InvalidLocksRoot,
     InvalidNonce,
     TransferUnwanted,
     UnknownAddress,
@@ -856,6 +855,6 @@ class RaidenProtocol:
             if log.isEnabledFor(logging.WARN):
                 log.warn('maybe unwanted transfer', e=e)
 
-        except (UnknownTokenAddress, InvalidLocksRoot) as e:
+        except UnknownTokenAddress as e:
             if log.isEnabledFor(logging.WARN):
                 log.warn(str(e))
