@@ -40,9 +40,10 @@ from raiden.settings import (
 from raiden.utils import (
     address_decoder,
     address_encoder,
+    get_system_spec,
+    is_minified_address,
     quantity_decoder,
     split_endpoint,
-    get_system_spec,
 )
 from raiden.tests.utils.smoketest import (
     load_or_create_smoketest_config,
@@ -126,14 +127,6 @@ def check_json_rpc(client):
             return False
 
     return True
-
-
-def init_minified_addr_checker():
-    return re.compile('(0x)?[a-f0-9]{6,8}')
-
-
-def check_minified_address(addr, compiled_re):
-    return compiled_re.match(addr)
 
 
 def check_synced(blockchain_service):
@@ -918,10 +911,9 @@ def removedb(ctx):
     # Sanity check if the specified directory is a Raiden datadir.
     sane = True
     if not address_hex:
-        regex = init_minified_addr_checker()
         ls = os.listdir(user_db_dir)
         sane = all(
-            check_minified_address(f, regex) and
+            is_minified_address(f) and
             len(f) == 8 and
             os.path.isdir(os.path.join(user_db_dir, f))
             for f in ls
