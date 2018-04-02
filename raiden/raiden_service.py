@@ -229,7 +229,8 @@ class RaidenService:
 
         self.wal = None
 
-        if config['database_path'] != ':memory:':
+        self.database_path = config['database_path']
+        if self.database_path != ':memory:':
             database_dir = os.path.dirname(config['database_path'])
             os.makedirs(database_dir, exist_ok=True)
 
