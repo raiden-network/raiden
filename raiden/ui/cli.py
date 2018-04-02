@@ -162,6 +162,21 @@ def check_synced(blockchain_service):
     )
 
 
+def check_discovery_registration_gas(blockchain_service, account_address):
+    discovery_tx_cost = blockchain_service.client.gasprice() * DISCOVERY_TX_GAS_LIMIT
+    account_balance = blockchain_service.client.balance(account_address)
+
+    if discovery_tx_cost > account_balance:
+        print(
+            'Account has insufficient funds for discovery registration.\n'
+            'Needed: {} ETH\n'
+            'Available: {} ETH.\n'
+            'Please deposit additional funds into this account.'
+            .format(discovery_tx_cost / denoms.ether, account_balance / denoms.ether)
+        )
+        sys.exit(1)
+
+
 def etherscan_query_with_retries(url, sleep, retries=3):
     for _ in range(retries - 1):
         try:
@@ -548,23 +563,10 @@ def app(
         gas_price,
     )
 
+    check_discovery_registration_gas(blockchain_service, address)
+
     if sync_check:
         check_synced(blockchain_service)
-
-    discovery_tx_cost = rpc_client.gasprice() * DISCOVERY_TX_GAS_LIMIT
-    while True:
-        balance = blockchain_service.client.balance(address)
-        if discovery_tx_cost <= balance:
-            break
-        print(
-            'Account has insufficient funds for discovery registration.\n'
-            'Needed: {} ETH\n'
-            'Available: {} ETH.\n'
-            'Please deposit additional funds into this account.'
-            .format(discovery_tx_cost / denoms.ether, balance / denoms.ether)
-        )
-        if not click.confirm('Try again?'):
-            sys.exit(1)
 
     registry = blockchain_service.registry(
         registry_contract_address,
