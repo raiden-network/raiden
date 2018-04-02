@@ -21,7 +21,7 @@ from raiden.utils import sha3
 
 
 @pytest.fixture
-def settle_timeout(blockchain_type):
+def settle_timeout():
     """
     NettingChannel default settle timeout for tests.
     If using geth we set it considerably lower since waiting for
@@ -31,7 +31,7 @@ def settle_timeout(blockchain_type):
 
 
 @pytest.fixture
-def reveal_timeout(blockchain_type):
+def reveal_timeout():
     """
     NettingChannel default reveal timeout for tests.
     If using geth we set it considerably lower since waiting for
