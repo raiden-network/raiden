@@ -498,10 +498,20 @@ def app(
     from raiden.app import App
     from raiden.network.blockchain_service import BlockChainService
 
+    address_hex = address_encoder(address) if address else None
+    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+    address = address_decoder(address_hex)
+
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
+    if datadir is None:
+        datadir = os.path.join(os.path.expanduser('~'), '.raiden')
+
+    database_path = os.path.join(datadir, address_hex[:8], 'log.db')
+
     config = App.DEFAULT_CONFIG.copy()
+    config['database_path'] = database_path
     config['host'] = listen_host
     config['port'] = listen_port
     config['console'] = console
@@ -522,10 +532,6 @@ def app(
     config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_timeout'] = timeout
-
-    address_hex = address_encoder(address) if address else None
-    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
-    address = address_decoder(address_hex)
 
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
@@ -576,20 +582,6 @@ def app(
         blockchain_service.node_address,
         blockchain_service.discovery(discovery_contract_address)
     )
-
-    if datadir is None:
-        # default database directory
-        raiden_directory = os.path.join(os.path.expanduser('~'), '.raiden')
-    else:
-        raiden_directory = datadir
-
-    if not os.path.exists(raiden_directory):
-        os.makedirs(raiden_directory)
-    user_db_dir = os.path.join(raiden_directory, address_hex[:8])
-    if not os.path.exists(user_db_dir):
-        os.makedirs(user_db_dir)
-    database_path = os.path.join(user_db_dir, 'log.db')
-    config['database_path'] = database_path
 
     return App(
         config,
