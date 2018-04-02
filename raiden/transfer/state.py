@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from binascii import hexlify
 from collections import namedtuple
 
 from raiden.constants import UINT256_MAX, UINT64_MAX
@@ -630,7 +631,8 @@ class UnlockProofState(State):
         self.secret = secret
 
     def __repr__(self):
-        return '<UnlockProofState>'
+        full_proof = [hexlify(entry) for entry in self.merkle_proof]
+        return f'<UnlockProofState proof:{full_proof} lock:{hexlify(self.lock_encoded)}>'
 
     def __eq__(self, other):
         return (
