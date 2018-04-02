@@ -345,10 +345,7 @@ class NettingChannel:
                     signature=encode_hex(signature),
                 )
 
-    def withdraw(self, unlock_proofs):
-        # force a list to get the length (could be a generator)
-        unlock_proofs = list(unlock_proofs)
-
+    def withdraw(self, unlock_proof):
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'withdraw called',
@@ -356,44 +353,39 @@ class NettingChannel:
                 contract=pex(self.address),
             )
 
-        failed = False
-        for unlock_proof in unlock_proofs:
-            if isinstance(unlock_proof.lock_encoded, messages.Lock):
-                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+        if isinstance(unlock_proof.lock_encoded, messages.Lock):
+            raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
 
-            merkleproof_encoded = ''.join(unlock_proof.merkle_proof)
+        merkleproof_encoded = ''.join(unlock_proof.merkle_proof)
 
-            transaction_hash = estimate_and_transact(
-                self.proxy,
-                'withdraw',
-                unlock_proof.lock_encoded,
-                merkleproof_encoded,
-                unlock_proof.secret,
+        transaction_hash = estimate_and_transact(
+            self.proxy,
+            'withdraw',
+            unlock_proof.lock_encoded,
+            merkleproof_encoded,
+            unlock_proof.secret,
+        )
+
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
+        if receipt_or_none:
+            log.critical(
+                'withdraw failed',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                lock=unlock_proof,
             )
-
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-            if receipt_or_none:
-                log.critical(
-                    'withdraw failed',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    lock=unlock_proof,
-                )
-                self._check_exists()
-                failed = True
-
-            elif log.isEnabledFor(logging.INFO):
-                log.info(
-                    'withdraw sucessfull',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    lock=unlock_proof,
-                )
-
-        if failed:
+            self._check_exists()
             raise TransactionThrew('Withdraw', receipt_or_none)
+
+        elif log.isEnabledFor(logging.INFO):
+            log.info(
+                'withdraw sucessfull',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                lock=unlock_proof,
+            )
 
     def settle(self):
         if log.isEnabledFor(logging.INFO):

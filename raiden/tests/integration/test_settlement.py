@@ -16,6 +16,7 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import channel
 from raiden.transfer.merkle_tree import validate_proof, merkleroot
+from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ActionForTokenNetwork,
     ContractReceiveChannelWithdraw,
@@ -148,7 +149,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     nettingchannel_proxy = bob_app.raiden.chain.netting_channel(
         bob_alice_channel.identifier,
     )
-    nettingchannel_proxy.withdraw([unlock_proof])
+    nettingchannel_proxy.withdraw(unlock_proof)
 
     waiting.wait_for_settle(
         alice_app.raiden,
@@ -234,7 +235,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     # withdraw must fail.
     netting_channel = app1.raiden.chain.netting_channel(channelstate_0_1.identifier)
     with pytest.raises(Exception):
-        netting_channel.withdraw([(unlock_proof, lock.encoded, secret)])
+        netting_channel.withdraw(UnlockProofState(unlock_proof, lock.encoded, secret))
 
     waiting.wait_for_settle(
         app1.raiden,
@@ -350,7 +351,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.withdraw(
-        [(unlock_proof, attack_transfer.lock, secret)],
+        UnlockProofState(unlock_proof, attack_transfer.lock, secret)
     )
     # XXX: verify that the secret was publicized
 

@@ -701,32 +701,30 @@ class NettingChannelTesterMock:
                 signature=signature,
             )
 
-    def withdraw(self, unlock_proofs):
+    def withdraw(self, unlock_proof):
         self._check_exists()
-        # force a list to get the length (could be a generator)
-        unlock_proofs = list(unlock_proofs)
-        log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
 
-        for merkle_proof, locked_encoded, secret in unlock_proofs:
-            if isinstance(locked_encoded, messages.Lock):
-                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+        log.info('withdraw called', contract=pex(self.address), unlock_proof=unlock_proof)
 
-            merkleproof_encoded = ''.join(merkle_proof)
+        if isinstance(unlock_proof.locked_encoded, messages.Lock):
+            raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
 
-            self.proxy.withdraw(
-                locked_encoded,
-                merkleproof_encoded,
-                secret,
-            )
-            self.tester_chain.mine(number_of_blocks=1)
+        merkleproof_encoded = ''.join(unlock_proof.merkle_proof)
 
-            lock = messages.Lock.from_bytes(locked_encoded)
-            log.info(
-                'withdraw called',
-                contract=pex(self.address),
-                lock=lock,
-                secret=encode_hex(secret),
-            )
+        self.proxy.withdraw(
+            unlock_proof.locked_encoded,
+            merkleproof_encoded,
+            unlock_proof.secret,
+        )
+        self.tester_chain.mine(number_of_blocks=1)
+
+        lock = messages.Lock.from_bytes(unlock_proof.locked_encoded)
+        log.info(
+            'withdraw called',
+            contract=pex(self.address),
+            lock=lock,
+            secret=encode_hex(unlock_proof.secret),
+        )
 
     def settle(self):
         self._check_exists()

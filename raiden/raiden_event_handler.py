@@ -5,6 +5,7 @@ from ethereum import slogging
 
 from raiden.messages import (
     DirectTransfer,
+    Lock,
     MediatedTransfer,
     RefundTransfer,
     RevealSecret,
@@ -199,7 +200,15 @@ def handle_contract_channelwithdraw(
         channel_withdraw_event: ContractSendChannelWithdraw
 ):
     channel = raiden.chain.netting_channel(channel_withdraw_event.channel_identifier)
-    channel.withdraw(channel_withdraw_event.unlock_proofs)
+    block_number = raiden.get_block_number()
+
+    for unlock_proof in channel_withdraw_event.unlock_proofs:
+        lock = Lock.from_bytes(unlock_proof.lock_encoded)
+
+        if lock.expiration < block_number:
+            log.error('Lock has expired!', lock=lock)
+        else:
+            channel.withdraw(unlock_proof)
 
 
 def handle_contract_channelsettle(
