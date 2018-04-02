@@ -229,12 +229,14 @@ class RaidenService:
 
         self.wal = None
 
-        self.database_path = config['database_path']
+        self.database_path = os.path.realpath(config['database_path'])
         if self.database_path != ':memory:':
-            self.database_dir = os.path.dirname(self.database_path)
-            self.lock_file = os.path.join(self.database_dir, '.lock')
+            database_dir = os.path.dirname(self.database_path)
+            os.makedirs(database_dir, exist_ok=True)
 
+            self.database_dir = database_dir
             # Prevent concurrent acces to the same db
+            self.lock_file = os.path.join(self.database_dir, '.lock')
             self.db_lock = filelock.FileLock(self.lock_file)
         else:
             self.database_dir = None
