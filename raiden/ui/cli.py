@@ -106,7 +106,7 @@ def check_json_rpc(client):
             "\n"
             "geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n"
         )
-        return False
+        sys.exit(1)
     else:
         if client_version.startswith('Parity'):
             major, minor, patch = [
@@ -114,19 +114,17 @@ def check_json_rpc(client):
             ]
             if (major, minor, patch) < (1, 7, 6):
                 print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
-                return False
+                sys.exit(1)
         elif client_version.startswith('Geth'):
             major, minor, patch = [
                 int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 2):
                 print('You need Byzantium enabled geth. >= 1.7.2')
-                return False
+                sys.exit(1)
         else:
             print('Unsupported client {} detected.'.format(client_version))
-            return False
-
-    return True
+            sys.exit(1)
 
 
 def check_synced(blockchain_service):
@@ -559,16 +557,14 @@ def app(
         gas_price,
     )
 
-    # this assumes the eth node is already online
-    if not check_json_rpc(rpc_client):
-        sys.exit(1)
-
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
         gas_price,
     )
 
+    # this assumes the eth node is already online
+    check_json_rpc(rpc_client)
     check_discovery_registration_gas(blockchain_service, address)
 
     if sync_check:

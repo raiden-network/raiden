@@ -229,9 +229,8 @@ class RaidenService:
 
         self.wal = None
 
-        self.database_path = os.path.realpath(config['database_path'])
-        if self.database_path != ':memory:':
-            database_dir = os.path.dirname(self.database_path)
+        if config['database_path'] != ':memory:':
+            database_dir = os.path.dirname(config['database_path'])
             os.makedirs(database_dir, exist_ok=True)
 
             self.database_dir = database_dir
@@ -239,6 +238,7 @@ class RaidenService:
             self.lock_file = os.path.join(self.database_dir, '.lock')
             self.db_lock = filelock.FileLock(self.lock_file)
         else:
+            self.database_path = ':memory:'
             self.database_dir = None
             self.lock_file = None
             self.serialization_file = None
