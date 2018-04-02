@@ -11,7 +11,7 @@ from ethereum.tools.tester import TransactionFailed
 from ethereum.utils import normalize_address
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
-from raiden.messages import DirectTransfer
+from raiden.messages import DirectTransfer, Lock
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.tests import get_relative_contract
 from raiden.transfer.state import MerkleTreeState
@@ -115,6 +115,33 @@ def test_max(tester_chain, tester_nettingchannel_library_address):
     VALUES = [UINT64_MIN, 1, INT64_MAX, UINT64_MAX]
     for a, b in product(VALUES, VALUES):
         assert auxiliary.max(a, b) == max(a, b)
+
+
+def test_merkle_proof_one_lock(tester_chain, tester_nettingchannel_library_address):
+    """ computeMerkleRoot and the python implementation must compute the same
+    value for a merkle tree with a single lock.
+    """
+
+    auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
+
+    amount = 10
+    expiration = 77
+    secret = sha3(b'test_merkle_proof_one_lock')
+    hashlock = sha3(secret)
+    lock = Lock(amount, expiration, hashlock)
+
+    layers = compute_layers([lock.lockhash])
+    merkletree = MerkleTreeState(layers)
+
+    proof = compute_merkleproof_for(merkletree, lock.lockhash)
+    assert len(proof) == 0, 'with only one element the proof is empty'
+
+    smart_contact_root = auxiliary.computeMerkleRoot(
+        lock.as_bytes,
+        b''.join(proof),
+    )
+
+    assert smart_contact_root == merkleroot(merkletree)
 
 
 @pytest.mark.parametrize('tree', FAKE_TREE)
