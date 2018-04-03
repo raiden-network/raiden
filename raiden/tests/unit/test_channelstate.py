@@ -144,6 +144,7 @@ def create_channel_from_models(our_model, partner_model):
 
 
 def make_receive_transfer_direct(
+        payment_network_identifier,
         channel_state,
         privkey,
         nonce,
@@ -169,6 +170,8 @@ def make_receive_transfer_direct(
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_directtransfer = ReceiveTransferDirect(
+        payment_network_identifier,
+        channel_state.token_address,
         identifier,
         balance_proof,
     )
@@ -274,10 +277,13 @@ def test_channelstate_update_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
     state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
+        channel_state.token_address,
         channel_state.identifier,
         our_model1.participant_address,
         balance1_new,
@@ -310,10 +316,13 @@ def test_channelstate_decreasing_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     amount = 10
     balance1_new = our_model1.balance - amount
     state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
+        channel_state.token_address,
         channel_state.identifier,
         our_model1.participant_address,
         balance1_new,
@@ -339,10 +348,13 @@ def test_channelstate_repeated_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
     state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
+        channel_state.token_address,
         channel_state.identifier,
         our_model1.participant_address,
         balance1_new,
@@ -546,12 +558,14 @@ def test_channelstate_directtransfer_overspent():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
 
     nonce = 1
     transferred_amount = distributable + 1
     receive_mediatedtransfer = make_receive_transfer_direct(
+        payment_network_identifier,
         channel_state,
         privkey2,
         nonce,
@@ -999,10 +1013,12 @@ def test_receive_directdtransfer_before_deposit():
     our_model1, _ = create_model(0)  # our deposit is 0
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     nonce = 1
     transferred_amount = 30
     receive_directtransfer = make_receive_transfer_direct(
+        payment_network_identifier,
         channel_state,
         privkey2,
         nonce,
@@ -1022,9 +1038,12 @@ def test_channelstate_withdraw_without_locks():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     closed_block_number = 77
     state_change = ContractReceiveChannelClosed(
+        payment_network_identifier,
+        channel_state.token_address,
         channel_state.identifier,
         partner_model1.participant_address,
         closed_block_number,
@@ -1038,6 +1057,7 @@ def test_channelstate_withdraw():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     lock_amount = 10
     lock_expiration = 100
@@ -1071,6 +1091,8 @@ def test_channelstate_withdraw():
     # at risk of expiring
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     state_change = ContractReceiveChannelClosed(
+        payment_network_identifier,
+        channel_state.token_address,
         channel_state.identifier,
         partner_model1.participant_address,
         closed_block_number,

@@ -12,7 +12,6 @@ from raiden.blockchain.state import (
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
 from raiden.transfer.state_change import (
-    ActionForTokenNetwork,
     ContractReceiveChannelNew,
     ContractReceiveRouteNew,
     ContractReceiveNewTokenNetwork,
@@ -72,13 +71,12 @@ def handle_channel_new(raiden, event):
             channel_proxy,
         )
 
-        new_channel = ContractReceiveChannelNew(channel_state)
-        state_change = ActionForTokenNetwork(
+        new_channel = ContractReceiveChannelNew(
             payment_network_identifier,
             token_address,
-            new_channel,
+            channel_state,
         )
-        raiden.handle_state_change(state_change)
+        raiden.handle_state_change(new_channel)
 
         partner_address = channel_state.partner_state.address
         connection_manager = raiden.connection_manager_for_token(token_address)
@@ -100,15 +98,12 @@ def handle_channel_new(raiden, event):
         token_address = manager.token_address()
 
         new_route = ContractReceiveRouteNew(
+            payment_network_identifier,
+            token_address,
             participant1,
             participant2,
         )
-        state_change = ActionForTokenNetwork(
-            payment_network_identifier,
-            token_address,
-            new_route,
-        )
-        raiden.handle_state_change(state_change)
+        raiden.handle_state_change(new_route)
 
 
 def handle_channel_new_balance(raiden, event):
@@ -134,16 +129,13 @@ def handle_channel_new_balance(raiden, event):
         balance_was_zero = previous_balance == 0
 
         newbalance_statechange = ContractReceiveChannelNewBalance(
+            payment_network_identifier,
+            token_address,
             channel_identifier,
             participant_address,
             new_balance,
         )
-        state_change = ActionForTokenNetwork(
-            payment_network_identifier,
-            token_address,
-            newbalance_statechange,
-        )
-        raiden.handle_state_change(state_change)
+        raiden.handle_state_change(newbalance_statechange)
 
         if balance_was_zero:
             connection_manager = raiden.connection_manager_for_token(token_address)
@@ -168,16 +160,13 @@ def handle_channel_closed(raiden, event):
 
     if channel_state:
         channel_closed = ContractReceiveChannelClosed(
+            payment_network_identifier,
+            channel_state.token_address,
             channel_identifier,
             data['closing_address'],
             data['block_number'],
         )
-        state_change = ActionForTokenNetwork(
-            payment_network_identifier,
-            channel_state.token_address,
-            channel_closed,
-        )
-        raiden.handle_state_change(state_change)
+        raiden.handle_state_change(channel_closed)
 
 
 def handle_channel_settled(raiden, event):
@@ -193,15 +182,12 @@ def handle_channel_settled(raiden, event):
 
     if channel_state:
         channel_settled = ContractReceiveChannelSettled(
+            payment_network_identifier,
+            channel_state.token_address,
             channel_identifier,
             data['block_number'],
         )
-        state_change = ActionForTokenNetwork(
-            payment_network_identifier,
-            channel_state.token_address,
-            channel_settled,
-        )
-        raiden.handle_state_change(state_change)
+        raiden.handle_state_change(channel_settled)
 
 
 def handle_channel_withdraw(raiden, event):

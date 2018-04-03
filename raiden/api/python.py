@@ -16,10 +16,7 @@ from raiden.transfer.events import (
     EventTransferSentFailed,
     EventTransferReceivedSuccess,
 )
-from raiden.transfer.state_change import (
-    ActionForTokenNetwork,
-    ActionChannelClose,
-)
+from raiden.transfer.state_change import ActionChannelClose
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -314,13 +311,12 @@ class RaidenAPI:
         )
 
         for channel_state in channels_to_close:
-            channel_close = ActionChannelClose(channel_state.identifier)
-            state_change = ActionForTokenNetwork(
+            channel_close = ActionChannelClose(
                 registry_address,
                 token_address,
-                channel_close,
+                channel_state.identifier,
             )
-            self.raiden.handle_state_change(state_change)
+            self.raiden.handle_state_change(channel_close)
 
         msg = 'After {} seconds the deposit was not properly processed.'.format(
             poll_timeout

@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from raiden.transfer.state_change import (
+    ActionTransferDirect,
+    ReceiveTransferDirect,
+)
 from raiden.tests.utils.transfer import direct_transfer
 from raiden.tests.utils.events import must_contain_entry
-from raiden.transfer.state_change import ActionForTokenNetwork
 
 
 @pytest.mark.parametrize('channels_per_node', [1])
@@ -29,28 +32,22 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
         to_identifier='latest',
     )
 
-    # ActionTransferDirect
-    assert must_contain_entry(app0_state_changes, ActionForTokenNetwork, {
+    assert must_contain_entry(app0_state_changes, ActionTransferDirect, {
         'token_network_identifier': token_address,
-        'sub_state_change': {
-            'identifier': identifier,
-            'amount': amount,
-            'receiver_address': app1.raiden.address,
-        }
+        'identifier': identifier,
+        'amount': amount,
+        'receiver_address': app1.raiden.address,
     })
 
-    # ReceiveTransferDirect
     app1_state_changes = app1.raiden.wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
         to_identifier='latest',
     )
-    assert must_contain_entry(app1_state_changes, ActionForTokenNetwork, {
+    assert must_contain_entry(app1_state_changes, ReceiveTransferDirect, {
         'token_network_identifier': token_address,
-        'sub_state_change': {
-            'transfer_identifier': identifier,
-            'balance_proof': {
-                'transferred_amount': amount,
-                'sender': app0.raiden.address,
-            }
+        'transfer_identifier': identifier,
+        'balance_proof': {
+            'transferred_amount': amount,
+            'sender': app0.raiden.address,
         }
     })
