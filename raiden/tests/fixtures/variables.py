@@ -14,6 +14,7 @@ from raiden.settings import (
     DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
 )
 from raiden.network.transport import UDPTransport
+from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 
 # we need to use fixture for the default values otherwise
@@ -21,13 +22,13 @@ from raiden.utils import sha3
 
 
 @pytest.fixture
-def settle_timeout():
+def settle_timeout(number_of_nodes, reveal_timeout):
     """
     NettingChannel default settle timeout for tests.
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    return 16
+    return number_of_nodes * (reveal_timeout + TRANSIT_BLOCKS)
 
 
 @pytest.fixture
