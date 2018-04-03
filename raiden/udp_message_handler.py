@@ -8,7 +8,6 @@ from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import (
-    ActionForTokenNetwork,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -102,17 +101,13 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     balance_proof = balanceproof_from_envelope(message)
 
     direct_transfer = ReceiveTransferDirect(
+        payment_network_identifier,
+        token_address,
         message.identifier,
         balance_proof,
     )
 
-    state_change = ActionForTokenNetwork(
-        payment_network_identifier,
-        token_address,
-        direct_transfer,
-    )
-
-    raiden.handle_state_change(state_change)
+    raiden.handle_state_change(direct_transfer)
 
 
 def handle_message_mediatedtransfer(raiden: 'RaidenService', message: MediatedTransfer):

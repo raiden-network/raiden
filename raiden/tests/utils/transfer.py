@@ -343,6 +343,8 @@ def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pke
     identifier = channel.get_next_nonce(from_channel.our_state)
 
     state_change = ActionTransferDirect(
+        payment_network_identifier,
+        from_channel.token_address,
         from_channel.partner_state.address,
         identifier,
         amount,

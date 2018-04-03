@@ -37,7 +37,6 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionForTokenNetwork,
     ActionInitNode,
     ActionLeaveAllNetworks,
     ActionTransferDirect,
@@ -536,20 +535,16 @@ class RaidenService:
         if identifier is None:
             identifier = create_default_identifier()
 
+        registry_address = self.default_registry.address
         direct_transfer = ActionTransferDirect(
+            registry_address,
+            token_address,
             target,
             identifier,
             amount,
         )
 
-        registry_address = self.default_registry.address
-        state_change = ActionForTokenNetwork(
-            registry_address,
-            token_address,
-            direct_transfer,
-        )
-
-        self.handle_state_change(state_change)
+        self.handle_state_change(direct_transfer)
 
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         self.protocol.start_health_check(target)

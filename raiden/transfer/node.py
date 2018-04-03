@@ -17,14 +17,21 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionForTokenNetwork,
+    ActionChannelClose,
     ActionInitNode,
     ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
+    ActionTransferDirect,
     Block,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
+    ContractReceiveRouteNew,
+    ReceiveTransferDirect,
     ReceiveUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
@@ -372,7 +379,7 @@ def handle_token_network_action(node_state, state_change):
     if token_network_state:
         iteration = token_network.state_transition(
             token_network_state,
-            state_change.sub_state_change,
+            state_change,
             node_state.block_number,
         )
 
@@ -577,18 +584,23 @@ def state_transition(node_state, state_change):
             node_state,
             state_change,
         )
-    elif type(state_change) == ActionForTokenNetwork:
-        iteration = handle_token_network_action(
-            node_state,
-            state_change,
-        )
     elif type(state_change) == ActionNewTokenNetwork:
         iteration = handle_new_token_network(
             node_state,
             state_change,
         )
+    elif type(state_change) == ActionChannelClose:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
     elif type(state_change) == ActionChangeNodeNetworkState:
         iteration = handle_node_change_network_state(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ActionTransferDirect:
+        iteration = handle_token_network_action(
             node_state,
             state_change,
         )
@@ -623,6 +635,36 @@ def state_transition(node_state, state_change):
         )
     elif type(state_change) == ContractReceiveChannelWithdraw:
         iteration = handle_channel_withdraw(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveChannelNew:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveChannelClosed:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveChannelNewBalance:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveChannelSettled:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveRouteNew:
+        iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ReceiveTransferDirect:
+        iteration = handle_token_network_action(
             node_state,
             state_change,
         )

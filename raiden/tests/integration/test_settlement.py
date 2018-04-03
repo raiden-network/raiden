@@ -18,7 +18,8 @@ from raiden.transfer import channel
 from raiden.transfer.merkle_tree import validate_proof, merkleroot
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
-    ActionForTokenNetwork,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
 )
 from raiden.utils import sha3
@@ -59,25 +60,19 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     assert channel_state.close_transaction.finished_block_number
     assert channel_state.settle_transaction.finished_block_number
 
-    # ContractReceiveChannelClosed
-    assert must_contain_entry(state_changes, ActionForTokenNetwork, {
+    assert must_contain_entry(state_changes, ContractReceiveChannelClosed, {
         'payment_network_identifier': registry_address,
-        'token_network_identifier': token_address,
-        'sub_state_change': {
-            'channel_identifier': channel_identifier,
-            'closing_address': app1.raiden.address,
-            'closed_block_number': channel_state.close_transaction.finished_block_number,
-        }
+        'token_address': token_address,
+        'channel_identifier': channel_identifier,
+        'closing_address': app1.raiden.address,
+        'closed_block_number': channel_state.close_transaction.finished_block_number,
     })
 
-    # ContractReceiveChannelSettled
-    assert must_contain_entry(state_changes, ActionForTokenNetwork, {
+    assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
         'payment_network_identifier': registry_address,
-        'token_network_identifier': token_address,
-        'sub_state_change': {
-            'channel_identifier': channel_identifier,
-            'settle_block_number': channel_state.settle_transaction.finished_block_number,
-        }
+        'token_address': token_address,
+        'channel_identifier': channel_identifier,
+        'settle_block_number': channel_state.settle_transaction.finished_block_number,
     })
 
 
