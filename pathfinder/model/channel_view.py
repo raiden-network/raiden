@@ -36,7 +36,7 @@ class ChannelView:
         self._capacity = deposit
         self.state = ChannelView.State.OPEN
         self.channel_id = channel_id
-        self.balance_proof_nonce = -1
+        self.balance_proof_nonce = 0
 
     def update_capacity(
         self,

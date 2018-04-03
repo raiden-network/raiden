@@ -143,7 +143,7 @@ def populate_token_networks_simple(
             )
 
             p1_balance_proof = BalanceProof(
-                0,
+                1,
                 p1_transferred_amount,
                 EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
                 channel_id,
@@ -153,7 +153,7 @@ def populate_token_networks_simple(
                 private_key=private_keys[p1_index]
             )
             p2_balance_proof = BalanceProof(
-                0,
+                1,
                 p2_transferred_amount,
                 EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
                 channel_id,
