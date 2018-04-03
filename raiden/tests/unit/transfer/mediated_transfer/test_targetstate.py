@@ -11,6 +11,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
+    EventWithdrawFailed,
     SendRevealSecret,
     SendSecretRequest,
 )
@@ -19,6 +20,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
     UNIT_HASHLOCK,
@@ -211,7 +213,7 @@ def test_handle_inittarget_bad_expiration():
 
     state_change = ActionInitTarget(payment_network_identifier, from_route, from_transfer)
     iteration = target.handle_inittarget(state_change, from_channel, block_number)
-    assert not iteration.events
+    assert must_contain_entry(iteration.events, EventWithdrawFailed, {})
 
 
 def test_handle_secretreveal():

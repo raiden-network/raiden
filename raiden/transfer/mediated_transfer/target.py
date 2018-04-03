@@ -56,7 +56,7 @@ def handle_inittarget(state_change, channel_state, block_number):
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_address
-    is_valid, _ = channel.handle_receive_mediatedtransfer(
+    is_valid, errormsg = channel.handle_receive_mediatedtransfer(
         channel_state,
         transfer,
     )
@@ -79,7 +79,17 @@ def handle_inittarget(state_change, channel_state, block_number):
 
         iteration = TransitionResult(target_state, [secret_request])
     else:
-        iteration = TransitionResult(target_state, list())
+        if not is_valid:
+            failure_reason = errormsg
+        elif not safe_to_wait:
+            failure_reason = 'lock expiration is not safe'
+
+        withdraw_failed = EventWithdrawFailed(
+            identifier=transfer.identifier,
+            hashlock=transfer.lock.hashlock,
+            reason=failure_reason,
+        )
+        iteration = TransitionResult(target_state, [withdraw_failed])
 
     return iteration
 
