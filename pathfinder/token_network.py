@@ -124,8 +124,8 @@ class TokenNetwork:
         This needs to check that the balance proof is valid.
 
         Called by the public interface. """
+        participant1, participant2 = self.channel_id_to_addresses[balance_proof.channel_id]
 
-        participant1, participant2 = self.channel_id_to_addresses(balance_proof.channel_id)
         if is_same_address(participant1, balance_proof.sender):
             receiver = participant2
         elif is_same_address(participant2, balance_proof.sender):
@@ -136,9 +136,8 @@ class TokenNetwork:
         view1: ChannelView = self.G[balance_proof.sender][receiver]['view']
         view2: ChannelView = self.G[receiver][balance_proof.sender]['view']
 
-        if view1.transferred_amount >= balance_proof.transferred_amount:
-            # FIXME: use nonce instead for this check?
-            raise ValueError('Balance proof is outdated.')
+        if balance_proof.nonce <= view1.balance_proof_nonce:
+            raise ValueError('Outdated balance proof.')
 
         reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
         reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
@@ -147,6 +146,7 @@ class TokenNetwork:
             raise ValueError('Supplied locks do not match the provided locksroot')
 
         view1.update_capacity(
+            balance_proof.nonce,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=sum(lock.amount_locked for lock in locks)
         )

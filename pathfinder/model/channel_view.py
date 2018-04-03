@@ -36,14 +36,20 @@ class ChannelView:
         self._capacity = deposit
         self.state = ChannelView.State.OPEN
         self.channel_id = channel_id
+        self.balance_proof_nonce = -1
 
     def update_capacity(
         self,
+        nonce: int = None,
         deposit: int = None,
         transferred_amount: int = None,
         received_amount: int = None,
         locked_amount: int = None
     ):
+        if nonce is not None:
+            assert nonce > self.balance_proof_nonce, 'Balance proof nonce must increase.'
+            self.balance_proof_nonce = nonce
+
         if deposit is not None:
             self._deposit = deposit
         if transferred_amount is not None:

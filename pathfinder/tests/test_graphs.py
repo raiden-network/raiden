@@ -3,9 +3,13 @@ from typing import List
 import time
 import numpy as np
 from pathfinder.token_network import TokenNetwork
+from pathfinder.utils.types import Address
 
 
-def test_routing_benchmark(token_networks: List[TokenNetwork], populate_token_networks: None):
+def test_routing_benchmark(
+    token_networks: List[TokenNetwork],
+    populate_token_networks_random: None
+):
     value = 100
     G = token_networks[0].G
     token_network = token_networks[0]
@@ -27,3 +31,14 @@ def test_routing_benchmark(token_networks: List[TokenNetwork], populate_token_ne
     print(paths)
     print(np.mean(np.array(times)), np.min(np.array(times)), np.max(np.array(times)))
     print("total_runtime = {}".format(end-start))
+
+
+def test_routing_simple(
+    token_networks: List[TokenNetwork],
+    populate_token_networks_simple: None,
+    addresses: List[Address]
+):
+    token_network = token_networks[0]
+    paths = token_network.get_paths(addresses[0], addresses[3], 10, 1)
+    assert len(paths) == 1
+    assert paths[0] == [addresses[0], addresses[1], addresses[2], addresses[3]]
