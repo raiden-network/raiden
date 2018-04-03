@@ -59,6 +59,23 @@ def is_minified_address(addr):
     return re.compile('(0x)?[a-f0-9]{6,8}').match(addr)
 
 
+def is_supported_client(client_version):
+    if client_version.startswith('Parity'):
+        major, minor, patch = [
+            int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+        ]
+        if (major, minor, patch) >= (1, 7, 6):
+            return True
+    elif client_version.startswith('Geth'):
+        major, minor, patch = [
+            int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+        ]
+        if (major, minor, patch) >= (1, 7, 2):
+            return True
+
+    return False
+
+
 def address_decoder(addr: str) -> typing.address:
     if addr[:2] == '0x':
         addr = addr[2:]

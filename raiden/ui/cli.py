@@ -2,7 +2,6 @@
 from binascii import hexlify
 import sys
 import os
-import re
 import tempfile
 import json
 import socket
@@ -42,6 +41,7 @@ from raiden.utils import (
     address_encoder,
     get_system_spec,
     is_minified_address,
+    is_supported_client,
     quantity_decoder,
     split_endpoint,
 )
@@ -108,22 +108,8 @@ def check_json_rpc(client):
         )
         sys.exit(1)
     else:
-        if client_version.startswith('Parity'):
-            major, minor, patch = [
-                int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
-            ]
-            if (major, minor, patch) < (1, 7, 6):
-                print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
-                sys.exit(1)
-        elif client_version.startswith('Geth'):
-            major, minor, patch = [
-                int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
-            ]
-            if (major, minor, patch) < (1, 7, 2):
-                print('You need Byzantium enabled geth. >= 1.7.2')
-                sys.exit(1)
-        else:
-            print('Unsupported client {} detected.'.format(client_version))
+        if not is_supported_client(client_version):
+            print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
             sys.exit(1)
 
 
