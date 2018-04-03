@@ -18,7 +18,7 @@ from raiden_libs.no_ssl_patch import no_ssl_verification
 
 import pathfinder
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.transport import MatrixTransport
+from raiden_libs.transport import MatrixTransport
 from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)

@@ -12,7 +12,7 @@ from web3 import Web3
 
 from raiden_libs.gevent_error_handler import register_error_handler
 from pathfinder.token_network import TokenNetwork
-from pathfinder.transport import MatrixTransport
+from raiden_libs.transport import MatrixTransport
 from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
