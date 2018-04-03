@@ -10,7 +10,13 @@ from raiden.tests.utils.transfer import (
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_mediated_transfer(raiden_network, deposit, token_addresses, network_wait):
+def test_mediated_transfer(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
@@ -20,7 +26,7 @@ def test_mediated_transfer(raiden_network, deposit, token_addresses, network_wai
         app2,
         token_address,
         amount,
-        timeout=network_wait,
+        timeout=network_wait * number_of_nodes,
     )
 
     assert_synched_channel_state(
