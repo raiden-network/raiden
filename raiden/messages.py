@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
@@ -323,6 +325,21 @@ class SecretRequest(SignedMessage):
             event.amount,
         )
 
+    def to_dict(self):
+        return {
+            'identifier': self.identifier,
+            'hashlock': self.hashlock.hex(),
+            'amount': self.amount,
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return SecretRequest(
+            data['identifier'],
+            unhexlify(data['hashlock']),
+            data['amount'],
+        )
+
 
 class Secret(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
@@ -420,6 +437,30 @@ class Secret(EnvelopeMessage):
             event.secret,
         )
 
+    def to_dict(self):
+        return {
+            'identifier': self.identifier,
+            'secret': self.secret.hex(),
+            'nonce': self.nonce,
+            'channel': self.channel.hex(),
+            'transferred_amount': self.transferred_amount,
+            'locksroot': self.locksroot.hex(),
+            'signature': self.signature.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        message = Secret(
+            data['identifier'],
+            unhexlify(data['secret']),
+            data['nonce'],
+            unhexlify(data['channel']),
+            data['transferred_amount'],
+            unhexlify(data['locksroot']),
+        )
+        message.signature = unhexlify(data['signature'])
+        return message
+
 
 class RevealSecret(SignedMessage):
     """Message used to reveal a secret to party known to have interest in it.
@@ -464,6 +505,15 @@ class RevealSecret(SignedMessage):
         return RevealSecret(
             event.secret,
         )
+
+    def to_dict(self):
+        return {
+            'secret': self.secret.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return RevealSecret(unhexlify(data['secret']))
 
 
 class DirectTransfer(EnvelopeMessage):
@@ -575,6 +625,32 @@ class DirectTransfer(EnvelopeMessage):
 
         return representation
 
+    def to_dict(self):
+        return {
+            'identifier': self.identifier,
+            'nonce': self.nonce,
+            'token': self.token.hex(),
+            'channel': self.channel.hex(),
+            'transferred_amount': self.transferred_amount,
+            'recipient': self.recipient.hex(),
+            'locksroot': self.locksroot.hex(),
+            'signature': self.signature.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        message = DirectTransfer(
+            data['identifier'],
+            data['nonce'],
+            unhexlify(data['token']),
+            unhexlify(data['channel']),
+            data['transferred_amount'],
+            unhexlify(data['recipient']),
+            unhexlify(data['locksroot']),
+        )
+        message.signature = unhexlify(data['signature'])
+        return message
+
 
 class Lock:
     """ Describes a locked `amount`.
@@ -653,6 +729,17 @@ class Lock:
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'amount': self.amount,
+            'expiration': self.expiration,
+            'hashlock': self.hashlock.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return Lock(data['amount'], data['expiration'], unhexlify(data['hashlock']))
 
 
 class LockedTransfer(EnvelopeMessage):
@@ -886,6 +973,40 @@ class MediatedTransfer(LockedTransfer):
             fee,
         )
 
+    def to_dict(self):
+        return {
+            'identifier': self.identifier,
+            'nonce': self.nonce,
+            'token': self.token.hex(),
+            'channel': self.channel.hex(),
+            'transferred_amount': self.transferred_amount,
+            'recipient': self.recipient.hex(),
+            'lock': self.lock.to_dict(),
+            'locksroot': self.locksroot.hex(),
+            'target': self.target.hex(),
+            'initiator': self.initiator.hex(),
+            'fee': self.fee,
+            'signature': self.signature.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        message = MediatedTransfer(
+            data['identifier'],
+            data['nonce'],
+            unhexlify(data['token']),
+            unhexlify(data['channel']),
+            data['transferred_amount'],
+            unhexlify(data['recipient']),
+            Lock.from_dict(data['lock']),
+            unhexlify(data['locksroot']),
+            unhexlify(data['target']),
+            unhexlify(data['initiator']),
+            data['fee'],
+        )
+        message.signature = data['signature']
+        return message
+
 
 class RefundTransfer(MediatedTransfer):
     """ A special MediatedTransfer sent from a payee to a payer indicating that
@@ -941,6 +1062,40 @@ class RefundTransfer(MediatedTransfer):
             event.initiator,
             fee,
         )
+
+    def to_dict(self):
+        return {
+            'identifier': self.identifier,
+            'nonce': self.nonce,
+            'token': self.token.hex(),
+            'channel': self.channel.hex(),
+            'transferred_amount': self.transferred_amount,
+            'recipient': self.recipient.hex(),
+            'lock': self.lock.to_dict(),
+            'locksroot': self.locksroot.hex(),
+            'target': self.target.hex(),
+            'initiator': self.initiator.hex(),
+            'fee': self.fee,
+            'signature': self.signature.hex(),
+        }
+
+    @staticmethod
+    def from_dict(data):
+        message = RefundTransfer(
+            data['identifier'],
+            data['nonce'],
+            unhexlify(data['token']),
+            unhexlify(data['channel']),
+            data['transferred_amount'],
+            unhexlify(data['recipient']),
+            Lock.from_dict(data['lock']),
+            unhexlify(data['locksroot']),
+            unhexlify(data['target']),
+            unhexlify(data['initiator']),
+            data['fee'],
+        )
+        message.signature = data['signature']
+        return message
 
 
 CMDID_TO_CLASS = {
