@@ -80,14 +80,12 @@ def test_routing_disjoint(
 ):
     token_network = token_networks[0]
 
-    # Paths should be "as disjoint as possible". Since only two different paths exist, the first
-    # path should also be third again.
+    # Paths should be "as disjoint as possible". There are only 2 different paths though.
     monkeypatch.setattr(pathfinder.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
     paths = token_network.get_paths(addresses[0], addresses[2], value=10, k=3)
-    assert len(paths) == 3
+    assert len(paths) == 2
     assert paths[0] == [addresses[0], addresses[1], addresses[2]]
     assert paths[1] == [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]]
-    assert paths[2] == [addresses[0], addresses[1], addresses[2]]
 
 
 def test_routing_hop_fee_balance(

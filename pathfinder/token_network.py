@@ -230,6 +230,10 @@ class TokenNetwork:
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
                 visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
+
+            if path in paths:
+                break
+
             paths.append(path)
         return paths
 
