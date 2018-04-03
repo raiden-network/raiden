@@ -208,7 +208,7 @@ class TokenNetwork:
     ):
         visited: Dict[ChannelId, float] = {}
         paths = []
-        hop_bias = kwargs.get('bias', 0)
+        hop_bias = kwargs.get('hop_bias', 0)
         assert 0 <= hop_bias <= 1
 
         def weight(
