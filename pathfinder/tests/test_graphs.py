@@ -25,7 +25,7 @@ def test_routing_benchmark(
     for i in range(100):
         tic = time.time()
         source, target = random.sample(G.nodes, 2)
-        paths = token_network.get_paths(source, target, value, 5, bias=0.0)
+        paths = token_network.get_paths(source, target, value=value, k=5, bias=0.0)
         toc = time.time()
         times.append(toc - tic)
     end = time.time()
@@ -59,17 +59,17 @@ def test_routing_simple(
 
     # 0->1->4->3 is as short as 0->1->2->3 but the shortcut 1->4 is a lot more expensive.
     # 0->2->3 would be shorter but 0->2 is degraded.
-    paths = token_network.get_paths(addresses[0], addresses[3], 10, 1, hop_bias=0)
+    paths = token_network.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=0)
     assert len(paths) == 1
     assert paths[0] == [addresses[0], addresses[1], addresses[2], addresses[3]]
 
     # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
     with pytest.raises(NetworkXNoPath):
-        token_network.get_paths(addresses[0], addresses[3], 100, 1)
+        token_network.get_paths(addresses[0], addresses[3], value=100, k=1)
 
     # Not connected.
     with pytest.raises(NetworkXNoPath):
-        token_network.get_paths(addresses[0], addresses[5], 10, 1)
+        token_network.get_paths(addresses[0], addresses[5], value=10, k=1)
 
 
 def test_routing_disjoint(
@@ -83,7 +83,7 @@ def test_routing_disjoint(
     # Paths should be "as disjoint as possible". Since only two different paths exist, the first
     # path should also be third again.
     monkeypatch.setattr(pathfinder.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
-    paths = token_network.get_paths(addresses[0], addresses[2], 10, 3)
+    paths = token_network.get_paths(addresses[0], addresses[2], value=10, k=3)
     assert len(paths) == 3
     assert paths[0] == [addresses[0], addresses[1], addresses[2]]
     assert paths[1] == [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]]
@@ -99,8 +99,8 @@ def test_routing_hop_fee_balance(
 
     # 1->4 has an extremely high fee, so 1->2->3->4 would be cheaper but slower.
     # Prefer cheap over fast.
-    paths = token_network.get_paths(addresses[1], addresses[4], 10, 1, hop_bias=0)
+    paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=0)
     assert paths[0] == [addresses[1], addresses[2], addresses[3], addresses[4]]
     # Prefer fast over cheap.
-    paths = token_network.get_paths(addresses[1], addresses[4], 10, 1, hop_bias=1)
+    paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=1)
     assert paths[0] == [addresses[1], addresses[4]]
