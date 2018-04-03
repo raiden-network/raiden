@@ -3,9 +3,9 @@ from typing import List
 from unittest.mock import Mock
 import pytest
 from coincurve import PrivateKey
-from eth_utils import to_checksum_address, remove_0x_prefix
+from eth_utils import remove_0x_prefix
 from raiden_libs.contracts import ContractManager
-from raiden_libs.utils import public_key_to_address, EMPTY_MERKLE_ROOT
+from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
 from web3 import Web3
 from web3.contract import Contract
 
@@ -24,6 +24,12 @@ def token_networks(token_network_contracts: List[Contract]) -> List[TokenNetwork
     ]
 
 
+def forge_fee_signature(private_key: str, fee: float) -> bytes:
+    fee_msg = str(fee).encode()
+    private_key_ecdsa = PrivateKey.from_hex(remove_0x_prefix(private_key))
+    return private_key_ecdsa.sign_recoverable(fee_msg)
+
+
 @pytest.fixture
 def populate_token_networks_random(
         token_networks: List[TokenNetwork],
@@ -33,15 +39,13 @@ def populate_token_networks_random(
     # seed for pseudo-randomness from config constant, that changes from time to time
     for token_network in token_networks:
         for channel_id in range(NUMBER_OF_CHANNELS):
-            seed1, seed2 = random.sample(private_keys, 2)
-            private_key_ecdsa1 = PrivateKey.from_hex(remove_0x_prefix(seed1))
-            private_key_ecdsa2 = PrivateKey.from_hex(remove_0x_prefix(seed2))
-            address1 = to_checksum_address(public_key_to_address(private_key_ecdsa1.public_key))
-            address2 = to_checksum_address(public_key_to_address(private_key_ecdsa2.public_key))
-            fee1 = str(abs(random.gauss(0.0002, 0.0001))).encode()
-            fee2 = str(abs(random.gauss(0.0002, 0.0001))).encode()
-            signature1 = private_key_ecdsa1.sign_recoverable(fee1)
-            signature2 = private_key_ecdsa2.sign_recoverable(fee2)
+            private_key1, private_key2 = random.sample(private_keys, 2)
+            address1 = Address(private_key_to_address(private_key1))
+            address2 = Address(private_key_to_address(private_key2))
+            fee1 = abs(random.gauss(0.0002, 0.0001))
+            fee2 = abs(random.gauss(0.0002, 0.0001))
+            signature1 = forge_fee_signature(private_key1, fee1)
+            signature2 = forge_fee_signature(private_key2, fee2)
             token_network.handle_channel_opened_event(
                 channel_id,
                 address1,
@@ -65,12 +69,12 @@ def populate_token_networks_random(
 
             token_network.update_fee(
                 channel_id,
-                fee1,
+                str(fee1).encode(),
                 signature1
             )
             token_network.update_fee(
                 channel_id,
-                fee2,
+                str(fee2).encode(),
                 signature2
             )
 
@@ -161,14 +165,10 @@ def populate_token_networks_simple(
             token_network.update_balance(p1_balance_proof, [])
             token_network.update_balance(p2_balance_proof, [])
 
-            p1_fee_msg = str(p1_fee).encode()
-            p2_fee_msg = str(p2_fee).encode()
-            p1_private_key_ecdsa = PrivateKey.from_hex(remove_0x_prefix(private_keys[p1_index]))
-            p2_private_key_ecdsa = PrivateKey.from_hex(remove_0x_prefix(private_keys[p2_index]))
-            p1_fee_signature = p1_private_key_ecdsa.sign_recoverable(p1_fee_msg)
-            p2_fee_signature = p2_private_key_ecdsa.sign_recoverable(p2_fee_msg)
-            token_network.update_fee(channel_id, p1_fee_msg, p1_fee_signature)
-            token_network.update_fee(channel_id, p2_fee_msg, p2_fee_signature)
+            p1_fee_signature = forge_fee_signature(private_keys[p1_index], p1_fee)
+            p2_fee_signature = forge_fee_signature(private_keys[p2_index], p2_fee)
+            token_network.update_fee(channel_id, str(p1_fee).encode(), p1_fee_signature)
+            token_network.update_fee(channel_id, str(p2_fee).encode(), p2_fee_signature)
 
 
 @pytest.fixture
