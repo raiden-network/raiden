@@ -87,7 +87,7 @@ class TokenNetwork:
                 log.error(
                     "Receiver in ChannelNewDeposit does not fit the internal channel"
                 )
-        except KeyError as ke:
+        except KeyError:
             log.error(
                 "Received ChannelNewDeposit event for unknown channel '{}'".format(
                     channel_id
@@ -106,7 +106,7 @@ class TokenNetwork:
 
             self.G.remove_edge(participant1, participant2)
             self.G.remove_edge(participant2, participant1)
-        except KeyError as ke:
+        except KeyError:
             log.error(
                 "Received ChannelClosed event for unknown channel '{}'".format(
                     channel_id
@@ -124,8 +124,11 @@ class TokenNetwork:
         This needs to check that the balance proof is valid.
 
         Called by the public interface. """
-        participant1, participant2 = self.channel_id_to_addresses[balance_proof.channel_id]
 
+        participant1, participant2 = self.channel_id_to_addresses.get(
+            balance_proof.channel_id,
+            (None, None)
+        )
         if is_same_address(participant1, balance_proof.sender):
             receiver = participant2
         elif is_same_address(participant2, balance_proof.sender):
@@ -225,7 +228,7 @@ class TokenNetwork:
                     0
                 )
 
-        for i in range(k):
+        for _ in range(k):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id

@@ -102,7 +102,7 @@ class PathfindingService(gevent.Greenlet):
 
         try:
             token_network = self.token_networks[token_network_address]
-        except KeyError as e:
+        except KeyError:
             log.info('Ignoring event from unknown token network {}'.format(
                 token_network_address
             ))
