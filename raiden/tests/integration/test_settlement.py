@@ -254,21 +254,13 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_close_channel_lack_of_balance_proof(
-        raiden_chain,
-        reveal_timeout,
-        deposit,
-        token_addresses
-):
-
+def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
     token_proxy = app0.raiden.chain.token(token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
-
-    expiration = app0.raiden.get_block_number() + reveal_timeout * 2
 
     amount = 100
     identifier = 1
@@ -285,8 +277,6 @@ def test_close_channel_lack_of_balance_proof(
     reveal_secret = RevealSecret(secret)
     app0.raiden.sign(reveal_secret)
     udp_message_handler.on_udp_message(app1.raiden, reveal_secret)
-
-    assert app0.raiden.get_block_number() < expiration, 'increase the expiration'
 
     channel_state = get_channelstate(app0, app1, token_address)
     waiting.wait_for_settle(
