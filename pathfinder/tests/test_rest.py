@@ -445,12 +445,11 @@ def test_get_paths(
     response = requests.get(url)
     assert response.status_code == 200
     paths = response.json()['result']
-    assert len(paths) == 1  # FIXME: this should return two paths
-    assert paths == [[
-        '0x425Ae7433087C2e11D012E0835fA73e8Cea347be',
-        '0x19d36ABD5B82eD0925177FbD3038ce7bCEa72A45',
-        '0x1B54A58A58Fbe9ABCf4aC13b733B10695b0484A9'
-    ]]
+    assert len(paths) == 2
+    assert paths == [
+        [addresses[0], addresses[1], addresses[2]],
+        [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]]
+    ]
 
     # there is no connection between 0 and 5, this should return an error
     url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(

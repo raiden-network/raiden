@@ -8,7 +8,12 @@ from eth_utils import is_checksum_address, is_same_address, to_checksum_address
 from networkx import DiGraph
 from raiden_libs.utils import compute_merkle_tree, get_merkle_root, public_key_to_address
 from web3.contract import Contract
-from pathfinder.config import DIVERSITY_PEN_DEFAULT
+from pathfinder.config import (
+    DIVERSITY_PEN_DEFAULT,
+    MIN_PATH_REDUNDANCY,
+    PATH_REDUNDANCY_FACTOR,
+    MAX_PATHS_PER_REQUEST
+)
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.channel_view import ChannelView
 from pathfinder.model.lock import Lock
@@ -216,6 +221,7 @@ class TokenNetwork:
             k: int,
             **kwargs
     ):
+        k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelId, float] = {}
         paths = []
         hop_bias = kwargs.get('hop_bias', 0)
@@ -235,16 +241,22 @@ class TokenNetwork:
                     0
                 )
 
-        for _ in range(k):
+        max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
+        for _ in range(max_iterations):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
+            duplicate = path in paths
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
-                visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
+                if duplicate:
+                    visited[channel_id] *= 2
+                else:
+                    visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
 
-            if path in paths:
+            if not duplicate:
+                paths.append(path)
+            if len(paths) >= k:
                 break
 
-            paths.append(path)
         return paths
 
     #
