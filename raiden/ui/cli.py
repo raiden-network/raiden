@@ -7,6 +7,7 @@ import json
 import socket
 import errno
 import signal
+import shutil
 from itertools import count
 from ipaddress import IPv4Address, AddressValueError
 
@@ -881,21 +882,11 @@ def smoketest(ctx, debug, **kwargs):
         sys.exit(1)
 
 
-@run.command()
-@click.pass_context
-def removedb(ctx):
-    """Delete local cache and database of this address or all if none is specified."""
-    import shutil
-
-    datadir = ctx.obj['datadir']
-    address = ctx.obj['address']
-    address_hex = address_encoder(address) if address else None
-    user_db_dir = os.path.join(datadir, address_hex[:8]) if address_hex else datadir
+def _removedb(netdir, address_hex):
+    user_db_dir = os.path.join(netdir, address_hex[:8]) if address_hex else netdir
 
     if not os.path.exists(user_db_dir):
-        print('Directory does not exist: {}'.format(user_db_dir))
-        print('Nothing to delete.')
-        return
+        return False
 
     # Sanity check if the specified directory is a Raiden datadir.
     sane = True
@@ -917,4 +908,25 @@ def removedb(ctx):
         shutil.rmtree(user_db_dir)
         print('Local data deleted.')
     else:
-        print('Abort.')
+        print('Aborted.')
+
+
+@run.command()
+@click.pass_context
+def removedb(ctx):
+    """Delete local cache and database of this address or all if none is specified."""
+
+    datadir = ctx.obj['datadir']
+    address = ctx.obj['address']
+    address_hex = address_encoder(address) if address else None
+
+    result = False
+    for f in os.listdir(datadir):
+        netdir = os.path.join(datadir, f)
+        if os.path.isdir(netdir):
+            if _removedb(netdir, address_hex):
+                result = True
+
+    if not result:
+        print('No raiden databases found for {}'.format(address_hex))
+        print('Nothing to delete.')
