@@ -483,7 +483,7 @@ def app(
         web_ui,
         datadir,
         eth_client_communication,
-        nat
+        nat,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -568,7 +568,8 @@ def app(
     print(
         'You are connected to the {} network and the DB path is: {}'.format(
             ID_TO_NETWORKNAME[net_id],
-            database_path)
+            database_path,
+        )
     )
 
     registry = blockchain_service.registry(
