@@ -98,13 +98,13 @@ def check_json_rpc(client):
         client_version = client.call('web3_clientVersion')
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
-            "\n"
-            "Couldn't contact the ethereum node through JSON-RPC.\n"
-            "Please make sure that JSON-RPC is enabled for these interfaces:\n"
-            "\n"
-            "    eth_*, net_*, web3_*\n"
-            "\n"
-            "geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n"
+            '\n'
+            'Could not contact the ethereum node through JSON-RPC.\n'
+            'Please make sure that JSON-RPC is enabled for these interfaces:\n'
+            '\n'
+            '    eth_*, net_*, web3_*\n'
+            '\n'
+            'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n'
         )
         sys.exit(1)
     else:
@@ -118,10 +118,10 @@ def check_synced(net_id, blockchain_service):
         network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(
-            "Couldn't determine the network the ethereum node is connected.\n"
-            "Because of this there is no way to determine the latest\n"
-            "block with an oracle, and the events from the ethereum\n"
-            "node cannot be trusted. Giving up.\n"
+            'Could not determine the network the ethereum node is connected.\n'
+            'Because of this there is no way to determine the latest\n'
+            'block with an oracle, and the events from the ethereum\n'
+            'node cannot be trusted. Giving up.\n'
         )
         sys.exit(1)
     except KeyError:
@@ -268,16 +268,20 @@ ADDRESS_TYPE = AddressType()
 OPTIONS = [
     click.option(
         '--address',
-        help=('The ethereum address you would like raiden to use and for which '
-              'a keystore file exists in your local system.'),
+        help=(
+            'The ethereum address you would like raiden to use and for which '
+            'a keystore file exists in your local system.'
+        ),
         default=None,
         type=ADDRESS_TYPE,
         show_default=True,
     ),
     click.option(
         '--keystore-path',
-        help=('If you have a non-standard path for the ethereum keystore directory'
-              ' provide it using this argument.'),
+        help=(
+            'If you have a non-standard path for the ethereum keystore directory'
+            ' provide it using this argument.'
+        ),
         default=None,
         type=click.Path(exists=True),
         show_default=True,
@@ -293,8 +297,10 @@ OPTIONS = [
     ),
     click.option(
         '--eth-rpc-endpoint',
-        help='"host:port" address of ethereum JSON-RPC server.\n'
-        'Also accepts a protocol prefix (http:// or https://) with optional port',
+        help=(
+            '"host:port" address of ethereum JSON-RPC server.\n'
+            'Also accepts a protocol prefix (http:// or https://) with optional port'
+        ),
         default='127.0.0.1:8545',  # geth default jsonrpc port
         type=str,
         show_default=True,
@@ -427,14 +433,16 @@ OPTIONS = [
     ),
     click.option(
         '--nat',
-        help='Manually specify method to use for determining public IP / NAT traversal.\n'
-             'Available methods:\n'
-             '"auto" - Try UPnP, then STUN, fallback to none\n'
-             '"upnp" - Try UPnP, fallback to none\n'
-             '"stun" - Try STUN, fallback to none\n'
-             '"none" - Use the local interface address '
-             '(this will likely cause connectivity issues)\n'
-             '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port no.)',
+        help=(
+            'Manually specify method to use for determining public IP / NAT traversal.\n'
+            'Available methods:\n'
+            '"auto" - Try UPnP, then STUN, fallback to none\n'
+            '"upnp" - Try UPnP, fallback to none\n'
+            '"stun" - Try STUN, fallback to none\n'
+            '"none" - Use the local interface address '
+            '(this will likely cause connectivity issues)\n'
+            '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port no.)'
+        ),
         type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
         default='auto',
         show_default=True
@@ -443,8 +451,7 @@ OPTIONS = [
 
 
 def options(func):
-    """Having the common app options as a decorator facilitates reuse.
-    """
+    """Having the common app options as a decorator facilitates reuse."""
     for option in OPTIONS:
         func = option(func)
     return func
@@ -611,7 +618,7 @@ def prompt_account(address_hex, keystore_path, password_file):
             if idx >= 0 and idx < len(addresses):
                 should_prompt = False
             else:
-                print("\nError: Provided index '{}' is out of bounds\n".format(idx))
+                print('\nError: Provided index "{}" is out of bounds\n'.format(idx))
 
         address_hex = addresses[idx]
 
@@ -734,9 +741,11 @@ def run(ctx, **kwargs):
                     pass
         except socket.error as v:
             if v.args[0] == errno.EADDRINUSE:
-                print('ERROR: Address %s:%s is in use. '
-                      'Use --listen-address <host:port> to specify port to listen on.' %
-                      (listen_host, listen_port))
+                print(
+                    'ERROR: Address %s:%s is in use. '
+                    'Use --listen-address <host:port> to specify port to listen on.' %
+                    (listen_host, listen_port)
+                )
                 sys.exit(1)
             raise
         app_.stop(leave_channels=False)
@@ -770,8 +779,7 @@ def version(short, **kwargs):
 )
 @click.pass_context
 def smoketest(ctx, debug, **kwargs):
-    """ Test, that the raiden installation is sane.
-    """
+    """ Test, that the raiden installation is sane."""
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.utils import get_contract_path
@@ -876,9 +884,7 @@ def smoketest(ctx, debug, **kwargs):
 @run.command()
 @click.pass_context
 def removedb(ctx):
-    """
-    Delete local cache and database of this address or all if none is specified.
-    """
+    """Delete local cache and database of this address or all if none is specified."""
     import shutil
 
     datadir = ctx.obj['datadir']
