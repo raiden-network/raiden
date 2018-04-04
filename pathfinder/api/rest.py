@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 
 import gevent
 from eth_utils import decode_hex, is_address, is_checksum_address, is_same_address
@@ -18,7 +18,7 @@ from pathfinder.utils.types import Address
 
 class PathfinderResource(Resource):
 
-    def __init__(self, pathfinding_service: PathfindingService):
+    def __init__(self, pathfinding_service: PathfindingService) -> None:
         self.pathfinding_service = pathfinding_service
 
     def _validate_token_network_argument(
@@ -147,7 +147,7 @@ class ChannelFeeResource(PathfinderResource):
         if channel_id_error is not None:
             return channel_id_error
 
-        channel_id = int(channel_id)
+        channel_id_casted = int(channel_id)
         body = request.json
 
         fee: str = body.get('fee')
@@ -170,7 +170,7 @@ class ChannelFeeResource(PathfinderResource):
         try:
             fee_encoded = fee.encode()
             signature_decoded = decode_hex(signature)
-            token_network.update_fee(channel_id, fee_encoded, signature_decoded)
+            token_network.update_fee(channel_id_casted, fee_encoded, signature_decoded)
         except ValueError as err:
             return {'error': str(err)}, 400
 
@@ -238,18 +238,17 @@ class PathsResource(PathfinderResource):
 
 
 class PaymentInfoResource(Resource):
-    def __init__(self):
-        pass
+    pass
 
 
 class ServiceApi:
-    def __init__(self, pathfinding_service: PathfindingService):
+    def __init__(self, pathfinding_service: PathfindingService) -> None:
         self.flask_app = Flask(__name__)
         self.api = Api(self.flask_app)
         self.rest_server: WSGIServer = None
         self.server_greenlet: Greenlet = None
 
-        resources = [
+        resources: List[Tuple[str, Resource, Dict]] = [
             ('/<token_network_address>/<channel_id>/balance', ChannelBalanceResource, {}),
             ('/<token_network_address>/<channel_id>/fee', ChannelFeeResource, {}),
             ('/<token_network_address>/paths', PathsResource, {}),

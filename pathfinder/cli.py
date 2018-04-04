@@ -30,7 +30,7 @@ def check_supplied_token_network_addresses(token_network_addresses: List[str]) -
         if not is_checksum_address(address):
             log.error(f"Token Network address '{address}' is not a checksum address. Ignoring.")
         else:
-            result.append(address)
+            result.append(Address(address))
 
     return result
 

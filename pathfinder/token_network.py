@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import networkx as nx
 from coincurve import PublicKey
 from coincurve.utils import sha256
@@ -36,13 +36,13 @@ class TokenNetwork:
     def __init__(
         self,
         token_network_contract: Contract
-    ):
+    ) -> None:
         """ Initializes a new TokenNetwork. """
 
         self.token_network_contract = token_network_contract
         self.address = to_checksum_address(self.token_network_contract.address)
         self.token_address = self.token_network_contract.functions.token().call()
-        self.channel_id_to_addresses = dict()
+        self.channel_id_to_addresses: Dict[int, Tuple[Address, Address]] = dict()
         self.G = DiGraph()
         self.max_fee = 0.0
 
@@ -196,22 +196,22 @@ class TokenNetwork:
         else:
             raise ValueError('Signature does not match any of the participants.')
 
-        new_fee = float(new_fee)
+        new_fee_casted = float(new_fee)
         channel_view = self.G[sender][receiver]['view']
 
-        if new_fee >= self.max_fee:
+        if new_fee_casted >= self.max_fee:
             # Equal case is included to avoid a recalculation of the max fee.
-            self.max_fee = new_fee
-            channel_view.fee = new_fee
+            self.max_fee = new_fee_casted
+            channel_view.fee = new_fee_casted
         elif channel_view.fee == self.max_fee:
             # O(n) operation but rarely called, amortized likely constant.
-            channel_view.fee = new_fee
+            channel_view.fee = new_fee_casted
             self.max_fee = max(
                 edge_data['view'].fee
                 for _, _, edge_data in self.G.edges(data=True)
             )
 
-        channel_view.fee = new_fee
+        channel_view.fee = new_fee_casted
 
     def get_paths(
             self,
@@ -223,7 +223,7 @@ class TokenNetwork:
     ):
         k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelId, float] = {}
-        paths = []
+        paths: List[List[Address]] = []
         hop_bias = kwargs.get('hop_bias', 0)
         assert 0 <= hop_bias <= 1
 
