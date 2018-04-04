@@ -558,6 +558,11 @@ def app(
 
     database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
     config['database_path'] = database_path
+    print(
+        'You are connected to the {} network and the DB path is: {}'.format(
+            ID_TO_NETWORKNAME[net_id],
+            database_path)
+    )
 
     registry = blockchain_service.registry(
         registry_contract_address,
