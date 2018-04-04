@@ -10,6 +10,7 @@ install: pip install -r requirements_dev.txt
 # Command to run tests, e.g. python setup.py test
 script:
   - make lint
-  - python setup.py test
+  - make typecheck
+  - make test
 
 
