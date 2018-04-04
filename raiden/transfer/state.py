@@ -187,7 +187,10 @@ class TokenNetworkState(State):
         }
 
     def __repr__(self):
-        return '<TokenNetworkState id:{}>'.format(pex(self.address))
+        return '<TokenNetworkState id:{} token:{}>'.format(
+            pex(self.address),
+            pex(self.token_address),
+        )
 
     def __eq__(self, other):
         return (
