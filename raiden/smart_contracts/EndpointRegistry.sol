@@ -4,7 +4,7 @@
  * The Ethereum address registers his address in this registry.
 */
 
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.21;
 
 contract EndpointRegistry{
     string constant public contract_version = "0.2._";
@@ -44,7 +44,7 @@ contract EndpointRegistry{
         socket_to_address[old_socket] = address(0);
         address_to_socket[msg.sender] = socket;
         socket_to_address[socket] = msg.sender;
-        AddressRegistered(msg.sender, socket);
+        emit AddressRegistered(msg.sender, socket);
     }
 
     /*

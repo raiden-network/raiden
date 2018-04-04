@@ -198,6 +198,9 @@ library NettingChannelLibrary {
         internal
         returns (address)
     {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
         bytes32 signed_hash;
 
         require(signature.length == 65);
@@ -210,7 +213,7 @@ library NettingChannelLibrary {
             extra_hash
         );
 
-        var (r, s, v) = signatureSplit(signature);
+        (r, s, v) = signatureSplit(signature);
         return ecrecover(signed_hash, v, r, s);
     }
 
