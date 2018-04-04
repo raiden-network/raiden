@@ -5,7 +5,7 @@ from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
 from raiden.messages import DirectTransfer
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils import factories
 from raiden.tests.utils.messages import make_direct_transfer
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -65,8 +65,10 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
 def test_close_first_argument_is_for_partner_transfer(tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount=90,
@@ -125,7 +127,7 @@ def test_close_wrong_channel(tester_channels):
     """ Close must not accept a transfer aimed at a different channel. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
-    wrong_address = make_address()
+    wrong_address = factories.make_address()
 
     # make a transfer where the recipient is totally wrong
     transfer_wrong_channel = DirectTransfer(
@@ -219,8 +221,10 @@ def test_close_valid_tranfer_different_token(
 def test_close_tampered_identifier(tester_channels):
     """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount=90,
@@ -246,8 +250,10 @@ def test_close_tampered_identifier(tester_channels):
 def test_close_tampered_nonce(tester_channels):
     """ Messages with a tampered nonce must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount=90,
