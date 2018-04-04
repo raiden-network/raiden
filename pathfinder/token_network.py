@@ -41,7 +41,9 @@ class TokenNetwork:
         self.G = DiGraph()
         self.max_fee = 0.0
 
+    #
     # Contract event listener functions
+    #
 
     def handle_channel_opened_event(
         self,
@@ -113,7 +115,9 @@ class TokenNetwork:
                 )
             )
 
+    #
     # pathfinding endpoints
+    #
 
     def update_balance(
         self,
@@ -174,7 +178,10 @@ class TokenNetwork:
             )
         )
 
-        participant1, participant2 = self.channel_id_to_addresses[channel_id]
+        participant1, participant2 = self.channel_id_to_addresses.get(
+            channel_id,
+            (None, None)
+        )
         if is_same_address(participant1, signer):
             sender = participant1
             receiver = participant2
@@ -240,7 +247,9 @@ class TokenNetwork:
             paths.append(path)
         return paths
 
+    #
     # functions for persistence
+    #
 
     def save_snapshot(self, filename):
         """ Serializes the token network so it doesn't need to sync from scratch when
