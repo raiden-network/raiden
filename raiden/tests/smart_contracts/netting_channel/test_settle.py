@@ -2,6 +2,7 @@
 import pytest
 
 from raiden.messages import Lock
+from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import (
     increase_transferred_amount,
     make_direct_transfer_from_channel,
@@ -71,6 +72,7 @@ def test_settle_single_direct_transfer_for_closing_party(
     """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -80,6 +82,7 @@ def test_settle_single_direct_transfer_for_closing_party(
 
     amount = 90
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount,
@@ -116,6 +119,7 @@ def test_settle_single_direct_transfer_for_counterparty(
     """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -125,6 +129,7 @@ def test_settle_single_direct_transfer_for_counterparty(
 
     amount = 90
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount,
@@ -160,6 +165,7 @@ def test_settle_two_direct_transfers(
     """ Test settle of a channel with two direct transfers. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -169,6 +175,7 @@ def test_settle_two_direct_transfers(
 
     amount0 = 10
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount0,
@@ -177,6 +184,7 @@ def test_settle_two_direct_transfers(
 
     amount1 = 30
     transfer1 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel1,
         channel0,
         amount1,
@@ -226,6 +234,8 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     """ Test settle with a locked mediated transfer for the counter party. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
+
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
 
@@ -233,7 +243,13 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     transferred_amount0 = 30
-    increase_transferred_amount(channel0, channel1, transferred_amount0, pkey0)
+    increase_transferred_amount(
+        payment_network_identifier,
+        channel0,
+        channel1,
+        transferred_amount0,
+        pkey0,
+    )
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
@@ -286,6 +302,8 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     """ Test settle with a locked mediated transfer for the closing address. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
+
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
 
@@ -293,7 +311,13 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     transferred_amount0 = 30
-    increase_transferred_amount(channel0, channel1, transferred_amount0, pkey0)
+    increase_transferred_amount(
+        payment_network_identifier,
+        channel0,
+        channel1,
+        transferred_amount0,
+        pkey0,
+    )
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
@@ -340,6 +364,8 @@ def test_settle_two_locked_mediated_transfer_messages(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
+
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
 
@@ -347,10 +373,22 @@ def test_settle_two_locked_mediated_transfer_messages(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey1)
 
     transferred_amount0 = 30
-    increase_transferred_amount(channel0, channel1, transferred_amount0, pkey0)
+    increase_transferred_amount(
+        payment_network_identifier,
+        channel0,
+        channel1,
+        transferred_amount0,
+        pkey0,
+    )
 
     transferred_amount1 = 70
-    increase_transferred_amount(channel1, channel0, transferred_amount1, pkey1)
+    increase_transferred_amount(
+        payment_network_identifier,
+        channel1,
+        channel0,
+        transferred_amount1,
+        pkey1,
+    )
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
@@ -419,6 +457,7 @@ def test_two_direct_transfers(
     """ The value of both transfers must be account for. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -428,6 +467,7 @@ def test_two_direct_transfers(
 
     first_amount0 = 90
     make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         first_amount0,
@@ -436,6 +476,7 @@ def test_two_direct_transfers(
 
     second_amount0 = 90
     second_direct0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         second_amount0,
@@ -475,6 +516,7 @@ def test_mediated_after_direct_transfer(
     """ The transfer types must not change the behavior of the dispute. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -484,6 +526,7 @@ def test_mediated_after_direct_transfer(
 
     first_amount0 = 90
     make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         first_amount0,
@@ -536,6 +579,7 @@ def test_settlement_with_unauthorized_token_transfer(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -545,6 +589,7 @@ def test_settlement_with_unauthorized_token_transfer(
 
     amount0 = 10
     transfer0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount0,
@@ -553,6 +598,7 @@ def test_settlement_with_unauthorized_token_transfer(
 
     amount1 = 30
     transfer1 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel1,
         channel0,
         amount1,
@@ -598,6 +644,8 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
     """ Transferred amount can be larger than the deposit. """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    payment_network_identifier = factories.make_address()
+
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
 
@@ -606,8 +654,20 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
 
     # increase the transferred amount by three times the deposits
     for _ in range(3):
-        increase_transferred_amount(channel0, channel1, deposit, pkey0)
-        increase_transferred_amount(channel1, channel0, deposit, pkey1)
+        increase_transferred_amount(
+            payment_network_identifier,
+            channel0,
+            channel1,
+            deposit,
+            pkey0,
+        )
+        increase_transferred_amount(
+            payment_network_identifier,
+            channel1,
+            channel0,
+            deposit,
+            pkey1,
+        )
 
     transferred_amount0 = deposit * 3
     transferred_amount1 = deposit * 3
@@ -615,6 +675,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
     amount0 = 10
     transferred_amount0 += amount0
     direct0 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel0,
         channel1,
         amount0,
@@ -624,6 +685,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
     amount1 = 30
     transferred_amount1 += amount1
     direct1 = make_direct_transfer_from_channel(
+        payment_network_identifier,
         channel1,
         channel0,
         amount1,

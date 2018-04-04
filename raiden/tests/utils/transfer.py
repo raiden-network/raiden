@@ -299,7 +299,13 @@ def assert_balance(from_channel, balance, locked):
     assert balance == amount_locked + distributable
 
 
-def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
+def increase_transferred_amount(
+        payment_network_identifier,
+        from_channel,
+        partner_channel,
+        amount,
+        pkey,
+):
     # increasing the transferred amount by a value larger than distributable
     # would put one end of the channel in a negative balance, which is forbidden
     distributable_from_to = channel.get_distributable(
@@ -325,6 +331,8 @@ def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
     receive_direct = ReceiveTransferDirect(
+        payment_network_identifier,
+        from_channel.token_address,
         identifier,
         balance_proof,
     )
@@ -337,7 +345,13 @@ def increase_transferred_amount(from_channel, partner_channel, amount, pkey):
     return direct_transfer_message
 
 
-def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pkey):
+def make_direct_transfer_from_channel(
+        payment_network_identifier,
+        from_channel,
+        partner_channel,
+        amount,
+        pkey,
+):
     """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`."""
     identifier = channel.get_next_nonce(from_channel.our_state)
@@ -365,6 +379,8 @@ def make_direct_transfer_from_channel(from_channel, partner_channel, amount, pke
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
     receive_direct = ReceiveTransferDirect(
+        payment_network_identifier,
+        from_channel.token_address,
         identifier,
         balance_proof,
     )
