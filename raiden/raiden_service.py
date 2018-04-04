@@ -249,6 +249,10 @@ class RaidenService:
         # finish before starting the protocol
         endpoint_registration_event.join()
 
+        # Lock used to serialize calls to `poll_blockchain_events`, this is
+        # important to give a consistent view of the node state.
+        self.event_poll_lock = gevent.lock.Semaphore()
+
         self.start()
 
     def start(self):
@@ -371,10 +375,10 @@ class RaidenService:
     def get_block_number(self):
         return views.block_number(self.wal.state_manager.current_state)
 
-    def poll_blockchain_events(self, current_block=None):
-        # pylint: disable=unused-argument
-        for event in self.blockchain_events.poll_blockchain_events():
-            on_blockchain_event(self, event)
+    def poll_blockchain_events(self, current_block=None):  # pylint: disable=unused-argument
+        with self.event_poll_lock:
+            for event in self.blockchain_events.poll_blockchain_events():
+                on_blockchain_event(self, event)
 
     def sign(self, message):
         """ Sign message inplace. """
