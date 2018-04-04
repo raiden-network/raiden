@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Dict
 
 import gevent
-from eth_utils import decode_hex, is_address, is_checksum_address
+from eth_utils import decode_hex, is_address, is_checksum_address, is_same_address
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
@@ -89,8 +89,8 @@ class ChannelBalanceResource(PathfinderResource):
             )}, 400
 
         # token_network_address and channel_id info is duplicate
-        # check, that both version match
-        if not token_network_address == balance_proof.token_network_address:
+        # check that both versions match
+        if not is_same_address(token_network_address, balance_proof.token_network_address):
             error = 'The token network address from the balance proof ({}) ' \
                     'and the request ({}) do not match'
             return {
