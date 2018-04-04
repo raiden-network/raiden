@@ -119,8 +119,7 @@ def test_max(tester_chain, tester_nettingchannel_library_address):
 
 def test_merkle_proof_one_lock(tester_chain, tester_nettingchannel_library_address):
     """ computeMerkleRoot and the python implementation must compute the same
-    value for a merkle tree with a single lock.
-    """
+    value for a merkle tree with a single lock."""
 
     auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
