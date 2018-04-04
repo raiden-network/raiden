@@ -247,6 +247,9 @@ class BlockchainEvents:
                 # filters will no longer exist there. In that case we will need
                 # to recreate all the filters.
                 if not reinstalled_filters and str(e) == 'filter not found':
+                    if log.isEnabledFor('DEBUG'):
+                        log.debug('reinstalling eth filters')
+
                     result = list()
                     reinstalled_filters = True
                     updated_event_listerners = list()

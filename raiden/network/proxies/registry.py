@@ -19,6 +19,7 @@ from raiden.utils import (
     address_encoder,
     isaddress,
     pex,
+    privatekey_to_address,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -59,6 +60,7 @@ class Registry:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
+        self.node_address = privatekey_to_address(self.client.privkey)
 
         self.address_to_channelmanager = dict()
         self.token_to_channelmanager = dict()
@@ -82,6 +84,14 @@ class Registry:
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
 
+        if log.isEnabledFor(logging.INFO):
+            log.info(
+                'add_token called',
+                node=pex(self.node_address),
+                token_address=pex(token_address),
+                registry_address=pex(self.address),
+            )
+
         transaction_hash = estimate_and_transact(
             self.proxy,
             'addToken',
@@ -91,17 +101,32 @@ class Registry:
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'add_token failed',
+                    node=pex(self.node_address),
+                    token_address=pex(token_address),
+                    registry_address=pex(self.address),
+                )
             raise TransactionThrew('AddToken', receipt_or_none)
 
         manager_address = self.manager_address_by_token(token_address)
 
         if manager_address is None:
-            log.error('Transaction failed and check_transaction_threw didnt detect it')
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'add_token failed and check_transaction_threw didnt detect it',
+                    node=pex(self.node_address),
+                    token_address=pex(token_address),
+                    registry_address=pex(self.address),
+                )
+
             raise RuntimeError('channelManagerByToken failed')
 
         if log.isEnabledFor(logging.INFO):
             log.info(
-                'add_token called',
+                'add_token sucessful',
+                node=pex(self.node_address),
                 token_address=pex(token_address),
                 registry_address=pex(self.address),
                 manager_address=pex(manager_address),
