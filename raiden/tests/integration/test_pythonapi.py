@@ -25,7 +25,8 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
-@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_register_token(raiden_network, token_amount):
     app1 = raiden_network[0]
