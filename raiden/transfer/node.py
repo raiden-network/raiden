@@ -45,7 +45,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 
 
-def get_networks(node_state, payment_network_identifier, token_network_identifier):
+def get_networks(node_state, payment_network_identifier, token_address):
     token_network_state = None
     payment_network_state = node_state.identifiers_to_paymentnetworks.get(
         payment_network_identifier
@@ -53,17 +53,17 @@ def get_networks(node_state, payment_network_identifier, token_network_identifie
 
     if payment_network_state:
         token_network_state = payment_network_state.tokenaddresses_to_tokennetworks.get(
-            token_network_identifier
+            token_address
         )
 
     return payment_network_state, token_network_state
 
 
-def get_token_network(node_state, payment_network_identifier, token_network_identifier):
+def get_token_network(node_state, payment_network_identifier, token_address):
     _, token_network_state = get_networks(
         node_state,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
     )
 
     return token_network_state
@@ -99,12 +99,12 @@ def subdispatch_to_paymenttask(node_state, state_change, hashlock):
     if sub_task:
         if isinstance(sub_task, PaymentMappingState.InitiatorTask):
             payment_network_identifier = sub_task.payment_network_identifier
-            token_network_identifier = sub_task.token_network_identifier
+            token_address = sub_task.token_address
 
             token_network_state = get_token_network(
                 node_state,
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
             )
 
             if token_network_state:
@@ -118,12 +118,12 @@ def subdispatch_to_paymenttask(node_state, state_change, hashlock):
 
         elif isinstance(sub_task, PaymentMappingState.MediatorTask):
             payment_network_identifier = sub_task.payment_network_identifier
-            token_network_identifier = sub_task.token_network_identifier
+            token_address = sub_task.token_address
 
             token_network_state = get_token_network(
                 node_state,
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
             )
 
             if token_network_state:
@@ -137,13 +137,13 @@ def subdispatch_to_paymenttask(node_state, state_change, hashlock):
 
         elif isinstance(sub_task, PaymentMappingState.TargetTask):
             payment_network_identifier = sub_task.payment_network_identifier
-            token_network_identifier = sub_task.token_network_identifier
+            token_address = sub_task.token_address
             channel_identifier = sub_task.channel_identifier
 
             channel_state = views.get_channelstate_by_tokenaddress(
                 node_state,
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
                 channel_identifier,
             )
 
@@ -163,7 +163,7 @@ def subdispatch_initiatortask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         hashlock):
 
     block_number = node_state.block_number
@@ -176,7 +176,7 @@ def subdispatch_initiatortask(
     elif sub_task and isinstance(sub_task, PaymentMappingState.InitiatorTask):
         is_valid_subtask = (
             payment_network_identifier == sub_task.payment_network_identifier and
-            token_network_identifier == sub_task.token_network_identifier
+            token_address == sub_task.token_address
         )
         manager_state = sub_task.manager_state
     else:
@@ -187,7 +187,7 @@ def subdispatch_initiatortask(
         token_network_state = get_token_network(
             node_state,
             payment_network_identifier,
-            token_network_identifier,
+            token_address,
         )
         iteration = initiator_manager.state_transition(
             manager_state,
@@ -200,7 +200,7 @@ def subdispatch_initiatortask(
         if iteration.new_state:
             sub_task = PaymentMappingState.InitiatorTask(
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
                 iteration.new_state,
             )
             node_state.payment_mapping.hashlocks_to_task[hashlock] = sub_task
@@ -212,7 +212,7 @@ def subdispatch_mediatortask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         hashlock):
 
     block_number = node_state.block_number
@@ -225,7 +225,7 @@ def subdispatch_mediatortask(
     elif sub_task and isinstance(sub_task, PaymentMappingState.MediatorTask):
         is_valid_subtask = (
             payment_network_identifier == sub_task.payment_network_identifier and
-            token_network_identifier == sub_task.token_network_identifier
+            token_address == sub_task.token_address
         )
         mediator_state = sub_task.mediator_state
     else:
@@ -236,7 +236,7 @@ def subdispatch_mediatortask(
         token_network_state = get_token_network(
             node_state,
             payment_network_identifier,
-            token_network_identifier,
+            token_address,
         )
         iteration = mediator.state_transition(
             mediator_state,
@@ -249,7 +249,7 @@ def subdispatch_mediatortask(
         if iteration.new_state:
             sub_task = PaymentMappingState.MediatorTask(
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
                 iteration.new_state,
             )
             node_state.payment_mapping.hashlocks_to_task[hashlock] = sub_task
@@ -261,7 +261,7 @@ def subdispatch_targettask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         channel_identifier,
         hashlock):
 
@@ -275,7 +275,7 @@ def subdispatch_targettask(
     elif sub_task and isinstance(sub_task, PaymentMappingState.TargetTask):
         is_valid_subtask = (
             payment_network_identifier == sub_task.payment_network_identifier and
-            token_network_identifier == sub_task.token_network_identifier
+            token_address == sub_task.token_address
         )
         target_state = sub_task.target_state
     else:
@@ -287,7 +287,7 @@ def subdispatch_targettask(
         channel_state = views.get_channelstate_by_tokenaddress(
             node_state,
             payment_network_identifier,
-            token_network_identifier,
+            token_address,
             channel_identifier,
         )
 
@@ -303,7 +303,7 @@ def subdispatch_targettask(
         if iteration.new_state:
             sub_task = PaymentMappingState.TargetTask(
                 payment_network_identifier,
-                token_network_identifier,
+                token_address,
                 channel_identifier,
                 iteration.new_state,
             )
@@ -319,7 +319,7 @@ def maybe_add_tokennetwork(node_state, payment_network_identifier, token_network
     payment_network_state, token_network_state_previous = get_networks(
         node_state,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
     )
 
     if payment_network_state is None:
@@ -368,11 +368,11 @@ def handle_node_init(node_state, state_change):
 
 
 def handle_token_network_action(node_state, state_change):
-    token_network_identifier = state_change.token_network_identifier
+    token_address = state_change.token_address
     payment_network_state, token_network_state = get_networks(
         node_state,
         state_change.payment_network_identifier,
-        token_network_identifier,
+        token_address,
     )
 
     events = list()
@@ -384,7 +384,7 @@ def handle_token_network_action(node_state, state_change):
         )
 
         if iteration.new_state is None:
-            del payment_network_state.tokenaddresses_to_tokennetworks[token_network_identifier]
+            del payment_network_state.tokenaddresses_to_tokennetworks[token_address]
 
         events = iteration.events
 
@@ -453,11 +453,11 @@ def handle_tokenadded(node_state, state_change):
 
 
 def handle_channel_withdraw(node_state, state_change):
-    token_network_identifier = state_change.token_network_identifier
+    token_address = state_change.token_address
     payment_network_state, token_network_state = get_networks(
         node_state,
         state_change.payment_network_identifier,
-        state_change.token_network_identifier,
+        state_change.token_address,
     )
 
     # first dispatch the withdraw to update the channel
@@ -471,7 +471,7 @@ def handle_channel_withdraw(node_state, state_change):
         events.extend(sub_iteration.events)
 
         if sub_iteration.new_state is None:
-            del payment_network_state.tokenaddresses_to_tokennetworks[token_network_identifier]
+            del payment_network_state.tokenaddresses_to_tokennetworks[token_address]
 
     # second emulate a secret reveal, to register the secret with all the other
     # channels and proceed with the protocol
@@ -497,13 +497,13 @@ def handle_init_initiator(node_state, state_change):
     transfer = state_change.transfer
     hashlock = transfer.hashlock
     payment_network_identifier = state_change.payment_network_identifier
-    token_network_identifier = transfer.token
+    token_address = transfer.token
 
     return subdispatch_initiatortask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         hashlock,
     )
 
@@ -512,13 +512,13 @@ def handle_init_mediator(node_state, state_change):
     transfer = state_change.from_transfer
     hashlock = transfer.lock.hashlock
     payment_network_identifier = state_change.payment_network_identifier
-    token_network_identifier = transfer.token
+    token_address = transfer.token
 
     return subdispatch_mediatortask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         hashlock,
     )
 
@@ -527,14 +527,14 @@ def handle_init_target(node_state, state_change):
     transfer = state_change.transfer
     hashlock = transfer.lock.hashlock
     payment_network_identifier = state_change.payment_network_identifier
-    token_network_identifier = transfer.token
+    token_address = transfer.token
     channel_identifier = transfer.balance_proof.channel_address
 
     return subdispatch_targettask(
         node_state,
         state_change,
         payment_network_identifier,
-        token_network_identifier,
+        token_address,
         channel_identifier,
         hashlock,
     )
