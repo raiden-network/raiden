@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.21;
 
 import "./NettingChannelLibrary.sol";
 
@@ -53,7 +53,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(amount);
 
         if (success == true) {
-            ChannelNewBalance(data.token, msg.sender, balance);
+            emit ChannelNewBalance(data.token, msg.sender, balance);
         }
 
         return success;
@@ -92,7 +92,7 @@ contract NettingChannelContract {
             extra_hash,
             signature
         );
-        ChannelClosed(msg.sender);
+        emit ChannelClosed(msg.sender);
     }
 
     /// @notice Dispute the state after closing, called by the counterparty (the
@@ -113,7 +113,7 @@ contract NettingChannelContract {
             extra_hash,
             signature
         );
-        TransferUpdated(msg.sender);
+        emit TransferUpdated(msg.sender);
     }
 
     /// @notice Unlock a locked transfer.
@@ -123,7 +123,7 @@ contract NettingChannelContract {
     function withdraw(bytes locked_encoded, bytes merkle_proof, bytes32 secret) public {
         // throws if sender is not a participant
         data.withdraw(locked_encoded, merkle_proof, secret);
-        ChannelSecretRevealed(secret, msg.sender);
+        emit ChannelSecretRevealed(secret, msg.sender);
     }
 
     /// @notice Settle the transfers and balances of the channel and pay out to
@@ -132,7 +132,7 @@ contract NettingChannelContract {
     ///         have passed.
     function settle() public {
         data.settle();
-        ChannelSettled();
+        emit ChannelSettled();
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.21;
 
 import "./ChannelManagerContract.sol";
 
@@ -39,7 +39,7 @@ contract Registry {
         registry[token_address] = manager_address;
         tokens.push(token_address);
 
-        TokenAdded(token_address, manager_address);
+        emit TokenAdded(token_address, manager_address);
 
         return manager_address;
     }

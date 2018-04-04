@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.21;
 
 import "./Token.sol";
 import "./Utils.sol";
@@ -39,11 +39,11 @@ contract ChannelManagerContract is Utils {
     {
         address old_channel = getChannelWith(partner);
         if (old_channel != 0) {
-            ChannelDeleted(msg.sender, partner);
+            emit ChannelDeleted(msg.sender, partner);
         }
 
         address new_channel = data.newChannel(partner, settle_timeout);
-        ChannelNew(new_channel, msg.sender, partner, settle_timeout);
+        emit ChannelNew(new_channel, msg.sender, partner, settle_timeout);
         return new_channel;
     }
 
@@ -84,6 +84,8 @@ contract ChannelManagerContract is Utils {
         uint i;
         uint pos;
         address[] memory result;
+        address address1;
+        address address2;
         NettingChannelContract channel;
 
         uint open_channels_num = 0;
@@ -101,7 +103,7 @@ contract ChannelManagerContract is Utils {
             }
             channel = NettingChannelContract(data.all_channels[i]);
 
-            var (address1, , address2, ) = channel.addressAndBalance();
+            (address1, , address2, ) = channel.addressAndBalance();
 
             result[pos] = address1;
             pos += 1;
