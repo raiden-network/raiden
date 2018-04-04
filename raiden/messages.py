@@ -981,8 +981,8 @@ class MediatedTransfer(LockedTransfer):
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
             'recipient': self.recipient.hex(),
-            'lock': self.lock.to_dict(),
             'locksroot': self.locksroot.hex(),
+            'lock': self.lock.to_dict(),
             'target': self.target.hex(),
             'initiator': self.initiator.hex(),
             'fee': self.fee,
@@ -998,13 +998,13 @@ class MediatedTransfer(LockedTransfer):
             unhexlify(data['channel']),
             data['transferred_amount'],
             unhexlify(data['recipient']),
-            Lock.from_dict(data['lock']),
             unhexlify(data['locksroot']),
+            Lock.from_dict(data['lock']),
             unhexlify(data['target']),
             unhexlify(data['initiator']),
             data['fee'],
         )
-        message.signature = data['signature']
+        message.signature = unhexlify(data['signature'])
         return message
 
 
@@ -1063,22 +1063,6 @@ class RefundTransfer(MediatedTransfer):
             fee,
         )
 
-    def to_dict(self):
-        return {
-            'identifier': self.identifier,
-            'nonce': self.nonce,
-            'token': self.token.hex(),
-            'channel': self.channel.hex(),
-            'transferred_amount': self.transferred_amount,
-            'recipient': self.recipient.hex(),
-            'lock': self.lock.to_dict(),
-            'locksroot': self.locksroot.hex(),
-            'target': self.target.hex(),
-            'initiator': self.initiator.hex(),
-            'fee': self.fee,
-            'signature': self.signature.hex(),
-        }
-
     @staticmethod
     def from_dict(data):
         message = RefundTransfer(
@@ -1088,13 +1072,13 @@ class RefundTransfer(MediatedTransfer):
             unhexlify(data['channel']),
             data['transferred_amount'],
             unhexlify(data['recipient']),
-            Lock.from_dict(data['lock']),
             unhexlify(data['locksroot']),
+            Lock.from_dict(data['lock']),
             unhexlify(data['target']),
             unhexlify(data['initiator']),
             data['fee'],
         )
-        message.signature = data['signature']
+        message.signature = unhexlify(data['signature'])
         return message
 
 
