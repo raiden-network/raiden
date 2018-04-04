@@ -29,12 +29,14 @@ MAINNET = 'mainnet'
 ROPSTEN = 'ropsten'
 RINKEBY = 'rinkeby'
 KOVAN = 'kovan'
+SMOKETEST = 'smoketest'
 
 ID_TO_NETWORKNAME = {
     1: MAINNET,
     3: ROPSTEN,
     4: RINKEBY,
     42: KOVAN,
+    627: SMOKETEST,
 }
 
 NETWORKNAME_TO_ID = {
