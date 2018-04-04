@@ -143,7 +143,6 @@ def check_synced(net_id, blockchain_service):
         tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
         sleep=3,
     )
-    return net_id
 
 
 def check_discovery_registration_gas(blockchain_service, account_address):
