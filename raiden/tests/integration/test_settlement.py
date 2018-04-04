@@ -174,7 +174,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
 
     assert must_contain_entry(state_changes, ContractReceiveChannelWithdraw, {
         'payment_network_identifier': registry_address,
-        'token_network_identifier': token_address,
+        'token_address': token_address,
         'channel_identifier': alice_bob_channel.identifier,
         'hashlock': hashlock,
         'secret': secret,

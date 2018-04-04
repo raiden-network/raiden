@@ -479,7 +479,7 @@ class ContractReceiveChannelWithdraw(StateChange):
     def __init__(
             self,
             payment_network_identifier,
-            token_network_identifier,
+            token_address,
             channel_identifier,
             secret,
             receiver: typing.Address):
@@ -490,7 +490,7 @@ class ContractReceiveChannelWithdraw(StateChange):
         hashlock = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_address = token_address
         self.channel_identifier = channel_identifier
         self.secret = secret
         self.hashlock = hashlock

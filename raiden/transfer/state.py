@@ -255,19 +255,19 @@ class PaymentMappingState(State):
 
     InitiatorTask = namedtuple('InitiatorTask', (
         'payment_network_identifier',
-        'token_network_identifier',
+        'token_address',
         'manager_state',
     ))
 
     MediatorTask = namedtuple('MediatorTask', (
         'payment_network_identifier',
-        'token_network_identifier',
+        'token_address',
         'mediator_state',
     ))
 
     TargetTask = namedtuple('TargetTask', (
         'payment_network_identifier',
-        'token_network_identifier',
+        'token_address',
         'channel_identifier',
         'target_state',
     ))

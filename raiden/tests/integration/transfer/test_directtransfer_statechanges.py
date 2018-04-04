@@ -33,7 +33,7 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
     )
 
     assert must_contain_entry(app0_state_changes, ActionTransferDirect, {
-        'token_network_identifier': token_address,
+        'token_address': token_address,
         'identifier': identifier,
         'amount': amount,
         'receiver_address': app1.raiden.address,
@@ -44,7 +44,7 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
         to_identifier='latest',
     )
     assert must_contain_entry(app1_state_changes, ReceiveTransferDirect, {
-        'token_network_identifier': token_address,
+        'token_address': token_address,
         'transfer_identifier': identifier,
         'balance_proof': {
             'transferred_amount': amount,
