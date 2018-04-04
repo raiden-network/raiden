@@ -113,9 +113,8 @@ def check_json_rpc(client):
             sys.exit(1)
 
 
-def check_synced(blockchain_service):
+def check_synced(net_id, blockchain_service):
     try:
-        net_id = int(blockchain_service.client.call('net_version'))
         network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(
@@ -144,6 +143,7 @@ def check_synced(blockchain_service):
         tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
         sleep=3,
     )
+    return net_id
 
 
 def check_discovery_registration_gas(blockchain_service, account_address):
@@ -476,7 +476,8 @@ def app(
         web_ui,
         datadir,
         eth_client_communication,
-        nat):
+        nat
+):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
@@ -492,10 +493,8 @@ def app(
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
-    database_path = os.path.join(datadir, address_hex[:8], 'log.db')
-
     config = App.DEFAULT_CONFIG.copy()
-    config['database_path'] = database_path
+
     config['host'] = listen_host
     config['port'] = listen_port
     config['console'] = console
@@ -553,8 +552,12 @@ def app(
     check_json_rpc(rpc_client)
     check_discovery_registration_gas(blockchain_service, address)
 
+    net_id = int(blockchain_service.client.call('net_version'))
     if sync_check:
-        check_synced(blockchain_service)
+        check_synced(net_id, blockchain_service)
+
+    database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
+    config['database_path'] = database_path
 
     registry = blockchain_service.registry(
         registry_contract_address,
