@@ -52,6 +52,9 @@ coverage.xml
 # Pyenv
 .python-version
 
+# mypy 
+.mypy_cache
+
 # Translations
 *.mo
 *.pot

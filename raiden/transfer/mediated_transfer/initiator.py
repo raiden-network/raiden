@@ -1,19 +1,37 @@
 # -*- coding: utf-8 -*-
+from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.transfer.mediated_transfer.state import InitiatorTransferState
 from raiden.transfer.events import (
     EventTransferSentSuccess,
     EventTransferSentFailed,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
+    SendMediatedTransfer,
     SendRevealSecret,
 )
+from raiden.transfer.mediated_transfer.state import (
+    InitiatorTransferState,
+    TransferDescriptionWithSecretState,
+)
+from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveSecretRequest,
+    ReceiveSecretReveal,
+)
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    RouteState,
+    NettingChannelState,
+)
+
+ChannelMap = typing.Dict[typing.ChannelID, NettingChannelState]
 
 
-def get_initial_lock_expiration(block_number, settle_timeout):
+def get_initial_lock_expiration(
+        block_number: typing.BlockNumber,
+        settle_timeout: typing.BlockTimeout,
+) -> typing.BlockExpiration:
     """ Returns the expiration for first hash-time-lock in a mediated transfer. """
     # The initiator doesn't need to learn the secret, so there is no need to
     # decrement reveal_timeout from the settle_timeout.
@@ -28,7 +46,11 @@ def get_initial_lock_expiration(block_number, settle_timeout):
     return lock_expiration
 
 
-def next_channel_from_routes(available_routes, channelidentifiers_to_channels, transfer_amount):
+def next_channel_from_routes(
+        available_routes: typing.List[RouteState],
+        channelidentifiers_to_channels: ChannelMap,
+        transfer_amount: typing.TokenAmount,
+) -> typing.Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
@@ -52,12 +74,15 @@ def next_channel_from_routes(available_routes, channelidentifiers_to_channels, t
 
         return channel_state
 
+    return None
+
 
 def try_new_route(
-        channelidentifiers_to_channels,
-        available_routes,
-        transfer_description,
-        block_number):
+        channelidentifiers_to_channels: ChannelMap,
+        available_routes: typing.List[RouteState],
+        transfer_description: TransferDescriptionWithSecretState,
+        block_number: typing.BlockNumber,
+) -> TransitionResult:
 
     channel_state = next_channel_from_routes(
         available_routes,
@@ -98,7 +123,11 @@ def try_new_route(
     return TransitionResult(initiator_state, events)
 
 
-def send_mediatedtransfer(initiator_state, channel_state, block_number):
+def send_mediatedtransfer(
+        initiator_state: InitiatorTransferState,
+        channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
+) -> SendMediatedTransfer:
     """ Create a mediated transfer using channel.
     Raises:
         AssertionError: If the channel does not have enough capacity.
@@ -127,7 +156,11 @@ def send_mediatedtransfer(initiator_state, channel_state, block_number):
     return mediatedtransfer_event
 
 
-def handle_secretrequest(initiator_state, state_change):
+def handle_secretrequest(
+        initiator_state: InitiatorTransferState,
+        state_change: ReceiveSecretRequest,
+) -> TransitionResult:
+
     request_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
         state_change.hashlock == initiator_state.transfer_description.hashlock
@@ -175,7 +208,11 @@ def handle_secretrequest(initiator_state, state_change):
     return iteration
 
 
-def handle_secretreveal(initiator_state, state_change, channel_state):
+def handle_secretreveal(
+        initiator_state: InitiatorTransferState,
+        state_change: ReceiveSecretReveal,
+        channel_state: NettingChannelState,
+) -> TransitionResult:
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.
     """
