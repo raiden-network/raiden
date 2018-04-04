@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`1328` Use separate database directory per network id. This is a breaking change. You will need to copy your data from the previous directory to the new network id subdirectory.
+
 * :release:`0.3.0 <2018-02-22>`
 * :bug:`1273` Don't crash when using the ``--nat=ext:IP`` command line option.
 * :bug:`1217` Correctly decode network events in the REST API.
