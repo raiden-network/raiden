@@ -175,6 +175,7 @@ def populate_token_networks_simple(
 def pathfinding_service(
         web3: Web3,
         contract_manager: ContractManager,
+        populate_token_networks_simple: None,
         token_networks: List[TokenNetwork]
 ) -> PathfindingService:
     # TODO: replace with a pathfinding service that actually syncs with the tester chain.

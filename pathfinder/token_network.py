@@ -41,7 +41,9 @@ class TokenNetwork:
         self.G = DiGraph()
         self.max_fee = 0.0
 
+    #
     # Contract event listener functions
+    #
 
     def handle_channel_opened_event(
         self,
@@ -87,7 +89,7 @@ class TokenNetwork:
                 log.error(
                     "Receiver in ChannelNewDeposit does not fit the internal channel"
                 )
-        except KeyError as ke:
+        except KeyError:
             log.error(
                 "Received ChannelNewDeposit event for unknown channel '{}'".format(
                     channel_id
@@ -106,14 +108,16 @@ class TokenNetwork:
 
             self.G.remove_edge(participant1, participant2)
             self.G.remove_edge(participant2, participant1)
-        except KeyError as ke:
+        except KeyError:
             log.error(
                 "Received ChannelClosed event for unknown channel '{}'".format(
                     channel_id
                 )
             )
 
+    #
     # pathfinding endpoints
+    #
 
     def update_balance(
         self,
@@ -124,8 +128,11 @@ class TokenNetwork:
         This needs to check that the balance proof is valid.
 
         Called by the public interface. """
-        participant1, participant2 = self.channel_id_to_addresses[balance_proof.channel_id]
 
+        participant1, participant2 = self.channel_id_to_addresses.get(
+            balance_proof.channel_id,
+            (None, None)
+        )
         if is_same_address(participant1, balance_proof.sender):
             receiver = participant2
         elif is_same_address(participant2, balance_proof.sender):
@@ -171,7 +178,10 @@ class TokenNetwork:
             )
         )
 
-        participant1, participant2 = self.channel_id_to_addresses[channel_id]
+        participant1, participant2 = self.channel_id_to_addresses.get(
+            channel_id,
+            (None, None)
+        )
         if is_same_address(participant1, signer):
             sender = participant1
             receiver = participant2
@@ -225,7 +235,7 @@ class TokenNetwork:
                     0
                 )
 
-        for i in range(k):
+        for _ in range(k):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
@@ -237,7 +247,9 @@ class TokenNetwork:
             paths.append(path)
         return paths
 
+    #
     # functions for persistence
+    #
 
     def save_snapshot(self, filename):
         """ Serializes the token network so it doesn't need to sync from scratch when
