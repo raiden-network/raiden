@@ -1,9 +1,7 @@
 Click>=6.0
 coincurve
 
-eth-tester[pyethereum16]>=0.1.0-beta.21,<1.0
-
-ethereum>=1.6.0,<2.0.0
+eth-tester[py-evm]>=0.1.0-beta.23,<1.0
 web3>=4.0.0,<5.0
 eth-utils>=1.0.1,<2.0.0
 
@@ -12,5 +10,7 @@ flask_restful
 gevent
 networkx
 requests
+
 git+https://github.com/matrix-org/matrix-python-sdk.git
 git+https://github.com/raiden-network/raiden-libs.git
+git+https://github.com/raiden-network/raiden-contracts.git

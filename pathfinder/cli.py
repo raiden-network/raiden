@@ -11,7 +11,7 @@ from typing import List
 
 import click
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.contracts import ContractManager
+from raiden_contracts.contract_manager import ContractManager
 from web3 import HTTPProvider, Web3
 from eth_utils import is_checksum_address
 from raiden_libs.no_ssl_patch import no_ssl_verification

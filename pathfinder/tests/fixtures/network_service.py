@@ -7,21 +7,12 @@ from eth_utils import remove_0x_prefix
 from raiden_libs.contracts import ContractManager
 from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
 from web3 import Web3
-from web3.contract import Contract
 
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.token_network import TokenNetwork
 from pathfinder.utils.types import Address
-
-
-@pytest.fixture
-def token_networks(token_network_contracts: List[Contract]) -> List[TokenNetwork]:
-    return [
-        TokenNetwork(token_network_contract)
-        for token_network_contract in token_network_contracts
-    ]
 
 
 def forge_fee_signature(private_key: str, fee: float) -> bytes:
@@ -174,14 +165,14 @@ def populate_token_networks_simple(
 @pytest.fixture
 def pathfinding_service(
         web3: Web3,
-        contract_manager: ContractManager,
+        contracts_manager: ContractManager,
         populate_token_networks_simple: None,
         token_networks: List[TokenNetwork]
 ) -> PathfindingService:
     # TODO: replace with a pathfinding service that actually syncs with the tester chain.
     pathfinding_service = PathfindingService(
         web3,
-        contract_manager,
+        contracts_manager,
         transport=Mock(),
         token_network_listener=Mock(),
         token_network_registry_listener=Mock()
