@@ -6,6 +6,7 @@ from raiden.messages import (
     Ack,
     Ping,
 )
+from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.utils import sha3
 from raiden.tests.utils.messages import (
     make_direct_transfer,
@@ -56,9 +57,9 @@ def test_ack():
     assert sha3(decoded_ack.encode()) == msghash
 
 
-@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
-@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
-@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('identifier', [0, UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
 def test_direct_transfer_min_max(identifier, nonce, transferred_amount):
     direct_transfer = make_direct_transfer(
         identifier=identifier,
@@ -70,11 +71,11 @@ def test_direct_transfer_min_max(identifier, nonce, transferred_amount):
     assert decode(direct_transfer.encode()) == direct_transfer
 
 
-@pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
-@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
-@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
-@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
-@pytest.mark.parametrize('fee', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('amount', [0, UINT256_MAX])
+@pytest.mark.parametrize('identifier', [0, UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
+@pytest.mark.parametrize('fee', [0, UINT256_MAX])
 def test_mediated_transfer_min_max(amount, identifier, fee, nonce, transferred_amount):
     mediated_transfer = make_mediated_transfer(
         amount=amount,
@@ -88,10 +89,10 @@ def test_mediated_transfer_min_max(amount, identifier, fee, nonce, transferred_a
     assert decode(mediated_transfer.encode()) == mediated_transfer
 
 
-@pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
-@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
-@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
-@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('amount', [0, UINT256_MAX])
+@pytest.mark.parametrize('identifier', [0, UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
 def test_refund_transfer_min_max(amount, identifier, nonce, transferred_amount):
     refund_transfer = make_refund_transfer(
         amount=amount,
