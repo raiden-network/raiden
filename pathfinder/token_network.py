@@ -257,7 +257,18 @@ class TokenNetwork:
             if len(paths) >= k:
                 break
 
-        return paths
+        result = []
+        for path in paths:
+            fee = 0
+            for node1, node2 in zip(path[:-1], path[1:]):
+                fee += self.G[node1][node2]['view'].fee
+
+            result.append(dict(
+                path=path,
+                estimated_fee=fee
+            ))
+
+        return result
 
     #
     # functions for persistence

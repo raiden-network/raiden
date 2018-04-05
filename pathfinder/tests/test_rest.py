@@ -447,8 +447,14 @@ def test_get_paths(
     paths = response.json()['result']
     assert len(paths) == 2
     assert paths == [
-        [addresses[0], addresses[1], addresses[2]],
-        [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]]
+        {
+            'path': [addresses[0], addresses[1], addresses[2]],
+            'estimated_fee': 0.0018
+        },
+        {
+            'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
+            'estimated_fee': 0.0131
+        }
     ]
 
     # there is no connection between 0 and 5, this should return an error
