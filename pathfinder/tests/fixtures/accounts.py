@@ -14,6 +14,7 @@ def faucet_private_key(request) -> str:
     if is_hex(private_key):
         assert len(remove_0x_prefix(private_key)) == 64
         return private_key
+    raise NotImplementedError()
     # TODO: support private keys from file
 
 
@@ -30,7 +31,10 @@ def private_keys() -> List[str]:
 
 @pytest.fixture(scope='session')
 def addresses(private_keys: List[str]) -> List[Address]:
-    return [private_key_to_address(private_key) for private_key in private_keys]
+    return [
+        Address(private_key_to_address(private_key))
+        for private_key in private_keys
+    ]
 
 
 @pytest.fixture(scope='session')
@@ -45,9 +49,9 @@ def target_private_key(private_keys: List[str]) -> str:
 
 @pytest.fixture(scope='session')
 def initiator_address(initiator_private_key: str) -> Address:
-    return private_key_to_address(initiator_private_key)
+    return Address(private_key_to_address(initiator_private_key))
 
 
 @pytest.fixture(scope='session')
 def target_address(target_private_key: str) -> Address:
-    return private_key_to_address(target_private_key)
+    return Address(private_key_to_address(target_private_key))

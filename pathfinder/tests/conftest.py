@@ -1,6 +1,10 @@
 from gevent import monkey
 
-from pathfinder.tests.fixtures import *  # flake8: noqa
+from pathfinder.tests.fixtures.api import *  # flake8: noqa
+from pathfinder.tests.fixtures.accounts import *  # flake8: noqa
+from pathfinder.tests.fixtures.contracts import *  # flake8: noqa
+from pathfinder.tests.fixtures.network_service import *  # flake8: noqa
+from pathfinder.tests.fixtures.web3 import *  # flake8: noqa
 
 monkey.patch_all()
 

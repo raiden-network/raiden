@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from unittest import mock
 
 import requests
@@ -23,9 +23,9 @@ def test_put_balance(
 ):
     url = api_url + '/{}/123/balance'.format(token_network_addresses[0])
 
-    token_networks[0].update_balance = mock.Mock(return_value=None)
+    token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
-    body = dict(
+    body: Dict = dict(
         balance_proof=dict(
             nonce=1,
             transferred_amount=3,
@@ -73,7 +73,7 @@ def test_put_balance_sync_check(
 ):
     url = api_url + '/{}/12/balance'.format(token_network_addresses[0])
 
-    token_networks[0].update_balance = mock.Mock(return_value=None)
+    token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
     body = dict(
         balance_proof=dict(
@@ -134,7 +134,7 @@ def test_put_balance_path_validation(
     api_url: str,
     token_network_addresses: List[Address]
 ):
-    body = dict()
+    body: Dict = dict()
 
     url = api_url + '/1234abc/1/balance'
     response = requests.put(url, json=body)
@@ -177,7 +177,7 @@ def test_put_balance_validation(
 ):
     url = api_url + '/{}/123/balance'.format(token_network_addresses[0])
 
-    body = dict()
+    body: Dict = dict()
     response = requests.put(url, json=body)
     assert response.status_code == 400
     assert response.json()['error'] == 'No balance proof specified.'
@@ -272,12 +272,12 @@ def test_put_fee(
 ):
     url = api_url + '/{}/123/fee'.format(token_network_addresses[0])
 
-    token_networks[0].update_fee = mock.Mock(return_value=None)
+    token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
 
     fee = 0.02
     signature = forge_fee_signature(private_keys[0], fee)
 
-    body = dict(
+    body: Dict = dict(
         fee=str(fee),
         signature=to_hex(signature)
     )
@@ -298,7 +298,7 @@ def test_put_fee_path_validation(
     api_url: str,
     token_network_addresses: List[Address]
 ):
-    body = dict()
+    body: Dict = dict()
 
     url = api_url + '/1234abc/1/fee'
     response = requests.put(url, json=body)

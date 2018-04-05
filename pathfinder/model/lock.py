@@ -2,7 +2,7 @@ from eth_utils import keccak
 
 
 class Lock:
-    def __init__(self, amount_locked: int, expiration: int, hashlock: bytes):
+    def __init__(self, amount_locked: int, expiration: int, hashlock: bytes) -> None:
         self.amount_locked = amount_locked
         self.expiration = expiration
         self.hashlock = hashlock

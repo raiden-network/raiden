@@ -17,7 +17,7 @@ class BalanceProof:
         additional_hash: bytes,
         signature: bytes = None,
         private_key: str = None,
-    ):
+    ) -> None:
         self.nonce = nonce
         self.transferred_amount = transferred_amount
         self.locksroot = locksroot

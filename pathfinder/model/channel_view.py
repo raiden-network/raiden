@@ -21,7 +21,7 @@ class ChannelView:
         participant1: Address,
         participant2: Address,
         deposit: int = 0
-    ):
+    ) -> None:
         assert is_checksum_address(participant1)
         assert is_checksum_address(participant2)
 

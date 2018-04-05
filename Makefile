@@ -52,11 +52,11 @@ clean-test: ## remove test and coverage artifacts
 lint: ## check style with flake8
 	flake8 pathfinder tests
 
+typecheck: ## static analysis with mypy
+	mypy --ignore-missing-imports pathfinder
+
 test: ## run tests quickly with the default Python
 	py.test
-
-test-all: ## run tests on every Python version with tox
-	tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source pathfinder -m pytest
