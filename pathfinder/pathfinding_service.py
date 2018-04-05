@@ -7,7 +7,7 @@ from typing import Dict, Optional, List
 import gevent
 from eth_utils import is_checksum_address
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.contracts import ContractManager
+from raiden_contracts.contract_manager import ContractManager
 from web3 import Web3
 
 from raiden_libs.gevent_error_handler import register_error_handler

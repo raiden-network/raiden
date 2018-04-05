@@ -11,6 +11,7 @@ with open('README.rst') as readme_file:
 install_requires_replacements = {
     'git+https://github.com/matrix-org/matrix-python-sdk.git': 'matrix-client',
     'git+https://github.com/raiden-network/raiden-libs.git': 'raiden-libs',
+    'git+https://github.com/raiden-network/raiden-contracts.git': 'raiden-contracts',
 }
 
 requirements = list(set(
