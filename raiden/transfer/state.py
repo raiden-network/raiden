@@ -311,9 +311,7 @@ class RouteState(State):
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return (
-            '<RouteState hop:{node} channel:{channel}>'
-        ).format(
+        return '<RouteState hop:{node} channel:{channel}>'.format(
             node=pex(self.node_address),
             channel=pex(self.channel_identifier),
         )
@@ -711,10 +709,10 @@ class MerkleTreeState(State):
         )
 
     def __eq__(self, other):
-        if isinstance(other, MerkleTreeState):
-            return self.layers == other.layers
-
-        return False
+        return (
+            isinstance(other, MerkleTreeState) and
+            self.layers == other.layers
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)

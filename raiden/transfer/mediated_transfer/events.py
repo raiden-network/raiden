@@ -122,7 +122,7 @@ class SendBalanceProof(Event):
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<SendBalanceProof id: {} token: {} receiver: {} balance_proof: {}>'.format(
+        return '<SendBalanceProof id:{} token:{} receiver:{} balance_proof:{}>'.format(
             self.identifier,
             pex(self.token),
             pex(self.receiver),
