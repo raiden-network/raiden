@@ -275,8 +275,8 @@ def assert_locked(from_channel, pending_locks):
     assert from_channel.our_state.merkletree == tree
 
     for lock in pending_locks:
-        pending = lock.hashlock in from_channel.our_state.hashlocks_to_pendinglocks
-        unclaimed = lock.hashlock in from_channel.our_state.hashlocks_to_unclaimedlocks
+        pending = lock.hashlock in from_channel.our_state.hashlocks_to_lockedlocks
+        unclaimed = lock.hashlock in from_channel.our_state.hashlocks_to_unlockedlocks
         assert pending or unclaimed
 
 

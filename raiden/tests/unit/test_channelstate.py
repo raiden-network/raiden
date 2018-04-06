@@ -41,6 +41,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
+    ContractReceiveChannelWithdraw,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -245,15 +246,15 @@ def test_new_end_state():
     lock_secret = sha3(b'test_end_state')
     lock_hashlock = sha3(lock_secret)
 
-    assert channel.is_known(end_state, lock_hashlock) is False
-    assert channel.is_locked(end_state, lock_hashlock) is False
+    assert channel.is_lock_pending(end_state, lock_hashlock) is False
+    assert channel.is_lock_locked(end_state, lock_hashlock) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
     assert not channel.get_known_unlocks(end_state)
     assert merkleroot(end_state.merkletree) == EMPTY_MERKLE_ROOT
 
-    assert not end_state.hashlocks_to_pendinglocks
-    assert not end_state.hashlocks_to_unclaimedlocks
+    assert not end_state.hashlocks_to_lockedlocks
+    assert not end_state.hashlocks_to_unlockedlocks
 
 
 def test_endstate_update_contract_balance():
@@ -1195,3 +1196,50 @@ def test_channelstate_withdraw():
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
     assert must_contain_entry(iteration.events, ContractSendChannelWithdraw, {})
+
+
+def test_channel_withdraw_must_not_change_merkletree():
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
+
+    lock_amount = 10
+    lock_expiration = 100
+    lock_secret = sha3(b'test_channelstate_mediatedtransfer_overspent')
+    lock_hashlock = sha3(lock_secret)
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_hashlock,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_mediatedtransfer = make_receive_transfer_mediated(
+        channel_state,
+        privkey2,
+        nonce,
+        transferred_amount,
+        lock,
+    )
+
+    is_valid, msg = channel.handle_receive_mediatedtransfer(
+        channel_state,
+        receive_mediatedtransfer,
+    )
+    assert is_valid, msg
+
+    assert merkleroot(channel_state.partner_state.merkletree) == lock.lockhash
+
+    withdraw = ContractReceiveChannelWithdraw(
+        payment_network_identifier,
+        channel_state.token_address,
+        channel_state.identifier,
+        lock_secret,
+        channel_state.our_state.address,
+    )
+    iteration = channel.handle_channel_withdraw(channel_state, withdraw)
+
+    new_channel = iteration.new_state
+    assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash

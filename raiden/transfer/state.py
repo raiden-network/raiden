@@ -724,8 +724,8 @@ class NettingChannelEndState(State):
     __slots__ = (
         'address',
         'contract_balance',
-        'hashlocks_to_pendinglocks',
-        'hashlocks_to_unclaimedlocks',
+        'hashlocks_to_lockedlocks',
+        'hashlocks_to_unlockedlocks',
         'merkletree',
         'balance_proof',
     )
@@ -740,8 +740,8 @@ class NettingChannelEndState(State):
         self.address = address
         self.contract_balance = balance
 
-        self.hashlocks_to_pendinglocks = dict()
-        self.hashlocks_to_unclaimedlocks = dict()
+        self.hashlocks_to_lockedlocks = dict()
+        self.hashlocks_to_unlockedlocks = dict()
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof = None
 
@@ -757,8 +757,8 @@ class NettingChannelEndState(State):
             isinstance(other, NettingChannelEndState) and
             self.address == other.address and
             self.contract_balance == other.contract_balance and
-            self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
-            self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
+            self.hashlocks_to_lockedlocks == other.hashlocks_to_lockedlocks and
+            self.hashlocks_to_unlockedlocks == other.hashlocks_to_unlockedlocks and
             self.merkletree == other.merkletree and
             self.balance_proof == other.balance_proof
         )
