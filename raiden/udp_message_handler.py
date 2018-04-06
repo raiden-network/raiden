@@ -89,7 +89,7 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
         )
     else:
         state_change = ReceiveTransferRefund(
-            routes,
+            message.sender,
             from_transfer,
         )
 
