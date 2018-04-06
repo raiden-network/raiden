@@ -2,6 +2,7 @@
 import pytest
 import gevent
 
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -185,9 +186,28 @@ def test_token_swap(raiden_network, deposit, token_addresses):
 @pytest.mark.parametrize('blockchain_cache', [False])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_api_channel_events(raiden_chain, token_addresses):
+def test_api_channel_events(raiden_chain, token_addresses, deposit, events_poll_timeout):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
+    registry_address = app0.raiden.default_registry.address
+
+    # Without blockchain_cache we need to wait for the events to be processed
+    waiting.wait_for_newbalance(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        deposit,
+        events_poll_timeout,
+    )
+    waiting.wait_for_newbalance(
+        app1.raiden,
+        registry_address,
+        token_address,
+        app0.raiden.address,
+        deposit,
+        events_poll_timeout,
+    )
 
     amount = 30
     direct_transfer(

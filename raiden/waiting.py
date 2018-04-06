@@ -14,7 +14,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 def wait_for_newchannel(
         raiden,
         payment_network_id,
-        token_network_id,
+        token_address,
         partner_address,
         poll_timeout):
     """Wait until the channel with partner_address is registered.
@@ -25,7 +25,7 @@ def wait_for_newchannel(
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden),
         payment_network_id,
-        token_network_id,
+        token_address,
         partner_address,
     )
 
@@ -34,7 +34,7 @@ def wait_for_newchannel(
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
             payment_network_id,
-            token_network_id,
+            token_address,
             partner_address,
         )
 
@@ -42,7 +42,7 @@ def wait_for_newchannel(
 def wait_for_newbalance(
         raiden,
         payment_network_id,
-        token_network_id,
+        token_address,
         partner_address,
         target_balance,
         poll_timeout):
@@ -54,7 +54,7 @@ def wait_for_newbalance(
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden),
         payment_network_id,
-        token_network_id,
+        token_address,
         partner_address,
     )
 
@@ -63,12 +63,12 @@ def wait_for_newbalance(
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
             payment_network_id,
-            token_network_id,
+            token_address,
             partner_address,
         )
 
 
-def wait_for_close(raiden, payment_network_id, token_network_id, channel_ids, poll_timeout):
+def wait_for_close(raiden, payment_network_id, token_address, channel_ids, poll_timeout):
     """Wait until all channels are closed.
 
     Note:
@@ -81,7 +81,7 @@ def wait_for_close(raiden, payment_network_id, token_network_id, channel_ids, po
         channel_state = views.get_channelstate_by_id(
             views.state_from_raiden(raiden),
             payment_network_id,
-            token_network_id,
+            token_address,
             first_id,
         )
 
@@ -96,7 +96,7 @@ def wait_for_close(raiden, payment_network_id, token_network_id, channel_ids, po
             gevent.sleep(poll_timeout)
 
 
-def wait_for_settle(raiden, payment_network_id, token_network_id, channel_ids, poll_timeout):
+def wait_for_settle(raiden, payment_network_id, token_address, channel_ids, poll_timeout):
     """Wait until all channels are settled.
 
     Note:
@@ -112,7 +112,7 @@ def wait_for_settle(raiden, payment_network_id, token_network_id, channel_ids, p
         channel_state = views.get_channelstate_by_id(
             views.state_from_raiden(raiden),
             payment_network_id,
-            token_network_id,
+            token_address,
             first_id,
         )
 

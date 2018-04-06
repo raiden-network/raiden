@@ -279,39 +279,16 @@ class ActionNewTokenNetwork(StateChange):
 
 class ContractReceiveChannelNewBalance(StateChange):
     """ A channel to which this node IS a participant had a deposit. """
-
-    def __init__(
-            self,
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
-            participant_address: typing.Address,
-            contract_balance: typing.BlockNumber,
-    ):
-
-        if not isinstance(participant_address, typing.Address):
-            raise ValueError('participant_address must be of type address')
-
-        if not isinstance(contract_balance, typing.BlockNumber):
-            raise ValueError('contract_balance must be of type block_number')
-
+    def __init__(self, payment_network_identifier, channel_identifier, deposit_transaction):
         self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
         self.channel_identifier = channel_identifier
-        self.participant_address = participant_address
-        self.contract_balance = contract_balance
+        self.deposit_transaction = deposit_transaction
 
     def __repr__(self):
-        return (
-            '<ContractReceiveChannelNewBalance'
-            ' network:{} token:{} channel:{} participant:{} balance:{}'
-            '>'
-        ).format(
+        return '<ContractReceiveChannelNewBalance network:{} channel:{} transaction:{}>'.format(
             pex(self.payment_network_identifier),
-            pex(self.token_address),
             pex(self.channel_identifier),
-            pex(self.participant_address),
-            self.contract_balance,
+            self.deposit_transaction,
         )
 
     def __eq__(self, other):
@@ -320,8 +297,7 @@ class ContractReceiveChannelNewBalance(StateChange):
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_address == other.token_address and
             self.channel_identifier == other.channel_identifier and
-            self.participant_address == other.participant_address and
-            self.contract_balance == other.contract_balance
+            self.deposit_transaction == other.deposit_transaction
         )
 
     def __ne__(self, other):

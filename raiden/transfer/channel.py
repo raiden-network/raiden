@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
+import heapq
 from binascii import hexlify
+from collections import namedtuple
 
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
@@ -55,6 +57,13 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
 )
 from raiden.utils import publickey_to_address, typing
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+
+
+TransactionOrder = namedtuple(
+    'TransactionOrder',
+    ('block_number', 'transaction')
+)
 
 
 def is_known(end_state, hashlock):
@@ -62,6 +71,16 @@ def is_known(end_state, hashlock):
     return (
         hashlock in end_state.hashlocks_to_pendinglocks or
         hashlock in end_state.hashlocks_to_unclaimedlocks
+    )
+
+
+def is_deposit_confirmed(channel_state, block_number):
+    if not channel_state.deposit_transaction_queue:
+        return False
+
+    return is_transaction_confirmed(
+        channel_state.deposit_transaction_queue[0].block_number,
+        block_number,
     )
 
 
@@ -73,6 +92,11 @@ def is_locked(end_state, hashlock):
 def is_secret_known(end_state, hashlock):
     """True if the `hashlock` is for a lock with a known secret."""
     return hashlock in end_state.hashlocks_to_unclaimedlocks
+
+
+def is_transaction_confirmed(transaction_block_number, blockchain_block_number):
+    confirmation_block = transaction_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    return blockchain_block_number > confirmation_block
 
 
 def is_valid_signature(balance_proof, sender_address):
@@ -1035,7 +1059,9 @@ def handle_unlock(channel_state, unlock):
     return is_valid, msg
 
 
-def handle_block(channel_state, state_change):
+def handle_block(channel_state, state_change, block_number):
+    assert state_change.block_number == block_number
+
     events = list()
 
     if get_status(channel_state) == CHANNEL_STATE_CLOSED:
@@ -1050,6 +1076,13 @@ def handle_block(channel_state, state_change):
             )
             event = ContractSendChannelSettle(channel_state.identifier)
             events.append(event)
+
+    while is_deposit_confirmed(channel_state, block_number):
+        order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
+        apply_channel_newbalance(
+            channel_state,
+            order_deposit_transaction.transaction,
+        )
 
     return TransitionResult(channel_state, events)
 
@@ -1099,25 +1132,38 @@ def handle_channel_settled(channel_state, state_change):
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_newbalance(channel_state, state_change):
+def handle_channel_newbalance(channel_state, state_change, block_number):
+    deposit_transaction = state_change.deposit_transaction
+
+    if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
+        apply_channel_newbalance(channel_state, state_change.deposit_transaction)
+    else:
+        order = TransactionOrder(
+            deposit_transaction.deposit_block_number,
+            deposit_transaction,
+        )
+        heapq.heappush(channel_state.deposit_transaction_queue, order)
+
     events = list()
-    participant_address = state_change.participant_address
+    return TransitionResult(channel_state, events)
+
+
+def apply_channel_newbalance(channel_state, deposit_transaction):
+    participant_address = deposit_transaction.participant_address
 
     if participant_address == channel_state.our_state.address:
         new_balance = max(
             channel_state.our_state.contract_balance,
-            state_change.contract_balance,
+            deposit_transaction.contract_balance,
         )
         channel_state.our_state.contract_balance = new_balance
 
     elif participant_address == channel_state.partner_state.address:
         new_balance = max(
             channel_state.partner_state.contract_balance,
-            state_change.contract_balance,
+            deposit_transaction.contract_balance,
         )
         channel_state.partner_state.contract_balance = new_balance
-
-    return TransitionResult(channel_state, events)
 
 
 def handle_channel_withdraw(channel_state, state_change):
@@ -1161,7 +1207,7 @@ def state_transition(channel_state, state_change, block_number):
     iteration = TransitionResult(channel_state, events)
 
     if type(state_change) == Block:
-        iteration = handle_block(channel_state, state_change)
+        iteration = handle_block(channel_state, state_change, block_number)
 
     elif type(state_change) == ActionChannelClose:
         iteration = handle_action_close(channel_state, state_change, block_number)
@@ -1176,7 +1222,7 @@ def state_transition(channel_state, state_change, block_number):
         iteration = handle_channel_settled(channel_state, state_change)
 
     elif type(state_change) == ContractReceiveChannelNewBalance:
-        iteration = handle_channel_newbalance(channel_state, state_change)
+        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
 
     elif type(state_change) == ContractReceiveChannelWithdraw:
         iteration = handle_channel_withdraw(channel_state, state_change)

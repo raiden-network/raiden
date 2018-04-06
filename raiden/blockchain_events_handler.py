@@ -11,16 +11,15 @@ from raiden.blockchain.state import (
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
+from raiden.transfer.state import TransactionChannelNewBalance
 from raiden.transfer.state_change import (
-    ContractReceiveChannelNew,
-    ContractReceiveRouteNew,
-    ContractReceiveNewTokenNetwork,
-)
-from raiden.transfer.state_change import (
-    ContractReceiveChannelNewBalance,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
+    ContractReceiveNewTokenNetwork,
+    ContractReceiveRouteNew,
 )
 from raiden.utils import pex
 
@@ -113,6 +112,7 @@ def handle_channel_new_balance(raiden, event):
     token_address = data['token_address']
     participant_address = data['participant']
     new_balance = data['balance']
+    deposit_block_number = data['block_number']
 
     previous_channel_state = views.get_channelstate_by_tokenaddress(
         views.state_from_raiden(raiden),
@@ -128,12 +128,15 @@ def handle_channel_new_balance(raiden, event):
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
 
-        newbalance_statechange = ContractReceiveChannelNewBalance(
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
+        deposit_transaction = TransactionChannelNewBalance(
             participant_address,
             new_balance,
+            deposit_block_number,
+        )
+        newbalance_statechange = ContractReceiveChannelNewBalance(
+            payment_network_identifier,
+            channel_identifier,
+            deposit_transaction,
         )
         raiden.handle_state_change(newbalance_statechange)
 
