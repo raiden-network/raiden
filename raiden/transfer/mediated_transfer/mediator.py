@@ -465,37 +465,56 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
 
 
 def set_expired_pairs(transfers_pair, block_number):
-    """ Set the state of expired transfers, and return the failed events. """
+    """ Set the state transfers to the expired state and return the failed
+    events.
+    """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     events = list()
     for pair in pending_transfers_pairs:
-        if block_number > pair.payer_transfer.lock.expiration:
-            assert pair.payee_state == 'payee_expired'
-            assert pair.payee_transfer.lock.expiration < pair.payer_transfer.lock.expiration
+        has_payee_transfer_expired = (
+            block_number > pair.payee_transfer.lock.expiration and
+            pair.payee_state != 'payee_expired'
+        )
+        has_payer_transfer_expired = (
+            block_number > pair.payer_transfer.lock.expiration and
+            pair.payer_state != 'payer_expired'
+        )
 
-            if pair.payer_state != 'payer_expired':
-                pair.payer_state = 'payer_expired'
-                # XXX: emit the event only once
-                withdraw_failed = EventWithdrawFailed(
-                    pair.payer_transfer.identifier,
-                    pair.payer_transfer.lock.hashlock,
-                    'lock expired',
-                )
-                events.append(withdraw_failed)
+        if has_payer_transfer_expired:
+            # For safety, the correct behavior is:
+            #
+            # - If the payee has been payed, then the payer must pay too.
+            #
+            #   And the corollary:
+            #
+            # - If the payer transfer has expired, then the payee transfer must
+            #   have expired too.
+            #
+            # The problem is that this corollary cannot be asserted. If a user
+            # is running Raiden without a monitoring service, then it may go
+            # offline after having payed a transfer to a payee, but without
+            # getting a balance proof of the payer, and once it comes back
+            # online the transfer may have expired.
+            #
+            # assert pair.payee_state == 'payee_expired'
 
-        elif block_number > pair.payee_transfer.lock.expiration:
-            assert pair.payee_state not in STATE_TRANSFER_PAID
-            assert pair.payee_transfer.lock.expiration < pair.payer_transfer.lock.expiration
+            pair.payer_state = 'payer_expired'
+            withdraw_failed = EventWithdrawFailed(
+                pair.payer_transfer.identifier,
+                pair.payer_transfer.lock.hashlock,
+                'lock expired',
+            )
+            events.append(withdraw_failed)
 
-            if pair.payee_state != 'payee_expired':
-                pair.payee_state = 'payee_expired'
-                unlock_failed = EventUnlockFailed(
-                    pair.payee_transfer.identifier,
-                    pair.payee_transfer.lock.hashlock,
-                    'lock expired',
-                )
-                events.append(unlock_failed)
+        elif has_payee_transfer_expired:
+            pair.payee_state = 'payee_expired'
+            unlock_failed = EventUnlockFailed(
+                pair.payee_transfer.identifier,
+                pair.payee_transfer.lock.hashlock,
+                'lock expired',
+            )
+            events.append(unlock_failed)
 
     return events
 
@@ -870,6 +889,8 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
     Return:
         TransitionResult: The resulting iteration
     """
+    assert state_change.block_number == block_number
+
     close_events = events_for_close(
         channelidentifiers_to_channels,
         state.transfers_pair,
