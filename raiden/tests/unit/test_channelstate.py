@@ -13,26 +13,19 @@ from raiden.messages import (
     MediatedTransfer,
     Secret,
 )
-from raiden.tests.utils import factories
-from raiden.tests.utils.events import must_contain_entry
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.transfer import channel
+from raiden.transfer.events import (
+    ContractSendChannelWithdraw,
+    EventTransferReceivedInvalidDirectTransfer,
+    EventTransferReceivedSuccess,
+)
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.merkle_tree import (
     LEAVES,
     MERKLEROOT,
     compute_layers,
     merkleroot,
-)
-from raiden.transfer.events import (
-    ContractSendChannelWithdraw,
-    EventTransferReceivedInvalidDirectTransfer,
-    EventTransferReceivedSuccess,
-)
-from raiden.transfer.state_change import (
-    ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
-    ReceiveTransferDirect,
-    ReceiveUnlock,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -41,8 +34,18 @@ from raiden.transfer.state import (
     HashTimeLockState,
     NettingChannelEndState,
     NettingChannelState,
+    TransactionChannelNewBalance,
     TransactionExecutionStatus,
 )
+from raiden.transfer.state_change import (
+    Block,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelNewBalance,
+    ReceiveTransferDirect,
+    ReceiveUnlock,
+)
+from raiden.tests.utils import factories
+from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
     sha3,
     privatekey_to_address,
@@ -272,7 +275,8 @@ def test_channelstate_update_contract_balance():
     """A blockchain event for a new balance must increase the respective
     participants balance.
     """
-    block_number = 10
+    deposit_block_number = 10
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -281,12 +285,16 @@ def test_channelstate_update_contract_balance():
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
-    state_change = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        channel_state.token_address,
-        channel_state.identifier,
+
+    deposit_transaction = TransactionChannelNewBalance(
         our_model1.participant_address,
         balance1_new,
+        deposit_block_number,
+    )
+    state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
+        channel_state.identifier,
+        deposit_transaction,
     )
 
     iteration = channel.state_transition(
@@ -311,7 +319,8 @@ def test_channelstate_decreasing_contract_balance():
     """A blockchain event for a new balance that decrease the balance must be
     ignored.
     """
-    block_number = 10
+    deposit_block_number = 10
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -320,12 +329,16 @@ def test_channelstate_decreasing_contract_balance():
 
     amount = 10
     balance1_new = our_model1.balance - amount
-    state_change = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        channel_state.token_address,
-        channel_state.identifier,
+
+    deposit_transaction = TransactionChannelNewBalance(
         our_model1.participant_address,
         balance1_new,
+        deposit_block_number,
+    )
+    state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
+        channel_state.identifier,
+        deposit_transaction,
     )
 
     iteration = channel.state_transition(
@@ -343,7 +356,8 @@ def test_channelstate_repeated_contract_balance():
     """Handling the same blockchain event multiple times must change the
     balance only once.
     """
-    block_number = 10
+    deposit_block_number = 10
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -352,12 +366,16 @@ def test_channelstate_repeated_contract_balance():
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
-    state_change = ContractReceiveChannelNewBalance(
+
+    deposit_transaction = TransactionChannelNewBalance(
         payment_network_identifier,
-        channel_state.token_address,
-        channel_state.identifier,
         our_model1.participant_address,
         balance1_new,
+        deposit_block_number,
+    )
+    state_change = ContractReceiveChannelNewBalance(
+        channel_state.identifier,
+        deposit_transaction,
     )
 
     our_model2 = our_model1._replace(
@@ -377,6 +395,74 @@ def test_channelstate_repeated_contract_balance():
 
         assert_partner_state(new_state.our_state, new_state.partner_state, our_model2)
         assert_partner_state(new_state.partner_state, new_state.our_state, partner_model2)
+
+
+def test_deposit_must_wait_for_confirmation():
+    block_number = 10
+    confirmed_deposit_block_number = block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
+
+    our_model1, _ = create_model(0)
+    partner_model1, _ = create_model(0)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    deposit_amount = 10
+    balance1_new = our_model1.balance + deposit_amount
+    our_model2 = our_model1._replace(
+        balance=balance1_new,
+        distributable=balance1_new,
+        contract_balance=balance1_new,
+    )
+    partner_model2 = partner_model1
+
+    assert channel_state.our_state.contract_balance == 0
+    assert channel_state.partner_state.contract_balance == 0
+
+    deposit_transaction = TransactionChannelNewBalance(
+        channel_state.our_state.address,
+        deposit_amount,
+        block_number,
+    )
+    new_balance = ContractReceiveChannelNewBalance(
+        channel_state.identifier,
+        deposit_transaction,
+    )
+    iteration = channel.state_transition(
+        deepcopy(channel_state),
+        new_balance,
+        block_number,
+    )
+    unconfirmed_state = iteration.new_state
+
+    for block_number in range(block_number, confirmed_deposit_block_number):
+        unconfirmed_block = Block(block_number)
+        iteration = channel.state_transition(
+            deepcopy(unconfirmed_state),
+            unconfirmed_block,
+            block_number,
+        )
+        unconfirmed_state = iteration.new_state
+
+        assert_partner_state(
+            unconfirmed_state.our_state,
+            unconfirmed_state.partner_state,
+            our_model1,
+        )
+        assert_partner_state(
+            unconfirmed_state.partner_state,
+            unconfirmed_state.our_state,
+            partner_model1,
+        )
+
+    confirmed_block = Block(confirmed_deposit_block_number)
+    iteration = channel.state_transition(
+        deepcopy(unconfirmed_state),
+        confirmed_block,
+        confirmed_deposit_block_number,
+    )
+    confirmed_state = iteration.new_state
+
+    assert_partner_state(confirmed_state.our_state, confirmed_state.partner_state, our_model2)
+    assert_partner_state(confirmed_state.partner_state, confirmed_state.our_state, partner_model2)
 
 
 def test_channelstate_send_mediatedtransfer():

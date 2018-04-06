@@ -777,6 +777,7 @@ class NettingChannelState(State):
         'token_address',
         'reveal_timeout',
         'settle_timeout',
+        'deposit_transaction_queue',
         'open_transaction',
         'close_transaction',
         'settle_transaction',
@@ -833,6 +834,7 @@ class NettingChannelState(State):
         self.settle_timeout = settle_timeout
         self.our_state = our_state
         self.partner_state = partner_state
+        self.deposit_transaction_queue = list()
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
@@ -854,9 +856,46 @@ class NettingChannelState(State):
             self.token_address == other.token_address and
             self.reveal_timeout == other.reveal_timeout and
             self.settle_timeout == other.settle_timeout and
+            self.deposit_transaction_queue == other.deposit_transaction_queue and
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
             self.settle_transaction == other.settle_transaction
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class TransactionChannelNewBalance(State):
+    def __init__(
+            self,
+            participant_address: typing.Address,
+            contract_balance: typing.TokenAmount,
+            deposit_block_number: typing.BlockNumber,
+    ):
+        if not isinstance(participant_address, typing.Address):
+            raise ValueError('participant_address must be of type address')
+
+        if not isinstance(contract_balance, typing.BlockNumber):
+            raise ValueError('contract_balance must be of type block_number')
+
+        self.participant_address = participant_address
+        self.contract_balance = contract_balance
+        self.deposit_block_number = deposit_block_number
+
+    def __repr__(self):
+        return '<TransactionChannelNewBalance participant:{} balance:{} at_block:{}>'.format(
+            pex(self.participant_address),
+            self.contract_balance,
+            self.deposit_block_number,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TransactionChannelNewBalance) and
+            self.participant_address == other.participant_address and
+            self.contract_balance == other.contract_balance and
+            self.deposit_block_number == other.deposit_block_number
         )
 
     def __ne__(self, other):
