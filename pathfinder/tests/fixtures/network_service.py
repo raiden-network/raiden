@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from coincurve import PrivateKey
 from eth_utils import remove_0x_prefix
-from raiden_libs.contracts import ContractManager
+from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
 from web3 import Web3
 
