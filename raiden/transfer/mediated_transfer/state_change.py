@@ -237,7 +237,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
         self.hashlock = hashlock
         self.secret = secret
 
-    def __str__(self):
+    def __repr__(self):
         return '<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>'.format(
             pex(self.sender),
             self.transfer
@@ -266,6 +266,22 @@ class ReceiveTransferRefund(StateChange):
         self.sender = sender
         self.transfer = transfer
 
+    def __repr__(self):
+        return '<ReceiveTransferRefund sender:{} transfer:{}>'.format(
+            pex(self.sender),
+            self.transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveTransferRefund) and
+            self.sender == other.sender and
+            self.transfer == other.transfer
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ReceiveBalanceProof(StateChange):
     """ A balance proof `identifier` was received. """
@@ -273,6 +289,24 @@ class ReceiveBalanceProof(StateChange):
         self.identifier = identifier
         self.node_address = node_address
         self.balance_proof = balance_proof
+
+    def __repr__(self):
+        return '<ReceiveBalanceProof id:{} node:{} balance_proof:{}>'.format(
+            self.identifier,
+            pex(self.node_address),
+            self.balance_proof,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveBalanceProof) and
+            self.identifier == other.identifier and
+            self.node_address == other.node_address and
+            self.balance_proof == other.balance_proof
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ContractReceiveWithdraw(StateChange):
@@ -290,9 +324,31 @@ class ContractReceiveWithdraw(StateChange):
         event must be used twice, once for each receiver.
     """
     def __init__(self, channel_address, secret, receiver):
+        hashlock = sha3(secret)
+
         self.channel_address = channel_address
-        self.secret = secret
+        self.hashlock = hashlock
         self.receiver = receiver
+        self.secret = secret
+
+    def __repr__(self):
+        return '<ContractReceiveWithdraw channel:{} hashlock:{} receiver:{}>'.format(
+            pex(self.channel_address),
+            pex(self.hashlock),
+            pex(self.receiver),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveWithdraw) and
+            self.channel_address == other.channel_address and
+            self.hashlock == other.hashlock and
+            self.receiver == other.receiver and
+            self.secret == other.secret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ContractReceiveClosed(StateChange):
@@ -301,11 +357,45 @@ class ContractReceiveClosed(StateChange):
         self.closing_address = closing_address
         self.block_number = block_number  # TODO: rename to closed_block
 
+    def __repr__(self):
+        return '<ContractReceiveClosed channel:{} closing:{} block_number:{}>'.format(
+            pex(self.channel_address),
+            pex(self.closing_address),
+            self.block_number,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveClosed) and
+            self.channel_address == other.channel_address and
+            self.closing_address == other.closing_address and
+            self.block_number == other.block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractReceiveSettled(StateChange):
     def __init__(self, channel_address, block_number):
         self.channel_address = channel_address
         self.block_number = block_number  # TODO: rename to settle_block_number
+
+    def __repr__(self):
+        return '<ContractReceiveSettled channel:{} block_number:{}>'.format(
+            pex(self.channel_address),
+            self.block_number,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveSettled) and
+            self.channel_address == other.channel_address and
+            self.block_number == other.block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ContractReceiveBalance(StateChange):
@@ -323,6 +413,31 @@ class ContractReceiveBalance(StateChange):
         self.balance = balance
         self.block_number = block_number
 
+    def __repr__(self):
+        return (
+            '<ContractReceiveBalance'
+            ' channel:{} token:{} participant:{} balance:{} block_number:{}'
+            '>'
+        ).format(
+            pex(self.channel_address),
+            pex(self.token_address),
+            pex(self.participant_address),
+            self.balance,
+            self.block_number,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveBalance) and
+            self.channel_address == other.channel_address and
+            self.token_address == other.token_address and
+            self.participant_address == other.participant_address and
+            self.block_number == other.block_number
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractReceiveNewChannel(StateChange):
     def __init__(
@@ -339,9 +454,53 @@ class ContractReceiveNewChannel(StateChange):
         self.participant2 = participant2
         self.settle_timeout = settle_timeout
 
+    def __repr__(self):
+        return (
+            '<ContractReceiveNewChannel'
+            ' manager:{} channel:{} participant1:{} participant2:{} settle_timeout:{}'
+            '>'
+        ).format(
+            pex(self.manager_address),
+            pex(self.channel_address),
+            pex(self.participant1),
+            pex(self.participant2),
+            self.settle_timeout
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveNewChannel) and
+            self.manager_address == other.manager_address and
+            self.channel_address == other.channel_address and
+            self.participant1 == other.participant1 and
+            self.participant2 == other.participant2 and
+            self.settle_timeout == other.settle_timeout
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractReceiveTokenAdded(StateChange):
     def __init__(self, registry_address, token_address, manager_address):
         self.registry_address = registry_address
         self.token_address = token_address
         self.manager_address = manager_address
+
+    def __repr__(self):
+        return '<ContractReceiveTokenAdded registry:{} token:{} manager:{}>'.format(
+            pex(self.registry_address),
+            pex(self.token_address),
+            pex(self.manager_address),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveTokenAdded) and
+            self.registry_address == other.registry_address and
+            self.token_address == other.token_address and
+            self.manager_address == other.manager_address
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

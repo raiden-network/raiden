@@ -91,15 +91,13 @@ class ActionCancelTransfer(StateChange):
         self.identifier = identifier
 
     def __repr__(self):
-        return 'ActionCancelTransfer(identifier:{})'.format(
+        return '<ActionCancelTransfer identifier:{}>'.format(
             self.identifier,
         )
 
     def __eq__(self, other):
-        if not isinstance(other, ActionCancelTransfer):
-            return False
-
         return (
+            isinstance(other, ActionCancelTransfer) and
             self.identifier == other.identifier
         )
 
@@ -479,6 +477,8 @@ class ContractReceiveChannelWithdraw(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelWithdraw) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.secret == other.secret and
             self.hashlock == other.hashlock and
@@ -557,6 +557,12 @@ class ReceiveTransferDirect(StateChange):
         self.transfer_identifier = transfer_identifier
         self.balance_proof = balance_proof
 
+    def __repr__(self):
+        return '<ReceiveTransferDirect id:{} balance_proof:{}>'.format(
+            self.transfer_identifier,
+            self.balance_proof,
+        )
+
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferDirect) and
@@ -566,16 +572,6 @@ class ReceiveTransferDirect(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __repr__(self):
-        return (
-            'ReceiveTransferDirect('
-            'id:{} balance_proof:{}'
-            ')'
-        ).format(
-            self.transfer_identifier,
-            self.balance_proof,
-        )
 
 
 class ReceiveUnlock(StateChange):
