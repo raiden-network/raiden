@@ -25,7 +25,7 @@ def make_message(message, **attrs):
     return message
 
 
-ACK = 0
+PROCESSED = 0
 PING = 1
 SECRETREQUEST = 3
 SECRET = 4
@@ -62,10 +62,10 @@ optional_secret = make_field('secret', 32, '32s', optional_bytes())
 
 signature = make_field('signature', 65, '65s')
 
-Ack = namedbuffer(
-    'ack',
+Processed = namedbuffer(
+    'processed',
     [
-        cmdid(ACK),  # [0:1]
+        cmdid(PROCESSED),  # [0:1]
         pad(3),      # [1:4]
         sender,
         echo,
@@ -190,7 +190,7 @@ Lock = namedbuffer(
 
 
 CMDID_MESSAGE = {
-    ACK: Ack,
+    PROCESSED: Processed,
     PING: Ping,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,

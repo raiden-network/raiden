@@ -138,5 +138,5 @@ def on_udp_message(raiden: 'RaidenService', message: Message):
     elif isinstance(message, MediatedTransfer):
         handle_message_mediatedtransfer(raiden, message)
     elif log.isEnabledFor(logging.ERROR):
-        # ack and ping messages are not forwarded to the handler
+        # `Processed` and `Ping` messages are not forwarded to the handler
         log.error('Unknown message cmdid {}'.format(message.cmdid))

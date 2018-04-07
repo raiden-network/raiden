@@ -21,7 +21,7 @@ from raiden.exceptions import (
     RaidenShuttingDown,
 )
 from raiden.constants import UDP_MAX_MESSAGE_SIZE
-from raiden.messages import decode, Ack, Ping, SignedMessage
+from raiden.messages import decode, Processed, Ping, SignedMessage
 from raiden.settings import CACHE_TTL
 from raiden.utils import isaddress, sha3, pex
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -494,8 +494,9 @@ class RaidenProtocol:
         self.addresses_events = dict()
 
         # Maps the echohash of received and *sucessfully* processed messages to
-        # its Ack, used to ignored duplicate messages and resend the Ack.
-        self.receivedhashes_to_acks = dict()
+        # its `Processed` message, used to ignored duplicate messages and resend the
+        # `Processed` message.
+        self.receivedhashes_to_processedmessages = dict()
 
         # Maps the echohash to a SentMessageState
         self.senthashes_to_states = dict()
@@ -612,8 +613,8 @@ class RaidenProtocol:
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        if isinstance(message, (Ack, Ping)):
-            raise ValueError('Do not use send for Ack or Ping messages')
+        if isinstance(message, (Processed, Ping)):
+            raise ValueError('Do not use send for `Processed` or `Ping` messages')
 
         # Messages that are not unique per receiver can result in hash
         # collision, e.g. Secret messages. The hash collision has the undesired
@@ -661,36 +662,43 @@ class RaidenProtocol:
         return async_result
 
     def send_and_wait(self, receiver_address, message, timeout=None):
-        """Sends a message and wait for the response ack."""
+        """Sends a message and wait for the response 'Processed' message."""
         async_result = self.send_async(receiver_address, message)
         return async_result.wait(timeout=timeout)
 
-    def maybe_send_ack(self, receiver_address, ack_message):
-        """ Send ack_message to receiver_address if the transport is running. """
+    def maybe_send_processed(self, receiver_address, processed_message):
+        """ Send processed_message to receiver_address if the transport is running. """
         if not isaddress(receiver_address):
             raise InvalidAddress('Invalid address {}'.format(pex(receiver_address)))
 
-        if not isinstance(ack_message, Ack):
-            raise ValueError('Use maybe_send_ack only for Ack messages')
+        if not isinstance(processed_message, Processed):
+            raise ValueError('Use _maybe_send_processed only for `Processed` messages')
 
-        messagedata = ack_message.encode()
-        self.receivedhashes_to_acks[ack_message.echo] = (receiver_address, messagedata)
-        self._maybe_send_ack(*self.receivedhashes_to_acks[ack_message.echo])
+        messagedata = processed_message.encode()
 
-    def _maybe_send_ack(self, receiver_address, messagedata):
-        """ ACK must not go into the queue, otherwise nodes will deadlock
+        self.receivedhashes_to_processedmessages[processed_message.echo] = (
+            receiver_address,
+            messagedata
+        )
+
+        self._maybe_send_processed(
+            *self.receivedhashes_to_processedmessages[processed_message.echo]
+        )
+
+    def _maybe_send_processed(self, receiver_address, messagedata):
+        """ `Processed` messages must not go into the queue, otherwise nodes will deadlock
         waiting for the confirmation.
         """
         host_port = self.get_host_port(receiver_address)
 
-        # ACKs are sent at the end of the receive method, after the message is
+        # `Processed` messages are sent at the end of the receive method, after the message is
         # sucessfully processed. It may be the case that the server is stopped
-        # after the message is received but before the ack is sent, under that
+        # after the message is received but before the processed message is sent, under that
         # circumstance the udp socket would be unavaiable and then an exception
         # is raised.
         #
         # This check verifies the udp socket is still available before trying
-        # to send the ack. There must be *no context-switches after this test*.
+        # to send the `Processed` message. There must be *no context-switches after this test*.
         if self.transport.server.started:
             self.transport.send(
                 self.raiden,
@@ -746,16 +754,16 @@ class RaidenProtocol:
             log.error('receive packet larger than maximum size', length=len(data))
             return
 
-        # Repeat the ACK if the message has been handled before
+        # Repeat the 'PROCESSED' message if the message has been handled before
         echohash = sha3(data + self.raiden.address)
-        if echohash in self.receivedhashes_to_acks:
-            self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
+        if echohash in self.receivedhashes_to_processedmessages:
+            self._maybe_send_processed(*self.receivedhashes_to_processedmessages[echohash])
             return
 
         message = decode(data)
 
-        if isinstance(message, Ack):
-            self.receive_ack(message)
+        if isinstance(message, Processed):
+            self.receive_processed(message)
 
         elif isinstance(message, Ping):
             self.receive_ping(message, echohash)
@@ -769,27 +777,27 @@ class RaidenProtocol:
                 message=hexlify(data),
             )
 
-    def receive_ack(self, ack):
-        waitack = self.senthashes_to_states.get(ack.echo)
+    def receive_processed(self, processed):
+        waitprocessed = self.senthashes_to_states.get(processed.echo)
 
-        if waitack is None:
+        if waitprocessed is None:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'ACK FOR UNKNOWN ECHO',
+                    '`Processed` MESSAGE UNKNOWN ECHO',
                     node=pex(self.raiden.address),
-                    echohash=pex(ack.echo),
+                    echohash=pex(processed.echo),
                 )
 
         else:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'ACK RECEIVED',
+                    '`Processed` MESSAGE RECEIVED',
                     node=pex(self.raiden.address),
-                    receiver=pex(waitack.receiver_address),
-                    echohash=pex(ack.echo),
+                    receiver=pex(waitprocessed.receiver_address),
+                    echohash=pex(processed.echo),
                 )
 
-            waitack.async_result.set(True)
+            waitprocessed.async_result.set(True)
 
     def receive_ping(self, ping, echohash):
         if ping_log.isEnabledFor(logging.DEBUG):
@@ -801,18 +809,18 @@ class RaidenProtocol:
                 sender=pex(ping.sender),
             )
 
-        ack = Ack(
+        processed_message = Processed(
             self.raiden.address,
             echohash,
         )
 
         try:
-            self.maybe_send_ack(
+            self.maybe_send_processed(
                 ping.sender,
-                ack,
+                processed_message,
             )
         except (InvalidAddress, UnknownAddress) as e:
-            log.debug("Couldn't send the ACK", e=e)
+            log.debug("Couldn't send the `Processed` message", e=e)
 
     def receive_message(self, message, echohash):
         is_debug_log_enabled = log.isEnabledFor(logging.DEBUG)
@@ -829,15 +837,15 @@ class RaidenProtocol:
         try:
             on_udp_message(self.raiden, message)
 
-            # only send the Ack if the message was handled without exceptions
-            ack = Ack(
+            # only send the Processed message if the message was handled without exceptions
+            processed_message = Processed(
                 self.raiden.address,
                 echohash,
             )
 
-            self.maybe_send_ack(
+            self.maybe_send_processed(
                 message.sender,
-                ack,
+                processed_message,
             )
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress) as e:
             if is_debug_log_enabled:
@@ -845,7 +853,7 @@ class RaidenProtocol:
         else:
             if is_debug_log_enabled:
                 log.debug(
-                    'ACK',
+                    'PROCESSED',
                     node=pex(self.raiden.address),
                     to=pex(message.sender),
                     echohash=pex(echohash),

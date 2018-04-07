@@ -7,7 +7,7 @@ import coincurve
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import decode
 from raiden.messages import (
-    Ack, DirectTransfer, Lock, MediatedTransfer, Ping,
+    Processed, DirectTransfer, Lock, MediatedTransfer, Ping,
     RefundTransfer, Secret, SecretRequest,
 )
 
@@ -33,9 +33,9 @@ def run_timeit(message_name, message, iterations=ITERATIONS):
     print('{}: encode {} decode {}'.format(message_name, encode_time, decode_time))
 
 
-def test_ack(iterations=ITERATIONS):
-    msg = Ack(ADDRESS, HASH)
-    run_timeit('Ack', msg, iterations=iterations)
+def test_processed(iterations=ITERATIONS):
+    msg = Processed(ADDRESS, HASH)
+    run_timeit('Processed', msg, iterations=iterations)
 
 
 def test_ping(iterations=ITERATIONS):
@@ -154,7 +154,7 @@ def test_cancel_transfer(iterations=ITERATIONS):
 
 def test_all(iterations=ITERATIONS):
     test_mediated_transfer(iterations=iterations)
-    test_ack(iterations=iterations)
+    test_processed(iterations=iterations)
     test_ping(iterations=iterations)
     test_secret_request(iterations=iterations)
     test_direct_transfer(iterations=iterations)
@@ -170,7 +170,7 @@ def benchmark_alternatives():
     import cPickle
     import umsgpack
 
-    from raiden.messages import decode, Ack, Ping, MediatedTransfer, Lock
+    from raiden.messages import decode, Processed, Ping, MediatedTransfer, Lock
     from raiden.utils import privatekey_to_address, sha3
 
     privkey = 'x' * 32
@@ -192,7 +192,7 @@ def benchmark_alternatives():
     )
     m1.sign(privkey, ADDRESS)
 
-    m2 = Ack(address, sha3(privkey))
+    m2 = Processed(address, sha3(privkey))
     """
 
     exec(setup)

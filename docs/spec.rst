@@ -83,7 +83,7 @@ A :term:`DirectTransfer` does not rely on locks to complete. It is automatically
 
 - The sender must assume the transfer is completed once the message is sent to the network, there is no workaround. The acknowledgement in this case is only used as a synchronization primitive, the payer will only know about the transfer once the message is received.
 
-A succesfull direct transfer involves only 2 messages. The direct transfer message and an ``ACK``. For an Alice - Bob example:
+A succesfull direct transfer involves only 2 messages. The direct transfer message and an ``PROCESSED``. For an Alice - Bob example:
 
 * Alice wants to transfer ``n`` tokens to Bob.
 * Alice creates a new transfer with.
@@ -103,7 +103,7 @@ Mediated transfers have an :term:`initiator` and a :term:`target` and a number o
 - ``1`` secret request
 - ``N + 1`` secret reveal
 - ``N + 1`` secret
-- ``3N + 4`` ACK
+- ``3N + 4`` PROCESSED
 
 For the simplest Alice - Bob example:
 
@@ -339,7 +339,7 @@ Known Issues
 Below are some of the open issues of the current version of raiden and our work towards solving them.
 
 - `Secure from interception of RevealSecret <https://github.com/raiden-network/raiden/issues/473>`_
-- `Add ACK authentication <https://github.com/raiden-network/raiden/issues/44>`_
+- `Add PROCESSED authentication <https://github.com/raiden-network/raiden/issues/44>`_
 - `Prevent replay attacks from different registries or Ethereum networks <https://github.com/raiden-network/raiden/issues/292>`_
 - `Whitelist for smart contract code <https://github.com/raiden-network/raiden/issues/344>`_
 - `Handle blockchain congestion <https://github.com/raiden-network/raiden/issues/383>`_

@@ -4,7 +4,7 @@ import pytest
 from raiden.utils import sha3
 from raiden.messages import (
     decode,
-    Ack,
+    Processed,
     Ping,
 )
 from raiden.tests.utils.transport import UnreliableTransport
@@ -25,20 +25,20 @@ def test_ping(raiden_network):
         ping_encoded,
         app1.raiden.address,
     )
-    assert async_result.wait(2), 'The message was not acknowledged'
+    assert async_result.wait(2), 'The message was not processed'
 
     expected_echohash = sha3(ping_encoded + app1.raiden.address)
 
     messages_decoded = [decode(m) for m in messages]
-    ack_message = next(
+    processed_message = next(
         decoded
         for decoded in messages_decoded
-        if isinstance(decoded, Ack) and decoded.echo == expected_echohash
+        if isinstance(decoded, Processed) and decoded.echo == expected_echohash
     )
 
-    # the ping message was sent and acknowledged
+    # the ping message was sent and processed
     assert ping_encoded in messages
-    assert ack_message
+    assert processed_message
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

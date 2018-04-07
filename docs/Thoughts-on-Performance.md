@@ -52,12 +52,12 @@
 ```
 Time per round:
 on receive
-    receive Msg:     15μs   #
-    deserialize Msg  30μs   # 30 deserializations
-    recover:        260μs   #
-    serialize Ack:   30μs   # acks are not signed
-    send Ack:        15μs
-                    350μs
+    receive Msg:               15μs   #
+    deserialize Msg            30μs   # 30 deserializations
+    recover:                   260μs   #
+    serialize Processed Msg:   30μs   # processed messages are not signed
+    send Processed Msg:        15μs
+                               350μs
 always:
     pathfinding:     20μs   # 50k paths / second
     businesslogic   250μs   # 2000 Locked Transfers / second (send + receive)
@@ -66,7 +66,7 @@ on respond
     signing Msg:    170μs
     serialize Msg:   30μs
     send Msg:        15μs
-    receive Ack:     15μs
+    receive Processed Msg:     15μs
                     320μs
 ----------------------------------------
                     940μs
@@ -91,7 +91,7 @@ Exchange: 8f+2h Messages = 7.5 + 1.24 ms = 9ms
     B: MediatedTransfer
     A: HashLock
     B: HashLock
-    C: Ack
+    C: Processed Msg
 
 
 3ms per transfer:

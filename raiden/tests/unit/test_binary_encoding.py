@@ -3,7 +3,7 @@ import pytest
 
 from raiden.messages import (
     decode,
-    Ack,
+    Processed,
     Ping,
 )
 from raiden.constants import UINT256_MAX, UINT64_MAX
@@ -45,16 +45,16 @@ def test_hash():
     assert sha3(decoded_ping.encode()) == msghash
 
 
-def test_ack():
+def test_processed():
     echo = sha3(b'random')
-    ack = Ack(ADDRESS, echo)
-    assert ack.echo == echo
-    data = ack.encode()
+    processed_message = Processed(ADDRESS, echo)
+    assert processed_message.echo == echo
+    data = processed_message.encode()
     msghash = sha3(data)
-    decoded_ack = decode(data)
-    assert decoded_ack.echo == ack.echo
-    assert decoded_ack.sender == ack.sender
-    assert sha3(decoded_ack.encode()) == msghash
+    decoded_processed_message = decode(data)
+    assert decoded_processed_message.echo == processed_message.echo
+    assert decoded_processed_message.sender == processed_message.sender
+    assert sha3(decoded_processed_message.encode()) == msghash
 
 
 @pytest.mark.parametrize('identifier', [0, UINT64_MAX])
