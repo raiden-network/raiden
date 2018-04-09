@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 import sqlite3
 import threading
+from typing import (
+    Any,
+    Optional,
+    Tuple,
+)
 
 
 class SQLiteStorage:
@@ -103,15 +108,17 @@ class SQLiteStorage:
                 events_data,
             )
 
-    def get_state_snapshot(self):
-        """ Return the last state snapshot as a tuple of (state_change_id, data) """
-        cursor = self.conn.execute('SELECT * from state_snapshot')
+    def get_state_snapshot(self) -> Optional[Tuple[int, Any]]:
+        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
+        cursor = self.conn.execute('SELECT statechange_id, data from state_snapshot')
         serialized = cursor.fetchall()
 
         result = None
         if serialized:
             assert len(serialized) == 1
-            result = self.serializer.deserialize(serialized[0][2])
+            last_applied_state_change_id = serialized[0][0]
+            snapshot_state = self.serializer.deserialize(serialized[0][1])
+            return (last_applied_state_change_id, snapshot_state)
 
         return result
 

@@ -9,14 +9,31 @@ InternalEvent = namedtuple(
 )
 
 
-class WriteAheadLog:
-    def __init__(self, transition_function, storage):
-        # TODO:
-        # - reapply missing state changes
-        # - clear existing events for the unapplied state changes
-        snapshot = storage.get_state_snapshot()
-        state_manager = StateManager(transition_function, snapshot)
+def restore_from_latest_snapshot(transition_function, storage):
+    events = list()
+    snapshot = storage.get_state_snapshot()
 
+    if snapshot:
+        last_applied_state_change_id, state = snapshot
+        unapplied_state_changes = storage.get_statechanges_by_identifier(
+            from_identifier=last_applied_state_change_id,
+            to_identifier='latest',
+        )
+    else:
+        state = None
+        unapplied_state_changes = list()
+
+    state_manager = StateManager(transition_function, state)
+    wal = WriteAheadLog(state_manager, storage)
+
+    for state_change in unapplied_state_changes:
+        events.extend(state_manager.dispatch(state_change))
+
+    return wal, events
+
+
+class WriteAheadLog:
+    def __init__(self, state_manager, storage):
         self.state_manager = state_manager
         self.state_change_id = None
         self.storage = storage

@@ -3,6 +3,7 @@ import sqlite3
 
 import pytest
 
+from raiden.transfer.architecture import StateManager
 from raiden.storage.serialize import PickleSerializer
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.wal import WriteAheadLog
@@ -20,9 +21,13 @@ def state_transition_noop(state, state_change):  # pylint: disable=unused-argume
 
 
 def new_wal():
+    state = None
     serializer = PickleSerializer
+
+    state_manager = StateManager(state_transition_noop, state)
     storage = SQLiteStorage(':memory:', serializer)
-    return WriteAheadLog(state_transition_noop, storage)
+    wal = WriteAheadLog(state_manager, storage)
+    return wal
 
 
 def test_write_read_log():
@@ -78,10 +83,10 @@ def test_write_read_log():
     assert wal.storage.get_state_snapshot() is None
 
     wal.storage.write_state_snapshot(1, 'AAAA')
-    assert wal.storage.get_state_snapshot() == 'AAAA'
+    assert wal.storage.get_state_snapshot() == (1, 'AAAA')
 
     wal.storage.write_state_snapshot(2, 'BBBB')
-    assert wal.storage.get_state_snapshot() == 'BBBB'
+    assert wal.storage.get_state_snapshot() == (2, 'BBBB')
 
 
 def test_write_read_events():
