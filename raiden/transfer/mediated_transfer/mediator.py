@@ -465,9 +465,7 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
 
 
 def set_expired_pairs(transfers_pair, block_number):
-    """ Set the state transfers to the expired state and return the failed
-    events.
-    """
+    """ Set the state transfers to the expired state and return the failed events."""
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     events = list()
@@ -484,7 +482,7 @@ def set_expired_pairs(transfers_pair, block_number):
         if has_payer_transfer_expired:
             # For safety, the correct behavior is:
             #
-            # - If the payee has been payed, then the payer must pay too.
+            # - If the payee has been paid, then the payer must pay too.
             #
             #   And the corollary:
             #
@@ -493,7 +491,7 @@ def set_expired_pairs(transfers_pair, block_number):
             #
             # The problem is that this corollary cannot be asserted. If a user
             # is running Raiden without a monitoring service, then it may go
-            # offline after having payed a transfer to a payee, but without
+            # offline after having paid a transfer to a payee, but without
             # getting a balance proof of the payer, and once it comes back
             # online the transfer may have expired.
             #
@@ -533,8 +531,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
         block_number (int): The current block number.
     Returns:
         An empty list if there are not enough blocks to safely create a refund,
-        or a list with a refund event.
-    """
+        or a list with a refund event."""
     # A refund transfer works like a special SendMediatedTransfer, so it must
     # follow the same rules and decrement reveal_timeout from the
     # payee_transfer.

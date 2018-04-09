@@ -18,7 +18,7 @@ from raiden.tests.utils.factories import (
 
 
 def test_payer_enter_danger_zone_with_transfer_payed():
-    """ A mediator may have paid the next hop (payee), and didn't get payed by
+    """ A mediator may have paid the next hop (payee), and didn't get paid by
     the previous hop (payer).
 
     When this happens, an assertion must not be hit, because it means the
@@ -83,28 +83,28 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         )
         new_state = block_iteration.new_state
 
-    # send the balance proof, transitioning the payee state to payed
+    # send the balance proof, transitioning the payee state to paid
     assert new_state.transfers_pair[0].payee_state == 'payee_pending'
     receive_secret = ReceiveSecretReveal(
         UNIT_SECRET,
         channel1.partner_state.address,
     )
-    payed_iteration = mediator.state_transition(
+    paid_iteration = mediator.state_transition(
         new_state,
         receive_secret,
         channelmap,
         block_number,
     )
-    payed_state = payed_iteration.new_state
-    assert payed_state.transfers_pair[0].payee_state == 'payee_balance_proof'
+    paid_state = paid_iteration.new_state
+    assert paid_state.transfers_pair[0].payee_state == 'payee_balance_proof'
 
-    # move to the block in which the payee lock expires, this must not raise an
+    # move to the block in which the payee lock expires. This must not raise an
     # assertion
     expired_block_number = lock_expiration + 1
     expired_block_state_change = Block(expired_block_number)
     block_iteration = mediator.handle_block(
         channelmap,
-        payed_state,
+        paid_state,
         expired_block_state_change,
         expired_block_number,
     )
