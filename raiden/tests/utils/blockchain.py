@@ -331,10 +331,6 @@ def geth_create_blockchain(
     try:
         geth_wait_and_check(deploy_client, private_keys, random_marker)
 
-        # reenter echo mode (disabled by geth pasphrase prompt)
-        if isinstance(sys.stdin, io.IOBase):
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
-
         for process in processes_list:
             process.poll()
 
@@ -347,5 +343,10 @@ def geth_create_blockchain(
         for proccess in processes_list:
             process.terminate()
         raise e
+
+    finally:
+        # reenter echo mode (disabled by geth pasphrase prompt)
+        if isinstance(sys.stdin, io.IOBase):
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     return processes_list
