@@ -14,7 +14,7 @@ from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data
 
 __all__ = (
-    'Ack',
+    'Processed',
     'Ping',
     'SecretRequest',
     'Secret',
@@ -236,14 +236,14 @@ class EnvelopeMessage(SignedMessage):
         return message
 
 
-class Ack(Message):
-    """ All accepted messages should be confirmed by an `Ack` which echoes the
+class Processed(Message):
+    """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
 
-    We don't sign Acks because attack vector can be mitigated and to speed up
+    We don't sign `Processed` messages because attack vector can be mitigated and to speed up
     things.
     """
-    cmdid = messages.ACK
+    cmdid = messages.PROCESSED
 
     def __init__(self, sender, echo):
         super().__init__()
@@ -252,7 +252,7 @@ class Ack(Message):
 
     @staticmethod
     def unpack(packed):
-        return Ack(
+        return Processed(
             packed.sender,
             packed.echo,
         )
@@ -1083,7 +1083,7 @@ class RefundTransfer(MediatedTransfer):
 
 
 CMDID_TO_CLASS = {
-    messages.ACK: Ack,
+    messages.PROCESSED: Processed,
     messages.PING: Ping,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,

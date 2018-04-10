@@ -10,7 +10,7 @@ from raiden.transfer.events import (
     EventTransferSentFailed,
     EventTransferReceivedSuccess,
 )
-from raiden.messages import Ack
+from raiden.messages import Processed
 
 
 ADDRESS = sha3(b'foo')[:20]
@@ -100,9 +100,9 @@ def test_event_operators():
 
 
 def test_message_operators():
-    a = Ack(ADDRESS, HASH)
-    b = Ack(ADDRESS, HASH)
-    c = Ack(ADDRESS2, HASH2)
+    a = Processed(ADDRESS, HASH)
+    b = Processed(ADDRESS, HASH)
+    c = Processed(ADDRESS2, HASH2)
 
     # pylint: disable=unneeded-not
     assert a == b
