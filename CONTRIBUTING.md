@@ -228,12 +228,13 @@ def a(
 ) -> D:
     """ Function Title
 
-        body comes
-        here"""
+    body comes
+    here
+    """
     pass
 ```
 
-If in doubt consult the PEP.
+The closing quotes should be on their own line. If in doubt consult the PEP.
 
 **Breaking function calls when line is above 99 characters**
 
