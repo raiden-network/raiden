@@ -116,6 +116,7 @@ def check_json_rpc(client):
 
 def check_synced(net_id, blockchain_service):
     try:
+        net_id = blockchain_service.network_id
         network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(

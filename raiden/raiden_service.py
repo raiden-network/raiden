@@ -189,6 +189,7 @@ class RaidenService:
         self.token_to_hashlock_to_channels = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
+        self.network_id = self.chain.network_id
         self.default_registry = default_registry
         self.config = config
         self.privkey = private_key_bin

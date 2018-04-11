@@ -4,6 +4,7 @@ import os
 import gevent
 from ethereum import slogging
 from ethereum.tools import _solidity
+from functools import lru_cache
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -202,3 +203,8 @@ class BlockChainService:
         registry.add_token(token_address)
 
         return token_address
+
+    @property
+    @lru_cache()
+    def network_id(self) -> int:
+        return int(self.client.call('net_version'))
