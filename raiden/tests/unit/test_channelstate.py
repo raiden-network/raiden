@@ -374,6 +374,7 @@ def test_channelstate_repeated_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -404,6 +405,7 @@ def test_deposit_must_wait_for_confirmation():
     our_model1, _ = create_model(0)
     partner_model1, _ = create_model(0)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    payment_network_identifier = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -423,6 +425,7 @@ def test_deposit_must_wait_for_confirmation():
         block_number,
     )
     new_balance = ContractReceiveChannelNewBalance(
+        payment_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
