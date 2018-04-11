@@ -116,7 +116,7 @@ class ActionTransferDirect(StateChange):
             token_address,
             receiver_address: typing._Address,
             identifier,
-            amount: int
+            amount: int,
     ):
         if not isinstance(receiver_address, typing._Address):
             raise ValueError('receiver_address must be address')
@@ -284,22 +284,10 @@ class ContractReceiveChannelNewBalance(StateChange):
             payment_network_identifier,
             token_address,
             channel_identifier,
-<<<<<<< HEAD
             deposit_transaction,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
-=======
-            participant_address: typing.Address,
-            contract_balance: typing.BlockNumber):
-
-        if not isinstance(participant_address, typing._Address):
-            raise ValueError('participant_address must be of type address')
-
-        if not isinstance(contract_balance, typing._BlockNumber):
-            raise ValueError('contract_balance must be of type block_number')
-
->>>>>>> Expose real types for runtime type checking
         self.channel_identifier = channel_identifier
         self.deposit_transaction = deposit_transaction
 
@@ -550,7 +538,6 @@ class ContractReceiveNewRoute(StateChange):
 class ContractReceiveRouteNew(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
-<<<<<<< HEAD
     def __init__(
             self,
             payment_network_identifier,
@@ -560,10 +547,6 @@ class ContractReceiveRouteNew(StateChange):
     ):
 
         if not isinstance(participant1, typing.Address):
-=======
-    def __init__(self, participant1: typing.Address, participant2: typing.Address):
-        if not isinstance(participant1, typing._Address):
->>>>>>> Expose real types for runtime type checking
             raise ValueError('participant1 must be of type address')
 
         if not isinstance(participant2, typing._Address):
