@@ -193,7 +193,7 @@ class DummyTransport:
         self.throttle_policy = throttle_policy
 
         # The protocol checks if the transport is still running prior to
-        # sending ACKs
+        # sending PROCESSED messages
         class ServerMock:
             started = True
         self.server = ServerMock()
