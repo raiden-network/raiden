@@ -135,6 +135,7 @@ def handle_channel_new_balance(raiden, event):
         )
         newbalance_statechange = ContractReceiveChannelNewBalance(
             payment_network_identifier,
+            token_address,
             channel_identifier,
             deposit_transaction,
         )

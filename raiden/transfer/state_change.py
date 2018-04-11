@@ -279,16 +279,27 @@ class ActionNewTokenNetwork(StateChange):
 
 class ContractReceiveChannelNewBalance(StateChange):
     """ A channel to which this node IS a participant had a deposit. """
-    def __init__(self, payment_network_identifier, channel_identifier, deposit_transaction):
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_address,
+            channel_identifier,
+            deposit_transaction,
+    ):
         self.payment_network_identifier = payment_network_identifier
+        self.token_address = token_address
         self.channel_identifier = channel_identifier
         self.deposit_transaction = deposit_transaction
 
     def __repr__(self):
-        return '<ContractReceiveChannelNewBalance network:{} channel:{} transaction:{}>'.format(
-            pex(self.payment_network_identifier),
-            pex(self.channel_identifier),
-            self.deposit_transaction,
+        return (
+            '<ContractReceiveChannelNewBalance network:{} token:{} '
+            'channel:{} transaction:{}>'.format(
+                pex(self.payment_network_identifier),
+                pex(self.token_address),
+                pex(self.channel_identifier),
+                self.deposit_transaction,
+            )
         )
 
     def __eq__(self, other):

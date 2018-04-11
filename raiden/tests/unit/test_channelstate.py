@@ -281,6 +281,7 @@ def test_channelstate_update_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    token_address = factories.make_address()
     payment_network_identifier = factories.make_address()
 
     deposit_amount = 10
@@ -293,6 +294,7 @@ def test_channelstate_update_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         payment_network_identifier,
+        token_address,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -326,6 +328,7 @@ def test_channelstate_decreasing_contract_balance():
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
+    token_address = factories.make_address()
 
     amount = 10
     balance1_new = our_model1.balance - amount
@@ -337,6 +340,7 @@ def test_channelstate_decreasing_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         payment_network_identifier,
+        token_address,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -363,18 +367,19 @@ def test_channelstate_repeated_contract_balance():
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
+    token_address = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
 
     deposit_transaction = TransactionChannelNewBalance(
-        payment_network_identifier,
         our_model1.participant_address,
         balance1_new,
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
         payment_network_identifier,
+        token_address,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -406,6 +411,7 @@ def test_deposit_must_wait_for_confirmation():
     partner_model1, _ = create_model(0)
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
+    token_address = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -426,6 +432,7 @@ def test_deposit_must_wait_for_confirmation():
     )
     new_balance = ContractReceiveChannelNewBalance(
         payment_network_identifier,
+        token_address,
         channel_state.identifier,
         deposit_transaction,
     )
