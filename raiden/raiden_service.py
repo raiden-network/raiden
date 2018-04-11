@@ -268,7 +268,10 @@ class RaidenService:
 
         # The database may be :memory:
         storage = sqlite.SQLiteStorage(self.database_path, serialize.PickleSerializer())
-        self.wal = wal.WriteAheadLog(node.state_transition, storage)
+        self.wal, unapplied_events = wal.restore_from_latest_snapshot(
+            node.state_transition,
+            storage,
+        )
 
         # First run, initialize the basic state
         if self.wal.state_manager.current_state is None:
@@ -299,6 +302,9 @@ class RaidenService:
         self.start_neighbours_healthcheck()
 
         self.start_event.set()
+
+        for event in unapplied_events:
+            on_raiden_event(self, event)
 
     def start_neighbours_healthcheck(self):
         for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
