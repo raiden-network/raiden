@@ -121,10 +121,7 @@ class RaidenMatrixProtocol:
             self.client.join_room(alias)
 
         for room_id, room in self.client.get_rooms().items():
-            if not room.canonical_alias:
-                room.update_aliases()
-                if room.aliases:
-                    room.canonical_alias = room.aliases[0]
+            self._ensure_room_alias(room)
             room.add_listener(self._handle_message)
             log.debug(
                 'ROOM: %r => %r',
@@ -140,10 +137,7 @@ class RaidenMatrixProtocol:
     def _handle_invite(self, room_id, state):
         """Join all invited rooms"""
         room = self.client.join_room(room_id)
-        if not room.canonical_alias:
-            room.update_aliases()
-            if room.aliases:
-                room.canonical_alias = room.aliases[0]
+        self._ensure_room_alias(room)
         room.add_listener(self._handle_message)
         log.debug(
             'Invited to room: %r => %r',
@@ -301,16 +295,12 @@ class RaidenMatrixProtocol:
             (address_encoder(addr).lower()
              for addr in sorted((receiver_address, self.raiden.address)))
         )  # e.g.: raiden_ropsten_0xaaaa_0xbbbb
-        room = None
         for room_id, _room in self.client.get_rooms().items():
             # search for a room with given name
-            if not room.canonical_alias:
-                room.update_aliases()
-                if room.aliases:
-                    room.canonical_alias = room.aliases[0]
-            if not room.canonical_alias:
+            self._ensure_room_alias(_room)
+            if not _room.canonical_alias:
                 continue
-            if room.canonical_alias != room_name:
+            if _room.canonical_alias != room_name:
                 continue
             else:
                 room = _room
@@ -341,3 +331,10 @@ class RaidenMatrixProtocol:
             )
 
         return room
+
+    @staticmethod
+    def _ensure_room_alias(room):
+        if not room.canonical_alias:
+            room.update_aliases()
+            if room.aliases:
+                room.canonical_alias = room.aliases[0]
