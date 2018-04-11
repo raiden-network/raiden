@@ -46,6 +46,8 @@ class BlockChainService:
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
 
+        self.client.add_reconnect_listener(self.on_reconnect)
+
     def block_number(self) -> int:
         return self.client.block_number()
 
@@ -204,7 +206,13 @@ class BlockChainService:
 
         return token_address
 
-    @property
     @lru_cache()
-    def network_id(self) -> int:
+    def _network_id(self) -> int:
         return int(self.client.call('net_version'))
+
+    # This is a bit ugly, be we need direct access to the `lru_cache.clear_cache()` method in
+    # `on_reconnect()`.
+    network_id = property(_network_id)
+
+    def on_reconnect(self):
+        self._network_id.cache_clear()

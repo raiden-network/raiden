@@ -52,11 +52,14 @@ class RaidenMatrixProtocol:
     def __init__(self, raiden: 'RaidenService'):
         self.raiden = raiden
 
-        self.network_name = ID_TO_NETWORKNAME.get(
+        self.senthashes_to_states = dict()
+
+    @property
+    def network_name(self):
+        return ID_TO_NETWORKNAME.get(
             self.raiden.network_id,
             str(self.raiden.network_id)
         )
-        self.senthashes_to_states = dict()
 
     def start(self):
         self.client = GMatrixClient(self.server)
