@@ -530,8 +530,8 @@ class RaidenProtocol:
         self.transport.stop()
 
         # Set all the pending results to False
-        for waitack in self.senthashes_to_states.values():
-            waitack.async_result.set(False)
+        for wait_processed in self.senthashes_to_states.values():
+            wait_processed.async_result.set(False)
 
     def get_health_events(self, receiver_address):
         """ Starts a healthcheck taks for `receiver_address` and returns a
@@ -656,8 +656,8 @@ class RaidenProtocol:
 
             queue.put(messagedata)
         else:
-            waitack = self.senthashes_to_states[echohash]
-            async_result = waitack.async_result
+            wait_processed = self.senthashes_to_states[echohash]
+            async_result = wait_processed.async_result
 
         return async_result
 

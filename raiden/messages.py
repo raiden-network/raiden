@@ -269,7 +269,7 @@ class Processed(Message):
 
 
 class Ping(SignedMessage):
-    """ Ping, should be responded by an Ack message. """
+    """ Ping, should be responded by a `Processed` message. """
     cmdid = messages.PING
 
     def __init__(self, nonce):
