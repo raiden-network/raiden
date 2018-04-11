@@ -19,7 +19,6 @@ from raiden.utils import (
 from raiden.messages import (
     from_dict as message_from_dict,
     decode as message_from_bytes,
-    Ack,
     Ping,
     Processed,
     SignedMessage,
@@ -29,12 +28,13 @@ from raiden.exceptions import (
     UnknownAddress,
     UnknownTokenAddress,
 )
+from raiden import raiden_service  # flake8: noqa
 from raiden.udp_message_handler import on_udp_message
 from raiden.constants import ID_TO_NETWORKNAME
+from raiden.network.gmatrixclient import GMatrixClient
 
 from matrix_client.errors import MatrixRequestError
 from matrix_client.room import Room
-from gmatrixclient import GMatrixClient
 
 
 log = slogging.get_logger(__name__)
@@ -49,7 +49,7 @@ class RaidenMatrixProtocol:
     _room_prefix = 'raiden'
     _room_sep = '_'
 
-    def __init__(self, raiden: 'RaidenService'):
+    def __init__(self, raiden: 'raiden.raiden_service.RaidenService'):
         self.raiden = raiden
 
         self.senthashes_to_states = dict()
@@ -178,7 +178,7 @@ class RaidenMatrixProtocol:
             self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
             return
 
-        if isinstance(message, Ack):
+        if isinstance(message, Processed):
             self._receive_processed(message)
         elif isinstance(message, Ping):
             log.warning(
@@ -291,9 +291,11 @@ class RaidenMatrixProtocol:
 
     def _get_room_for_address(self, receiver_address: typing.Address) -> Room:
         room_name = self._room_sep.join(
-            (self._room_prefix, self.network_name) +
-            (address_encoder(addr).lower()
-             for addr in sorted((receiver_address, self.raiden.address)))
+            [self._room_prefix, self.network_name] +
+            [
+                address_encoder(addr).lower()
+                for addr in sorted((receiver_address, self.raiden.address))
+            ]
         )  # e.g.: raiden_ropsten_0xaaaa_0xbbbb
         for room_id, _room in self.client.get_rooms().items():
             # search for a room with given name

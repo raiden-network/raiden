@@ -206,13 +206,10 @@ class BlockChainService:
 
         return token_address
 
+    @property
     @lru_cache()
-    def _network_id(self) -> int:
+    def network_id(self) -> int:
         return int(self.client.call('net_version'))
 
-    # This is a bit ugly, be we need direct access to the `lru_cache.clear_cache()` method in
-    # `on_reconnect()`.
-    network_id = property(_network_id)
-
     def on_reconnect(self):
-        self._network_id.cache_clear()
+        self.__class__.__dict__['network_id'].fget.cache_clear()
