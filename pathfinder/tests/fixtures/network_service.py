@@ -1,12 +1,14 @@
 import random
+
 from typing import List
 from unittest.mock import Mock
 import pytest
 from coincurve import PrivateKey
 from eth_utils import remove_0x_prefix
+from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
-from web3 import Web3
+from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.pathfinding_service import PathfindingService
@@ -181,5 +183,22 @@ def pathfinding_service(
         token_network.address: token_network
         for token_network in token_networks
     }
+
+    return pathfinding_service
+
+
+@pytest.fixture
+def pathfinding_service_mocked_listeners(
+        web3: Web3,
+        contracts_manager: ContractManager,
+) -> PathfindingService:
+    """ Returns a PathfindingService with mocked blockchain listeners. """
+    pathfinding_service = PathfindingService(
+        web3,
+        contracts_manager,
+        transport=Mock(),
+        token_network_listener=BlockchainListenerMock(),
+        token_network_registry_listener=BlockchainListenerMock()
+    )
 
     return pathfinding_service
