@@ -2,7 +2,7 @@ Click>=6.0
 coincurve
 
 eth-tester[py-evm]>=0.1.0-beta.23,<1.0
-web3>=4.0.0,<5.0
+web3>=4.1.0,<5.0
 eth-utils>=1.0.1,<2.0.0
 
 flask

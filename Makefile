@@ -56,7 +56,7 @@ typecheck: ## static analysis with mypy
 	mypy --ignore-missing-imports pathfinder
 
 test: ## run tests quickly with the default Python
-	py.test
+	py.test -v
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source pathfinder -m pytest

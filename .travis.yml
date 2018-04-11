@@ -1,5 +1,6 @@
 # Config file for automatic testing at travis-ci.org
 
+sudo: required
 language: python
 python: 3.6
 cache: pip

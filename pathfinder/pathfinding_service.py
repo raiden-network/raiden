@@ -84,7 +84,9 @@ class PathfindingService(gevent.Greenlet):
     def _run(self):
         register_error_handler(error_handler)
         self.transport.start()
-        self.token_network_listener.run()
+        self.token_network_listener.start()
+        if self.token_network_registry_listener:
+            self.token_network_registry_listener.start()
 
         self.is_running.wait()
 
