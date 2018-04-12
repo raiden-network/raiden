@@ -135,7 +135,7 @@ def check_synced(net_id, blockchain_service):
         sys.exit(1)
 
     url = ETHERSCAN_API.format(
-        network=network,
+        network=network if net_id != 1 else 'api',
         action='eth_blockNumber',
     )
     wait_for_sync(
