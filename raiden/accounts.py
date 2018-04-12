@@ -59,13 +59,15 @@ class AccountManager:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
                             self.accounts[str(data['address']).lower()] = str(fullpath)
-                    except (ValueError, KeyError, IOError) as ex:
+                    except (KeyError, IOError, json.decoder.JSONDecodeError) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
                             # Should be a valid account file - warn user
                             msg = 'Invalid account file'
                             if isinstance(ex, IOError):
                                 msg = 'Can not read account file'
+                            if isinstance(ex, json.decoder.JSONDecodeError):
+                                msg = 'The account file is not valid JSON format'
                             log.warning('%s %s: %s', msg, fullpath, ex)
 
     def address_in_keystore(self, address):
