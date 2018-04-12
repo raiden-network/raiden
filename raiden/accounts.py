@@ -65,7 +65,7 @@ class AccountManager:
                             # Should be a valid account file - warn user
                             msg = 'Invalid account file'
                             if isinstance(ex, IOError):
-                                msg = 'Can not read account file'
+                                msg = 'Can not read account file (errno=%s)' % ex.errno
                             if isinstance(ex, json.decoder.JSONDecodeError):
                                 msg = 'The account file is not valid JSON format'
                             log.warning('%s %s: %s', msg, fullpath, ex)
