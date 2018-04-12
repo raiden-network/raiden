@@ -80,7 +80,9 @@ def test_account_manager_invalid_files(test_keystore, caplog):
         AccountManager(test_keystore)
 
     for msg, file_name, reason in [
-        ('The account file is not valid JSON format', KEYFILE_INVALID, 'Expecting value: line 1 column 1 (char 0)'),
+        ('The account file is not valid JSON format',
+         KEYFILE_INVALID,
+         'Expecting value: line 1 column 1 (char 0)'),
         ('Can not read account file (errno=13)', KEYFILE_INACCESSIBLE, 'Permission denied')
     ]:
         for record in caplog.records:
