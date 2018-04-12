@@ -6,6 +6,7 @@ from string import Template
 import distutils.spawn  # pylint: disable=import-error,no-name-in-module
 import json
 import os
+import sys
 import pdb
 import requests
 import shlex
@@ -71,6 +72,13 @@ $RST_GETH_BINARY
     --datadir $RST_DATADIR
 """
 RST_GETH_BINARY = distutils.spawn.find_executable('geth')
+if not RST_GETH_BINARY:
+    print(
+        'Error: unable to locate geth binary.\n'
+        'Make sure it is installed and added to the PATH variable.'
+    )
+    sys.exit(1)
+
 if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
     os.environ['RST_GETH_BINARY'] = RST_GETH_BINARY
 

@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`1237` Inform the user if geth binary is missing during raiden smoketest.
 * :feature:`1328` Use separate database directory per network id. This is a breaking change. You will need to copy your data from the previous directory to the new network id subdirectory.
 
 * :release:`0.3.0 <2018-02-22>`
