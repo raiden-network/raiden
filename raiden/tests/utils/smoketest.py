@@ -73,8 +73,10 @@ $RST_GETH_BINARY
 """
 RST_GETH_BINARY = distutils.spawn.find_executable('geth')
 if not RST_GETH_BINARY:
-    print('Error: unable to locate geth binary.\n'
-          'Make sure it is installed and added to the PATH variable.')
+    print(
+        'Error: unable to locate geth binary.\n'
+        'Make sure it is installed and added to the PATH variable.'
+    )
     sys.exit(1)
 
 if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
