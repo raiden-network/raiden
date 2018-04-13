@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+The tests in this module mock events creation by using a mock blockchain listener.
+
+This makes them a lot faster than using full blockchain based approach and they should
+be used most of the time to keep test times short.
+"""
 from typing import List
 
 from unittest.mock import Mock
@@ -11,7 +17,7 @@ from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.utils.types import Address
 
 
-def test_pathfinding_service_with_mocked_events(
+def test_pfs_with_mocked_events(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
@@ -21,7 +27,7 @@ def test_pathfinding_service_with_mocked_events(
 
     token_network_address = token_networks[0].address
 
-    # this is a new Pathfinding Service, there should be no token networks registered
+    # this is a new pathfinding service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0
 
     # emit a TokenNetworkCreated event
@@ -105,7 +111,35 @@ def test_pathfinding_service_with_mocked_events(
     # now there should be seven channels
     assert len(token_network.channel_id_to_addresses.keys()) == 7
 
-    # Now close all channels
+    # check that deposits got registered
+    for channel_id, (
+        p1_index,
+        p1_deposit,
+        p1_transferred_amount,
+        p1_fee,
+        p2_index,
+        p2_deposit,
+        p2_transferred_amount,
+        p2_fee
+    ) in enumerate(channel_descriptions):
+        p1, p2 = token_network.channel_id_to_addresses[channel_id]
+        assert p1 == addresses[p1_index]
+        assert p2 == addresses[p2_index]
+
+        view1 = token_network.G[p1][p2]['view']
+        view2 = token_network.G[p2][p1]['view']
+
+        assert view1.deposit == p1_deposit
+        assert view2.deposit == p2_deposit
+
+    # check pathfinding
+    paths = token_network.get_paths(addresses[0], addresses[3], 10, 5)
+    assert len(paths) == 3
+    assert paths[0]['path'] == [addresses[0], addresses[2], addresses[3]]
+    assert paths[1]['path'] == [addresses[0], addresses[1], addresses[4], addresses[3]]
+    assert paths[2]['path'] == [addresses[0], addresses[1], addresses[2], addresses[3]]
+
+    # wow close all channels
     for channel_id, (
         p1_index,
         p1_deposit,
@@ -129,7 +163,7 @@ def test_pathfinding_service_with_mocked_events(
     assert len(token_network.channel_id_to_addresses.keys()) == 0
 
 
-def test_pathfinding_service_idempotency_of_channel_openings(
+def test_pfs_idempotency_of_channel_openings(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
@@ -166,10 +200,10 @@ def test_pathfinding_service_idempotency_of_channel_openings(
             )
         ))
 
-    # now there should be seven channels
+    # there should only be one channel
     assert len(token_network.channel_id_to_addresses.keys()) == 1
 
-    # Now close the channel
+    # now close the channel
     network_listener.emit_event(dict(
         address=token_network_address,
         name='ChannelClosed',
@@ -183,7 +217,7 @@ def test_pathfinding_service_idempotency_of_channel_openings(
     assert len(token_network.channel_id_to_addresses.keys()) == 0
 
 
-def test_multiple_channels_for_2_participants_opened(
+def test_pfs_multiple_channels_for_two_participants_opened(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
@@ -247,7 +281,7 @@ def test_multiple_channels_for_2_participants_opened(
     assert len(token_network.channel_id_to_addresses.keys()) == 1
 
 
-def test_events_from_unknown_token_network_ignored(
+def test_pfs_events_from_unknown_token_network_ignored(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
@@ -301,7 +335,7 @@ def test_events_from_unknown_token_network_ignored(
     assert len(token_network.channel_id_to_addresses.keys()) == 1
 
 
-def test_follow_networks_has_precedence(
+def test_pfs_follow_networks_has_precedence_over_listener(
     web3: Web3,
     contracts_manager: ContractManager,
     token_networks: List[TokenNetwork]
