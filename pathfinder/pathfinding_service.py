@@ -36,9 +36,20 @@ class PathfindingService(gevent.Greenlet):
         transport: MatrixTransport,
         token_network_listener: BlockchainListener,
         *,
-        token_network_registry_listener: BlockchainListener = None,
         follow_networks: List[Address] = None,
+        token_network_registry_listener: BlockchainListener = None,
     ) -> None:
+        """ Creates a new pathfinding service
+
+        Args:
+            web3: A web3 client
+            contract_manager: A contract manager
+            transport: A transport object
+            token_network_listener: A blockchain listener object
+            follow_networks: A list of token network addresses to follow. This has precedence over
+                the `token_network_registry_listener`
+            token_network_registry_listener: A blockchain listener object for the network registry
+        """
         super().__init__()
         self.web3 = web3
         self.contract_manager = contract_manager
@@ -124,7 +135,7 @@ class PathfindingService(gevent.Greenlet):
             participant1 = event['args']['participant1']
             participant2 = event['args']['participant2']
 
-            token_network.handle_channel_opened(
+            token_network.handle_channel_opened_event(
                 channel_identifier,
                 participant1,
                 participant2
