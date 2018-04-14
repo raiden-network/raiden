@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from binascii import unhexlify
+from gevent.event import AsyncResult
 from typing import List, Union, Tuple
 
 from ethereum import slogging
@@ -65,6 +66,7 @@ class ChannelManager:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
+        self.open_channel_transactions = dict()
 
     def token_address(self) -> Address:
         """ Return the token of this manager. """
@@ -96,17 +98,48 @@ class ChannelManager:
         if local_address == other_peer:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
-            'newChannel',
-            other_peer,
-            settle_timeout,
-        )
+        # Prevent concurrent attempts to open a channel with the same token and
+        # partner address.
+        if other_peer not in self.open_channel_transactions:
+            try:
+                new_open_channel_transaction = AsyncResult()
+                self.open_channel_transactions[other_peer] = new_open_channel_transaction
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+                # Check to see if a channel with this partner already exists
+                if self.channel_exists(other_peer):
+                    raise DuplicatedChannelError(
+                        "Channel with given partner address already exists"
+                    )
 
-        if check_transaction_threw(self.client, transaction_hash):
-            raise DuplicatedChannelError('Duplicated channel')
+                transaction_hash = estimate_and_transact(
+                    self.proxy,
+                    'newChannel',
+                    other_peer,
+                    settle_timeout,
+                )
+
+                if not transaction_hash:
+                    raise RuntimeError('open channel transaction failed')
+
+                self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+
+                if check_transaction_threw(self.client, transaction_hash):
+                    raise DuplicatedChannelError('Duplicated channel')
+
+                new_open_channel_transaction.set(transaction_hash)
+
+            except Exception as e:
+                channel_transaction = self.open_channel_transactions[other_peer]
+                if channel_transaction:
+                    channel_transaction.set_exception(e)
+                raise
+
+            finally:
+                # Delete the async result if it exists in the dictionary
+                self.open_channel_transactions.pop(other_peer, None)
+        else:
+            # All other concurrent threads should block on the result of opening this channel
+            transaction_hash = self.open_channel_transactions[other_peer].get()
 
         netting_channel_results_encoded = self.proxy.call(
             'getChannelWith',
@@ -163,6 +196,24 @@ class ChannelManager:
             address_decoder(address)
             for address in address_list
         ]
+
+    def channel_exists(self, participant_address: Address) -> bool:
+        existing_channel = self.proxy.call(
+            'getChannelWith',
+            participant_address,
+        )
+
+        null_addr = '0x' + '0' * 40
+
+        exists = False
+
+        if existing_channel != null_addr:
+            exists = self.proxy.call(
+                'contractExists',
+                existing_channel
+            )
+
+        return exists
 
     def channelnew_filter(
             self,
