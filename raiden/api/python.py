@@ -19,7 +19,9 @@ from raiden.transfer.events import (
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    ChannelBusyError,
     ChannelNotFound,
+    DuplicatedChannelError,
     EthNodeCommunicationError,
     InsufficientFunds,
     InvalidAddress,
@@ -49,6 +51,7 @@ class RaidenAPI:
 
     def __init__(self, raiden):
         self.raiden = raiden
+        self.open_channel_locks = dict()
 
     @property
     def address(self):
@@ -137,47 +140,62 @@ class RaidenAPI:
             settle_timeout=None,
             reveal_timeout=None,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
-        """ Open a channel with the peer at `partner_address`
-        with the given `token_address`.
-        """
-        if reveal_timeout is None:
-            reveal_timeout = self.raiden.config['reveal_timeout']
 
-        if settle_timeout is None:
-            settle_timeout = self.raiden.config['settle_timeout']
+        # Prevent concurrent attempts to open a channel with the same token and
+        # partner address
+        if partner_address not in self.open_channel_locks:
+            new_open_lock = gevent.lock.Semaphore()
+            self.open_channel_locks[(token_address, partner_address)] = new_open_lock
 
-        if settle_timeout <= reveal_timeout:
-            raise InvalidSettleTimeout(
-                'reveal_timeout can not be larger-or-equal to settle_timeout'
+        open_lock = self.open_channel_locks[(token_address, partner_address)]
+
+        if open_lock.locked():
+            raise DuplicatedChannelError(
+                "Channel with given partner address is already in the process of creation"
             )
 
-        if not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel open')
+        with open_lock:
+            """ Open a channel with the peer at `partner_address`
+            with the given `token_address`.
+            """
+            if reveal_timeout is None:
+                reveal_timeout = self.raiden.config['reveal_timeout']
 
-        if not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel open')
+            if settle_timeout is None:
+                settle_timeout = self.raiden.config['settle_timeout']
 
-        channel_manager = self.raiden.default_registry.manager_by_token(token_address)
-        netcontract_address = channel_manager.new_netting_channel(
-            partner_address,
-            settle_timeout,
-        )
+            if settle_timeout <= reveal_timeout:
+                raise InvalidSettleTimeout(
+                    'reveal_timeout can not be larger-or-equal to settle_timeout'
+                )
 
-        msg = 'After {} seconds the channel was not properly created.'.format(
-            poll_timeout
-        )
+            if not isaddress(token_address):
+                raise InvalidAddress('Expected binary address format for token in channel open')
 
-        registry_address = self.raiden.default_registry.address
-        with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-            waiting.wait_for_newchannel(
-                self.raiden,
-                registry_address,
-                token_address,
+            if not isaddress(partner_address):
+                raise InvalidAddress('Expected binary address format for partner in channel open')
+
+            channel_manager = self.raiden.default_registry.manager_by_token(token_address)
+            netcontract_address = channel_manager.new_netting_channel(
                 partner_address,
-                self.raiden.alarm.wait_time,
+                settle_timeout,
             )
 
-        return netcontract_address
+            msg = 'After {} seconds the channel was not properly created.'.format(
+                poll_timeout
+            )
+
+            registry_address = self.raiden.default_registry.address
+            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
+                waiting.wait_for_newchannel(
+                    self.raiden,
+                    registry_address,
+                    token_address,
+                    partner_address,
+                    self.raiden.alarm.wait_time,
+                )
+
+            return netcontract_address
 
     def channel_deposit(
             self,
@@ -242,28 +260,36 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         netcontract_address = channel_state.identifier
-        token.approve(netcontract_address, amount)
-
         channel_proxy = self.raiden.chain.netting_channel(netcontract_address)
-        channel_proxy.deposit(amount)
 
-        old_balance = channel_state.our_state.contract_balance
-        target_balance = old_balance + amount
-
-        msg = 'After {} seconds the deposit was not properly processed.'.format(
-            poll_timeout
-        )
-
-        # Wait until the `ChannelNewBalance` event is processed.
-        with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-            waiting.wait_for_newbalance(
-                self.raiden,
-                registry_address,
-                token_address,
-                partner_address,
-                target_balance,
-                self.raiden.alarm.wait_time,
+        # If concurrent operations are happening on the channel, fail the request
+        if not channel_proxy.channel_operations_lock.acquire(0):
+            raise ChannelBusyError(
+                f"""Channel with id {channel_state.identifier} is
+                busy with another ongoing operation"""
             )
+
+        with channel_proxy.channel_operations_lock:
+            token.approve(netcontract_address, amount)
+            channel_proxy.deposit(amount)
+
+            old_balance = channel_state.our_state.contract_balance
+            target_balance = old_balance + amount
+
+            msg = 'After {} seconds the deposit was not properly processed.'.format(
+                poll_timeout
+            )
+
+            # Wait until the `ChannelNewBalance` event is processed.
+            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
+                waiting.wait_for_newbalance(
+                    self.raiden,
+                    registry_address,
+                    token_address,
+                    partner_address,
+                    target_balance,
+                    self.raiden.alarm.wait_time,
+                )
 
     def channel_close(self, token_address, partner_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
         """Close a channel opened with `partner_address` for the given
@@ -310,27 +336,54 @@ class RaidenAPI:
             partner_addresses,
         )
 
-        for channel_state in channels_to_close:
-            channel_close = ActionChannelClose(
-                registry_address,
-                token_address,
-                channel_state.identifier,
-            )
-            self.raiden.handle_state_change(channel_close)
+        # Keep track of all the locks acquired, in case an exception is thrown during
+        # the middle of the lock acquring process.
+        acquiredLocks = []
 
-        msg = 'After {} seconds the deposit was not properly processed.'.format(
-            poll_timeout
-        )
-        channel_ids = [channel_state.identifier for channel_state in channels_to_close]
+        # Grab all the locks for all the channels we are about to operate on,
+        # this way we don't have to worry about context switches in the rest of the function.
+        try:
+            for channel_state in channels_to_close:
+                # If concurrent operations are happening on one of the channels, fail entire
+                # request. TODO: we could also prevent failing entire request and continue
+                # with those channels that are available, callers of the api will then have
+                #  to deal with partial results.
+                channel = self.raiden.chain.netting_channel(channel_state.identifier)
+                if not channel.channel_operations_lock.acquire(0):
+                    raise ChannelBusyError(
+                        f"""Channel with id {channel_state.identifier} is
+                        busy with another ongoing operation"""
+                    )
+                channel.channel_operations_lock.acquire
+                acquiredLocks.append(channel.channel_operations_lock)
 
-        with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-            waiting.wait_for_close(
-                self.raiden,
-                registry_address,
-                token_address,
-                channel_ids,
-                self.raiden.alarm.wait_time,
+            for channel_state in channels_to_close:
+                channel_close = ActionChannelClose(
+                    registry_address,
+                    token_address,
+                    channel_state.identifier,
+                )
+                self.raiden.handle_state_change(channel_close)
+
+            msg = 'After {} seconds the deposit was not properly processed.'.format(
+                poll_timeout
             )
+
+            channel_ids = [channel_state.identifier for channel_state in channels_to_close]
+
+            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
+                waiting.wait_for_close(
+                    self.raiden,
+                    registry_address,
+                    token_address,
+                    channel_ids,
+                    self.raiden.alarm.wait_time,
+                )
+        finally:
+            for lock in acquiredLocks:
+                # TODO: should we have exception handling for this in case the gevent module
+                # ever has an unforseen bug?
+                lock.release()
 
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given

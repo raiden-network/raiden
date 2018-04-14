@@ -17,6 +17,7 @@ from ethereum import slogging
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
+    ChannelBusyError,
     ChannelNotFound,
     DuplicatedChannelError,
     EthNodeCommunicationError,
@@ -354,6 +355,11 @@ class RestAPI:
                 partner_address,
                 amount
             )
+        except ChannelBusyError as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT
+            )
         except EthNodeCommunicationError as e:
             return api_error(
                 errors=str(e),
@@ -369,11 +375,16 @@ class RestAPI:
         return api_response(result=result.data)
 
     def close(self, token_address, partner_address):
-
-        raiden_service_result = self.raiden_api.channel_close(
-            token_address,
-            partner_address
-        )
+        try:
+            raiden_service_result = self.raiden_api.channel_close(
+                token_address,
+                partner_address
+            )
+        except ChannelBusyError as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT
+            )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
         return api_response(result=result.data)
@@ -526,6 +537,11 @@ class RestAPI:
                 channel_state.partner_state.address,
                 balance
             )
+        except ChannelBusyError as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT
+            )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
@@ -543,10 +559,17 @@ class RestAPI:
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        self.raiden_api.channel_close(
-            channel_state.token_address,
-            channel_state.partner_state.address
-        )
+        try:
+            self.raiden_api.channel_close(
+                channel_state.token_address,
+                channel_state.partner_state.address
+            )
+        except ChannelBusyError as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT
+            )
+
         updated_channel_state = self.raiden_api.get_channel(channel_state.identifier)
         result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
         return api_response(result=result.data)
