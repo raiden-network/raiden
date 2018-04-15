@@ -19,15 +19,18 @@ from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data
 
 __all__ = (
-    'Processed',
-    'Ping',
-    'SecretRequest',
-    'Secret',
     'DirectTransfer',
     'Lock',
     'LockedTransfer',
     'MediatedTransfer',
+    'Ping',
+    'Processed',
     'RefundTransfer',
+    'Secret',
+    'SecretRequest',
+    'SignedMessage',
+    'decode',
+    'from_dict',
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
@@ -498,12 +501,12 @@ class Secret(EnvelopeMessage):
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
         message = cls(
-            data['identifier'],
-            data_decoder(data['secret']),
-            data['nonce'],
-            address_decoder(data['channel']),
-            data['transferred_amount'],
-            data_decoder(data['locksroot']),
+            identifier=data['identifier'],
+            nonce=data['nonce'],
+            channel=address_decoder(data['channel']),
+            transferred_amount=data['transferred_amount'],
+            locksroot=data_decoder(data['locksroot']),
+            secret=data_decoder(data['secret']),
         )
         message.signature = data_decoder(data['signature'])
         return message
