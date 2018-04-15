@@ -24,6 +24,8 @@ from raiden.blockchain.events import (
     get_relevant_proxies,
     BlockchainEvents,
 )
+from raiden.network.matrixprotocol import RaidenMatrixProtocol
+from raiden.network.transport import UDPTransport, TokenBucket
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
@@ -166,7 +168,7 @@ def endpoint_registry_exception_handler(greenlet):
 class RaidenService:
     """ A Raiden node. """
 
-    def __init__(self, chain, default_registry, private_key_bin, transport, discovery, config):
+    def __init__(self, chain, default_registry, private_key_bin, config, discovery=None):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -195,29 +197,50 @@ class RaidenService:
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
 
-        endpoint_registration_event = gevent.spawn(
-            discovery.register,
-            self.address,
-            config['external_ip'],
-            config['external_port'],
-        )
-        endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
-
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
-        self.protocol = RaidenProtocol(
-            transport,
-            discovery,
-            self,
-            config['protocol']['retry_interval'],
-            config['protocol']['retries_before_backoff'],
-            config['protocol']['nat_keepalive_retries'],
-            config['protocol']['nat_keepalive_timeout'],
-            config['protocol']['nat_invitation_timeout'],
-        )
 
-        # TODO: remove this cyclic dependency
-        transport.protocol = self.protocol
+        if config['transport_type'] == 'udp':
+            if config.get('socket'):
+                transport = UDPTransport(
+                    None,
+                    None,
+                    socket=config['socket'],
+                )
+            else:
+                transport = UDPTransport(
+                    config['host'],
+                    config['port'],
+                )
+
+            transport.throttle_policy = TokenBucket(
+                config['protocol']['throttle_capacity'],
+                config['protocol']['throttle_fill_rate']
+            )
+
+            endpoint_registration_event = gevent.spawn(
+                discovery.register,
+                self.address,
+                config['external_ip'],
+                config['external_port'],
+            )
+            endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
+
+            self.protocol = RaidenProtocol(
+                transport,
+                discovery,
+                self,
+                config['protocol']['retry_interval'],
+                config['protocol']['retries_before_backoff'],
+                config['protocol']['nat_keepalive_retries'],
+                config['protocol']['nat_keepalive_timeout'],
+                config['protocol']['nat_invitation_timeout'],
+            )
+
+            # TODO: remove this cyclic dependency
+            transport.protocol = self.protocol
+        elif config['transport_type'] == 'matrix':
+            self.protocol = RaidenMatrixProtocol(self)
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
@@ -245,9 +268,10 @@ class RaidenService:
             self.serialization_file = None
             self.db_lock = None
 
-        # If the endpoint registration fails the node will quit, this must
-        # finish before starting the protocol
-        endpoint_registration_event.join()
+        if config['transport_type'] == 'udp':
+            # If the endpoint registration fails the node will quit, this must
+            # finish before starting the protocol
+            endpoint_registration_event.join()
 
         # Lock used to serialize calls to `poll_blockchain_events`, this is
         # important to give a consistent view of the node state.
@@ -320,7 +344,8 @@ class RaidenService:
         self.alarm.stop_async()
 
         wait_for = [self.alarm]
-        wait_for.extend(self.protocol.greenlets)
+        if hasattr(self.protocol, 'greenlets'):
+            wait_for.extend(self.protocol.greenlets)
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         gevent.wait(wait_for, timeout=self.shutdown_timeout)

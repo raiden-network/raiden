@@ -18,7 +18,6 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
-from raiden.network.transport import UDPTransport, TokenBucket
 from raiden.utils import (
     pex,
     privatekey_to_address
@@ -48,36 +47,27 @@ class App:  # pylint: disable=too-few-public-methods
         'rpc': True,
         'console': False,
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
+        'transport_type': 'udp',
+        'matrix': {
+            'server': 'https://transport01.raiden.network',
+            'default_rooms': {
+                # room_name: attach_listener
+                '#raiden_presence:transport01.raiden.network': False
+            }
+        }
     }
 
-    def __init__(self, config, chain, default_registry, discovery, transport_class=UDPTransport):
+    def __init__(self, config, chain, default_registry, discovery=None):
         self.config = config
         self.discovery = discovery
 
-        if config.get('socket'):
-            transport = transport_class(
-                None,
-                None,
-                socket=config['socket'],
-            )
-        else:
-            transport = transport_class(
-                config['host'],
-                config['port'],
-            )
-
-        transport.throttle_policy = TokenBucket(
-            config['protocol']['throttle_capacity'],
-            config['protocol']['throttle_fill_rate']
-        )
         try:
             self.raiden = RaidenService(
                 chain,
                 default_registry,
                 unhexlify(config['privatekey_hex']),
-                transport,
-                discovery,
                 config,
+                discovery=discovery,
             )
         except filelock.Timeout:
             pubkey = hexlify(

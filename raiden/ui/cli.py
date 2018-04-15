@@ -448,6 +448,12 @@ OPTIONS = [
         type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
         default='auto',
         show_default=True
+    ),
+    click.option(
+        '--transport',
+        type=click.Choice(['udp', 'matrix']),
+        default='udp',
+        show_default=True
     )
 ]
 
@@ -485,6 +491,7 @@ def app(
         datadir,
         eth_client_communication,
         nat,
+        transport,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -510,6 +517,7 @@ def app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
+    config['transport_type'] = transport
 
     if mapped_socket:
         config['socket'] = mapped_socket.socket
@@ -560,7 +568,7 @@ def app(
     check_json_rpc(rpc_client)
     check_discovery_registration_gas(blockchain_service, address)
 
-    net_id = int(blockchain_service.client.call('net_version'))
+    net_id = blockchain_service.network_id
     if sync_check:
         check_synced(net_id, blockchain_service)
 
@@ -618,7 +626,7 @@ def prompt_account(address_hex, keystore_path, password_file):
         while should_prompt:
             idx = click.prompt('Select one of them by index to continue', type=int)
 
-            if idx >= 0 and idx < len(addresses):
+            if 0 <= idx < len(addresses):
                 should_prompt = False
             else:
                 print('\nError: Provided index "{}" is out of bounds\n'.format(idx))
@@ -684,73 +692,84 @@ def run(ctx, **kwargs):
                     root.handlers.remove(handler)
                     break
 
+        def _run_app():
+            app_ = ctx.invoke(app, **kwargs)
+
+            domain_list = []
+            if kwargs['rpccorsdomain']:
+                if ',' in kwargs['rpccorsdomain']:
+                    for domain in kwargs['rpccorsdomain'].split(','):
+                        domain_list.append(str(domain))
+                else:
+                    domain_list.append(str(kwargs['rpccorsdomain']))
+
+            api_server = None
+            if ctx.params['rpc']:
+                raiden_api = RaidenAPI(app_.raiden)
+                rest_api = RestAPI(raiden_api)
+                api_server = APIServer(
+                    rest_api,
+                    cors_domain_list=domain_list,
+                    web_ui=ctx.params['web_ui'],
+                    eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
+                )
+                (api_host, api_port) = split_endpoint(kwargs['api_address'])
+                api_server.start(api_host, api_port)
+
+                print(
+                    'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
+                    'See the Raiden documentation for all available endpoints at\n'
+                    'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
+                        api_host,
+                        api_port,
+                    )
+                )
+
+            if ctx.params['console']:
+                console = Console(app_)
+                console.start()
+
+            # wait for interrupt
+            event = gevent.event.Event()
+            gevent.signal(signal.SIGQUIT, event.set)
+            gevent.signal(signal.SIGTERM, event.set)
+            gevent.signal(signal.SIGINT, event.set)
+
+            gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
+            gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
+
+            event.wait()
+            print('Signal received. Shutting down ...')
+            if api_server:
+                api_server.stop()
+            return app_
+
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did
         # not timeout.
-        (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-        try:
-            with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
-                kwargs['mapped_socket'] = mapped_socket
+        if kwargs['transport'] == 'udp':
+            (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
+            try:
+                socket_factory = SocketFactory(listen_host, listen_port, strategy=kwargs['nat'])
+                with socket_factory as mapped_socket:
+                    kwargs['mapped_socket'] = mapped_socket
+                    app_ = _run_app()
 
-                app_ = ctx.invoke(app, **kwargs)
-
-                domain_list = []
-                if kwargs['rpccorsdomain']:
-                    if ',' in kwargs['rpccorsdomain']:
-                        for domain in kwargs['rpccorsdomain'].split(','):
-                            domain_list.append(str(domain))
-                    else:
-                        domain_list.append(str(kwargs['rpccorsdomain']))
-
-                if ctx.params['rpc']:
-                    raiden_api = RaidenAPI(app_.raiden)
-                    rest_api = RestAPI(raiden_api)
-                    api_server = APIServer(
-                        rest_api,
-                        cors_domain_list=domain_list,
-                        web_ui=ctx.params['web_ui'],
-                        eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
-                    )
-                    (api_host, api_port) = split_endpoint(kwargs['api_address'])
-                    api_server.start(api_host, api_port)
-
+            except socket.error as v:
+                if v.args[0] == errno.EADDRINUSE:
                     print(
-                        'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
-                        'See the Raiden documentation for all available endpoints at\n'
-                        'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
-                            api_host,
-                            api_port,
-                        )
+                        'ERROR: Address %s:%s is in use. '
+                        'Use --listen-address <host:port> to specify port to listen on.' %
+                        (listen_host, listen_port)
                     )
-
-                if ctx.params['console']:
-                    console = Console(app_)
-                    console.start()
-
-                # wait for interrupt
-                event = gevent.event.Event()
-                gevent.signal(signal.SIGQUIT, event.set)
-                gevent.signal(signal.SIGTERM, event.set)
-                gevent.signal(signal.SIGINT, event.set)
-
-                gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
-                gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
-
-                event.wait()
-                print('Signal received. Shutting down ...')
-                try:
-                    api_server.stop()
-                except NameError:
-                    pass
-        except socket.error as v:
-            if v.args[0] == errno.EADDRINUSE:
-                print(
-                    'ERROR: Address %s:%s is in use. '
-                    'Use --listen-address <host:port> to specify port to listen on.' %
-                    (listen_host, listen_port)
-                )
-                sys.exit(1)
-            raise
+                    sys.exit(1)
+                raise
+        elif kwargs['transport'] == 'matrix':
+            kwargs['mapped_socket'] = None
+            app_ = _run_app()
+        else:
+            # Shouldn't happen
+            raise RuntimeError("Invalid transport type '{}'".format(kwargs['transport']))
         app_.stop(leave_channels=False)
     else:
         # Pass parsed args on to subcommands.
