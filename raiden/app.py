@@ -80,9 +80,12 @@ class App:  # pylint: disable=too-few-public-methods
                 config,
             )
         except filelock.Timeout:
-            pubkey = privatekey_to_address(unhexlify(self.config['privatekey_hex']))
-            print('FATAL: Another Raiden instance already running for account 0x%s' %
-                  hexlify(str(pubkey)))
+            pubkey = hexlify(
+                privatekey_to_address(unhexlify(self.config['privatekey_hex']))).decode()
+            print(
+                f'FATAL: Another Raiden instance already running for account 0x{pubkey} on '
+                f'network id {chain.network_id}'
+            )
             sys.exit(1)
         self.start_console = self.config['console']
 
