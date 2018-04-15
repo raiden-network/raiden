@@ -109,6 +109,7 @@ history = ''
 
 install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
+    'git+https://github.com/matrix-org/matrix-python-sdk.git#egg=matrix_client': 'matrix_client'
 }
 
 install_requires = list(set(

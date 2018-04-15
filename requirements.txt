@@ -14,6 +14,7 @@ ipaddress==1.0.19
 ipython<5.0.0
 marshmallow==2.15.0
 marshmallow_polyfield==3.2
+git+https://github.com/matrix-org/matrix-python-sdk.git#egg=matrix_client
 miniupnpc==2.0.2
 netifaces==0.10.6
 networkx==2.0.0
