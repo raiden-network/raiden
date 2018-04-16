@@ -73,7 +73,7 @@ def api_url(api_schema: str, free_port: int) -> str:
 
 
 @pytest.fixture
-def api_sut(pathfinding_service: PathfindingService, free_port: int) -> ServiceApi:
-    api = ServiceApi(pathfinding_service)
+def api_sut(pathfinding_service_full_mock: PathfindingService, free_port: int) -> ServiceApi:
+    api = ServiceApi(pathfinding_service_full_mock)
     api.run(port=free_port)
     return api

@@ -7,6 +7,7 @@ from coincurve import PrivateKey
 from eth_utils import remove_0x_prefix
 from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
+from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
@@ -21,6 +22,53 @@ def forge_fee_signature(private_key: str, fee: float) -> bytes:
     fee_msg = str(fee).encode()
     private_key_ecdsa = PrivateKey.from_hex(remove_0x_prefix(private_key))
     return private_key_ecdsa.sign_recoverable(fee_msg)
+
+
+@pytest.fixture
+def channel_descriptions() -> List:
+
+    # Now initialize some channels in this network.
+    # The tuples in channel_descriptions define the following:
+    # (
+    #     p1_index,
+    #     p1_deposit,
+    #     p1_transferred_amount,
+    #     p1_fee,
+    #     p2_index,
+    #     p2_deposit,
+    #     p2_transferred_amount,
+    #     p2_fee
+    # )
+    # Topology:
+    #       /-------------\
+    # 0 -- 1 -- 2 -- 3 -- 4    5 -- 6
+    #  \-------/
+
+    channel_descriptions = [
+        (0, 100, 20, 0.0010, 1,  50, 10, 0.0015),  # capacities  90 --  60
+        (1, 40, 10, 0.0008, 2, 130, 100, 0.0012),  # capacities 130 --  40
+        (2, 90, 10, 0.0007, 3, 10, 0, 0.0010),  # capacities  80 --  10
+        (3, 50, 20, 0.0011, 4, 50, 20, 0.0011),  # capacities  50 --  50
+        (0, 40, 40, 0.0015, 2, 80, 0, 0.0025),  # capacities   0 -- 120
+        (1, 30, 10, 0.0100, 4, 40, 15, 0.0018),  # capacities  35 --  35
+        (5, 500, 900, 0.0030, 6, 750, 950, 0.0040),  # capacities 550 --
+        #  700
+    ]
+    return channel_descriptions
+
+
+@pytest.fixture
+def blockchain_listener(web3, contracts_manager):
+    blockchain_listener = BlockchainListener(
+        web3,
+        contracts_manager,
+        'TokenNetwork',
+        poll_interval=0,
+    )
+    blockchain_listener.required_confirmations = 1
+    blockchain_listener.start()
+    yield blockchain_listener
+    blockchain_listener.stop()
 
 
 @pytest.fixture
@@ -77,36 +125,9 @@ def populate_token_networks_simple(
     token_networks: List[TokenNetwork],
     private_keys: List[str],
     addresses: List[Address],
-    web3: Web3
+    web3: Web3,
+    channel_descriptions
 ):
-    """ Initializes all token networks with the same default network, consisting of the channels
-    described in channel_descriptions.
-    The tuples in channel_descriptions define the following:
-    (
-        p1_index,
-        p1_deposit,
-        p1_transferred_amount,
-        p1_fee,
-        p2_index,
-        p2_deposit,
-        p2_transferred_amount,
-        p2_fee
-    )
-    Topology:
-          /-------------\
-    0 -- 1 -- 2 -- 3 -- 4    5 -- 6
-     \-------/
-    """
-    channel_descriptions = [
-        (0, 100,  20, 0.0010, 1,  50,  10, 0.0015),  # capacities  90 --  60
-        (1,  40,  10, 0.0008, 2, 130, 100, 0.0012),  # capacities 130 --  40
-        (2,  90,  10, 0.0007, 3,   0,   0, 0.0010),  # capacities  80 --  10
-        (3,  50,  20, 0.0011, 4,  50,  20, 0.0011),  # capacities  50 --  50
-        (0,  40,  40, 0.0015, 2,  80,   0, 0.0025),  # capacities   0 -- 120
-        (1,  30,  10, 0.0100, 4,  40,  15, 0.0018),  # capacities  35 --  35
-        (5, 500, 900, 0.0030, 6, 750, 950, 0.0040),  # capacities 550 -- 700
-    ]
-
     for channel_id, (
         p1_index,
         p1_deposit,
@@ -165,7 +186,7 @@ def populate_token_networks_simple(
 
 
 @pytest.fixture
-def pathfinding_service(
+def pathfinding_service_full_mock(
         contracts_manager: ContractManager,
         populate_token_networks_simple: None,
         token_networks: List[TokenNetwork]
