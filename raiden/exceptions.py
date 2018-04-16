@@ -113,6 +113,11 @@ class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
 
 
+class ChannelBusyError(RaidenError):
+    """Raised if someone tries to perform an operation on a channel that
+    conflicts with an ongoing operation."""
+
+
 class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""
