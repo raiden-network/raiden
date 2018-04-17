@@ -12,6 +12,7 @@ from ethereum.tools import _solidity
 from ethereum.abi import event_id, normalize_name, ContractTranslator
 
 from raiden.utils import get_contract_path
+from raiden.constants import MIN_REQUIRED_SOLC
 
 __all__ = (
     'CONTRACT_MANAGER',
@@ -144,6 +145,7 @@ def validate_solc():
         msg = (
             'The solidity compiler failed to execute. Please make sure that you\n'
             'are using the binary version of the compiler (solc-js is not compatible)\n'
+            'and that the version is >= {}'.format(MIN_REQUIRED_SOLC)
         )
 
         if e.output:
