@@ -346,6 +346,21 @@ style consistency's sake and may change in the future as there [may
 be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better)
 a tiny change in performance.
 
+**NewTypes and type comparisons**
+
+For often used types it makes sense to define new types using the `typing.NewType` function.
+New type names should be capitalized.
+```python
+Address = NewType('Address', bytes)
+```
+
+These type definitions can not be used for type comparisons. To make this possible always
+define a associated alias, which must start with `T_`.
+```python
+T_Address = bytes
+```
+
+
 #### Solidity
 
 For solidity we generally follow the style guide as shown in the [solidity
