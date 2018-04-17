@@ -546,7 +546,7 @@ class ContractReceiveRouteNew(StateChange):
             participant2: typing.Address,
     ):
 
-        if not isinstance(participant1, typing.Address):
+        if not isinstance(participant1, typing.T_Address):
             raise ValueError('participant1 must be of type address')
 
         if not isinstance(participant2, typing._Address):
