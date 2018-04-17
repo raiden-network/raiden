@@ -2,29 +2,29 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import NewType
 
-_Address = bytes
+T_Address = bytes
 Address = NewType('Address', bytes)
 
-_BlockExpiration = int
+T_BlockExpiration = int
 BlockExpiration = NewType('BlockExpiration', int)
 
-_BlockNumber = int
+T_BlockNumber = int
 BlockNumber = NewType('BlockNumber', int)
 
-_BlockTimeout = int
+T_BlockTimeout = int
 BlockTimeout = NewType('BlockNumber', int)
 
-_ChannelID = _Address
+T_ChannelID = T_Address
 ChannelID = NewType('ChannelID', Address)
 
-_Keccak256 = bytes
+T_Keccak256 = bytes
 Keccak256 = NewType('Keccak256', bytes)
 
-_Secret = bytes
+T_Secret = bytes
 Secret = NewType('Secret', bytes)
 
-_Signature = bytes
+T_Signature = bytes
 Signature = NewType('Signature', bytes)
 
-_TokenAmount = int
+T_TokenAmount = int
 TokenAmount = NewType('TokenAmount', int)
