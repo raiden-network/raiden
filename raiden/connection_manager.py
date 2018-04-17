@@ -240,7 +240,7 @@ class ConnectionManager:
             payment_network_id,
             self.token_address,
         )
-        known = set(channel_state.partner_address for channel_state in open_channels)
+        known = set(channel_state.partner_state.address for channel_state in open_channels)
         known.add(self.BOOTSTRAP_ADDR)
         known.add(self.raiden.address)
 
