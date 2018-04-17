@@ -27,7 +27,7 @@ def token_networks(
             decimals=18,
             token_name=f'TestToken{i}',
             token_symbol=f'TT{i}'
-        ))
+        ).address)
         for i in range(4)
     ]
 

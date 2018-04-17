@@ -182,11 +182,5 @@ class PathfindingService(gevent.Greenlet):
     def create_token_network_for_address(self, token_network_address: Address):
         log.info(f'Following token network at {token_network_address}')
 
-        contract = self.web3.eth.contract(
-            token_network_address,
-            abi=self.contract_manager.get_contract_abi('TokenNetwork')
-        )
-
-        token_network = TokenNetwork(contract)
-
+        token_network = TokenNetwork(token_network_address)
         self.token_networks[token_network_address] = token_network

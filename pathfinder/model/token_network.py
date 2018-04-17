@@ -4,10 +4,9 @@ from typing import List, Dict, Any, Tuple
 import networkx as nx
 from coincurve import PublicKey
 from coincurve.utils import sha256
-from eth_utils import is_checksum_address, is_same_address, to_checksum_address
+from eth_utils import is_checksum_address, is_same_address
 from networkx import DiGraph
 from raiden_libs.utils import compute_merkle_tree, get_merkle_root, public_key_to_address
-from web3.contract import Contract
 from pathfinder.config import (
     DIVERSITY_PEN_DEFAULT,
     MIN_PATH_REDUNDANCY,
@@ -33,15 +32,10 @@ class TokenNetwork:
     TODO: test all these methods once we have sample data, DO NOT let these crucial functions
     remain uncovered! """
 
-    def __init__(
-        self,
-        token_network_contract: Contract
-    ) -> None:
+    def __init__(self, token_network_address: Address) -> None:
         """ Initializes a new TokenNetwork. """
 
-        self.token_network_contract = token_network_contract
-        self.address = to_checksum_address(self.token_network_contract.address)
-        self.token_address = self.token_network_contract.functions.token().call()
+        self.address = token_network_address
         self.channel_id_to_addresses: Dict[int, Tuple[Address, Address]] = dict()
         self.G = DiGraph()
         self.max_fee = 0.0
