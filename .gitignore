@@ -52,7 +52,7 @@ coverage.xml
 # Pyenv
 .python-version
 
-# mypy 
+# mypy
 .mypy_cache
 
 # Translations

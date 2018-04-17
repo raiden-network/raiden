@@ -76,7 +76,7 @@ class NodeState(State):
     )
 
     def __init__(self, block_number: typing.BlockNumber):
-        if not isinstance(block_number, typing._BlockNumber):
+        if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be a block_number')
 
         self.block_number = block_number
@@ -118,7 +118,7 @@ class PaymentNetworkState(State):
             address: typing.Address,
             token_network_list: typing.List['TokenNetworkState']):
 
-        if not isinstance(address, typing._Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
         self.address = address
@@ -164,10 +164,10 @@ class TokenNetworkState(State):
             network_graph: 'TokenNetworkGraphState',
             partner_channels: typing.List['NettingChannelState']):
 
-        if not isinstance(address, typing._Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(token_address, typing._Address):
+        if not isinstance(token_address, typing.T_Address):
             raise ValueError('token_address must be an address instance')
 
         if not isinstance(network_graph, TokenNetworkGraphState):
@@ -304,7 +304,7 @@ class RouteState(State):
     )
 
     def __init__(self, node_address: typing.Address, channel_identifier):
-        if not isinstance(node_address, typing._Address):
+        if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -347,13 +347,13 @@ class BalanceProofUnsignedState(State):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing._TokenAmount):
+        if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing._Keccak256):
+        if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_address, typing._Address):
+        if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
 
         if nonce <= 0:
@@ -432,22 +432,22 @@ class BalanceProofSignedState(State):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing._TokenAmount):
+        if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing._Keccak256):
+        if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_address, typing._Address):
+        if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
 
-        if not isinstance(message_hash, typing._Keccak256):
+        if not isinstance(message_hash, typing.T_Keccak256):
             raise ValueError('message_hash must be a keccak256 instance')
 
-        if not isinstance(signature, typing._Signature):
+        if not isinstance(signature, typing.T_Signature):
             raise ValueError('signature must be a signature instance')
 
-        if not isinstance(sender, typing._Address):
+        if not isinstance(sender, typing.T_Address):
             raise ValueError('sender must be an address instance')
 
         if nonce <= 0:
@@ -532,13 +532,13 @@ class HashTimeLockState(State):
             expiration: typing.BlockNumber,
             hashlock: typing.Keccak256):
 
-        if not isinstance(amount, typing._TokenAmount):
+        if not isinstance(amount, typing.T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
 
-        if not isinstance(expiration, typing._BlockNumber):
+        if not isinstance(expiration, typing.T_BlockNumber):
             raise ValueError('expiration must be a block_number instance')
 
-        if not isinstance(hashlock, typing._Keccak256):
+        if not isinstance(hashlock, typing.T_Keccak256):
             raise ValueError('hashlock must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
@@ -587,7 +587,7 @@ class UnlockPartialProofState(State):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
-        if not isinstance(secret, typing._Secret):
+        if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.lock = lock
@@ -624,7 +624,7 @@ class UnlockProofState(State):
             lock_encoded,
             secret: typing.Secret):
 
-        if not isinstance(secret, typing._Secret):
+        if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.merkle_proof = merkle_proof
@@ -731,10 +731,10 @@ class NettingChannelEndState(State):
     )
 
     def __init__(self, address: typing.Address, balance: typing.TokenAmount):
-        if not isinstance(address, typing._Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(balance, typing._TokenAmount):
+        if not isinstance(balance, typing.T_TokenAmount):
             raise ValueError('balance must be a token_amount isinstance')
 
         self.address = address
@@ -873,10 +873,10 @@ class TransactionChannelNewBalance(State):
             contract_balance: typing.TokenAmount,
             deposit_block_number: typing.BlockNumber,
     ):
-        if not isinstance(participant_address, typing._Address):
+        if not isinstance(participant_address, typing.T_Address):
             raise ValueError('participant_address must be of type address')
 
-        if not isinstance(contract_balance, typing._BlockNumber):
+        if not isinstance(contract_balance, typing.T_BlockNumber):
             raise ValueError('contract_balance must be of type block_number')
 
         self.participant_address = participant_address
