@@ -11,7 +11,7 @@ from raiden_contracts.contract_manager import ContractManager
 from web3 import Web3
 
 from raiden_libs.gevent_error_handler import register_error_handler
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 from raiden_libs.transport import MatrixTransport
 from pathfinder.utils.types import Address
 

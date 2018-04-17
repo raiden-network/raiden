@@ -269,19 +269,3 @@ class TokenNetwork:
             ))
 
         return result
-
-    #
-    # functions for persistence
-    #
-
-    def save_snapshot(self, filename):
-        """ Serializes the token network so it doesn't need to sync from scratch when
-        the snapshot is loaded.
-
-        We probably need to save the lasts synced block here. """
-        pass
-
-    @staticmethod
-    def load_snapshot(filename):
-        """ Deserializes the token network so it doesn't need to sync from scratch """
-        pass

@@ -12,7 +12,7 @@ from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.utils.types import Address
 

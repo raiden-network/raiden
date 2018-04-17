@@ -4,7 +4,7 @@ import pytest
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
 
 from pathfinder.utils.types import Address
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ from eth_utils import to_normalized_address, to_hex
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.lock import Lock
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 from pathfinder.utils.types import Address
 from pathfinder.tests.fixtures.network_service import forge_fee_signature
 
