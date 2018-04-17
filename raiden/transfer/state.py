@@ -873,10 +873,10 @@ class TransactionChannelNewBalance(State):
             contract_balance: typing.TokenAmount,
             deposit_block_number: typing.BlockNumber,
     ):
-        if not isinstance(participant_address, typing.Address):
+        if not isinstance(participant_address, typing._Address):
             raise ValueError('participant_address must be of type address')
 
-        if not isinstance(contract_balance, typing.BlockNumber):
+        if not isinstance(contract_balance, typing._BlockNumber):
             raise ValueError('contract_balance must be of type block_number')
 
         self.participant_address = participant_address
