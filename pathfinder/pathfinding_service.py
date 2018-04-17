@@ -11,7 +11,7 @@ from raiden_contracts.contract_manager import ContractManager
 from web3 import Web3
 
 from raiden_libs.gevent_error_handler import register_error_handler
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 from raiden_libs.transport import MatrixTransport
 from pathfinder.utils.types import Address
 
@@ -182,11 +182,5 @@ class PathfindingService(gevent.Greenlet):
     def create_token_network_for_address(self, token_network_address: Address):
         log.info(f'Following token network at {token_network_address}')
 
-        contract = self.web3.eth.contract(
-            token_network_address,
-            abi=self.contract_manager.get_contract_abi('TokenNetwork')
-        )
-
-        token_network = TokenNetwork(contract)
-
+        token_network = TokenNetwork(token_network_address)
         self.token_networks[token_network_address] = token_network

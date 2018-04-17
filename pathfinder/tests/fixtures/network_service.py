@@ -13,7 +13,7 @@ from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 from pathfinder.utils.types import Address
 
 

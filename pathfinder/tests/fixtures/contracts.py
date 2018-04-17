@@ -4,7 +4,7 @@ import pytest
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
 
 from pathfinder.utils.types import Address
-from pathfinder.token_network import TokenNetwork
+from pathfinder.model.token_network import TokenNetwork
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def token_networks(
             decimals=18,
             token_name=f'TestToken{i}',
             token_symbol=f'TT{i}'
-        ))
+        ).address)
         for i in range(4)
     ]
 
