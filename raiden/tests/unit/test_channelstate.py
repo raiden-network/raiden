@@ -1231,7 +1231,19 @@ def test_channel_withdraw_must_not_change_merkletree():
     assert is_valid, msg
 
     assert merkleroot(channel_state.partner_state.merkletree) == lock.lockhash
+    assert channel.is_lock_pending(channel_state.partner_state, lock.hashlock)
 
+    closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
+    state_change = ContractReceiveChannelClosed(
+        payment_network_identifier,
+        channel_state.token_address,
+        channel_state.identifier,
+        partner_model1.participant_address,
+        closed_block_number,
+    )
+    iteration = channel.handle_channel_closed(channel_state, state_change)
+
+    new_channel = iteration.new_state
     withdraw = ContractReceiveChannelWithdraw(
         payment_network_identifier,
         channel_state.token_address,
@@ -1239,7 +1251,8 @@ def test_channel_withdraw_must_not_change_merkletree():
         lock_secret,
         channel_state.our_state.address,
     )
-    iteration = channel.handle_channel_withdraw(channel_state, withdraw)
+    iteration = channel.handle_channel_withdraw(new_channel, withdraw)
 
     new_channel = iteration.new_state
     assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash
+    assert not channel.is_lock_pending(new_channel.partner_state, lock.hashlock)

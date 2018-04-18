@@ -68,7 +68,8 @@ TransactionOrder = namedtuple(
 
 def is_lock_pending(end_state, hashlock):
     """True if the `hashlock` corresponds to a lock that is pending withdraw
-    and didn't expire."""
+    and didn't expire.
+    """
     return (
         hashlock in end_state.hashlocks_to_lockedlocks or
         hashlock in end_state.hashlocks_to_unlockedlocks
@@ -1187,36 +1188,40 @@ def apply_channel_newbalance(channel_state, deposit_transaction):
 
 
 def handle_channel_withdraw(channel_state, state_change):
-    our_state = channel_state.our_state
-    partner_state = channel_state.partner_state
+    events = list()
 
-    hashlock = state_change.hashlock
-    secret = state_change.secret
+    # Withdraw is allowed by the smart contract only on a closed channel.
+    # Ignore the withdraw if the channel was not closed yet.
+    if get_status(channel_state) == CHANNEL_STATE_CLOSED:
+        our_state = channel_state.our_state
+        partner_state = channel_state.partner_state
 
-    our_withdraw = (
-        state_change.receiver == our_state.address and
-        is_lock_pending(partner_state, hashlock)
-    )
-    if our_withdraw:
-        _del_lock(partner_state, hashlock)
+        hashlock = state_change.hashlock
+        secret = state_change.secret
 
-    partner_withdraw = (
-        state_change.receiver == partner_state.address and
-        is_lock_pending(our_state, hashlock)
-    )
-    if partner_withdraw:
-        _del_lock(our_state, hashlock)
+        our_withdraw = (
+            state_change.receiver == our_state.address and
+            is_lock_pending(partner_state, hashlock)
+        )
+        if our_withdraw:
+            _del_lock(partner_state, hashlock)
 
-    # Withdraw is required if there was a refund in this channel, and the
-    # secret is learned from the withdraw event.
-    events = []
-    if is_lock_pending(our_state, hashlock):
-        lock = get_lock(our_state, hashlock)
-        proof = compute_proof_for_lock(our_state, secret, lock)
-        withdraw = ContractSendChannelWithdraw(channel_state.identifier, [proof])
-        events.append(withdraw)
+        partner_withdraw = (
+            state_change.receiver == partner_state.address and
+            is_lock_pending(our_state, hashlock)
+        )
+        if partner_withdraw:
+            _del_lock(our_state, hashlock)
 
-    register_secret(channel_state, secret, hashlock)
+        # Withdraw is required if there was a refund in this channel, and the
+        # secret is learned from the withdraw event.
+        if is_lock_pending(our_state, hashlock):
+            lock = get_lock(our_state, hashlock)
+            proof = compute_proof_for_lock(our_state, secret, lock)
+            withdraw = ContractSendChannelWithdraw(channel_state.identifier, [proof])
+            events.append(withdraw)
+
+        register_secret(channel_state, secret, hashlock)
 
     return TransitionResult(channel_state, events)
 
