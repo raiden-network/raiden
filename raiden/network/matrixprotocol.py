@@ -20,15 +20,28 @@ from raiden.exceptions import (
     UnknownAddress,
     UnknownTokenAddress,
 )
-from raiden.messages import (Ping, Processed, SignedMessage, decode as message_from_bytes,
-                             from_dict as message_from_dict)
-from raiden.network.matrix.matrix_client import GMatrixClient
+from raiden.messages import (
+    Ping,
+    Processed,
+    SignedMessage,
+    decode as message_from_bytes,
+    from_dict as message_from_dict
+)
 from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNREACHABLE
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.udp_message_handler import on_udp_message
-from raiden.utils import (address_encoder, data_decoder, data_encoder, eth_sign_sha3, isaddress,
-                          pex, sha3, typing, address_decoder)
-from raiden.utils.typing import Address
+from raiden.utils import (
+    address_decoder,
+    address_encoder,
+    data_decoder,
+    data_encoder,
+    eth_sign_sha3,
+    isaddress,
+    pex,
+    sha3,
+    typing
+)
+from raiden_libs.network.matrix import GMatrixClient
 
 
 log = slogging.get_logger(__name__)
@@ -49,7 +62,7 @@ class RaidenMatrixProtocol:
     _room_prefix = 'raiden'
     _room_sep = '_'
 
-    def __init__(self, raiden: 'raiden.raiden_service.RaidenService'):
+    def __init__(self, raiden: 'raiden_service.RaidenService'):
         self.raiden = raiden
         self._server_name = self.raiden.config['matrix']['server']
         self.client = GMatrixClient(self._server_name)
@@ -57,6 +70,8 @@ class RaidenMatrixProtocol:
         self._senthashes_to_states = dict()
         self._receivedhashes_to_processedmessages = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._userids_to_address: Dict[str, str] = dict()
+        self._address_to_roomid_cache: Dict[typing.Address, str] = dict()
 
     @property
     def network_name(self):
@@ -87,8 +102,8 @@ class RaidenMatrixProtocol:
                     token=token,
                 )
                 break
-            except MatrixRequestError as e:
-                if e.code != 403:
+            except MatrixRequestError as ex:
+                if ex.code != 403:
                     raise
                 log.debug(
                     'Could not login. Trying register',
@@ -104,8 +119,8 @@ class RaidenMatrixProtocol:
                         token=token,
                     )
                     break
-                except MatrixRequestError as e:
-                    if e.code != 400:
+                except MatrixRequestError as ex:
+                    if ex.code != 400:
                         raise
                     log.debug('Username taken. Continuing')
                     continue
@@ -128,21 +143,23 @@ class RaidenMatrixProtocol:
         )
         self.client.get_user(user['user_id']).set_display_name(name)
 
-        # TODO: get initial rooms from config
         default_rooms = self.raiden.config['matrix']['default_rooms']
         for room_name in default_rooms.keys():
             try:
                 self.client.join_room(room_name)
             except MatrixRequestError as ex:
-                if ex.code == 404:
-                    # Room doesn't exist
-                    alias, *_ = room_name.partition(':')
-                    alias = alias.replace('#', '')
-                    self.client.create_room(alias, is_public=True)
+                if ex.code != 404:
+                    raise
+                # Room doesn't exist
+                alias, *_ = room_name.partition(':')
+                alias = alias.replace('#', '')
+                self.client.create_room(alias, is_public=True)
 
         for room_id, room in self.client.get_rooms().items():
             self._ensure_room_alias(room)
             should_listen = True
+            # Some rooms are used for non-membership purposes (e.g. presence etc.) and
+            # don't need to be listened on
             if room.canonical_alias and default_rooms.get(room.canonical_alias) is False:
                 should_listen = False
             if should_listen:
@@ -152,13 +169,15 @@ class RaidenMatrixProtocol:
                 room_id=room_id,
                 aliases=room.aliases
             )
-            # TODO: add room monitoring to invite coming users peers that matches
-            # any room we participate in
+            # TODO: add room monitoring to invite users coming online that match any room we
+            # participate in
+            # @andre: please clarify that above todo.
 
         self.client.add_invite_listener(self._handle_invite)
         self.client.add_presence_listener(self._handle_presence_change)
-        self.client.start_listener_thread(exception_handler=lambda ex: None)  # greenlet "thread"
-        # TODO: Add greenlet that regularly updates our presence state
+        # TODO: Add (better) error handling strategy
+        self.client.start_listener_thread(exception_handler=lambda e: None)
+        # TODO: Add greenlet that regularly refreshes our presence state
         self.client.set_presence_state(UserPresence.ONLINE.value)
 
     def start_health_check(self, node_address):
@@ -166,7 +185,7 @@ class RaidenMatrixProtocol:
             user
             for user
             in self.client.search_user_directory(address_encoder(node_address))
-            if _validate_signature(user)
+            if _validate_userid_signature(user)
         ]
         existing = {presence['user_id'] for presence in self.client.get_presence_list()}
         user_ids = {u.user_id for u in users} - existing
@@ -199,32 +218,35 @@ class RaidenMatrixProtocol:
 
         user = self.client.get_user(sender_id)
 
-        try:
-            # recover displayname signature
-            addr_display = signing.recover(
-                sender_id.encode(),
-                signature=data_decoder(user.get_display_name()),
-                hasher=eth_sign_sha3
-            )
-        except AssertionError:
-            log.warning('INVALID MESSAGE', sender_id=sender_id)
-            return
-        if address_encoder(addr_display).lower() not in sender_id:
-            log.warning(
-                'INVALID SIGNATURE',
-                peer_address=address_encoder(addr_display),
-                sender_id=sender_id
-            )
-            return
+        addr_display = self._userids_to_address.get(sender_id)
+        if not addr_display:
+            try:
+                # recover displayname signature
+                addr_display = signing.recover(
+                    sender_id.encode(),
+                    signature=data_decoder(user.get_display_name()),
+                    hasher=eth_sign_sha3
+                )
+            except AssertionError:
+                log.warning('INVALID MESSAGE', sender_id=sender_id)
+                return
+            if address_encoder(addr_display).lower() not in sender_id:
+                log.warning(
+                    'INVALID SIGNATURE',
+                    peer_address=address_encoder(addr_display),
+                    sender_id=sender_id
+                )
+                return
+            self._userids_to_address[sender_id] = addr_display
 
         data = event['content']['body']
         if data.startswith('0x'):
             message = message_from_bytes(data_decoder(data))
-        else:  # json
+        else:
             message = message_from_dict(json.loads(data))
 
         if isinstance(message, SignedMessage) and not message.sender:
-            # FIXME: This also can't be right
+            # FIXME: This can't be right
             message.sender = addr_display
 
         echohash = sha3(data.encode() + self.raiden.address)
@@ -294,9 +316,9 @@ class RaidenMatrixProtocol:
                 message.sender,
                 processed_message,
             )
-        except (InvalidAddress, UnknownAddress, UnknownTokenAddress) as e:
+        except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             if is_debug_log_enabled:
-                log.warn(str(e))
+                log.warn('Exception while processing message', exc_info=True)
         else:
             if is_debug_log_enabled:
                 log.debug(
@@ -368,6 +390,15 @@ class RaidenMatrixProtocol:
             wait_processed.async_result.set(False)
 
     def _get_room_for_address(self, receiver_address: typing.Address) -> Room:
+        room_id = self._address_to_roomid_cache.get(receiver_address)
+        if room_id:
+            room = self.client.rooms.get(room_id)
+            if room:
+                return room
+            else:
+                # Room is gone - remove from cache
+                self._address_to_roomid_cache.pop(receiver_address)
+
         room_name = self._room_sep.join(
             [self._room_prefix, self.network_name] +
             [
@@ -391,7 +422,7 @@ class RaidenMatrixProtocol:
                 raise ValueError('No candidates found for given address: {}'.format(address))
 
             # filter candidates
-            peers = [user for user in candidates if _validate_signature(user)]
+            peers = [user for user in candidates if _validate_userid_signature(user)]
             if not peers:
                 raise ValueError('No valid peer found for given address: {}'.format(address))
 
@@ -402,10 +433,12 @@ class RaidenMatrixProtocol:
             )
             offline_peers = [
                 user for user in peers
-                if self._userid_to_presence[user.user_id] is UserPresence.OFFLINE
+                if self._userid_to_presence.get(user.user_id) is UserPresence.OFFLINE
             ]
             if offline_peers:
                 log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
+
+        self._address_to_roomid_cache[receiver_address] = room.room_id
 
         return room
 
@@ -430,6 +463,8 @@ class RaidenMatrixProtocol:
             state=state
         )
         self._userid_to_presence[user_id] = state
+        # User should be re-validated after presence change
+        self._userids_to_address.pop(user_id, None)
         try:
             state_change = ActionChangeNodeNetworkState(
                 # FIXME: This should probably use ecrecover instead
@@ -446,10 +481,10 @@ class RaidenMatrixProtocol:
 
     @staticmethod
     def _address_from_user_id(user_id):
-        return Address(address_decoder(user_id.partition(':')[0].replace('@', '')))
+        return address_decoder(user_id.partition(':')[0].replace('@', ''))
 
 
-def _validate_signature(user: User) -> bool:
+def _validate_userid_signature(user: User) -> bool:
     # display_name should be an address present in the user_id
     recovered = signing.recover(
         user.user_id.encode(),
