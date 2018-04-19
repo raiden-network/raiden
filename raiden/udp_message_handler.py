@@ -33,7 +33,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 def handle_message_secretrequest(raiden: 'RaidenService', message: SecretRequest):
     secret_request = ReceiveSecretRequest(
-        message.identifier,
+        message.payment_identifier,
         message.amount,
         message.secrethash,
         message.sender,
@@ -103,7 +103,7 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     direct_transfer = ReceiveTransferDirect(
         payment_network_identifier,
         token_address,
-        message.identifier,
+        message.payment_identifier,
         balance_proof,
     )
 

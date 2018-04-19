@@ -58,7 +58,7 @@ def sanity_check(payment_state: InitiatorPaymentState):
 
 def events_for_cancel_current_route(transfer_description) -> typing.List[Event]:
     unlock_failed = EventUnlockFailed(
-        identifier=transfer_description.identifier,
+        identifier=transfer_description.payment_identifier,
         secrethash=transfer_description.secrethash,
         reason='route was canceled',
     )
@@ -84,14 +84,15 @@ def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
         channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
-
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
             state_change.routes,
             state_change.transfer,
+            pseudo_random_generator,
             block_number,
         )
 
@@ -109,9 +110,9 @@ def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
-
     events = list()
     if can_cancel(payment_state):
         transfer_description = payment_state.initiator.transfer_description
@@ -123,6 +124,7 @@ def handle_cancelroute(
             channelidentifiers_to_channels,
             state_change.routes,
             transfer_description,
+            pseudo_random_generator,
             block_number,
         )
 
@@ -147,7 +149,7 @@ def handle_cancelpayment(payment_state: InitiatorPaymentState) -> TransitionResu
     cancel_events = cancel_current_route(payment_state)
 
     cancel = EventTransferSentFailed(
-        identifier=transfer_description.identifier,
+        identifier=transfer_description.payment_identifier,
         reason='user canceled transfer',
     )
     cancel_events.append(cancel)
@@ -159,6 +161,7 @@ def handle_transferrefund(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -205,7 +208,7 @@ def handle_transferrefund(
         if is_valid:
             old_description = payment_state.initiator.transfer_description
             transfer_description = TransferDescriptionWithSecretState(
-                old_description.identifier,
+                old_description.payment_identifier,
                 old_description.amount,
                 old_description.registry,
                 old_description.token,
@@ -219,6 +222,7 @@ def handle_transferrefund(
                 payment_state,
                 state_change,
                 channelidentifiers_to_channels,
+                pseudo_random_generator,
                 block_number,
             )
 
@@ -235,14 +239,15 @@ def handle_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator,
 ) -> TransitionResult:
-
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
     sub_iteration = initiator.handle_secretreveal(
         payment_state.initiator,
         state_change,
         channel_state,
+        pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
     return iteration
@@ -252,16 +257,17 @@ def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        addresses_to_queues: typing.UnorderedMessageQueue,
+        addresses_to_queues,
+        pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
-
     # pylint: disable=unidiomatic-typecheck
     if type(state_change) == ActionInitInitiator:
         iteration = handle_init(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
@@ -275,6 +281,7 @@ def state_transition(
             payment_state.initiator,
             state_change,
             partner_message_queue,
+            pseudo_random_generator,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
     elif type(state_change) == ActionCancelRoute:
@@ -282,6 +289,7 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
@@ -289,6 +297,7 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ActionCancelPayment:
@@ -300,6 +309,7 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
+            pseudo_random_generator,
         )
     else:
         iteration = TransitionResult(payment_state, list())

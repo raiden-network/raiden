@@ -4,7 +4,10 @@ from binascii import unhexlify
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import (
+    UINT256_MAX,
+    UINT64_MAX,
+)
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages, signing
 from raiden.encoding.signing import recover_publickey_safe
@@ -32,7 +35,7 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
     if nonce <= 0:
         raise ValueError('nonce cannot be zero or negative')
 
-    if nonce >= 2 ** 64:
+    if nonce > UINT64_MAX:
         raise ValueError('nonce is too large')
 
     if len(channel) != 20:
@@ -48,12 +51,12 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
         raise ValueError('locksroot must have length 32')
 
 
-def assert_transfer_values(identifier, token, recipient):
-    if identifier < 0:
-        raise ValueError('identifier cannot be negative')
+def assert_transfer_values(payment_identifier, token, recipient):
+    if payment_identifier < 0:
+        raise ValueError('payment_identifier cannot be negative')
 
-    if identifier >= 2 ** 64:
-        raise ValueError('identifier is too large')
+    if payment_identifier > UINT64_MAX:
+        raise ValueError('payment_identifier is too large')
 
     if len(token) != 20:
         raise ValueError('token is an invalid address')
@@ -245,26 +248,26 @@ class Processed(Message):
     """
     cmdid = messages.PROCESSED
 
-    def __init__(self, sender, echo):
+    def __init__(self, sender, processed_message_identifier):
         super().__init__()
         self.sender = sender
-        self.echo = echo
+        self.processed_message_identifier = processed_message_identifier
 
     @staticmethod
     def unpack(packed):
         return Processed(
             packed.sender,
-            packed.echo,
+            packed.processed_message_identifier,
         )
 
     def pack(self, packed):
-        packed.echo = self.echo
+        packed.processed_message_identifier = self.processed_message_identifier
         packed.sender = self.sender
 
     def __repr__(self):
-        return '<{} [echohash:{}]>'.format(
+        return '<{} [processed_msgid:{}]>'.format(
             self.__class__.__name__,
-            pex(self.echo),
+            self.processed_message_identifier,
         )
 
 
@@ -291,15 +294,18 @@ class SecretRequest(SignedMessage):
     """ Requests the secret which unlocks a secrethash. """
     cmdid = messages.SECRETREQUEST
 
-    def __init__(self, identifier, secrethash, amount):
+    def __init__(self, message_identifier, payment_identifier, secrethash, amount):
         super().__init__()
-        self.identifier = identifier
+        self.message_identifier = message_identifier
+        self.payment_identifier = payment_identifier
         self.secrethash = secrethash
         self.amount = amount
 
     def __repr__(self):
-        return '<{} [secrethash:{} amount:{} hash:{}]>'.format(
+        return '<{} [msgid:{} paymentid:{} secrethash:{} amount:{} hash:{}]>'.format(
             self.__class__.__name__,
+            self.message_identifier,
+            self.payment_identifier,
             pex(self.secrethash),
             self.amount,
             pex(self.hash),
@@ -307,12 +313,18 @@ class SecretRequest(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret_request = SecretRequest(packed.identifier, packed.secrethash, packed.amount)
+        secret_request = SecretRequest(
+            packed.message_identifier,
+            packed.payment_identifier,
+            packed.secrethash,
+            packed.amount,
+        )
         secret_request.signature = packed.signature
         return secret_request
 
     def pack(self, packed):
-        packed.identifier = self.identifier
+        packed.message_identifier = self.message_identifier
+        packed.payment_identifier = self.payment_identifier
         packed.secrethash = self.secrethash
         packed.amount = self.amount
         packed.signature = self.signature
@@ -320,14 +332,16 @@ class SecretRequest(SignedMessage):
     @staticmethod
     def from_event(event):
         return SecretRequest(
-            event.identifier,
+            event.message_identifier,
+            event.payment_identifier,
             event.secrethash,
             event.amount,
         )
 
     def to_dict(self):
         return {
-            'identifier': self.identifier,
+            'message_identifier': self.message_identifier,
+            'payment_identifier': self.payment_identifier,
             'secrethash': self.secrethash.hex(),
             'amount': self.amount,
         }
@@ -335,7 +349,8 @@ class SecretRequest(SignedMessage):
     @staticmethod
     def from_dict(data):
         return SecretRequest(
-            data['identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
             unhexlify(data['secrethash']),
             data['amount'],
         )
@@ -352,12 +367,14 @@ class Secret(EnvelopeMessage):
 
     def __init__(
             self,
-            identifier,
+            message_identifier,
+            payment_identifier,
             nonce,
             channel,
             transferred_amount,
             locksroot,
-            secret):
+            secret,
+    ):
         super().__init__()
 
         assert_envelope_values(
@@ -367,16 +384,17 @@ class Secret(EnvelopeMessage):
             locksroot,
         )
 
-        if identifier < 0:
-            raise ValueError('identifier cannot be negative')
+        if payment_identifier < 0:
+            raise ValueError('payment_identifier cannot be negative')
 
-        if identifier >= 2 ** 64:
-            raise ValueError('identifier is too large')
+        if payment_identifier >= 2 ** 64:
+            raise ValueError('payment_identifier is too large')
 
         if len(secret) != 32:
             raise ValueError('secret must have 32 bytes')
 
-        self.identifier = identifier
+        self.message_identifier = message_identifier
+        self.payment_identifier = payment_identifier
         self.secret = secret
         self.nonce = nonce
         self.channel = channel
@@ -386,10 +404,12 @@ class Secret(EnvelopeMessage):
 
     def __repr__(self):
         return (
-            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
+            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} '
             'hash:{} secrethash:{}]>'
         ).format(
             self.__class__.__name__,
+            self.message_identifier,
+            self.payment_identifier,
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
@@ -407,7 +427,8 @@ class Secret(EnvelopeMessage):
     @staticmethod
     def unpack(packed):
         secret = Secret(
-            packed.identifier,
+            packed.message_identifier,
+            packed.payment_identifier,
             packed.nonce,
             packed.channel,
             packed.transferred_amount,
@@ -418,7 +439,8 @@ class Secret(EnvelopeMessage):
         return secret
 
     def pack(self, packed):
-        packed.identifier = self.identifier
+        packed.message_identifier = self.message_identifier
+        packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -429,7 +451,8 @@ class Secret(EnvelopeMessage):
     @staticmethod
     def from_event(event):
         return Secret(
-            event.identifier,
+            event.message_identifier,
+            event.payment_identifier,
             event.balance_proof.nonce,
             event.balance_proof.channel_address,
             event.balance_proof.transferred_amount,
@@ -439,7 +462,8 @@ class Secret(EnvelopeMessage):
 
     def to_dict(self):
         return {
-            'identifier': self.identifier,
+            'message_identifier': self.message_identifier,
+            'payment_identifier': self.payment_identifier,
             'secret': self.secret.hex(),
             'nonce': self.nonce,
             'channel': self.channel.hex(),
@@ -451,7 +475,8 @@ class Secret(EnvelopeMessage):
     @staticmethod
     def from_dict(data):
         message = Secret(
-            data['identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
             unhexlify(data['secret']),
             data['nonce'],
             unhexlify(data['channel']),
@@ -472,14 +497,16 @@ class RevealSecret(SignedMessage):
     """
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, secret):
+    def __init__(self, message_identifier, secret):
         super().__init__()
+        self.message_identifier = message_identifier
         self.secret = secret
         self._secrethash = None
 
     def __repr__(self):
-        return '<{} [secrethash:{} hash:{}]>'.format(
+        return '<{} [msgid:{} secrethash:{} hash:{}]>'.format(
             self.__class__.__name__,
+            self.message_identifier,
             pex(self.secrethash),
             pex(self.hash),
         )
@@ -492,28 +519,37 @@ class RevealSecret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        reveal_secret = RevealSecret(packed.secret)
+        reveal_secret = RevealSecret(
+            packed.message_identifier,
+            packed.secret,
+        )
         reveal_secret.signature = packed.signature
         return reveal_secret
 
     def pack(self, packed):
+        packed.message_identifier = self.message_identifier
         packed.secret = self.secret
         packed.signature = self.signature
 
     @staticmethod
     def from_event(event):
         return RevealSecret(
+            event.message_identifier,
             event.secret,
         )
 
     def to_dict(self):
         return {
+            'message_identifier': self.message_identifier,
             'secret': self.secret.hex(),
         }
 
     @staticmethod
     def from_dict(data):
-        return RevealSecret(unhexlify(data['secret']))
+        return RevealSecret(
+            data['message_identifier'],
+            unhexlify(data['secret']),
+        )
 
 
 class DirectTransfer(EnvelopeMessage):
@@ -545,7 +581,8 @@ class DirectTransfer(EnvelopeMessage):
 
     def __init__(
             self,
-            identifier,
+            message_identifier,
+            payment_identifier,
             nonce,
             token,
             channel,
@@ -559,10 +596,11 @@ class DirectTransfer(EnvelopeMessage):
             transferred_amount,
             locksroot,
         )
-        assert_transfer_values(identifier, token, recipient)
+        assert_transfer_values(payment_identifier, token, recipient)
 
         super().__init__()
-        self.identifier = identifier
+        self.message_identifier = message_identifier
+        self.payment_identifier = payment_identifier
         self.nonce = nonce
         self.token = token
         self.channel = channel
@@ -573,7 +611,8 @@ class DirectTransfer(EnvelopeMessage):
     @staticmethod
     def unpack(packed):
         transfer = DirectTransfer(
-            packed.identifier,
+            packed.message_identifier,
+            packed.payment_identifier,
             packed.nonce,
             packed.token,
             packed.channel,
@@ -586,7 +625,8 @@ class DirectTransfer(EnvelopeMessage):
         return transfer
 
     def pack(self, packed):
-        packed.identifier = self.identifier
+        packed.message_identifier = self.message_identifier
+        packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.token = self.token
         packed.channel = self.channel
@@ -600,7 +640,8 @@ class DirectTransfer(EnvelopeMessage):
         balance_proof = event.balance_proof
 
         return DirectTransfer(
-            event.identifier,
+            event.message_identifier,
+            event.payment_identifier,
             balance_proof.nonce,
             event.token,
             balance_proof.channel_address,
@@ -611,23 +652,26 @@ class DirectTransfer(EnvelopeMessage):
 
     def __repr__(self):
         representation = (
-            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} id:{}]>'
+            '<{} ['
+            'msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} hash:{}'
+            ']>'
         ).format(
             self.__class__.__name__,
+            self.message_identifier,
+            self.payment_identifier,
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
             pex(self.locksroot),
             pex(self.hash),
-            self.identifier,
         )
 
         return representation
 
     def to_dict(self):
         return {
-            'identifier': self.identifier,
+            'message_identifier': self.message_identifier,
+            'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
             'token': self.token.hex(),
             'channel': self.channel.hex(),
@@ -640,7 +684,8 @@ class DirectTransfer(EnvelopeMessage):
     @staticmethod
     def from_dict(data):
         message = DirectTransfer(
-            data['identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
             data['nonce'],
             unhexlify(data['token']),
             unhexlify(data['channel']),
@@ -760,7 +805,8 @@ class LockedTransferBase(EnvelopeMessage):
     """
     def __init__(
             self,
-            identifier,
+            message_identifier,
+            payment_identifier,
             nonce,
             token,
             channel,
@@ -777,9 +823,10 @@ class LockedTransferBase(EnvelopeMessage):
             locksroot,
         )
 
-        assert_transfer_values(identifier, token, recipient)
+        assert_transfer_values(payment_identifier, token, recipient)
 
-        self.identifier = identifier
+        self.message_identifier = message_identifier
+        self.payment_identifier = payment_identifier
         self.nonce = nonce
         self.token = token
         self.channel = channel
@@ -797,7 +844,8 @@ class LockedTransferBase(EnvelopeMessage):
         )
 
         locked_transfer = LockedTransferBase(
-            packed.identifier,
+            packed.message_identifier,
+            packed.payment_identifier,
             packed.nonce,
             packed.token,
             packed.channel,
@@ -810,7 +858,8 @@ class LockedTransferBase(EnvelopeMessage):
         return locked_transfer
 
     def pack(self, packed):
-        packed.identifier = self.identifier
+        packed.message_identifier = self.message_identifier
+        packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.token = self.token
         packed.channel = self.channel
@@ -829,7 +878,7 @@ class LockedTransferBase(EnvelopeMessage):
 class LockedTransfer(LockedTransferBase):
     """
     A LockedTransfer has a `target` address to which a chain of transfers shall
-    be established. Here the `haslock` is mandatory.
+    be established. Here the `secrethash` is mandatory.
 
     `fee` is the remaining fee a recipient shall use to complete the mediated transfer.
     The recipient can deduct his own fee from the amount and lower `fee` to the remaining fee.
@@ -850,7 +899,8 @@ class LockedTransfer(LockedTransferBase):
 
     def __init__(
             self,
-            identifier,
+            message_identifier,
+            payment_identifier,
             nonce,
             token,
             channel,
@@ -868,11 +918,12 @@ class LockedTransfer(LockedTransferBase):
         if len(initiator) != 20:
             raise ValueError('initiator is an invalid address')
 
-        if fee >= 2 ** 256:
+        if fee > UINT256_MAX:
             raise ValueError('fee is too large')
 
         super().__init__(
-            identifier,
+            message_identifier,
+            payment_identifier,
             nonce,
             token,
             channel,
@@ -888,16 +939,17 @@ class LockedTransfer(LockedTransferBase):
 
     def __repr__(self):
         representation = (
-            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} id:{} secrethash:{} expiration:{} amount:{}]>'
+            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} '
+            'hash:{} secrethash:{} expiration:{} amount:{}]>'
         ).format(
             self.__class__.__name__,
+            self.message_identifier,
+            self.payment_identifier,
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
             pex(self.locksroot),
             pex(self.hash),
-            self.identifier,
             pex(self.lock.secrethash),
             self.lock.expiration,
             self.lock.amount,
@@ -914,7 +966,8 @@ class LockedTransfer(LockedTransferBase):
         )
 
         mediated_transfer = LockedTransfer(
-            packed.identifier,
+            packed.message_identifier,
+            packed.payment_identifier,
             packed.nonce,
             packed.token,
             packed.channel,
@@ -930,7 +983,8 @@ class LockedTransfer(LockedTransferBase):
         return mediated_transfer
 
     def pack(self, packed):
-        packed.identifier = self.identifier
+        packed.message_identifier = self.message_identifier
+        packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.token = self.token
         packed.channel = self.channel
@@ -961,7 +1015,8 @@ class LockedTransfer(LockedTransferBase):
         fee = 0
 
         return LockedTransfer(
-            transfer.identifier,
+            event.message_identifier,
+            transfer.payment_identifier,
             balance_proof.nonce,
             transfer.token,
             balance_proof.channel_address,
@@ -976,7 +1031,8 @@ class LockedTransfer(LockedTransferBase):
 
     def to_dict(self):
         return {
-            'identifier': self.identifier,
+            'message_identifier': self.message_identifier,
+            'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
             'token': self.token.hex(),
             'channel': self.channel.hex(),
@@ -993,7 +1049,8 @@ class LockedTransfer(LockedTransferBase):
     @staticmethod
     def from_dict(data):
         message = LockedTransfer(
-            data['identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
             data['nonce'],
             unhexlify(data['token']),
             unhexlify(data['channel']),
@@ -1025,7 +1082,8 @@ class RefundTransfer(LockedTransfer):
         )
 
         locked_transfer = RefundTransfer(
-            packed.identifier,
+            packed.message_identifier,
+            packed.payment_identifier,
             packed.nonce,
             packed.token,
             packed.channel,
@@ -1051,7 +1109,8 @@ class RefundTransfer(LockedTransfer):
         fee = 0
 
         return RefundTransfer(
-            event.identifier,
+            event.payment_identifier,
+            event.message_identifier,
             balance_proof.nonce,
             event.token,
             balance_proof.channel_address,
@@ -1067,7 +1126,8 @@ class RefundTransfer(LockedTransfer):
     @staticmethod
     def from_dict(data):
         message = RefundTransfer(
-            data['identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
             data['nonce'],
             unhexlify(data['token']),
             unhexlify(data['channel']),

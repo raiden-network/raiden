@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 from ethereum.utils import normalize_address
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.tests.utils.messages import (
     SECRETHASHES_FOR_MERKLETREE,
@@ -35,6 +38,7 @@ def test_withdraw(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -47,8 +51,18 @@ def test_withdraw(
     secret = b'secretsecretsecretsecretsecretse'
     secrethash = sha3(secret)
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(channel0, new_block, new_block.block_number)
-    channel.state_transition(channel1, new_block, new_block.block_number)
+    channel.state_transition(
+        channel0,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
+    channel.state_transition(
+        channel1,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
     lock0 = Lock(lock_amount, lock_expiration, secrethash)
 
     mediated0 = make_mediated_transfer(
@@ -135,8 +149,10 @@ def test_withdraw_at_settlement_block(
     opened_block = nettingchannel.opened(sender=pkey0)
     nonce = 1 + (opened_block * (2 ** 32))
 
+    message_identifier = random.randint(0, UINT64_MAX)
     mediated0 = LockedTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=nonce,
         token=tester_token.address,
         channel=normalize_address(nettingchannel.address),
@@ -185,14 +201,25 @@ def test_withdraw_at_settlement_block(
 
 def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pseudo_random_generator = random.Random()
 
     lock_timeout = reveal_timeout + 5
     lock_expiration = tester_chain.block.number + lock_timeout
     secret = b'expiredlockexpiredlockexpiredloc'
     secrethash = sha3(secret)
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(channel0, new_block, new_block.block_number)
-    channel.state_transition(channel1, new_block, new_block.block_number)
+    channel.state_transition(
+        channel0,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
+    channel.state_transition(
+        channel1,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
     lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=secrethash)
 
     mediated0 = make_mediated_transfer(
@@ -241,6 +268,7 @@ def test_withdraw_both_participants(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -256,8 +284,18 @@ def test_withdraw_both_participants(
     lock10_expiration = tester_chain.block.number + settle_timeout - 2 * reveal_timeout
 
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(channel0, new_block, new_block.block_number)
-    channel.state_transition(channel1, new_block, new_block.block_number)
+    channel.state_transition(
+        channel0,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
+    channel.state_transition(
+        channel1,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
 
     # using the same secrethash and amount is intentional
     lock01 = Lock(lock_amount, lock01_expiration, secrethash)
@@ -344,12 +382,23 @@ def test_withdraw_both_participants(
 def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     """ A lock can be withdrawn only once, the second try must fail. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pseudo_random_generator = random.Random()
 
     lock_expiration = tester_chain.block.number + reveal_timeout + 5
     secret = b'secretsecretsecretsecretsecretse'
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(channel0, new_block, new_block.block_number)
-    channel.state_transition(channel1, new_block, new_block.block_number)
+    channel.state_transition(
+        channel0,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
+    channel.state_transition(
+        channel1,
+        new_block,
+        pseudo_random_generator,
+        new_block.block_number,
+    )
     lock = Lock(17, lock_expiration, sha3(secret))
 
     mediated0 = make_mediated_transfer(
@@ -606,6 +655,7 @@ def test_withdraw_lock_with_a_large_expiration(
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
+    pseudo_random_generator = random.Random()
 
     initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
@@ -615,7 +665,12 @@ def test_withdraw_lock_with_a_large_expiration(
 
     # work around for the python expiration validation
     bad_block_number = lock_expiration - 10
-    channel.state_transition(channel0, Block(bad_block_number), bad_block_number)
+    channel.state_transition(
+        channel0,
+        Block(bad_block_number),
+        pseudo_random_generator,
+        bad_block_number,
+    )
 
     lock_amount = 29
     secret = sha3(b'test_withdraw_lock_with_a_large_expiration')

@@ -62,6 +62,10 @@ def lockstate_from_lock(lock):
     )
 
 
+def message_identifier_from_prng(prng):
+    return prng.randint(0, UINT64_MAX)
+
+
 class NodeState(State):
     """ Umbrella object that stores all the node state.
     For each registry smart contract there must be a payment network. Within the
@@ -70,16 +74,19 @@ class NodeState(State):
 
     __slots__ = (
         'addresses_to_queues',
+        'pseudo_random_generator',
         'block_number',
+        'pseudo_random_generator',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
         'payment_mapping',
     )
 
-    def __init__(self, block_number: typing.BlockNumber):
+    def __init__(self, pseudo_random_generator, block_number: typing.BlockNumber):
         if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be a block_number')
 
+        self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
         self.addresses_to_queues = list()
         self.identifiers_to_paymentnetworks = dict()
@@ -96,6 +103,7 @@ class NodeState(State):
     def __eq__(self, other):
         return (
             isinstance(other, NodeState) and
+            self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.addresses_to_queues == other.addresses_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
@@ -843,7 +851,7 @@ class NettingChannelState(State):
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
-        self.ordered_message_queue: typing.OrderedMessageQueue = list()
+        self.ordered_message_queue = list()
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(

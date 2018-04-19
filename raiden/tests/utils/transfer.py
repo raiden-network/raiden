@@ -1,7 +1,10 @@
 """ Utilities to make and assert transfers. """
+import random
+
 import gevent
 from coincurve import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     DirectTransfer,
     LockedTransfer,
@@ -160,22 +163,25 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
     return secret
 
 
-def claim_lock(app_chain, identifier, token, secret):
+def claim_lock(app_chain, payment_identifier, token, secret):
     """ Unlock a pending transfer. """
     secrethash = sha3(secret)
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
 
+        message_identifier = random.randint(0, UINT64_MAX)
         unlock_lock = channel.send_unlock(
             from_channel,
-            identifier,
+            message_identifier,
+            payment_identifier,
             secret,
             secrethash,
         )
 
         secret_message = Secret(
-            unlock_lock.identifier,
+            unlock_lock.message_identifier,
+            unlock_lock.payment_identifier,
             unlock_lock.balance_proof.nonce,
             unlock_lock.balance_proof.channel_address,
             unlock_lock.balance_proof.transferred_amount,
@@ -314,11 +320,13 @@ def increase_transferred_amount(
     )
     assert distributable_from_to >= amount, 'operation would end up in a incosistent state'
 
-    identifier = 1
+    message_identifier = random.randint(0, UINT64_MAX)
+    payment_identifier = 1
     event = channel.send_directtransfer(
         from_channel,
         amount,
-        identifier,
+        payment_identifier,
+        message_identifier,
     )
 
     direct_transfer_message = DirectTransfer.from_event(event)
@@ -333,7 +341,7 @@ def increase_transferred_amount(
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
-        identifier,
+        payment_identifier,
         balance_proof,
     )
 
@@ -354,18 +362,20 @@ def make_direct_transfer_from_channel(
 ):
     """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`."""
-    identifier = channel.get_next_nonce(from_channel.our_state)
+    payment_identifier = channel.get_next_nonce(from_channel.our_state)
+    pseudo_random_generator = random.Random()
 
     state_change = ActionTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
         from_channel.partner_state.address,
-        identifier,
+        payment_identifier,
         amount,
     )
     iteration = channel.handle_send_directtransfer(
         from_channel,
         state_change,
+        pseudo_random_generator,
     )
     assert isinstance(iteration.events[0], SendDirectTransfer)
     direct_transfer_message = DirectTransfer.from_event(iteration.events[0])
@@ -381,7 +391,7 @@ def make_direct_transfer_from_channel(
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
-        identifier,
+        payment_identifier,
         balance_proof,
     )
 
@@ -404,14 +414,16 @@ def make_mediated_transfer(
 ):
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`."""
-    identifier = channel.get_next_nonce(from_channel.our_state)
+    payment_identifier = channel.get_next_nonce(from_channel.our_state)
+    message_identifier = random.randint(0, UINT64_MAX)
 
     lockedtransfer = channel.send_lockedtransfer(
         from_channel,
         initiator,
         target,
         lock.amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         lock.expiration,
         lock.secrethash,
     )

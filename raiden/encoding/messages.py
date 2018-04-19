@@ -40,7 +40,14 @@ log = slogging.get_logger(__name__)
 
 
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
-identifier = make_field('identifier', 8, '8s', integer(0, UINT64_MAX))
+payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
+message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
+processed_message_identifier = make_field(
+    'processed_message_identifier',
+    8,
+    '8s',
+    integer(0, UINT64_MAX),
+)
 expiration = make_field('expiration', 8, '8s', integer(0, UINT64_MAX))
 
 token = make_field('token', 20, '20s')
@@ -53,7 +60,6 @@ channel = make_field('channel', 20, '20s')
 locksroot = make_field('locksroot', 32, '32s')
 secrethash = make_field('secrethash', 32, '32s')
 secret = make_field('secret', 32, '32s')
-echo = make_field('echo', 32, '32s')
 transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
 amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
 fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
@@ -65,30 +71,31 @@ signature = make_field('signature', 65, '65s')
 Processed = namedbuffer(
     'processed',
     [
-        cmdid(PROCESSED),  # [0:1]
-        pad(3),      # [1:4]
+        cmdid(PROCESSED),
+        pad(3),
         sender,
-        echo,
+        processed_message_identifier,
     ]
 )
 
 Ping = namedbuffer(
     'ping',
     [
-        cmdid(PING),  # [0:1]
-        pad(3),       # [1:4]
-        nonce,        # [4:12]
-        signature,    # [12:77]
+        cmdid(PING),
+        pad(3),
+        nonce,
+        signature,
     ]
 )
 
 SecretRequest = namedbuffer(
     'secret_request',
     [
-        cmdid(SECRETREQUEST),  # [0:1]
-        pad(3),                # [1:4]
-        identifier,            # [4:12]
-        secrethash,              # [12:46]
+        cmdid(SECRETREQUEST),
+        pad(3),
+        message_identifier,
+        payment_identifier,
+        secrethash,
         amount,
         signature,
     ]
@@ -99,7 +106,8 @@ Secret = namedbuffer(
     [
         cmdid(SECRET),
         pad(3),
-        identifier,
+        message_identifier,
+        payment_identifier,
         secret,
         nonce,
         channel,
@@ -112,9 +120,10 @@ Secret = namedbuffer(
 RevealSecret = namedbuffer(
     'reveal_secret',
     [
-        cmdid(REVEALSECRET),  # [0:1]
-        pad(3),               # [1:4]
-        secret,               # [4:36]
+        cmdid(REVEALSECRET),
+        pad(3),
+        message_identifier,
+        secret,
         signature,
     ]
 )
@@ -125,7 +134,8 @@ DirectTransfer = namedbuffer(
         cmdid(DIRECTTRANSFER),
         pad(3),
         nonce,
-        identifier,
+        message_identifier,
+        payment_identifier,
         token,
         channel,
         recipient,
@@ -141,7 +151,8 @@ LockedTransfer = namedbuffer(
         cmdid(LOCKEDTRANSFER),
         pad(3),
         nonce,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         token,
         channel,
@@ -163,7 +174,8 @@ RefundTransfer = namedbuffer(
         cmdid(REFUNDTRANSFER),
         pad(3),
         nonce,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         token,
         channel,

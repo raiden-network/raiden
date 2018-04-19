@@ -249,21 +249,24 @@ class SendDirectTransfer(Event):
 
     def __init__(
             self,
-            identifier,
+            message_identifier,
+            payment_identifier,
             balance_proof,
             token,
             recipient):
 
-        self.identifier = identifier
+        self.message_identifier = message_identifier
+        self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
         self.token = token
         self.recipient = recipient
 
     def __repr__(self):
         return (
-            '<SendDirectTransfer identifier:{} balance_proof:{} token:{} recipient:{}>'
+            '<SendDirectTransfer msgid:{} paymentid:{} balance_proof:{} token:{} recipient:{}>'
         ).format(
-            self.identifier,
+            self.message_identifier,
+            self.payment_identifier,
             self.balance_proof,
             pex(self.token),
             pex(self.recipient),
@@ -272,7 +275,8 @@ class SendDirectTransfer(Event):
     def __eq__(self, other):
         return (
             isinstance(other, SendDirectTransfer) and
-            self.identifier == other.identifier and
+            self.message_identifier == other.message_identifier and
+            self.payment_identifier == other.payment_identifier and
             self.balance_proof == other.balance_proof and
             self.token == other.token and
             self.recipient == other.recipient

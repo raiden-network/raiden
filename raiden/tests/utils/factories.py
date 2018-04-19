@@ -6,6 +6,7 @@ import string
 
 from coincurve import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -211,7 +212,8 @@ def make_signed_transfer(
         target,
         expiration,
         secret,
-        identifier=1,
+        payment_identifier=1,
+        message_identifier=None,
         nonce=1,
         transferred_amount=0,
         recipient=UNIT_TRANSFER_TARGET,
@@ -221,6 +223,9 @@ def make_signed_transfer(
         sender=UNIT_TRANSFER_SENDER
 ):
 
+    if message_identifier is None:
+        message_identifier = random.randint(0, UINT64_MAX)
+
     secrethash = sha3(secret)
     lock = Lock(
         amount,
@@ -229,7 +234,8 @@ def make_signed_transfer(
     )
 
     transfer = LockedTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         token,
         channel_identifier,
@@ -308,14 +314,14 @@ def make_signed_transfer_for(
         target,
         expiration,
         secret,
-        identifier,
-        nonce,
-        transferred_amount,
-        recipient,
-        channel_address,
-        token_address,
-        pkey,
-        sender,
+        payment_identifier=identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        recipient=recipient,
+        channel_identifier=channel_address,
+        token=token_address,
+        pkey=pkey,
+        sender=sender,
     )
 
     # Do *not* register the transfer here

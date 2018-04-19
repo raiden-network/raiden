@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from raiden.constants import UINT64_MAX
 from raiden.utils import sha3
 from raiden.messages import (
     decode,
@@ -28,12 +29,14 @@ def test_ping(raiden_network):
     assert async_result.wait(2), 'The message was not processed'
 
     expected_echohash = sha3(ping_encoded + app1.raiden.address)
+    expected_messageid = int.from_bytes(expected_echohash, 'big') % UINT64_MAX
 
     messages_decoded = [decode(m) for m in messages]
     processed_message = next(
         decoded
         for decoded in messages_decoded
-        if isinstance(decoded, Processed) and decoded.echo == expected_echohash
+        if isinstance(decoded, Processed) and
+        decoded.processed_message_identifier == expected_messageid
     )
 
     # the ping message was sent and processed

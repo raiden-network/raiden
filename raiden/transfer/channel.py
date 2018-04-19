@@ -39,6 +39,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_UNUSABLE,
     EMPTY_MERKLE_ROOT,
     EMPTY_MERKLE_TREE,
+    message_identifier_from_prng,
     BalanceProofUnsignedState,
     HashTimeLockState,
     MerkleTreeState,
@@ -655,7 +656,7 @@ def compute_merkletree_without(merkletree, lockhash):
     return result
 
 
-def create_senddirecttransfer(channel_state, amount, identifier):
+def create_senddirecttransfer(channel_state, amount, message_identifier, payment_identifier):
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
@@ -665,7 +666,7 @@ def create_senddirecttransfer(channel_state, amount, identifier):
     msg = 'caller must make sure the channel is open'
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
-    our_balance_proof = our_state.balance_proof
+    our_balance_proof = channel_state.our_state.balance_proof
 
     if our_balance_proof:
         transferred_amount = amount + our_balance_proof.transferred_amount
@@ -686,7 +687,8 @@ def create_senddirecttransfer(channel_state, amount, identifier):
     )
 
     direct_transfer = SendDirectTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         balance_proof,
         token,
         recipient,
@@ -700,7 +702,8 @@ def create_sendlockedtransfer(
         initiator,
         target,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         secrethash):
 
@@ -746,7 +749,7 @@ def create_sendlockedtransfer(
     )
 
     locked_transfer = LockedTransferUnsignedState(
-        identifier,
+        payment_identifier,
         token,
         balance_proof,
         lock,
@@ -755,6 +758,7 @@ def create_sendlockedtransfer(
     )
 
     lockedtransfer = SendLockedTransfer(
+        message_identifier,
         locked_transfer,
         recipient,
     )
@@ -762,7 +766,7 @@ def create_sendlockedtransfer(
     return lockedtransfer, merkletree
 
 
-def create_unlock(channel_state, identifier, secret, lock):
+def create_unlock(channel_state, message_identifier, payment_identifier, secret, lock):
     msg = 'caller must make sure the lock is known'
     assert is_lock_pending(channel_state.our_state, lock.secrethash), msg
 
@@ -793,7 +797,8 @@ def create_unlock(channel_state, identifier, secret, lock):
     )
 
     unlock_lock = SendBalanceProof(
-        identifier,
+        message_identifier,
+        payment_identifier,
         token,
         recipient,
         secret,
@@ -803,11 +808,12 @@ def create_unlock(channel_state, identifier, secret, lock):
     return unlock_lock, merkletree
 
 
-def send_directtransfer(channel_state, amount, identifier):
+def send_directtransfer(channel_state, amount, message_identifier, payment_identifier):
     direct_transfer = create_senddirecttransfer(
         channel_state,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
     )
 
     channel_state.our_state.balance_proof = direct_transfer.balance_proof
@@ -821,28 +827,30 @@ def send_lockedtransfer(
         initiator,
         target,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         secrethash):
 
-    send_event, merkletree = create_sendlockedtransfer(
+    send_locked_transfer_event, merkletree = create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         secrethash,
     )
 
-    transfer = mediated_transfer.transfer
+    transfer = send_locked_transfer_event.transfer
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
-    channel_state.ordered_message_queue.append(mediated_transfer)
+    channel_state.ordered_message_queue.append(send_locked_transfer_event)
 
-    return mediated_transfer
+    return send_locked_transfer_event
 
 
 def send_refundtransfer(
@@ -850,7 +858,8 @@ def send_refundtransfer(
         initiator,
         target,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         secrethash):
 
@@ -862,7 +871,8 @@ def send_refundtransfer(
         initiator,
         target,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         expiration,
         secrethash,
     )
@@ -878,13 +888,14 @@ def send_refundtransfer(
     return refund_transfer
 
 
-def send_unlock(channel_state, identifier, secret, secrethash):
+def send_unlock(channel_state, message_identifier, payment_identifier, secret, secrethash):
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock
 
     unlock, merkletree = create_unlock(
         channel_state,
-        identifier,
+        message_identifier,
+        payment_identifier,
         secret,
         lock,
     )
@@ -943,11 +954,11 @@ def register_secret(channel_state, secret, secrethash):
     register_secret_endstate(partner_state, secret, secrethash)
 
 
-def handle_send_directtransfer(channel_state, state_change):
+def handle_send_directtransfer(channel_state, state_change, pseudo_random_generator):
     events = list()
 
     amount = state_change.amount
-    identifier = state_change.identifier
+    payment_identifier = state_change.payment_identifier
     distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
 
     is_open = get_status(channel_state) == CHANNEL_STATE_OPENED
@@ -955,24 +966,22 @@ def handle_send_directtransfer(channel_state, state_change):
     can_pay = amount <= distributable_amount
 
     if is_open and is_valid and can_pay:
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         direct_transfer = send_directtransfer(
             channel_state,
             amount,
-            identifier,
+            message_identifier,
+            payment_identifier,
         )
         events.append(direct_transfer)
     else:
         if not is_open:
-            failure = EventTransferSentFailed(
-                state_change.identifier,
-                'Channel is not opened',
-            )
+            failure = EventTransferSentFailed(payment_identifier, 'Channel is not opened')
             events.append(failure)
 
         elif not is_valid:
             msg = 'Transfer amount is invalid. Transfer: {}'.format(amount)
-
-            failure = EventTransferSentFailed(state_change.identifier, msg)
+            failure = EventTransferSentFailed(payment_identifier, msg)
             events.append(failure)
 
         elif not can_pay:
@@ -984,7 +993,7 @@ def handle_send_directtransfer(channel_state, state_change):
                 amount,
             )
 
-            failure = EventTransferSentFailed(state_change.identifier, msg)
+            failure = EventTransferSentFailed(payment_identifier, msg)
             events.append(failure)
 
     return TransitionResult(channel_state, events)
@@ -1013,14 +1022,14 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
         event = EventTransferReceivedSuccess(
-            direct_transfer.transfer_identifier,
+            direct_transfer.payment_identifier,
             transfer_amount,
             channel_state.partner_state.address,
         )
         events = [event]
     else:
         event = EventTransferReceivedInvalidDirectTransfer(
-            direct_transfer.transfer_identifier,
+            direct_transfer.payment_identifier,
             reason=msg,
         )
         events = [event]
@@ -1229,7 +1238,7 @@ def handle_channel_withdraw(channel_state, state_change):
     return TransitionResult(channel_state, events)
 
 
-def state_transition(channel_state, state_change, block_number):
+def state_transition(channel_state, state_change, pseudo_random_generator, block_number):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events = list()
@@ -1242,7 +1251,11 @@ def state_transition(channel_state, state_change, block_number):
         iteration = handle_action_close(channel_state, state_change, block_number)
 
     elif type(state_change) == ActionTransferDirect:
-        iteration = handle_send_directtransfer(channel_state, state_change)
+        iteration = handle_send_directtransfer(
+            channel_state,
+            state_change,
+            pseudo_random_generator,
+        )
 
     elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_channel_closed(channel_state, state_change)

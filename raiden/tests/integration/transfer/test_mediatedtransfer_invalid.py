@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 
 from raiden.api.python import RaidenAPI
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -90,11 +93,12 @@ def test_receive_lockedtransfer_invalidnonce(
     )
 
     amount = 10
-    identifier = 1
+    payment_identifier = 1
     repeated_nonce = 1
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
-        identifier=identifier,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
         nonce=repeated_nonce,
         token=token_address,
         channel=channel0.identifier,
@@ -138,7 +142,8 @@ def test_receive_lockedtransfer_invalidsender(
     amount = 10
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
-        identifier=1,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=1,
         nonce=1,
         token=token_address,
         channel=channel0.identifier,
@@ -178,12 +183,13 @@ def test_receive_lockedtransfer_invalidrecipient(
     token_address = token_addresses[0]
     channel0 = get_channelstate(app0, app1, token_address)
 
-    identifier = 1
+    payment_identifier = 1
     invalid_recipient = make_address()
     amount = 10
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
-        identifier=identifier,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
         nonce=1,
         token=token_address,
         channel=channel0.identifier,
@@ -236,10 +242,11 @@ def test_received_lockedtransfer_closedchannel(
 
     # Now receive one mediated transfer for the closed channel
     amount = 10
-    identifier = 1
+    payment_identifier = 1
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
-        identifier=identifier,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
         nonce=1,
         token=token_address,
         channel=channel0.identifier,

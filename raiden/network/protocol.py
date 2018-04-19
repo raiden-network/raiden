@@ -20,7 +20,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     RaidenShuttingDown,
 )
-from raiden.constants import UDP_MAX_MESSAGE_SIZE
+from raiden.constants import UDP_MAX_MESSAGE_SIZE, UINT64_MAX
 from raiden.messages import decode, Processed, Ping, SignedMessage
 from raiden.settings import CACHE_TTL
 from raiden.utils import isaddress, sha3, pex
@@ -39,7 +39,7 @@ healthcheck_log = slogging.get_logger(__name__ + '.healthcheck')
 ping_log = slogging.get_logger(__name__ + '.ping')
 
 # - async_result available for code that wants to block on message acknowledgment
-# - receiver_address used to tie back the echohash to the receiver (mainly for
+# - receiver_address used to tie back the message_id to the receiver (mainly for
 #   logging purposes)
 SentMessageState = namedtuple('SentMessageState', (
     'async_result',
@@ -493,12 +493,12 @@ class RaidenProtocol:
         self.greenlets = list()
         self.addresses_events = dict()
 
-        # Maps the echohash of received and *sucessfully* processed messages to
+        # Maps the message_id of received and *sucessfully* processed messages to
         # its `Processed` message, used to ignored duplicate messages and resend the
         # `Processed` message.
         self.receivedhashes_to_processedmessages = dict()
 
-        # Maps the echohash to a SentMessageState
+        # Maps the message_id to a SentMessageState
         self.senthashes_to_states = dict()
 
         # Maps the addresses to a dict with the latest nonce (using a dict
@@ -622,7 +622,7 @@ class RaidenProtocol:
         # replied with an Ack, adding the receiver address into the echohash to
         # avoid these collisions.
         messagedata = message.encode()
-        echohash = sha3(messagedata + receiver_address)
+        message_id = sha3(messagedata + receiver_address)
 
         if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
             raise ValueError(
@@ -633,9 +633,9 @@ class RaidenProtocol:
         token_address = getattr(message, 'token', b'')
 
         # Ignore duplicated messages
-        if echohash not in self.senthashes_to_states:
+        if message_id not in self.senthashes_to_states:
             async_result = AsyncResult()
-            self.senthashes_to_states[echohash] = SentMessageState(
+            self.senthashes_to_states[message_id] = SentMessageState(
                 async_result,
                 receiver_address,
             )
@@ -651,12 +651,12 @@ class RaidenProtocol:
                     to=pex(receiver_address),
                     node=pex(self.raiden.address),
                     message=message,
-                    echohash=pex(echohash),
+                    message_id=message_id,
                 )
 
             queue.put(messagedata)
         else:
-            wait_processed = self.senthashes_to_states[echohash]
+            wait_processed = self.senthashes_to_states[message_id]
             async_result = wait_processed.async_result
 
         return async_result
@@ -675,15 +675,14 @@ class RaidenProtocol:
             raise ValueError('Use _maybe_send_processed only for `Processed` messages')
 
         messagedata = processed_message.encode()
+        message_id = processed_message.processed_message_identifier
 
-        self.receivedhashes_to_processedmessages[processed_message.echo] = (
+        self.receivedhashes_to_processedmessages[message_id] = (
             receiver_address,
             messagedata
         )
 
-        self._maybe_send_processed(
-            *self.receivedhashes_to_processedmessages[processed_message.echo]
-        )
+        self._maybe_send_processed(*self.receivedhashes_to_processedmessages[message_id])
 
     def _maybe_send_processed(self, receiver_address, messagedata):
         """ `Processed` messages must not go into the queue, otherwise nodes will deadlock
@@ -726,15 +725,16 @@ class RaidenProtocol:
         """
         host_port = self.get_host_port(receiver_address)
         echohash = sha3(data + receiver_address)
+        message_id = int.from_bytes(echohash, 'big') % UINT64_MAX
 
-        if echohash not in self.senthashes_to_states:
+        if message_id not in self.senthashes_to_states:
             async_result = AsyncResult()
-            self.senthashes_to_states[echohash] = SentMessageState(
+            self.senthashes_to_states[message_id] = SentMessageState(
                 async_result,
                 receiver_address,
             )
         else:
-            async_result = self.senthashes_to_states[echohash].async_result
+            async_result = self.senthashes_to_states[message_id].async_result
 
         if not async_result.ready():
             self.transport.send(
@@ -756,8 +756,10 @@ class RaidenProtocol:
 
         # Repeat the 'PROCESSED' message if the message has been handled before
         echohash = sha3(data + self.raiden.address)
-        if echohash in self.receivedhashes_to_processedmessages:
-            self._maybe_send_processed(*self.receivedhashes_to_processedmessages[echohash])
+        message_id = int.from_bytes(echohash, 'big') % UINT64_MAX
+
+        if message_id in self.receivedhashes_to_processedmessages:
+            self._maybe_send_processed(*self.receivedhashes_to_processedmessages[message_id])
             return
 
         message = decode(data)
@@ -766,10 +768,10 @@ class RaidenProtocol:
             self.receive_processed(message)
 
         elif isinstance(message, Ping):
-            self.receive_ping(message, echohash)
+            self.receive_ping(message, message_id)
 
         elif isinstance(message, SignedMessage):
-            self.receive_message(message, echohash)
+            self.receive_message(message, message_id)
 
         elif log.isEnabledFor(logging.ERROR):
             log.error(
@@ -778,41 +780,38 @@ class RaidenProtocol:
             )
 
     def receive_processed(self, processed):
-        waitprocessed = self.senthashes_to_states.get(processed.echo)
+        waitprocessed = self.senthashes_to_states.get(processed.processed_message_identifier)
 
         if waitprocessed is None:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    '`Processed` MESSAGE UNKNOWN ECHO',
+                    'PROCESSED FOR UNKNOWN',
                     node=pex(self.raiden.address),
-                    echohash=pex(processed.echo),
+                    message_id=processed.processed_message_identifier,
                 )
 
         else:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    '`Processed` MESSAGE RECEIVED',
+                    'PROCESSED RECEIVED',
                     node=pex(self.raiden.address),
                     receiver=pex(waitprocessed.receiver_address),
-                    echohash=pex(processed.echo),
+                    message_id=processed.processed_message_identifier,
                 )
 
             waitprocessed.async_result.set(True)
 
-    def receive_ping(self, ping, echohash):
+    def receive_ping(self, ping, message_id):
         if ping_log.isEnabledFor(logging.DEBUG):
             ping_log.debug(
                 'PING RECEIVED',
                 node=pex(self.raiden.address),
-                echohash=pex(echohash),
+                message_id=message_id,
                 message=ping,
                 sender=pex(ping.sender),
             )
 
-        processed_message = Processed(
-            self.raiden.address,
-            echohash,
-        )
+        processed_message = Processed(self.raiden.address, message_id)
 
         try:
             self.maybe_send_processed(
@@ -822,14 +821,14 @@ class RaidenProtocol:
         except (InvalidAddress, UnknownAddress) as e:
             log.debug("Couldn't send the `Processed` message", e=e)
 
-    def receive_message(self, message, echohash):
+    def receive_message(self, message, message_id):
         is_debug_log_enabled = log.isEnabledFor(logging.DEBUG)
 
         if is_debug_log_enabled:
             log.info(
                 'MESSAGE RECEIVED',
                 node=pex(self.raiden.address),
-                echohash=pex(echohash),
+                message_id=message_id,
                 message=message,
                 message_sender=pex(message.sender)
             )
@@ -838,10 +837,7 @@ class RaidenProtocol:
             on_udp_message(self.raiden, message)
 
             # only send the Processed message if the message was handled without exceptions
-            processed_message = Processed(
-                self.raiden.address,
-                echohash,
-            )
+            processed_message = Processed(self.raiden.address, message_id)
 
             self.maybe_send_processed(
                 message.sender,
@@ -856,5 +852,5 @@ class RaidenProtocol:
                     'PROCESSED',
                     node=pex(self.raiden.address),
                     to=pex(message.sender),
-                    echohash=pex(echohash),
+                    message_id=message_id,
                 )

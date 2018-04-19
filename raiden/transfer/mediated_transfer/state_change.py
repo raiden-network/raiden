@@ -164,16 +164,16 @@ class ActionCancelRoute(StateChange):
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
-    def __init__(self, identifier, amount, secrethash, sender):
-        self.identifier = identifier
+    def __init__(self, payment_identifier, amount, secrethash, sender):
+        self.payment_identifier = payment_identifier
         self.amount = amount
         self.secrethash = secrethash
         self.sender = sender
         self.revealsecret = None
 
     def __repr__(self):
-        return '<ReceiveSecretRequest id:{} amount:{} secrethash:{} sender:{}>'.format(
-            self.identifier,
+        return '<ReceiveSecretRequest paymentid:{} amount:{} secrethash:{} sender:{}>'.format(
+            self.payment_identifier,
             self.amount,
             pex(self.secrethash),
             pex(self.sender),
@@ -182,7 +182,7 @@ class ReceiveSecretRequest(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveSecretRequest) and
-            self.identifier == other.identifier and
+            self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
             self.secrethash == other.secrethash and
             self.sender == other.sender and

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     RevealSecret,
     Secret,
@@ -27,7 +30,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     other_address = HOP1
     amount = 10
     refund_transfer_message = make_refund_transfer(
-        identifier=1,
+        payment_identifier=1,
         nonce=1,
         token=token_address,
         channel=other_address,
@@ -40,7 +43,8 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     sign_and_inject(refund_transfer_message, other_key, other_address, app0)
 
     secret = Secret(
-        identifier=1,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=1,
         nonce=1,
         channel=make_address(),
         transferred_amount=amount,
@@ -49,8 +53,16 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     )
     sign_and_inject(secret, other_key, other_address, app0)
 
-    secret_request_message = SecretRequest(1, UNIT_SECRETHASH, 1)
+    secret_request_message = SecretRequest(
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=1,
+        secrethash=UNIT_SECRETHASH,
+        amount=1,
+    )
     sign_and_inject(secret_request_message, other_key, other_address, app0)
 
-    reveal_secret_message = RevealSecret(UNIT_SECRET)
+    reveal_secret_message = RevealSecret(
+        message_identifier=random.randint(0, UINT64_MAX),
+        secret=UNIT_SECRET,
+    )
     sign_and_inject(reveal_secret_message, other_key, other_address, app0)

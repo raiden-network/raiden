@@ -1,18 +1,7 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.mediated_transfer.state import TargetTransferState
-from raiden.transfer.state_change import (
-    Block,
-    ReceiveUnlock,
-)
-from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitTarget,
-    ReceiveSecretReveal,
-)
-from raiden.transfer.events import (
-    EventTransferReceivedSuccess,
-)
+from raiden.transfer.events import EventTransferReceivedSuccess
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
@@ -20,6 +9,16 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
+from raiden.transfer.mediated_transfer.state import TargetTransferState
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitTarget,
+    ReceiveSecretReveal,
+)
+from raiden.transfer.state import message_identifier_from_prng
+from raiden.transfer.state_change import (
+    Block,
+    ReceiveUnlock,
+)
 
 
 def events_for_close(target_state, channel_state, block_number):
@@ -45,7 +44,13 @@ def events_for_close(target_state, channel_state, block_number):
     return list()
 
 
-def handle_inittarget(state_change, channel_state, addresses_to_queues, block_number):
+def handle_inittarget(
+        state_change,
+        channel_state,
+        addresses_to_queues,
+        pseudo_random_generator,
+        block_number,
+):
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
@@ -70,8 +75,10 @@ def handle_inittarget(state_change, channel_state, addresses_to_queues, block_nu
     # if there is not enough time to safely withdraw the token on-chain
     # silently let the transfer expire.
     if is_valid and safe_to_wait:
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         secret_request = SendSecretRequest(
-            transfer.identifier,
+            message_identifier,
+            transfer.payment_identifier,
             transfer.lock.amount,
             transfer.lock.secrethash,
             transfer.initiator,
@@ -87,7 +94,7 @@ def handle_inittarget(state_change, channel_state, addresses_to_queues, block_nu
             failure_reason = 'lock expiration is not safe'
 
         withdraw_failed = EventWithdrawFailed(
-            identifier=transfer.identifier,
+            identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
             reason=failure_reason,
         )
@@ -96,7 +103,13 @@ def handle_inittarget(state_change, channel_state, addresses_to_queues, block_nu
     return iteration
 
 
-def handle_secretreveal(target_state, state_change, channel_state, addresses_to_queues):
+def handle_secretreveal(
+        target_state,
+        state_change,
+        channel_state,
+        addresses_to_queues,
+        pseudo_random_generator,
+):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
 
@@ -110,11 +123,12 @@ def handle_secretreveal(target_state, state_change, channel_state, addresses_to_
         transfer = target_state.transfer
         route = target_state.route
 
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         receiver_address = route.node_address
         reveal = SendRevealSecret(
-            transfer.identifier,
+            message_identifier,
             target_state.secret,
             transfer.token,
             receiver_address,
@@ -145,13 +159,13 @@ def handle_unlock(target_state, state_change, channel_state):
         if is_valid:
             transfer = target_state.transfer
             transfer_success = EventTransferReceivedSuccess(
-                transfer.identifier,
+                transfer.payment_identifier,
                 transfer.lock.amount,
                 transfer.initiator,
             )
 
             unlock_success = EventWithdrawSuccess(
-                transfer.identifier,
+                transfer.payment_identifier,
                 transfer.lock.secrethash,
             )
 
@@ -173,7 +187,7 @@ def handle_block(target_state, channel_state, block_number):
     if not secret_known and block_number > transfer.lock.expiration:
         # XXX: emit the event only once
         failed = EventWithdrawFailed(
-            identifier=transfer.identifier,
+            identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
             reason='lock expired',
         )
@@ -189,7 +203,14 @@ def handle_block(target_state, channel_state, block_number):
     return iteration
 
 
-def state_transition(target_state, state_change, channel_state, addresses_to_queues, block_number):
+def state_transition(
+        target_state,
+        state_change,
+        channel_state,
+        addresses_to_queues,
+        pseudo_random_generator,
+        block_number,
+):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -200,6 +221,7 @@ def state_transition(target_state, state_change, channel_state, addresses_to_que
             state_change,
             channel_state,
             addresses_to_queues,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == Block:
@@ -216,6 +238,7 @@ def state_transition(target_state, state_change, channel_state, addresses_to_que
             state_change,
             channel_state,
             addresses_to_queues,
+            pseudo_random_generator,
         )
     elif type(state_change) == ReceiveUnlock:
         iteration = handle_unlock(

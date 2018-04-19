@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 
 from raiden.api.python import RaidenAPI
+from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
 from raiden.transfer import channel
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -46,12 +49,14 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     channel0 = get_channelstate(app0, app1, token_address)
+    message_identifier = random.randint(0, UINT64_MAX)
 
-    identifier = 1
+    payment_identifier = 1
     invalid_token_address = make_address()
     channel_identifier = channel0.identifier
     direct_transfer_message = DirectTransfer(
-        identifier=identifier,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
         nonce=1,
         token=invalid_token_address,
         channel=channel_identifier,
@@ -84,11 +89,14 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     balance0 = channel.get_balance(channel0.our_state, channel0.partner_state)
     balance1 = channel.get_balance(channel0.partner_state, channel0.our_state)
 
-    identifier = 1
+    payment_identifier = 1
     invalid_locksroot = UNIT_SECRETHASH
     channel_identifier = channel0.identifier
+    message_identifier = random.randint(0, UINT64_MAX)
+
     direct_transfer_message = DirectTransfer(
-        identifier=identifier,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
         nonce=1,
         token=token_address,
         channel=channel_identifier,
@@ -120,8 +128,11 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
 
     channel0 = get_channelstate(app0, app1, token_address)
     channel_identifier = channel0.identifier
+    message_identifier = random.randint(0, UINT64_MAX)
+
     direct_transfer_message = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1,
         token=token_address,
         channel=channel_identifier,
@@ -153,11 +164,14 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
     channel0 = get_channelstate(app0, app1, token_address)
 
     transferred_amount = 10
-    same_identifier = 1
+    same_payment_identifier = 1
+    message_identifier = random.randint(0, UINT64_MAX)
+
     event = channel.send_directtransfer(
         channel0,
         transferred_amount,
-        same_identifier,
+        message_identifier,
+        same_payment_identifier,
     )
 
     direct_transfer_message = DirectTransfer.from_event(event)
@@ -170,8 +184,11 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
 
     # Send a *different* direct transfer with the *same nonce*
     invalid_transferred_amount = transferred_amount // 2
+    message_identifier = random.randint(0, UINT64_MAX)
+
     invalid_direct_transfer_message = DirectTransfer(
-        identifier=same_identifier,
+        message_identifier=message_identifier,
+        payment_identifier=same_payment_identifier,
         nonce=1,
         token=token_address,
         channel=channel0.identifier,
@@ -213,8 +230,10 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     )
 
     # Now receive one direct transfer for the closed channel
+    message_identifier = random.randint(0, UINT64_MAX)
     direct_transfer_message = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1,
         token=token_address,
         channel=channel0.identifier,

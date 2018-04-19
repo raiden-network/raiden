@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import random
+
 import gevent
 import pytest
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -89,7 +92,11 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
             break
     assert event
 
-    reveal_secret = RevealSecret(event.secret)
+    message_identifier = random.randint(0, UINT64_MAX)
+    reveal_secret = RevealSecret(
+        message_identifier,
+        event.secret,
+    )
     app2.raiden.sign(reveal_secret)
 
     reveal_data = reveal_secret.encode()
@@ -120,7 +127,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     token = token_addresses[0]
     channelstate_0_1 = get_channelstate(app0, app1, token)
 
-    identifier = 1
+    payment_identifier = 1
     secret = sha3(b'test_regression_multiple_revealsecret')
     secrethash = sha3(secret)
     expiration = app0.raiden.get_block_number() + 100
@@ -134,7 +141,8 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     nonce = 1
     transferred_amount = 0
     mediated_transfer = LockedTransfer(
-        identifier,
+        random.randint(0, UINT64_MAX),
+        payment_identifier,
         nonce,
         token,
         channelstate_0_1.identifier,
@@ -150,12 +158,16 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     message_data = mediated_transfer.encode()
     app1.raiden.protocol.receive(message_data)
 
-    reveal_secret = RevealSecret(secret)
+    reveal_secret = RevealSecret(
+        random.randint(0, UINT64_MAX),
+        secret,
+    )
     app0.raiden.sign(reveal_secret)
     reveal_secret_data = reveal_secret.encode()
 
     secret = Secret(
-        identifier=identifier,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
         channel=channelstate_0_1.identifier,
         transferred_amount=amount,

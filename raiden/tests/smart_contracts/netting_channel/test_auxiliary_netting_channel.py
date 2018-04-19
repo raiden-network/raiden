@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
 import os
+import random
 import string
+from binascii import hexlify
 from itertools import chain, product
 
 import pytest
@@ -208,8 +209,10 @@ def test_signature_split(tester_chain, tester_nettingchannel_library_address):
     auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
 
     privkey, address = make_privkey_address()
+    message_identifier = random.randint(0, UINT64_MAX)
     msg = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1,
         token='x' * 20,
         channel=auxiliary.address,
@@ -241,8 +244,10 @@ def test_recoverAddressFromSignature(tester_chain, tester_nettingchannel_library
     auxiliary = deploy_auxiliary_tester(tester_chain, tester_nettingchannel_library_address)
     privkey, address = make_privkey_address()
 
+    message_identifier = random.randint(0, UINT64_MAX)
     msg = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1,
         token='x' * 20,
         channel=auxiliary.address,

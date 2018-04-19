@@ -49,21 +49,21 @@ def test_transfer_statechange_operators():
         payment_network_identifier,
         token_address,
         receiver_address=ADDRESS,
-        identifier=2,
+        payment_identifier=2,
         amount=2,
     )
     b = ActionTransferDirect(
         payment_network_identifier,
         token_address,
         receiver_address=ADDRESS,
-        identifier=2,
+        payment_identifier=2,
         amount=2,
     )
     c = ActionTransferDirect(
         payment_network_identifier,
         token_address,
         receiver_address=ADDRESS2,  # different recipient
-        identifier=2,
+        payment_identifier=2,
         amount=2,
     )
 
@@ -109,9 +109,12 @@ def test_event_operators():
 
 
 def test_message_operators():
-    a = Processed(ADDRESS, HASH)
-    b = Processed(ADDRESS, HASH)
-    c = Processed(ADDRESS2, HASH2)
+    message_identifier = 10
+    message_identifier2 = 11
+
+    a = Processed(ADDRESS, message_identifier)
+    b = Processed(ADDRESS, message_identifier)
+    c = Processed(ADDRESS2, message_identifier2)
 
     # pylint: disable=unneeded-not
     assert a == b

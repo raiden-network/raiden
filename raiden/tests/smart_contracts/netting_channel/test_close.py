@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 from ethereum.tools import tester
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
 from raiden.tests.utils import factories
 from raiden.tests.utils.messages import make_direct_transfer
@@ -95,8 +98,10 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     opened_block = nettingchannel.opened(sender=pkey0)
 
     # make a transfer where pkey0 is the target
+    message_identifier = random.randint(0, UINT64_MAX)
     transfer_nonparticipant = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         channel=channel0.identifier,
@@ -130,8 +135,10 @@ def test_close_wrong_channel(tester_channels):
     wrong_address = factories.make_address()
 
     # make a transfer where the recipient is totally wrong
+    message_identifier = random.randint(0, UINT64_MAX)
     transfer_wrong_channel = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         channel=wrong_address,
@@ -233,7 +240,7 @@ def test_close_tampered_identifier(tester_channels):
     transfer0_data = transfer0.encode()
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
-    tampered_transfer.identifier += 1
+    tampered_transfer.payment_identifier += 1
 
     tampered_transfer_hash = sha3(tampered_transfer.encode()[:-65])
     with pytest.raises(TransactionFailed):

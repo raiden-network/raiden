@@ -31,7 +31,7 @@ def lockedtransfersigned_from_message(message):
     )
 
     transfer_state = LockedTransferSignedState(
-        message.identifier,
+        message.payment_identifier,
         message.token,
         balance_proof,
         lock,
@@ -213,7 +213,7 @@ class LockedTransferUnsignedState(State):
     """
 
     __slots__ = (
-        'identifier',
+        'payment_identifier',
         'token',
         'balance_proof',
         'lock',
@@ -223,7 +223,7 @@ class LockedTransferUnsignedState(State):
 
     def __init__(
             self,
-            identifier,
+            payment_identifier,
             token: typing.Address,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
@@ -241,7 +241,7 @@ class LockedTransferUnsignedState(State):
         if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
-        self.identifier = identifier
+        self.payment_identifier = payment_identifier
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -252,7 +252,7 @@ class LockedTransferUnsignedState(State):
         return (
             '<LockedTransferUnsignedState id:{} token:{} lock:{} target:{}>'
         ).format(
-            self.identifier,
+            self.payment_identifier,
             encode_hex(self.token),
             self.lock,
             encode_hex(self.target),
@@ -261,7 +261,7 @@ class LockedTransferUnsignedState(State):
     def __eq__(self, other):
         return (
             isinstance(other, LockedTransferUnsignedState) and
-            self.identifier == other.identifier and
+            self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and
@@ -279,7 +279,7 @@ class LockedTransferSignedState(State):
     """
 
     __slots__ = (
-        'identifier',
+        'payment_identifier',
         'token',
         'balance_proof',
         'lock',
@@ -289,7 +289,7 @@ class LockedTransferSignedState(State):
 
     def __init__(
             self,
-            identifier,
+            payment_identifier,
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
@@ -307,7 +307,7 @@ class LockedTransferSignedState(State):
         if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
-        self.identifier = identifier
+        self.payment_identifier = payment_identifier
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -318,7 +318,7 @@ class LockedTransferSignedState(State):
         return (
             '<LockedTransferSignedState id:{} token:{} lock:{} target:{}>'
         ).format(
-            self.identifier,
+            self.payment_identifier,
             encode_hex(self.token),
             self.lock,
             encode_hex(self.target),
@@ -327,7 +327,7 @@ class LockedTransferSignedState(State):
     def __eq__(self, other):
         return (
             isinstance(other, LockedTransferSignedState) and
-            self.identifier == other.identifier and
+            self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and
@@ -345,7 +345,7 @@ class TransferDescriptionWithSecretState(State):
     """
 
     __slots__ = (
-        'identifier',
+        'payment_identifier',
         'amount',
         'registry',
         'token',
@@ -357,7 +357,7 @@ class TransferDescriptionWithSecretState(State):
 
     def __init__(
             self,
-            identifier,
+            payment_identifier,
             amount: typing.TokenAmount,
             registry: typing.Address,
             token: typing.Address,
@@ -367,7 +367,7 @@ class TransferDescriptionWithSecretState(State):
 
         secrethash = sha3(secret)
 
-        self.identifier = identifier
+        self.payment_identifier = payment_identifier
         self.amount = amount
         self.registry = registry
         self.token = token
@@ -389,7 +389,7 @@ class TransferDescriptionWithSecretState(State):
     def __eq__(self, other):
         return (
             isinstance(other, TransferDescriptionWithSecretState) and
-            self.identifier == other.identifier and
+            self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
             self.registry == other.registry and
             self.token == other.token and

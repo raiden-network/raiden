@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 
 from raiden import waiting, udp_message_handler
 from raiden.api.python import RaidenAPI
+from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.blockchain import wait_until_block
@@ -269,7 +272,10 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     # Stop app0 to avoid sending the unlock
     app0.raiden.protocol.stop_and_wait()
 
-    reveal_secret = RevealSecret(secret)
+    reveal_secret = RevealSecret(
+        random.randint(0, UINT64_MAX),
+        secret,
+    )
     app0.raiden.sign(reveal_secret)
     udp_message_handler.on_udp_message(app1.raiden, reveal_secret)
 
