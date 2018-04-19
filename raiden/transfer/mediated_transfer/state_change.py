@@ -164,18 +164,18 @@ class ActionCancelRoute(StateChange):
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
-    def __init__(self, identifier, amount, hashlock, sender):
+    def __init__(self, identifier, amount, secrethash, sender):
         self.identifier = identifier
         self.amount = amount
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.sender = sender
         self.revealsecret = None
 
     def __repr__(self):
-        return '<ReceiveSecretRequest id:{} amount:{} hashlock:{} sender:{}>'.format(
+        return '<ReceiveSecretRequest id:{} amount:{} secrethash:{} sender:{}>'.format(
             self.identifier,
             self.amount,
-            pex(self.hashlock),
+            pex(self.secrethash),
             pex(self.sender),
         )
 
@@ -184,7 +184,7 @@ class ReceiveSecretRequest(StateChange):
             isinstance(other, ReceiveSecretRequest) and
             self.identifier == other.identifier and
             self.amount == other.amount and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.sender == other.sender and
             self.revealsecret == other.revealsecret
         )
@@ -196,15 +196,15 @@ class ReceiveSecretRequest(StateChange):
 class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
     def __init__(self, secret, sender):
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.sender = sender
 
     def __repr__(self):
-        return '<ReceiveSecretReveal hashlock:{} sender:{}>'.format(
-            pex(self.hashlock),
+        return '<ReceiveSecretReveal secrethash:{} sender:{}>'.format(
+            pex(self.secrethash),
             pex(self.sender),
         )
 
@@ -212,7 +212,7 @@ class ReceiveSecretReveal(StateChange):
         return (
             isinstance(other, ReceiveSecretReveal) and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.sender == other.sender
         )
 
@@ -229,12 +229,12 @@ class ReceiveTransferRefundCancelRoute(StateChange):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.sender = sender
         self.transfer = transfer
         self.routes = routes
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.secret = secret
 
     def __repr__(self):
@@ -250,7 +250,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
             self.transfer == other.transfer and
             self.routes == other.routes and
             self.secret == other.secret and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -324,17 +324,17 @@ class ContractReceiveWithdraw(StateChange):
         event must be used twice, once for each receiver.
     """
     def __init__(self, channel_address, secret, receiver):
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.channel_address = channel_address
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.receiver = receiver
         self.secret = secret
 
     def __repr__(self):
-        return '<ContractReceiveWithdraw channel:{} hashlock:{} receiver:{}>'.format(
+        return '<ContractReceiveWithdraw channel:{} secrethash:{} receiver:{}>'.format(
             pex(self.channel_address),
-            pex(self.hashlock),
+            pex(self.secrethash),
             pex(self.receiver),
         )
 
@@ -342,7 +342,7 @@ class ContractReceiveWithdraw(StateChange):
         return (
             isinstance(other, ContractReceiveWithdraw) and
             self.channel_address == other.channel_address and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.receiver == other.receiver and
             self.secret == other.secret
         )

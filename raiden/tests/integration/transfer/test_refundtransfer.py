@@ -161,7 +161,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     assert refund_message
 
     assert mediated_message.lock.amount == refund_message.lock.amount
-    assert mediated_message.lock.hashlock == refund_message.lock.hashlock
+    assert mediated_message.lock.secrethash == refund_message.lock.secrethash
     assert mediated_message.lock.expiration > refund_message.lock.expiration
 
     # Both channels have the amount locked because of the refund message

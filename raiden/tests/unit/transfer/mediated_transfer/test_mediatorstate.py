@@ -41,7 +41,7 @@ from raiden.tests.utils.factories import (
     HOP4,
     HOP4_KEY,
     HOP5_KEY,
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
@@ -128,7 +128,7 @@ def make_transfers_pair(privatekeys, amount):
             amount,
             UNIT_TRANSFER_IDENTIFIER,
             received_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT,
-            UNIT_HASHLOCK,
+            UNIT_SECRETHASH,
         )
         assert mediatedtransfer_event
         sent_transfer = mediatedtransfer_event.transfer
@@ -575,7 +575,7 @@ def test_next_transfer_pair():
     assert transfer.initiator == payer_transfer.initiator
     assert transfer.target == payer_transfer.target
     assert transfer.lock.amount == payer_transfer.lock.amount
-    assert transfer.lock.hashlock == payer_transfer.lock.hashlock
+    assert transfer.lock.secrethash == payer_transfer.lock.secrethash
     assert transfer.lock.expiration < payer_transfer.lock.expiration
 
 
@@ -731,7 +731,7 @@ def test_events_for_refund():
     assert events
     assert events[0].lock.expiration < block_number + timeout_blocks
     assert events[0].lock.amount == amount
-    assert events[0].lock.hashlock == refund_transfer.lock.hashlock
+    assert events[0].lock.secrethash == refund_transfer.lock.secrethash
     assert events[0].recipient == refund_channel.partner_state.address
 
 
@@ -860,7 +860,7 @@ def test_events_for_balanceproof():
         transfers_pair,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
     )
     assert len(events) == 2
 
@@ -901,7 +901,7 @@ def test_events_for_balanceproof_channel_closed():
             transfers_pair,
             block_number,
             UNIT_SECRET,
-            UNIT_HASHLOCK,
+            UNIT_SECRETHASH,
         )
 
         assert not events
@@ -930,7 +930,7 @@ def test_events_for_balanceproof_middle_secret():
         transfers_pair,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
     )
 
     balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
@@ -956,7 +956,7 @@ def test_events_for_balanceproof_secret_unknown():
         transfers_pair,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
     )
     assert not events
 
@@ -979,7 +979,7 @@ def test_events_for_balanceproof_lock_expired():
         transfers_pair,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
     )
     assert not events
 
@@ -996,7 +996,7 @@ def test_events_for_balanceproof_lock_expired():
         transfers_pair,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
     )
 
     balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
@@ -1051,7 +1051,7 @@ def test_events_for_close_hold_for_unpaid_payee():
     pair = transfers_pair[0]
 
     for channel_state in channelmap.values():
-        channel.register_secret(channel_state, UNIT_SECRET, UNIT_HASHLOCK)
+        channel.register_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
     # preconditions
     assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
@@ -1144,7 +1144,7 @@ def test_secret_learned():
         channelmap,
         block_number,
         UNIT_SECRET,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
         channel1.partner_state.address,
         'payee_secret_revealed',
     )
@@ -1200,7 +1200,7 @@ def test_mediate_transfer():
     }
     possible_routes = [factories.route_from_channel(channel1)]
 
-    mediator_state = MediatorTransferState(UNIT_HASHLOCK)
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
         mediator_state,
         possible_routes,
@@ -1218,7 +1218,7 @@ def test_mediate_transfer():
     assert transfer.identifier == payer_transfer.identifier
     assert transfer.token == payer_transfer.token
     assert transfer.lock.amount == payer_transfer.lock.amount
-    assert transfer.lock.hashlock == payer_transfer.lock.hashlock
+    assert transfer.lock.secrethash == payer_transfer.lock.secrethash
     assert transfer.target == payer_transfer.target
     assert payer_transfer.lock.expiration > transfer.lock.expiration
     assert send_transfer.recipient == channel1.partner_state.address
@@ -1288,7 +1288,7 @@ def test_init_mediator():
     assert mediated_transfer.lock.amount == from_transfer.lock.amount, 'transfer amount mismatch'
     msg = 'transfer expiration mismatch'
     assert mediated_transfer.lock.expiration < from_transfer.lock.expiration, msg
-    assert mediated_transfer.lock.hashlock == from_transfer.lock.hashlock, 'wrong hashlock'
+    assert mediated_transfer.lock.secrethash == from_transfer.lock.secrethash, 'wrong secrethash'
 
 
 def test_no_valid_routes():
@@ -1640,7 +1640,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     }
     possible_routes = [factories.route_from_channel(channel1)]
 
-    mediator_state = MediatorTransferState(UNIT_HASHLOCK)
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
         mediator_state,
         possible_routes,

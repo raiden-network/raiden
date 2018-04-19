@@ -46,11 +46,11 @@ def test_ping(iterations=ITERATIONS):
 
 def test_secret_request(iterations=ITERATIONS):
     identifier = 1
-    hashlock = HASH
+    secrethash = HASH
     amount = 1
     msg = SecretRequest(
         identifier,
-        hashlock,
+        secrethash,
         amount,
     )
     msg.sign(PRIVKEY, ADDRESS)
@@ -100,8 +100,8 @@ def test_mediated_transfer(iterations=ITERATIONS):
     identifier = 1
     amount = 1
     expiration = 1
-    hashlock = sha3(ADDRESS)
-    lock = Lock(amount, expiration, hashlock)
+    secrethash = sha3(ADDRESS)
+    lock = Lock(amount, expiration, secrethash)
 
     nonce = 1
     token = ADDRESS
@@ -130,8 +130,8 @@ def test_mediated_transfer(iterations=ITERATIONS):
 def test_cancel_transfer(iterations=ITERATIONS):
     amount = 1
     expiration = 1
-    hashlock = sha3(ADDRESS)
-    lock = Lock(amount, expiration, hashlock)
+    secrethash = sha3(ADDRESS)
+    lock = Lock(amount, expiration, secrethash)
 
     identifier = 1
     nonce = 1

@@ -58,7 +58,7 @@ def lockstate_from_lock(lock):
     return HashTimeLockState(
         lock.amount,
         lock.expiration,
-        lock.hashlock,
+        lock.secrethash,
     )
 
 
@@ -88,7 +88,7 @@ class NodeState(State):
         return '<NodeState block:{} networks:{} qtd_transfers:{}>'.format(
             self.block_number,
             lpex(self.identifiers_to_paymentnetworks.keys()),
-            len(self.payment_mapping.hashlocks_to_task),
+            len(self.payment_mapping.secrethashes_to_task),
         )
 
     def __eq__(self, other):
@@ -234,23 +234,23 @@ class TokenNetworkGraphState(State):
 
 
 class PaymentMappingState(State):
-    """ Global map from hashlock to a transfer task.
-    This mapping is used to quickly dispatch state changes by hashlock, for
+    """ Global map from secrethash to a transfer task.
+    This mapping is used to quickly dispatch state changes by secrethash, for
     those that dont have a balance proof, e.g. SecretReveal.
-    This mapping forces one task per hashlock, assuming that hashlock collision
+    This mapping forces one task per secrethash, assuming that secrethash collision
     is unlikely. Features like token swaps, that span multiple networks, must
     be encapsulated in a single task to work with this structure.
     """
 
     # Because of retries, there may be multiple transfers for the same payment,
     # IOW there may be more than one task for the same transfer identifier. For
-    # this reason the mapping uses the hashlock as key.
+    # this reason the mapping uses the secrethash as key.
     #
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
     __slots__ = (
-        'hashlocks_to_task',
+        'secrethashes_to_task',
     )
 
     InitiatorTask = namedtuple('InitiatorTask', (
@@ -273,17 +273,17 @@ class PaymentMappingState(State):
     ))
 
     def __init__(self):
-        self.hashlocks_to_task = dict()
+        self.secrethashes_to_task = dict()
 
     def __repr__(self):
         return '<PaymentMappingState qtd_transfers:{}>'.format(
-            len(self.hashlocks_to_task)
+            len(self.secrethashes_to_task)
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, PaymentMappingState) and
-            self.hashlocks_to_task == other.hashlocks_to_task
+            self.secrethashes_to_task == other.secrethashes_to_task
         )
 
     def __ne__(self, other):
@@ -521,7 +521,7 @@ class HashTimeLockState(State):
     __slots__ = (
         'amount',
         'expiration',
-        'hashlock',
+        'secrethash',
         'encoded',
         'lockhash',
     )
@@ -530,7 +530,7 @@ class HashTimeLockState(State):
             self,
             amount: typing.TokenAmount,
             expiration: typing.BlockNumber,
-            hashlock: typing.Keccak256):
+            secrethash: typing.Keccak256):
 
         if not isinstance(amount, typing.T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
@@ -538,26 +538,26 @@ class HashTimeLockState(State):
         if not isinstance(expiration, typing.T_BlockNumber):
             raise ValueError('expiration must be a block_number instance')
 
-        if not isinstance(hashlock, typing.T_Keccak256):
-            raise ValueError('hashlock must be a keccak256 instance')
+        if not isinstance(secrethash, typing.T_Keccak256):
+            raise ValueError('secrethash must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
         packed.amount = amount
         packed.expiration = expiration
-        packed.hashlock = hashlock
+        packed.secrethash = secrethash
         encoded = bytes(packed.data)
 
         self.amount = amount
         self.expiration = expiration
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.encoded = encoded
         self.lockhash = sha3(encoded)
 
     def __repr__(self):
-        return '<HashTimeLockState amount:{} expiration:{} hashlock:{}>'.format(
+        return '<HashTimeLockState amount:{} expiration:{} secrethash:{}>'.format(
             self.amount,
             self.expiration,
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
@@ -565,7 +565,7 @@ class HashTimeLockState(State):
             isinstance(other, HashTimeLockState) and
             self.amount == other.amount and
             self.expiration == other.expiration and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -724,8 +724,8 @@ class NettingChannelEndState(State):
     __slots__ = (
         'address',
         'contract_balance',
-        'hashlocks_to_lockedlocks',
-        'hashlocks_to_unlockedlocks',
+        'secrethashes_to_lockedlocks',
+        'secrethashes_to_unlockedlocks',
         'merkletree',
         'balance_proof',
     )
@@ -740,8 +740,8 @@ class NettingChannelEndState(State):
         self.address = address
         self.contract_balance = balance
 
-        self.hashlocks_to_lockedlocks = dict()
-        self.hashlocks_to_unlockedlocks = dict()
+        self.secrethashes_to_lockedlocks = dict()
+        self.secrethashes_to_unlockedlocks = dict()
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof = None
 
@@ -757,8 +757,8 @@ class NettingChannelEndState(State):
             isinstance(other, NettingChannelEndState) and
             self.address == other.address and
             self.contract_balance == other.contract_balance and
-            self.hashlocks_to_lockedlocks == other.hashlocks_to_lockedlocks and
-            self.hashlocks_to_unlockedlocks == other.hashlocks_to_unlockedlocks and
+            self.secrethashes_to_lockedlocks == other.secrethashes_to_lockedlocks and
+            self.secrethashes_to_unlockedlocks == other.secrethashes_to_unlockedlocks and
             self.merkletree == other.merkletree and
             self.balance_proof == other.balance_proof
         )

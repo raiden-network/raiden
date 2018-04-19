@@ -162,7 +162,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
 
 def claim_lock(app_chain, identifier, token, secret):
     """ Unlock a pending transfer. """
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
@@ -171,7 +171,7 @@ def claim_lock(app_chain, identifier, token, secret):
             from_channel,
             identifier,
             secret,
-            hashlock,
+            secrethash,
         )
 
         secret_message = Secret(
@@ -275,8 +275,8 @@ def assert_locked(from_channel, pending_locks):
     assert from_channel.our_state.merkletree == tree
 
     for lock in pending_locks:
-        pending = lock.hashlock in from_channel.our_state.hashlocks_to_lockedlocks
-        unclaimed = lock.hashlock in from_channel.our_state.hashlocks_to_unlockedlocks
+        pending = lock.secrethash in from_channel.our_state.secrethashes_to_lockedlocks
+        unclaimed = lock.secrethash in from_channel.our_state.secrethashes_to_unlockedlocks
         assert pending or unclaimed
 
 
@@ -413,7 +413,7 @@ def make_mediated_transfer(
         lock.amount,
         identifier,
         lock.expiration,
-        lock.hashlock,
+        lock.secrethash,
     )
     mediated_transfer_msg = MediatedTransfer.from_event(mediatedtransfer)
 

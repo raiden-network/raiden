@@ -244,17 +244,17 @@ def test_new_end_state():
     end_state = NettingChannelEndState(node_address, balance1)
 
     lock_secret = sha3(b'test_end_state')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
 
-    assert channel.is_lock_pending(end_state, lock_hashlock) is False
-    assert channel.is_lock_locked(end_state, lock_hashlock) is False
+    assert channel.is_lock_pending(end_state, lock_secrethash) is False
+    assert channel.is_lock_locked(end_state, lock_secrethash) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
     assert not channel.get_known_unlocks(end_state)
     assert merkleroot(end_state.merkletree) == EMPTY_MERKLE_ROOT
 
-    assert not end_state.hashlocks_to_lockedlocks
-    assert not end_state.hashlocks_to_unlockedlocks
+    assert not end_state.secrethashes_to_lockedlocks
+    assert not end_state.secrethashes_to_unlockedlocks
 
 
 def test_endstate_update_contract_balance():
@@ -488,12 +488,12 @@ def test_channelstate_send_mediatedtransfer():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b'test_end_state')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
 
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     identifier = 1
@@ -507,7 +507,7 @@ def test_channelstate_send_mediatedtransfer():
         lock_amount,
         identifier,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     our_model2 = our_model1._replace(
@@ -571,11 +571,11 @@ def test_channelstate_receive_mediatedtransfer():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b'test_end_state')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -606,7 +606,7 @@ def test_channelstate_receive_mediatedtransfer():
 
     # Step 2: Simulate learning the secret
     # - Registers the secret, this must not change the balance/locked amount
-    channel.register_secret(channel_state, lock_secret, lock_hashlock)
+    channel.register_secret(channel_state, lock_secret, lock_secrethash)
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -699,11 +699,11 @@ def test_channelstate_mediatedtransfer_overspent():
 
     lock_amount = distributable + 1
     lock_expiration = 10
-    lock_hashlock = sha3(b'test_channelstate_mediatedtransfer_overspent')
+    lock_secrethash = sha3(b'test_channelstate_mediatedtransfer_overspent')
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -738,11 +738,11 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
     # - this wont be unlocked
     lock1_amount = 1
     lock1_expiration = 1 + channel_state.settle_timeout
-    lock1_hashlock = sha3(b'test_receive_cannot_overspend_with_multiple_pending_transfers1')
+    lock1_secrethash = sha3(b'test_receive_cannot_overspend_with_multiple_pending_transfers1')
     lock1 = HashTimeLockState(
         lock1_amount,
         lock1_expiration,
-        lock1_hashlock,
+        lock1_secrethash,
     )
 
     nonce1 = 1
@@ -778,11 +778,11 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
     lock2_amount = distributable + 1
     lock2_expiration = channel_state.settle_timeout
-    lock2_hashlock = sha3(b'test_receive_cannot_overspend_with_multiple_pending_transfers2')
+    lock2_secrethash = sha3(b'test_receive_cannot_overspend_with_multiple_pending_transfers2')
     lock2 = HashTimeLockState(
         lock2_amount,
         lock2_expiration,
-        lock2_hashlock,
+        lock2_secrethash,
     )
     leaves = [lock1.lockhash, lock2.lockhash]
 
@@ -901,11 +901,11 @@ def test_interwoven_transfers():
         block_number += 1
 
         lock_expiration = block_number + channel_state.settle_timeout - 1
-        lock_hashlock = sha3(lock_secret)
+        lock_secrethash = sha3(lock_secret)
         lock = HashTimeLockState(
             lock_amount,
             lock_expiration,
-            lock_hashlock,
+            lock_secrethash,
         )
 
         merkletree_leaves = list(partner_model_current.merkletree_leaves)
@@ -1029,11 +1029,11 @@ def test_channel_must_accept_expired_locks():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_hashlock = sha3(b'test_channel_must_accept_expired_locks')
+    lock_secrethash = sha3(b'test_channel_must_accept_expired_locks')
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -1077,11 +1077,11 @@ def test_receive_mediatedtransfer_before_deposit():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b'test_end_state')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -1159,11 +1159,11 @@ def test_channelstate_withdraw():
     lock_amount = 10
     lock_expiration = 100
     lock_secret = sha3(b'test_channelstate_mediatedtransfer_overspent')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -1182,7 +1182,7 @@ def test_channelstate_withdraw():
     )
     assert is_valid, msg
 
-    channel.register_secret(channel_state, lock_secret, lock_hashlock)
+    channel.register_secret(channel_state, lock_secret, lock_secrethash)
 
     # If the channel is closed, withdraw must be done even if the lock is not
     # at risk of expiring
@@ -1207,11 +1207,11 @@ def test_channel_withdraw_must_not_change_merkletree():
     lock_amount = 10
     lock_expiration = 100
     lock_secret = sha3(b'test_channelstate_mediatedtransfer_overspent')
-    lock_hashlock = sha3(lock_secret)
+    lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
-        lock_hashlock,
+        lock_secrethash,
     )
 
     nonce = 1
@@ -1231,7 +1231,7 @@ def test_channel_withdraw_must_not_change_merkletree():
     assert is_valid, msg
 
     assert merkleroot(channel_state.partner_state.merkletree) == lock.lockhash
-    assert channel.is_lock_pending(channel_state.partner_state, lock.hashlock)
+    assert channel.is_lock_pending(channel_state.partner_state, lock.secrethash)
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     state_change = ContractReceiveChannelClosed(
@@ -1255,4 +1255,4 @@ def test_channel_withdraw_must_not_change_merkletree():
 
     new_channel = iteration.new_state
     assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash
-    assert not channel.is_lock_pending(new_channel.partner_state, lock.hashlock)
+    assert not channel.is_lock_pending(new_channel.partner_state, lock.secrethash)

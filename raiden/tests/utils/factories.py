@@ -38,7 +38,7 @@ UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 
 UNIT_SECRET = b'secretsecretsecretsecretsecretse'
-UNIT_HASHLOCK = sha3(UNIT_SECRET)
+UNIT_SECRETHASH = sha3(UNIT_SECRET)
 
 UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
@@ -176,11 +176,11 @@ def make_transfer(
         token=UNIT_TOKEN_ADDRESS
 ):
 
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     lock = HashTimeLockState(
         amount,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     if locksroot is None:
@@ -221,11 +221,11 @@ def make_signed_transfer(
         sender=UNIT_TRANSFER_SENDER
 ):
 
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     lock = Lock(
         amount,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     transfer = MediatedTransfer(

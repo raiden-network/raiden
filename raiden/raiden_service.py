@@ -182,11 +182,11 @@ class RaidenService:
         self.tokens_to_connectionmanagers = dict()
         self.identifier_to_results = defaultdict(list)
 
-        # This is a map from a hashlock to a list of channels, the same
-        # hashlock can be used in more than one token (for tokenswaps), a
+        # This is a map from a secrethash to a list of channels, the same
+        # secrethash can be used in more than one token (for tokenswaps), a
         # channel should be removed from this list only when the lock is
         # released/withdrawn but not when the secret is registered.
-        self.token_to_hashlock_to_channels = defaultdict(lambda: defaultdict(list))
+        self.token_to_secrethash_to_channels = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
         self.default_registry = default_registry

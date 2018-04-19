@@ -70,18 +70,18 @@ class SendRevealSecret(Event):
         update the balance.
     """
     def __init__(self, identifier, secret, token, receiver):
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.identifier = identifier
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.token = token
         self.receiver = receiver
 
     def __repr__(self):
-        return '<SendRevealSecret id:{} hashlock:{} token:{} receiver:{}>'.format(
+        return '<SendRevealSecret id:{} secrethash:{} token:{} receiver:{}>'.format(
             self.identifier,
-            pex(self.hashlock),
+            pex(self.secrethash),
             pex(self.token),
             pex(self.receiver),
         )
@@ -91,7 +91,7 @@ class SendRevealSecret(Event):
             isinstance(other, SendRevealSecret) and
             self.identifier == other.identifier and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.token == other.token and
             self.receiver == other.receiver
         )
@@ -147,17 +147,17 @@ class SendSecretRequest(Event):
     """ Event used by a target node to request the secret from the initiator
     (`receiver`).
     """
-    def __init__(self, identifier, amount, hashlock, receiver):
+    def __init__(self, identifier, amount, secrethash, receiver):
         self.identifier = identifier
         self.amount = amount
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.receiver = receiver
 
     def __repr__(self):
-        return '<SendSecretRequest id:{} amount:{} hashlock:{} receiver:{}>'.format(
+        return '<SendSecretRequest id:{} amount:{} secrethash:{} receiver:{}>'.format(
             self.identifier,
             self.amount,
-            pex(self.hashlock),
+            pex(self.secrethash),
             pex(self.receiver),
         )
 
@@ -166,7 +166,7 @@ class SendSecretRequest(Event):
             isinstance(other, SendSecretRequest) and
             self.identifier == other.identifier and
             self.amount == other.amount and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.receiver == other.receiver
         )
 
@@ -232,21 +232,21 @@ class SendRefundTransfer(Event):
 
 class EventUnlockSuccess(Event):
     """ Event emitted when a lock unlock succeded. """
-    def __init__(self, identifier, hashlock):
+    def __init__(self, identifier, secrethash):
         self.identifier = identifier
-        self.hashlock = hashlock
+        self.secrethash = secrethash
 
     def __repr__(self):
-        return '<EventUnlockSuccess id:{} hashlock:{}>'.format(
+        return '<EventUnlockSuccess id:{} secrethash:{}>'.format(
             self.identifier,
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, EventUnlockSuccess) and
             self.identifier == other.identifier and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -255,15 +255,15 @@ class EventUnlockSuccess(Event):
 
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
-    def __init__(self, identifier, hashlock, reason):
+    def __init__(self, identifier, secrethash, reason):
         self.identifier = identifier
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.reason = reason
 
     def __repr__(self):
-        return '<EventUnlockFailed id:{} hashlock:{} reason:{}>'.format(
+        return '<EventUnlockFailed id:{} secrethash:{} reason:{}>'.format(
             self.identifier,
-            pex(self.hashlock),
+            pex(self.secrethash),
             self.reason,
         )
 
@@ -271,7 +271,7 @@ class EventUnlockFailed(Event):
         return (
             isinstance(other, EventUnlockFailed) and
             self.identifier == other.identifier and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -280,21 +280,21 @@ class EventUnlockFailed(Event):
 
 class EventWithdrawSuccess(Event):
     """ Event emitted when a lock withdraw succeded. """
-    def __init__(self, identifier, hashlock):
+    def __init__(self, identifier, secrethash):
         self.identifier = identifier
-        self.hashlock = hashlock
+        self.secrethash = secrethash
 
     def __repr__(self):
-        return '<EventWithdrawSuccess id:{} hashlock:{}>'.format(
+        return '<EventWithdrawSuccess id:{} secrethash:{}>'.format(
             self.identifier,
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, EventWithdrawSuccess) and
             self.identifier == other.identifier and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -303,15 +303,15 @@ class EventWithdrawSuccess(Event):
 
 class EventWithdrawFailed(Event):
     """ Event emitted when a lock withdraw failed. """
-    def __init__(self, identifier, hashlock, reason):
+    def __init__(self, identifier, secrethash, reason):
         self.identifier = identifier
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.reason = reason
 
     def __repr__(self):
-        return '<EventWithdrawFailed id:{} hashlock:{} reason:{}>'.format(
+        return '<EventWithdrawFailed id:{} secrethash:{} reason:{}>'.format(
             self.identifier,
-            pex(self.hashlock),
+            pex(self.secrethash),
             self.reason,
         )
 
@@ -319,7 +319,7 @@ class EventWithdrawFailed(Event):
         return (
             isinstance(other, EventWithdrawFailed) and
             self.identifier == other.identifier and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):

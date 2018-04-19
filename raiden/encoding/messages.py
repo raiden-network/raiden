@@ -51,7 +51,7 @@ sender = make_field('sender', 20, '20s')
 channel = make_field('channel', 20, '20s')
 
 locksroot = make_field('locksroot', 32, '32s')
-hashlock = make_field('hashlock', 32, '32s')
+secrethash = make_field('secrethash', 32, '32s')
 secret = make_field('secret', 32, '32s')
 echo = make_field('echo', 32, '32s')
 transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
@@ -88,7 +88,7 @@ SecretRequest = namedbuffer(
         cmdid(SECRETREQUEST),  # [0:1]
         pad(3),                # [1:4]
         identifier,            # [4:12]
-        hashlock,              # [12:46]
+        secrethash,              # [12:46]
         amount,
         signature,
     ]
@@ -149,7 +149,7 @@ MediatedTransfer = namedbuffer(
         target,
         initiator,
         locksroot,
-        hashlock,
+        secrethash,
         transferred_amount,
         amount,
         fee,
@@ -171,7 +171,7 @@ RefundTransfer = namedbuffer(
         target,
         initiator,
         locksroot,
-        hashlock,
+        secrethash,
         transferred_amount,
         amount,
         fee,
@@ -184,7 +184,7 @@ Lock = namedbuffer(
     [
         expiration,
         amount,
-        hashlock,
+        secrethash,
     ]
 )
 

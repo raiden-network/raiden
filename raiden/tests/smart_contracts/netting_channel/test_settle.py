@@ -255,7 +255,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -323,7 +323,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -394,7 +394,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3(b'lock1'))
+    lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
@@ -405,7 +405,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     )
 
     lock_expiration1 = tester_chain.block.number + reveal_timeout + 5
-    lock1 = Lock(amount=31, expiration=lock_expiration1, hashlock=sha3(b'lock2'))
+    lock1 = Lock(amount=31, expiration=lock_expiration1, secrethash=sha3(b'lock2'))
     mediated1 = make_mediated_transfer(
         channel1,
         channel0,
@@ -537,7 +537,7 @@ def test_mediated_after_direct_transfer(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock1 = Lock(amount=31, expiration=lock_expiration, hashlock=sha3(b'lock2'))
+    lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=sha3(b'lock2'))
     second_mediated0 = make_mediated_transfer(
         channel0,
         channel1,

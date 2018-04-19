@@ -474,20 +474,20 @@ class ContractReceiveChannelWithdraw(StateChange):
         if not isinstance(receiver, typing.T_Address):
             raise ValueError('receiver must be of type address')
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_identifier = channel_identifier
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.receiver = receiver
 
     def __repr__(self):
-        return '<ContractReceiveChannelWithdraw channel:{} receive:{} hashlock:{}>'.format(
+        return '<ContractReceiveChannelWithdraw channel:{} receive:{} secrethash:{}>'.format(
             pex(self.channel_identifier),
             pex(self.receiver),
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
@@ -497,7 +497,7 @@ class ContractReceiveChannelWithdraw(StateChange):
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.receiver == other.receiver
         )
 
@@ -624,15 +624,15 @@ class ReceiveUnlock(StateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<ReceiveUnlock hashlock: {} balance_proof: {}>'.format(
-            pex(self.hashlock),
+        return '<ReceiveUnlock secrethash: {} balance_proof: {}>'.format(
+            pex(self.secrethash),
             self.balance_proof,
         )
 
@@ -640,7 +640,7 @@ class ReceiveUnlock(StateChange):
         return (
             isinstance(other, ReceiveUnlock) and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.balance_proof == other.balance_proof
         )
 

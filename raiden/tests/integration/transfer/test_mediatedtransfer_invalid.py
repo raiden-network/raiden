@@ -10,7 +10,7 @@ from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.factories import (
     make_address,
     make_privkey_address,
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
 )
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -100,8 +100,8 @@ def test_receive_mediatedtransfer_invalidnonce(
         channel=channel0.identifier,
         transferred_amount=amount,
         recipient=app1.raiden.address,
-        locksroot=UNIT_HASHLOCK,
-        lock=Lock(amount, expiration, UNIT_HASHLOCK),
+        locksroot=UNIT_SECRETHASH,
+        lock=Lock(amount, expiration, UNIT_SECRETHASH),
         target=app2.raiden.address,
         initiator=app0.raiden.address,
         fee=0,
@@ -144,8 +144,8 @@ def test_receive_mediatedtransfer_invalidsender(
         channel=channel0.identifier,
         transferred_amount=0,
         recipient=app0.raiden.address,
-        locksroot=UNIT_HASHLOCK,
-        lock=Lock(amount, expiration, UNIT_HASHLOCK),
+        locksroot=UNIT_SECRETHASH,
+        lock=Lock(amount, expiration, UNIT_SECRETHASH),
         target=app0.raiden.address,
         initiator=other_address,
         fee=0
@@ -189,8 +189,8 @@ def test_receive_mediatedtransfer_invalidrecipient(
         channel=channel0.identifier,
         transferred_amount=0,
         recipient=invalid_recipient,
-        locksroot=UNIT_HASHLOCK,
-        lock=Lock(amount, expiration, UNIT_HASHLOCK),
+        locksroot=UNIT_SECRETHASH,
+        lock=Lock(amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0
@@ -245,8 +245,8 @@ def test_received_mediatedtransfer_closedchannel(
         channel=channel0.identifier,
         transferred_amount=0,
         recipient=app1.raiden.address,
-        locksroot=UNIT_HASHLOCK,
-        lock=Lock(amount, expiration, UNIT_HASHLOCK),
+        locksroot=UNIT_SECRETHASH,
+        lock=Lock(amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0
