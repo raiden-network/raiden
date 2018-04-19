@@ -5,18 +5,16 @@ from gevent import monkey  # isort:skip # noqa
 monkey.patch_all()  # isort:skip # noqa
 
 import logging
-import os
 import sys
 from typing import List
 
 import click
 from raiden_libs.blockchain import BlockchainListener
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3 import HTTPProvider, Web3
 from eth_utils import is_checksum_address
 from raiden_libs.no_ssl_patch import no_ssl_verification
 
-import pathfinder
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.transport import MatrixTransport
 from pathfinder.utils.types import Address
@@ -104,22 +102,17 @@ def main(
             log.info('Starting Web3 client...')
             web3 = Web3(HTTPProvider(eth_rpc))
 
-            module_dir = os.path.dirname(pathfinder.__file__)
-            contracts_path = os.path.join(module_dir, 'contract', 'contracts_12032018.json')
-            contract_manager = ContractManager(contracts_path)
-
             log.info('Starting TokenNetwork Listener...')
             token_network_listener = BlockchainListener(
                 web3,
-                contract_manager,
+                CONTRACT_MANAGER,
                 'TokenNetwork',
             )
 
             log.info('Starting Pathfinding Service...')
             if token_network_addresses:
                 service = PathfindingService(
-                    web3,
-                    contract_manager,
+                    CONTRACT_MANAGER,
                     transport,
                     token_network_listener,
                     follow_networks=token_network_addresses)
@@ -127,13 +120,12 @@ def main(
                 log.info('Starting TokenNetworkRegistry Listener...')
                 token_network_registry_listener = BlockchainListener(
                     web3,
-                    contract_manager,
+                    CONTRACT_MANAGER,
                     'TokenNetworkRegistry',
                 )
 
                 service = PathfindingService(
-                    web3,
-                    contract_manager,
+                    CONTRACT_MANAGER,
                     transport,
                     token_network_listener,
                     token_network_registry_listener=token_network_registry_listener)

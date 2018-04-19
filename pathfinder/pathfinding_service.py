@@ -8,7 +8,6 @@ import gevent
 from eth_utils import is_checksum_address
 from raiden_libs.blockchain import BlockchainListener
 from raiden_contracts.contract_manager import ContractManager
-from web3 import Web3
 
 from raiden_libs.gevent_error_handler import register_error_handler
 from pathfinder.model.token_network import TokenNetwork
@@ -31,7 +30,6 @@ def error_handler(context, exc_info):
 class PathfindingService(gevent.Greenlet):
     def __init__(
         self,
-        web3: Web3,
         contract_manager: ContractManager,
         transport: MatrixTransport,
         token_network_listener: BlockchainListener,
@@ -42,7 +40,6 @@ class PathfindingService(gevent.Greenlet):
         """ Creates a new pathfinding service
 
         Args:
-            web3: A web3 client
             contract_manager: A contract manager
             transport: A transport object
             token_network_listener: A blockchain listener object
@@ -51,7 +48,6 @@ class PathfindingService(gevent.Greenlet):
             token_network_registry_listener: A blockchain listener object for the network registry
         """
         super().__init__()
-        self.web3 = web3
         self.contract_manager = contract_manager
         self.transport = transport
         self.token_network_listener = token_network_listener

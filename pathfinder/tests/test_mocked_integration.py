@@ -8,7 +8,6 @@ be used most of the time to keep test times short.
 from typing import List
 
 from unittest.mock import Mock
-from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
@@ -336,7 +335,6 @@ def test_pfs_events_from_unknown_token_network_ignored(
 
 
 def test_pfs_follow_networks_has_precedence_over_listener(
-    web3: Web3,
     contracts_manager: ContractManager,
     token_networks: List[TokenNetwork]
 ):
@@ -344,7 +342,6 @@ def test_pfs_follow_networks_has_precedence_over_listener(
     registry_listener = BlockchainListenerMock()
 
     pathfinding_service = PathfindingService(
-        web3,
         contracts_manager,
         transport=Mock(),
         token_network_listener=network_listener,

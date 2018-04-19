@@ -166,14 +166,12 @@ def populate_token_networks_simple(
 
 @pytest.fixture
 def pathfinding_service(
-        web3: Web3,
         contracts_manager: ContractManager,
         populate_token_networks_simple: None,
         token_networks: List[TokenNetwork]
 ) -> PathfindingService:
     # TODO: replace with a pathfinding service that actually syncs with the tester chain.
     pathfinding_service = PathfindingService(
-        web3,
         contracts_manager,
         transport=Mock(),
         token_network_listener=Mock(),
@@ -188,13 +186,9 @@ def pathfinding_service(
 
 
 @pytest.fixture
-def pathfinding_service_mocked_listeners(
-        web3: Web3,
-        contracts_manager: ContractManager,
-) -> PathfindingService:
+def pathfinding_service_mocked_listeners(contracts_manager: ContractManager) -> PathfindingService:
     """ Returns a PathfindingService with mocked blockchain listeners. """
     pathfinding_service = PathfindingService(
-        web3,
         contracts_manager,
         transport=Mock(),
         token_network_listener=BlockchainListenerMock(),
