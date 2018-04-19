@@ -45,7 +45,7 @@ def events_for_close(target_state, channel_state, block_number):
     return list()
 
 
-def handle_inittarget(state_change, channel_state, block_number):
+def handle_inittarget(state_change, channel_state, addresses_to_queues, block_number):
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
@@ -77,6 +77,8 @@ def handle_inittarget(state_change, channel_state, block_number):
             transfer.initiator,
         )
 
+        partner_message_queue = addresses_to_queues.setdefault(route.node_address, [])
+        partner_message_queue.append(secret_request)
         iteration = TransitionResult(target_state, [secret_request])
     else:
         if not is_valid:
@@ -94,7 +96,7 @@ def handle_inittarget(state_change, channel_state, block_number):
     return iteration
 
 
-def handle_secretreveal(target_state, state_change, channel_state):
+def handle_secretreveal(target_state, state_change, channel_state, addresses_to_queues):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
 
@@ -110,12 +112,16 @@ def handle_secretreveal(target_state, state_change, channel_state):
 
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
+        receiver_address = route.node_address
         reveal = SendRevealSecret(
             transfer.identifier,
             target_state.secret,
             transfer.token,
-            route.node_address,
+            receiver_address,
         )
+
+        partner_message_queue = addresses_to_queues.setdefault(receiver_address, [])
+        partner_message_queue.append(reveal)
 
         iteration = TransitionResult(target_state, [reveal])
 
@@ -183,7 +189,7 @@ def handle_block(target_state, channel_state, block_number):
     return iteration
 
 
-def state_transition(target_state, state_change, channel_state, block_number):
+def state_transition(target_state, state_change, channel_state, addresses_to_queues, block_number):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -193,6 +199,7 @@ def state_transition(target_state, state_change, channel_state, block_number):
         iteration = handle_inittarget(
             state_change,
             channel_state,
+            addresses_to_queues,
             block_number,
         )
     elif type(state_change) == Block:
@@ -208,6 +215,7 @@ def state_transition(target_state, state_change, channel_state, block_number):
             target_state,
             state_change,
             channel_state,
+            addresses_to_queues,
         )
     elif type(state_change) == ReceiveUnlock:
         iteration = handle_unlock(

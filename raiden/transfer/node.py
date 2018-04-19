@@ -97,6 +97,8 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
     events = list()
 
     if sub_task:
+        addresses_to_queues = node_state.addresses_to_queues
+
         if isinstance(sub_task, PaymentMappingState.InitiatorTask):
             payment_network_identifier = sub_task.payment_network_identifier
             token_address = sub_task.token_address
@@ -112,6 +114,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.manager_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
+                    addresses_to_queues,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -131,6 +134,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.mediator_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
+                    addresses_to_queues,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -152,6 +156,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.target_state,
                     state_change,
                     channel_state,
+                    addresses_to_queues,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -184,6 +189,8 @@ def subdispatch_initiatortask(
 
     events = list()
     if is_valid_subtask:
+        addresses_to_queues = node_state.addresses_to_queues
+
         token_network_state = get_token_network(
             node_state,
             payment_network_identifier,
@@ -193,6 +200,7 @@ def subdispatch_initiatortask(
             manager_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
+            addresses_to_queues,
             block_number,
         )
         events = iteration.events
@@ -233,6 +241,8 @@ def subdispatch_mediatortask(
 
     events = list()
     if is_valid_subtask:
+        addresses_to_queues = node_state.addresses_to_queues
+
         token_network_state = get_token_network(
             node_state,
             payment_network_identifier,
@@ -242,6 +252,7 @@ def subdispatch_mediatortask(
             mediator_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
+            addresses_to_queues,
             block_number,
         )
         events = iteration.events
@@ -292,10 +303,13 @@ def subdispatch_targettask(
         )
 
     if channel_state:
+        addresses_to_queues = node_state.addresses_to_queues
+
         iteration = target.state_transition(
             target_state,
             state_change,
             channel_state,
+            addresses_to_queues,
             block_number,
         )
         events = iteration.events

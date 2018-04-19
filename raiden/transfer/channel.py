@@ -811,6 +811,7 @@ def send_directtransfer(channel_state, amount, identifier):
     )
 
     channel_state.our_state.balance_proof = direct_transfer.balance_proof
+    channel_state.ordered_message_queue.append(direct_transfer)
 
     return direct_transfer
 
@@ -834,13 +835,14 @@ def send_lockedtransfer(
         secrethash,
     )
 
-    transfer = send_event.transfer
+    transfer = mediated_transfer.transfer
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
+    channel_state.ordered_message_queue.append(mediated_transfer)
 
-    return send_event
+    return mediated_transfer
 
 
 def send_refundtransfer(
@@ -880,19 +882,20 @@ def send_unlock(channel_state, identifier, secret, secrethash):
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock
 
-    unlock_lock, merkletree = create_unlock(
+    unlock, merkletree = create_unlock(
         channel_state,
         identifier,
         secret,
         lock,
     )
 
-    channel_state.our_state.balance_proof = unlock_lock.balance_proof
+    channel_state.our_state.balance_proof = unlock.balance_proof
     channel_state.our_state.merkletree = merkletree
+    channel_state.ordered_message_queue.append(unlock)
 
     _del_lock(channel_state.our_state, lock.secrethash)
 
-    return unlock_lock
+    return unlock
 
 
 def events_for_close(channel_state, block_number):

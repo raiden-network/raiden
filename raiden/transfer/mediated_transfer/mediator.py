@@ -562,7 +562,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
     return list()
 
 
-def events_for_revealsecret(transfers_pair, secret):
+def events_for_revealsecret(transfers_pair, secret, addresses_to_queues):
     """ Reveal the secret backwards.
     This node is named N, suppose there is a mediated transfer with two refund
     transfers, one from B and one from C:
@@ -589,13 +589,16 @@ def events_for_revealsecret(transfers_pair, secret):
         if payee_secret and not payer_secret:
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
-            reveal_secret = SendRevealSecret(
+            revealsecret = SendRevealSecret(
                 payer_transfer.identifier,
                 secret,
                 payer_transfer.token,
                 payer_transfer.balance_proof.sender,
             )
-            events.append(reveal_secret)
+
+            partner_message_queue = addresses_to_queues.setdefault(pair.payee_address, [])
+            partner_message_queue.append(revealsecret)
+            events.append(revealsecret)
 
     return events
 
@@ -709,6 +712,7 @@ def events_for_withdraw_if_closed(
 def secret_learned(
         state,
         channelidentifiers_to_channels,
+        addresses_to_queues,
         block_number,
         secret,
         secrethash,
@@ -753,6 +757,7 @@ def secret_learned(
     secret_reveal = events_for_revealsecret(
         state.transfers_pair,
         secret,
+        addresses_to_queues,
     )
 
     balance_proof = events_for_balanceproof(
@@ -968,7 +973,9 @@ def handle_secretreveal(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
-        block_number):
+        addresses_to_queues,
+        block_number,
+):
     """ Validate and handle a ReceiveSecretReveal mediator_state change.
     The Secret must propagate backwards through the chain of mediators, this
     function will record the learned secret, check if the secret is propagating
@@ -982,6 +989,7 @@ def handle_secretreveal(
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
+            addresses_to_queues,
             block_number,
             mediator_state_change.secret,
             mediator_state_change.secrethash,
@@ -995,7 +1003,13 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels, block_number):
+def handle_contractwithdraw(
+        state,
+        state_change,
+        channelidentifiers_to_channels,
+        addresses_to_queues,
+        block_number,
+):
     """ Handle a NettingChannelUnlock state change. """
     assert sha3(state.secret) == state.secrethash, 'secret must be validated by the smart contract'
 
@@ -1045,6 +1059,7 @@ def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels,
     iteration = secret_learned(
         state,
         channelidentifiers_to_channels,
+        addresses_to_queues,
         block_number,
         state_change.secret,
         state_change.secrethash,
@@ -1086,7 +1101,13 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
     return iteration
 
 
-def state_transition(mediator_state, state_change, channelidentifiers_to_channels, block_number):
+def state_transition(
+        mediator_state,
+        state_change,
+        channelidentifiers_to_channels,
+        addresses_to_queues,
+        block_number,
+):
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches
     # Notes:
@@ -1126,6 +1147,7 @@ def state_transition(mediator_state, state_change, channelidentifiers_to_channel
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
+            addresses_to_queues,
             block_number,
         )
 
@@ -1134,6 +1156,7 @@ def state_transition(mediator_state, state_change, channelidentifiers_to_channel
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
+            addresses_to_queues,
             block_number,
         )
 
