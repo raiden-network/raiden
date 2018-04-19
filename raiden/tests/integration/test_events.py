@@ -303,7 +303,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
 
     # the secret hasn't been revealed yet (through messages)
 
-    assert len(channel_state2_1.our_state.hashlocks_to_pendinglocks) == 1
+    assert len(channel_state2_1.our_state.hashlocks_to_lockedlocks) == 1
     proofs = list(channel.get_known_unlocks(channel_state2_1.our_state))
     assert not proofs
 
