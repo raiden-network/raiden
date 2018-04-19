@@ -51,6 +51,8 @@ from raiden.tests.utils.smoketest import (
     start_ethereum,
     run_smoketests,
 )
+from raiden.utils.cli import option, command, group, option_group
+
 
 gevent.monkey.patch_all()
 
@@ -267,206 +269,232 @@ class NATChoiceType(click.Choice):
 ADDRESS_TYPE = AddressType()
 
 
-OPTIONS = [
-    click.option(
-        '--address',
-        help=(
-            'The ethereum address you would like raiden to use and for which '
-            'a keystore file exists in your local system.'
-        ),
-        default=None,
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--keystore-path',
-        help=(
-            'If you have a non-standard path for the ethereum keystore directory'
-            ' provide it using this argument.'
-        ),
-        default=None,
-        type=click.Path(exists=True),
-        show_default=True,
-    ),
-    click.option(
-        '--gas-price',
-        help=(
-            'Set the gas price for ethereum transactions. If not provided '
-            'the value of the RPC calls eth_gasPrice is going to be used'
-        ),
-        default=None,
-        type=int
-    ),
-    click.option(
-        '--eth-rpc-endpoint',
-        help=(
-            '"host:port" address of ethereum JSON-RPC server.\n'
-            'Also accepts a protocol prefix (http:// or https://) with optional port'
-        ),
-        default='127.0.0.1:8545',  # geth default jsonrpc port
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--registry-contract-address',
-        help='hex encoded address of the registry contract.',
-        default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--discovery-contract-address',
-        help='hex encoded address of the discovery contract.',
-        default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--listen-address',
-        help='"host:port" for the raiden service to listen on.',
-        default='0.0.0.0:{}'.format(INITIAL_PORT),
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--rpccorsdomain',
-        help='Comma separated list of domains to accept cross origin requests.',
-        default='http://localhost:*/*',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--logging',
-        help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
-        default=':INFO',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--logfile',
-        help='file path for logging to file',
-        default=None,
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--log-json',
-        help='Output log lines in JSON format',
-        is_flag=True
-    ),
-    click.option(
-        '--max-unresponsive-time',
-        help=(
-            'Max time in seconds for which an address can send no packets and '
-            'still be considered healthy.'
-        ),
-        default=30,
-        type=int,
-        show_default=True,
-    ),
-    click.option(
-        '--send-ping-time',
-        help=(
-            'Time in seconds after which if we have received no message from a '
-            'node we have a connection with, we are going to send a PING message'
-        ),
-        default=60,
-        type=int,
-        show_default=True,
-    ),
-    click.option(
-        '--console',
-        help='Start the interactive raiden console',
-        is_flag=True
-    ),
-    click.option(
-        '--rpc/--no-rpc',
-        help='Start with or without the RPC server.',
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--sync-check/--no-sync-check',
-        help='Checks if the ethereum node is synchronized against etherscan.',
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--api-address',
-        help='"host:port" for the RPC server to listen on.',
-        default='127.0.0.1:5001',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--datadir',
-        help='Directory for storing raiden data.',
-        default=os.path.join(os.path.expanduser('~'), '.raiden'),
-        type=click.Path(
-            exists=False,
-            dir_okay=True,
-            file_okay=False,
-            writable=True,
-            resolve_path=True,
-            allow_dash=False,
-        ),
-        show_default=True,
-    ),
-    click.option(
-        '--password-file',
-        help='Text file containing the password for the provided account',
-        default=None,
-        type=click.File(lazy=True),
-        show_default=True,
-    ),
-    click.option(
-        '--web-ui/--no-web-ui',
-        help=(
-            'Start with or without the web interface. Requires --rpc. '
-            'It will be accessible at http://<api-address>. '
-        ),
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--eth-client-communication',
-        help='Print all communication with the underlying eth client',
-        is_flag=True,
-    ),
-    click.option(
-        '--nat',
-        help=(
-            'Manually specify method to use for determining public IP / NAT traversal.\n'
-            'Available methods:\n'
-            '"auto" - Try UPnP, then STUN, fallback to none\n'
-            '"upnp" - Try UPnP, fallback to none\n'
-            '"stun" - Try STUN, fallback to none\n'
-            '"none" - Use the local interface address '
-            '(this will likely cause connectivity issues)\n'
-            '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port no.)'
-        ),
-        type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
-        default='auto',
-        show_default=True
-    ),
-    click.option(
-        '--transport',
-        type=click.Choice(['udp', 'matrix']),
-        default='udp',
-        show_default=True
-    )
-]
-
-
 def options(func):
     """Having the common app options as a decorator facilitates reuse."""
-    for option in OPTIONS:
-        func = option(func)
+
+    # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
+    # for every use
+    options_ = [
+        option(
+            '--datadir',
+            help='Directory for storing raiden data.',
+            default=os.path.join(os.path.expanduser('~'), '.raiden'),
+            type=click.Path(
+                exists=False,
+                dir_okay=True,
+                file_okay=False,
+                writable=True,
+                resolve_path=True,
+                allow_dash=False,
+            ),
+            show_default=True,
+        ),
+        option(
+            '--keystore-path',
+            help=(
+                'If you have a non-standard path for the ethereum keystore directory'
+                ' provide it using this argument.'
+            ),
+            default=None,
+            type=click.Path(exists=True),
+            show_default=True,
+        ),
+        option(
+            '--address',
+            help=(
+                'The ethereum address you would like raiden to use and for which '
+                'a keystore file exists in your local system.'
+            ),
+            default=None,
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--password-file',
+            help='Text file containing the password for the provided account',
+            default=None,
+            type=click.File(lazy=True),
+            show_default=True,
+        ),
+        option(
+            '--registry-contract-address',
+            help='hex encoded address of the registry contract.',
+            default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--discovery-contract-address',
+            help='hex encoded address of the discovery contract.',
+            default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--console',
+            help='Start the interactive raiden console',
+            is_flag=True
+        ),
+        option(
+            '--transport',
+            help='Transport system to use. Matrix is experimental.',
+            type=click.Choice(['udp', 'matrix']),
+            default='udp',
+            show_default=True
+        ),
+        option_group(
+            'Ethereum Node Options',
+            option(
+                '--sync-check/--no-sync-check',
+                help='Checks if the ethereum node is synchronized against etherscan.',
+                default=True,
+                show_default=True,
+            ),
+            option(
+                '--gas-price',
+                help=(
+                    'Set the gas price for ethereum transactions. If not provided '
+                    'the value of the RPC calls eth_gasPrice is going to be used'
+                ),
+                default=None,
+                type=int
+            ),
+            option(
+                '--eth-rpc-endpoint',
+                help=(
+                    '"host:port" address of ethereum JSON-RPC server.\n'
+                    'Also accepts a protocol prefix (http:// or https://) with optional port'
+                ),
+                default='127.0.0.1:8545',  # geth default jsonrpc port
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--eth-client-communication',
+                help='Print all communication with the underlying eth client',
+                is_flag=True,
+            ),
+        ),
+        option_group(
+            'UDP Transport Options',
+            option(
+                '--listen-address',
+                help='"host:port" for the raiden service to listen on.',
+                default='0.0.0.0:{}'.format(INITIAL_PORT),
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--max-unresponsive-time',
+                help=(
+                    'Max time in seconds for which an address can send no packets and '
+                    'still be considered healthy.'
+                ),
+                default=30,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--send-ping-time',
+                help=(
+                    'Time in seconds after which if we have received no message from a '
+                    'node we have a connection with, we are going to send a PING message'
+                ),
+                default=60,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--nat',
+                help=(
+                    'Manually specify method to use for determining public IP / NAT traversal.\n'
+                    'Available methods:\n'
+                    '"auto" - Try UPnP, then STUN, fallback to none\n'
+                    '"upnp" - Try UPnP, fallback to none\n'
+                    '"stun" - Try STUN, fallback to none\n'
+                    '"none" - Use the local interface address '
+                    '(this will likely cause connectivity issues)\n'
+                    '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port '
+                    'number)'
+                ),
+                type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
+                default='auto',
+                show_default=True,
+                option_group='udp_transport'
+            ),
+        ),
+        option_group(
+            'Matrix Transport Options',
+            option(
+                '--matrix-server',
+                help='Matrix homeserver to use for communication',
+                default='https://transport01.raiden.network',
+                show_default=True,
+            )
+        ),
+        option_group(
+            'Logging Options',
+            option(
+                '--logging',
+                help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
+                default=':INFO',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--logfile',
+                help='file path for logging to file',
+                default=None,
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--log-json',
+                help='Output log lines in JSON format',
+                is_flag=True
+            ),
+        ),
+        option_group(
+            'RPC Options',
+            option(
+                '--rpc/--no-rpc',
+                help='Start with or without the RPC server.',
+                default=True,
+                show_default=True,
+            ),
+            option(
+                '--rpccorsdomain',
+                help='Comma separated list of domains to accept cross origin requests.',
+                default='http://localhost:*/*',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--api-address',
+                help='"host:port" for the RPC server to listen on.',
+                default='127.0.0.1:5001',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--web-ui/--no-web-ui',
+                help=(
+                    'Start with or without the web interface. Requires --rpc. '
+                    'It will be accessible at http://<api-address>. '
+                ),
+                default=True,
+                show_default=True,
+            ),
+        ),
+    ]
+
+    for option_ in reversed(options_):
+        func = option_(func)
     return func
 
 
 @options
-@click.command()
+@command()
 def app(
         address,
         keystore_path,
@@ -492,6 +520,7 @@ def app(
         eth_client_communication,
         nat,
         transport,
+        matrix_server,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -518,6 +547,7 @@ def app(
     config['api_host'] = api_host
     config['api_port'] = api_port
     config['transport_type'] = transport
+    config['matrix']['server'] = matrix_server
 
     if mapped_socket:
         config['socket'] = mapped_socket.socket
@@ -668,7 +698,7 @@ def prompt_account(address_hex, keystore_path, password_file):
     return address_hex, privatekey_bin
 
 
-@click.group(invoke_without_command=True)
+@group(invoke_without_command=True, context_settings={'max_content_width': 120})
 @options
 @click.pass_context
 def run(ctx, **kwargs):
@@ -777,7 +807,7 @@ def run(ctx, **kwargs):
 
 
 @run.command()
-@click.option(
+@option(
     '--short',
     is_flag=True,
     help='Only display Raiden version'
@@ -794,7 +824,7 @@ def version(short, **kwargs):
 
 
 @run.command()
-@click.option(
+@option(
     '--debug',
     is_flag=True,
     help='Drop into pdb on errors.'
@@ -853,11 +883,11 @@ def smoketest(ctx, debug, **kwargs):
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
     )
-    for option in app.params:
-        if option.name in args.keys():
-            args[option.name] = option.process_value(ctx, args[option.name])
+    for option_ in app.params:
+        if option_.name in args.keys():
+            args[option_.name] = option_.process_value(ctx, args[option_.name])
         else:
-            args[option.name] = option.default
+            args[option_.name] = option_.default
 
     password_file = os.path.join(args['keystore_path'], 'password')
     with open(password_file, 'w') as handler:
