@@ -313,10 +313,10 @@ def get_channelstate_by_tokenaddress(
 
 def get_transfer_role(
         node_state: NodeState,
-        hashlock: typing.Keccak256
+        secrethash: typing.Keccak256
 ) -> str:
 
-    transfer_task = node_state.payment_mapping.hashlocks_to_task.get(hashlock)
+    transfer_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     result = None
     if isinstance(transfer_task, PaymentMappingState.InitiatorTask):

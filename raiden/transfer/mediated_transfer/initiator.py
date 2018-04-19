@@ -147,7 +147,7 @@ def send_mediatedtransfer(
         transfer_description.amount,
         transfer_description.identifier,
         lock_expiration,
-        transfer_description.hashlock,
+        transfer_description.secrethash,
     )
     assert mediatedtransfer_event
 
@@ -163,7 +163,7 @@ def handle_secretrequest(
 
     request_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
-        state_change.hashlock == initiator_state.transfer_description.hashlock
+        state_change.secrethash == initiator_state.transfer_description.secrethash
     )
 
     valid_secretrequest = (
@@ -218,7 +218,7 @@ def handle_secretreveal(
     """
     is_valid_secret_reveal = (
         state_change.sender == channel_state.partner_state.address and
-        state_change.hashlock == initiator_state.transfer_description.hashlock
+        state_change.secrethash == initiator_state.transfer_description.secrethash
     )
 
     # If the channel is closed the balance proof must not be sent
@@ -233,7 +233,7 @@ def handle_secretreveal(
             channel_state,
             transfer_description.identifier,
             state_change.secret,
-            state_change.hashlock,
+            state_change.secrethash,
         )
 
         # TODO: Emit these events after on-chain withdraw
@@ -245,7 +245,7 @@ def handle_secretreveal(
 
         unlock_success = EventUnlockSuccess(
             transfer_description.identifier,
-            transfer_description.hashlock,
+            transfer_description.secrethash,
         )
 
         iteration = TransitionResult(None, [transfer_success, unlock_success, unlock_lock])

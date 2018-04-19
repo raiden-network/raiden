@@ -109,7 +109,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
         The channel is updated and the correspoding lock is removed
         * A balance proof for the new channel state is created and sent to the
           payer
-        The channel is unregistered for the given hashlock
+        The channel is unregistered for the given secrethash
 
     The step marked with an asterisk above introduced a context-switch. This
     allowed a second Reveal Secret message to be handled before the channel was
@@ -122,13 +122,13 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
 
     identifier = 1
     secret = sha3(b'test_regression_multiple_revealsecret')
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     expiration = app0.raiden.get_block_number() + 100
     amount = 10
     lock = Lock(
         amount,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     nonce = 1
@@ -140,7 +140,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
         channelstate_0_1.identifier,
         transferred_amount,
         app1.raiden.address,
-        lock.hashlock,
+        lock.secrethash,
         lock,
         app1.raiden.address,
         app0.raiden.address,

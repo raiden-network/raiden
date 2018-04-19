@@ -66,13 +66,13 @@ TransactionOrder = namedtuple(
 )
 
 
-def is_lock_pending(end_state, hashlock):
-    """True if the `hashlock` corresponds to a lock that is pending withdraw
+def is_lock_pending(end_state, secrethash):
+    """True if the `secrethash` corresponds to a lock that is pending withdraw
     and didn't expire.
     """
     return (
-        hashlock in end_state.hashlocks_to_lockedlocks or
-        hashlock in end_state.hashlocks_to_unlockedlocks
+        secrethash in end_state.secrethashes_to_lockedlocks or
+        secrethash in end_state.secrethashes_to_unlockedlocks
     )
 
 
@@ -86,14 +86,14 @@ def is_deposit_confirmed(channel_state, block_number):
     )
 
 
-def is_lock_locked(end_state, hashlock):
-    """True if the `hashlock` is for a lock with an unknown secret."""
-    return hashlock in end_state.hashlocks_to_lockedlocks
+def is_lock_locked(end_state, secrethash):
+    """True if the `secrethash` is for a lock with an unknown secret."""
+    return secrethash in end_state.secrethashes_to_lockedlocks
 
 
-def is_secret_known(end_state, hashlock):
-    """True if the `hashlock` is for a lock with a known secret."""
-    return hashlock in end_state.hashlocks_to_unlockedlocks
+def is_secret_known(end_state, secrethash):
+    """True if the `secrethash` is for a lock with a known secret."""
+    return secrethash in end_state.secrethashes_to_unlockedlocks
 
 
 def is_transaction_confirmed(transaction_block_number, blockchain_block_number):
@@ -338,7 +338,7 @@ def is_valid_unlock(unlock, channel_state, sender_state):
     received_balance_proof = unlock.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
-    lock = get_lock(sender_state, unlock.hashlock)
+    lock = get_lock(sender_state, unlock.secrethash)
 
     if lock is not None:
         merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
@@ -359,14 +359,14 @@ def is_valid_unlock(unlock, channel_state, sender_state):
     # withdraw on-chain for the non-closing party.
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
         msg = 'Invalid Unlock message for {}. The channel is already closed.'.format(
-            hexlify(unlock.hashlock).decode(),
+            hexlify(unlock.secrethash).decode(),
         )
 
         result = (False, msg, None)
 
     elif lock is None:
         msg = 'Invalid Secret message. There is no correspoding lock for {}'.format(
-            hexlify(unlock.hashlock).decode(),
+            hexlify(unlock.secrethash).decode(),
         )
 
         result = (False, msg, None)
@@ -440,12 +440,12 @@ def is_valid_unlock(unlock, channel_state, sender_state):
 def get_amount_locked(end_state):
     total_pending = sum(
         lock.amount
-        for lock in end_state.hashlocks_to_lockedlocks.values()
+        for lock in end_state.secrethashes_to_lockedlocks.values()
     )
 
     total_unclaimed = sum(
         unlock.lock.amount
-        for unlock in end_state.hashlocks_to_unlockedlocks.values()
+        for unlock in end_state.secrethashes_to_unlockedlocks.values()
     )
 
     return total_pending + total_unclaimed
@@ -496,21 +496,21 @@ def get_known_unlocks(end_state):
             partialproof.secret,
             partialproof.lock,
         )
-        for partialproof in end_state.hashlocks_to_unlockedlocks.values()
+        for partialproof in end_state.secrethashes_to_unlockedlocks.values()
     ]
 
 
 def get_lock(
         end_state: 'NettingChannelEndState',
-        hashlock: typing.Keccak256,
+        secrethash: typing.Keccak256,
 ) -> HashTimeLockState:
-    """Return the lock correspoding to `hashlock` or None if the lock is
+    """Return the lock correspoding to `secrethash` or None if the lock is
     unknown.
     """
-    lock = end_state.hashlocks_to_lockedlocks.get(hashlock)
+    lock = end_state.secrethashes_to_lockedlocks.get(secrethash)
 
     if not lock:
-        partial_unlock = end_state.hashlocks_to_unlockedlocks.get(hashlock)
+        partial_unlock = end_state.secrethashes_to_unlockedlocks.get(secrethash)
 
         if partial_unlock:
             lock = partial_unlock.lock
@@ -560,19 +560,19 @@ def get_status(channel_state):
     return result
 
 
-def _del_lock(end_state, hashlock):
+def _del_lock(end_state, secrethash):
     """Removes the lock from the indexing structures.
 
     Note:
         This won't change the merkletree!
     """
-    assert is_lock_pending(end_state, hashlock)
+    assert is_lock_pending(end_state, secrethash)
 
-    if hashlock in end_state.hashlocks_to_lockedlocks:
-        del end_state.hashlocks_to_lockedlocks[hashlock]
+    if secrethash in end_state.secrethashes_to_lockedlocks:
+        del end_state.secrethashes_to_lockedlocks[secrethash]
 
-    if hashlock in end_state.hashlocks_to_unlockedlocks:
-        del end_state.hashlocks_to_unlockedlocks[hashlock]
+    if secrethash in end_state.secrethashes_to_unlockedlocks:
+        del end_state.secrethashes_to_unlockedlocks[secrethash]
 
 
 def set_closed(channel_state, block_number):
@@ -702,7 +702,7 @@ def create_sendmediatedtransfer(
         amount,
         identifier,
         expiration,
-        hashlock):
+        secrethash):
 
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -717,7 +717,7 @@ def create_sendmediatedtransfer(
     lock = HashTimeLockState(
         amount,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     merkletree = compute_merkletree_with(
@@ -764,7 +764,7 @@ def create_sendmediatedtransfer(
 
 def create_unlock(channel_state, identifier, secret, lock):
     msg = 'caller must make sure the lock is known'
-    assert is_lock_pending(channel_state.our_state, lock.hashlock), msg
+    assert is_lock_pending(channel_state.our_state, lock.secrethash), msg
 
     msg = 'caller must make sure the channel is open'
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
@@ -822,7 +822,7 @@ def send_mediatedtransfer(
         amount,
         identifier,
         expiration,
-        hashlock):
+        secrethash):
 
     send_event, merkletree = create_sendmediatedtransfer(
         channel_state,
@@ -831,14 +831,14 @@ def send_mediatedtransfer(
         amount,
         identifier,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     transfer = send_event.transfer
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
-    channel_state.our_state.hashlocks_to_lockedlocks[lock.hashlock] = lock
+    channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return send_event
 
@@ -850,10 +850,10 @@ def send_refundtransfer(
         amount,
         identifier,
         expiration,
-        hashlock):
+        secrethash):
 
     msg = 'Refunds are only valid for *know and pending* transfers'
-    assert hashlock in channel_state.partner_state.hashlocks_to_lockedlocks, msg
+    assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     send_mediated_transfer, merkletree = create_sendmediatedtransfer(
         channel_state,
@@ -862,7 +862,7 @@ def send_refundtransfer(
         amount,
         identifier,
         expiration,
-        hashlock,
+        secrethash,
     )
 
     mediated_transfer = send_mediated_transfer.transfer
@@ -870,14 +870,14 @@ def send_refundtransfer(
 
     channel_state.our_state.balance_proof = mediated_transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
-    channel_state.our_state.hashlocks_to_lockedlocks[lock.hashlock] = lock
+    channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     refund_transfer = refund_from_sendmediated(send_mediated_transfer)
     return refund_transfer
 
 
-def send_unlock(channel_state, identifier, secret, hashlock):
-    lock = get_lock(channel_state.our_state, hashlock)
+def send_unlock(channel_state, identifier, secret, secrethash):
+    lock = get_lock(channel_state.our_state, secrethash)
     assert lock
 
     unlock_lock, merkletree = create_unlock(
@@ -890,7 +890,7 @@ def send_unlock(channel_state, identifier, secret, hashlock):
     channel_state.our_state.balance_proof = unlock_lock.balance_proof
     channel_state.our_state.merkletree = merkletree
 
-    _del_lock(channel_state.our_state, lock.hashlock)
+    _del_lock(channel_state.our_state, lock.secrethash)
 
     return unlock_lock
 
@@ -916,18 +916,18 @@ def events_for_close(channel_state, block_number):
     return events
 
 
-def register_secret_endstate(end_state, secret, hashlock):
-    if is_lock_locked(end_state, hashlock):
-        pendinglock = end_state.hashlocks_to_lockedlocks[hashlock]
-        del end_state.hashlocks_to_lockedlocks[hashlock]
+def register_secret_endstate(end_state, secret, secrethash):
+    if is_lock_locked(end_state, secrethash):
+        pendinglock = end_state.secrethashes_to_lockedlocks[secrethash]
+        del end_state.secrethashes_to_lockedlocks[secrethash]
 
-        end_state.hashlocks_to_unlockedlocks[hashlock] = UnlockPartialProofState(
+        end_state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
             pendinglock,
             secret,
         )
 
 
-def register_secret(channel_state, secret, hashlock):
+def register_secret(channel_state, secret, secrethash):
     """This will register the secret and set the lock to the unlocked stated.
 
     Even though the lock is unlock it's is *not* claimed. The capacity will
@@ -936,8 +936,8 @@ def register_secret(channel_state, secret, hashlock):
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
-    register_secret_endstate(our_state, secret, hashlock)
-    register_secret_endstate(partner_state, secret, hashlock)
+    register_secret_endstate(our_state, secret, secrethash)
+    register_secret_endstate(partner_state, secret, secrethash)
 
 
 def handle_send_directtransfer(channel_state, state_change):
@@ -1034,7 +1034,7 @@ def handle_receive_mediatedtransfer(
     The receiver needs to use this method to update the container with a
     _valid_ transfer, otherwise the locksroot will not contain the pending
     transfer. The receiver needs to ensure that the merkle root has the
-    hashlock included, otherwise it won't be able to claim it.
+    secrethash included, otherwise it won't be able to claim it.
     """
     is_valid, msg, merkletree = is_valid_mediatedtransfer(
         mediated_transfer,
@@ -1048,7 +1048,7 @@ def handle_receive_mediatedtransfer(
         channel_state.partner_state.merkletree = merkletree
 
         lock = mediated_transfer.lock
-        channel_state.partner_state.hashlocks_to_lockedlocks[lock.hashlock] = lock
+        channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return is_valid, msg
 
@@ -1059,9 +1059,9 @@ def handle_receive_refundtransfer(channel_state, refund_transfer):
 
 def handle_receive_secretreveal(channel_state, state_change):
     secret = state_change.secret
-    hashlock = state_change.hashlock
+    secrethash = state_change.secrethash
 
-    register_secret(channel_state, secret, hashlock)
+    register_secret(channel_state, secret, secrethash)
 
 
 def handle_unlock(channel_state, unlock):
@@ -1075,7 +1075,7 @@ def handle_unlock(channel_state, unlock):
         channel_state.partner_state.balance_proof = unlock.balance_proof
         channel_state.partner_state.merkletree = unlocked_merkletree
 
-        _del_lock(channel_state.partner_state, unlock.hashlock)
+        _del_lock(channel_state.partner_state, unlock.secrethash)
 
     return is_valid, msg
 
@@ -1196,32 +1196,32 @@ def handle_channel_withdraw(channel_state, state_change):
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state
 
-        hashlock = state_change.hashlock
+        secrethash = state_change.secrethash
         secret = state_change.secret
 
         our_withdraw = (
             state_change.receiver == our_state.address and
-            is_lock_pending(partner_state, hashlock)
+            is_lock_pending(partner_state, secrethash)
         )
         if our_withdraw:
-            _del_lock(partner_state, hashlock)
+            _del_lock(partner_state, secrethash)
 
         partner_withdraw = (
             state_change.receiver == partner_state.address and
-            is_lock_pending(our_state, hashlock)
+            is_lock_pending(our_state, secrethash)
         )
         if partner_withdraw:
-            _del_lock(our_state, hashlock)
+            _del_lock(our_state, secrethash)
 
         # Withdraw is required if there was a refund in this channel, and the
         # secret is learned from the withdraw event.
-        if is_lock_pending(our_state, hashlock):
-            lock = get_lock(our_state, hashlock)
+        if is_lock_pending(our_state, secrethash):
+            lock = get_lock(our_state, secrethash)
             proof = compute_proof_for_lock(our_state, secret, lock)
             withdraw = ContractSendChannelWithdraw(channel_state.identifier, [proof])
             events.append(withdraw)
 
-        register_secret(channel_state, secret, hashlock)
+        register_secret(channel_state, secret, secrethash)
 
     return TransitionResult(channel_state, events)
 

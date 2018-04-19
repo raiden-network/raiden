@@ -95,7 +95,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
         alice_to_bob_amount,
         identifier,
     )
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
 
     # This is the current state of the protocol:
     #
@@ -106,7 +106,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     alice_bob_channel = get_channelstate(alice_app, bob_app, token_address)
     bob_alice_channel = get_channelstate(bob_app, alice_app, token_address)
 
-    lock = channel.get_lock(alice_bob_channel.our_state, hashlock)
+    lock = channel.get_lock(alice_bob_channel.our_state, secrethash)
     assert lock
 
     assert_synched_channel_state(
@@ -139,7 +139,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
 
     # Unlock will not be called because the secret was not revealed
     assert lock.expiration > alice_app.raiden.chain.block_number()
-    assert lock.hashlock == sha3(secret)
+    assert lock.secrethash == sha3(secret)
 
     nettingchannel_proxy = bob_app.raiden.chain.netting_channel(
         bob_alice_channel.identifier,
@@ -176,7 +176,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
         'payment_network_identifier': registry_address,
         'token_address': token_address,
         'channel_identifier': alice_bob_channel.identifier,
-        'hashlock': hashlock,
+        'secrethash': secrethash,
         'secret': secret,
         'receiver': bob_app.raiden.address,
     })
@@ -210,11 +210,11 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         amount,
         identifier,
     )
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
 
     # Compute the merkle proof for the pending transfer, and then unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_address)
-    lock = channel.get_lock(channelstate_0_1.our_state, hashlock)
+    lock = channel.get_lock(channelstate_0_1.our_state, secrethash)
     unlock_proof = channel.compute_proof_for_lock(
         channelstate_0_1.our_state,
         secret,
@@ -315,7 +315,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
         amount,
         identifier,
     )
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
 
     attack_channel = get_channelstate(app2, app1, token)
     attack_transfer = None  # TODO
@@ -323,7 +323,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     hub_contract = get_channelstate(app1, app0, token).external_state.netting_channel.address
 
     # the attacker can create a merkle proof of the locked transfer
-    lock = attack_channel.partner_state.get_lock_by_hashlock(hashlock)
+    lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
     unlock_proof = attack_channel.partner_state.compute_proof_for_lock(secret, lock)
 
     # start the settle counter

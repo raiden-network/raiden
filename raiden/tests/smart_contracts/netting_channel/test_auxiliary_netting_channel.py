@@ -126,8 +126,8 @@ def test_merkle_proof_one_lock(tester_chain, tester_nettingchannel_library_addre
     amount = 10
     expiration = 77
     secret = sha3(b'test_merkle_proof_one_lock')
-    hashlock = sha3(secret)
-    lock = Lock(amount, expiration, hashlock)
+    secrethash = sha3(secret)
+    lock = Lock(amount, expiration, secrethash)
 
     layers = compute_layers([lock.lockhash])
     merkletree = MerkleTreeState(layers)

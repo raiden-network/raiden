@@ -10,7 +10,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
     HOP2,
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
     UNIT_TRANSFER_SENDER,
@@ -56,7 +56,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     }
     possible_routes = [factories.route_from_channel(channel1)]
 
-    mediator_state = MediatorTransferState(UNIT_HASHLOCK)
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     initial_iteration = mediator.mediate_transfer(
         mediator_state,
         possible_routes,

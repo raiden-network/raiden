@@ -84,16 +84,16 @@ def subdispatch_to_all_channels(node_state, state_change, block_number):
 def subdispatch_to_all_mediatedtransfers(node_state, state_change):
     events = list()
 
-    for hashlock in node_state.payment_mapping.hashlocks_to_task.keys():
-        result = subdispatch_to_paymenttask(node_state, state_change, hashlock)
+    for secrethash in node_state.payment_mapping.secrethashes_to_task.keys():
+        result = subdispatch_to_paymenttask(node_state, state_change, secrethash)
         events.extend(result.events)
 
     return TransitionResult(node_state, events)
 
 
-def subdispatch_to_paymenttask(node_state, state_change, hashlock):
+def subdispatch_to_paymenttask(node_state, state_change, secrethash):
     block_number = node_state.block_number
-    sub_task = node_state.payment_mapping.hashlocks_to_task.get(hashlock)
+    sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events = list()
 
     if sub_task:
@@ -164,10 +164,10 @@ def subdispatch_initiatortask(
         state_change,
         payment_network_identifier,
         token_address,
-        hashlock):
+        secrethash):
 
     block_number = node_state.block_number
-    sub_task = node_state.payment_mapping.hashlocks_to_task.get(hashlock)
+    sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
         is_valid_subtask = True
@@ -203,7 +203,7 @@ def subdispatch_initiatortask(
                 token_address,
                 iteration.new_state,
             )
-            node_state.payment_mapping.hashlocks_to_task[hashlock] = sub_task
+            node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
 
     return TransitionResult(node_state, events)
 
@@ -213,10 +213,10 @@ def subdispatch_mediatortask(
         state_change,
         payment_network_identifier,
         token_address,
-        hashlock):
+        secrethash):
 
     block_number = node_state.block_number
-    sub_task = node_state.payment_mapping.hashlocks_to_task.get(hashlock)
+    sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
         is_valid_subtask = True
@@ -252,7 +252,7 @@ def subdispatch_mediatortask(
                 token_address,
                 iteration.new_state,
             )
-            node_state.payment_mapping.hashlocks_to_task[hashlock] = sub_task
+            node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
 
     return TransitionResult(node_state, events)
 
@@ -263,10 +263,10 @@ def subdispatch_targettask(
         payment_network_identifier,
         token_address,
         channel_identifier,
-        hashlock):
+        secrethash):
 
     block_number = node_state.block_number
-    sub_task = node_state.payment_mapping.hashlocks_to_task.get(hashlock)
+    sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
         is_valid_subtask = True
@@ -307,7 +307,7 @@ def subdispatch_targettask(
                 channel_identifier,
                 iteration.new_state,
             )
-            node_state.payment_mapping.hashlocks_to_task[hashlock] = sub_task
+            node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
 
     return TransitionResult(node_state, events)
 
@@ -489,13 +489,13 @@ def handle_secret_reveal(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.hashlock
+        state_change.secrethash
     )
 
 
 def handle_init_initiator(node_state, state_change):
     transfer = state_change.transfer
-    hashlock = transfer.hashlock
+    secrethash = transfer.secrethash
     payment_network_identifier = state_change.payment_network_identifier
     token_address = transfer.token
 
@@ -504,13 +504,13 @@ def handle_init_initiator(node_state, state_change):
         state_change,
         payment_network_identifier,
         token_address,
-        hashlock,
+        secrethash,
     )
 
 
 def handle_init_mediator(node_state, state_change):
     transfer = state_change.from_transfer
-    hashlock = transfer.lock.hashlock
+    secrethash = transfer.lock.secrethash
     payment_network_identifier = state_change.payment_network_identifier
     token_address = transfer.token
 
@@ -519,13 +519,13 @@ def handle_init_mediator(node_state, state_change):
         state_change,
         payment_network_identifier,
         token_address,
-        hashlock,
+        secrethash,
     )
 
 
 def handle_init_target(node_state, state_change):
     transfer = state_change.transfer
-    hashlock = transfer.lock.hashlock
+    secrethash = transfer.lock.secrethash
     payment_network_identifier = state_change.payment_network_identifier
     token_address = transfer.token
     channel_identifier = transfer.balance_proof.channel_address
@@ -536,7 +536,7 @@ def handle_init_target(node_state, state_change):
         payment_network_identifier,
         token_address,
         channel_identifier,
-        hashlock,
+        secrethash,
     )
 
 
@@ -544,7 +544,7 @@ def handle_receive_transfer_refund(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.transfer.lock.hashlock
+        state_change.transfer.lock.secrethash
     )
 
 
@@ -552,23 +552,23 @@ def handle_receive_transfer_refund_cancel_route(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.transfer.lock.hashlock
+        state_change.transfer.lock.secrethash
     )
 
 
 def handle_receive_secret_request(node_state, state_change):
-    hashlock = state_change.hashlock
-    return subdispatch_to_paymenttask(node_state, state_change, hashlock)
+    secrethash = state_change.secrethash
+    return subdispatch_to_paymenttask(node_state, state_change, secrethash)
 
 
 def handle_receive_secret_reveal(node_state, state_change):
-    hashlock = state_change.hashlock
-    return subdispatch_to_paymenttask(node_state, state_change, hashlock)
+    secrethash = state_change.secrethash
+    return subdispatch_to_paymenttask(node_state, state_change, secrethash)
 
 
 def handle_receive_unlock(node_state, state_change):
-    hashlock = state_change.hashlock
-    return subdispatch_to_paymenttask(node_state, state_change, hashlock)
+    secrethash = state_change.secrethash
+    return subdispatch_to_paymenttask(node_state, state_change, secrethash)
 
 
 def state_transition(node_state, state_change):

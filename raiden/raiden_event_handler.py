@@ -142,7 +142,7 @@ def handle_unlockfailed(
     # pylint: disable=unused-argument
     log.error(
         'UnlockFailed!',
-        hashlock=pex(unlock_failed_event.hashlock),
+        secrethash=pex(unlock_failed_event.secrethash),
         reason=unlock_failed_event.reason
     )
 

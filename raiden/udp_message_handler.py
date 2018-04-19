@@ -35,7 +35,7 @@ def handle_message_secretrequest(raiden: 'RaidenService', message: SecretRequest
     secret_request = ReceiveSecretRequest(
         message.identifier,
         message.amount,
-        message.hashlock,
+        message.secrethash,
         message.sender,
     )
     raiden.handle_state_change(secret_request)
@@ -75,7 +75,7 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
 
     role = views.get_transfer_role(
         node_state,
-        from_transfer.lock.hashlock,
+        from_transfer.lock.secrethash,
     )
 
     if role == 'initiator':

@@ -50,7 +50,7 @@ def sanity_check(payment_state):
 def events_for_cancel_current_route(transfer_description):
     unlock_failed = EventUnlockFailed(
         identifier=transfer_description.identifier,
-        hashlock=transfer_description.hashlock,
+        secrethash=transfer_description.secrethash,
         reason='route was canceled',
     )
     return [unlock_failed]
@@ -164,7 +164,7 @@ def handle_transferrefund(
     maximum_expiration = lock_timeout + block_number
 
     is_valid_lock = (
-        refund_transfer.lock.hashlock == original_transfer.lock.hashlock and
+        refund_transfer.lock.secrethash == original_transfer.lock.secrethash and
         refund_transfer.lock.amount == original_transfer.lock.amount and
         refund_transfer.lock.expiration <= maximum_expiration
     )
