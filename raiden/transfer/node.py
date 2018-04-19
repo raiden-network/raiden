@@ -75,7 +75,12 @@ def subdispatch_to_all_channels(node_state, state_change, block_number):
     for payment_network in node_state.identifiers_to_paymentnetworks.values():
         for token_network_state in payment_network.tokenaddresses_to_tokennetworks.values():
             for channel_state in token_network_state.channelidentifiers_to_channels.values():
-                result = channel.state_transition(channel_state, state_change, block_number)
+                result = channel.state_transition(
+                    channel_state,
+                    state_change,
+                    node_state.pseudo_random_generator,
+                    block_number,
+                )
                 events.extend(result.events)
 
     return TransitionResult(node_state, events)
@@ -98,6 +103,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
 
     if sub_task:
         addresses_to_queues = node_state.addresses_to_queues
+        pseudo_random_generator = node_state.pseudo_random_generator
 
         if isinstance(sub_task, PaymentMappingState.InitiatorTask):
             payment_network_identifier = sub_task.payment_network_identifier
@@ -115,6 +121,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
                     addresses_to_queues,
+                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -135,6 +142,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
                     addresses_to_queues,
+                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -157,6 +165,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     state_change,
                     channel_state,
                     addresses_to_queues,
+                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -190,6 +199,7 @@ def subdispatch_initiatortask(
     events = list()
     if is_valid_subtask:
         addresses_to_queues = node_state.addresses_to_queues
+        pseudo_random_generator = node_state.pseudo_random_generator
 
         token_network_state = get_token_network(
             node_state,
@@ -201,6 +211,7 @@ def subdispatch_initiatortask(
             state_change,
             token_network_state.channelidentifiers_to_channels,
             addresses_to_queues,
+            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -248,11 +259,14 @@ def subdispatch_mediatortask(
             payment_network_identifier,
             token_address,
         )
+
+        pseudo_random_generator = node_state.pseudo_random_generator
         iteration = mediator.state_transition(
             mediator_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
             addresses_to_queues,
+            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -304,12 +318,14 @@ def subdispatch_targettask(
 
     if channel_state:
         addresses_to_queues = node_state.addresses_to_queues
+        pseudo_random_generator = node_state.pseudo_random_generator
 
         iteration = target.state_transition(
             target_state,
             state_change,
             channel_state,
             addresses_to_queues,
+            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -376,7 +392,10 @@ def handle_block(node_state, state_change):
 
 
 def handle_node_init(node_state, state_change):
-    node_state = NodeState(state_change.block_number)
+    node_state = NodeState(
+        state_change.pseudo_random_generator,
+        state_change.block_number,
+    )
     events = list()
     return TransitionResult(node_state, events)
 
@@ -391,9 +410,11 @@ def handle_token_network_action(node_state, state_change):
 
     events = list()
     if token_network_state:
+        pseudo_random_generator = node_state.pseudo_random_generator
         iteration = token_network.state_transition(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             node_state.block_number,
         )
 
@@ -477,9 +498,11 @@ def handle_channel_withdraw(node_state, state_change):
     # first dispatch the withdraw to update the channel
     events = []
     if token_network_state:
+        pseudo_random_generator = node_state.pseudo_random_generator
         sub_iteration = token_network.subdispatch_to_channel_by_id(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             node_state.block_number,
         )
         events.extend(sub_iteration.events)

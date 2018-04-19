@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """ Utilities to track and assert transferred messages. """
-
 import string
+import random
 
+from raiden.constants import UINT64_MAX
 from raiden.network.transport import DummyTransport
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
@@ -43,7 +44,7 @@ SECRETHASHES_FOR_MERKLETREE = [
 # nonce value
 DIRECT_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
-    'identifier': [-1, 2 ** 64],
+    'payment_identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'transferred_amount': [-1, 2 ** 256],
@@ -51,7 +52,7 @@ DIRECT_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
 
 REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
-    'identifier': [-1, 2 ** 64],
+    'payment_identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'transferred_amount': [-1, 2 ** 256],
@@ -59,7 +60,7 @@ REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
 
 MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
-    'identifier': [-1, 2 ** 64],
+    'payment_identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'target': INVALID_ADDRESSES,
@@ -78,7 +79,8 @@ def make_lock(amount=7, expiration=1, secrethash=VALID_SECRETHASHES[0]):
 
 
 def make_refund_transfer(
-        identifier=0,
+        message_identifier=None,
+        payment_identifier=0,
         nonce=1,
         token=ADDRESS,
         channel=ADDRESS,
@@ -91,8 +93,12 @@ def make_refund_transfer(
         fee=0,
         secrethash=VALID_SECRETHASHES[0]):
 
+    if message_identifier is None:
+        message_identifier = random.randint(0, UINT64_MAX)
+
     return RefundTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         token,
         channel,
@@ -107,7 +113,8 @@ def make_refund_transfer(
 
 
 def make_mediated_transfer(
-        identifier=0,
+        message_identifier=None,
+        payment_identifier=0,
         nonce=1,
         token=ADDRESS,
         channel=ADDRESS,
@@ -120,6 +127,9 @@ def make_mediated_transfer(
         initiator=ADDRESS,
         fee=0):
 
+    if message_identifier is None:
+        message_identifier = random.randint(0, UINT64_MAX)
+
     lock = make_lock(
         amount=amount,
         expiration=expiration,
@@ -129,7 +139,8 @@ def make_mediated_transfer(
         locksroot = sha3(lock.as_bytes)
 
     return LockedTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         token,
         channel,
@@ -139,12 +150,13 @@ def make_mediated_transfer(
         lock,
         target,
         initiator,
-        fee
+        fee,
     )
 
 
 def make_direct_transfer(
-        identifier=0,
+        message_identifier=None,
+        payment_identifier=0,
         nonce=1,
         token=ADDRESS,
         channel=ADDRESS,
@@ -152,8 +164,12 @@ def make_direct_transfer(
         recipient=ADDRESS,
         locksroot=EMPTY_MERKLE_ROOT):
 
+    if message_identifier is None:
+        message_identifier = random.randint(0, UINT64_MAX)
+
     return DirectTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         token,
         channel,

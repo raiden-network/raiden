@@ -19,6 +19,7 @@ transferred_amount = integers(min_value=0, max_value=UINT256_MAX)
 def direct_transfer(draw, token, channel, recipient, locksroot):
     return DirectTransfer(
         draw(identifier),
+        draw(identifier),
         draw(nonce),
         draw(token),
         draw(channel),

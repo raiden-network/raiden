@@ -21,6 +21,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
+    message_identifier_from_prng,
     RouteState,
     NettingChannelState,
 )
@@ -81,6 +82,7 @@ def try_new_route(
         channelidentifiers_to_channels: ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
+        pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -98,7 +100,7 @@ def try_new_route(
             reason = 'none of the available routes could be used'
 
         transfer_failed = EventTransferSentFailed(
-            identifier=transfer_description.identifier,
+            identifier=transfer_description.payment_identifier,
             reason=reason,
         )
         events.append(transfer_failed)
@@ -111,9 +113,11 @@ def try_new_route(
             channel_state.identifier,
         )
 
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             initiator_state,
             channel_state,
+            message_identifier,
             block_number,
         )
         assert lockedtransfer_event
@@ -126,9 +130,11 @@ def try_new_route(
 def send_lockedtransfer(
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
+        message_identifier,
         block_number: typing.BlockNumber,
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel.
+
     Raises:
         AssertionError: If the channel does not have enough capacity.
     """
@@ -145,7 +151,8 @@ def send_lockedtransfer(
         transfer_description.initiator,
         transfer_description.target,
         transfer_description.amount,
-        transfer_description.identifier,
+        message_identifier,
+        transfer_description.payment_identifier,
         lock_expiration,
         transfer_description.secrethash,
     )
@@ -159,7 +166,8 @@ def send_lockedtransfer(
 def handle_secretrequest(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretRequest,
-        partner_message_queue: typing.UnorderedMessageQueue,
+        partner_message_queue,
+        pseudo_random_generator,
 ) -> TransitionResult:
 
     request_from_target = (
@@ -167,14 +175,18 @@ def handle_secretrequest(
         state_change.secrethash == initiator_state.transfer_description.secrethash
     )
 
+    is_valid_payment_id = (
+        state_change.payment_identifier == initiator_state.transfer_description.payment_identifier
+    )
+
     valid_secretrequest = (
         request_from_target and
-        state_change.identifier == initiator_state.transfer_description.identifier and
+        is_valid_payment_id and
         state_change.amount == initiator_state.transfer_description.amount
     )
 
     invalid_secretrequest = request_from_target and (
-        state_change.identifier != initiator_state.transfer_description.identifier or
+        is_valid_payment_id or
         state_change.amount != initiator_state.transfer_description.amount
     )
 
@@ -185,9 +197,10 @@ def handle_secretrequest(
         #
         # Note: The target might be the first hop
         #
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         transfer_description = initiator_state.transfer_description
         revealsecret = SendRevealSecret(
-            transfer_description.identifier,
+            message_identifier,
             transfer_description.secret,
             transfer_description.token,
             transfer_description.target,
@@ -199,7 +212,7 @@ def handle_secretrequest(
 
     elif invalid_secretrequest:
         cancel = EventTransferSentFailed(
-            identifier=initiator_state.transfer_description.identifier,
+            identifier=initiator_state.transfer_description.payment_identifier,
             reason='bad secret request message from target',
         )
         iteration = TransitionResult(None, [cancel])
@@ -214,6 +227,7 @@ def handle_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
+        pseudo_random_generator,
 ) -> TransitionResult:
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.
@@ -231,22 +245,24 @@ def handle_secretreveal(
         # withdraw message to next hop
         transfer_description = initiator_state.transfer_description
 
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         unlock_lock = channel.send_unlock(
             channel_state,
-            transfer_description.identifier,
+            transfer_description.payment_identifier,
+            message_identifier,
             state_change.secret,
             state_change.secrethash,
         )
 
         # TODO: Emit these events after on-chain withdraw
         transfer_success = EventTransferSentSuccess(
-            transfer_description.identifier,
+            transfer_description.payment_identifier,
             transfer_description.amount,
             transfer_description.target,
         )
 
         unlock_success = EventUnlockSuccess(
-            transfer_description.identifier,
+            transfer_description.payment_identifier,
             transfer_description.secrethash,
         )
 

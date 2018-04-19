@@ -21,21 +21,36 @@ def maybe_update_subtask(new_state, secrethash, secrethashes_to_states):
         del secrethashes_to_states[secrethash]
 
 
-def subdispatch_to_channel_by_id(token_network_state, state_change, block_number):
+def subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
     events = list()
 
     ids_to_channels = token_network_state.channelidentifiers_to_channels
     channel_state = ids_to_channels.get(state_change.channel_identifier)
 
     if channel_state:
-        result = channel.state_transition(channel_state, state_change, block_number)
+        result = channel.state_transition(
+            channel_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
         events.extend(result.events)
 
     return TransitionResult(token_network_state, events)
 
 
-def handle_channel_close(token_network_state, state_change, block_number):
-    return subdispatch_to_channel_by_id(token_network_state, state_change, block_number)
+def handle_channel_close(token_network_state, state_change, pseudo_random_generator, block_number):
+    return subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
 
 
 def handle_channelnew(token_network_state, state_change):
@@ -57,16 +72,31 @@ def handle_channelnew(token_network_state, state_change):
     return TransitionResult(token_network_state, events)
 
 
-def handle_balance(token_network_state, state_change, block_number):
-    return subdispatch_to_channel_by_id(token_network_state, state_change, block_number)
+def handle_balance(token_network_state, state_change, pseudo_random_generator, block_number):
+    return subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
 
 
-def handle_closed(token_network_state, state_change, block_number):
-    return subdispatch_to_channel_by_id(token_network_state, state_change, block_number)
+def handle_closed(token_network_state, state_change, pseudo_random_generator, block_number):
+    return subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
 
 
-def handle_settled(token_network_state, state_change, block_number):
-    return subdispatch_to_channel_by_id(token_network_state, state_change, block_number)
+def handle_settled(token_network_state, state_change, pseudo_random_generator, block_number):
+    return subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
 
 
 def handle_newroute(token_network_state, state_change):
@@ -80,12 +110,22 @@ def handle_newroute(token_network_state, state_change):
     return TransitionResult(token_network_state, events)
 
 
-def handle_action_transfer_direct(token_network_state, state_change, block_number):
+def handle_action_transfer_direct(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
     receiver_address = state_change.receiver_address
     channel_state = token_network_state.partneraddresses_to_channels.get(receiver_address)
 
     if channel_state:
-        iteration = channel.state_transition(channel_state, state_change, block_number)
+        iteration = channel.state_transition(
+            channel_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
         events = iteration.events
     else:
         failure = EventTransferSentFailed(
@@ -97,39 +137,60 @@ def handle_action_transfer_direct(token_network_state, state_change, block_numbe
     return TransitionResult(token_network_state, events)
 
 
-def handle_receive_transfer_direct(token_network_state, state_change, block_number):
+def handle_receive_transfer_direct(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
     events = list()
 
     channel_id = state_change.balance_proof.channel_address
     channel_state = token_network_state.channelidentifiers_to_channels.get(channel_id)
 
     if channel_state:
-        result = channel.state_transition(channel_state, state_change, block_number)
+        result = channel.state_transition(
+            channel_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
         events.extend(result.events)
 
     return TransitionResult(token_network_state, events)
 
 
-def handle_receive_transfer_refund(token_network_state, state_change, block_number):
+def handle_receive_transfer_refund(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
     events = list()
 
     channel_id = state_change.balance_proof.channel_address
     channel_state = token_network_state.channelidentifiers_to_channels.get(channel_id)
 
     if channel_state:
-        result = channel.state_transition(channel_state, state_change, block_number)
+        result = channel.state_transition(
+            channel_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
         events.extend(result.events)
 
     return TransitionResult(token_network_state, events)
 
 
-def state_transition(token_network_state, state_change, block_number):
+def state_transition(token_network_state, state_change, pseudo_random_generator, block_number):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     if type(state_change) == ActionChannelClose:
         iteration = handle_channel_close(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelNew:
@@ -141,18 +202,21 @@ def state_transition(token_network_state, state_change, block_number):
         iteration = handle_balance(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_closed(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_settled(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ContractReceiveRouteNew:
@@ -164,12 +228,14 @@ def state_transition(token_network_state, state_change, block_number):
         iteration = handle_action_transfer_direct(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveTransferDirect:
         iteration = handle_receive_transfer_direct(
             token_network_state,
             state_change,
+            pseudo_random_generator,
             block_number,
         )
     else:

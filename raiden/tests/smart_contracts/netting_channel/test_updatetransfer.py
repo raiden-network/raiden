@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+import random
+
 import pytest
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
@@ -157,8 +160,10 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
     opened_block = nettingchannel.opened(sender=pkey0)
 
     # make a transfer where pkey1 is the target
+    message_identifier = random.randint(0, UINT64_MAX)
     transfer_nonparticipant = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         channel=channel0.identifier,
@@ -194,8 +199,10 @@ def test_update_must_fail_with_a_channel_address(tester_channels):
     wrong_channel = factories.make_address()
 
     # make a transfer where pkey1 is the target
+    message_identifier = random.randint(0, UINT64_MAX)
     transfer_wrong_recipient = DirectTransfer(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         channel=wrong_channel,

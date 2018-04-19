@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-locals,too-many-statements,too-many-lines
 
+import random
 from collections import namedtuple
 from copy import deepcopy
 from itertools import cycle
@@ -8,6 +9,7 @@ from itertools import cycle
 import pytest
 from ethereum import slogging
 
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     DirectTransfer,
     LockedTransfer,
@@ -159,9 +161,11 @@ def make_receive_transfer_direct(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError('Private key does not match any of the participants.')
 
-    identifier = nonce
+    message_identifier = random.randint(0, UINT64_MAX)
+    payment_identifier = nonce
     mediated_transfer_msg = DirectTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         channel_state.token_address,
         channel_state.identifier,
@@ -176,7 +180,7 @@ def make_receive_transfer_direct(
     receive_directtransfer = ReceiveTransferDirect(
         payment_network_identifier,
         channel_state.token_address,
-        identifier,
+        payment_identifier,
         balance_proof,
     )
 
@@ -206,11 +210,13 @@ def make_receive_transfer_mediated(
 
     locksroot = layers[MERKLEROOT][0]
 
-    identifier = nonce
+    message_identifier = random.randint(0, UINT64_MAX)
+    payment_identifier = nonce
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
     mediated_transfer_msg = LockedTransfer(
-        identifier,
+        message_identifier,
+        payment_identifier,
         nonce,
         channel_state.token_address,
         channel_state.identifier,
@@ -226,7 +232,7 @@ def make_receive_transfer_mediated(
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_lockedtransfer = LockedTransferSignedState(
-        identifier,
+        payment_identifier,
         channel_state.token_address,
         balance_proof,
         lock,
@@ -300,9 +306,11 @@ def test_channelstate_update_contract_balance():
         deposit_transaction,
     )
 
+    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         state_change,
+        pseudo_random_generator,
         block_number,
     )
     new_state = iteration.new_state
@@ -346,9 +354,11 @@ def test_channelstate_decreasing_contract_balance():
         deposit_transaction,
     )
 
+    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         state_change,
+        pseudo_random_generator,
         block_number,
     )
     new_state = iteration.new_state
@@ -391,11 +401,13 @@ def test_channelstate_repeated_contract_balance():
         contract_balance=balance1_new,
     )
     partner_model2 = partner_model1
+    pseudo_random_generator = random.Random()
 
     for _ in range(10):
         iteration = channel.state_transition(
             deepcopy(channel_state),
             state_change,
+            pseudo_random_generator,
             block_number,
         )
         new_state = iteration.new_state
@@ -437,9 +449,11 @@ def test_deposit_must_wait_for_confirmation():
         channel_state.identifier,
         deposit_transaction,
     )
+    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         new_balance,
+        pseudo_random_generator,
         block_number,
     )
     unconfirmed_state = iteration.new_state
@@ -449,6 +463,7 @@ def test_deposit_must_wait_for_confirmation():
         iteration = channel.state_transition(
             deepcopy(unconfirmed_state),
             unconfirmed_block,
+            pseudo_random_generator,
             block_number,
         )
         unconfirmed_state = iteration.new_state
@@ -468,6 +483,7 @@ def test_deposit_must_wait_for_confirmation():
     iteration = channel.state_transition(
         deepcopy(unconfirmed_state),
         confirmed_block,
+        pseudo_random_generator,
         confirmed_deposit_block_number,
     )
     confirmed_state = iteration.new_state
@@ -496,7 +512,8 @@ def test_channelstate_send_lockedtransfer():
         lock_secrethash,
     )
 
-    identifier = 1
+    payment_identifier = 1
+    message_identifier = random.randint(0, UINT64_MAX)
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
 
@@ -505,7 +522,8 @@ def test_channelstate_send_lockedtransfer():
         transfer_initiator,
         transfer_target,
         lock_amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
         lock_expiration,
         lock_secrethash,
     )
@@ -532,11 +550,13 @@ def test_channelstate_send_direct_transfer():
     channel_state = create_channel_from_models(our_model1, partner_model1)
 
     amount = 30
-    identifier = 1
+    payment_identifier = 1
+    message_identifier = random.randint(0, UINT64_MAX)
     channel.send_directtransfer(
         channel_state,
         amount,
-        identifier,
+        message_identifier,
+        payment_identifier,
     )
 
     our_model2 = our_model1._replace(
@@ -614,8 +634,10 @@ def test_channelstate_receive_lockedtransfer():
     # Step 3: Simulate unlocking the lock
     # - Update the balances
     transferred_amount = 0
+    message_identifier = random.randint(0, UINT64_MAX)
     secret_message = Secret(
-        identifier=1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
         nonce=2,
         channel=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
@@ -975,8 +997,10 @@ def test_interwoven_transfers():
                 distributable=our_model_current.distributable + lock_amount,
             )
 
+            message_identifier = random.randint(0, UINT64_MAX)
             secret_message = Secret(
-                identifier=nonce,
+                message_identifier=message_identifier,
+                payment_identifier=nonce,
                 nonce=nonce,
                 channel=channel_state.identifier,
                 transferred_amount=transferred_amount,

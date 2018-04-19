@@ -278,7 +278,10 @@ class RaidenService:
         if self.wal.state_manager.current_state is None:
             block_number = self.chain.block_number()
 
-            state_change = ActionInitNode(block_number)
+            state_change = ActionInitNode(
+                random.Random(),
+                block_number,
+            )
             self.wal.log_and_dispatch(state_change, block_number)
         else:
             # Get the last known block number after reapplying all the state changes from the log
@@ -514,8 +517,8 @@ class RaidenService:
         async_result = self.start_mediated_transfer(
             token_address,
             amount,
-            identifier,
             target,
+            identifier,
         )
 
         return async_result
@@ -558,7 +561,7 @@ class RaidenService:
 
         self.handle_state_change(direct_transfer)
 
-    def start_mediated_transfer(self, token_address, amount, identifier, target):
+    def start_mediated_transfer(self, token_address, amount, target, identifier):
         self.protocol.start_health_check(target)
 
         if identifier is None:

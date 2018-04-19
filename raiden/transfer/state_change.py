@@ -41,18 +41,18 @@ class ActionCancelPayment(StateChange):
     state of the transfer.
     """
 
-    def __init__(self, identifier):
-        self.identifier = identifier
+    def __init__(self, payment_identifier):
+        self.payment_identifier = payment_identifier
 
     def __repr__(self):
         return '<ActionCancelPayment identifier:{}>'.format(
-            self.identifier,
+            self.payment_identifier,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ActionCancelPayment) and
-            self.identifier == other.identifier
+            self.payment_identifier == other.payment_identifier
         )
 
     def __ne__(self, other):
@@ -115,8 +115,8 @@ class ActionTransferDirect(StateChange):
             payment_network_identifier,
             token_address,
             receiver_address: typing.T_Address,
-            identifier,
             amount: int,
+            payment_identifier,
     ):
         if not isinstance(receiver_address, typing.T_Address):
             raise ValueError('receiver_address must be address')
@@ -126,14 +126,14 @@ class ActionTransferDirect(StateChange):
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
-        self.identifier = identifier
         self.amount = amount
         self.receiver_address = receiver_address
+        self.payment_identifier = payment_identifier
 
     def __repr__(self):
         return '<ActionTransferDirect receiver_address:{} identifier:{} amount:{}>'.format(
             pex(self.receiver_address),
-            self.identifier,
+            self.payment_identifier,
             self.amount,
         )
 
@@ -143,7 +143,7 @@ class ActionTransferDirect(StateChange):
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_address == other.token_address and
             self.receiver_address == other.receiver_address and
-            self.identifier == other.identifier and
+            self.payment_identifier == other.payment_identifier and
             self.amount == other.amount
         )
 
@@ -229,10 +229,11 @@ class ContractReceiveChannelClosed(StateChange):
 
 
 class ActionInitNode(StateChange):
-    def __init__(self, block_number: int):
+    def __init__(self, pseudo_random_generator, block_number: int):
         if not isinstance(block_number, int):
             raise ValueError('block_number must be int')
 
+        self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
 
     def __repr__(self):
@@ -241,6 +242,7 @@ class ActionInitNode(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitNode) and
+            self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number
         )
 
@@ -494,7 +496,7 @@ class ContractReceiveChannelWithdraw(StateChange):
         return (
             isinstance(other, ContractReceiveChannelWithdraw) and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_address == other.token_address and
             self.channel_identifier == other.channel_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
@@ -583,7 +585,7 @@ class ReceiveTransferDirect(StateChange):
             self,
             payment_network_identifier,
             token_address,
-            transfer_identifier,
+            payment_identifier,
             balance_proof,
     ):
         if not isinstance(balance_proof, BalanceProofSignedState):
@@ -591,7 +593,7 @@ class ReceiveTransferDirect(StateChange):
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
-        self.transfer_identifier = transfer_identifier
+        self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -602,7 +604,7 @@ class ReceiveTransferDirect(StateChange):
         ).format(
             pex(self.payment_network_identifier),
             pex(self.token_address),
-            self.transfer_identifier,
+            self.payment_identifier,
             self.balance_proof,
         )
 
@@ -611,7 +613,7 @@ class ReceiveTransferDirect(StateChange):
             isinstance(other, ReceiveTransferDirect) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_address == other.token_address and
-            self.transfer_identifier == other.transfer_identifier and
+            self.payment_identifier == other.payment_identifier and
             self.balance_proof == other.balance_proof
         )
 
