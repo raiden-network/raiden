@@ -53,7 +53,7 @@ class InitiatorPaymentState(State):
         'cancelled_channels',
     )
 
-    def __init__(self, initiator: typing.Address):
+    def __init__(self, initiator: 'InitiatorTransferState'):
         # TODO: Allow multiple concurrent transfers and unlock refunds (issue #1091).
         self.initiator = initiator
         self.cancelled_channels = list()

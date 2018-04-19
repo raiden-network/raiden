@@ -252,6 +252,7 @@ def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: initiator.ChannelMap,
+        addresses_to_queues: typing.UnorderedMessageQueue,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -264,9 +265,16 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
+        channel_state = channelidentifiers_to_channels[payment_state.initiator.channel_identifier]
+        partner_message_queue = addresses_to_queues.setdefault(
+            channel_state.partner_state.address,
+            [],
+        )
+
         sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
+            partner_message_queue,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
     elif type(state_change) == ActionCancelRoute:

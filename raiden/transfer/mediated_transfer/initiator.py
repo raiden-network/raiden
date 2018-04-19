@@ -159,6 +159,7 @@ def send_lockedtransfer(
 def handle_secretrequest(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretRequest,
+        partner_message_queue: typing.UnorderedMessageQueue,
 ) -> TransitionResult:
 
     request_from_target = (
@@ -185,15 +186,16 @@ def handle_secretrequest(
         # Note: The target might be the first hop
         #
         transfer_description = initiator_state.transfer_description
-        reveal_secret = SendRevealSecret(
+        revealsecret = SendRevealSecret(
             transfer_description.identifier,
             transfer_description.secret,
             transfer_description.token,
             transfer_description.target,
         )
 
-        initiator_state.revealsecret = reveal_secret
-        iteration = TransitionResult(initiator_state, [reveal_secret])
+        initiator_state.revealsecret = revealsecret
+        partner_message_queue.append(revealsecret)
+        iteration = TransitionResult(initiator_state, [revealsecret])
 
     elif invalid_secretrequest:
         cancel = EventTransferSentFailed(

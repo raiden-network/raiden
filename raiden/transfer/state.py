@@ -69,6 +69,7 @@ class NodeState(State):
     """
 
     __slots__ = (
+        'addresses_to_queues',
         'block_number',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
@@ -80,6 +81,7 @@ class NodeState(State):
             raise ValueError('block_number must be a block_number')
 
         self.block_number = block_number
+        self.addresses_to_queues = list()
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
         self.payment_mapping = PaymentMappingState()
@@ -95,6 +97,7 @@ class NodeState(State):
         return (
             isinstance(other, NodeState) and
             self.block_number == other.block_number and
+            self.addresses_to_queues == other.addresses_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
             self.payment_mapping == other.payment_mapping
@@ -781,6 +784,7 @@ class NettingChannelState(State):
         'open_transaction',
         'close_transaction',
         'settle_transaction',
+        'ordered_message_queue',
     )
 
     def __init__(
@@ -793,7 +797,8 @@ class NettingChannelState(State):
             partner_state: NettingChannelEndState,
             open_transaction: TransactionExecutionStatus,
             close_transaction: typing.Optional[TransactionExecutionStatus],
-            settle_transaction: typing.Optional[TransactionExecutionStatus]):
+            settle_transaction: typing.Optional[TransactionExecutionStatus],
+    ):
 
         if reveal_timeout >= settle_timeout:
             raise ValueError('reveal_timeout must be smaller than settle_timeout')
@@ -838,6 +843,7 @@ class NettingChannelState(State):
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
+        self.ordered_message_queue: typing.OrderedMessageQueue = list()
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
@@ -859,7 +865,8 @@ class NettingChannelState(State):
             self.deposit_transaction_queue == other.deposit_transaction_queue and
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
-            self.settle_transaction == other.settle_transaction
+            self.settle_transaction == other.settle_transaction and
+            self.ordered_message_queue == other.ordered_message_queue
         )
 
     def __ne__(self, other):
