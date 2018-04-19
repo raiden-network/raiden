@@ -73,10 +73,11 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     )
 
 
+@pytest.mark.skip('transport_class can no longer be set')
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
+#@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
 def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     """A failed transfer must send a refund back.
 

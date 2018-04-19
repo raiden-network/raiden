@@ -219,7 +219,6 @@ def create_apps(
         endpoint_discovery_services,
         registry_address,
         raiden_udp_ports,
-        transport_class,
         reveal_timeout,
         settle_timeout,
         database_paths,
@@ -248,6 +247,7 @@ def create_apps(
         config = {
             'host': host,
             'port': port,
+            'transport_type': 'udp',
             'external_ip': host,
             'external_port': port,
             'privatekey_hex': hexlify(private_key),
@@ -275,8 +275,7 @@ def create_apps(
             copy,
             blockchain,
             registry,
-            discovery,
-            transport_class,
+            discovery
         )
         app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)

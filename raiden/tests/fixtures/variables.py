@@ -107,11 +107,6 @@ def poll_timeout():
 
 
 @pytest.fixture
-def transport_class():
-    return UDPTransport
-
-
-@pytest.fixture
 def retry_interval():
     return 0.5
 
