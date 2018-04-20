@@ -11,8 +11,8 @@ from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
-from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.pathfinding_service import PathfindingService
+from pathfinder.model import BalanceProof
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.model.token_network import TokenNetwork
 from pathfinder.utils.types import Address
@@ -85,8 +85,6 @@ def populate_token_networks_random(
             address2 = Address(private_key_to_address(private_key2))
             fee1 = abs(random.gauss(0.0002, 0.0001))
             fee2 = abs(random.gauss(0.0002, 0.0001))
-            signature1 = forge_fee_signature(private_key1, fee1)
-            signature2 = forge_fee_signature(private_key2, fee2)
             token_network.handle_channel_opened_event(
                 channel_id,
                 address1,
@@ -110,13 +108,16 @@ def populate_token_networks_random(
 
             token_network.update_fee(
                 channel_id,
-                str(fee1).encode(),
-                signature1
+                address1,
+                channel_id + 1,
+                fee1
             )
+
             token_network.update_fee(
                 channel_id,
-                str(fee2).encode(),
-                signature2
+                address2,
+                channel_id + 1,
+                fee2
             )
 
 
@@ -179,10 +180,18 @@ def populate_token_networks_simple(
             token_network.update_balance(p1_balance_proof, [])
             token_network.update_balance(p2_balance_proof, [])
 
-            p1_fee_signature = forge_fee_signature(private_keys[p1_index], p1_fee)
-            p2_fee_signature = forge_fee_signature(private_keys[p2_index], p2_fee)
-            token_network.update_fee(channel_id, str(p1_fee).encode(), p1_fee_signature)
-            token_network.update_fee(channel_id, str(p2_fee).encode(), p2_fee_signature)
+            token_network.update_fee(
+                channel_identifier=channel_id,
+                signer=addresses[p1_index],
+                nonce=channel_id + 1,
+                new_percentage_fee=p1_fee
+            )
+            token_network.update_fee(
+                channel_identifier=channel_id,
+                signer=addresses[p2_index],
+                nonce=channel_id + 1,
+                new_percentage_fee=p2_fee
+            )
 
 
 @pytest.fixture

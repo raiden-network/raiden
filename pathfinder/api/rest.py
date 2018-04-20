@@ -7,10 +7,12 @@ from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
+from jsonschema.exceptions import ValidationError
+from raiden_libs.messages import FeeInfo, Message
+from raiden_libs.exceptions import MessageTypeError
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
-from pathfinder.model.balance_proof import BalanceProof
-from pathfinder.model.lock import Lock
+from pathfinder.model import BalanceProof, Lock
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.utils.exceptions import InvalidAddressChecksumError
 from pathfinder.utils.types import Address
@@ -147,32 +149,36 @@ class ChannelFeeResource(PathfinderResource):
         if channel_id_error is not None:
             return channel_id_error
 
-        channel_id_casted = int(channel_id)
         body = request.json
-
-        fee: str = body.get('fee')
-        if fee is None:
-            return {'error': 'No fee specified.'}, 400
-
-        signature: str = body.get('signature')
-        if signature is None:
-            return {'error': 'No signature specified.'}, 400
-
-        # Note: signature check is performed by the TokenNetwork.
-        token_network = self.pathfinding_service.token_networks.get(
-            Address(token_network_address)
-        )
-        if token_network is None:
-            return {'error': 'Unsupported token network: {}'.format(
-                token_network_address
-            )}, 400
-
         try:
-            fee_encoded = fee.encode()
-            signature_decoded = decode_hex(signature)
-            token_network.update_fee(channel_id_casted, fee_encoded, signature_decoded)
-        except ValueError as err:
-            return {'error': str(err)}, 400
+            fee_info: FeeInfo = Message.deserialize(body, FeeInfo)
+        except MessageTypeError:
+            return {'error', 'Not a FeeInfo message'}, 400
+        except ValidationError as val_err:
+            return {'error': val_err.message}, 400
+
+        # token_network_address and channel_id info is duplicate
+        # check that both versions match
+        if not is_same_address(token_network_address, fee_info.token_network_address):
+            error = 'The token network address from the fee info ({}) ' \
+                    'and the request ({}) do not match'
+            return {
+                'error': error.format(fee_info.token_network_address, token_network_address)
+            }, 400
+
+        if not int(channel_id) == fee_info.channel_identifier:
+            error = 'The channel id from the fee info ({}) and the request ({}) do not match'
+            return {
+                'error': error.format(fee_info.channel_identifier, channel_id)
+            }, 400
+
+        # Note: signature check is performed by the PathfindingService
+        if not self.pathfinding_service.follows_token_network(fee_info.token_network_address):
+            return {
+                'error': 'Unsupported token network: {}'.format(token_network_address)
+            }, 400
+
+        self.pathfinding_service.on_fee_info_message(fee_info)
 
 
 class PathsResource(PathfinderResource):

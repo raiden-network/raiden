@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
 import logging
 from typing import List, Dict, Any, Tuple
+
 import networkx as nx
-from coincurve import PublicKey
-from coincurve.utils import sha256
-from eth_utils import is_checksum_address, is_same_address
 from networkx import DiGraph
-from raiden_libs.utils import compute_merkle_tree, get_merkle_root, public_key_to_address
+from eth_utils import is_checksum_address, is_same_address
+from raiden_libs.utils import compute_merkle_tree, get_merkle_root
+
 from pathfinder.config import (
     DIVERSITY_PEN_DEFAULT,
     MIN_PATH_REDUNDANCY,
     PATH_REDUNDANCY_FACTOR,
     MAX_PATHS_PER_REQUEST
 )
-from pathfinder.model.balance_proof import BalanceProof
-from pathfinder.model.channel_view import ChannelView
-from pathfinder.model.lock import Lock
+from pathfinder.model import BalanceProof, ChannelView, Lock
 from pathfinder.utils.types import Address, ChannelId
 
 
@@ -38,7 +36,7 @@ class TokenNetwork:
         self.address = token_network_address
         self.channel_id_to_addresses: Dict[int, Tuple[Address, Address]] = dict()
         self.G = DiGraph()
-        self.max_fee = 0.0
+        self.max_percentage_fee = 0.0
 
     #
     # Contract event listener functions
@@ -46,7 +44,7 @@ class TokenNetwork:
 
     def handle_channel_opened_event(
         self,
-        channel_id: ChannelId,
+        channel_identifier: ChannelId,
         participant1: Address,
         participant2: Address,
     ):
@@ -57,17 +55,17 @@ class TokenNetwork:
         assert is_checksum_address(participant1)
         assert is_checksum_address(participant2)
 
-        self.channel_id_to_addresses[channel_id] = (participant1, participant2)
+        self.channel_id_to_addresses[channel_identifier] = (participant1, participant2)
 
-        view1 = ChannelView(channel_id, participant1, participant2, deposit=0)
-        view2 = ChannelView(channel_id, participant2, participant1, deposit=0)
+        view1 = ChannelView(channel_identifier, participant1, participant2, deposit=0)
+        view2 = ChannelView(channel_identifier, participant2, participant1, deposit=0)
 
         self.G.add_edge(participant1, participant2, view=view1)
         self.G.add_edge(participant2, participant1, view=view2)
 
     def handle_channel_new_deposit_event(
         self,
-        channel_id: ChannelId,
+        channel_identifier: ChannelId,
         receiver: Address,
         total_deposit: int
     ):
@@ -78,7 +76,7 @@ class TokenNetwork:
         assert is_checksum_address(receiver)
 
         try:
-            participant1, participant2 = self.channel_id_to_addresses[channel_id]
+            participant1, participant2 = self.channel_id_to_addresses[channel_identifier]
 
             if receiver == participant1:
                 self.G[participant1][participant2]['view'].update_capacity(deposit=total_deposit)
@@ -91,11 +89,11 @@ class TokenNetwork:
         except KeyError:
             log.error(
                 "Received ChannelNewDeposit event for unknown channel '{}'".format(
-                    channel_id
+                    channel_identifier
                 )
             )
 
-    def handle_channel_closed_event(self, channel_id: ChannelId):
+    def handle_channel_closed_event(self, channel_identifier: ChannelId):
         """ Close a channel. This doesn't mean that the channel is settled yet, but it cannot
         transfer any more.
 
@@ -103,14 +101,14 @@ class TokenNetwork:
 
         try:
             # we need to unregister the channel_id here
-            participant1, participant2 = self.channel_id_to_addresses.pop(channel_id)
+            participant1, participant2 = self.channel_id_to_addresses.pop(channel_identifier)
 
             self.G.remove_edge(participant1, participant2)
             self.G.remove_edge(participant2, participant1)
         except KeyError:
             log.error(
                 "Received ChannelClosed event for unknown channel '{}'".format(
-                    channel_id
+                    channel_identifier
                 )
             )
 
@@ -161,24 +159,19 @@ class TokenNetwork:
         )
 
     def update_fee(
-            self,
-            channel_id: ChannelId,
-            new_fee: bytes,
-            signature: bytes
+        self,
+        channel_identifier: ChannelId,
+        signer: Address,
+        nonce: int,
+        new_percentage_fee: float,
     ):
-        """ Update the channel with a new fee. New_fee bytes are of the form '0.0012'.encode()"""
-        # Fixme: I need a nonce for replay protection
-        msg = new_fee
-        signer = public_key_to_address(
-            PublicKey.from_signature_and_message(
-                signature,
-                msg,
-                hasher=sha256
-            )
-        )
+        """ Update the channel with a new fee.
+
+        Validation of the data must happen before this method is called.
+        """
 
         participant1, participant2 = self.channel_id_to_addresses.get(
-            channel_id,
+            channel_identifier,
             (None, None)
         )
         if is_same_address(participant1, signer):
@@ -190,30 +183,33 @@ class TokenNetwork:
         else:
             raise ValueError('Signature does not match any of the participants.')
 
-        new_fee_casted = float(new_fee)
-        channel_view = self.G[sender][receiver]['view']
+        new_percentage_fee_casted = float(new_percentage_fee)
+        channel_view: ChannelView = self.G[sender][receiver]['view']
 
-        if new_fee_casted >= self.max_fee:
+        if nonce <= channel_view.fee_info_nonce:
+            raise ValueError('Outdated fee info.')
+
+        if new_percentage_fee_casted >= self.max_percentage_fee:
             # Equal case is included to avoid a recalculation of the max fee.
-            self.max_fee = new_fee_casted
-            channel_view.fee = new_fee_casted
-        elif channel_view.fee == self.max_fee:
+            self.max_percentage_fee = new_percentage_fee_casted
+            channel_view._percentage_fee = new_percentage_fee_casted
+        elif channel_view._percentage_fee == self.max_percentage_fee:
             # O(n) operation but rarely called, amortized likely constant.
-            channel_view.fee = new_fee_casted
-            self.max_fee = max(
-                edge_data['view'].fee
+            channel_view._percentage_fee = new_percentage_fee_casted
+            self.max_percentage_fee = max(
+                edge_data['view'].percentage_fee
                 for _, _, edge_data in self.G.edges(data=True)
             )
 
-        channel_view.fee = new_fee_casted
+        channel_view.update_fee(nonce, new_percentage_fee_casted)
 
     def get_paths(
-            self,
-            source: Address,
-            target: Address,
-            value: int,
-            k: int,
-            **kwargs
+        self,
+        source: Address,
+        target: Address,
+        value: int,
+        k: int,
+        **kwargs
     ):
         k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelId, float] = {}
@@ -222,18 +218,20 @@ class TokenNetwork:
         assert 0 <= hop_bias <= 1
 
         def weight(
-                u: Address,
-                v: Address,
-                attr: Dict[str, Any]
+            u: Address,
+            v: Address,
+            attr: Dict[str, Any]
         ):
             view: ChannelView = attr['view']
             if view.capacity < value:
                 return None
             else:
-                return hop_bias*self.max_fee + (1-hop_bias)*view.fee + visited.get(
-                    view.channel_id,
-                    0
-                )
+                return hop_bias * self.max_percentage_fee + \
+                       (1 - hop_bias) * view._percentage_fee + \
+                       visited.get(
+                            view.channel_id,
+                            0
+                        )
 
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
         for _ in range(max_iterations):
@@ -255,7 +253,7 @@ class TokenNetwork:
         for path in paths:
             fee = 0
             for node1, node2 in zip(path[:-1], path[1:]):
-                fee += self.G[node1][node2]['view'].fee
+                fee += self.G[node1][node2]['view'].percentage_fee
 
             result.append(dict(
                 path=path,

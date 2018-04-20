@@ -11,7 +11,7 @@ from unittest.mock import Mock
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
-from pathfinder.model.token_network import TokenNetwork
+from pathfinder.model import TokenNetwork
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.utils.types import Address
 

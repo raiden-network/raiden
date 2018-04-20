@@ -5,13 +5,15 @@ import traceback
 from typing import Dict, Optional, List
 
 import gevent
-from eth_utils import is_checksum_address
+from eth_utils import is_checksum_address, decode_hex
 from raiden_libs.blockchain import BlockchainListener
+from raiden_libs.messages import Message, FeeInfo
+from raiden_libs.gevent_error_handler import register_error_handler
+from raiden_libs.transport import MatrixTransport
+from raiden_libs.utils.signing import eth_verify
 from raiden_contracts.contract_manager import ContractManager
 
-from raiden_libs.gevent_error_handler import register_error_handler
-from pathfinder.model.token_network import TokenNetwork
-from raiden_libs.transport import MatrixTransport
+from pathfinder.model import TokenNetwork
 from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
@@ -100,27 +102,32 @@ class PathfindingService(gevent.Greenlet):
     def stop(self):
         self.is_running.set()
 
-    def on_message_event(self, message: str):
+    def on_message_event(self, message: Message):
         """This handles messages received over the Transport"""
-        # TODO: process messages
-        print(message)
+        assert isinstance(message, Message)
+        if isinstance(message, FeeInfo):
+            self.on_fee_info_message(message)
+        else:
+            log.error("Ignoring unknown message of type '%s'", (type(message)))
 
-    def _get_token_network(self, event) -> Optional[TokenNetwork]:
-        token_network_address = event['address']
+    def follows_token_network(self, token_network_address: Address) -> bool:
+        """ Checks if a token network is followed by the pathfinding service. """
         assert is_checksum_address(token_network_address)
 
-        try:
-            token_network = self.token_networks[token_network_address]
-        except KeyError:
-            log.info('Ignoring event from unknown token network {}'.format(
-                token_network_address
-            ))
+        return token_network_address in self.token_networks.keys()
+
+    def _get_token_network(self, token_network_address: Address) -> Optional[TokenNetwork]:
+        """ Returns the `TokenNetwork` for the given address or `None` for unknown networks. """
+
+        assert is_checksum_address(token_network_address)
+
+        if not self.follows_token_network(token_network_address):
             return None
+        else:
+            return self.token_networks[token_network_address]
 
-        return token_network
-
-    def handle_channel_opened(self, event):
-        token_network = self._get_token_network(event)
+    def handle_channel_opened(self, event: Dict):
+        token_network = self._get_token_network(event['address'])
 
         if token_network:
             log.debug('Received ChannelOpened event for token network {}'.format(
@@ -137,8 +144,8 @@ class PathfindingService(gevent.Greenlet):
                 participant2
             )
 
-    def handle_channel_new_deposit(self, event):
-        token_network = self._get_token_network(event)
+    def handle_channel_new_deposit(self, event: Dict):
+        token_network = self._get_token_network(event['address'])
 
         if token_network:
             log.debug('Received ChannelNewDeposit event for token network {}'.format(
@@ -155,8 +162,8 @@ class PathfindingService(gevent.Greenlet):
                 total_deposit
             )
 
-    def handle_channel_closed(self, event):
-        token_network = self._get_token_network(event)
+    def handle_channel_closed(self, event: Dict):
+        token_network = self._get_token_network(event['address'])
 
         if token_network:
             log.debug('Received ChannelClosed event for token network {}'.format(
@@ -167,13 +174,33 @@ class PathfindingService(gevent.Greenlet):
 
             token_network.handle_channel_closed_event(channel_identifier)
 
+    def on_fee_info_message(self, fee_info: FeeInfo):
+        token_network = self._get_token_network(fee_info.token_network_address)
+
+        if token_network:
+            log.debug('Received FeeInfo message for token network {}'.format(
+                token_network.address
+            ))
+
+            fee_info_signer = Address(
+                eth_verify(decode_hex(fee_info.signature), fee_info.serialize_bin())
+            )
+            # TODO: check chain id
+
+            token_network.update_fee(
+                fee_info.channel_identifier,
+                fee_info_signer,
+                fee_info.nonce,
+                fee_info.percentage_fee
+            )
+
     def handle_token_network_created(self, event):
-        # TODO: check that the address is our token network address
         token_network_address = event['args']['token_network_address']
         assert is_checksum_address(token_network_address)
 
-        log.info(f'Found new token network at {token_network_address}')
-        self.create_token_network_for_address(token_network_address)
+        if not self.follows_token_network(token_network_address):
+            log.info(f'Found new token network at {token_network_address}')
+            self.create_token_network_for_address(token_network_address)
 
     def create_token_network_for_address(self, token_network_address: Address):
         log.info(f'Following token network at {token_network_address}')

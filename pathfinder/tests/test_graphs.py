@@ -8,8 +8,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from networkx import NetworkXNoPath
 
 import pathfinder.model.token_network
-from pathfinder.model.channel_view import ChannelView
-from pathfinder.model.token_network import TokenNetwork
+from pathfinder.model import ChannelView, TokenNetwork
 from pathfinder.utils.types import Address
 
 
@@ -33,8 +32,8 @@ def test_routing_benchmark(
         path = path_object['path']
         fees = path_object['estimated_fee']
         for node1, node2 in zip(path[:-1], path[1:]):
-            view = G[node1][node2]['view']
-            print('fee = ', view.fee, 'capacity = ', view.capacity)
+            view: ChannelView = G[node1][node2]['view']
+            print('fee = ', view.percentage_fee, 'capacity = ', view.capacity)
         print('fee sum = ', fees)
     print(paths)
     print(np.mean(np.array(times)), np.min(np.array(times)), np.max(np.array(times)))
@@ -54,7 +53,7 @@ def test_routing_simple(
     assert view01.deposit == 100
     assert view01.transferred_amount == 20
     assert view01.locked_amount == 0
-    assert isclose(view01.fee, 0.001)
+    assert isclose(view01._percentage_fee, 0.001)
     assert view01.capacity == 90
     assert view10.capacity == 60
 

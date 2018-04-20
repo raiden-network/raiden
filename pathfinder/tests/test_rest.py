@@ -2,14 +2,15 @@ from typing import List, Dict
 from unittest import mock
 
 import requests
-from eth_utils import to_normalized_address, to_hex
+from eth_utils import to_normalized_address, encode_hex, is_same_address
+from raiden_libs.utils.signing import sign_data, private_key_to_address
+from raiden_libs.messages import FeeInfo
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model.balance_proof import BalanceProof
 from pathfinder.model.lock import Lock
 from pathfinder.model.token_network import TokenNetwork
 from pathfinder.utils.types import Address
-from pathfinder.tests.fixtures.network_service import forge_fee_signature
 
 
 #
@@ -274,23 +275,81 @@ def test_put_fee(
 
     token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
 
-    fee = 0.02
-    signature = forge_fee_signature(private_keys[0], fee)
-
-    body: Dict = dict(
-        fee=str(fee),
-        signature=to_hex(signature)
+    fee_info = FeeInfo(
+        token_network_address=token_network_addresses[0],
+        channel_identifier=123,
+        chain_id=1,
+        nonce=1,
+        percentage_fee=0.02
     )
+    fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
+
+    body = fee_info.serialize_data()
+    body['message_type'] = 'FeeInfo'
 
     response = requests.put(url, json=body)
     assert response.status_code == 200
     token_networks[0].update_fee.assert_called_once()
     call_args = token_networks[0].update_fee.call_args[0]
-    fee_arg: str = call_args[1]
-    signature_arg: str = call_args[2]
 
-    assert fee_arg == b'0.02'  # this gets converted to bytes in the rest api
-    assert signature_arg == signature
+    channel_id: int = call_args[0]
+    sender: str = call_args[1]
+    nonce: int = call_args[2]
+    fee: float = call_args[3]
+
+    assert channel_id == 123
+    assert is_same_address(sender, private_key_to_address(private_keys[0]))
+    assert nonce == 1
+    assert fee == 0.02
+
+
+def test_put_fee_sync_check(
+    api_sut: ServiceApi,
+    api_url: str,
+    token_networks: List[TokenNetwork],
+    token_network_addresses: List[Address],
+    private_keys: List[str],
+):
+    url = api_url + '/{}/12/fee'.format(token_network_addresses[0])
+
+    token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
+
+    fee_info = FeeInfo(
+        token_network_address=token_network_addresses[0],
+        channel_identifier=123,
+        chain_id=1,
+        nonce=1,
+        percentage_fee=0.02
+    )
+    fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
+
+    body = fee_info.serialize_data()
+    body['message_type'] = 'FeeInfo'
+
+    # path channel id and FeeInfo id are not equal
+    response = requests.put(url, json=body)
+    assert response.status_code == 400
+    assert response.json()['error'].startswith(
+        'The channel id from the fee info (123) and '
+        'the request (12) do not match'
+    )
+
+    fee_info = FeeInfo(
+        token_network_address=token_network_addresses[1],
+        channel_identifier=123,
+        chain_id=1,
+        nonce=1,
+        percentage_fee=0.02
+    )
+    fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
+
+    body = fee_info.serialize_data()
+    body['message_type'] = 'FeeInfo'
+
+    # now the network address doesn't match
+    response = requests.put(url, json=body)
+    assert response.status_code == 400
+    assert response.json()['error'].startswith('The token network address from the fee info')
 
 
 def test_put_fee_path_validation(
@@ -332,6 +391,37 @@ def test_put_fee_path_validation(
     assert response.json()['error'] == 'Channel Id is not an integer: {}'.format(
         'abc'
     )
+
+
+def test_put_fee_validation(
+    api_sut: ServiceApi,
+    api_url: str,
+    token_networks: List[TokenNetwork],
+    token_network_addresses: List[Address],
+    private_keys: List[str],
+):
+    url = api_url + '/{}/123/fee'.format(token_network_addresses[0])
+
+    token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
+
+    fee_info = FeeInfo(
+        token_network_address=token_network_addresses[0],
+        channel_identifier=123,
+        chain_id=1,
+        nonce=1,
+        percentage_fee=0.02
+    )
+    fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
+
+    body = fee_info.serialize_data()
+    body['message_type'] = 'FeeInfo'
+
+    # remove the fee to make it an invalid message
+    del body['percentage_fee']
+
+    response = requests.put(url, json=body)
+    assert response.status_code == 400
+    assert response.json()['error'] == "'percentage_fee' is a required property"
 
 
 #

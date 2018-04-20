@@ -2,7 +2,7 @@ from enum import Enum
 
 from eth_utils import is_checksum_address
 
-from pathfinder.config import DEFAULT_FEE
+from pathfinder.config import DEFAULT_PERCENTAGE_FEE
 from pathfinder.utils.types import Address, ChannelId
 
 
@@ -32,11 +32,12 @@ class ChannelView:
         self._transferred_amount = 0
         self._received_amount = 0
         self._locked_amount = 0
-        self.fee = DEFAULT_FEE
+        self._percentage_fee = DEFAULT_PERCENTAGE_FEE
         self._capacity = deposit
         self.state = ChannelView.State.OPEN
         self.channel_id = channel_id
         self.balance_proof_nonce = 0
+        self.fee_info_nonce = 0
 
     def update_capacity(
         self,
@@ -63,22 +64,41 @@ class ChannelView:
             self.transferred_amount + self.locked_amount
         ) + self.received_amount
 
+    def update_fee(self, nonce: int = None, percentage_fee: float = None):
+        if nonce is not None:
+            assert nonce > self.fee_info_nonce, 'Fee nonce must increase.'
+            self.fee_info_nonce = nonce
+
+        if percentage_fee is not None:
+            self._percentage_fee = percentage_fee
+
     @property
-    def deposit(self):
+    def deposit(self) -> int:
         return self._deposit
 
     @property
-    def transferred_amount(self):
+    def transferred_amount(self) -> int:
         return self._transferred_amount
 
     @property
-    def received_amount(self):
+    def received_amount(self) -> int:
         return self._received_amount
 
     @property
-    def locked_amount(self):
+    def locked_amount(self) -> int:
         return self._locked_amount
 
     @property
-    def capacity(self):
+    def capacity(self) -> int:
         return self._capacity
+
+    @property
+    def percentage_fee(self) -> float:
+        return self._percentage_fee
+
+    def __repr__(self):
+        return '<ChannelView from={} to={} capacity={}>'.format(
+            self.self,
+            self.partner,
+            self.capacity
+        )
