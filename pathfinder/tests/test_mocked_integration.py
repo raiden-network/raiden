@@ -19,7 +19,8 @@ from pathfinder.utils.types import Address
 def test_pfs_with_mocked_events(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
-    pathfinding_service_mocked_listeners: PathfindingService
+    pathfinding_service_mocked_listeners: PathfindingService,
+    channel_descriptions: List
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
@@ -42,31 +43,6 @@ def test_pfs_with_mocked_events(
     token_network = pathfinding_service_mocked_listeners.token_networks[token_network_address]
 
     # Now initialize some channels in this network.
-    # The tuples in channel_descriptions define the following:
-    # (
-    #     p1_index,
-    #     p1_deposit,
-    #     p1_transferred_amount,
-    #     p1_fee,
-    #     p2_index,
-    #     p2_deposit,
-    #     p2_transferred_amount,
-    #     p2_fee
-    # )
-    # Topology:
-    #       /-------------\
-    # 0 -- 1 -- 2 -- 3 -- 4    5 -- 6
-    #  \-------/
-
-    channel_descriptions = [
-        (0, 100,  20, 0.0010, 1,  50,  10, 0.0015),  # capacities  90 --  60
-        (1,  40,  10, 0.0008, 2, 130, 100, 0.0012),  # capacities 130 --  40
-        (2,  90,  10, 0.0007, 3,   0,   0, 0.0010),  # capacities  80 --  10
-        (3,  50,  20, 0.0011, 4,  50,  20, 0.0011),  # capacities  50 --  50
-        (0,  40,  40, 0.0015, 2,  80,   0, 0.0025),  # capacities   0 -- 120
-        (1,  30,  10, 0.0100, 4,  40,  15, 0.0018),  # capacities  35 --  35
-        (5, 500, 900, 0.0030, 6, 750, 950, 0.0040),  # capacities 550 -- 700
-    ]
     for channel_id, (
         p1_index,
         p1_deposit,
