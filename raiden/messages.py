@@ -20,7 +20,7 @@ __all__ = (
     'Secret',
     'DirectTransfer',
     'Lock',
-    'LockedTransfer',
+    'LockedTransferBase',
     'MediatedTransfer',
     'RefundTransfer',
 )
@@ -742,7 +742,7 @@ class Lock:
         return Lock(data['amount'], data['expiration'], unhexlify(data['secrethash']))
 
 
-class LockedTransfer(EnvelopeMessage):
+class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `secrethash`.
 
@@ -796,7 +796,7 @@ class LockedTransfer(EnvelopeMessage):
             packed.secrethash,
         )
 
-        locked_transfer = LockedTransfer(
+        locked_transfer = LockedTransferBase(
             packed.identifier,
             packed.nonce,
             packed.token,
@@ -826,7 +826,7 @@ class LockedTransfer(EnvelopeMessage):
         packed.signature = self.signature
 
 
-class MediatedTransfer(LockedTransfer):
+class MediatedTransfer(LockedTransferBase):
     """
     A MediatedTransfer has a `target` address to which a chain of transfers shall
     be established. Here the `haslock` is mandatory.

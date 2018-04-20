@@ -160,7 +160,7 @@ def test_all(iterations=ITERATIONS):
     test_direct_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
 
-    # LockedTransfer cannot be encoded/decoded
+    # LockedTransferBase cannot be encoded/decoded
 
 
 def benchmark_alternatives():
