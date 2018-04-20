@@ -8,7 +8,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
-    SendMediatedTransfer,
+    SendLockedTransfer,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -111,23 +111,23 @@ def try_new_route(
             channel_state.identifier,
         )
 
-        mediatedtransfer_event = send_mediatedtransfer(
+        lockedtransfer_event = send_lockedtransfer(
             initiator_state,
             channel_state,
             block_number,
         )
-        assert mediatedtransfer_event
+        assert lockedtransfer_event
 
-        events.append(mediatedtransfer_event)
+        events.append(lockedtransfer_event)
 
     return TransitionResult(initiator_state, events)
 
 
-def send_mediatedtransfer(
+def send_lockedtransfer(
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
-) -> SendMediatedTransfer:
+) -> SendLockedTransfer:
     """ Create a mediated transfer using channel.
     Raises:
         AssertionError: If the channel does not have enough capacity.
@@ -140,7 +140,7 @@ def send_mediatedtransfer(
         channel_state.settle_timeout,
     )
 
-    mediatedtransfer_event = channel.send_mediatedtransfer(
+    lockedtransfer_event = channel.send_lockedtransfer(
         channel_state,
         transfer_description.initiator,
         transfer_description.target,
@@ -149,11 +149,11 @@ def send_mediatedtransfer(
         lock_expiration,
         transfer_description.secrethash,
     )
-    assert mediatedtransfer_event
+    assert lockedtransfer_event
 
-    initiator_state.transfer = mediatedtransfer_event.transfer
+    initiator_state.transfer = lockedtransfer_event.transfer
 
-    return mediatedtransfer_event
+    return lockedtransfer_event
 
 
 def handle_secretrequest(

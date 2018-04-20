@@ -10,7 +10,7 @@ from ethereum import slogging
 
 from raiden.messages import (
     DirectTransfer,
-    MediatedTransfer,
+    LockedTransfer,
     Secret,
 )
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
@@ -209,7 +209,7 @@ def make_receive_transfer_mediated(
     identifier = nonce
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
-    mediated_transfer_msg = MediatedTransfer(
+    mediated_transfer_msg = LockedTransfer(
         identifier,
         nonce,
         channel_state.token_address,
@@ -225,7 +225,7 @@ def make_receive_transfer_mediated(
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
-    receive_mediatedtransfer = LockedTransferSignedState(
+    receive_lockedtransfer = LockedTransferSignedState(
         identifier,
         channel_state.token_address,
         balance_proof,
@@ -234,7 +234,7 @@ def make_receive_transfer_mediated(
         transfer_target,
     )
 
-    return receive_mediatedtransfer
+    return receive_lockedtransfer
 
 
 def test_new_end_state():
@@ -476,7 +476,7 @@ def test_deposit_must_wait_for_confirmation():
     assert_partner_state(confirmed_state.partner_state, confirmed_state.our_state, partner_model2)
 
 
-def test_channelstate_send_mediatedtransfer():
+def test_channelstate_send_lockedtransfer():
     """Sending a mediated transfer must update the participant state.
 
     This tests only the state of the sending node, without synchronisation.
@@ -500,7 +500,7 @@ def test_channelstate_send_mediatedtransfer():
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
 
-    channel.send_mediatedtransfer(
+    channel.send_lockedtransfer(
         channel_state,
         transfer_initiator,
         transfer_target,
@@ -553,7 +553,7 @@ def test_channelstate_send_direct_transfer():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
 
 
-def test_channelstate_receive_mediatedtransfer():
+def test_channelstate_receive_lockedtransfer():
     """Tests receiving a mediated transfer.
 
     The transfer is done in three steps:
@@ -580,7 +580,7 @@ def test_channelstate_receive_mediatedtransfer():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -588,9 +588,9 @@ def test_channelstate_receive_mediatedtransfer():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
     assert is_valid, msg
 
@@ -661,7 +661,7 @@ def test_channelstate_directtransfer_overspent():
 
     nonce = 1
     transferred_amount = distributable + 1
-    receive_mediatedtransfer = make_receive_transfer_direct(
+    receive_lockedtransfer = make_receive_transfer_direct(
         payment_network_identifier,
         channel_state,
         privkey2,
@@ -670,7 +670,7 @@ def test_channelstate_directtransfer_overspent():
     )
 
     is_valid, _ = channel.is_valid_directtransfer(
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
         channel_state,
         channel_state.partner_state,
         channel_state.our_state,
@@ -679,7 +679,7 @@ def test_channelstate_directtransfer_overspent():
 
     iteration = channel.handle_receive_directtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
 
     assert must_contain_entry(iteration.events, EventTransferReceivedInvalidDirectTransfer, {})
@@ -687,7 +687,7 @@ def test_channelstate_directtransfer_overspent():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
 
 
-def test_channelstate_mediatedtransfer_overspent():
+def test_channelstate_lockedtransfer_overspent():
     """Receiving a lock with an amount large than distributable must be
     ignored.
     """
@@ -699,7 +699,7 @@ def test_channelstate_mediatedtransfer_overspent():
 
     lock_amount = distributable + 1
     lock_expiration = 10
-    lock_secrethash = sha3(b'test_channelstate_mediatedtransfer_overspent')
+    lock_secrethash = sha3(b'test_channelstate_lockedtransfer_overspent')
     lock = HashTimeLockState(
         lock_amount,
         lock_expiration,
@@ -708,7 +708,7 @@ def test_channelstate_mediatedtransfer_overspent():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -716,9 +716,9 @@ def test_channelstate_mediatedtransfer_overspent():
         lock,
     )
 
-    is_valid, _ = channel.handle_receive_mediatedtransfer(
+    is_valid, _ = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
     assert not is_valid, 'message is invalid because it is spending more than the distributable'
 
@@ -726,7 +726,7 @@ def test_channelstate_mediatedtransfer_overspent():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
 
 
-def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers():
+def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers():
     """Receiving a concurrent lock with an amount large than distributable
     must be ignored.
     """
@@ -747,7 +747,7 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
 
     nonce1 = 1
     transferred_amount = 0
-    receive_mediatedtransfer1 = make_receive_transfer_mediated(
+    receive_lockedtransfer1 = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce1,
@@ -755,9 +755,9 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
         lock1,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer1,
+        receive_lockedtransfer1,
     )
     assert is_valid, msg
 
@@ -787,7 +787,7 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
     leaves = [lock1.lockhash, lock2.lockhash]
 
     nonce2 = 2
-    receive_mediatedtransfer2 = make_receive_transfer_mediated(
+    receive_lockedtransfer2 = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce2,
@@ -796,9 +796,9 @@ def test_channelstate_mediatedtransfer_overspend_with_multiple_pending_transfers
         merkletree_leaves=leaves,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer2,
+        receive_lockedtransfer2,
     )
     assert not is_valid, 'message is invalid because its expending more than the distributable'
 
@@ -918,7 +918,7 @@ def test_interwoven_transfers():
             merkletree_leaves=merkletree_leaves,
         )
 
-        receive_mediatedtransfer = make_receive_transfer_mediated(
+        receive_lockedtransfer = make_receive_transfer_mediated(
             channel_state,
             privkey2,
             nonce,
@@ -927,9 +927,9 @@ def test_interwoven_transfers():
             merkletree_leaves=merkletree_leaves,
         )
 
-        is_valid, msg = channel.handle_receive_mediatedtransfer(
+        is_valid, msg = channel.handle_receive_lockedtransfer(
             channel_state,
-            receive_mediatedtransfer,
+            receive_lockedtransfer,
         )
         assert is_valid, msg
 
@@ -1038,7 +1038,7 @@ def test_channel_must_accept_expired_locks():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -1046,9 +1046,9 @@ def test_channel_must_accept_expired_locks():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
     assert is_valid, msg
 
@@ -1066,7 +1066,7 @@ def test_channel_must_accept_expired_locks():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
 
 
-def test_receive_mediatedtransfer_before_deposit():
+def test_receive_lockedtransfer_before_deposit():
     """Regression test that ensures we accept incoming mediated transfers, even if we don't have
     any balance on the channel.
     """
@@ -1086,7 +1086,7 @@ def test_receive_mediatedtransfer_before_deposit():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -1094,9 +1094,9 @@ def test_receive_mediatedtransfer_before_deposit():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
 
     # this node partner has enough balance, the transfer must be accepted
@@ -1158,7 +1158,7 @@ def test_channelstate_withdraw():
 
     lock_amount = 10
     lock_expiration = 100
-    lock_secret = sha3(b'test_channelstate_mediatedtransfer_overspent')
+    lock_secret = sha3(b'test_channelstate_lockedtransfer_overspent')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
@@ -1168,7 +1168,7 @@ def test_channelstate_withdraw():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -1176,9 +1176,9 @@ def test_channelstate_withdraw():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
     assert is_valid, msg
 
@@ -1206,7 +1206,7 @@ def test_channel_withdraw_must_not_change_merkletree():
 
     lock_amount = 10
     lock_expiration = 100
-    lock_secret = sha3(b'test_channelstate_mediatedtransfer_overspent')
+    lock_secret = sha3(b'test_channelstate_lockedtransfer_overspent')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         lock_amount,
@@ -1216,7 +1216,7 @@ def test_channel_withdraw_must_not_change_merkletree():
 
     nonce = 1
     transferred_amount = 0
-    receive_mediatedtransfer = make_receive_transfer_mediated(
+    receive_lockedtransfer = make_receive_transfer_mediated(
         channel_state,
         privkey2,
         nonce,
@@ -1224,9 +1224,9 @@ def test_channel_withdraw_must_not_change_merkletree():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_mediatedtransfer(
+    is_valid, msg = channel.handle_receive_lockedtransfer(
         channel_state,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
     assert is_valid, msg
 

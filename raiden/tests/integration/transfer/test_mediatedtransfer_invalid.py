@@ -4,7 +4,7 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.messages import (
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
 )
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.factories import (
@@ -23,7 +23,7 @@ from raiden.tests.utils.transfer import (
 
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_failsfast_mediatedtransfer_exceeding_distributable(
+def test_failsfast_lockedtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
         deposit
@@ -51,7 +51,7 @@ def test_failsfast_mediatedtransfer_exceeding_distributable(
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_failfast_mediatedtransfer_nochannel(raiden_network, token_addresses):
+def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     """When the node has no channels it should fail without raising exceptions."""
     token_address = token_addresses[0]
     app0, app1 = raiden_network
@@ -68,7 +68,7 @@ def test_failfast_mediatedtransfer_nochannel(raiden_network, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_receive_mediatedtransfer_invalidnonce(
+def test_receive_lockedtransfer_invalidnonce(
         raiden_network,
         deposit,
         token_addresses,
@@ -93,7 +93,7 @@ def test_receive_mediatedtransfer_invalidnonce(
     identifier = 1
     repeated_nonce = 1
     expiration = reveal_timeout * 2
-    mediated_transfer_message = MediatedTransfer(
+    mediated_transfer_message = LockedTransfer(
         identifier=identifier,
         nonce=repeated_nonce,
         token=token_address,
@@ -123,7 +123,7 @@ def test_receive_mediatedtransfer_invalidnonce(
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_receive_mediatedtransfer_invalidsender(
+def test_receive_lockedtransfer_invalidsender(
         raiden_network,
         token_addresses,
         deposit,
@@ -137,7 +137,7 @@ def test_receive_mediatedtransfer_invalidsender(
     channel0 = get_channelstate(app0, app1, token_address)
     amount = 10
     expiration = reveal_timeout * 2
-    mediated_transfer_message = MediatedTransfer(
+    mediated_transfer_message = LockedTransfer(
         identifier=1,
         nonce=1,
         token=token_address,
@@ -167,7 +167,7 @@ def test_receive_mediatedtransfer_invalidsender(
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_receive_mediatedtransfer_invalidrecipient(
+def test_receive_lockedtransfer_invalidrecipient(
         raiden_network,
         token_addresses,
         reveal_timeout,
@@ -182,7 +182,7 @@ def test_receive_mediatedtransfer_invalidrecipient(
     invalid_recipient = make_address()
     amount = 10
     expiration = reveal_timeout * 2
-    mediated_transfer_message = MediatedTransfer(
+    mediated_transfer_message = LockedTransfer(
         identifier=identifier,
         nonce=1,
         token=token_address,
@@ -213,7 +213,7 @@ def test_receive_mediatedtransfer_invalidrecipient(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('settle_timeout', [30])
-def test_received_mediatedtransfer_closedchannel(
+def test_received_lockedtransfer_closedchannel(
         raiden_network,
         reveal_timeout,
         token_addresses,
@@ -238,7 +238,7 @@ def test_received_mediatedtransfer_closedchannel(
     amount = 10
     identifier = 1
     expiration = reveal_timeout * 2
-    mediated_transfer_message = MediatedTransfer(
+    mediated_transfer_message = LockedTransfer(
         identifier=identifier,
         nonce=1,
         token=token_address,

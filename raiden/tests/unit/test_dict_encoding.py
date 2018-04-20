@@ -4,7 +4,7 @@ import pytest
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.messages import (
     DirectTransfer,
-    MediatedTransfer,
+    LockedTransfer,
     RefundTransfer,
 )
 from raiden.tests.utils.messages import (
@@ -46,7 +46,7 @@ def test_mediated_transfer_min_max(amount, identifier, fee, nonce, transferred_a
     )
 
     mediated_transfer.sign(PRIVKEY, ADDRESS)
-    assert MediatedTransfer.from_dict(mediated_transfer.to_dict()) == mediated_transfer
+    assert LockedTransfer.from_dict(mediated_transfer.to_dict()) == mediated_transfer
 
 
 @pytest.mark.parametrize('amount', [0, UINT256_MAX])

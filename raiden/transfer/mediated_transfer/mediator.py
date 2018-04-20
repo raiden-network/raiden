@@ -380,7 +380,7 @@ def next_transfer_pair(
         lock_timeout = timeout_blocks - payee_channel.reveal_timeout
         lock_expiration = lock_timeout + block_number
 
-        mediatedtransfer_event = channel.send_mediatedtransfer(
+        lockedtransfer_event = channel.send_lockedtransfer(
             payee_channel,
             payer_transfer.initiator,
             payer_transfer.target,
@@ -389,15 +389,15 @@ def next_transfer_pair(
             lock_expiration,
             payer_transfer.lock.secrethash
         )
-        assert mediatedtransfer_event
+        assert lockedtransfer_event
 
         transfer_pair = MediationPairState(
             payer_transfer,
             payee_channel.partner_state.address,
-            mediatedtransfer_event.transfer,
+            lockedtransfer_event.transfer,
         )
 
-        mediated_events = [mediatedtransfer_event]
+        mediated_events = [lockedtransfer_event]
 
     return (
         transfer_pair,
@@ -532,7 +532,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
     Returns:
         An empty list if there are not enough blocks to safely create a refund,
         or a list with a refund event."""
-    # A refund transfer works like a special SendMediatedTransfer, so it must
+    # A refund transfer works like a special SendLockedTransfer, so it must
     # follow the same rules and decrement reveal_timeout from the
     # payee_transfer.
     new_lock_timeout = timeout_blocks - refund_channel.reveal_timeout
@@ -860,7 +860,7 @@ def handle_init(state_change, channelidentifiers_to_channels, block_number):
 
     mediator_state = MediatorTransferState(from_transfer.lock.secrethash)
 
-    is_valid, _ = channel.handle_receive_mediatedtransfer(
+    is_valid, _ = channel.handle_receive_lockedtransfer(
         payer_channel,
         from_transfer,
     )
@@ -925,7 +925,7 @@ def handle_refundtransfer(
     point B is part of the path again and will try a new partner to proceed
     with the mediation through D, D finally reaches the target T.
     In the above scenario B has two pairs of payer and payee transfers:
-        payer:A payee:C from the first SendMediatedTransfer
+        payer:A payee:C from the first SendLockedTransfer
         payer:C payee:D from the following SendRefundTransfer
     Args:
         mediator_state (MediatorTransferState): Current mediator_state.

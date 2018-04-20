@@ -21,7 +21,7 @@ from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.mediated_transfer.events import (
     refund_from_sendmediated,
     SendBalanceProof,
-    SendMediatedTransfer,
+    SendLockedTransfer,
 )
 from raiden.transfer.merkle_tree import (
     LEAVES,
@@ -230,7 +230,7 @@ def is_valid_directtransfer(direct_transfer, channel_state, sender_state, receiv
     return result
 
 
-def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, receiver_state):
+def is_valid_lockedtransfer(mediated_transfer, channel_state, sender_state, receiver_state):
     received_balance_proof = mediated_transfer.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
@@ -246,7 +246,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
         result = (False, msg, None)
 
     if merkletree is None:
-        msg = 'Invalid MediatedTransfer message. Same lockhash handled twice.'
+        msg = 'Invalid LockedTransfer message. Same lockhash handled twice.'
         result = (False, msg, None)
 
     else:
@@ -260,7 +260,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
         if not is_valid:
             # The signature must be valid, otherwise the balance proof cannot be
             # used onchain
-            msg = 'Invalid MediatedTransfer message. {}'.format(signature_msg)
+            msg = 'Invalid LockedTransfer message. {}'.format(signature_msg)
 
             result = (False, msg, None)
 
@@ -268,7 +268,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
             # The nonces must increase sequentially, otherwise there is a
             # synchronization problem
             msg = (
-                'Invalid MediatedTransfer message. '
+                'Invalid LockedTransfer message. '
                 'Nonce did not change sequentially, expected: {} got: {}.'
             ).format(
                 expected_nonce,
@@ -280,7 +280,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
         elif received_balance_proof.locksroot != locksroot_with_lock:
             # The locksroot must be updated to include the new lock
             msg = (
-                "Invalid MediatedTransfer message. "
+                "Invalid LockedTransfer message. "
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
                 hexlify(locksroot_with_lock).decode(),
@@ -292,7 +292,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
         elif received_balance_proof.transferred_amount != current_transferred_amount:
             # Mediated transfers must not change transferred_amount
             msg = (
-                "Invalid MediatedTransfer message. "
+                "Invalid LockedTransfer message. "
                 "Balance proof's transferred_amount changed, expected: {} got: {}."
             ).format(
                 current_transferred_amount,
@@ -306,7 +306,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
             # on-chain contract would be sucesstible to replay attacks across
             # channels.
             msg = (
-                'Invalid MediatedTransfer message. '
+                'Invalid LockedTransfer message. '
                 'Balance proof is tied to the wrong channel, expected: {} got: {}'
             ).format(
                 hexlify(channel_state.identifier).decode(),
@@ -318,7 +318,7 @@ def is_valid_mediatedtransfer(mediated_transfer, channel_state, sender_state, re
         # the sender is doing a trying to play the protocol and do a double spend
         elif lock.amount > distributable:
             msg = (
-                'Invalid MediatedTransfer message. '
+                'Invalid LockedTransfer message. '
                 'Lock amount larger than the available distributable, '
                 'lock amount: {} maximum distributable: {}'
             ).format(
@@ -695,7 +695,7 @@ def create_senddirecttransfer(channel_state, amount, identifier):
     return direct_transfer
 
 
-def create_sendmediatedtransfer(
+def create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
@@ -754,12 +754,12 @@ def create_sendmediatedtransfer(
         target,
     )
 
-    mediatedtransfer = SendMediatedTransfer(
+    lockedtransfer = SendLockedTransfer(
         locked_transfer,
         recipient,
     )
 
-    return mediatedtransfer, merkletree
+    return lockedtransfer, merkletree
 
 
 def create_unlock(channel_state, identifier, secret, lock):
@@ -815,7 +815,7 @@ def send_directtransfer(channel_state, amount, identifier):
     return direct_transfer
 
 
-def send_mediatedtransfer(
+def send_lockedtransfer(
         channel_state,
         initiator,
         target,
@@ -824,7 +824,7 @@ def send_mediatedtransfer(
         expiration,
         secrethash):
 
-    send_event, merkletree = create_sendmediatedtransfer(
+    send_event, merkletree = create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
@@ -855,7 +855,7 @@ def send_refundtransfer(
     msg = 'Refunds are only valid for *know and pending* transfers'
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
-    send_mediated_transfer, merkletree = create_sendmediatedtransfer(
+    send_mediated_transfer, merkletree = create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
@@ -1025,7 +1025,7 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
     return TransitionResult(channel_state, events)
 
 
-def handle_receive_mediatedtransfer(
+def handle_receive_lockedtransfer(
         channel_state: 'NettingChannelState',
         mediated_transfer: 'LockedTransferSignedState'
 ):
@@ -1036,7 +1036,7 @@ def handle_receive_mediatedtransfer(
     transfer. The receiver needs to ensure that the merkle root has the
     secrethash included, otherwise it won't be able to claim it.
     """
-    is_valid, msg, merkletree = is_valid_mediatedtransfer(
+    is_valid, msg, merkletree = is_valid_lockedtransfer(
         mediated_transfer,
         channel_state,
         channel_state.partner_state,
@@ -1054,7 +1054,7 @@ def handle_receive_mediatedtransfer(
 
 
 def handle_receive_refundtransfer(channel_state, refund_transfer):
-    return handle_receive_mediatedtransfer(channel_state, refund_transfer)
+    return handle_receive_lockedtransfer(channel_state, refund_transfer)
 
 
 def handle_receive_secretreveal(channel_state, state_change):

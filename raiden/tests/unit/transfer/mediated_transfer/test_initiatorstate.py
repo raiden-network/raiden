@@ -30,7 +30,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
-    SendMediatedTransfer,
+    SendLockedTransfer,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
@@ -138,7 +138,7 @@ def test_init_with_usable_routes():
     payment_state = transition.new_state
     assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
-    mediated_transfers = [e for e in transition.events if isinstance(e, SendMediatedTransfer)]
+    mediated_transfers = [e for e in transition.events if isinstance(e, SendLockedTransfer)]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
 
     send_mediated_transfer = mediated_transfers[0]
@@ -381,7 +381,7 @@ def test_refund_transfer_next_route():
     assert len(iteration.events) == 2
 
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer))
+    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
 
     assert route_cancelled, 'The previous transfer must be cancelled'
     assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'
