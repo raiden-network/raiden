@@ -3,7 +3,7 @@
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import MediatorTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.state_change import Block
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -66,7 +66,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         block_number,
     )
 
-    send_transfer = must_contain_entry(initial_iteration.events, SendMediatedTransfer, {})
+    send_transfer = must_contain_entry(initial_iteration.events, SendLockedTransfer, {})
     assert send_transfer
 
     lock_expiration = send_transfer.transfer.lock.expiration

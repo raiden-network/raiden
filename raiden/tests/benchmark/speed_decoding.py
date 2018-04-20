@@ -7,7 +7,7 @@ import coincurve
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import decode
 from raiden.messages import (
-    Processed, DirectTransfer, Lock, MediatedTransfer, Ping,
+    Processed, DirectTransfer, Lock, LockedTransfer, Ping,
     RefundTransfer, Secret, SecretRequest,
 )
 
@@ -110,7 +110,7 @@ def test_mediated_transfer(iterations=ITERATIONS):
     locksroot = sha3(ADDRESS)
     target = ADDRESS
     initiator = ADDRESS
-    msg = MediatedTransfer(
+    msg = LockedTransfer(
         identifier,
         nonce,
         token,
@@ -170,7 +170,7 @@ def benchmark_alternatives():
     import cPickle
     import umsgpack
 
-    from raiden.messages import decode, Processed, Ping, MediatedTransfer, Lock
+    from raiden.messages import decode, Processed, Ping, LockedTransfer, Lock
     from raiden.utils import privatekey_to_address, sha3
 
     privkey = 'x' * 32
@@ -180,7 +180,7 @@ def benchmark_alternatives():
     m0.sign(privkey, ADDRESS)
 
     l1 = Lock(100, 50, sha3(address))
-    m1 = MediatedTransfer(
+    m1 = LockedTransfer(
         10,
         address,
         100,

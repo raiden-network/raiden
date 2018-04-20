@@ -99,7 +99,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
 
     # This is the current state of the protocol:
     #
-    #    A -> B MediatedTransfer
+    #    A -> B LockedTransfer
     #    B -> A SecretRequest
     #    - protocol didn't continue
 

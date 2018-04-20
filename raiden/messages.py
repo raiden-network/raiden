@@ -21,7 +21,7 @@ __all__ = (
     'DirectTransfer',
     'Lock',
     'LockedTransferBase',
-    'MediatedTransfer',
+    'LockedTransfer',
     'RefundTransfer',
 )
 
@@ -826,9 +826,9 @@ class LockedTransferBase(EnvelopeMessage):
         packed.signature = self.signature
 
 
-class MediatedTransfer(LockedTransferBase):
+class LockedTransfer(LockedTransferBase):
     """
-    A MediatedTransfer has a `target` address to which a chain of transfers shall
+    A LockedTransfer has a `target` address to which a chain of transfers shall
     be established. Here the `haslock` is mandatory.
 
     `fee` is the remaining fee a recipient shall use to complete the mediated transfer.
@@ -846,7 +846,7 @@ class MediatedTransfer(LockedTransferBase):
     `initiator` is the party that knows the secret to the `secrethash`
     """
 
-    cmdid = messages.MEDIATEDTRANSFER
+    cmdid = messages.LOCKEDTRANSFER
 
     def __init__(
             self,
@@ -913,7 +913,7 @@ class MediatedTransfer(LockedTransferBase):
             packed.secrethash,
         )
 
-        mediated_transfer = MediatedTransfer(
+        mediated_transfer = LockedTransfer(
             packed.identifier,
             packed.nonce,
             packed.token,
@@ -949,7 +949,7 @@ class MediatedTransfer(LockedTransferBase):
         packed.signature = self.signature
 
     @staticmethod
-    def from_event(event: 'SendMediatedTransfer') -> 'MediatedTransfer':
+    def from_event(event: 'SendLockedTransfer') -> 'LockedTransfer':
         transfer = event.transfer
         lock = transfer.lock
         balance_proof = transfer.balance_proof
@@ -960,7 +960,7 @@ class MediatedTransfer(LockedTransferBase):
         )
         fee = 0
 
-        return MediatedTransfer(
+        return LockedTransfer(
             transfer.identifier,
             balance_proof.nonce,
             transfer.token,
@@ -992,7 +992,7 @@ class MediatedTransfer(LockedTransferBase):
 
     @staticmethod
     def from_dict(data):
-        message = MediatedTransfer(
+        message = LockedTransfer(
             data['identifier'],
             data['nonce'],
             unhexlify(data['token']),
@@ -1009,8 +1009,8 @@ class MediatedTransfer(LockedTransferBase):
         return message
 
 
-class RefundTransfer(MediatedTransfer):
-    """ A special MediatedTransfer sent from a payee to a payer indicating that
+class RefundTransfer(LockedTransfer):
+    """ A special LockedTransfer sent from a payee to a payer indicating that
     no route is available, this transfer will effectively refund the payer the
     transfer amount allowing him to try a new path to complete the transfer.
     """
@@ -1090,6 +1090,6 @@ CMDID_TO_CLASS = {
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,
     messages.DIRECTTRANSFER: DirectTransfer,
-    messages.MEDIATEDTRANSFER: MediatedTransfer,
+    messages.LOCKEDTRANSFER: LockedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
 }

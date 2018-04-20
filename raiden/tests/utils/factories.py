@@ -8,7 +8,7 @@ from coincurve import PrivateKey
 
 from raiden.messages import (
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
     signing,
 )
 from raiden.utils import (
@@ -228,7 +228,7 @@ def make_signed_transfer(
         secrethash,
     )
 
-    transfer = MediatedTransfer(
+    transfer = LockedTransfer(
         identifier,
         nonce,
         token,
@@ -319,7 +319,7 @@ def make_signed_transfer_for(
     )
 
     # Do *not* register the transfer here
-    is_valid, msg, _ = channel.is_valid_mediatedtransfer(
+    is_valid, msg, _ = channel.is_valid_lockedtransfer(
         mediated_transfer,
         channel_state,
         channel_state.partner_state,

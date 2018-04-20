@@ -5,8 +5,8 @@ from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.utils import pex, sha3
 
 
-def refund_from_sendmediated(send_mediatedtransfer_event):
-    transfer = send_mediatedtransfer_event.transfer
+def refund_from_sendmediated(send_lockedtransfer_event):
+    transfer = send_lockedtransfer_event.transfer
     return SendRefundTransfer(
         transfer.identifier,
         transfer.token,
@@ -14,11 +14,11 @@ def refund_from_sendmediated(send_mediatedtransfer_event):
         transfer.lock,
         transfer.initiator,
         transfer.target,
-        send_mediatedtransfer_event.recipient,
+        send_lockedtransfer_event.recipient,
     )
 
 
-class SendMediatedTransfer(Event):
+class SendLockedTransfer(Event):
     """ A locked transfer that must be sent to `recipient`. """
 
     def __init__(self, transfer, recipient):
@@ -29,14 +29,14 @@ class SendMediatedTransfer(Event):
         self.recipient = recipient
 
     def __repr__(self):
-        return '<SendMediatedTransfer transfer:{} recipient:{}>'.format(
+        return '<SendLockedTransfer transfer:{} recipient:{}>'.format(
             self.transfer,
             pex(self.recipient),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendMediatedTransfer) and
+            isinstance(other, SendLockedTransfer) and
             self.transfer == other.transfer and
             self.recipient == other.recipient
         )

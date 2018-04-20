@@ -13,7 +13,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.messages import (
     DirectTransfer,
-    MediatedTransfer,
+    LockedTransfer,
     Message,
     RefundTransfer,
     RevealSecret,
@@ -110,7 +110,7 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     raiden.handle_state_change(direct_transfer)
 
 
-def handle_message_mediatedtransfer(raiden: 'RaidenService', message: MediatedTransfer):
+def handle_message_lockedtransfer(raiden: 'RaidenService', message: LockedTransfer):
     if message.target == raiden.address:
         raiden.target_mediated_transfer(message)
     else:
@@ -127,11 +127,11 @@ def on_udp_message(raiden: 'RaidenService', message: Message):
     elif isinstance(message, DirectTransfer):
         handle_message_directtransfer(raiden, message)
     elif isinstance(message, RefundTransfer):
-        # The RefundTransfer must be prior to the MediatedTransfer, since a
-        # RefundTransfer is also a MediatedTransfer
+        # The RefundTransfer must be prior to the LockedTransfer, since a
+        # RefundTransfer is also a LockedTransfer
         handle_message_refundtransfer(raiden, message)
-    elif isinstance(message, MediatedTransfer):
-        handle_message_mediatedtransfer(raiden, message)
+    elif isinstance(message, LockedTransfer):
+        handle_message_lockedtransfer(raiden, message)
     elif log.isEnabledFor(logging.ERROR):
         # `Processed` and `Ping` messages are not forwarded to the handler
         log.error('Unknown message cmdid {}'.format(message.cmdid))

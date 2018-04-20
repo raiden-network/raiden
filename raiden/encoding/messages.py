@@ -30,7 +30,7 @@ PING = 1
 SECRETREQUEST = 3
 SECRET = 4
 DIRECTTRANSFER = 5
-MEDIATEDTRANSFER = 7
+LOCKEDTRANSFER = 7
 REFUNDTRANSFER = 8
 REVEALSECRET = 11
 
@@ -135,10 +135,10 @@ DirectTransfer = namedbuffer(
     ]
 )
 
-MediatedTransfer = namedbuffer(
+LockedTransfer = namedbuffer(
     'mediated_transfer',
     [
-        cmdid(MEDIATEDTRANSFER),
+        cmdid(LOCKEDTRANSFER),
         pad(3),
         nonce,
         identifier,
@@ -196,7 +196,7 @@ CMDID_MESSAGE = {
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
     DIRECTTRANSFER: DirectTransfer,
-    MEDIATEDTRANSFER: MediatedTransfer,
+    LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
 }
 

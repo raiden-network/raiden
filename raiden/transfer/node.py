@@ -81,7 +81,7 @@ def subdispatch_to_all_channels(node_state, state_change, block_number):
     return TransitionResult(node_state, events)
 
 
-def subdispatch_to_all_mediatedtransfers(node_state, state_change):
+def subdispatch_to_all_lockedtransfers(node_state, state_change):
     events = list()
 
     for secrethash in node_state.payment_mapping.secrethashes_to_task.keys():
@@ -353,7 +353,7 @@ def handle_block(node_state, state_change):
         state_change,
         block_number,
     )
-    transfers_result = subdispatch_to_all_mediatedtransfers(
+    transfers_result = subdispatch_to_all_lockedtransfers(
         node_state,
         state_change,
     )

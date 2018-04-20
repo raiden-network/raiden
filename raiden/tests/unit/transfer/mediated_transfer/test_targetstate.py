@@ -81,7 +81,7 @@ def test_events_for_close():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )
@@ -127,7 +127,7 @@ def test_events_for_close_secret_unknown():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )
@@ -206,7 +206,7 @@ def test_handle_inittarget_bad_expiration():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )

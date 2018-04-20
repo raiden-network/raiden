@@ -56,7 +56,7 @@ def handle_inittarget(state_change, channel_state, block_number):
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_address
-    is_valid, errormsg = channel.handle_receive_mediatedtransfer(
+    is_valid, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )

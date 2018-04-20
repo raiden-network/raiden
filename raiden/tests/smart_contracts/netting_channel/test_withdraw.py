@@ -4,7 +4,7 @@ from ethereum.utils import normalize_address
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import Lock, MediatedTransfer
+from raiden.messages import Lock, LockedTransfer
 from raiden.tests.utils.messages import (
     SECRETHASHES_FOR_MERKLETREE,
     SECRETHASHES_SECRESTS,
@@ -135,7 +135,7 @@ def test_withdraw_at_settlement_block(
     opened_block = nettingchannel.opened(sender=pkey0)
     nonce = 1 + (opened_block * (2 ** 32))
 
-    mediated0 = MediatedTransfer(
+    mediated0 = LockedTransfer(
         identifier=1,
         nonce=nonce,
         token=tester_token.address,

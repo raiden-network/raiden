@@ -13,7 +13,7 @@ from raiden.transfer.state import (
 
 
 def lockedtransfersigned_from_message(message):
-    """ Create LockedTransferSignedState from a MediatedTransfer message. """
+    """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = BalanceProofSignedState(
         message.nonce,
         message.transferred_amount,

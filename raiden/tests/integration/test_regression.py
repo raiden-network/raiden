@@ -4,7 +4,7 @@ import pytest
 
 from raiden.messages import (
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
     RevealSecret,
     Secret,
 )
@@ -133,7 +133,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
 
     nonce = 1
     transferred_amount = 0
-    mediated_transfer = MediatedTransfer(
+    mediated_transfer = LockedTransfer(
         identifier,
         nonce,
         token,

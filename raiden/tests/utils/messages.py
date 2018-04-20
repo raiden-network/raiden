@@ -11,7 +11,7 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.messages import (
     DirectTransfer,
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
     RefundTransfer,
 )
 
@@ -128,7 +128,7 @@ def make_mediated_transfer(
     if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
 
-    return MediatedTransfer(
+    return LockedTransfer(
         identifier,
         nonce,
         token,
