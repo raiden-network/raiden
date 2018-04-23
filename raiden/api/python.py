@@ -250,8 +250,8 @@ class RaidenAPI:
         # If concurrent operations are happening on the channel, fail the request
         if not channel_proxy.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
-                f"""Channel with id {channel_state.identifier} is
-                busy with another ongoing operation"""
+                f'Channel with id {channel_state.identifier} is '
+                f'busy with another ongoing operation'
             )
 
         channel_proxy.channel_operations_lock.release()
@@ -335,8 +335,8 @@ class RaidenAPI:
                 # will cause the ExitStack to exit, releasing all locks acquired so far
                 if not channel.channel_operations_lock.acquire(0):
                     raise ChannelBusyError(
-                        f"""Channel with id {channel_state.identifier} is
-                        busy with another ongoing operation"""
+                        f'Channel with id {channel_state.identifier} is '
+                        f'busy with another ongoing operation'
                     )
 
                 channel.channel_operations_lock.release()
