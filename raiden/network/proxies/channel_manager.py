@@ -40,6 +40,7 @@ from raiden.utils import (
     privatekey_to_address,
 )
 from raiden.utils.typing import Address
+from raiden.constants import NULL_ADDRESS
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -200,11 +201,9 @@ class ChannelManager:
             participant_address,
         )
 
-        null_addr = '0x' + '0' * 40
-
         exists = False
 
-        if existing_channel != null_addr:
+        if existing_channel != NULL_ADDRESS:
             exists = self.proxy.call(
                 'contractExists',
                 existing_channel

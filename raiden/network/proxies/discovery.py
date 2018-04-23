@@ -12,12 +12,9 @@ from raiden.exceptions import (
     UnknownAddress,
 )
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
-)
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-)
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.settings import DEFAULT_POLL_TIMEOUT
+from raiden.constants import NULL_ADDRESS
 from raiden.utils import (
     address_encoder,
     isaddress,
@@ -51,7 +48,7 @@ class Discovery:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
-        self.not_found_address = '0x' + '0' * 40
+        self.not_found_address = NULL_ADDRESS
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
