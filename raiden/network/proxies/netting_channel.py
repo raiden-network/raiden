@@ -211,8 +211,8 @@ class NettingChannel:
 
         if not self.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
-                f"""Channel with address {self.address} is
-                busy with another ongoing operation"""
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation'
             )
 
         self.channel_operations_lock.release()
@@ -270,8 +270,8 @@ class NettingChannel:
 
         if not self.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
-                f"""Channel with address {self.address} is
-                busy with another ongoing operation"""
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation'
             )
 
         self.channel_operations_lock.release()
@@ -427,8 +427,8 @@ class NettingChannel:
 
         if not self.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
-                f"""Channel with address {self.address} is
-                busy with another ongoing operation"""
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation'
             )
 
         self.channel_operations_lock.release()
