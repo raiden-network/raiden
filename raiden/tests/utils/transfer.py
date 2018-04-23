@@ -163,7 +163,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
     return secret
 
 
-def claim_lock(app_chain, payment_identifier, token, secret):
+def claim_lock(app_chain, queueids_to_queues, payment_identifier, token, secret):
     """ Unlock a pending transfer. """
     secrethash = sha3(secret)
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
@@ -171,8 +171,11 @@ def claim_lock(app_chain, payment_identifier, token, secret):
         partner_channel = get_channelstate(to_, from_, token)
 
         message_identifier = random.randint(0, UINT64_MAX)
+        queueid = (from_channel.partner_state.address, from_channel.identifier)
+        partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
         unlock_lock = channel.send_unlock(
             from_channel,
+            partner_channel_message_queue,
             message_identifier,
             payment_identifier,
             secret,
@@ -309,6 +312,7 @@ def increase_transferred_amount(
         payment_network_identifier,
         from_channel,
         partner_channel,
+        partner_channel_message_queue,
         amount,
         pkey,
 ):
@@ -324,9 +328,10 @@ def increase_transferred_amount(
     payment_identifier = 1
     event = channel.send_directtransfer(
         from_channel,
+        partner_channel_message_queue,
         amount,
-        payment_identifier,
         message_identifier,
+        payment_identifier,
     )
 
     direct_transfer_message = DirectTransfer.from_event(event)
@@ -357,6 +362,7 @@ def make_direct_transfer_from_channel(
         payment_network_identifier,
         from_channel,
         partner_channel,
+        partner_channel_message_queue,
         amount,
         pkey,
 ):
@@ -374,6 +380,7 @@ def make_direct_transfer_from_channel(
     )
     iteration = channel.handle_send_directtransfer(
         from_channel,
+        partner_channel_message_queue,
         state_change,
         pseudo_random_generator,
     )
@@ -406,6 +413,7 @@ def make_direct_transfer_from_channel(
 def make_mediated_transfer(
         from_channel,
         partner_channel,
+        partner_channel_message_queue,
         initiator,
         target,
         lock,
@@ -419,6 +427,7 @@ def make_mediated_transfer(
 
     lockedtransfer = channel.send_lockedtransfer(
         from_channel,
+        partner_channel_message_queue,
         initiator,
         target,
         lock.amount,

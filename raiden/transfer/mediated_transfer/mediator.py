@@ -349,6 +349,7 @@ def next_transfer_pair(
         payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
+        queueids_to_queues,
         pseudo_random_generator,
         timeout_blocks: int,
         block_number: int
@@ -383,8 +384,11 @@ def next_transfer_pair(
         lock_expiration = lock_timeout + block_number
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        queueid = (payee_channel.partner_state.address, payee_channel.identifier)
+        partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
         lockedtransfer_event = channel.send_lockedtransfer(
             payee_channel,
+            partner_channel_message_queue,
             payer_transfer.initiator,
             payer_transfer.target,
             payer_transfer.lock.amount,
@@ -574,7 +578,7 @@ def events_for_refund_transfer(
     return list()
 
 
-def events_for_revealsecret(transfers_pair, secret, addresses_to_queues, pseudo_random_generator):
+def events_for_revealsecret(transfers_pair, secret, queueids_to_queues, pseudo_random_generator):
     """ Reveal the secret backwards.
 
     This node is named N, suppose there is a mediated transfer with two refund
@@ -614,8 +618,9 @@ def events_for_revealsecret(transfers_pair, secret, addresses_to_queues, pseudo_
                 payer_transfer.balance_proof.sender,
             )
 
-            partner_message_queue = addresses_to_queues.setdefault(pair.payee_address, [])
-            partner_message_queue.append(revealsecret)
+            queueid = (pair.payee_address, 'global')
+            partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
+            partner_default_message_queue.append(revealsecret)
             events.append(revealsecret)
 
     return events
@@ -623,6 +628,7 @@ def events_for_revealsecret(transfers_pair, secret, addresses_to_queues, pseudo_
 
 def events_for_balanceproof(
         channelidentifiers_to_channels,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -650,8 +656,11 @@ def events_for_balanceproof(
             pair.payee_state = 'payee_balance_proof'
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
+            queueid = (payee_channel.partner_state.address, payee_channel.identifier)
+            partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
             unlock_lock = channel.send_unlock(
                 payee_channel,
+                partner_channel_message_queue,
                 pair.payee_transfer.payment_identifier,
                 message_identifier,
                 secret,
@@ -734,7 +743,7 @@ def events_for_withdraw_if_closed(
 def secret_learned(
         state,
         channelidentifiers_to_channels,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
         secret,
@@ -781,12 +790,13 @@ def secret_learned(
     secret_reveal = events_for_revealsecret(
         state.transfers_pair,
         secret,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
     )
 
     balance_proof = events_for_balanceproof(
         channelidentifiers_to_channels,
+        queueids_to_queues,
         state.transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -807,6 +817,7 @@ def mediate_transfer(
         possible_routes,
         payer_channel,
         channelidentifiers_to_channels,
+        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -845,6 +856,7 @@ def mediate_transfer(
             payer_transfer,
             available_routes,
             channelidentifiers_to_channels,
+            queueids_to_queues,
             pseudo_random_generator,
             timeout_blocks,
             block_number,
@@ -885,6 +897,7 @@ def mediate_transfer(
 def handle_init(
         state_change,
         channelidentifiers_to_channels,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -912,6 +925,7 @@ def handle_init(
         routes,
         payer_channel,
         channelidentifiers_to_channels,
+        queueids_to_queues,
         pseudo_random_generator,
         from_transfer,
         block_number,
@@ -958,6 +972,7 @@ def handle_refundtransfer(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -998,6 +1013,7 @@ def handle_refundtransfer(
                 mediator_state_change.routes,
                 payer_channel,
                 channelidentifiers_to_channels,
+                queueids_to_queues,
                 pseudo_random_generator,
                 payer_transfer,
                 block_number,
@@ -1012,7 +1028,7 @@ def handle_secretreveal(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -1029,7 +1045,7 @@ def handle_secretreveal(
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
-            addresses_to_queues,
+            queueids_to_queues,
             pseudo_random_generator,
             block_number,
             mediator_state_change.secret,
@@ -1048,7 +1064,7 @@ def handle_contractwithdraw(
         state,
         state_change,
         channelidentifiers_to_channels,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -1101,7 +1117,7 @@ def handle_contractwithdraw(
     iteration = secret_learned(
         state,
         channelidentifiers_to_channels,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
         state_change.secret,
@@ -1148,7 +1164,7 @@ def state_transition(
         mediator_state,
         state_change,
         channelidentifiers_to_channels,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -1167,6 +1183,7 @@ def state_transition(
             iteration = handle_init(
                 state_change,
                 channelidentifiers_to_channels,
+                queueids_to_queues,
                 pseudo_random_generator,
                 block_number,
             )
@@ -1184,6 +1201,7 @@ def state_transition(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
+            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -1193,7 +1211,7 @@ def state_transition(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
-            addresses_to_queues,
+            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -1203,7 +1221,7 @@ def state_transition(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
-            addresses_to_queues,
+            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )

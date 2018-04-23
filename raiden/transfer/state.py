@@ -73,7 +73,7 @@ class NodeState(State):
     """
 
     __slots__ = (
-        'addresses_to_queues',
+        'queueids_to_queues',
         'pseudo_random_generator',
         'block_number',
         'pseudo_random_generator',
@@ -88,7 +88,7 @@ class NodeState(State):
 
         self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
-        self.addresses_to_queues = list()
+        self.queueids_to_queues = dict()
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
         self.payment_mapping = PaymentMappingState()
@@ -105,7 +105,7 @@ class NodeState(State):
             isinstance(other, NodeState) and
             self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
-            self.addresses_to_queues == other.addresses_to_queues and
+            self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
             self.payment_mapping == other.payment_mapping
@@ -792,7 +792,6 @@ class NettingChannelState(State):
         'open_transaction',
         'close_transaction',
         'settle_transaction',
-        'ordered_message_queue',
     )
 
     def __init__(
@@ -851,7 +850,6 @@ class NettingChannelState(State):
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
-        self.ordered_message_queue = list()
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
@@ -873,8 +871,7 @@ class NettingChannelState(State):
             self.deposit_transaction_queue == other.deposit_transaction_queue and
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
-            self.settle_transaction == other.settle_transaction and
-            self.ordered_message_queue == other.ordered_message_queue
+            self.settle_transaction == other.settle_transaction
         )
 
     def __ne__(self, other):

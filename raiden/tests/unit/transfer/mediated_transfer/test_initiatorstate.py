@@ -42,7 +42,7 @@ def make_initiator_state(
         routes,
         transfer_description,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
         payment_network_identifier=None,
@@ -62,7 +62,7 @@ def make_initiator_state(
         inital_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -75,7 +75,7 @@ def test_next_route():
     channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
     channel2 = factories.make_channel(our_balance=0, token_address=UNIT_TOKEN_ADDRESS)
     channel3 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channelmap = {
@@ -95,7 +95,7 @@ def test_next_route():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -112,7 +112,7 @@ def test_next_route():
         state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -128,7 +128,7 @@ def test_init_with_usable_routes():
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     payment_network_identifier = factories.make_address()
@@ -143,7 +143,7 @@ def test_init_with_usable_routes():
         None,
         init_state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -172,7 +172,7 @@ def test_init_without_routes():
     block_number = 1
     routes = []
     payment_network_identifier = factories.make_address()
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     init_state_change = ActionInitInitiator(
@@ -186,7 +186,7 @@ def test_init_without_routes():
         None,
         init_state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -201,7 +201,7 @@ def test_init_without_routes():
 def test_state_wait_secretrequest_valid():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
@@ -211,7 +211,7 @@ def test_state_wait_secretrequest_valid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -227,7 +227,7 @@ def test_state_wait_secretrequest_valid():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -238,7 +238,7 @@ def test_state_wait_secretrequest_valid():
 
 def test_state_wait_unlock_valid():
     block_number = 1
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -252,7 +252,7 @@ def test_state_wait_unlock_valid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -273,7 +273,7 @@ def test_state_wait_unlock_valid():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -296,7 +296,7 @@ def test_state_wait_unlock_invalid():
     block_number = 1
     target_address = factories.HOP2
     token = factories.UNIT_TOKEN_ADDRESS
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -309,7 +309,7 @@ def test_state_wait_unlock_invalid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -332,7 +332,7 @@ def test_state_wait_unlock_invalid():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -345,7 +345,7 @@ def test_refund_transfer_next_route():
     amount = UNIT_TRANSFER_AMOUNT
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -383,7 +383,7 @@ def test_refund_transfer_next_route():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -417,7 +417,7 @@ def test_refund_transfer_next_route():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -439,7 +439,7 @@ def test_refund_transfer_no_more_routes():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
     refund_pkey, refund_address = factories.make_privkey_address()
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -456,7 +456,7 @@ def test_refund_transfer_no_more_routes():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -489,7 +489,7 @@ def test_refund_transfer_no_more_routes():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -506,7 +506,7 @@ def test_refund_transfer_no_more_routes():
 def test_refund_transfer_invalid_sender():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -521,7 +521,7 @@ def test_refund_transfer_invalid_sender():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -552,7 +552,7 @@ def test_refund_transfer_invalid_sender():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -564,7 +564,7 @@ def test_refund_transfer_invalid_sender():
 def test_cancel_transfer():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    addresses_to_queues = dict()
+    queueids_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -579,7 +579,7 @@ def test_cancel_transfer():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -592,7 +592,7 @@ def test_cancel_transfer():
         current_state,
         state_change,
         channelmap,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )

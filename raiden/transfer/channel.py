@@ -808,7 +808,13 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
     return unlock_lock, merkletree
 
 
-def send_directtransfer(channel_state, amount, message_identifier, payment_identifier):
+def send_directtransfer(
+        channel_state,
+        partner_channel_message_queue,
+        amount,
+        message_identifier,
+        payment_identifier,
+):
     direct_transfer = create_senddirecttransfer(
         channel_state,
         amount,
@@ -817,20 +823,22 @@ def send_directtransfer(channel_state, amount, message_identifier, payment_ident
     )
 
     channel_state.our_state.balance_proof = direct_transfer.balance_proof
-    channel_state.ordered_message_queue.append(direct_transfer)
+    partner_channel_message_queue.append(direct_transfer)
 
     return direct_transfer
 
 
 def send_lockedtransfer(
         channel_state,
+        partner_channel_message_queue,
         initiator,
         target,
         amount,
         message_identifier,
         payment_identifier,
         expiration,
-        secrethash):
+        secrethash,
+):
 
     send_locked_transfer_event, merkletree = create_sendlockedtransfer(
         channel_state,
@@ -848,7 +856,7 @@ def send_lockedtransfer(
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
-    channel_state.ordered_message_queue.append(send_locked_transfer_event)
+    partner_channel_message_queue.append(send_locked_transfer_event)
 
     return send_locked_transfer_event
 
@@ -888,7 +896,14 @@ def send_refundtransfer(
     return refund_transfer
 
 
-def send_unlock(channel_state, message_identifier, payment_identifier, secret, secrethash):
+def send_unlock(
+        channel_state,
+        partner_channel_message_queue,
+        message_identifier,
+        payment_identifier,
+        secret,
+        secrethash,
+):
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock
 
@@ -902,7 +917,7 @@ def send_unlock(channel_state, message_identifier, payment_identifier, secret, s
 
     channel_state.our_state.balance_proof = unlock.balance_proof
     channel_state.our_state.merkletree = merkletree
-    channel_state.ordered_message_queue.append(unlock)
+    partner_channel_message_queue.append(unlock)
 
     _del_lock(channel_state.our_state, lock.secrethash)
 
@@ -954,7 +969,12 @@ def register_secret(channel_state, secret, secrethash):
     register_secret_endstate(partner_state, secret, secrethash)
 
 
-def handle_send_directtransfer(channel_state, state_change, pseudo_random_generator):
+def handle_send_directtransfer(
+        channel_state,
+        partner_channel_message_queue,
+        state_change,
+        pseudo_random_generator,
+):
     events = list()
 
     amount = state_change.amount
@@ -969,6 +989,7 @@ def handle_send_directtransfer(channel_state, state_change, pseudo_random_genera
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         direct_transfer = send_directtransfer(
             channel_state,
+            partner_channel_message_queue,
             amount,
             message_identifier,
             payment_identifier,
@@ -1238,7 +1259,13 @@ def handle_channel_withdraw(channel_state, state_change):
     return TransitionResult(channel_state, events)
 
 
-def state_transition(channel_state, state_change, pseudo_random_generator, block_number):
+def state_transition(
+        channel_state,
+        partner_channel_message_queue,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events = list()
@@ -1253,6 +1280,7 @@ def state_transition(channel_state, state_change, pseudo_random_generator, block
     elif type(state_change) == ActionTransferDirect:
         iteration = handle_send_directtransfer(
             channel_state,
+            partner_channel_message_queue,
             state_change,
             pseudo_random_generator,
         )

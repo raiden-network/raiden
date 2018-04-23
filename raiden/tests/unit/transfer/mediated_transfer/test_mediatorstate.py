@@ -81,6 +81,7 @@ def make_transfers_pair(privatekeys, amount):
     initial_expiration = (2 * len(privatekeys) + 1) * UNIT_REVEAL_TIMEOUT
     next_expiration = initial_expiration
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     addresses = list()
     for pkey in privatekeys:
@@ -126,8 +127,12 @@ def make_transfers_pair(privatekeys, amount):
         assert is_valid, msg
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+
+        queueid = (pay_channel.partner_state.address, pay_channel.identifier)
+        partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
         lockedtransfer_event = channel.send_lockedtransfer(
             pay_channel,
+            partner_channel_message_queue,
             UNIT_TRANSFER_INITIATOR,
             UNIT_TRANSFER_TARGET,
             amount,
@@ -547,6 +552,7 @@ def test_next_transfer_pair():
     expiration = 50
     secret = UNIT_SECRET
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     payer_transfer = factories.make_signed_transfer(
         balance,
@@ -564,6 +570,7 @@ def test_next_transfer_pair():
         payer_transfer,
         available_routes,
         channelmap,
+        queueids_to_queues,
         pseudo_random_generator,
         timeout_blocks,
         block_number,
@@ -875,6 +882,7 @@ def test_events_for_balanceproof():
     """
     amount = 10
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP1_KEY, HOP2_KEY],
@@ -888,6 +896,7 @@ def test_events_for_balanceproof():
 
     events = mediator.events_for_balanceproof(
         channelmap,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -912,6 +921,7 @@ def test_events_for_balanceproof_channel_closed():
     amount = 10
     block_number = 5
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
         channelmap, transfers_pair = make_transfers_pair(
@@ -931,6 +941,7 @@ def test_events_for_balanceproof_channel_closed():
         last_pair.payee_state = 'payee_secret_revealed'
         events = mediator.events_for_balanceproof(
             channelmap,
+            queueids_to_queues,
             transfers_pair,
             pseudo_random_generator,
             block_number,
@@ -951,6 +962,7 @@ def test_events_for_balanceproof_middle_secret():
     """
     amount = 10
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
@@ -963,6 +975,7 @@ def test_events_for_balanceproof_middle_secret():
 
     events = mediator.events_for_balanceproof(
         channelmap,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -983,6 +996,7 @@ def test_events_for_balanceproof_secret_unknown():
     block_number = 1
     amount = 10
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
@@ -992,6 +1006,7 @@ def test_events_for_balanceproof_secret_unknown():
     # the secret is not known, so no event should be used
     events = mediator.events_for_balanceproof(
         channelmap,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1005,6 +1020,7 @@ def test_events_for_balanceproof_lock_expired():
     """ The balance proof should not be sent if the lock has expired. """
     amount = 10
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
@@ -1018,6 +1034,7 @@ def test_events_for_balanceproof_lock_expired():
     # the lock has expired, do not send a balance proof
     events = mediator.events_for_balanceproof(
         channelmap,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1036,6 +1053,7 @@ def test_events_for_balanceproof_lock_expired():
     # to withdraw the token before the lock expires.
     events = mediator.events_for_balanceproof(
         channelmap,
+        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1225,6 +1243,7 @@ def test_mediate_transfer():
     target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     payer_channel = factories.make_channel(
         partner_balance=amount,
@@ -1257,6 +1276,7 @@ def test_mediate_transfer():
         possible_routes,
         payer_channel,
         channelmap,
+        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -1689,6 +1709,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     block_number = 5
     expiration = 30
     pseudo_random_generator = random.Random()
+    queueids_to_queues = dict()
 
     payer_channel = factories.make_channel(
         partner_balance=UNIT_TRANSFER_AMOUNT,
@@ -1721,6 +1742,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
         possible_routes,
         payer_channel,
         channelmap,
+        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,

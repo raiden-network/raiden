@@ -21,11 +21,13 @@ def test_transfer_update_event(tester_channels, tester_events):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     direct0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=90,
         pkey=pkey0,
     )
@@ -55,11 +57,13 @@ def test_update_fails_on_open_channel(tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -80,11 +84,13 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     direct0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=70,
         pkey=pkey0,
     )
@@ -108,11 +114,14 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
+    channel1to0_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -121,6 +130,7 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
         payment_network_identifier,
         channel1,
         channel0,
+        channel1to0_message_queue,
         amount=10,
         pkey=pkey1,
     )
@@ -234,11 +244,13 @@ def test_update_called_multiple_times_same_transfer(tester_channels):
     """ updateTransfer can be called only once. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -270,11 +282,13 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
     """ updateTransfer second call must fail even if there is a new transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -283,6 +297,7 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -315,11 +330,13 @@ def test_update_called_multiple_times_older_transfer(tester_channels):
     """ updateTransfer second call must fail even if called with an older transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )
@@ -328,6 +345,7 @@ def test_update_called_multiple_times_older_transfer(tester_channels):
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount=10,
         pkey=pkey0,
     )

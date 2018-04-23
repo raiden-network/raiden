@@ -75,6 +75,7 @@ def test_settle_single_direct_transfer_for_closing_party(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -87,6 +88,7 @@ def test_settle_single_direct_transfer_for_closing_party(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount,
         pkey0,
     )
@@ -122,6 +124,7 @@ def test_settle_single_direct_transfer_for_counterparty(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -134,6 +137,7 @@ def test_settle_single_direct_transfer_for_counterparty(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount,
         pkey0,
     )
@@ -168,6 +172,7 @@ def test_settle_two_direct_transfers(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -180,6 +185,7 @@ def test_settle_two_direct_transfers(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount0,
         pkey0,
     )
@@ -189,6 +195,7 @@ def test_settle_two_direct_transfers(
         payment_network_identifier,
         channel1,
         channel0,
+        channel0to1_message_queue,
         amount1,
         pkey1,
     )
@@ -237,6 +244,8 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
+    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -250,6 +259,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         transferred_amount0,
         pkey0,
     )
@@ -258,12 +268,14 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
+        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
+        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -272,6 +284,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
+        channel0to1_message_queue,
         address0,
         address1,
         lock0,
@@ -316,6 +329,8 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
+    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -329,6 +344,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         transferred_amount0,
         pkey0,
     )
@@ -337,12 +353,14 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
+        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
+        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -351,6 +369,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
+        channel0to1_message_queue,
         address0,
         address1,
         lock0,
@@ -389,6 +408,8 @@ def test_settle_two_locked_mediated_transfer_messages(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
+    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -402,6 +423,7 @@ def test_settle_two_locked_mediated_transfer_messages(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         transferred_amount0,
         pkey0,
     )
@@ -411,6 +433,7 @@ def test_settle_two_locked_mediated_transfer_messages(
         payment_network_identifier,
         channel1,
         channel0,
+        channel1to0_message_queue,
         transferred_amount1,
         pkey1,
     )
@@ -419,12 +442,14 @@ def test_settle_two_locked_mediated_transfer_messages(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
+        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
+        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -433,6 +458,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
+        channel0to1_message_queue,
         address0,
         address1,
         lock0,
@@ -444,6 +470,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     mediated1 = make_mediated_transfer(
         channel1,
         channel0,
+        channel1to0_message_queue,
         address1,
         address0,
         lock1,
@@ -493,6 +520,7 @@ def test_two_direct_transfers(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -505,6 +533,7 @@ def test_two_direct_transfers(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         first_amount0,
         pkey0,
     )
@@ -514,6 +543,7 @@ def test_two_direct_transfers(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         second_amount0,
         pkey0,
     )
@@ -552,6 +582,8 @@ def test_mediated_after_direct_transfer(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel1to0_message_queue = list()
+    channel0to1_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -565,6 +597,7 @@ def test_mediated_after_direct_transfer(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         first_amount0,
         pkey0,
     )
@@ -573,12 +606,14 @@ def test_mediated_after_direct_transfer(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
+        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
+        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -587,6 +622,7 @@ def test_mediated_after_direct_transfer(
     second_mediated0 = make_mediated_transfer(
         channel0,
         channel1,
+        channel0to1_message_queue,
         address0,
         address1,
         lock1,
@@ -626,6 +662,7 @@ def test_settlement_with_unauthorized_token_transfer(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -638,6 +675,7 @@ def test_settlement_with_unauthorized_token_transfer(
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount0,
         pkey0,
     )
@@ -647,6 +685,7 @@ def test_settlement_with_unauthorized_token_transfer(
         payment_network_identifier,
         channel1,
         channel0,
+        channel0to1_message_queue,
         amount1,
         pkey1,
     )
@@ -691,6 +730,8 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
+    channel0to1_message_queue = list()
+    channel1to0_message_queue = list()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -704,6 +745,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
             payment_network_identifier,
             channel0,
             channel1,
+            channel0to1_message_queue,
             deposit,
             pkey0,
         )
@@ -711,6 +753,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
             payment_network_identifier,
             channel1,
             channel0,
+            channel1to0_message_queue,
             deposit,
             pkey1,
         )
@@ -724,6 +767,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
         payment_network_identifier,
         channel0,
         channel1,
+        channel0to1_message_queue,
         amount0,
         pkey0,
     )
@@ -734,6 +778,7 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_chain, tester_
         payment_network_identifier,
         channel1,
         channel0,
+        channel0to1_message_queue,
         amount1,
         pkey1,
     )
