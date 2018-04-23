@@ -10,6 +10,7 @@ from raiden.tests.utils.tester import (
     new_nettingcontract,
     create_nettingchannel_proxy,
 )
+from raiden.constants import NULL_ADDRESS
 
 
 def netting_channel_settled(tester_chain, nettingchannel, pkey, settle_timeout):
@@ -157,11 +158,10 @@ def test_getchannelwith_must_return_zero_for_non_existing_channels(
 
     sender_key = private_keys[0]
     sender_addr = privatekey_to_address(sender_key)
-    null_addr = '0x' + '0' * 40
 
     for addr in addresses:
         channel_address = tester_channelmanager.getChannelWith(addr, sender=sender_key)
-        assert channel_address == null_addr
+        assert channel_address == NULL_ADDRESS
 
         # can not open a channel with itself
         if addr != sender_addr:
