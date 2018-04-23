@@ -115,8 +115,8 @@ class ActionTransferDirect(StateChange):
             payment_network_identifier,
             token_address,
             receiver_address: typing.T_Address,
-            amount: int,
             payment_identifier,
+            amount: int,
     ):
         if not isinstance(receiver_address, typing.T_Address):
             raise ValueError('receiver_address must be address')

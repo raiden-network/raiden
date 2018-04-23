@@ -47,7 +47,7 @@ def events_for_close(target_state, channel_state, block_number):
 def handle_inittarget(
         state_change,
         channel_state,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -84,8 +84,9 @@ def handle_inittarget(
             transfer.initiator,
         )
 
-        partner_message_queue = addresses_to_queues.setdefault(route.node_address, [])
-        partner_message_queue.append(secret_request)
+        queueid = (route.node_address, 'global')
+        partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
+        partner_default_message_queue.append(secret_request)
         iteration = TransitionResult(target_state, [secret_request])
     else:
         if not is_valid:
@@ -107,7 +108,7 @@ def handle_secretreveal(
         target_state,
         state_change,
         channel_state,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
@@ -134,8 +135,9 @@ def handle_secretreveal(
             receiver_address,
         )
 
-        partner_message_queue = addresses_to_queues.setdefault(receiver_address, [])
-        partner_message_queue.append(reveal)
+        queueid = (receiver_address, 'global')
+        partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
+        partner_default_message_queue.append(reveal)
 
         iteration = TransitionResult(target_state, [reveal])
 
@@ -207,7 +209,7 @@ def state_transition(
         target_state,
         state_change,
         channel_state,
-        addresses_to_queues,
+        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -220,7 +222,7 @@ def state_transition(
         iteration = handle_inittarget(
             state_change,
             channel_state,
-            addresses_to_queues,
+            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -237,7 +239,7 @@ def state_transition(
             target_state,
             state_change,
             channel_state,
-            addresses_to_queues,
+            queueids_to_queues,
             pseudo_random_generator,
         )
     elif type(state_change) == ReceiveUnlock:
