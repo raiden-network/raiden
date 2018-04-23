@@ -212,7 +212,7 @@ class NettingChannel:
         if not self.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
-                f'busy with another ongoing operation'
+                f'busy with another ongoing operation.'
             )
 
         self.channel_operations_lock.release()
@@ -242,7 +242,7 @@ class NettingChannel:
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'deposit sucessfull',
+                    'deposit successful',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                     amount=amount,
@@ -253,7 +253,7 @@ class NettingChannel:
 
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
-            ChannelBusyError: If the channel is busy with another operation
+            ChannelBusyError: If the channel is busy with another operation.
         """
 
         if log.isEnabledFor(logging.INFO):
@@ -271,7 +271,7 @@ class NettingChannel:
         if not self.channel_operations_lock.acquire(0):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
-                f'busy with another ongoing operation'
+                f'busy with another ongoing operation.'
             )
 
         self.channel_operations_lock.release()
@@ -305,7 +305,7 @@ class NettingChannel:
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'close sucessfull',
+                    'close successful',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
@@ -361,7 +361,7 @@ class NettingChannel:
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'updateTransfer sucessfull',
+                    'updateTransfer successful',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
@@ -407,7 +407,7 @@ class NettingChannel:
 
         elif log.isEnabledFor(logging.INFO):
             log.info(
-                'withdraw sucessfull',
+                'withdraw successful',
                 node=pex(self.node_address),
                 contract=pex(self.address),
                 lock=unlock_proof,
@@ -452,7 +452,7 @@ class NettingChannel:
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'settle sucessfull',
+                    'settle successful',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                 )

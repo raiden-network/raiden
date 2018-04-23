@@ -331,12 +331,12 @@ class RaidenAPI:
             for channel_state in channels_to_close:
                 channel = self.raiden.chain.netting_channel(channel_state.identifier)
 
-                # Check if we can acquire the lock. If we can't not raise an exception, which
+                # Check if we can acquire the lock. If we can't raise an exception, which
                 # will cause the ExitStack to exit, releasing all locks acquired so far
                 if not channel.channel_operations_lock.acquire(0):
                     raise ChannelBusyError(
                         f'Channel with id {channel_state.identifier} is '
-                        f'busy with another ongoing operation'
+                        f'busy with another ongoing operation.'
                     )
 
                 channel.channel_operations_lock.release()
