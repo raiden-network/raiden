@@ -3,13 +3,13 @@ from binascii import hexlify
 from binascii import unhexlify
 from http import HTTPStatus
 from string import Template
-import distutils.spawn  # pylint: disable=import-error,no-name-in-module
 import json
 import os
 import sys
 import pdb
 import requests
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
@@ -71,17 +71,19 @@ $RST_GETH_BINARY
     --verbosity 3
     --datadir $RST_DATADIR
 """
-RST_GETH_BINARY = distutils.spawn.find_executable('geth')
-if not RST_GETH_BINARY:
-    print(
-        'Error: unable to locate geth binary.\n'
-        'Make sure it is installed and added to the PATH variable.'
-    )
-    sys.exit(1)
 
-if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
-    os.environ['RST_GETH_BINARY'] = RST_GETH_BINARY
 
+def ensure_executable(cmd):
+    """look for the given command and make sure it can be executed"""
+    if not shutil.which(cmd):
+        print(
+            'Error: unable to locate %s binary.\n'
+            'Make sure it is installed and added to the PATH variable.' % cmd
+        )
+        sys.exit(1)
+
+
+ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
 
 TEST_ACCOUNT = {
     'version': 3,
