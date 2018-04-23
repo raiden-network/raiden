@@ -209,15 +209,13 @@ class NettingChannel:
                 amount=amount,
             )
 
-        if not self.channel_operations_lock.acquire(0):
+        if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
                 f'busy with another ongoing operation.'
             )
 
-        self.channel_operations_lock.release()
-
-        with self.channel_operations_lock:
+        else:
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'deposit',
@@ -248,6 +246,8 @@ class NettingChannel:
                     amount=amount,
                 )
 
+            self.channel_operations_lock.release()
+
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
 
@@ -268,15 +268,13 @@ class NettingChannel:
                 signature=encode_hex(signature),
             )
 
-        if not self.channel_operations_lock.acquire(0):
+        if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
                 f'busy with another ongoing operation.'
             )
 
-        self.channel_operations_lock.release()
-
-        with self.channel_operations_lock:
+        else:
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'close',
@@ -314,6 +312,8 @@ class NettingChannel:
                     extra_hash=encode_hex(extra_hash),
                     signature=encode_hex(signature),
                 )
+
+            self.channel_operations_lock.release()
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
@@ -425,15 +425,13 @@ class NettingChannel:
                 node=pex(self.node_address),
             )
 
-        if not self.channel_operations_lock.acquire(0):
+        if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
                 f'busy with another ongoing operation'
             )
 
-        self.channel_operations_lock.release()
-
-        with self.channel_operations_lock:
+        else:
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'settle',
@@ -456,6 +454,8 @@ class NettingChannel:
                     node=pex(self.node_address),
                     contract=pex(self.address),
                 )
+
+            self.channel_operations_lock.release()
 
     def events_filter(
             self,
