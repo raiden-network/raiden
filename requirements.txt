@@ -14,13 +14,15 @@ ipaddress==1.0.19
 ipython<5.0.0
 marshmallow==2.15.0
 marshmallow_polyfield==3.2
-git+https://github.com/matrix-org/matrix-python-sdk.git#egg=matrix_client
 miniupnpc==2.0.2
 netifaces==0.10.6
 networkx==2.0.0
 psutil==5.4.3
-pycryptodome==3.4.7
+pycryptodome>=3.5.1
 pysha3==1.0.2
+# raiden-libs==???
+# FIXME: replace with released version before merge
+git+https://github.com/raiden-network/raiden-libs/tree/e0dac0e3780014ecb96fb144f42543a036115314#egg=raiden-libs
 repoze.lru==0.7.0
 rlp==0.6
 tinyrpc[gevent,httpclient]==0.8

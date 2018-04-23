@@ -109,7 +109,10 @@ history = ''
 
 install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
-    'git+https://github.com/matrix-org/matrix-python-sdk.git#egg=matrix_client': 'matrix_client'
+    (
+        'git+https://github.com/raiden-network/raiden-libs/tree/'
+        'e0dac0e3780014ecb96fb144f42543a036115314#egg=raiden-libs'
+    ): 'raiden-libs',
 }
 
 install_requires = list(set(
