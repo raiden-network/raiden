@@ -63,7 +63,7 @@ class BlockChainService:
 
         return True
 
-    def estimate_blocktime(self, oldest: int=256) -> float:
+    def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
             oldest: delta in block numbers to go back.
