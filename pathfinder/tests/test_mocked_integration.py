@@ -20,7 +20,7 @@ def test_pfs_with_mocked_events(
     token_networks: List[TokenNetwork],  # just used for addresses
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService,
-    channel_descriptions: List
+    channel_descriptions_case_1: List
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
@@ -52,7 +52,7 @@ def test_pfs_with_mocked_events(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in enumerate(channel_descriptions):
+    ) in enumerate(channel_descriptions_case_1):
         network_listener.emit_event(dict(
             address=token_network_address,
             name='ChannelOpened',
@@ -96,7 +96,7 @@ def test_pfs_with_mocked_events(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in enumerate(channel_descriptions):
+    ) in enumerate(channel_descriptions_case_1):
         p1, p2 = token_network.channel_id_to_addresses[channel_id]
         assert p1 == addresses[p1_index]
         assert p2 == addresses[p2_index]
@@ -124,7 +124,7 @@ def test_pfs_with_mocked_events(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in enumerate(channel_descriptions):
+    ) in enumerate(channel_descriptions_case_1):
         network_listener.emit_event(dict(
             address=token_network_address,
             name='ChannelClosed',

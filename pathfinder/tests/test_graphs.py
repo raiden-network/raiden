@@ -2,6 +2,7 @@ import random
 from math import isclose
 from typing import List
 import time
+
 import numpy as np
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -42,7 +43,7 @@ def test_routing_benchmark(
 
 def test_routing_simple(
     token_networks: List[TokenNetwork],
-    populate_token_networks_simple: None,
+    populate_token_networks_case_1: None,
     addresses: List[Address]
 ):
     token_network = token_networks[0]
@@ -75,9 +76,9 @@ def test_routing_simple(
         token_network.get_paths(addresses[0], addresses[5], value=10, k=1)
 
 
-def test_routing_disjoint(
+def test_routing_disjoint_case1(
     token_networks: List[TokenNetwork],
-    populate_token_networks_simple: None,
+    populate_token_networks_case_1: None,
     addresses: List[Address],
     monkeypatch: MonkeyPatch
 ):
@@ -97,9 +98,43 @@ def test_routing_disjoint(
     }
 
 
+def test_routing_disjoint_case2(
+    token_networks: List[TokenNetwork],
+    populate_token_networks_case_2: None,
+    addresses: List[Address],
+    monkeypatch: MonkeyPatch
+):
+    token_network = token_networks[0]
+
+    # test default diversity penalty
+    paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
+    assert len(paths) == 3
+    assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
+    assert isclose(paths[0]['estimated_fee'], 0.3)
+
+    assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
+    assert isclose(paths[1]['estimated_fee'], 0.4)
+
+    assert paths[2]['path'] == [addresses[0], addresses[1], addresses[4]]
+    assert isclose(paths[2]['estimated_fee'], 0.5)
+
+    # set diversity penalty higher
+    monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
+    paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
+    assert len(paths) == 3
+    assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
+    assert isclose(paths[0]['estimated_fee'], 0.3)
+
+    assert paths[1]['path'] == [addresses[0], addresses[1], addresses[4]]
+    assert isclose(paths[1]['estimated_fee'], 0.5)
+
+    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
+    assert isclose(paths[2]['estimated_fee'], 0.4)
+
+
 def test_routing_hop_fee_balance(
     token_networks: List[TokenNetwork],
-    populate_token_networks_simple: None,
+    populate_token_networks_case_1: None,
     addresses: List[Address]
 ):
     token_network = token_networks[0]

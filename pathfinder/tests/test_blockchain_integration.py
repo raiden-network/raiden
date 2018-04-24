@@ -20,7 +20,7 @@ def test_pfs_with_mocked_client(
     ethereum_tester,
     contracts_manager: ContractManager,
     blockchain_listener: BlockchainListener,
-    channel_descriptions: List
+    channel_descriptions_case_1: List
 ):
     """Instantiates a pathfinding service with mocked transport,
     listening and processing blockchain events created by mocked Raiden clients"""
@@ -46,7 +46,7 @@ def test_pfs_with_mocked_client(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in channel_descriptions:
+    ) in channel_descriptions_case_1:
 
         clients[p2_index].open_channel(clients[p1_index].address)
         clients[p1_index].deposit_to_channel(clients[p2_index].address, p1_deposit)
@@ -55,7 +55,7 @@ def test_pfs_with_mocked_client(
         gevent.sleep(0)
 
     # there should be as many open channels as described
-    assert len(token_network.channel_id_to_addresses.keys()) == len(channel_descriptions)
+    assert len(token_network.channel_id_to_addresses.keys()) == len(channel_descriptions_case_1)
 
     # check that deposits got registered
     for channel_id, (
@@ -67,7 +67,7 @@ def test_pfs_with_mocked_client(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in enumerate(channel_descriptions):
+    ) in enumerate(channel_descriptions_case_1):
         p1_address, p2_address = token_network.channel_id_to_addresses[channel_id + 1]
         view1 = token_network.G[p1_address][p2_address]['view']
         view2 = token_network.G[p2_address][p1_address]['view']
@@ -95,7 +95,7 @@ def test_pfs_with_mocked_client(
         p2_deposit,
         p2_transferred_amount,
         p2_fee
-    ) in enumerate(channel_descriptions):
+    ) in enumerate(channel_descriptions_case_1):
         pass
 
     # there should be no open channels

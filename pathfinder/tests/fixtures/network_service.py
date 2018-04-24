@@ -1,6 +1,6 @@
 import random
+from typing import List, Callable
 
-from typing import List
 from unittest.mock import Mock
 import pytest
 from coincurve import PrivateKey
@@ -25,7 +25,11 @@ def forge_fee_signature(private_key: str, fee: float) -> bytes:
 
 
 @pytest.fixture
-def channel_descriptions() -> List:
+def channel_descriptions_case_1() -> List:
+    """ Creates a network with some edge cases.
+
+    These include disconneced subgraph, depleted channels...
+    """
 
     # Now initialize some channels in this network.
     # The tuples in channel_descriptions define the following:
@@ -57,6 +61,42 @@ def channel_descriptions() -> List:
 
 
 @pytest.fixture
+def channel_descriptions_case_2() -> List:
+    """ Creates a network with three paths from 0 to 4.
+
+    The paths differ in length and cost.
+    """
+
+    # Now initialize some channels in this network.
+    # The tuples in channel_descriptions define the following:
+    # (
+    #     p1_index,
+    #     p1_deposit,
+    #     p1_transferred_amount,
+    #     p1_fee,
+    #     p2_index,
+    #     p2_deposit,
+    #     p2_transferred_amount,
+    #     p2_fee
+    # )
+    # Topology:
+    #  /----- 1 ----\
+    # 0 -- 2 -- 3 -- 4
+    #       \-- 5 --/
+
+    channel_descriptions = [
+        (0, 100,  20, 0.3, 1,  50,  10, 0.3),  # capacities  90 --  60
+        (1,  40,  10, 0.2, 4, 130, 100, 0.2),  # capacities 130 --  40
+        (0,  90,  10, 0.1, 2,  10,   0, 0.1),  # capacities  80 --  10
+        (2,  50,  20, 0.2, 3,  50,  20, 0.2),  # capacities  50 --  50
+        (3, 100,  40, 0.1, 4,  80,   0, 0.1),  # capacities  60 -- 120
+        (2,  30,  10, 0.1, 5,  40,  15, 0.1),  # capacities  35 --  35
+        (5, 500, 900, 0.1, 4, 750, 950, 0.1),  # capacities 550 -- 700
+    ]
+    return channel_descriptions
+
+
+@pytest.fixture
 def blockchain_listener(web3, contracts_manager):
     blockchain_listener = BlockchainListener(
         web3,
@@ -75,8 +115,9 @@ def populate_token_networks_random(
         token_networks: List[TokenNetwork],
         private_keys: List[str],
 ) -> None:
-    random.seed(NUMBER_OF_CHANNELS)
     # seed for pseudo-randomness from config constant, that changes from time to time
+    random.seed(NUMBER_OF_CHANNELS)
+
     for token_network in token_networks:
         for channel_id in range(NUMBER_OF_CHANNELS):
             private_key1, private_key2 = random.sample(private_keys, 2)
@@ -121,85 +162,122 @@ def populate_token_networks_random(
 
 
 @pytest.fixture
-def populate_token_networks_simple(
+def populate_token_networks() -> Callable:
+    def populate_token_networks(
+        token_networks: List[TokenNetwork],
+        private_keys: List[str],
+        addresses: List[Address],
+        web3: Web3,
+        channel_descriptions: List
+    ):
+        for channel_id, (
+            p1_index,
+            p1_deposit,
+            p1_transferred_amount,
+            p1_fee,
+            p2_index,
+            p2_deposit,
+            p2_transferred_amount,
+            p2_fee
+        ) in enumerate(channel_descriptions):
+            for token_network in token_networks:
+                token_network.handle_channel_opened_event(
+                    channel_id,
+                    addresses[p1_index],
+                    addresses[p2_index]
+                )
+
+                token_network.handle_channel_new_deposit_event(
+                    channel_id,
+                    addresses[p1_index],
+                    p1_deposit
+                )
+                token_network.handle_channel_new_deposit_event(
+                    channel_id,
+                    addresses[p2_index],
+                    p2_deposit
+                )
+
+                p1_balance_proof = BalanceProof(
+                    1,
+                    p1_transferred_amount,
+                    EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
+                    channel_id,
+                    token_network.address,
+                    web3.net.version,
+                    b'',
+                    private_key=private_keys[p1_index]
+                )
+                p2_balance_proof = BalanceProof(
+                    1,
+                    p2_transferred_amount,
+                    EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
+                    channel_id,
+                    token_network.address,
+                    web3.net.version,
+                    b'',
+                    private_key=private_keys[p2_index]
+                )
+                token_network.update_balance(p1_balance_proof, [])
+                token_network.update_balance(p2_balance_proof, [])
+
+                token_network.update_fee(
+                    channel_identifier=channel_id,
+                    signer=addresses[p1_index],
+                    nonce=channel_id + 1,
+                    new_percentage_fee=p1_fee
+                )
+                token_network.update_fee(
+                    channel_identifier=channel_id,
+                    signer=addresses[p2_index],
+                    nonce=channel_id + 1,
+                    new_percentage_fee=p2_fee
+                )
+
+    return populate_token_networks
+
+
+@pytest.fixture
+def populate_token_networks_case_1(
+    populate_token_networks: Callable,
     token_networks: List[TokenNetwork],
     private_keys: List[str],
     addresses: List[Address],
     web3: Web3,
-    channel_descriptions
+    channel_descriptions_case_1: List
 ):
-    for channel_id, (
-        p1_index,
-        p1_deposit,
-        p1_transferred_amount,
-        p1_fee,
-        p2_index,
-        p2_deposit,
-        p2_transferred_amount,
-        p2_fee
-    ) in enumerate(channel_descriptions):
-        for token_network in token_networks:
-            token_network.handle_channel_opened_event(
-                channel_id,
-                addresses[p1_index],
-                addresses[p2_index]
-            )
+    populate_token_networks(
+        token_networks,
+        private_keys,
+        addresses,
+        web3,
+        channel_descriptions_case_1,
+    )
 
-            token_network.handle_channel_new_deposit_event(
-                channel_id,
-                addresses[p1_index],
-                p1_deposit
-            )
-            token_network.handle_channel_new_deposit_event(
-                channel_id,
-                addresses[p2_index],
-                p2_deposit
-            )
 
-            p1_balance_proof = BalanceProof(
-                1,
-                p1_transferred_amount,
-                EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
-                channel_id,
-                token_network.address,
-                web3.net.version,
-                b'',
-                private_key=private_keys[p1_index]
-            )
-            p2_balance_proof = BalanceProof(
-                1,
-                p2_transferred_amount,
-                EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
-                channel_id,
-                token_network.address,
-                web3.net.version,
-                b'',
-                private_key=private_keys[p2_index]
-            )
-            token_network.update_balance(p1_balance_proof, [])
-            token_network.update_balance(p2_balance_proof, [])
-
-            token_network.update_fee(
-                channel_identifier=channel_id,
-                signer=addresses[p1_index],
-                nonce=channel_id + 1,
-                new_percentage_fee=p1_fee
-            )
-            token_network.update_fee(
-                channel_identifier=channel_id,
-                signer=addresses[p2_index],
-                nonce=channel_id + 1,
-                new_percentage_fee=p2_fee
-            )
+@pytest.fixture
+def populate_token_networks_case_2(
+    populate_token_networks: Callable,
+    token_networks: List[TokenNetwork],
+    private_keys: List[str],
+    addresses: List[Address],
+    web3: Web3,
+    channel_descriptions_case_2: List
+):
+    populate_token_networks(
+        token_networks,
+        private_keys,
+        addresses,
+        web3,
+        channel_descriptions_case_2,
+    )
 
 
 @pytest.fixture
 def pathfinding_service_full_mock(
         contracts_manager: ContractManager,
-        populate_token_networks_simple: None,
-        token_networks: List[TokenNetwork]
+        token_networks: List[TokenNetwork],
 ) -> PathfindingService:
-    # TODO: replace with a pathfinding service that actually syncs with the tester chain.
     pathfinding_service = PathfindingService(
         contracts_manager,
         transport=Mock(),
