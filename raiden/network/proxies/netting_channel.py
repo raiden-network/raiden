@@ -34,6 +34,7 @@ from raiden.utils import (
     address_encoder,
     pex,
     privatekey_to_address,
+    releasing,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -215,7 +216,7 @@ class NettingChannel:
                 f'busy with another ongoing operation.'
             )
 
-        else:
+        with releasing(self.channel_operations_lock):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'deposit',
@@ -246,8 +247,6 @@ class NettingChannel:
                     amount=amount,
                 )
 
-            self.channel_operations_lock.release()
-
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
 
@@ -274,7 +273,7 @@ class NettingChannel:
                 f'busy with another ongoing operation.'
             )
 
-        else:
+        with releasing(self.channel_operations_lock):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'close',
@@ -312,8 +311,6 @@ class NettingChannel:
                     extra_hash=encode_hex(extra_hash),
                     signature=encode_hex(signature),
                 )
-
-            self.channel_operations_lock.release()
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
@@ -431,7 +428,7 @@ class NettingChannel:
                 f'busy with another ongoing operation'
             )
 
-        else:
+        with releasing(self.channel_operations_lock):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'settle',
@@ -454,8 +451,6 @@ class NettingChannel:
                     node=pex(self.node_address),
                     contract=pex(self.address),
                 )
-
-            self.channel_operations_lock.release()
 
     def events_filter(
             self,

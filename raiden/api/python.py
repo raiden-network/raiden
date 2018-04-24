@@ -35,6 +35,7 @@ from raiden.settings import (
 from raiden.utils import (
     isaddress,
     pex,
+    releasing,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -253,7 +254,8 @@ class RaidenAPI:
                 f'Channel with id {channel_state.identifier} is '
                 f'busy with another ongoing operation'
             )
-        else:
+
+        with releasing(channel_proxy.channel_operations_lock):
             token.approve(netcontract_address, amount)
             channel_proxy.deposit(amount)
 
@@ -274,8 +276,6 @@ class RaidenAPI:
                     target_balance,
                     self.raiden.alarm.wait_time,
                 )
-
-            channel_proxy.channel_operations_lock.release()
 
     def channel_close(self, token_address, partner_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
         """Close a channel opened with `partner_address` for the given
