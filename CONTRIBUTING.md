@@ -381,45 +381,6 @@ function iDoSomething(uint awesome_argument) {
 }
 ```
 
-**Modifiers in long function declarations**
-
-
-This is how the solidity documentation suggests it:
-
-```js
-function thisFunctionNameIsReallyLong(
-    address x,
-    address y,
-    address z,
-)
-    public
-    onlyowner
-    priced
-    returns (address)
-{
-    doSomething();
-}
-```
-
-This is the minor modification we make in order to make the code more readable
-when quickly skimming through it. The thinking here is to easily spot the start
-of the function's block when skimming and not have the modifiers appearing as
-if they are a block on their own due to the hanging parentheses.
-
-```js
-function thisFunctionNameIsReallyLong(
-    address x,
-    address y,
-    address z)
-
-    public
-    onlyowner
-    priced
-    returns (address)
-{
-    doSomething();
-}
-```
 
 **Documentation**
 
