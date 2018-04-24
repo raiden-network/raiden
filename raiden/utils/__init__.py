@@ -341,3 +341,18 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     # from the iterator each time and produces the desired result.
     iterator = iter(arg)
     return zip_longest(iterator, iterator)
+
+
+class releasing:
+    """context manager inspired by closing that will call release on __exit__
+    blocks, useful to release acquired locks.
+    """
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __enter__(self):
+        return self.obj
+
+    def __exit__(self, *exc_info):  # pylint: disable=unused-argument
+        self.obj.release()
