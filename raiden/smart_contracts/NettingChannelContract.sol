@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "./NettingChannelLibrary.sol";
 
@@ -19,7 +19,7 @@ contract NettingChannelContract {
         _;
     }
 
-    function NettingChannelContract(
+    constructor(
         address token_address,
         address participant1,
         address participant2,
