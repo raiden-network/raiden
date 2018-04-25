@@ -148,6 +148,34 @@ Thus we setup the following rules:
 
 ### Coding Style
 
+#### General Style
+
+In this section we are going to see style rules that should be followed across all languages.
+
+**Line breaks after operators**
+
+For long expressions where we break the expression at the operators the line break should come **after** the operator and not before.
+
+The following should be avoided:
+
+```python
+        participant1_amount = (
+            participant1_state.deposit
+            + participant2_state.transferred_amount
+            - participant1_state.transferred_amount
+        );
+```
+
+instead it should be:
+
+```python
+        participant1_amount = (
+            participant1_state.deposit +
+            participant2_state.transferred_amount -
+            participant1_state.transferred_amount
+        );
+```
+
 #### Python
 
 Raiden is written in Python and we follow the official Python style guide
