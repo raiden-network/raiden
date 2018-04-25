@@ -275,8 +275,8 @@ def populate_token_networks_case_2(
 
 @pytest.fixture
 def pathfinding_service_full_mock(
-        contracts_manager: ContractManager,
-        token_networks: List[TokenNetwork],
+    contracts_manager: ContractManager,
+    token_networks: List[TokenNetwork],
 ) -> PathfindingService:
     pathfinding_service = PathfindingService(
         contracts_manager,
@@ -293,7 +293,9 @@ def pathfinding_service_full_mock(
 
 
 @pytest.fixture
-def pathfinding_service_mocked_listeners(contracts_manager: ContractManager) -> PathfindingService:
+def pathfinding_service_mocked_listeners(
+    contracts_manager: ContractManager
+) -> PathfindingService:
     """ Returns a PathfindingService with mocked blockchain listeners. """
     pathfinding_service = PathfindingService(
         contracts_manager,

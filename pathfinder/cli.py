@@ -12,6 +12,7 @@ import click
 from raiden_libs.blockchain import BlockchainListener
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3 import HTTPProvider, Web3
+from hexbytes import HexBytes
 from eth_utils import is_checksum_address
 from raiden_libs.no_ssl_patch import no_ssl_verification
 
@@ -22,13 +23,26 @@ from pathfinder.utils.types import Address
 log = logging.getLogger(__name__)
 
 
-def check_supplied_token_network_addresses(token_network_addresses: List[str]) -> List[Address]:
+def is_code_at_address(token_network_address: Address, web3: Web3) -> bool:
+    code_at_address = web3.eth.getCode(token_network_address)
+    return code_at_address != HexBytes('0x')
+
+
+def check_supplied_token_network_addresses(
+    token_network_addresses: List[str],
+    web3: Web3
+) -> List[Address]:
     result = []
     for address in token_network_addresses:
         if not is_checksum_address(address):
             log.error(f"Token Network address '{address}' is not a checksum address. Ignoring.")
-        else:
-            result.append(Address(address))
+            continue
+
+        if not is_code_at_address(Address(address), web3):
+            log.error(f"Token network at '{address}' has no code. Ignoring.")
+            continue
+
+        result.append(Address(address))
 
     return result
 
@@ -82,9 +96,12 @@ def main(
 
     log.info("Starting Raiden Pathfinding Service")
 
-    token_network_addresses = check_supplied_token_network_addresses(token_network_addresses)
+    log.info(f'Starting Web3 client for node at {eth_rpc}')
+    web3 = Web3(HTTPProvider(eth_rpc))
+
+    token_network_addresses = check_supplied_token_network_addresses(token_network_addresses, web3)
     if token_network_addresses:
-        log.info('Following {} networks.')
+        log.info(f'Following {len(token_network_addresses)} network(s):')
     else:
         log.info('Following all networks.')
 
@@ -98,9 +115,6 @@ def main(
                 matrix_password,
                 monitoring_channel
             )
-
-            log.info('Starting Web3 client...')
-            web3 = Web3(HTTPProvider(eth_rpc))
 
             log.info('Starting TokenNetwork Listener...')
             token_network_listener = BlockchainListener(
