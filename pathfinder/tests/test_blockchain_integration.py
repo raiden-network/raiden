@@ -51,10 +51,11 @@ def test_pfs_with_mocked_client(
         p2_transferred_amount,
         p2_fee
     ) in channel_descriptions_case_1:
-
-        clients[p2_index].open_channel(clients[p1_index].address)
+        # order is important here because we check order later
+        clients[p1_index].open_channel(clients[p2_index].address)
         clients[p1_index].deposit_to_channel(clients[p2_index].address, p1_deposit)
         clients[p2_index].deposit_to_channel(clients[p1_index].address, p2_deposit)
+
     ethereum_tester.mine_blocks(1)
     gevent.sleep(0)
 
