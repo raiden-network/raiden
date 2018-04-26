@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.constants import UINT64_MAX
-from raiden.utils import sha3
 from raiden.messages import (
     decode,
     Processed,
@@ -10,6 +8,7 @@ from raiden.messages import (
 )
 from raiden.tests.utils.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb
+from raiden.network.protocol import messageid_from_data
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -28,9 +27,7 @@ def test_ping(raiden_network):
     )
     assert async_result.wait(2), 'The message was not processed'
 
-    expected_echohash = sha3(ping_encoded + app1.raiden.address)
-    expected_messageid = int.from_bytes(expected_echohash, 'big') % UINT64_MAX
-
+    expected_messageid = messageid_from_data(ping_encoded, app1.raiden.address)
     messages_decoded = [decode(m) for m in messages]
     processed_message = next(
         decoded

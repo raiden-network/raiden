@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import random
+
 from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import (
@@ -84,7 +86,7 @@ def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     if payment_state is None:
@@ -110,7 +112,7 @@ def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     events = list()
@@ -161,7 +163,7 @@ def handle_transferrefund(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -239,7 +241,7 @@ def handle_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
@@ -257,7 +259,7 @@ def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     # pylint: disable=unidiomatic-typecheck

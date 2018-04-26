@@ -61,6 +61,17 @@ HealthEvents = namedtuple('HealthEvents', (
 # handling messages.
 
 
+def messageid_from_data(data, address):
+    # Messages that are not unique per receiver can result in hash collision,
+    # e.g. Secret messages. The hash collision has the undesired effect of
+    # aborting message resubmission once /one/ of the nodes replied with an
+    # Ack, adding the receiver address into the echohash to avoid these
+    # collisions.
+    data = data + address
+
+    return int.from_bytes(sha3(data), 'big') % UINT64_MAX
+
+
 def event_first_of(*events):
     """ Waits until one of `events` is set.
 
@@ -493,13 +504,13 @@ class RaidenProtocol:
         self.greenlets = list()
         self.addresses_events = dict()
 
-        # Maps the message_id of received and *sucessfully* processed messages to
-        # its `Processed` message, used to ignored duplicate messages and resend the
-        # `Processed` message.
-        self.receivedhashes_to_processedmessages = dict()
+        # Maps received and *sucessfully* processed message ids to the
+        # corresponding `Processed` message. Used to ignored duplicate messages
+        # and resend the `Processed` message.
+        self.messageids_to_processedmessages = dict()
 
         # Maps the message_id to a SentMessageState
-        self.senthashes_to_states = dict()
+        self.messageids_to_states = dict()
 
         # Maps the addresses to a dict with the latest nonce (using a dict
         # because python integers are immutable)
@@ -530,7 +541,7 @@ class RaidenProtocol:
         self.transport.stop()
 
         # Set all the pending results to False
-        for wait_processed in self.senthashes_to_states.values():
+        for wait_processed in self.messageids_to_states.values():
             wait_processed.async_result.set(False)
 
     def get_health_events(self, receiver_address):
@@ -616,26 +627,21 @@ class RaidenProtocol:
         if isinstance(message, (Processed, Ping)):
             raise ValueError('Do not use send for `Processed` or `Ping` messages')
 
-        # Messages that are not unique per receiver can result in hash
-        # collision, e.g. Secret messages. The hash collision has the undesired
-        # effect of aborting message resubmission once /one/ of the nodes
-        # replied with an Ack, adding the receiver address into the echohash to
-        # avoid these collisions.
         messagedata = message.encode()
-        message_id = sha3(messagedata + receiver_address)
-
         if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
             raise ValueError(
                 'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE)
             )
 
+        message_id = messageid_from_data(messagedata, receiver_address)
+
         # All messages must be ordered, but only on a per channel basis.
         token_address = getattr(message, 'token', b'')
 
         # Ignore duplicated messages
-        if message_id not in self.senthashes_to_states:
+        if message_id not in self.messageids_to_states:
             async_result = AsyncResult()
-            self.senthashes_to_states[message_id] = SentMessageState(
+            self.messageids_to_states[message_id] = SentMessageState(
                 async_result,
                 receiver_address,
             )
@@ -656,7 +662,7 @@ class RaidenProtocol:
 
             queue.put(messagedata)
         else:
-            wait_processed = self.senthashes_to_states[message_id]
+            wait_processed = self.messageids_to_states[message_id]
             async_result = wait_processed.async_result
 
         return async_result
@@ -677,12 +683,12 @@ class RaidenProtocol:
         messagedata = processed_message.encode()
         message_id = processed_message.processed_message_identifier
 
-        self.receivedhashes_to_processedmessages[message_id] = (
+        self.messageids_to_processedmessages[message_id] = (
             receiver_address,
             messagedata
         )
 
-        self._maybe_send_processed(*self.receivedhashes_to_processedmessages[message_id])
+        self._maybe_send_processed(*self.messageids_to_processedmessages[message_id])
 
     def _maybe_send_processed(self, receiver_address, messagedata):
         """ `Processed` messages must not go into the queue, otherwise nodes will deadlock
@@ -724,17 +730,16 @@ class RaidenProtocol:
         Always returns same AsyncResult instance for equal input.
         """
         host_port = self.get_host_port(receiver_address)
-        echohash = sha3(data + receiver_address)
-        message_id = int.from_bytes(echohash, 'big') % UINT64_MAX
+        message_id = messageid_from_data(data, receiver_address)
 
-        if message_id not in self.senthashes_to_states:
+        if message_id not in self.messageids_to_states:
             async_result = AsyncResult()
-            self.senthashes_to_states[message_id] = SentMessageState(
+            self.messageids_to_states[message_id] = SentMessageState(
                 async_result,
                 receiver_address,
             )
         else:
-            async_result = self.senthashes_to_states[message_id].async_result
+            async_result = self.messageids_to_states[message_id].async_result
 
         if not async_result.ready():
             self.transport.send(
@@ -755,11 +760,9 @@ class RaidenProtocol:
             return
 
         # Repeat the 'PROCESSED' message if the message has been handled before
-        echohash = sha3(data + self.raiden.address)
-        message_id = int.from_bytes(echohash, 'big') % UINT64_MAX
-
-        if message_id in self.receivedhashes_to_processedmessages:
-            self._maybe_send_processed(*self.receivedhashes_to_processedmessages[message_id])
+        message_id = messageid_from_data(data, self.raiden.address)
+        if message_id in self.messageids_to_processedmessages:
+            self._maybe_send_processed(*self.messageids_to_processedmessages[message_id])
             return
 
         message = decode(data)
@@ -780,7 +783,7 @@ class RaidenProtocol:
             )
 
     def receive_processed(self, processed):
-        waitprocessed = self.senthashes_to_states.get(processed.processed_message_identifier)
+        waitprocessed = self.messageids_to_states.get(processed.processed_message_identifier)
 
         if waitprocessed is None:
             if log.isEnabledFor(logging.DEBUG):

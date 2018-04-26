@@ -17,14 +17,14 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
     token_address = token_addresses[0]
 
     amount = int(deposit / 2.)
-    identifier = 13
+    payment_identifier = 13
 
     direct_transfer(
         app0,
         app1,
         token_address,
         amount,
-        identifier,
+        payment_identifier,
     )
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
@@ -34,7 +34,7 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
 
     assert must_contain_entry(app0_state_changes, ActionTransferDirect, {
         'token_address': token_address,
-        'payment_identifier': identifier,
+        'payment_identifier': payment_identifier,
         'amount': amount,
         'receiver_address': app1.raiden.address,
     })
@@ -45,7 +45,7 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
     )
     assert must_contain_entry(app1_state_changes, ReceiveTransferDirect, {
         'token_address': token_address,
-        'payment_identifier': identifier,
+        'payment_identifier': payment_identifier,
         'balance_proof': {
             'transferred_amount': amount,
             'sender': app0.raiden.address,
