@@ -38,8 +38,6 @@ def test_withdraw(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    channel0to1_message_queue = list()
-    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -55,14 +53,12 @@ def test_withdraw(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
-        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
-        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -72,7 +68,6 @@ def test_withdraw(
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
-        channel0to1_message_queue,
         address0,
         address1,
         lock0,
@@ -206,8 +201,6 @@ def test_withdraw_at_settlement_block(
 
 def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    channel0to1_message_queue = list()
-    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     lock_timeout = reveal_timeout + 5
@@ -217,14 +210,12 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
-        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
-        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -234,7 +225,6 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     mediated0 = make_mediated_transfer(
         channel1,
         channel0,
-        channel0to1_message_queue,
         privatekey_to_address(pkey0),
         privatekey_to_address(pkey1),
         lock1,
@@ -278,8 +268,6 @@ def test_withdraw_both_participants(
         tester_token):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    channel0to1_message_queue = list()
-    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
@@ -298,14 +286,12 @@ def test_withdraw_both_participants(
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
-        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
-        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -318,7 +304,6 @@ def test_withdraw_both_participants(
     mediated01 = make_mediated_transfer(
         channel0,
         channel1,
-        channel0to1_message_queue,
         address0,
         address1,
         lock01,
@@ -329,7 +314,6 @@ def test_withdraw_both_participants(
     mediated10 = make_mediated_transfer(
         channel1,
         channel0,
-        channel1to0_message_queue,
         address1,
         address0,
         lock10,
@@ -398,8 +382,6 @@ def test_withdraw_both_participants(
 def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     """ A lock can be withdrawn only once, the second try must fail. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    channel0to1_message_queue = list()
-    channel1to0_message_queue = list()
     pseudo_random_generator = random.Random()
 
     lock_expiration = tester_chain.block.number + reveal_timeout + 5
@@ -407,14 +389,12 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     new_block = Block(tester_chain.block.number)
     channel.state_transition(
         channel0,
-        channel0to1_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
     )
     channel.state_transition(
         channel1,
-        channel1to0_message_queue,
         new_block,
         pseudo_random_generator,
         new_block.block_number,
@@ -424,7 +404,6 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     mediated0 = make_mediated_transfer(
         channel1,
         channel0,
-        channel1to0_message_queue,
         privatekey_to_address(pkey1),
         privatekey_to_address(pkey0),
         lock,
@@ -676,7 +655,6 @@ def test_withdraw_lock_with_a_large_expiration(
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
-    channel0to1_message_queue = list()
     pseudo_random_generator = random.Random()
 
     initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
@@ -689,7 +667,6 @@ def test_withdraw_lock_with_a_large_expiration(
     bad_block_number = lock_expiration - 10
     channel.state_transition(
         channel0,
-        channel0to1_message_queue,
         Block(bad_block_number),
         pseudo_random_generator,
         bad_block_number,
@@ -706,7 +683,6 @@ def test_withdraw_lock_with_a_large_expiration(
     mediated0 = make_mediated_transfer(
         channel0,
         channel1,
-        channel0to1_message_queue,
         address0,
         address1,
         lock,

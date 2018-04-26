@@ -47,7 +47,6 @@ def events_for_close(target_state, channel_state, block_number):
 def handle_inittarget(
         state_change,
         channel_state,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -76,17 +75,17 @@ def handle_inittarget(
     # silently let the transfer expire.
     if is_valid and safe_to_wait:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        recipient = transfer.initiator
+        queue_name = 'global'
         secret_request = SendSecretRequest(
+            recipient,
+            queue_name,
             message_identifier,
             transfer.payment_identifier,
             transfer.lock.amount,
             transfer.lock.secrethash,
-            transfer.initiator,
         )
 
-        queueid = (route.node_address, 'global')
-        partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
-        partner_default_message_queue.append(secret_request)
         iteration = TransitionResult(target_state, [secret_request])
     else:
         if not is_valid:
@@ -108,7 +107,6 @@ def handle_secretreveal(
         target_state,
         state_change,
         channel_state,
-        queueids_to_queues,
         pseudo_random_generator,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
@@ -127,17 +125,15 @@ def handle_secretreveal(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
-        receiver_address = route.node_address
+        recipient = route.node_address
+        queue_name = 'global'
         reveal = SendRevealSecret(
+            recipient,
+            queue_name,
             message_identifier,
             target_state.secret,
             transfer.token,
-            receiver_address,
         )
-
-        queueid = (receiver_address, 'global')
-        partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
-        partner_default_message_queue.append(reveal)
 
         iteration = TransitionResult(target_state, [reveal])
 
@@ -209,7 +205,6 @@ def state_transition(
         target_state,
         state_change,
         channel_state,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number,
 ):
@@ -222,7 +217,6 @@ def state_transition(
         iteration = handle_inittarget(
             state_change,
             channel_state,
-            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -239,7 +233,6 @@ def state_transition(
             target_state,
             state_change,
             channel_state,
-            queueids_to_queues,
             pseudo_random_generator,
         )
     elif type(state_change) == ReceiveUnlock:

@@ -290,7 +290,6 @@ def test_channelstate_update_contract_balance():
     channel_state = create_channel_from_models(our_model1, partner_model1)
     token_address = factories.make_address()
     payment_network_identifier = factories.make_address()
-    partner_channel_message_queue = list()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -310,7 +309,6 @@ def test_channelstate_update_contract_balance():
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
-        partner_channel_message_queue,
         state_change,
         pseudo_random_generator,
         block_number,
@@ -340,7 +338,6 @@ def test_channelstate_decreasing_contract_balance():
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
     token_address = factories.make_address()
-    partner_channel_message_queue = list()
 
     amount = 10
     balance1_new = our_model1.balance - amount
@@ -360,7 +357,6 @@ def test_channelstate_decreasing_contract_balance():
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
-        partner_channel_message_queue,
         state_change,
         pseudo_random_generator,
         block_number,
@@ -383,7 +379,6 @@ def test_channelstate_repeated_contract_balance():
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
     token_address = factories.make_address()
-    partner_channel_message_queue = list()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -411,7 +406,6 @@ def test_channelstate_repeated_contract_balance():
     for _ in range(10):
         iteration = channel.state_transition(
             deepcopy(channel_state),
-            partner_channel_message_queue,
             state_change,
             pseudo_random_generator,
             block_number,
@@ -431,7 +425,6 @@ def test_deposit_must_wait_for_confirmation():
     channel_state = create_channel_from_models(our_model1, partner_model1)
     payment_network_identifier = factories.make_address()
     token_address = factories.make_address()
-    partner_channel_message_queue = list()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -459,7 +452,6 @@ def test_deposit_must_wait_for_confirmation():
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
-        partner_channel_message_queue,
         new_balance,
         pseudo_random_generator,
         block_number,
@@ -470,7 +462,6 @@ def test_deposit_must_wait_for_confirmation():
         unconfirmed_block = Block(block_number)
         iteration = channel.state_transition(
             deepcopy(unconfirmed_state),
-            partner_channel_message_queue,
             unconfirmed_block,
             pseudo_random_generator,
             block_number,
@@ -491,7 +482,6 @@ def test_deposit_must_wait_for_confirmation():
     confirmed_block = Block(confirmed_deposit_block_number)
     iteration = channel.state_transition(
         deepcopy(unconfirmed_state),
-        partner_channel_message_queue,
         confirmed_block,
         pseudo_random_generator,
         confirmed_deposit_block_number,
@@ -510,7 +500,6 @@ def test_channelstate_send_lockedtransfer():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    partner_channel_message_queue = list()
 
     lock_amount = 30
     lock_expiration = 10
@@ -530,7 +519,6 @@ def test_channelstate_send_lockedtransfer():
 
     channel.send_lockedtransfer(
         channel_state,
-        partner_channel_message_queue,
         transfer_initiator,
         transfer_target,
         lock_amount,
@@ -560,14 +548,12 @@ def test_channelstate_send_direct_transfer():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    partner_channel_message_queue = list()
 
     amount = 30
     payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
     channel.send_directtransfer(
         channel_state,
-        partner_channel_message_queue,
         amount,
         message_identifier,
         payment_identifier,

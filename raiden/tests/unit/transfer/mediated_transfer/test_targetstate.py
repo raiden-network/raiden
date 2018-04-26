@@ -147,7 +147,6 @@ def test_handle_inittarget():
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
     payment_network_identifier = factories.make_address()
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -176,7 +175,6 @@ def test_handle_inittarget():
     iteration = target.handle_inittarget(
         state_change,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -188,7 +186,7 @@ def test_handle_inittarget():
     assert events[0].payment_identifier == from_transfer.payment_identifier
     assert events[0].amount == from_transfer.lock.amount
     assert events[0].secrethash == from_transfer.lock.secrethash
-    assert events[0].receiver == initiator
+    assert events[0].recipient == initiator
 
 
 def test_handle_inittarget_bad_expiration():
@@ -198,7 +196,6 @@ def test_handle_inittarget_bad_expiration():
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
     payment_network_identifier = factories.make_address()
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -227,7 +224,6 @@ def test_handle_inittarget_bad_expiration():
     iteration = target.handle_inittarget(
         state_change,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -244,7 +240,6 @@ def test_handle_secretreveal():
     initiator = factories.HOP1
     our_address = factories.ADDR
     secret = factories.UNIT_SECRET
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     channel_state, state = make_target_state(
@@ -260,7 +255,6 @@ def test_handle_secretreveal():
         state,
         state_change,
         channel_state,
-        addresses_to_queues,
         pseudo_random_generator,
     )
     assert len(iteration.events) == 1
@@ -270,7 +264,7 @@ def test_handle_secretreveal():
 
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.secret == secret
-    assert reveal.receiver == state.route.node_address
+    assert reveal.recipient == state.route.node_address
 
 
 def test_handle_block():
@@ -279,7 +273,6 @@ def test_handle_block():
     our_address = factories.ADDR
     amount = 3
     block_number = 1
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
@@ -294,7 +287,6 @@ def test_handle_block():
         state,
         new_block,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         new_block.block_number,
     )
@@ -308,7 +300,6 @@ def test_handle_block_equal_block_number():
     our_address = factories.ADDR
     amount = 3
     block_number = 1
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
@@ -323,7 +314,6 @@ def test_handle_block_equal_block_number():
         state,
         new_block,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         new_block.block_number,
     )
@@ -337,7 +327,6 @@ def test_handle_block_lower_block_number():
     our_address = factories.ADDR
     amount = 3
     block_number = 10
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
@@ -352,7 +341,6 @@ def test_handle_block_lower_block_number():
         state,
         new_block,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         new_block.block_number,
     )
@@ -366,7 +354,6 @@ def test_state_transition():
     block_number = 1
     initiator = factories.HOP6
     payment_network_identifier = factories.make_address()
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     our_balance = 100
@@ -401,7 +388,6 @@ def test_state_transition():
         None,
         init,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -414,7 +400,6 @@ def test_state_transition():
         init_transition.new_state,
         first_new_block,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         first_new_block.block_number,
     )
@@ -424,7 +409,6 @@ def test_state_transition():
         first_block_iteration.new_state,
         secret_reveal,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         first_new_block,
     )
@@ -435,7 +419,6 @@ def test_state_transition():
         init_transition.new_state,
         second_new_block,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         second_new_block.block_number,
     )
@@ -466,7 +449,6 @@ def test_state_transition():
         init_transition.new_state,
         balance_proof_state_change,
         from_channel,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number + 2,
     )

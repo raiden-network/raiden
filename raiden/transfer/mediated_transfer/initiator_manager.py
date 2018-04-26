@@ -84,14 +84,12 @@ def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
-            queueids_to_queues,
             state_change.routes,
             state_change.transfer,
             pseudo_random_generator,
@@ -112,7 +110,6 @@ def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -125,7 +122,6 @@ def handle_cancelroute(
         assert payment_state.initiator is None, msg
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
-            queueids_to_queues,
             state_change.routes,
             transfer_description,
             pseudo_random_generator,
@@ -165,7 +161,6 @@ def handle_transferrefund(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -227,7 +222,6 @@ def handle_transferrefund(
                 payment_state,
                 state_change,
                 channelidentifiers_to_channels,
-                queueids_to_queues,
                 pseudo_random_generator,
                 block_number,
             )
@@ -245,18 +239,14 @@ def handle_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        queueids_to_queues,
         pseudo_random_generator,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
-    queueid = (channel_state.partner_state.address, channel_state.identifier)
-    partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
     sub_iteration = initiator.handle_secretreveal(
         payment_state.initiator,
         state_change,
         channel_state,
-        partner_channel_message_queue,
         pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
@@ -267,7 +257,6 @@ def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -277,19 +266,13 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
-        channel_state = channelidentifiers_to_channels[payment_state.initiator.channel_identifier]
-        queueid = (channel_state.partner_state.address, 'global')
-        partner_default_message_queue = queueids_to_queues.setdefault(queueid, [])
-
         sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
-            partner_default_message_queue,
             pseudo_random_generator,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
@@ -298,7 +281,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -307,7 +289,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            queueids_to_queues,
             pseudo_random_generator,
             block_number,
         )
@@ -320,7 +301,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            queueids_to_queues,
             pseudo_random_generator,
         )
     else:

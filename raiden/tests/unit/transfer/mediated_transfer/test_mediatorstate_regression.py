@@ -33,7 +33,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     payer_channel = factories.make_channel(
         partner_balance=amount,
@@ -66,7 +65,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         possible_routes,
         payer_channel,
         channelmap,
-        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -99,7 +97,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         new_state,
         receive_secret,
         channelmap,
-        queueids_to_queues,
         pseudo_random_generator,
         block_number,
     )
