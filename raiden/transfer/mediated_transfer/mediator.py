@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import itertools
+import random
 from typing import List, Dict
 
 from raiden.transfer import channel
@@ -349,7 +350,7 @@ def next_transfer_pair(
         payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         timeout_blocks: int,
         block_number: int
 ):

@@ -3,7 +3,10 @@
 import string
 import random
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import (
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.network.transport import DummyTransport
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
@@ -43,30 +46,30 @@ SECRETHASHES_FOR_MERKLETREE = [
 # zero is used to indicate novalue in solidity, that is why it's an invalid
 # nonce value
 DIRECT_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, 2 ** 64],
-    'payment_identifier': [-1, 2 ** 64],
+    'nonce': [-1, 0, UINT64_MAX + 1],
+    'payment_identifier': [-1, UINT64_MAX + 1],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
-    'transferred_amount': [-1, 2 ** 256],
+    'transferred_amount': [-1, UINT256_MAX + 1],
 }))
 
 REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, 2 ** 64],
-    'payment_identifier': [-1, 2 ** 64],
+    'nonce': [-1, 0, UINT64_MAX + 1],
+    'payment_identifier': [-1, UINT64_MAX + 1],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
-    'transferred_amount': [-1, 2 ** 256],
+    'transferred_amount': [-1, UINT256_MAX + 1],
 }))
 
 MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, 2 ** 64],
-    'payment_identifier': [-1, 2 ** 64],
+    'nonce': [-1, 0, UINT64_MAX + 1],
+    'payment_identifier': [-1, UINT64_MAX + 1],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'target': INVALID_ADDRESSES,
     'initiator': INVALID_ADDRESSES,
-    'transferred_amount': [-1, 2 ** 256],
-    'fee': [2 ** 256],
+    'transferred_amount': [-1, UINT256_MAX + 1],
+    'fee': [UINT256_MAX + 1],
 }))
 
 

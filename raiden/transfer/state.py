@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+import random
 from binascii import hexlify
 from collections import namedtuple
 
@@ -76,13 +77,12 @@ class NodeState(State):
         'queueids_to_queues',
         'pseudo_random_generator',
         'block_number',
-        'pseudo_random_generator',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
         'payment_mapping',
     )
 
-    def __init__(self, pseudo_random_generator, block_number: typing.BlockNumber):
+    def __init__(self, pseudo_random_generator: random.Random, block_number: typing.BlockNumber):
         if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be a block_number')
 

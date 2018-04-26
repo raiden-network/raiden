@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import random
+
 from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
@@ -82,7 +84,7 @@ def try_new_route(
         channelidentifiers_to_channels: ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -166,7 +168,7 @@ def send_lockedtransfer(
 def handle_secretrequest(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretRequest,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
 
     request_from_target = (
@@ -228,7 +230,7 @@ def handle_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
-        pseudo_random_generator,
+        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.

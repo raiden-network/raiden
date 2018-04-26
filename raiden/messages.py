@@ -387,7 +387,7 @@ class Secret(EnvelopeMessage):
         if payment_identifier < 0:
             raise ValueError('payment_identifier cannot be negative')
 
-        if payment_identifier >= 2 ** 64:
+        if payment_identifier > UINT64_MAX:
             raise ValueError('payment_identifier is too large')
 
         if len(secret) != 32:
