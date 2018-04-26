@@ -81,7 +81,6 @@ def make_transfers_pair(privatekeys, amount):
     initial_expiration = (2 * len(privatekeys) + 1) * UNIT_REVEAL_TIMEOUT
     next_expiration = initial_expiration
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     addresses = list()
     for pkey in privatekeys:
@@ -127,12 +126,8 @@ def make_transfers_pair(privatekeys, amount):
         assert is_valid, msg
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
-
-        queueid = (pay_channel.partner_state.address, pay_channel.identifier)
-        partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
         lockedtransfer_event = channel.send_lockedtransfer(
             pay_channel,
-            partner_channel_message_queue,
             UNIT_TRANSFER_INITIATOR,
             UNIT_TRANSFER_TARGET,
             amount,
@@ -552,7 +547,6 @@ def test_next_transfer_pair():
     expiration = 50
     secret = UNIT_SECRET
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     payer_transfer = factories.make_signed_transfer(
         balance,
@@ -570,7 +564,6 @@ def test_next_transfer_pair():
         payer_transfer,
         available_routes,
         channelmap,
-        queueids_to_queues,
         pseudo_random_generator,
         timeout_blocks,
         block_number,
@@ -759,7 +752,6 @@ def test_events_for_revealsecret():
     """
     our_address = ADDR
     amount = 10
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     _, transfers_pair = make_transfers_pair(
@@ -770,7 +762,6 @@ def test_events_for_revealsecret():
     events = mediator.events_for_revealsecret(
         transfers_pair,
         our_address,
-        addresses_to_queues,
         pseudo_random_generator,
     )
 
@@ -785,7 +776,6 @@ def test_events_for_revealsecret():
     events = mediator.events_for_revealsecret(
         transfers_pair,
         UNIT_SECRET,
-        addresses_to_queues,
         pseudo_random_generator,
     )
 
@@ -793,13 +783,12 @@ def test_events_for_revealsecret():
     # secret and now must reveal it to the payer node from the transfer pair
     assert len(events) == 1
     assert events[0].secret == UNIT_SECRET
-    assert events[0].receiver == last_pair.payer_transfer.balance_proof.sender
+    assert events[0].recipient == last_pair.payer_transfer.balance_proof.sender
     assert last_pair.payer_state == 'payer_secret_revealed'
 
     events = mediator.events_for_revealsecret(
         transfers_pair,
         our_address,
-        addresses_to_queues,
         pseudo_random_generator,
     )
 
@@ -811,20 +800,18 @@ def test_events_for_revealsecret():
     events = mediator.events_for_revealsecret(
         transfers_pair,
         UNIT_SECRET,
-        addresses_to_queues,
         pseudo_random_generator,
     )
 
     assert len(events) == 1
     assert events[0].secret == UNIT_SECRET
-    assert events[0].receiver == first_pair.payer_transfer.balance_proof.sender
+    assert events[0].recipient == first_pair.payer_transfer.balance_proof.sender
     assert first_pair.payer_state == 'payer_secret_revealed'
 
 
 def test_events_for_revealsecret_secret_unknown():
     """ When the secret is not known there is nothing to do. """
     amount = 10
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     _, transfers_pair = make_transfers_pair(
@@ -835,7 +822,6 @@ def test_events_for_revealsecret_secret_unknown():
     events = mediator.events_for_revealsecret(
         transfers_pair,
         ADDR,
-        addresses_to_queues,
         pseudo_random_generator,
     )
 
@@ -852,7 +838,6 @@ def test_events_for_revealsecret_all_states():
         'payee_contract_withdraw',
         'payee_balance_proof',
     )
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     amount = 10
@@ -868,12 +853,11 @@ def test_events_for_revealsecret_all_states():
         events = mediator.events_for_revealsecret(
             transfers_pair,
             UNIT_SECRET,
-            addresses_to_queues,
             pseudo_random_generator,
         )
 
         assert events[0].secret == UNIT_SECRET
-        assert events[0].receiver == HOP2
+        assert events[0].recipient == HOP2
 
 
 def test_events_for_balanceproof():
@@ -882,7 +866,6 @@ def test_events_for_balanceproof():
     """
     amount = 10
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP1_KEY, HOP2_KEY],
@@ -896,7 +879,6 @@ def test_events_for_balanceproof():
 
     events = mediator.events_for_balanceproof(
         channelmap,
-        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -909,7 +891,7 @@ def test_events_for_balanceproof():
     unlock = next(e for e in events if isinstance(e, EventUnlockSuccess))
     assert unlock
     assert balance_proof
-    assert balance_proof.receiver == last_pair.payee_address
+    assert balance_proof.recipient == last_pair.payee_address
     assert last_pair.payee_state == 'payee_balance_proof'
 
 
@@ -921,7 +903,6 @@ def test_events_for_balanceproof_channel_closed():
     amount = 10
     block_number = 5
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
         channelmap, transfers_pair = make_transfers_pair(
@@ -941,7 +922,6 @@ def test_events_for_balanceproof_channel_closed():
         last_pair.payee_state = 'payee_secret_revealed'
         events = mediator.events_for_balanceproof(
             channelmap,
-            queueids_to_queues,
             transfers_pair,
             pseudo_random_generator,
             block_number,
@@ -962,7 +942,6 @@ def test_events_for_balanceproof_middle_secret():
     """
     amount = 10
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
@@ -975,7 +954,6 @@ def test_events_for_balanceproof_middle_secret():
 
     events = mediator.events_for_balanceproof(
         channelmap,
-        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -987,7 +965,7 @@ def test_events_for_balanceproof_middle_secret():
 
     assert len(events) == 2
     assert any(isinstance(e, EventUnlockSuccess) for e in events)
-    assert balance_proof.receiver == middle_pair.payee_address
+    assert balance_proof.recipient == middle_pair.payee_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -996,7 +974,6 @@ def test_events_for_balanceproof_secret_unknown():
     block_number = 1
     amount = 10
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
@@ -1006,7 +983,6 @@ def test_events_for_balanceproof_secret_unknown():
     # the secret is not known, so no event should be used
     events = mediator.events_for_balanceproof(
         channelmap,
-        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1020,7 +996,6 @@ def test_events_for_balanceproof_lock_expired():
     """ The balance proof should not be sent if the lock has expired. """
     amount = 10
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
@@ -1034,7 +1009,6 @@ def test_events_for_balanceproof_lock_expired():
     # the lock has expired, do not send a balance proof
     events = mediator.events_for_balanceproof(
         channelmap,
-        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1053,7 +1027,6 @@ def test_events_for_balanceproof_lock_expired():
     # to withdraw the token before the lock expires.
     events = mediator.events_for_balanceproof(
         channelmap,
-        queueids_to_queues,
         transfers_pair,
         pseudo_random_generator,
         block_number,
@@ -1065,7 +1038,7 @@ def test_events_for_balanceproof_lock_expired():
 
     assert len(events) == 2
     assert any(isinstance(e, EventUnlockSuccess) for e in events)
-    assert balance_proof.receiver == middle_pair.payee_address
+    assert balance_proof.recipient == middle_pair.payee_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -1157,7 +1130,6 @@ def test_secret_learned():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
     from_expiration = HOP1_TIMEOUT
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1200,7 +1172,6 @@ def test_secret_learned():
         initial_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -1208,7 +1179,6 @@ def test_secret_learned():
     iteration = mediator.secret_learned(
         iteration.new_state,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
         UNIT_SECRET,
@@ -1243,7 +1213,6 @@ def test_mediate_transfer():
     target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     payer_channel = factories.make_channel(
         partner_balance=amount,
@@ -1276,7 +1245,6 @@ def test_mediate_transfer():
         possible_routes,
         payer_channel,
         channelmap,
-        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -1300,7 +1268,6 @@ def test_init_mediator():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
     from_expiration = HOP1_TIMEOUT
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1344,7 +1311,6 @@ def test_init_mediator():
         mediator_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -1371,7 +1337,6 @@ def test_no_valid_routes():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
     from_expiration = HOP1_TIMEOUT
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1423,7 +1388,6 @@ def test_no_valid_routes():
         mediator_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -1464,7 +1428,6 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     high_from_expiration = 20
     low_reveal_timeout = 5
     low_settlement_expiration = 10
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1487,7 +1450,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     )
 
     # Assert the precondition for the test. The message is still valid, and the
-    # receiver cannot control the received lock expiration
+    # recipient cannot control the received lock expiration
     assert from_transfer.lock.expiration >= from_channel.settle_timeout
 
     channel1 = factories.make_channel(
@@ -1519,7 +1482,6 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
         mediator_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -1561,7 +1523,6 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
     from_expiration = HOP1_TIMEOUT
-    addresses_to_queues = dict()
     pseudo_random_generator = random.Random()
 
     # C's channel with the Attacker node A2
@@ -1609,7 +1570,6 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
         mediator_state,
         init_state_change,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         block_number,
     )
@@ -1628,7 +1588,6 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
             new_iteration.new_state,
             Block(new_block_number),
             channelmap,
-            addresses_to_queues,
             pseudo_random_generator,
             new_block_number,
         )
@@ -1648,7 +1607,6 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
         new_iteration.new_state,
         receive_secret,
         channelmap,
-        addresses_to_queues,
         pseudo_random_generator,
         attack_block_number,
     )
@@ -1663,7 +1621,6 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
             new_iteration.new_state,
             Block(new_block_number),
             channelmap,
-            addresses_to_queues,
             pseudo_random_generator,
             new_block_number,
         )
@@ -1709,7 +1666,6 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     block_number = 5
     expiration = 30
     pseudo_random_generator = random.Random()
-    queueids_to_queues = dict()
 
     payer_channel = factories.make_channel(
         partner_balance=UNIT_TRANSFER_AMOUNT,
@@ -1742,7 +1698,6 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
         possible_routes,
         payer_channel,
         channelmap,
-        queueids_to_queues,
         pseudo_random_generator,
         payer_transfer,
         block_number,

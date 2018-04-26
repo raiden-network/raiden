@@ -69,13 +69,11 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
-        channel0to1_message_queue,
         amount=90,
         pkey=pkey0,
     )
@@ -231,13 +229,11 @@ def test_close_tampered_identifier(tester_channels):
     """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
-        channel0to1_message_queue,
         amount=90,
         pkey=pkey0,
     )
@@ -262,13 +258,11 @@ def test_close_tampered_nonce(tester_channels):
     """ Messages with a tampered nonce must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    channel0to1_message_queue = list()
 
     transfer0 = make_direct_transfer_from_channel(
         payment_network_identifier,
         channel0,
         channel1,
-        channel0to1_message_queue,
         amount=90,
         pkey=pkey0,
     )

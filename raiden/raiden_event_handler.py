@@ -75,7 +75,7 @@ def handle_send_revealsecret(
     reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
     raiden.send_async(
-        reveal_secret_event.receiver,
+        reveal_secret_event.recipient,
         reveal_secret_message,
     )
 
@@ -87,7 +87,7 @@ def handle_send_balanceproof(
     secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
     raiden.send_async(
-        balance_proof_event.receiver,
+        balance_proof_event.recipient,
         secret_message,
     )
 
@@ -99,7 +99,7 @@ def handle_send_secretrequest(
     secret_request_message = SecretRequest.from_event(secret_request_event)
     raiden.sign(secret_request_message)
     raiden.send_async(
-        secret_request_event.receiver,
+        secret_request_event.recipient,
         secret_request_message,
     )
 

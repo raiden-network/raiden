@@ -158,10 +158,10 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addresses):
+
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     channel0 = get_channelstate(app0, app1, token_address)
-    message_queue = list()
 
     transferred_amount = 10
     same_payment_identifier = 1
@@ -169,7 +169,6 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
 
     event = channel.send_directtransfer(
         channel0,
-        message_queue,
         transferred_amount,
         message_identifier,
         same_payment_identifier,

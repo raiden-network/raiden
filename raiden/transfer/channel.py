@@ -686,12 +686,14 @@ def create_senddirecttransfer(channel_state, amount, message_identifier, payment
         channel_state.identifier,
     )
 
+    queue_name = channel_state.identifier
     direct_transfer = SendDirectTransfer(
+        recipient,
+        queue_name,
         message_identifier,
         payment_identifier,
         balance_proof,
         token,
-        recipient,
     )
 
     return direct_transfer
@@ -757,10 +759,12 @@ def create_sendlockedtransfer(
         target,
     )
 
+    queue_name = channel_state.identifier
     lockedtransfer = SendLockedTransfer(
+        recipient,
+        queue_name,
         message_identifier,
         locked_transfer,
-        recipient,
     )
 
     return lockedtransfer, merkletree
@@ -796,11 +800,13 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
         channel_state.identifier,
     )
 
+    queue_name = channel_state.identifier
     unlock_lock = SendBalanceProof(
+        recipient,
+        queue_name,
         message_identifier,
         payment_identifier,
         token,
-        recipient,
         secret,
         balance_proof,
     )
@@ -810,7 +816,6 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
 
 def send_directtransfer(
         channel_state,
-        partner_channel_message_queue,
         amount,
         message_identifier,
         payment_identifier,
@@ -823,14 +828,12 @@ def send_directtransfer(
     )
 
     channel_state.our_state.balance_proof = direct_transfer.balance_proof
-    partner_channel_message_queue.append(direct_transfer)
 
     return direct_transfer
 
 
 def send_lockedtransfer(
         channel_state,
-        partner_channel_message_queue,
         initiator,
         target,
         amount,
@@ -856,7 +859,6 @@ def send_lockedtransfer(
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
-    partner_channel_message_queue.append(send_locked_transfer_event)
 
     return send_locked_transfer_event
 
@@ -898,7 +900,6 @@ def send_refundtransfer(
 
 def send_unlock(
         channel_state,
-        partner_channel_message_queue,
         message_identifier,
         payment_identifier,
         secret,
@@ -917,7 +918,6 @@ def send_unlock(
 
     channel_state.our_state.balance_proof = unlock.balance_proof
     channel_state.our_state.merkletree = merkletree
-    partner_channel_message_queue.append(unlock)
 
     _del_lock(channel_state.our_state, lock.secrethash)
 
@@ -971,7 +971,6 @@ def register_secret(channel_state, secret, secrethash):
 
 def handle_send_directtransfer(
         channel_state,
-        partner_channel_message_queue,
         state_change,
         pseudo_random_generator,
 ):
@@ -989,7 +988,6 @@ def handle_send_directtransfer(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         direct_transfer = send_directtransfer(
             channel_state,
-            partner_channel_message_queue,
             amount,
             message_identifier,
             payment_identifier,
@@ -1261,7 +1259,6 @@ def handle_channel_withdraw(channel_state, state_change):
 
 def state_transition(
         channel_state,
-        partner_channel_message_queue,
         state_change,
         pseudo_random_generator,
         block_number,
@@ -1280,7 +1277,6 @@ def state_transition(
     elif type(state_change) == ActionTransferDirect:
         iteration = handle_send_directtransfer(
             channel_state,
-            partner_channel_message_queue,
             state_change,
             pseudo_random_generator,
         )

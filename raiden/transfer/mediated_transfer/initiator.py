@@ -80,7 +80,6 @@ def next_channel_from_routes(
 
 def try_new_route(
         channelidentifiers_to_channels: ChannelMap,
-        queueids_to_queues,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
         pseudo_random_generator,
@@ -115,12 +114,9 @@ def try_new_route(
         )
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        queueid = (channel_state.partner_state.address, channel_state.identifier)
-        partner_channel_message_queue = queueids_to_queues.setdefault(queueid, [])
         lockedtransfer_event = send_lockedtransfer(
             initiator_state,
             channel_state,
-            partner_channel_message_queue,
             message_identifier,
             block_number,
         )
@@ -134,7 +130,6 @@ def try_new_route(
 def send_lockedtransfer(
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
-        partner_channel_message_queue,
         message_identifier,
         block_number: typing.BlockNumber,
 ) -> SendLockedTransfer:
@@ -153,7 +148,6 @@ def send_lockedtransfer(
 
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state,
-        partner_channel_message_queue,
         transfer_description.initiator,
         transfer_description.target,
         transfer_description.amount,
@@ -172,7 +166,6 @@ def send_lockedtransfer(
 def handle_secretrequest(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretRequest,
-        partner_default_message_queue,
         pseudo_random_generator,
 ) -> TransitionResult:
 
@@ -205,15 +198,17 @@ def handle_secretrequest(
         #
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         transfer_description = initiator_state.transfer_description
+        recipient = transfer_description.target
+        queue_name = 'global'
         revealsecret = SendRevealSecret(
+            recipient,
+            queue_name,
             message_identifier,
             transfer_description.secret,
             transfer_description.token,
-            transfer_description.target,
         )
 
         initiator_state.revealsecret = revealsecret
-        partner_default_message_queue.append(revealsecret)
         iteration = TransitionResult(initiator_state, [revealsecret])
 
     elif invalid_secretrequest:
@@ -233,7 +228,6 @@ def handle_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
-        partner_channel_message_queue,
         pseudo_random_generator,
 ) -> TransitionResult:
     """ Send a balance proof to the next hop with the current mediated transfer
@@ -255,7 +249,6 @@ def handle_secretreveal(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         unlock_lock = channel.send_unlock(
             channel_state,
-            partner_channel_message_queue,
             transfer_description.payment_identifier,
             message_identifier,
             state_change.secret,

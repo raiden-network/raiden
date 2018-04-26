@@ -80,6 +80,13 @@ class Event:
     __slots__ = ()
 
 
+class SendMessageEvent(Event):
+    def __init__(self, recipient, queue_name, message_identifier):
+        self.recipient = recipient
+        self.queue_name = queue_name
+        self.message_identifier = message_identifier
+
+
 class StateManager:
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.

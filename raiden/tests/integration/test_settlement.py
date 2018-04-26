@@ -193,7 +193,6 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     amount = 30
-    queueids_to_queues = dict()
 
     address0 = app0.raiden.address
     address1 = app1.raiden.address
@@ -224,13 +223,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         secret,
         lock,
     )
-    claim_lock(
-        raiden_network,
-        queueids_to_queues,
-        identifier,
-        token_address,
-        secret,
-    )
+    claim_lock(raiden_network, identifier, token_address, secret)
 
     # Make a new transfer
     direct_transfer(app0, app1, token_address, amount, identifier=1)
