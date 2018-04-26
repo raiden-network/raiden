@@ -290,8 +290,8 @@ class BlockchainEvents:
 
         return poll_event_listener(eth_filter, translator)
 
-    def add_registry_listener(self, registry_proxy):
-        tokenadded = registry_proxy.tokenadded_filter()
+    def add_registry_listener(self, registry_proxy, from_block=None):
+        tokenadded = registry_proxy.tokenadded_filter(from_block)
         registry_address = registry_proxy.address
 
         self.add_event_listener(
@@ -301,8 +301,8 @@ class BlockchainEvents:
             registry_proxy.tokenadded_filter,
         )
 
-    def add_channel_manager_listener(self, channel_manager_proxy):
-        channelnew = channel_manager_proxy.channelnew_filter()
+    def add_channel_manager_listener(self, channel_manager_proxy, from_block=None):
+        channelnew = channel_manager_proxy.channelnew_filter(from_block)
         manager_address = channel_manager_proxy.address
 
         self.add_event_listener(
@@ -312,8 +312,8 @@ class BlockchainEvents:
             channel_manager_proxy.channelnew_filter,
         )
 
-    def add_netting_channel_listener(self, netting_channel_proxy):
-        netting_channel_events = netting_channel_proxy.all_events_filter()
+    def add_netting_channel_listener(self, netting_channel_proxy, from_block=None):
+        netting_channel_events = netting_channel_proxy.all_events_filter(from_block)
         channel_address = netting_channel_proxy.address
 
         self.add_event_listener(
@@ -323,15 +323,15 @@ class BlockchainEvents:
             netting_channel_proxy.all_events_filter,
         )
 
-    def add_proxies_listeners(self, proxies):
-        self.add_registry_listener(proxies.registry)
+    def add_proxies_listeners(self, proxies, from_block=None):
+        self.add_registry_listener(proxies.registry, from_block)
 
         for manager in proxies.channel_managers:
-            self.add_channel_manager_listener(manager)
+            self.add_channel_manager_listener(manager, from_block)
 
         all_netting_channels = itertools.chain(
             *proxies.channelmanager_nettingchannels.values()
         )
 
         for channel in all_netting_channels:
-            self.add_netting_channel_listener(channel)
+            self.add_netting_channel_listener(channel, from_block)

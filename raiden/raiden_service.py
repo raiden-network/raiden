@@ -273,13 +273,16 @@ class RaidenService:
             storage,
         )
 
+        last_log_block_number = None
         # First run, initialize the basic state
         if self.wal.state_manager.current_state is None:
             block_number = self.chain.block_number()
-            first_run = True
 
             state_change = ActionInitNode(block_number)
             self.wal.log_and_dispatch(state_change, block_number)
+        else:
+            # Get the last known block number after reapplying all the state changes from the log
+            last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
         # The alarm task must be started after the snapshot is loaded or the
         # state is primed, the callbacks assume the node is initialized.
@@ -291,8 +294,11 @@ class RaidenService:
         # Registry registration must start *after* the alarm task. This
         # avoids corner cases where the registry is queried in block A, a new
         # block B is mined, and the alarm starts polling at block C.
-        if first_run:
-            self.register_payment_network(self.default_registry.address)
+
+        # If last_log_block_number is None, the wal.state_manager.current_state was
+        # None in the log, meaning we don't have any events we care about, so just
+        # read the latest state from the network
+        self.register_payment_network(self.default_registry.address, last_log_block_number)
 
         # Start the protocol after the registry is queried to avoid warning
         # about unknown channels.
@@ -426,7 +432,7 @@ class RaidenService:
 
         self.protocol.send_and_wait(recipient, message, timeout)
 
-    def register_payment_network(self, registry_address):
+    def register_payment_network(self, registry_address, from_block=None):
         proxies = get_relevant_proxies(
             self.chain,
             self.address,
@@ -435,7 +441,7 @@ class RaidenService:
 
         # Install the filters first to avoid missing changes, as a consequence
         # some events might be applied twice.
-        self.blockchain_events.add_proxies_listeners(proxies)
+        self.blockchain_events.add_proxies_listeners(proxies, from_block)
 
         token_network_list = list()
         for manager in proxies.channel_managers:
