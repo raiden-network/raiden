@@ -123,9 +123,15 @@ def test_pfs_with_mocked_client(
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
         balance_proof = clients[p2_index].get_balance_proof(
-            clients[p1_index].address, chain_id=2
+            clients[p1_index].address,
+            nonce=1,
+            transferred_amount=0,
+            locked_amount=0,
+            locksroot="0x%064x" % 0,
+            additional_hash='0x%064x' % 1
         )
-        clients[p2_index].close_channel(clients[p1_index].address, balance_proof)
+        clients[p1_index].close_channel(clients[p2_index].address, balance_proof)
+
     ethereum_tester.mine_blocks(1)
     gevent.sleep(0)
 
