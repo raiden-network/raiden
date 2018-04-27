@@ -5,7 +5,7 @@ import traceback
 from typing import Dict, Optional, List
 
 import gevent
-from eth_utils import is_checksum_address
+from eth_utils import is_checksum_address, to_checksum_address
 from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.messages import Message, FeeInfo, BalanceProof
 from raiden_libs.gevent_error_handler import register_error_handler
@@ -186,7 +186,7 @@ class PathfindingService(gevent.Greenlet):
 
             token_network.update_fee(
                 fee_info.channel_identifier,
-                Address(fee_info.signer),
+                Address(to_checksum_address(fee_info.signer)),
                 fee_info.nonce,
                 fee_info.percentage_fee
             )
@@ -202,7 +202,7 @@ class PathfindingService(gevent.Greenlet):
 
             token_network.update_balance(
                 balance_proof.channel_identifier,
-                Address(balance_proof.signer),
+                Address(to_checksum_address(balance_proof.signer)),
                 balance_proof.nonce,
                 balance_proof.transferred_amount,
                 balance_proof.locked_amount,
