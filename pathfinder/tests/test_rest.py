@@ -4,13 +4,11 @@ from unittest import mock
 import requests
 from eth_utils import to_normalized_address, encode_hex, is_same_address
 from raiden_libs.utils.signing import sign_data, private_key_to_address
-from raiden_libs.messages import FeeInfo
+from raiden_libs.messages import FeeInfo, BalanceProof
 
 from pathfinder.api.rest import ServiceApi
-from pathfinder.model.balance_proof import BalanceProof
-from pathfinder.model.lock import Lock
-from pathfinder.model.token_network import TokenNetwork
-from pathfinder.utils.types import Address
+from pathfinder.model import TokenNetwork
+from pathfinder.utils.types import Address, ChannelId
 
 
 #
@@ -20,81 +18,68 @@ def test_put_balance(
     api_sut: ServiceApi,
     api_url: str,
     token_networks: List[TokenNetwork],
-    token_network_addresses: List[Address]
+    token_network_addresses: List[Address],
+    private_keys: List[str],
 ):
     url = api_url + '/{}/123/balance'.format(token_network_addresses[0])
 
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
-    body: Dict = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address=token_network_addresses[0],
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks=[
-            dict(
-                amount_locked=4,
-                expiration=107,
-                hashlock=''
-            )
-        ]
+    balance_proof = BalanceProof(
+        channel_identifier=123,
+        token_network_address=token_network_addresses[0],
+        nonce=1,
+        chain_id=321,
+        locksroot="0x%064x" % 0,
+        transferred_amount=1,
+        locked_amount=0,
+        additional_hash="0x%064x" % 0,
     )
+    balance_proof.signature = encode_hex(sign_data(private_keys[0], balance_proof.serialize_bin()))
+
+    body = balance_proof.serialize_full()
 
     response = requests.put(url, json=body)
     assert response.status_code == 200
+
     token_networks[0].update_balance.assert_called_once()
     call_args = token_networks[0].update_balance.call_args[0]
-    balance_proof: BalanceProof = call_args[0]
-    locks: List[Lock] = call_args[1]
-    assert balance_proof.nonce == 1
-    assert balance_proof.transferred_amount == 3
-    assert balance_proof.locksroot == b''
-    assert balance_proof.channel_id == 123
-    assert balance_proof.token_network_address == token_network_addresses[0]
-    assert balance_proof.chain_id == 321
-    assert balance_proof.additional_hash == b''
-    assert balance_proof.signature == b''
-    assert len(locks) == 1
-    assert locks[0].amount_locked == 4
-    assert locks[0].expiration == 107
-    assert locks[0].hashlock == b''
+
+    channel_identifier: ChannelId = call_args[0]
+    signer: Address = call_args[1]
+    nonce: int = call_args[2]
+    transferred_amount: int = call_args[3]
+    locked_amount: int = call_args[4]
+
+    assert channel_identifier == 123
+    assert is_same_address(signer, private_key_to_address(private_keys[0]))
+    assert nonce == 1
+    assert transferred_amount == 1
+    assert locked_amount == 0
 
 
 def test_put_balance_sync_check(
     api_sut: ServiceApi,
     api_url: str,
     token_networks: List[TokenNetwork],
-    token_network_addresses: List[Address]
+    token_network_addresses: List[Address],
+    private_keys: List[str],
 ):
     url = api_url + '/{}/12/balance'.format(token_network_addresses[0])
 
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address=token_network_addresses[0],
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks=[
-            dict(
-                amount_locked=4,
-                expiration=107,
-                hashlock=''
-            )
-        ]
+    balance_proof = BalanceProof(
+        channel_identifier=123,
+        token_network_address=token_network_addresses[0],
+        nonce=1,
+        chain_id=321,
+        additional_hash="0x%064x" % 0,
+        balance_hash="0x%064x" % 0,
     )
+    balance_proof.signature = encode_hex(sign_data(private_keys[0], balance_proof.serialize_bin()))
+
+    body = balance_proof.serialize_full()
 
     # path channel id and BP channel id are not equal
     response = requests.put(url, json=body)
@@ -104,25 +89,17 @@ def test_put_balance_sync_check(
         'the request (12) do not match'
     )
 
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=12,
-            token_network_address=token_network_addresses[1],
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks=[
-            dict(
-                amount_locked=4,
-                expiration=107,
-                hashlock=''
-            )
-        ]
+    balance_proof = BalanceProof(
+        channel_identifier=123,
+        token_network_address=token_network_addresses[1],
+        nonce=1,
+        chain_id=321,
+        additional_hash="0x%064x" % 0,
+        balance_hash="0x%064x" % 0,
     )
+    balance_proof.signature = encode_hex(sign_data(private_keys[0], balance_proof.serialize_bin()))
+
+    body = balance_proof.serialize_full()
 
     # now the network address doesn't match
     response = requests.put(url, json=body)
@@ -181,84 +158,20 @@ def test_put_balance_validation(
     body: Dict = dict()
     response = requests.put(url, json=body)
     assert response.status_code == 400
-    assert response.json()['error'] == 'No balance proof specified.'
+    assert response.json()['error'] == "'message_type' is a required property"
 
+    # here the balance_hash property is missing
     body = dict(
-        balance_proof={},
-        locks=[]
+        message_type='BalanceProof',
+        channel_identifier=123,
+        token_network_address=token_network_addresses[1],
+        nonce=1,
+        chain_id=321,
+        additional_hash="0x%064x" % 0,
     )
     response = requests.put(url, json=body)
     assert response.status_code == 400
-    assert response.json()['error'].startswith('Invalid balance proof format. Missing parameter:')
-
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address=to_normalized_address(token_network_addresses[0]),
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks=[]
-    )
-    response = requests.put(url, json=body)
-    assert response.status_code == 400
-    assert response.json()['error'].startswith(
-        'Missing or invalid checksum on token network address.'
-    )
-
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address=token_network_addresses[0],
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        )
-    )
-    response = requests.put(url, json=body)
-    assert response.status_code == 400
-    assert response.json()['error'].startswith('No lock list specified.')
-
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address=token_network_addresses[0],
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks={}
-    )
-    response = requests.put(url, json=body)
-    assert response.status_code == 400
-    assert response.json()['error'].startswith('No lock list specified.')
-
-    body = dict(
-        balance_proof=dict(
-            nonce=1,
-            transferred_amount=3,
-            locksroot='',
-            channel_identifier=123,
-            token_network_address='0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF',
-            chain_id=321,
-            additional_hash='',
-            signature=''
-        ),
-        locks=[]
-    )
-    response = requests.put(url, json=body)
-    assert response.status_code == 400
-    assert response.json()['error'].startswith('The token network address from the balance proof')
+    assert response.json()['error'] == "'balance_hash' is a required property"
 
 
 #
@@ -284,8 +197,7 @@ def test_put_fee(
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
-    body = fee_info.serialize_data()
-    body['message_type'] = 'FeeInfo'
+    body = fee_info.serialize_full()
 
     response = requests.put(url, json=body)
     assert response.status_code == 200
@@ -323,8 +235,7 @@ def test_put_fee_sync_check(
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
-    body = fee_info.serialize_data()
-    body['message_type'] = 'FeeInfo'
+    body = fee_info.serialize_full()
 
     # path channel id and FeeInfo id are not equal
     response = requests.put(url, json=body)
@@ -343,8 +254,7 @@ def test_put_fee_sync_check(
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
-    body = fee_info.serialize_data()
-    body['message_type'] = 'FeeInfo'
+    body = fee_info.serialize_full()
 
     # now the network address doesn't match
     response = requests.put(url, json=body)

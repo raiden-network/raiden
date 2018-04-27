@@ -107,8 +107,8 @@ def test_pfs_with_mocked_client(
         pathfinding_service.transport.transmit_data(fee_info.serialize_full())
         gevent.sleep(0)
         assert math.isclose(
-                graph[clients[p2_index].address][clients[p1_index].address]['view'].percentage_fee,
-                0.11235813
+            graph[clients[p2_index].address][clients[p1_index].address]['view'].percentage_fee,
+            0.11235813
         )
 
     # now close all channels

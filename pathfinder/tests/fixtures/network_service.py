@@ -8,11 +8,10 @@ from eth_utils import remove_0x_prefix
 from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.utils import EMPTY_MERKLE_ROOT, private_key_to_address
+from raiden_libs.utils import private_key_to_address
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.model import BalanceProof
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.model.token_network import TokenNetwork
 from pathfinder.utils.types import Address
@@ -198,28 +197,20 @@ def populate_token_networks() -> Callable:
                     p2_deposit
                 )
 
-                p1_balance_proof = BalanceProof(
+                token_network.update_balance(
+                    channel_id,
+                    addresses[p1_index],
                     1,
                     p1_transferred_amount,
-                    EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
-                    channel_id,
-                    token_network.address,
-                    web3.net.version,
-                    b'',
-                    private_key=private_keys[p1_index]
+                    0
                 )
-                p2_balance_proof = BalanceProof(
+                token_network.update_balance(
+                    channel_id,
+                    addresses[p2_index],
                     1,
                     p2_transferred_amount,
-                    EMPTY_MERKLE_ROOT,  # TODO: include some pending locks here
-                    channel_id,
-                    token_network.address,
-                    web3.net.version,
-                    b'',
-                    private_key=private_keys[p2_index]
+                    0
                 )
-                token_network.update_balance(p1_balance_proof, [])
-                token_network.update_balance(p2_balance_proof, [])
 
                 token_network.update_fee(
                     channel_identifier=channel_id,

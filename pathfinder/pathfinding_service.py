@@ -5,12 +5,11 @@ import traceback
 from typing import Dict, Optional, List
 
 import gevent
-from eth_utils import is_checksum_address, decode_hex
+from eth_utils import is_checksum_address
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.messages import Message, FeeInfo
+from raiden_libs.messages import Message, FeeInfo, BalanceProof
 from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.transport import MatrixTransport
-from raiden_libs.utils.signing import eth_verify
 from raiden_contracts.contract_manager import ContractManager
 
 from pathfinder.model import TokenNetwork
@@ -107,6 +106,8 @@ class PathfindingService(gevent.Greenlet):
         assert isinstance(message, Message)
         if isinstance(message, FeeInfo):
             self.on_fee_info_message(message)
+        elif isinstance(message, BalanceProof):
+            self.on_balance_proof_message(message)
         else:
             log.error("Ignoring unknown message of type '%s'", (type(message)))
 
@@ -181,17 +182,30 @@ class PathfindingService(gevent.Greenlet):
             log.debug('Received FeeInfo message for token network {}'.format(
                 token_network.address
             ))
-
-            fee_info_signer = Address(
-                eth_verify(decode_hex(fee_info.signature), fee_info.serialize_bin())
-            )
             # TODO: check chain id
 
             token_network.update_fee(
                 fee_info.channel_identifier,
-                fee_info_signer,
+                Address(fee_info.signer),
                 fee_info.nonce,
                 fee_info.percentage_fee
+            )
+
+    def on_balance_proof_message(self, balance_proof: BalanceProof):
+        token_network = self._get_token_network(balance_proof.token_network_address)
+
+        if token_network:
+            log.debug('Received BalanceProof message for token network {}'.format(
+                token_network.address
+            ))
+            # TODO: check chain id
+
+            token_network.update_balance(
+                balance_proof.channel_identifier,
+                Address(balance_proof.signer),
+                balance_proof.nonce,
+                balance_proof.transferred_amount,
+                balance_proof.locked_amount,
             )
 
     def handle_token_network_created(self, event):

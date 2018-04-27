@@ -1,20 +1,18 @@
 from typing import Optional, Tuple, Dict, List
 
 import gevent
-from eth_utils import decode_hex, is_address, is_checksum_address, is_same_address
+from eth_utils import is_address, is_checksum_address, is_same_address
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 from jsonschema.exceptions import ValidationError
-from raiden_libs.messages import FeeInfo, Message
+from raiden_libs.messages import FeeInfo, Message, BalanceProof
 from raiden_libs.exceptions import MessageTypeError
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
-from pathfinder.model import BalanceProof, Lock
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.utils.exceptions import InvalidAddressChecksumError
 from pathfinder.utils.types import Address
 
 
@@ -68,27 +66,12 @@ class ChannelBalanceResource(PathfinderResource):
             return channel_id_error
 
         body = request.json
-
-        balance_proof_json = body.get('balance_proof')
-        if balance_proof_json is None:
-            return {'error': 'No balance proof specified.'}, 400
         try:
-            balance_proof = BalanceProof(
-                nonce=balance_proof_json['nonce'],
-                transferred_amount=balance_proof_json['transferred_amount'],
-                locksroot=decode_hex(balance_proof_json['locksroot']),
-                channel_id=balance_proof_json['channel_identifier'],
-                token_network_address=balance_proof_json['token_network_address'],
-                chain_id=balance_proof_json['chain_id'],
-                additional_hash=decode_hex(balance_proof_json['additional_hash']),
-                signature=decode_hex(balance_proof_json['signature'])
-            )
-        except InvalidAddressChecksumError as err:
-            return {'error': str(err)}, 400
-        except KeyError as err:
-            return {'error': 'Invalid balance proof format. Missing parameter: {}'.format(
-                str(err)
-            )}, 400
+            balance_proof: BalanceProof = Message.deserialize(body, BalanceProof)
+        except MessageTypeError:
+            return {'error', 'Not a BalanceProof message'}, 400
+        except ValidationError as val_err:
+            return {'error': val_err.message}, 400
 
         # token_network_address and channel_id info is duplicate
         # check that both versions match
@@ -102,40 +85,22 @@ class ChannelBalanceResource(PathfinderResource):
                 )
             }, 400
 
-        if not int(channel_id) == balance_proof.channel_id:
+        if not int(channel_id) == balance_proof.channel_identifier:
             error = 'The channel id from the balance proof ({}) and the request ({}) do not match'
             return {
                 'error': error.format(
-                    balance_proof.channel_id,
+                    balance_proof.channel_identifier,
                     channel_id
                 )
             }, 400
 
-        locks_json = body.get('locks')
-        if locks_json is None or not isinstance(locks_json, list):
-            return {'error': 'No lock list specified.'}, 400
-        locks = [
-            Lock(
-                amount_locked=lock_json['amount_locked'],
-                expiration=lock_json['expiration'],
-                hashlock=decode_hex(lock_json['hashlock'])
-            )
-            for lock_json in locks_json
-        ]
+        # Note: signature check is performed by the PathfindingService
+        if not self.pathfinding_service.follows_token_network(balance_proof.token_network_address):
+            return {
+                'error': 'Unsupported token network: {}'.format(token_network_address)
+            }, 400
 
-        # Note: signature and lock checks are performed by the TokenNetwork.
-        token_network = self.pathfinding_service.token_networks.get(
-            balance_proof.token_network_address
-        )
-        if token_network is None:
-            return {'error': 'Unsupported token network: {}'.format(
-                balance_proof.token_network_address
-            )}, 400
-
-        try:
-            token_network.update_balance(balance_proof, locks)
-        except ValueError as err:
-            return {'error': str(err)}, 400
+        self.pathfinding_service.on_balance_proof_message(balance_proof)
 
 
 class ChannelFeeResource(PathfinderResource):

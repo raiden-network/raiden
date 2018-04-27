@@ -5,7 +5,6 @@ from typing import List, Dict, Any, Tuple
 import networkx as nx
 from networkx import DiGraph
 from eth_utils import is_checksum_address, is_same_address
-from raiden_libs.utils import compute_merkle_tree, get_merkle_root
 
 from pathfinder.config import (
     DIVERSITY_PEN_DEFAULT,
@@ -13,7 +12,7 @@ from pathfinder.config import (
     PATH_REDUNDANCY_FACTOR,
     MAX_PATHS_PER_REQUEST
 )
-from pathfinder.model import BalanceProof, ChannelView, Lock
+from pathfinder.model import ChannelView
 from pathfinder.utils.types import Address, ChannelId
 
 
@@ -118,8 +117,11 @@ class TokenNetwork:
 
     def update_balance(
         self,
-        balance_proof: BalanceProof,
-        locks: List[Lock]
+        channel_identifier: ChannelId,
+        signer: Address,
+        nonce: int,
+        transferred_amount: int,
+        locked_amount: int,
     ):
         """ Update the channel balance with the new balance proof.
         This needs to check that the balance proof is valid.
@@ -127,35 +129,30 @@ class TokenNetwork:
         Called by the public interface. """
 
         participant1, participant2 = self.channel_id_to_addresses.get(
-            balance_proof.channel_id,
+            channel_identifier,
             (None, None)
         )
-        if is_same_address(participant1, balance_proof.sender):
+
+        if is_same_address(participant1, signer):
             receiver = participant2
-        elif is_same_address(participant2, balance_proof.sender):
+        elif is_same_address(participant2, signer):
             receiver = participant1
         else:
             raise ValueError('Balance proof signature does not match any of the participants.')
 
-        view1: ChannelView = self.G[balance_proof.sender][receiver]['view']
-        view2: ChannelView = self.G[receiver][balance_proof.sender]['view']
+        view1: ChannelView = self.G[signer][receiver]['view']
+        view2: ChannelView = self.G[receiver][signer]['view']
 
-        if balance_proof.nonce <= view1.balance_proof_nonce:
+        if nonce <= view1.balance_proof_nonce:
             raise ValueError('Outdated balance proof.')
 
-        reconstructed_merkle_tree = compute_merkle_tree(lock.compute_hash() for lock in locks)
-        reconstructed_merkle_root = get_merkle_root(reconstructed_merkle_tree)
-
-        if not reconstructed_merkle_root == balance_proof.locksroot:
-            raise ValueError('Supplied locks do not match the provided locksroot')
-
         view1.update_capacity(
-            balance_proof.nonce,
-            transferred_amount=balance_proof.transferred_amount,
-            locked_amount=sum(lock.amount_locked for lock in locks)
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount
         )
         view2.update_capacity(
-            received_amount=balance_proof.transferred_amount
+            received_amount=transferred_amount
         )
 
     def update_fee(
@@ -181,7 +178,7 @@ class TokenNetwork:
             sender = participant2
             receiver = participant1
         else:
-            raise ValueError('Signature does not match any of the participants.')
+            raise ValueError('Fee update signature does not match any of the participants.')
 
         new_percentage_fee_casted = float(new_percentage_fee)
         channel_view: ChannelView = self.G[sender][receiver]['view']
