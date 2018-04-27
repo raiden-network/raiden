@@ -10,11 +10,11 @@ from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.utils import private_key_to_address
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
+from raiden_libs.types import Address
 
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.model.token_network import TokenNetwork
-from pathfinder.utils.types import Address
 
 
 def forge_fee_signature(private_key: str, fee: float) -> bytes:

@@ -5,10 +5,10 @@ import requests
 from eth_utils import to_normalized_address, encode_hex, is_same_address
 from raiden_libs.utils.signing import sign_data, private_key_to_address
 from raiden_libs.messages import FeeInfo, BalanceProof
+from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model import TokenNetwork
-from pathfinder.utils.types import Address, ChannelId
 
 
 #
@@ -45,7 +45,7 @@ def test_put_balance(
     token_networks[0].update_balance.assert_called_once()
     call_args = token_networks[0].update_balance.call_args[0]
 
-    channel_identifier: ChannelId = call_args[0]
+    channel_identifier: ChannelIdentifier = call_args[0]
     signer: Address = call_args[1]
     nonce: int = call_args[2]
     transferred_amount: int = call_args[3]

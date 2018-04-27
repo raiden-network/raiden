@@ -10,10 +10,10 @@ from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.messages import Message, FeeInfo, BalanceProof
 from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.transport import MatrixTransport
+from raiden_libs.types import Address
 from raiden_contracts.contract_manager import ContractManager
 
 from pathfinder.model import TokenNetwork
-from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
 

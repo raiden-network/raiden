@@ -1,9 +1,9 @@
 from enum import Enum
 
 from eth_utils import is_checksum_address
+from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.config import DEFAULT_PERCENTAGE_FEE
-from pathfinder.utils.types import Address, ChannelId
 
 
 class ChannelView:
@@ -17,7 +17,7 @@ class ChannelView:
 
     def __init__(
         self,
-        channel_id: ChannelId,
+        channel_id: ChannelIdentifier,
         participant1: Address,
         participant2: Address,
         deposit: int = 0

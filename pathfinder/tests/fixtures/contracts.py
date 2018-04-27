@@ -2,8 +2,8 @@ from typing import List, Callable
 
 import pytest
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
+from raiden_libs.types import Address
 
-from pathfinder.utils.types import Address
 from pathfinder.model.token_network import TokenNetwork
 
 

@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Tuple
 import networkx as nx
 from networkx import DiGraph
 from eth_utils import is_checksum_address, is_same_address
+from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.config import (
     DIVERSITY_PEN_DEFAULT,
@@ -13,7 +14,6 @@ from pathfinder.config import (
     MAX_PATHS_PER_REQUEST
 )
 from pathfinder.model import ChannelView
-from pathfinder.utils.types import Address, ChannelId
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class TokenNetwork:
 
     def handle_channel_opened_event(
         self,
-        channel_identifier: ChannelId,
+        channel_identifier: ChannelIdentifier,
         participant1: Address,
         participant2: Address,
     ):
@@ -64,7 +64,7 @@ class TokenNetwork:
 
     def handle_channel_new_deposit_event(
         self,
-        channel_identifier: ChannelId,
+        channel_identifier: ChannelIdentifier,
         receiver: Address,
         total_deposit: int
     ):
@@ -92,7 +92,7 @@ class TokenNetwork:
                 )
             )
 
-    def handle_channel_closed_event(self, channel_identifier: ChannelId):
+    def handle_channel_closed_event(self, channel_identifier: ChannelIdentifier):
         """ Close a channel. This doesn't mean that the channel is settled yet, but it cannot
         transfer any more.
 
@@ -117,7 +117,7 @@ class TokenNetwork:
 
     def update_balance(
         self,
-        channel_identifier: ChannelId,
+        channel_identifier: ChannelIdentifier,
         signer: Address,
         nonce: int,
         transferred_amount: int,
@@ -157,7 +157,7 @@ class TokenNetwork:
 
     def update_fee(
         self,
-        channel_identifier: ChannelId,
+        channel_identifier: ChannelIdentifier,
         signer: Address,
         nonce: int,
         new_percentage_fee: float,
@@ -209,7 +209,7 @@ class TokenNetwork:
         **kwargs
     ):
         k = min(k, MAX_PATHS_PER_REQUEST)
-        visited: Dict[ChannelId, float] = {}
+        visited: Dict[ChannelIdentifier, float] = {}
         paths: List[List[Address]] = []
         hop_bias = kwargs.get('hop_bias', 0)
         assert 0 <= hop_bias <= 1

@@ -10,10 +10,10 @@ from networkx.exception import NetworkXNoPath
 from jsonschema.exceptions import ValidationError
 from raiden_libs.messages import FeeInfo, Message, BalanceProof
 from raiden_libs.exceptions import MessageTypeError
+from raiden_libs.types import Address
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.utils.types import Address
 
 
 class PathfinderResource(Resource):

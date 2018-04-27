@@ -10,10 +10,10 @@ from typing import List
 from unittest.mock import Mock
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
+from raiden_libs.types import Address
 
 from pathfinder.model import TokenNetwork
 from pathfinder.pathfinding_service import PathfindingService
-from pathfinder.utils.types import Address
 
 
 def test_pfs_with_mocked_events(

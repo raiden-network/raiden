@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from networkx import NetworkXNoPath
+from raiden_libs.types import Address
 
 import pathfinder.model.token_network
 from pathfinder.model import ChannelView, TokenNetwork
-from pathfinder.utils.types import Address
 
 
 def test_routing_benchmark(

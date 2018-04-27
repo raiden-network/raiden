@@ -15,10 +15,10 @@ from web3 import HTTPProvider, Web3
 from hexbytes import HexBytes
 from eth_utils import is_checksum_address
 from raiden_libs.no_ssl_patch import no_ssl_verification
+from raiden_libs.types import Address
 
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.transport import MatrixTransport
-from pathfinder.utils.types import Address
 
 log = logging.getLogger(__name__)
 
