@@ -5,8 +5,8 @@ from raiden.transfer.events import EventTransferReceivedSuccess
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
-    SendRevealSecret,
-    SendSecretRequest,
+    SendRevealSecretInternal,
+    SendSecretRequestInternal,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
 from raiden.transfer.mediated_transfer.state import TargetTransferState
@@ -14,7 +14,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
     ReceiveSecretReveal,
 )
-from raiden.transfer.state import message_identifier_from_prng
 from raiden.transfer.state_change import (
     Block,
     ReceiveUnlock,
@@ -47,7 +46,6 @@ def events_for_close(target_state, channel_state, block_number):
 def handle_inittarget(
         state_change,
         channel_state,
-        pseudo_random_generator,
         block_number,
 ):
     """ Handles an ActionInitTarget state change. """
@@ -74,13 +72,11 @@ def handle_inittarget(
     # if there is not enough time to safely withdraw the token on-chain
     # silently let the transfer expire.
     if is_valid and safe_to_wait:
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         recipient = transfer.initiator
         queue_name = 'global'
-        secret_request = SendSecretRequest(
+        secret_request = SendSecretRequestInternal(
             recipient,
             queue_name,
-            message_identifier,
             transfer.payment_identifier,
             transfer.lock.amount,
             transfer.lock.secrethash,
@@ -107,7 +103,6 @@ def handle_secretreveal(
         target_state,
         state_change,
         channel_state,
-        pseudo_random_generator,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
@@ -122,15 +117,13 @@ def handle_secretreveal(
         transfer = target_state.transfer
         route = target_state.route
 
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         recipient = route.node_address
         queue_name = 'global'
-        reveal = SendRevealSecret(
+        reveal = SendRevealSecretInternal(
             recipient,
             queue_name,
-            message_identifier,
             target_state.secret,
             transfer.token,
         )
@@ -205,7 +198,6 @@ def state_transition(
         target_state,
         state_change,
         channel_state,
-        pseudo_random_generator,
         block_number,
 ):
     """ State machine for the target node of a mediated transfer. """
@@ -217,7 +209,6 @@ def state_transition(
         iteration = handle_inittarget(
             state_change,
             channel_state,
-            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == Block:
@@ -233,7 +224,6 @@ def state_transition(
             target_state,
             state_change,
             channel_state,
-            pseudo_random_generator,
         )
     elif type(state_change) == ReceiveUnlock:
         iteration = handle_unlock(

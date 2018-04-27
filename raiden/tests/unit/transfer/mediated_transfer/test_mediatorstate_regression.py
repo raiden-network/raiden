@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
-import random
-
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import MediatorTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransferInternal
 from raiden.transfer.state_change import Block
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -32,7 +30,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     block_number = 5
     target = HOP2
     expiration = 30
-    pseudo_random_generator = random.Random()
 
     payer_channel = factories.make_channel(
         partner_balance=amount,
@@ -65,12 +62,11 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         possible_routes,
         payer_channel,
         channelmap,
-        pseudo_random_generator,
         payer_transfer,
         block_number,
     )
 
-    send_transfer = must_contain_entry(initial_iteration.events, SendLockedTransfer, {})
+    send_transfer = must_contain_entry(initial_iteration.events, SendLockedTransferInternal, {})
     assert send_transfer
 
     lock_expiration = send_transfer.transfer.lock.expiration
@@ -97,7 +93,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         new_state,
         receive_secret,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
     paid_state = paid_iteration.new_state

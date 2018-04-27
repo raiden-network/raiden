@@ -9,14 +9,16 @@ from raiden.transfer.mediated_transfer import (
     mediator,
     target,
 )
-from raiden.transfer.architecture import (
-    SendMessageEvent,
-    TransitionResult,
+from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.events import (
+    SendDirectTransfer,
+    SendDirectTransferInternal,
 )
 from raiden.transfer.state import (
     NodeState,
     PaymentMappingState,
     PaymentNetworkState,
+    message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -36,6 +38,18 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ReceiveTransferDirect,
     ReceiveUnlock,
+)
+from raiden.transfer.mediated_transfer.events import (
+    SendBalanceProof,
+    SendBalanceProofInternal,
+    SendLockedTransfer,
+    SendLockedTransferInternal,
+    SendRefundTransfer,
+    SendRefundTransferInternal,
+    SendRevealSecret,
+    SendRevealSecretInternal,
+    SendSecretRequest,
+    SendSecretRequestInternal,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -81,7 +95,6 @@ def subdispatch_to_all_channels(node_state, state_change, block_number):
                 result = channel.state_transition(
                     channel_state,
                     state_change,
-                    node_state.pseudo_random_generator,
                     block_number,
                 )
                 events.extend(result.events)
@@ -105,8 +118,6 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
     events = list()
 
     if sub_task:
-        pseudo_random_generator = node_state.pseudo_random_generator
-
         if isinstance(sub_task, PaymentMappingState.InitiatorTask):
             payment_network_identifier = sub_task.payment_network_identifier
             token_address = sub_task.token_address
@@ -122,7 +133,6 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.manager_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
-                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -142,7 +152,6 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.mediator_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
-                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -164,7 +173,6 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     sub_task.target_state,
                     state_change,
                     channel_state,
-                    pseudo_random_generator,
                     block_number,
                 )
                 events = sub_iteration.events
@@ -197,8 +205,6 @@ def subdispatch_initiatortask(
 
     events = list()
     if is_valid_subtask:
-        pseudo_random_generator = node_state.pseudo_random_generator
-
         token_network_state = get_token_network(
             node_state,
             payment_network_identifier,
@@ -208,7 +214,6 @@ def subdispatch_initiatortask(
             manager_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
-            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -255,12 +260,10 @@ def subdispatch_mediatortask(
             token_address,
         )
 
-        pseudo_random_generator = node_state.pseudo_random_generator
         iteration = mediator.state_transition(
             mediator_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
-            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -311,13 +314,10 @@ def subdispatch_targettask(
         )
 
     if channel_state:
-        pseudo_random_generator = node_state.pseudo_random_generator
-
         iteration = target.state_transition(
             target_state,
             state_change,
             channel_state,
-            pseudo_random_generator,
             block_number,
         )
         events = iteration.events
@@ -402,11 +402,9 @@ def handle_token_network_action(node_state, state_change):
 
     events = list()
     if token_network_state:
-        pseudo_random_generator = node_state.pseudo_random_generator
         iteration = token_network.state_transition(
             token_network_state,
             state_change,
-            pseudo_random_generator,
             node_state.block_number,
         )
 
@@ -490,11 +488,9 @@ def handle_channel_withdraw(node_state, state_change):
     # first dispatch the withdraw to update the channel
     events = []
     if token_network_state:
-        pseudo_random_generator = node_state.pseudo_random_generator
         sub_iteration = token_network.subdispatch_to_channel_by_id(
             token_network_state,
             state_change,
-            pseudo_random_generator,
             node_state.block_number,
         )
         events.extend(sub_iteration.events)
@@ -598,6 +594,45 @@ def handle_receive_secret_reveal(node_state, state_change):
 def handle_receive_unlock(node_state, state_change):
     secrethash = state_change.secrethash
     return subdispatch_to_paymenttask(node_state, state_change, secrethash)
+
+
+def _create_send_event(node_state, internal_send_event, klass):
+    queueid = (internal_send_event.recipient, internal_send_event.queue_name)
+    pseudo_random_generator = node_state.pseudo_random_generator
+    queue = node_state.queueids_to_queues.setdefault(queueid, [])
+
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    send_event_external = klass(message_identifier, internal_send_event)
+
+    queue.append(send_event_external)
+    return send_event_external
+
+
+def process_send_events(node_state, iteration):
+    # pylint: disable=unidiomatic-typecheck
+    new_events = list(iteration.events)
+
+    for pos, event in enumerate(iteration.events):
+        if type(event) == SendDirectTransferInternal:
+            external_send = _create_send_event(node_state, event, SendDirectTransfer)
+            new_events[pos] = external_send
+        elif type(event) == SendLockedTransferInternal:
+            external_send = _create_send_event(node_state, event, SendLockedTransfer)
+            new_events[pos] = external_send
+        elif type(event) == SendRevealSecretInternal:
+            external_send = _create_send_event(node_state, event, SendRevealSecret)
+            new_events[pos] = external_send
+        elif type(event) == SendBalanceProofInternal:
+            external_send = _create_send_event(node_state, event, SendBalanceProof)
+            new_events[pos] = external_send
+        elif type(event) == SendSecretRequestInternal:
+            external_send = _create_send_event(node_state, event, SendSecretRequest)
+            new_events[pos] = external_send
+        elif type(event) == SendRefundTransferInternal:
+            external_send = _create_send_event(node_state, event, SendRefundTransfer)
+            new_events[pos] = external_send
+
+    return TransitionResult(iteration.new_state, new_events)
 
 
 def state_transition(node_state, state_change):
@@ -728,12 +763,10 @@ def state_transition(node_state, state_change):
             state_change,
         )
 
-    sanity_check(iteration)
+    # post process the send events, generating a message id and adding it to
+    # the correct message queue
+    iteration = process_send_events(node_state, iteration)
 
-    for event in iteration.events:
-        if isinstance(event, SendMessageEvent):
-            queueid = (event.recipient, event.queue_name)
-            queue = node_state.queueids_to_queues.setdefault(queueid, [])
-            queue.append(event)
+    sanity_check(iteration)
 
     return iteration

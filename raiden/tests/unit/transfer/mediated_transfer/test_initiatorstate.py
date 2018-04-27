@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
 # pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
-import random
 from copy import deepcopy
 
 from raiden.utils import random_secret
@@ -30,9 +29,9 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof,
-    SendLockedTransfer,
-    SendRevealSecret,
+    SendBalanceProofInternal,
+    SendLockedTransferInternal,
+    SendRevealSecretInternal,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.transfer.state_change import ActionCancelPayment
@@ -42,7 +41,6 @@ def make_initiator_state(
         routes,
         transfer_description,
         channelmap,
-        pseudo_random_generator,
         block_number,
         payment_network_identifier=None,
 ):
@@ -61,7 +59,6 @@ def make_initiator_state(
         inital_state,
         init_state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -73,7 +70,6 @@ def test_next_route():
     channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
     channel2 = factories.make_channel(our_balance=0, token_address=UNIT_TOKEN_ADDRESS)
     channel3 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
-    pseudo_random_generator = random.Random()
 
     channelmap = {
         channel1.identifier: channel1,
@@ -92,7 +88,6 @@ def test_next_route():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -108,7 +103,6 @@ def test_next_route():
         state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -123,7 +117,6 @@ def test_init_with_usable_routes():
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
-    pseudo_random_generator = random.Random()
 
     payment_network_identifier = factories.make_address()
     init_state_change = ActionInitInitiator(
@@ -137,7 +130,6 @@ def test_init_with_usable_routes():
         None,
         init_state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -147,7 +139,11 @@ def test_init_with_usable_routes():
     payment_state = transition.new_state
     assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
-    mediated_transfers = [e for e in transition.events if isinstance(e, SendLockedTransfer)]
+    mediated_transfers = [
+        e
+        for e in transition.events
+        if isinstance(e, SendLockedTransferInternal)
+    ]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
 
     send_mediated_transfer = mediated_transfers[0]
@@ -165,7 +161,6 @@ def test_init_without_routes():
     block_number = 1
     routes = []
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     init_state_change = ActionInitInitiator(
         payment_network_identifier,
@@ -178,7 +173,6 @@ def test_init_without_routes():
         None,
         init_state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -192,7 +186,6 @@ def test_init_without_routes():
 def test_state_wait_secretrequest_valid():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
     channelmap = {channel1.identifier: channel1}
@@ -201,7 +194,6 @@ def test_state_wait_secretrequest_valid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -216,17 +208,15 @@ def test_state_wait_secretrequest_valid():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRevealSecret)
+    assert isinstance(iteration.events[0], SendRevealSecretInternal)
 
 
 def test_state_wait_unlock_valid():
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
@@ -239,15 +229,13 @@ def test_state_wait_unlock_valid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret(
+    current_state.initiator.revealsecret = SendRevealSecretInternal(
         UNIT_TRANSFER_TARGET,
         'global',
-        UNIT_TRANSFER_IDENTIFIER,
         UNIT_SECRET,
         UNIT_TOKEN_ADDRESS,
     )
@@ -260,16 +248,15 @@ def test_state_wait_unlock_valid():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
     assert len(iteration.events) == 3
-    assert any(isinstance(e, SendBalanceProof) for e in iteration.events)
+    assert any(isinstance(e, SendBalanceProofInternal) for e in iteration.events)
     assert any(isinstance(e, EventTransferSentSuccess) for e in iteration.events)
     assert any(isinstance(e, EventUnlockSuccess) for e in iteration.events)
 
-    balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProof))
+    balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProofInternal))
     complete = next(e for e in iteration.events if isinstance(e, EventTransferSentSuccess))
 
     assert balance_proof.recipient == channel1.partner_state.address
@@ -278,11 +265,9 @@ def test_state_wait_unlock_valid():
 
 
 def test_state_wait_unlock_invalid():
-    identifier = 1
     block_number = 1
     target_address = factories.HOP2
     token = factories.UNIT_TOKEN_ADDRESS
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
@@ -294,15 +279,13 @@ def test_state_wait_unlock_invalid():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret(
+    current_state.initiator.revealsecret = SendRevealSecretInternal(
         target_address,
         'global',
-        identifier,
         UNIT_SECRET,
         token,
     )
@@ -317,7 +300,6 @@ def test_state_wait_unlock_invalid():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -329,7 +311,6 @@ def test_refund_transfer_next_route():
     amount = UNIT_TRANSFER_AMOUNT
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -366,7 +347,6 @@ def test_refund_transfer_next_route():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -399,7 +379,6 @@ def test_refund_transfer_next_route():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
     assert iteration.new_state is not None
@@ -407,7 +386,7 @@ def test_refund_transfer_next_route():
     assert len(iteration.events) == 2
 
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
+    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransferInternal))
 
     assert route_cancelled, 'The previous transfer must be cancelled'
     assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'
@@ -420,7 +399,6 @@ def test_refund_transfer_no_more_routes():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
     refund_pkey, refund_address = factories.make_privkey_address()
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -436,7 +414,6 @@ def test_refund_transfer_no_more_routes():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -468,7 +445,6 @@ def test_refund_transfer_no_more_routes():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
     assert iteration.new_state is None
@@ -484,7 +460,6 @@ def test_refund_transfer_no_more_routes():
 def test_refund_transfer_invalid_sender():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -498,7 +473,6 @@ def test_refund_transfer_invalid_sender():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -528,7 +502,6 @@ def test_refund_transfer_invalid_sender():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
     assert iteration.new_state is not None
@@ -539,7 +512,6 @@ def test_refund_transfer_invalid_sender():
 def test_cancel_transfer():
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -553,7 +525,6 @@ def test_cancel_transfer():
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
 
@@ -565,7 +536,6 @@ def test_cancel_transfer():
         current_state,
         state_change,
         channelmap,
-        pseudo_random_generator,
         block_number,
     )
     assert iteration.new_state is None

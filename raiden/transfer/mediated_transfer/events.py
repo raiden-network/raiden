@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-arguments,too-few-public-methods
-from raiden.transfer.architecture import (
-    Event,
-    SendMessageEvent,
-)
+from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.utils import pex, sha3
 
 
 def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
-    return SendRefundTransfer(
+    return SendRefundTransferInternal(
         send_lockedtransfer_event.recipient,
         send_lockedtransfer_event.queue_name,
-        send_lockedtransfer_event.message_identifier,
         transfer.payment_identifier,
         transfer.token,
         transfer.balance_proof,
@@ -23,28 +19,26 @@ def refund_from_sendmediated(send_lockedtransfer_event):
     )
 
 
-class SendLockedTransfer(SendMessageEvent):
+class SendLockedTransferInternal(Event):
     """ A locked transfer that must be sent to `recipient`. """
 
-    def __init__(self, recipient, queue_name, message_identifier, transfer):
+    def __init__(self, recipient, queue_name, transfer):
         if not isinstance(transfer, LockedTransferUnsignedState):
             raise ValueError('transfer must be a LockedTransferUnsignedState instance')
 
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.transfer = transfer
 
     def __repr__(self):
-        return '<SendLockedTransfer msgid:{} transfer:{} recipient:{}>'.format(
-            self.message_identifier,
+        return '<SendLockedTransferInternal transfer:{} recipient:{}>'.format(
             self.transfer,
             pex(self.recipient),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendLockedTransfer) and
-            self.message_identifier == other.message_identifier and
+            isinstance(other, SendLockedTransferInternal) and
             self.transfer == other.transfer and
             self.recipient == other.recipient
         )
@@ -53,7 +47,7 @@ class SendLockedTransfer(SendMessageEvent):
         return not self.__eq__(other)
 
 
-class SendRevealSecret(SendMessageEvent):
+class SendRevealSecretInternal(Event):
     """ Sends a RevealSecret to another node.
 
     This event is used once the secret is known locally and an action must be
@@ -85,21 +79,19 @@ class SendRevealSecret(SendMessageEvent):
             self,
             recipient,
             queue_name,
-            message_identifier,
             secret,
             token,
     ):
         secrethash = sha3(secret)
 
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.secret = secret
         self.secrethash = secrethash
         self.token = token
 
     def __repr__(self):
-        return '<SendRevealSecret msgid:{} secrethash:{} token:{} recipient:{}>'.format(
-            self.message_identifier,
+        return '<SendRevealSecretInternal secrethash:{} token:{} recipient:{}>'.format(
             pex(self.secrethash),
             pex(self.token),
             pex(self.recipient),
@@ -107,10 +99,9 @@ class SendRevealSecret(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRevealSecret) and
+            isinstance(other, SendRevealSecretInternal) and
             self.recipient == other.recipient and
             self.queue_name == other.queue_name and
-            self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
             self.token == other.token
@@ -120,7 +111,7 @@ class SendRevealSecret(SendMessageEvent):
         return not self.__eq__(other)
 
 
-class SendBalanceProof(SendMessageEvent):
+class SendBalanceProofInternal(Event):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to withdraw.
 
@@ -141,14 +132,13 @@ class SendBalanceProof(SendMessageEvent):
             self,
             recipient,
             queue_name,
-            message_identifier,
             payment_identifier,
             token,
             secret,
             balance_proof,
     ):
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.payment_identifier = payment_identifier
         self.token = token
         self.secret = secret
@@ -156,9 +146,10 @@ class SendBalanceProof(SendMessageEvent):
 
     def __repr__(self):
         return (
-            '<SendBalanceProof msgid:{} paymentid:{} token:{} recipient:{} balance_proof:{}>'
+            '<'
+            'SendBalanceProofInternal paymentid:{} token:{} recipient:{} balance_proof:{}'
+            '>'
         ).format(
-            self.message_identifier,
             self.payment_identifier,
             pex(self.token),
             pex(self.recipient),
@@ -167,10 +158,9 @@ class SendBalanceProof(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendBalanceProof) and
+            isinstance(other, SendBalanceProofInternal) and
             self.recipient == other.recipient and
             self.queue_name == other.queue_name and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.recipient == other.recipient and
@@ -182,7 +172,7 @@ class SendBalanceProof(SendMessageEvent):
         return not self.__eq__(other)
 
 
-class SendSecretRequest(SendMessageEvent):
+class SendSecretRequestInternal(Event):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
     """
@@ -190,23 +180,22 @@ class SendSecretRequest(SendMessageEvent):
             self,
             recipient,
             queue_name,
-            message_identifier,
             payment_identifier,
             amount,
             secrethash,
     ):
-
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.payment_identifier = payment_identifier
         self.amount = amount
         self.secrethash = secrethash
 
     def __repr__(self):
         return (
-            '<SendSecretRequest msgid:{} paymentid:{} amount:{} secrethash:{} recipient:{}>'
+            '<'
+            'SendSecretRequestInternal paymentid:{} amount:{} secrethash:{} recipient:{}'
+            '>'
         ).format(
-            self.message_identifier,
             self.payment_identifier,
             self.amount,
             pex(self.secrethash),
@@ -215,10 +204,9 @@ class SendSecretRequest(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendSecretRequest) and
+            isinstance(other, SendSecretRequestInternal) and
             self.recipient == other.recipient and
             self.queue_name == other.queue_name and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
             self.secrethash == other.secrethash and
@@ -229,7 +217,7 @@ class SendSecretRequest(SendMessageEvent):
         return not self.__eq__(other)
 
 
-class SendRefundTransfer(SendMessageEvent):
+class SendRefundTransferInternal(Event):
     """ Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the recipient to
     the sender, allowing the sender to try a different route without the risk
@@ -239,7 +227,6 @@ class SendRefundTransfer(SendMessageEvent):
             self,
             recipient,
             queue_name,
-            message_identifier,
             payment_identifier,
             token,
             balance_proof,
@@ -247,9 +234,8 @@ class SendRefundTransfer(SendMessageEvent):
             initiator,
             target,
     ):
-
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.payment_identifier = payment_identifier
         self.token = token
         self.balance_proof = balance_proof
@@ -260,11 +246,10 @@ class SendRefundTransfer(SendMessageEvent):
     def __repr__(self):
         return (
             '<'
-            'SendRefundTransfer msgid:{} paymentid:{} token:{} balance_proof:{} lock:{} '
+            'SendRefundTransferInternal paymentid:{} token:{} balance_proof:{} lock:{} '
             'initiator:{} target:{} recipient:{}'
             '>'
         ).format(
-            self.message_identifier,
             self.payment_identifier,
             pex(self.token),
             self.balance_proof,
@@ -276,10 +261,9 @@ class SendRefundTransfer(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRefundTransfer) and
+            isinstance(other, SendRefundTransferInternal) and
             self.recipient == other.recipient and
             self.queue_name == other.queue_name and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
@@ -387,3 +371,33 @@ class EventWithdrawFailed(Event):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class SendLockedTransfer(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event
+
+
+class SendRevealSecret(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event
+
+
+class SendBalanceProof(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event
+
+
+class SendSecretRequest(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event
+
+
+class SendRefundTransfer(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event

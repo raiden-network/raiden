@@ -333,9 +333,9 @@ class SecretRequest(SignedMessage):
     def from_event(event):
         return SecretRequest(
             event.message_identifier,
-            event.payment_identifier,
-            event.secrethash,
-            event.amount,
+            event.send_event.payment_identifier,
+            event.send_event.secrethash,
+            event.send_event.amount,
         )
 
     def to_dict(self):
@@ -452,12 +452,12 @@ class Secret(EnvelopeMessage):
     def from_event(event):
         return Secret(
             event.message_identifier,
-            event.payment_identifier,
-            event.balance_proof.nonce,
-            event.balance_proof.channel_address,
-            event.balance_proof.transferred_amount,
-            event.balance_proof.locksroot,
-            event.secret,
+            event.send_event.payment_identifier,
+            event.send_event.balance_proof.nonce,
+            event.send_event.balance_proof.channel_address,
+            event.send_event.balance_proof.transferred_amount,
+            event.send_event.balance_proof.locksroot,
+            event.send_event.secret,
         )
 
     def to_dict(self):
@@ -535,7 +535,7 @@ class RevealSecret(SignedMessage):
     def from_event(event):
         return RevealSecret(
             event.message_identifier,
-            event.secret,
+            event.send_event.secret,
         )
 
     def to_dict(self):
@@ -637,16 +637,16 @@ class DirectTransfer(EnvelopeMessage):
 
     @staticmethod
     def from_event(event):
-        balance_proof = event.balance_proof
+        balance_proof = event.send_event.balance_proof
 
         return DirectTransfer(
             event.message_identifier,
-            event.payment_identifier,
+            event.send_event.payment_identifier,
             balance_proof.nonce,
-            event.token,
+            event.send_event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
-            event.recipient,
+            event.send_event.recipient,
             balance_proof.locksroot,
         )
 
@@ -1004,7 +1004,7 @@ class LockedTransfer(LockedTransferBase):
 
     @staticmethod
     def from_event(event: 'SendLockedTransfer') -> 'LockedTransfer':
-        transfer = event.transfer
+        transfer = event.send_event.transfer
         lock = transfer.lock
         balance_proof = transfer.balance_proof
         lock = Lock(
@@ -1021,7 +1021,7 @@ class LockedTransfer(LockedTransferBase):
             transfer.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
-            event.recipient,
+            event.send_event.recipient,
             balance_proof.locksroot,
             lock,
             transfer.target,
@@ -1100,26 +1100,26 @@ class RefundTransfer(LockedTransfer):
 
     @staticmethod
     def from_event(event):
-        balance_proof = event.balance_proof
+        balance_proof = event.send_event.balance_proof
         lock = Lock(
-            event.lock.amount,
-            event.lock.expiration,
-            event.lock.secrethash,
+            event.send_event.lock.amount,
+            event.send_event.lock.expiration,
+            event.send_event.lock.secrethash,
         )
         fee = 0
 
         return RefundTransfer(
-            event.payment_identifier,
+            event.send_event.payment_identifier,
             event.message_identifier,
             balance_proof.nonce,
-            event.token,
+            event.send_event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
-            event.recipient,
+            event.send_event.recipient,
             balance_proof.locksroot,
             lock,
-            event.target,
-            event.initiator,
+            event.send_event.target,
+            event.send_event.initiator,
             fee,
         )
 

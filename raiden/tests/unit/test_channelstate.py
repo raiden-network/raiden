@@ -306,11 +306,9 @@ def test_channelstate_update_contract_balance():
         deposit_transaction,
     )
 
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         state_change,
-        pseudo_random_generator,
         block_number,
     )
     new_state = iteration.new_state
@@ -354,11 +352,9 @@ def test_channelstate_decreasing_contract_balance():
         deposit_transaction,
     )
 
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         state_change,
-        pseudo_random_generator,
         block_number,
     )
     new_state = iteration.new_state
@@ -401,13 +397,11 @@ def test_channelstate_repeated_contract_balance():
         contract_balance=balance1_new,
     )
     partner_model2 = partner_model1
-    pseudo_random_generator = random.Random()
 
     for _ in range(10):
         iteration = channel.state_transition(
             deepcopy(channel_state),
             state_change,
-            pseudo_random_generator,
             block_number,
         )
         new_state = iteration.new_state
@@ -449,11 +443,9 @@ def test_deposit_must_wait_for_confirmation():
         channel_state.identifier,
         deposit_transaction,
     )
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         deepcopy(channel_state),
         new_balance,
-        pseudo_random_generator,
         block_number,
     )
     unconfirmed_state = iteration.new_state
@@ -463,7 +455,6 @@ def test_deposit_must_wait_for_confirmation():
         iteration = channel.state_transition(
             deepcopy(unconfirmed_state),
             unconfirmed_block,
-            pseudo_random_generator,
             block_number,
         )
         unconfirmed_state = iteration.new_state
@@ -483,7 +474,6 @@ def test_deposit_must_wait_for_confirmation():
     iteration = channel.state_transition(
         deepcopy(unconfirmed_state),
         confirmed_block,
-        pseudo_random_generator,
         confirmed_deposit_block_number,
     )
     confirmed_state = iteration.new_state
@@ -513,7 +503,6 @@ def test_channelstate_send_lockedtransfer():
     )
 
     payment_identifier = 1
-    message_identifier = random.randint(0, UINT64_MAX)
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
 
@@ -522,7 +511,6 @@ def test_channelstate_send_lockedtransfer():
         transfer_initiator,
         transfer_target,
         lock_amount,
-        message_identifier,
         payment_identifier,
         lock_expiration,
         lock_secrethash,
@@ -551,11 +539,9 @@ def test_channelstate_send_direct_transfer():
 
     amount = 30
     payment_identifier = 1
-    message_identifier = random.randint(0, UINT64_MAX)
     channel.send_directtransfer(
         channel_state,
         amount,
-        message_identifier,
         payment_identifier,
     )
 

@@ -15,13 +15,13 @@ from raiden.transfer.events import (
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
-    SendDirectTransfer,
+    SendDirectTransferInternal,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.mediated_transfer.events import (
     refund_from_sendmediated,
-    SendBalanceProof,
-    SendLockedTransfer,
+    SendBalanceProofInternal,
+    SendLockedTransferInternal,
 )
 from raiden.transfer.merkle_tree import (
     LEAVES,
@@ -39,7 +39,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_UNUSABLE,
     EMPTY_MERKLE_ROOT,
     EMPTY_MERKLE_TREE,
-    message_identifier_from_prng,
     BalanceProofUnsignedState,
     HashTimeLockState,
     MerkleTreeState,
@@ -656,7 +655,7 @@ def compute_merkletree_without(merkletree, lockhash):
     return result
 
 
-def create_senddirecttransfer(channel_state, amount, message_identifier, payment_identifier):
+def create_senddirecttransfer(channel_state, amount, payment_identifier):
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
@@ -687,10 +686,9 @@ def create_senddirecttransfer(channel_state, amount, message_identifier, payment
     )
 
     queue_name = channel_state.identifier
-    direct_transfer = SendDirectTransfer(
+    direct_transfer = SendDirectTransferInternal(
         recipient,
         queue_name,
-        message_identifier,
         payment_identifier,
         balance_proof,
         token,
@@ -704,7 +702,6 @@ def create_sendlockedtransfer(
         initiator,
         target,
         amount,
-        message_identifier,
         payment_identifier,
         expiration,
         secrethash):
@@ -760,17 +757,16 @@ def create_sendlockedtransfer(
     )
 
     queue_name = channel_state.identifier
-    lockedtransfer = SendLockedTransfer(
+    lockedtransfer = SendLockedTransferInternal(
         recipient,
         queue_name,
-        message_identifier,
         locked_transfer,
     )
 
     return lockedtransfer, merkletree
 
 
-def create_unlock(channel_state, message_identifier, payment_identifier, secret, lock):
+def create_unlock(channel_state, payment_identifier, secret, lock):
     msg = 'caller must make sure the lock is known'
     assert is_lock_pending(channel_state.our_state, lock.secrethash), msg
 
@@ -801,10 +797,9 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
     )
 
     queue_name = channel_state.identifier
-    unlock_lock = SendBalanceProof(
+    unlock_lock = SendBalanceProofInternal(
         recipient,
         queue_name,
-        message_identifier,
         payment_identifier,
         token,
         secret,
@@ -817,13 +812,11 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
 def send_directtransfer(
         channel_state,
         amount,
-        message_identifier,
         payment_identifier,
 ):
     direct_transfer = create_senddirecttransfer(
         channel_state,
         amount,
-        message_identifier,
         payment_identifier,
     )
 
@@ -837,7 +830,6 @@ def send_lockedtransfer(
         initiator,
         target,
         amount,
-        message_identifier,
         payment_identifier,
         expiration,
         secrethash,
@@ -848,7 +840,6 @@ def send_lockedtransfer(
         initiator,
         target,
         amount,
-        message_identifier,
         payment_identifier,
         expiration,
         secrethash,
@@ -868,7 +859,6 @@ def send_refundtransfer(
         initiator,
         target,
         amount,
-        message_identifier,
         payment_identifier,
         expiration,
         secrethash):
@@ -881,7 +871,6 @@ def send_refundtransfer(
         initiator,
         target,
         amount,
-        message_identifier,
         payment_identifier,
         expiration,
         secrethash,
@@ -900,7 +889,6 @@ def send_refundtransfer(
 
 def send_unlock(
         channel_state,
-        message_identifier,
         payment_identifier,
         secret,
         secrethash,
@@ -910,7 +898,6 @@ def send_unlock(
 
     unlock, merkletree = create_unlock(
         channel_state,
-        message_identifier,
         payment_identifier,
         secret,
         lock,
@@ -972,7 +959,6 @@ def register_secret(channel_state, secret, secrethash):
 def handle_send_directtransfer(
         channel_state,
         state_change,
-        pseudo_random_generator,
 ):
     events = list()
 
@@ -985,11 +971,9 @@ def handle_send_directtransfer(
     can_pay = amount <= distributable_amount
 
     if is_open and is_valid and can_pay:
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
         direct_transfer = send_directtransfer(
             channel_state,
             amount,
-            message_identifier,
             payment_identifier,
         )
         events.append(direct_transfer)
@@ -1257,12 +1241,7 @@ def handle_channel_withdraw(channel_state, state_change):
     return TransitionResult(channel_state, events)
 
 
-def state_transition(
-        channel_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-):
+def state_transition(channel_state, state_change, block_number):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events = list()
@@ -1275,11 +1254,7 @@ def state_transition(
         iteration = handle_action_close(channel_state, state_change, block_number)
 
     elif type(state_change) == ActionTransferDirect:
-        iteration = handle_send_directtransfer(
-            channel_state,
-            state_change,
-            pseudo_random_generator,
-        )
+        iteration = handle_send_directtransfer(channel_state, state_change)
 
     elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_channel_closed(channel_state, state_change)

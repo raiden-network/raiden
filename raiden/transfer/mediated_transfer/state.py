@@ -437,7 +437,7 @@ class MediationPairState(State):
     #   valid from all but the `payee_expired` state.
     #
     # payee_balance_proof:
-    #   This node has sent a SendBalanceProof to the payee with the balance
+    #   This node has sent a SendBalanceProofInternal to the payee with the balance
     #   updated.
     #
     # payee_expired:
@@ -453,7 +453,7 @@ class MediationPairState(State):
 
     valid_payer_states = (
         'payer_pending',
-        'payer_secret_revealed',    # SendRevealSecret was sent
+        'payer_secret_revealed',    # SendRevealSecretInternal was sent
         'payer_waiting_close',      # ContractSendChannelClose was sent
         'payer_waiting_withdraw',   # ContractSendWithdraw was sent
         'payer_contract_withdraw',  # ContractChannelReceiveWithdraw for the above send received

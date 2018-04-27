@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import random
-
 from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import (
@@ -86,7 +84,6 @@ def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     if payment_state is None:
@@ -94,7 +91,6 @@ def handle_init(
             channelidentifiers_to_channels,
             state_change.routes,
             state_change.transfer,
-            pseudo_random_generator,
             block_number,
         )
 
@@ -112,7 +108,6 @@ def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     events = list()
@@ -126,7 +121,6 @@ def handle_cancelroute(
             channelidentifiers_to_channels,
             state_change.routes,
             transfer_description,
-            pseudo_random_generator,
             block_number,
         )
 
@@ -163,7 +157,6 @@ def handle_transferrefund(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
 
@@ -224,7 +217,6 @@ def handle_transferrefund(
                 payment_state,
                 state_change,
                 channelidentifiers_to_channels,
-                pseudo_random_generator,
                 block_number,
             )
 
@@ -241,7 +233,6 @@ def handle_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
@@ -249,7 +240,6 @@ def handle_secretreveal(
         payment_state.initiator,
         state_change,
         channel_state,
-        pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
     return iteration
@@ -259,7 +249,6 @@ def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: initiator.ChannelMap,
-        pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     # pylint: disable=unidiomatic-typecheck
@@ -268,14 +257,12 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
         sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
-            pseudo_random_generator,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)
     elif type(state_change) == ActionCancelRoute:
@@ -283,7 +270,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
@@ -291,7 +277,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            pseudo_random_generator,
             block_number,
         )
     elif type(state_change) == ActionCancelPayment:
@@ -303,7 +288,6 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
-            pseudo_random_generator,
         )
     else:
         iteration = TransitionResult(payment_state, list())
