@@ -180,6 +180,7 @@ def make_receive_transfer_direct(
     receive_directtransfer = ReceiveTransferDirect(
         payment_network_identifier,
         channel_state.token_address,
+        message_identifier,
         payment_identifier,
         balance_proof,
     )

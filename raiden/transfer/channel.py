@@ -16,6 +16,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
     SendDirectTransfer,
+    SendProcessed,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.mediated_transfer.events import (
@@ -1040,18 +1041,23 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
         transfer_amount = new_transferred_amount - previous_transferred_amount
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
-        event = EventTransferReceivedSuccess(
+        transfer_sucess_event = EventTransferReceivedSuccess(
             direct_transfer.payment_identifier,
             transfer_amount,
             channel_state.partner_state.address,
         )
-        events = [event]
+        send_processed = SendProcessed(
+            direct_transfer.balance_proof.sender,
+            'global',
+            direct_transfer.message_identifier,
+        )
+        events = [transfer_sucess_event, send_processed]
     else:
-        event = EventTransferReceivedInvalidDirectTransfer(
+        transfer_invalid_event = EventTransferReceivedInvalidDirectTransfer(
             direct_transfer.payment_identifier,
             reason=msg,
         )
-        events = [event]
+        events = [transfer_invalid_event]
 
     return TransitionResult(channel_state, events)
 

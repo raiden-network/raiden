@@ -103,6 +103,7 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     direct_transfer = ReceiveTransferDirect(
         payment_network_identifier,
         token_address,
+        message.message_identifier,
         message.payment_identifier,
         balance_proof,
     )

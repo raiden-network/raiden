@@ -341,6 +341,7 @@ def increase_transferred_amount(
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
+        message_identifier,
         payment_identifier,
         balance_proof,
     )
@@ -388,9 +389,11 @@ def make_direct_transfer_from_channel(
     assert direct_transfer_message.sender == from_channel.our_state.address
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
+    message_identifier = random.randint(0, UINT64_MAX)
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
+        message_identifier,
         payment_identifier,
         balance_proof,
     )
