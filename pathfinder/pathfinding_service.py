@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def error_handler(context, exc_info):
-    log.fatal("Unhandled exception terminating the program")
+    log.fatal("Unhandled exception. Terminating the program...")
     traceback.print_exception(
         etype=exc_info[0],
         value=exc_info[1],
