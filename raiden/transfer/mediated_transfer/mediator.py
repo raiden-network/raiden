@@ -5,7 +5,10 @@ from typing import List, Dict
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import ContractSendChannelWithdraw
+from raiden.transfer.events import (
+    ContractSendChannelWithdraw,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
@@ -1132,6 +1135,13 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
                         pair.payee_transfer.lock.secrethash,
                     )
                     events.append(withdraw)
+
+                    send_processed = SendProcessed(
+                        balance_proof_sender,
+                        'global',
+                        state_change.message_identifier,
+                    )
+                    events.append(send_processed)
 
                     pair.payer_state = 'payer_balance_proof'
 

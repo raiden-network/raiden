@@ -17,6 +17,9 @@ BlockTimeout = NewType('BlockNumber', int)
 T_ChannelID = bytes
 ChannelID = NewType('ChannelID', bytes)
 
+T_MessageID = int
+MessageID = NewType('MessageID', int)
+
 T_Keccak256 = bytes
 Keccak256 = NewType('Keccak256', bytes)
 

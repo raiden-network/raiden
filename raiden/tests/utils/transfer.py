@@ -170,10 +170,9 @@ def claim_lock(app_chain, payment_identifier, token, secret):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
 
-        message_identifier = random.randint(0, UINT64_MAX)
         unlock_lock = channel.send_unlock(
             from_channel,
-            message_identifier,
+            random.randint(0, UINT64_MAX),
             payment_identifier,
             secret,
             secrethash,
@@ -192,6 +191,7 @@ def claim_lock(app_chain, payment_identifier, token, secret):
 
         balance_proof = balanceproof_from_envelope(secret_message)
         receive_unlock = ReceiveUnlock(
+            random.randint(0, UINT64_MAX),
             unlock_lock.secret,
             balance_proof,
         )

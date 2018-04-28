@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import EventTransferReceivedSuccess
+from raiden.transfer.events import (
+    EventTransferReceivedSuccess,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
@@ -147,8 +150,9 @@ def handle_secretreveal(
 def handle_unlock(target_state, state_change, channel_state):
     """ Handles a ReceiveUnlock state change. """
     iteration = TransitionResult(target_state, list())
+    balance_proof_sender = state_change.balance_proof.sender
 
-    if state_change.balance_proof.sender == target_state.route.node_address:
+    if balance_proof_sender == target_state.route.node_address:
         is_valid, _ = channel.handle_unlock(
             channel_state,
             state_change,
@@ -167,7 +171,13 @@ def handle_unlock(target_state, state_change, channel_state):
                 transfer.lock.secrethash,
             )
 
-            iteration = TransitionResult(None, [transfer_success, unlock_success])
+            send_processed = SendProcessed(
+                balance_proof_sender,
+                'global',
+                state_change.message_identifier,
+            )
+
+            iteration = TransitionResult(None, [transfer_success, unlock_success, send_processed])
 
     return iteration
 

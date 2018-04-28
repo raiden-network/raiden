@@ -649,6 +649,7 @@ def test_channelstate_receive_lockedtransfer():
 
     balance_proof = balanceproof_from_envelope(secret_message)
     unlock_state_change = ReceiveUnlock(
+        random.randint(0, UINT64_MAX),
         lock_secret,
         balance_proof,
     )
@@ -1012,6 +1013,7 @@ def test_interwoven_transfers():
 
             balance_proof = balanceproof_from_envelope(secret_message)
             unlock_state_change = ReceiveUnlock(
+                random.randint(0, UINT64_MAX),
                 lock_secret,
                 balance_proof,
             )
