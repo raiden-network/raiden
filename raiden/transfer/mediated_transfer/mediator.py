@@ -1005,6 +1005,14 @@ def handle_refundtransfer(
                 block_number,
             )
 
+            events = list(iteration.events)
+            send_processed = SendProcessed(
+                mediator_state_change.transfer.balance_proof.sender,
+                'global',
+                mediator_state_change.message_identifier,
+            )
+            events.append(send_processed)
+
         # else: TODO: Use an event to notify about byzantine behavior
 
     return iteration
