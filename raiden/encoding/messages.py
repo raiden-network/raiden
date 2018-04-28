@@ -33,6 +33,7 @@ DIRECTTRANSFER = 5
 LOCKEDTRANSFER = 7
 REFUNDTRANSFER = 8
 REVEALSECRET = 11
+DELIVERED = 12
 
 
 # pylint: disable=invalid-name
@@ -44,6 +45,12 @@ payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
 processed_message_identifier = make_field(
     'processed_message_identifier',
+    8,
+    '8s',
+    integer(0, UINT64_MAX),
+)
+delivered_message_identifier = make_field(
+    'delivered_message_identifier',
     8,
     '8s',
     integer(0, UINT64_MAX),
@@ -75,6 +82,15 @@ Processed = namedbuffer(
         pad(3),
         sender,
         processed_message_identifier,
+    ]
+)
+
+Delivered = namedbuffer(
+    'delivered',
+    [
+        cmdid(DELIVERED),
+        pad(3),
+        delivered_message_identifier,
     ]
 )
 
@@ -210,6 +226,7 @@ CMDID_MESSAGE = {
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
+    DELIVERED: Delivered,
 }
 
 

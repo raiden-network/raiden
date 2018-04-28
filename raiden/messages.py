@@ -271,6 +271,32 @@ class Processed(Message):
         )
 
 
+class Delivered(SignedMessage):
+    cmdid = messages.DELIVERED
+
+    def __init__(self, delivered_message_identifier):
+        super().__init__()
+        self.delivered_message_identifier = delivered_message_identifier
+
+    @staticmethod
+    def unpack(packed):
+        delivered = Delivered(
+            packed.delivered_message_identifier,
+        )
+        delivered.signature = packed.signature
+        return delivered
+
+    def pack(self, packed):
+        packed.delivered_message_identifier = self.delivered_message_identifier
+        packed.signature = self.signature
+
+    def __repr__(self):
+        return '<{} [delivered_msgid:{}]>'.format(
+            self.__class__.__name__,
+            self.delivered_message_identifier,
+        )
+
+
 class Ping(SignedMessage):
     """ Ping, should be responded by a `Processed` message. """
     cmdid = messages.PING
@@ -1152,4 +1178,5 @@ CMDID_TO_CLASS = {
     messages.DIRECTTRANSFER: DirectTransfer,
     messages.LOCKEDTRANSFER: LockedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
+    messages.DELIVERED: Delivered,
 }
