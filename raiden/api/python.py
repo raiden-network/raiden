@@ -58,18 +58,18 @@ class RaidenAPI:
         return self.raiden.address
 
     # XXX: This interface will break once the channel identifiers are not addresses
-    def get_channel(self, channel_address):
+    def get_channel(self, registry_address, channel_address):
         if not isaddress(channel_address):
             raise InvalidAddress('Expected binary address format for channel in get_channel')
 
-        channel_list = self.get_channel_list()
+        channel_list = self.get_channel_list(registry_address)
         for channel in channel_list:
             if channel.identifier == channel_address:
                 return channel
 
         raise ChannelNotFound()
 
-    def token_network_register(self, token_address):
+    def token_network_register(self, registry_address, token_address):
         """Register the `token_address` in the blockchain.
 
         Raises:
@@ -83,11 +83,12 @@ class RaidenAPI:
         if not isaddress(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
-        if token_address in self.get_tokens_list():
+        if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress('Token already registered')
 
         try:
-            return self.raiden.default_registry.add_token(token_address)
+            registry = self.raiden.chain.registry(registry_address)
+            return registry.add_token(token_address)
         finally:
             # Assume the transaction failed because the token is already
             # registered with the smart contract and this node has not yet
@@ -99,6 +100,7 @@ class RaidenAPI:
 
     def token_network_connect(
             self,
+            registry_address,
             token_address,
             funds,
             initial_channel_target=3,
@@ -115,26 +117,35 @@ class RaidenAPI:
         if not isaddress(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
-        connection_manager = self.raiden.connection_manager_for_token(token_address)
+        connection_manager = self.raiden.connection_manager_for_token(
+            registry_address,
+            token_address
+        )
+
         connection_manager.connect(
             funds,
             initial_channel_target=initial_channel_target,
             joinable_funds_target=joinable_funds_target
         )
 
-    def token_network_leave(self, token_address, only_receiving=True):
+    def token_network_leave(self, registry_address, token_address, only_receiving=True):
         """Close all channels and wait for settlement."""
         if not isaddress(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
-        if token_address not in self.get_tokens_list():
+        if token_address not in self.get_tokens_list(registry_address):
             raise UnknownTokenAddress('token_address unknown')
 
-        connection_manager = self.raiden.connection_manager_for_token(token_address)
+        connection_manager = self.raiden.connection_manager_for_token(
+            registry_address,
+            token_address
+        )
+
         return connection_manager.leave(only_receiving)
 
     def channel_open(
             self,
+            registry_address,
             token_address,
             partner_address,
             settle_timeout=None,
@@ -155,13 +166,17 @@ class RaidenAPI:
                 'reveal_timeout can not be larger-or-equal to settle_timeout'
             )
 
+        if not isaddress(registry_address):
+            raise InvalidAddress('Expected binary address format for registry in channel open')
+
         if not isaddress(token_address):
             raise InvalidAddress('Expected binary address format for token in channel open')
 
         if not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
-        channel_manager = self.raiden.default_registry.manager_by_token(token_address)
+        registry = self.raiden.chain.registry(registry_address)
+        channel_manager = registry.manager_by_token(token_address)
         netcontract_address = channel_manager.new_netting_channel(
             partner_address,
             settle_timeout,
@@ -171,7 +186,6 @@ class RaidenAPI:
             poll_timeout
         )
 
-        registry_address = self.raiden.default_registry.address
         with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
             waiting.wait_for_newchannel(
                 self.raiden,
@@ -185,6 +199,7 @@ class RaidenAPI:
 
     def channel_deposit(
             self,
+            registry_address,
             token_address,
             partner_address,
             amount,
@@ -206,7 +221,6 @@ class RaidenAPI:
             execution.
         """
         node_state = views.state_from_raiden(self.raiden)
-        registry_address = self.raiden.default_registry.address
 
         token_networks = views.get_token_network_addresses_for(
             node_state,
@@ -279,13 +293,19 @@ class RaidenAPI:
                     self.raiden.alarm.wait_time,
                 )
 
-    def channel_close(self, token_address, partner_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def channel_close(
+            self,
+            registry_address,
+            token_address,
+            partner_address,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         """Close a channel opened with `partner_address` for the given
         `token_address`.
 
         Race condition, this can fail if channel was closed externally.
         """
         self.channel_batch_close(
+            registry_address,
             token_address,
             [partner_address],
             poll_timeout,
@@ -293,6 +313,7 @@ class RaidenAPI:
 
     def channel_batch_close(
             self,
+            registry_address,
             token_address,
             partner_addresses,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
@@ -310,12 +331,11 @@ class RaidenAPI:
 
         valid_tokens = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
-            self.raiden.default_registry.address,
+            registry_address,
         )
         if token_address not in valid_tokens:
             raise UnknownTokenAddress('Token address is not known.')
 
-        registry_address = self.raiden.default_registry.address
         node_state = views.state_from_raiden(self.raiden)
         channels_to_close = views.filter_channels_by_partneraddress(
             node_state,
@@ -366,7 +386,7 @@ class RaidenAPI:
                     self.raiden.alarm.wait_time,
                 )
 
-    def get_channel_list(self, token_address=None, partner_address=None):
+    def get_channel_list(self, registry_address, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
            `token_address` and/or `partner_address`.
 
@@ -387,8 +407,6 @@ class RaidenAPI:
 
         if partner_address and not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
-
-        registry_address = self.raiden.default_registry.address
 
         result = list()
         if token_address and partner_address:
@@ -436,16 +454,17 @@ class RaidenAPI:
         """ Returns the currently network status of `node_address`. """
         self.raiden.start_health_check_for(node_address)
 
-    def get_tokens_list(self):
+    def get_tokens_list(self, registry_address):
         """Returns a list of tokens the node knows about"""
         tokens_list = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
-            self.raiden.default_registry.address,
+            registry_address,
         )
         return tokens_list
 
     def transfer_and_wait(
             self,
+            registry_address,
             token_address,
             amount,
             target,
@@ -455,6 +474,7 @@ class RaidenAPI:
         # pylint: disable=too-many-arguments
 
         async_result = self.transfer_async(
+            registry_address,
             token_address,
             amount,
             target,
@@ -464,6 +484,7 @@ class RaidenAPI:
 
     def transfer_async(
             self,
+            registry_address,
             token_address,
             amount,
             target,
@@ -483,7 +504,7 @@ class RaidenAPI:
 
         valid_tokens = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
-            self.raiden.default_registry.address,
+            registry_address,
         )
         if token_address not in valid_tokens:
             raise UnknownTokenAddress('Token address is not known.')
@@ -498,6 +519,7 @@ class RaidenAPI:
         )
 
         async_result = self.raiden.mediated_transfer_async(
+            registry_address,
             token_address,
             amount,
             target,
@@ -505,9 +527,7 @@ class RaidenAPI:
         )
         return async_result
 
-    def get_network_events(self, from_block, to_block):
-        registry_address = self.raiden.default_registry.address
-
+    def get_network_events(self, registry_address, from_block, to_block):
         return get_all_registry_events(
             self.raiden.chain,
             registry_address,

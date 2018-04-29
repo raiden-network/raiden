@@ -12,6 +12,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
     HOP2,
+    UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
@@ -61,6 +62,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     initial_iteration = mediator.mediate_transfer(
+        UNIT_REGISTRY_IDENTIFIER,
         mediator_state,
         possible_routes,
         payer_channel,

@@ -40,8 +40,8 @@ class EchoNode:
 
         self.api = api
         self.token_address = token_address
-
-        existing_channels = self.api.get_channel_list(self.token_address)
+        registry_address = api.raiden.default_registry.address
+        existing_channels = self.api.get_channel_list(registry_address, self.token_address)
         open_channels = [
             channel_state
             for channel_state in existing_channels
@@ -101,7 +101,10 @@ class EchoNode:
                 if not locked:
                     return
                 else:
-                    channels = self.api.get_channel_list(token_address=self.token_address)
+                    channels = self.api.get_channel_list(
+                        registry_address=self.api.raiden.default_registry.address,
+                        token_address=self.token_address
+                    )
                     received_transfers = list()
                     for channel_state in channels:
                         channel_events = self.api.get_channel_events(
@@ -246,6 +249,7 @@ class EchoNode:
             )
 
             self.api.transfer_and_wait(
+                transfer.registry_address,
                 self.token_address,
                 echo_amount,
                 transfer['initiator'],

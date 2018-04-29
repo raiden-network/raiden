@@ -657,7 +657,13 @@ def compute_merkletree_without(merkletree, lockhash):
     return result
 
 
-def create_senddirecttransfer(channel_state, amount, message_identifier, payment_identifier):
+def create_senddirecttransfer(
+        registry_address,
+        channel_state,
+        amount,
+        message_identifier,
+        payment_identifier):
+
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
@@ -694,6 +700,7 @@ def create_senddirecttransfer(channel_state, amount, message_identifier, payment
         message_identifier,
         payment_identifier,
         balance_proof,
+        registry_address,
         token,
     )
 
@@ -701,6 +708,7 @@ def create_senddirecttransfer(channel_state, amount, message_identifier, payment
 
 
 def create_sendlockedtransfer(
+        registry_address,
         channel_state,
         initiator,
         target,
@@ -753,6 +761,7 @@ def create_sendlockedtransfer(
 
     locked_transfer = LockedTransferUnsignedState(
         payment_identifier,
+        registry_address,
         token,
         balance_proof,
         lock,
@@ -816,12 +825,14 @@ def create_unlock(channel_state, message_identifier, payment_identifier, secret,
 
 
 def send_directtransfer(
+        registry_address,
         channel_state,
         amount,
         message_identifier,
         payment_identifier,
 ):
     direct_transfer = create_senddirecttransfer(
+        registry_address,
         channel_state,
         amount,
         message_identifier,
@@ -834,6 +845,7 @@ def send_directtransfer(
 
 
 def send_lockedtransfer(
+        registry_address,
         channel_state,
         initiator,
         target,
@@ -843,8 +855,8 @@ def send_lockedtransfer(
         expiration,
         secrethash,
 ):
-
     send_locked_transfer_event, merkletree = create_sendlockedtransfer(
+        registry_address,
         channel_state,
         initiator,
         target,
@@ -865,6 +877,7 @@ def send_lockedtransfer(
 
 
 def send_refundtransfer(
+        registry_address,
         channel_state,
         initiator,
         target,
@@ -878,6 +891,7 @@ def send_refundtransfer(
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     send_mediated_transfer, merkletree = create_sendlockedtransfer(
+        registry_address,
         channel_state,
         initiator,
         target,
@@ -988,6 +1002,7 @@ def handle_send_directtransfer(
     if is_open and is_valid and can_pay:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         direct_transfer = send_directtransfer(
+            state_change.payment_network_identifier,
             channel_state,
             amount,
             message_identifier,

@@ -23,15 +23,26 @@ log = logging.getLogger(__name__)
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
 def test_participant_selection(raiden_network, token_addresses):
+    registry_address = raiden_network[0].raiden.default_registry.address
+
     # pylint: disable=too-many-locals
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
-    RaidenAPI(raiden_network[0].raiden).token_network_connect(token_address, 100)
+    RaidenAPI(raiden_network[0].raiden).token_network_connect(
+        registry_address,
+        token_address,
+        100)
 
     # connect the other nodes
     connect_greenlets = [
-        gevent.spawn(RaidenAPI(app.raiden).token_network_connect, token_address, 100)
+        gevent.spawn(
+            RaidenAPI(app.raiden).token_network_connect,
+            registry_address,
+            token_address,
+            100
+        )
+
         for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
@@ -46,7 +57,10 @@ def test_participant_selection(raiden_network, token_addresses):
             )
 
     connection_managers = [
-        app.raiden.connection_manager_for_token(token_address) for app in raiden_network
+        app.raiden.connection_manager_for_token(
+            registry_address,
+            token_address
+        ) for app in raiden_network
     ]
 
     def open_channels_count(connection_managers_):
@@ -103,8 +117,10 @@ def test_participant_selection(raiden_network, token_addresses):
     sender = raiden_network[-1].raiden
     receiver = raiden_network[0].raiden
 
+    registry_address = sender.raiden.default_registry.address
     # assert there is a direct channel receiver -> sender (vv)
     receiver_channel = RaidenAPI(receiver).get_channel_list(
+        registry_address=registry_address,
         token_address=token_address,
         partner_address=sender.address
     )
@@ -115,6 +131,7 @@ def test_participant_selection(raiden_network, token_addresses):
 
     # assert there is a direct channel sender -> receiver
     sender_channel = RaidenAPI(sender).get_channel_list(
+        registry_address=registry_address,
         token_address=token_address,
         partner_address=receiver.address
     )
@@ -124,6 +141,7 @@ def test_participant_selection(raiden_network, token_addresses):
     assert sender_channel.external_state.opened_block != 0
 
     RaidenAPI(sender).transfer_and_wait(
+        registry_address,
         token_address,
         1,
         receiver.address
@@ -145,7 +163,9 @@ def test_participant_selection(raiden_network, token_addresses):
     assert timeout > 0
     with gevent.timeout.Timeout(timeout):
         try:
-            RaidenAPI(raiden_network[0].raiden).token_network_leave(token_address)
+            RaidenAPI(raiden_network[0].raiden).token_network_leave(
+                registry_address,
+                token_address)
         except gevent.timeout.Timeout:
             log.error('timeout while waiting for leave')
 

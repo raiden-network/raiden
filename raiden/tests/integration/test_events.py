@@ -57,7 +57,11 @@ def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
         token_address,
     )
 
-    RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_open(
+        registry_address,
+        token_address,
+        app1.raiden.address)
+
     gevent.sleep(events_poll_timeout)
 
     # The channel is created but without funds
@@ -76,12 +80,14 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
+    registry_address = app0.raiden.default_registry.address
+
     channel0 = get_channelstate(app0, app1, token_address)
     channel1 = get_channelstate(app1, app0, token_address)
     assert channel0 is None
     assert channel1 is None
 
-    RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -90,7 +96,12 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
+    RaidenAPI(app0.raiden).channel_deposit(
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        deposit)
+
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -99,7 +110,12 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI(app1.raiden).channel_deposit(token_address, app0.raiden.address, deposit)
+    RaidenAPI(app1.raiden).channel_deposit(
+        registry_address,
+        token_address,
+        app0.raiden.address,
+        deposit)
+
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
@@ -150,7 +166,12 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
     assert not events
 
-    channel_address = RaidenAPI(app0.raiden).channel_open(token_address, app1.raiden.address)
+    channel_address = RaidenAPI(app0.raiden).channel_open(
+        registry_address,
+        token_address,
+        app1.raiden.address
+    )
+
     gevent.sleep(events_poll_timeout * 2)
 
     events = get_all_channel_manager_events(
@@ -194,7 +215,13 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         app1, 0, [],
     )
 
-    RaidenAPI(app0.raiden).channel_deposit(token_address, app1.raiden.address, deposit)
+    RaidenAPI(app0.raiden).channel_deposit(
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        deposit
+    )
+
     gevent.sleep(events_poll_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(
@@ -224,7 +251,11 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
     assert event_dicts_are_equal(events[0], new_balance_event)
 
-    RaidenAPI(app0.raiden).channel_close(token_address, app1.raiden.address)
+    RaidenAPI(app0.raiden).channel_close(
+        registry_address,
+        token_address,
+        app1.raiden.address)
+
     gevent.sleep(events_poll_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(
@@ -285,6 +316,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses):
     app0, app1, app2 = raiden_chain
+    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     amount = 10
@@ -311,7 +343,9 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
 
     # Close the channel
     netting_channel_proxy = app2.raiden.chain.netting_channel(channel_state2_1.identifier)
-    netting_channel_proxy.channel_close(channel_state2_1.partner_state.balance_proof)
+    netting_channel_proxy.channel_close(
+        registry_address,
+        channel_state2_1.partner_state.balance_proof)
 
     # Reveal the secret through the blockchain (this needs to emit the
     # SecretRevealed event)

@@ -31,6 +31,8 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 def test_register_token(raiden_network, token_amount):
     app1 = raiden_network[0]
 
+    registry_address = app1.raiden.default_registry.address
+
     token_address = app1.raiden.chain.deploy_contract(
         contract_name='HumanStandardToken',
         contract_path=get_contract_path('HumanStandardToken.sol'),
@@ -38,17 +40,17 @@ def test_register_token(raiden_network, token_amount):
     )
 
     api1 = RaidenAPI(app1.raiden)
-    assert token_address not in api1.get_tokens_list()
+    assert token_address not in api1.get_tokens_list(registry_address)
 
     app1.raiden.poll_blockchain_events()
-    assert token_address not in api1.get_tokens_list()
+    assert token_address not in api1.get_tokens_list(registry_address)
 
-    api1.token_network_register(token_address)
-    assert token_address in api1.get_tokens_list()
+    api1.token_network_register(registry_address, token_address)
+    assert token_address in api1.get_tokens_list(registry_address)
 
     # Exception if we try to reregister
     with pytest.raises(AlreadyRegisteredTokenAddress):
-        api1.token_network_register(token_address)
+        api1.token_network_register(registry_address, token_address)
 
 
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -74,19 +76,20 @@ def test_token_registered_race(raiden_chain, token_amount):
 
     gevent.sleep(1)
 
-    assert token_address not in api0.get_tokens_list()
-    assert token_address not in api1.get_tokens_list()
+    registry_address = app0.raiden.default_registry.address
+    assert token_address not in api0.get_tokens_list(registry_address)
+    assert token_address not in api1.get_tokens_list(registry_address)
 
-    api0.token_network_register(token_address)
+    api0.token_network_register(registry_address, token_address)
 
     gevent.sleep(1)
 
-    assert token_address in api0.get_tokens_list()
-    assert token_address not in api1.get_tokens_list()
+    assert token_address in api0.get_tokens_list(registry_address)
+    assert token_address not in api1.get_tokens_list(registry_address)
 
     # The next time when the event is polled, the token is registered
     app1.raiden.poll_blockchain_events()
-    assert token_address in api1.get_tokens_list()
+    assert token_address in api1.get_tokens_list(registry_address)
 
 
 @pytest.mark.parametrize('channels_per_node', [1])
@@ -99,12 +102,13 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     the channel with the deposit balance updated.
     """
     app0, app1 = raiden_chain
+    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     api0 = RaidenAPI(app0.raiden)
 
     old_state = get_channelstate(app0, app1, token_address)
-    api0.channel_deposit(token_address, app1.raiden.address, 10)
+    api0.channel_deposit(registry_address, token_address, app1.raiden.address, 10)
     new_state = get_channelstate(app0, app1, token_address)
 
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
@@ -120,6 +124,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
     with pytest.raises(InvalidAddress):
         # sending to an unknown/non-existant address
         RaidenAPI(app0.raiden).transfer(
+            app0.raiden.default_registry.address,
             token_address,
             10,
             target=non_existing_address,
@@ -232,6 +237,7 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
 
     with pytest.raises(InsufficientFunds):
         RaidenAPI(app0.raiden).transfer(
+            app0.raiden.default_registry.address,
             token_address,
             deposit + 1,
             target=app1.raiden.address,

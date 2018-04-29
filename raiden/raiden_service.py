@@ -49,7 +49,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
-from raiden.messages import SignedMessage
+from raiden.messages import (LockedTransfer, SignedMessage)
 from raiden.network.protocol import UDPTransport
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
@@ -68,9 +68,10 @@ def initiator_init(
         transfer_identifier,
         transfer_amount,
         transfer_secret,
+        registry_address,
         token_address,
         target_address):
-    registry_address = raiden.default_registry.address
+
     transfer_state = TransferDescriptionWithSecretState(
         transfer_identifier,
         transfer_amount,
@@ -98,9 +99,9 @@ def initiator_init(
     return init_initiator_statechange
 
 
-def mediator_init(raiden, transfer):
+def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
-    registry_address = raiden.default_registry.address
+    registry_address = transfer.registry_address
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
         registry_address,
@@ -123,13 +124,13 @@ def mediator_init(raiden, transfer):
     return init_mediator_statechange
 
 
-def target_init(raiden, transfer):
+def target_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_address,
     )
-    registry_address = raiden.default_registry.address
+    registry_address = transfer.registry_address
     init_target_statechange = ActionInitTarget(
         registry_address,
         from_route,
@@ -427,11 +428,10 @@ class RaidenService:
         state_change = ContractReceiveNewPaymentNetwork(payment_network)
         self.handle_state_change(state_change)
 
-    def connection_manager_for_token(self, token_address):
+    def connection_manager_for_token(self, registry_address, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
 
-        registry_address = self.default_registry.address
         known_token_networks = views.get_token_network_addresses_for(
             self.wal.state_manager.current_state,
             registry_address,
@@ -443,7 +443,7 @@ class RaidenService:
         manager = self.tokens_to_connectionmanagers.get(token_address)
 
         if manager is None:
-            manager = ConnectionManager(self, token_address)
+            manager = ConnectionManager(self, registry_address, token_address)
             self.tokens_to_connectionmanagers[token_address] = manager
 
         return manager
@@ -468,7 +468,13 @@ class RaidenService:
                 self.alarm.wait_time,
             )
 
-    def mediated_transfer_async(self, token_address, amount, target, identifier):
+    def mediated_transfer_async(
+            self,
+            registry_address,
+            token_address,
+            amount,
+            target,
+            identifier):
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asyncronous transfer, the transfer might fail
@@ -481,6 +487,7 @@ class RaidenService:
         """
 
         async_result = self.start_mediated_transfer(
+            registry_address,
             token_address,
             amount,
             target,
@@ -489,7 +496,7 @@ class RaidenService:
 
         return async_result
 
-    def direct_transfer_async(self, token_address, amount, target, identifier):
+    def direct_transfer_async(self, registry_address, token_address, amount, target, identifier):
         """ Do a direct transfer with target.
 
         Direct transfers are non cancellable and non expirable, since these
@@ -516,7 +523,6 @@ class RaidenService:
         if identifier is None:
             identifier = create_default_identifier()
 
-        registry_address = self.default_registry.address
         direct_transfer = ActionTransferDirect(
             registry_address,
             token_address,
@@ -527,7 +533,14 @@ class RaidenService:
 
         self.handle_state_change(direct_transfer)
 
-    def start_mediated_transfer(self, token_address, amount, target, identifier):
+    def start_mediated_transfer(
+            self,
+            registry_address,
+            token_address,
+            amount,
+            target,
+            identifier):
+
         self.protocol.start_health_check(target)
 
         if identifier is None:
@@ -544,6 +557,7 @@ class RaidenService:
             identifier,
             amount,
             secret,
+            registry_address,
             token_address,
             target,
         )
@@ -557,10 +571,10 @@ class RaidenService:
 
         return async_result
 
-    def mediate_mediated_transfer(self, transfer):
+    def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)
         self.handle_state_change(init_mediator_statechange)
 
-    def target_mediated_transfer(self, transfer):
+    def target_mediated_transfer(self, transfer: LockedTransfer):
         init_target_statechange = target_init(self, transfer)
         self.handle_state_change(init_target_statechange)

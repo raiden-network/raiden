@@ -30,6 +30,7 @@ from raiden.utils import sha3, privatekey_to_address
 
 
 def test_withdraw(
+        tester_registry_address,
         deposit,
         settle_timeout,
         reveal_timeout,
@@ -66,6 +67,7 @@ def test_withdraw(
     lock0 = Lock(lock_amount, lock_expiration, secrethash)
 
     mediated0 = make_mediated_transfer(
+        tester_registry_address,
         channel0,
         channel1,
         address0,
@@ -115,6 +117,7 @@ def test_withdraw(
 # This test must not use tester_channels since these proxies do automatic
 # mining
 def test_withdraw_at_settlement_block(
+        tester_registry_address,
         deposit,
         settle_timeout,
         tester_nettingcontracts,
@@ -154,6 +157,7 @@ def test_withdraw_at_settlement_block(
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=nonce,
+        registry_address=tester_registry_address,
         token=tester_token.address,
         channel=normalize_address(nettingchannel.address),
         transferred_amount=0,
@@ -199,7 +203,12 @@ def test_withdraw_at_settlement_block(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
+def test_withdraw_expired_lock(
+        tester_registry_address,
+        reveal_timeout,
+        tester_channels,
+        tester_chain):
+
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     pseudo_random_generator = random.Random()
 
@@ -223,6 +232,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=secrethash)
 
     mediated0 = make_mediated_transfer(
+        tester_registry_address,
         channel1,
         channel0,
         privatekey_to_address(pkey0),
@@ -260,6 +270,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
 @pytest.mark.parametrize('settle_timeout', [50])
 @pytest.mark.parametrize('reveal_timeout', [5])
 def test_withdraw_both_participants(
+        tester_registry_address,
         deposit,
         settle_timeout,
         reveal_timeout,
@@ -302,6 +313,7 @@ def test_withdraw_both_participants(
     lock10 = Lock(lock_amount, lock10_expiration, secrethash)
 
     mediated01 = make_mediated_transfer(
+        tester_registry_address,
         channel0,
         channel1,
         address0,
@@ -312,6 +324,7 @@ def test_withdraw_both_participants(
     )
 
     mediated10 = make_mediated_transfer(
+        tester_registry_address,
         channel1,
         channel0,
         address1,
@@ -379,7 +392,7 @@ def test_withdraw_both_participants(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
+def test_withdraw_twice(tester_registry_address, reveal_timeout, tester_channels, tester_chain):
     """ A lock can be withdrawn only once, the second try must fail. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     pseudo_random_generator = random.Random()
@@ -402,6 +415,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
     lock = Lock(17, lock_expiration, sha3(secret))
 
     mediated0 = make_mediated_transfer(
+        tester_registry_address,
         channel1,
         channel0,
         privatekey_to_address(pkey1),
@@ -645,6 +659,7 @@ def test_withdraw_tampered_lock_amount(
 
 
 def test_withdraw_lock_with_a_large_expiration(
+        tester_registry_address,
         deposit,
         tester_channels,
         tester_chain,
@@ -681,6 +696,7 @@ def test_withdraw_lock_with_a_large_expiration(
         secrethash=lock_secrethash,
     )
     mediated0 = make_mediated_transfer(
+        tester_registry_address,
         channel0,
         channel1,
         address0,

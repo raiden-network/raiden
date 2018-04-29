@@ -16,11 +16,12 @@ transferred_amount = integers(min_value=0, max_value=UINT256_MAX)
 
 
 @composite
-def direct_transfer(draw, token, channel, recipient, locksroot):
+def direct_transfer(draw, registry_address, token, channel, recipient, locksroot):
     return DirectTransfer(
         draw(identifier),
         draw(identifier),
         draw(nonce),
+        draw(registry_address),
         draw(token),
         draw(channel),
         draw(transferred_amount),

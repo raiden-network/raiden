@@ -15,6 +15,7 @@ def refund_from_sendmediated(send_lockedtransfer_event):
         send_lockedtransfer_event.queue_name,
         send_lockedtransfer_event.message_identifier,
         transfer.payment_identifier,
+        transfer.registry_address,
         transfer.token,
         transfer.balance_proof,
         transfer.lock,
@@ -241,6 +242,7 @@ class SendRefundTransfer(SendMessageEvent):
             queue_name,
             message_identifier,
             payment_identifier,
+            registry_address,
             token,
             balance_proof,
             lock,
@@ -251,6 +253,7 @@ class SendRefundTransfer(SendMessageEvent):
         super().__init__(recipient, queue_name, message_identifier)
 
         self.payment_identifier = payment_identifier
+        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -260,12 +263,13 @@ class SendRefundTransfer(SendMessageEvent):
     def __repr__(self):
         return (
             '<'
-            'SendRefundTransfer msgid:{} paymentid:{} token:{} balance_proof:{} lock:{} '
-            'initiator:{} target:{} recipient:{}'
+            'SendRefundTransfer msgid:{} paymentid:{} registry_address:{} token:{} '
+            'balance_proof:{} lock:{} initiator:{} target:{} recipient:{}'
             '>'
         ).format(
             self.message_identifier,
             self.payment_identifier,
+            pex(self.registry_address),
             pex(self.token),
             self.balance_proof,
             self.lock,
@@ -281,6 +285,7 @@ class SendRefundTransfer(SendMessageEvent):
             self.queue_name == other.queue_name and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
+            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and

@@ -52,6 +52,7 @@ delivered_message_identifier = make_field(
 )
 expiration = make_field('expiration', 8, '8s', integer(0, UINT64_MAX))
 
+registry_address = make_field('registry_address', 20, '20s')
 token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
@@ -159,6 +160,7 @@ DirectTransfer = namedbuffer(
         nonce,
         message_identifier,
         payment_identifier,
+        registry_address,
         token,
         channel,
         recipient,
@@ -177,6 +179,7 @@ LockedTransfer = namedbuffer(
         message_identifier,
         payment_identifier,
         expiration,
+        registry_address,
         token,
         channel,
         recipient,
@@ -200,6 +203,7 @@ RefundTransfer = namedbuffer(
         message_identifier,
         payment_identifier,
         expiration,
+        registry_address,
         token,
         channel,
         recipient,

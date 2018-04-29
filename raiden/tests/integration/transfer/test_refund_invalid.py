@@ -32,6 +32,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     refund_transfer_message = make_refund_transfer(
         payment_identifier=1,
         nonce=1,
+        registry_address=app0.raiden.default_registry.address,
         token=token_address,
         channel=other_address,
         transferred_amount=amount,
