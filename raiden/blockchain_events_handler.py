@@ -78,12 +78,14 @@ def handle_channel_new(raiden, event):
         raiden.handle_state_change(new_channel)
 
         partner_address = channel_state.partner_state.address
-        connection_manager = raiden.connection_manager_for_token(token_address)
+        connection_manager = raiden.connection_manager_for_token(
+            payment_network_identifier, token_address
+        )
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
-        gevent.spawn(connection_manager.retry_connect)
+        gevent.spawn(connection_manager.retry_connect, payment_network_identifier)
 
         # Start the listener *after* the channel is registered, to avoid None
         # exceptions (and not applying the event state change).
@@ -142,10 +144,13 @@ def handle_channel_new_balance(raiden, event):
         raiden.handle_state_change(newbalance_statechange)
 
         if balance_was_zero:
-            connection_manager = raiden.connection_manager_for_token(token_address)
+            connection_manager = raiden.connection_manager_for_token(
+                payment_network_identifier, token_address
+            )
 
             gevent.spawn(
                 connection_manager.join_channel,
+                payment_network_identifier,
                 participant_address,
                 new_balance,
             )

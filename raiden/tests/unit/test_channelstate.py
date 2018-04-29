@@ -48,6 +48,9 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import (
+    UNIT_REGISTRY_IDENTIFIER
+)
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
     sha3,
@@ -155,7 +158,8 @@ def make_receive_transfer_direct(
         privkey,
         nonce,
         transferred_amount,
-        locksroot=EMPTY_MERKLE_ROOT):
+        locksroot=EMPTY_MERKLE_ROOT,
+        registry_address=UNIT_REGISTRY_IDENTIFIER):
 
     address = privatekey_to_address(privkey.secret)
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
@@ -167,6 +171,7 @@ def make_receive_transfer_direct(
         message_identifier,
         payment_identifier,
         nonce,
+        registry_address,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -194,7 +199,8 @@ def make_receive_transfer_mediated(
         nonce,
         transferred_amount,
         lock,
-        merkletree_leaves=None):
+        merkletree_leaves=None,
+        registry_address=UNIT_REGISTRY_IDENTIFIER):
 
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
@@ -218,6 +224,7 @@ def make_receive_transfer_mediated(
         random.randint(0, UINT64_MAX),
         payment_identifier,
         nonce,
+        registry_address,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -234,6 +241,7 @@ def make_receive_transfer_mediated(
     receive_lockedtransfer = LockedTransferSignedState(
         random.randint(0, UINT64_MAX),
         payment_identifier,
+        registry_address,
         channel_state.token_address,
         balance_proof,
         lock,
@@ -517,8 +525,10 @@ def test_channelstate_send_lockedtransfer():
     message_identifier = random.randint(0, UINT64_MAX)
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
+    registry_address = factories.make_address()
 
     channel.send_lockedtransfer(
+        registry_address,
         channel_state,
         transfer_initiator,
         transfer_target,
@@ -549,11 +559,13 @@ def test_channelstate_send_direct_transfer():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    registry_address = factories.make_address()
 
     amount = 30
     payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
     channel.send_directtransfer(
+        registry_address,
         channel_state,
         amount,
         message_identifier,

@@ -641,6 +641,7 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier,
             payment_identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -659,6 +660,7 @@ class DirectTransfer(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.nonce = nonce
+        self.registry_address = registry_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
@@ -671,6 +673,7 @@ class DirectTransfer(EnvelopeMessage):
             packed.message_identifier,
             packed.payment_identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -686,6 +689,7 @@ class DirectTransfer(EnvelopeMessage):
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.token = self.token
+        packed.registry_address = self.registry_address
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
@@ -700,6 +704,7 @@ class DirectTransfer(EnvelopeMessage):
             event.message_identifier,
             event.payment_identifier,
             balance_proof.nonce,
+            event.registry_address,
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -730,6 +735,7 @@ class DirectTransfer(EnvelopeMessage):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
+            'registry_address': self.registry_address,
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
@@ -744,6 +750,7 @@ class DirectTransfer(EnvelopeMessage):
             data['message_identifier'],
             data['payment_identifier'],
             data['nonce'],
+            data['registry_address'],
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
@@ -865,6 +872,7 @@ class LockedTransferBase(EnvelopeMessage):
             message_identifier,
             payment_identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -885,6 +893,7 @@ class LockedTransferBase(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.nonce = nonce
+        self.registry_address = registry_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount
@@ -904,6 +913,7 @@ class LockedTransferBase(EnvelopeMessage):
             packed.message_identifier,
             packed.payment_identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -918,6 +928,7 @@ class LockedTransferBase(EnvelopeMessage):
         packed.message_identifier = self.message_identifier
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
+        packed.registry_address = self.registry_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -959,6 +970,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier,
             payment_identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -982,6 +994,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier,
             payment_identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -1026,6 +1039,7 @@ class LockedTransfer(LockedTransferBase):
             packed.message_identifier,
             packed.payment_identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -1043,6 +1057,7 @@ class LockedTransfer(LockedTransferBase):
         packed.message_identifier = self.message_identifier
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
+        packed.registry_address = self.registry_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -1075,6 +1090,7 @@ class LockedTransfer(LockedTransferBase):
             event.message_identifier,
             transfer.payment_identifier,
             balance_proof.nonce,
+            transfer.registry_address,
             transfer.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -1091,6 +1107,7 @@ class LockedTransfer(LockedTransferBase):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
+            'registry_address': self.registry_address.hex(),
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
@@ -1109,6 +1126,7 @@ class LockedTransfer(LockedTransferBase):
             data['message_identifier'],
             data['payment_identifier'],
             data['nonce'],
+            unhexlify(data['registry_address']),
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
@@ -1142,6 +1160,7 @@ class RefundTransfer(LockedTransfer):
             packed.message_identifier,
             packed.payment_identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -1169,6 +1188,7 @@ class RefundTransfer(LockedTransfer):
             event.payment_identifier,
             event.message_identifier,
             balance_proof.nonce,
+            event.registry_address,
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -1186,6 +1206,7 @@ class RefundTransfer(LockedTransfer):
             data['message_identifier'],
             data['payment_identifier'],
             data['nonce'],
+            unhexlify(data['registry_address']),
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],

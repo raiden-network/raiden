@@ -386,13 +386,19 @@ class ConsoleTools:
             return
 
         self._api.channel_open(
+            self._raiden.default_registry.address,
             token_address,
             peer_address,
             settle_timeout=settle_timeout,
             reveal_timeout=reveal_timeout,
         )
 
-        return self._api.channel_deposit(token_address, peer_address, amount)
+        return self._api.channel_deposit(
+            self._raiden.default_registry.address,
+            token_address,
+            peer_address,
+            amount
+        )
 
     def wait_for_contract(self, contract_address_hex, timeout=None):
         """ Wait until a contract is mined

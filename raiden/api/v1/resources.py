@@ -11,6 +11,10 @@ from raiden.api.v1.encoding import (
     ConnectionsLeaveSchema,
 )
 
+from ethereum import slogging
+
+log = slogging.get_logger(__name__)
+
 
 def create_blueprint():
     # Take a look at this SO question on hints how to organize versioned
@@ -34,14 +38,14 @@ class AddressResource(BaseResource):
 class ChannelsResource(BaseResource):
 
     put_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'state'),
+        exclude=('registry_address', 'channel_address', 'state'),
     )
 
-    def get(self):
+    def get(self, registry_address):
         """
         this translates to 'get all channels the node is connected with'
         """
-        return self.rest_api.get_channel_list()
+        return self.rest_api.get_channel_list(registry_address)
 
     @use_kwargs(put_schema, locations=('json',))
     def put(self, **kwargs):
@@ -64,17 +68,20 @@ class ChannelsResourceByChannelAddress(BaseResource):
 
 class TokensResource(BaseResource):
 
-    def get(self):
+    def get(self, registry_address):
         """
         this translates to 'get all token addresses we have channels open for'
         """
-        return self.rest_api.get_tokens_list()
+        return self.rest_api.get_tokens_list(registry_address)
 
 
 class PartnersResourceByTokenAddress(BaseResource):
 
-    def get(self, **kwargs):
-        return self.rest_api.get_partners_by_token(**kwargs)
+    def get(self, registry_address, token_address):
+        return self.rest_api.get_partners_by_token(
+            registry_address,
+            token_address
+        )
 
 
 class NetworkEventsResource(BaseResource):
@@ -82,8 +89,9 @@ class NetworkEventsResource(BaseResource):
     get_schema = EventRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, from_block, to_block):
+    def get(self, registry_address, from_block, to_block):
         return self.rest_api.get_network_events(
+            registry_address=registry_address,
             from_block=from_block,
             to_block=to_block,
         )
@@ -117,8 +125,8 @@ class ChannelEventsResource(BaseResource):
 
 class RegisterTokenResource(BaseResource):
 
-    def put(self, token_address):
-        return self.rest_api.register_token(token_address)
+    def put(self, registry_address, token_address):
+        return self.rest_api.register_token(registry_address, token_address)
 
 
 class TransferToTargetResource(BaseResource):
@@ -128,8 +136,9 @@ class TransferToTargetResource(BaseResource):
     )
 
     @use_kwargs(post_schema, locations=('json',))
-    def post(self, token_address, target_address, amount, identifier):
+    def post(self, registry_address, token_address, target_address, amount, identifier):
         return self.rest_api.initiate_transfer(
+            registry_address=registry_address,
             token_address=token_address,
             target_address=target_address,
             amount=amount,
@@ -143,8 +152,16 @@ class ConnectionsResource(BaseResource):
     delete_schema = ConnectionsLeaveSchema()
 
     @use_kwargs(put_schema)
-    def put(self, token_address, funds, initial_channel_target, joinable_funds_target):
+    def put(
+            self,
+            registry_address,
+            token_address,
+            funds,
+            initial_channel_target,
+            joinable_funds_target):
+
         return self.rest_api.connect(
+            registry_address=registry_address,
             token_address=token_address,
             funds=funds,
             initial_channel_target=initial_channel_target,
@@ -152,8 +169,9 @@ class ConnectionsResource(BaseResource):
         )
 
     @use_kwargs(delete_schema, locations=('json',))
-    def delete(self, token_address, only_receiving_channels):
+    def delete(self, registry_address, token_address, only_receiving_channels):
         return self.rest_api.leave(
+            registry_address=registry_address,
             token_address=token_address,
             only_receiving=only_receiving_channels
         )

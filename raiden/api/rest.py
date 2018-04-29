@@ -75,19 +75,26 @@ ERROR_STATUS_CODES = [
 
 URLS_V1 = [
     ('/address', AddressResource),
-    ('/channels', ChannelsResource),
-    ('/channels/<hexaddress:channel_address>', ChannelsResourceByChannelAddress),
-    ('/tokens', TokensResource),
-    ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
-    ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
-    ('/events/network', NetworkEventsResource),
+    ('/channels/<hexaddress:registry_address>', ChannelsResource),
+    (
+        '/channels/<hexaddress:registry_address>/<hexaddress:channel_address>',
+        ChannelsResourceByChannelAddress
+    ),
+    ('/tokens/<hexaddress:registry_address>', TokensResource),
+    (
+        '/tokens/<hexaddress:registry_address>/<hexaddress:token_address>/partners',
+        PartnersResourceByTokenAddress
+    ),
+    ('/tokens/<hexaddress:registry_address>/<hexaddress:token_address>', RegisterTokenResource),
+    ('/events/<hexaddress:registry_address>/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
     ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
     (
-        '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
+        '''/transfers/<hexaddress:registry_address>/
+        <hexaddress:token_address>/<hexaddress:target_address>''',
         TransferToTargetResource,
     ),
-    ('/connections/<hexaddress:token_address>', ConnectionsResource),
+    ('/connections/<hexaddress:registry_address>/<hexaddress:token_address>', ConnectionsResource),
 ]
 
 
@@ -280,9 +287,12 @@ class RestAPI:
     def get_our_address(self):
         return api_response(result=dict(our_address=address_encoder(self.raiden_api.address)))
 
-    def register_token(self, token_address):
+    def register_token(self, registry_address, token_address):
         try:
-            manager_address = self.raiden_api.token_network_register(token_address)
+            manager_address = self.raiden_api.token_network_register(
+                registry_address,
+                token_address
+            )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(
                 errors=str(e),
@@ -296,6 +306,7 @@ class RestAPI:
 
     def open(
             self,
+            registry_address,
             partner_address,
             token_address,
             settle_timeout=None,
@@ -304,6 +315,7 @@ class RestAPI:
 
         try:
             self.raiden_api.channel_open(
+                registry_address,
                 token_address,
                 partner_address,
                 settle_timeout,
@@ -320,6 +332,7 @@ class RestAPI:
             # make initial deposit
             try:
                 self.raiden_api.channel_deposit(
+                    registry_address,
                     token_address,
                     partner_address,
                     balance
@@ -337,20 +350,27 @@ class RestAPI:
 
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(self.raiden_api.raiden),
-            self.raiden_api.raiden.default_registry.address,
+            registry_address,
             token_address,
             partner_address,
         )
-        result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
+
+        result = self.channel_schema.dump(
+            channelstate_to_api_dict(
+                channel_state,
+                registry_address
+            )
+        )
 
         return api_response(
             result=result.data,
             status_code=HTTPStatus.CREATED
         )
 
-    def deposit(self, token_address, partner_address, amount):
+    def deposit(self, registry_address, token_address, partner_address, amount):
         try:
             raiden_service_result = self.raiden_api.channel_deposit(
+                registry_address,
                 token_address,
                 partner_address,
                 amount
@@ -371,12 +391,19 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED
             )
 
-        result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
+        result = self.channel_schema.dump(
+            channelstate_to_api_dict(
+                raiden_service_result,
+                registry_address
+            )
+        )
+
         return api_response(result=result.data)
 
-    def close(self, token_address, partner_address):
+    def close(self, registry_address, token_address, partner_address):
         try:
             raiden_service_result = self.raiden_api.channel_close(
+                registry_address,
                 token_address,
                 partner_address
             )
@@ -391,6 +418,7 @@ class RestAPI:
 
     def connect(
             self,
+            registry_address,
             token_address,
             funds,
             initial_channel_target=None,
@@ -398,6 +426,7 @@ class RestAPI:
 
         try:
             self.raiden_api.token_network_connect(
+                registry_address,
                 token_address,
                 funds,
                 initial_channel_target,
@@ -419,31 +448,38 @@ class RestAPI:
             status_code=HTTPStatus.NO_CONTENT
         )
 
-    def leave(self, token_address, only_receiving):
-        closed_channels = self.raiden_api.token_network_leave(token_address, only_receiving)
+    def leave(self, registry_address, token_address, only_receiving):
+        closed_channels = self.raiden_api.token_network_leave(
+            registry_address,
+            token_address,
+            only_receiving)
         closed_channels = [channel_state.identifier for channel_state in closed_channels]
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
         return api_response(result=result.data)
 
-    def get_channel_list(self, token_address=None, partner_address=None):
-        raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
+    def get_channel_list(self, registry_address, token_address=None, partner_address=None):
+        raiden_service_result = self.raiden_api.get_channel_list(
+            registry_address,
+            token_address,
+            partner_address
+        )
         assert isinstance(raiden_service_result, list)
 
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dump(channel_list)
         return api_response(result=result.data)
 
-    def get_tokens_list(self):
-        raiden_service_result = self.raiden_api.get_tokens_list()
+    def get_tokens_list(self, registry_address):
+        raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
         assert isinstance(raiden_service_result, list)
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
         return api_response(result=result.data)
 
-    def get_network_events(self, from_block, to_block):
+    def get_network_events(self, registry_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_network_events(
-            from_block, to_block
+            registry_address, from_block, to_block
         )
         return api_response(result=normalize_events_list(raiden_service_result))
 
@@ -462,20 +498,27 @@ class RestAPI:
         )
         return api_response(result=normalize_events_list(raiden_service_result))
 
-    def get_channel(self, channel_address):
-        channel_state = self.raiden_api.get_channel(channel_address)
-        result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
+    def get_channel(self, registry_address, channel_address):
+        channel_state = self.raiden_api.get_channel(registry_address, channel_address)
+        result = self.channel_schema.dump(channelstate_to_api_dict(
+            channel_state,
+            registry_address)
+        )
         return api_response(result=result.data)
 
-    def get_partners_by_token(self, token_address):
+    def get_partners_by_token(self, registry_address, token_address):
         return_list = []
-        raiden_service_result = self.raiden_api.get_channel_list(token_address)
+        raiden_service_result = self.raiden_api.get_channel_list(
+            registry_address,
+            token_address
+        )
         for result in raiden_service_result:
             return_list.append({
                 'partner_address': result.partner_state.address,
                 'channel': url_for(
                     # TODO: Somehow nicely parameterize this for future versions
                     'v1_resources.channelsresourcebychanneladdress',
+                    registry_address=registry_address,
                     channel_address=result.identifier,
                 ),
             })
@@ -484,13 +527,20 @@ class RestAPI:
         result = self.partner_per_token_list_schema.dump(schema_list)
         return api_response(result=result.data)
 
-    def initiate_transfer(self, token_address, target_address, amount, identifier):
+    def initiate_transfer(
+            self,
+            registry_address,
+            token_address,
+            target_address,
+            amount,
+            identifier):
 
         if identifier is None:
             identifier = create_default_identifier()
 
         try:
             transfer_result = self.raiden_api.transfer(
+                registry_address=registry_address,
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
@@ -516,6 +566,7 @@ class RestAPI:
 
         transfer = {
             'initiator_address': self.raiden_api.address,
+            'registry_address': registry_address,
             'token_address': token_address,
             'target_address': target_address,
             'amount': amount,
@@ -524,7 +575,7 @@ class RestAPI:
         result = self.transfer_schema.dump(transfer)
         return api_response(result=result.data)
 
-    def _deposit(self, channel_state, balance):
+    def _deposit(self, registry_address, channel_state, balance):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
                 errors="Can't deposit on a closed channel",
@@ -533,6 +584,7 @@ class RestAPI:
 
         try:
             self.raiden_api.channel_deposit(
+                registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
                 balance
@@ -548,11 +600,20 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED
             )
 
-        updated_channel_state = self.raiden_api.get_channel(channel_state.identifier)
-        result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address,
+            channel_state.identifier
+        )
+
+        result = self.channel_schema.dump(
+            channelstate_to_api_dict(
+                updated_channel_state,
+                registry_address
+            )
+        )
         return api_response(result=result.data)
 
-    def _close(self, channel_state):
+    def _close(self, registry_address, channel_state):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
                 errors='Attempted to close an already closed channel',
@@ -561,6 +622,7 @@ class RestAPI:
 
         try:
             self.raiden_api.channel_close(
+                registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address
             )
@@ -570,11 +632,19 @@ class RestAPI:
                 status_code=HTTPStatus.CONFLICT
             )
 
-        updated_channel_state = self.raiden_api.get_channel(channel_state.identifier)
-        result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address,
+            channel_state.identifier)
+
+        result = self.channel_schema.dump(
+            channelstate_to_api_dict(
+                updated_channel_state,
+                registry_address
+            )
+        )
         return api_response(result=result.data)
 
-    def patch_channel(self, channel_address, balance=None, state=None):
+    def patch_channel(self, registry_address, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
             return api_error(
                 errors='Can not update balance and change channel state at the same time',
@@ -588,7 +658,11 @@ class RestAPI:
             )
 
         try:
-            channel_state = self.raiden_api.get_channel(channel_address)
+            channel_state = self.raiden_api.get_channel(
+                registry_address,
+                channel_address
+            )
+
         except ChannelNotFound:
             return api_error(
                 errors='Requested channel {} not found'.format(address_encoder(channel_address)),
@@ -596,10 +670,10 @@ class RestAPI:
             )
 
         if balance is not None:
-            result = self._deposit(channel_state, balance)
+            result = self._deposit(registry_address, channel_state, balance)
 
         elif state == CHANNEL_STATE_CLOSED:
-            result = self._close(channel_state)
+            result = self._close(registry_address, channel_state)
 
         else:  # should never happen, channel_state is validated in the schema
             result = api_error(

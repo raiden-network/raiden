@@ -270,6 +270,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     )
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
+        payment_network_identifier,
         channel0,
         channel1,
         address0,
@@ -349,6 +350,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     )
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
+        payment_network_identifier,
         channel0,
         channel1,
         address0,
@@ -431,6 +433,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     )
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
+        payment_network_identifier,
         channel0,
         channel1,
         address0,
@@ -442,6 +445,7 @@ def test_settle_two_locked_mediated_transfer_messages(
     lock_expiration1 = tester_chain.block.number + reveal_timeout + 5
     lock1 = Lock(amount=31, expiration=lock_expiration1, secrethash=sha3(b'lock2'))
     mediated1 = make_mediated_transfer(
+        payment_network_identifier,
         channel1,
         channel0,
         address1,
@@ -585,6 +589,7 @@ def test_mediated_after_direct_transfer(
     )
     lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=sha3(b'lock2'))
     second_mediated0 = make_mediated_transfer(
+        payment_network_identifier,
         channel0,
         channel1,
         address0,

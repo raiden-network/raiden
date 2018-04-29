@@ -36,6 +36,7 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
     token_address = token_addresses[0]
 
     result = app0.raiden.mediated_transfer_async(
+        app0.raiden.default_registry.address,
         token_address,
         deposit * 2,
         app1.raiden.address,
@@ -61,6 +62,7 @@ def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
 
     amount = 10
     async_result = app0.raiden.mediated_transfer_async(
+        app0.raiden.default_registry.address,
         token_address,
         amount,
         app1.raiden.address,
@@ -100,6 +102,7 @@ def test_receive_lockedtransfer_invalidnonce(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=repeated_nonce,
+        registry_address=app0.raiden.default_registry.address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=amount,
@@ -145,6 +148,7 @@ def test_receive_lockedtransfer_invalidsender(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
         nonce=1,
+        registry_address=app0.raiden.default_registry.address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
@@ -191,6 +195,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=1,
+        registry_address=app0.raiden.default_registry.address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
@@ -227,10 +232,12 @@ def test_received_lockedtransfer_closedchannel(
 ):
 
     app0, app1 = raiden_network
+    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     channel0 = get_channelstate(app0, app1, token_address)
 
     RaidenAPI(app1.raiden).channel_close(
+        registry_address,
         token_address,
         app0.raiden.address,
     )
@@ -248,6 +255,7 @@ def test_received_lockedtransfer_closedchannel(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=1,
+        registry_address=app0.raiden.default_registry.address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,

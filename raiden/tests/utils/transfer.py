@@ -15,6 +15,7 @@ from raiden.raiden_service import (
     mediator_init,
     target_init,
 )
+
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
@@ -67,6 +68,7 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     """
 
     async_result = initiator_app.raiden.mediated_transfer_async(
+        initiator_app.raiden.default_registry.address,
         token,
         amount,
         target_app.raiden.address,
@@ -80,6 +82,7 @@ def direct_transfer(initiator_app, target_app, token_address, amount, identifier
     channel_state = get_channelstate(initiator_app, target_app, token_address)
     assert channel_state, 'there is not a direct channel'
     initiator_app.raiden.direct_transfer_async(
+        initiator_app.raiden.default_registry.address,
         token_address,
         amount,
         target_app.raiden.address,
@@ -96,6 +99,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
     # pylint: disable=too-many-arguments
 
     async_result = initiator_app.raiden.mediated_transfer_async(
+        initiator_app.raiden.default_registry.address,
         token,
         amount,
         target_app.raiden.address,
@@ -133,6 +137,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         identifier,
         amount,
         secret,
+        initiator_app.raiden.default_registry.address,
         token,
         target,
     )
@@ -322,7 +327,9 @@ def increase_transferred_amount(
 
     message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = 1
+    registry_address = make_address()
     event = channel.send_directtransfer(
+        registry_address,
         from_channel,
         amount,
         payment_identifier,
@@ -373,6 +380,7 @@ def make_direct_transfer_from_channel(
         payment_identifier,
         amount,
     )
+
     iteration = channel.handle_send_directtransfer(
         from_channel,
         state_change,
@@ -407,6 +415,7 @@ def make_direct_transfer_from_channel(
 
 
 def make_mediated_transfer(
+        registry_address,
         from_channel,
         partner_channel,
         initiator,
@@ -421,6 +430,7 @@ def make_mediated_transfer(
     message_identifier = random.randint(0, UINT64_MAX)
 
     lockedtransfer = channel.send_lockedtransfer(
+        registry_address,
         from_channel,
         initiator,
         target,

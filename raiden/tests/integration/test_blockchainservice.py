@@ -28,7 +28,6 @@ solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements,too-many-locals
     app0, app1, app2 = raiden_network
-    registry_address = app0.raiden.default_registry.address
 
     peer0_address = app0.raiden.address
     peer1_address = app1.raiden.address
@@ -36,6 +35,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     blockchain_service0 = app0.raiden.chain
     registry = app0.raiden.default_registry
+    registry_address = app0.raiden.default_registry.address
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     token_address = blockchain_service0.deploy_and_register_token(
@@ -142,7 +142,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail()['our_balance'] == 70
     assert netting_channel_02.detail()['partner_balance'] == 130
 
-    RaidenAPI(app1.raiden).channel_close(token_address, app0.raiden.address)
+    RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
 
     waiting.wait_for_settle(
         app1.raiden,

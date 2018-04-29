@@ -20,7 +20,8 @@ from raiden.utils import address_encoder
 def test_token_addresses(raiden_network, token_addresses):
     app = raiden_network[0]
     api = RaidenAPI(app.raiden)
-    assert set(api.get_tokens_list()) == set(token_addresses)
+    registry_address = app.raiden.default_registry.address
+    assert set(api.get_tokens_list(registry_address)) == set(token_addresses)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -32,14 +33,16 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     api1 = RaidenAPI(node1.raiden)
     api2 = RaidenAPI(node2.raiden)
 
+    registry_address = node1.raiden.default_registry.address
+
     # nodes don't have a channel, so they are not healthchecking
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNKNOWN
     assert api2.get_node_network_state(api1.address) == NODE_NETWORK_UNKNOWN
-    assert not api1.get_channel_list(token_address, api2.address)
+    assert not api1.get_channel_list(registry_address, token_address, api2.address)
 
     # open is a synchronous api
-    api1.channel_open(token_address, api2.address)
-    channels = api1.get_channel_list(token_address, api2.address)
+    api1.channel_open(node1.raiden.default_registry.address, token_address, api2.address)
+    channels = api1.get_channel_list(registry_address, token_address, api2.address)
     assert len(channels) == 1
 
     channel12 = get_channelstate(node1, node2, token_address)
@@ -51,14 +54,20 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     )
     assert event_list1 == []
 
+    registry_address = api1.raiden.default_registry.address
     # Load the new state with the deposit
-    api1.channel_deposit(token_address, api2.address, deposit)
+    api1.channel_deposit(
+        registry_address,
+        token_address,
+        api2.address,
+        deposit)
+
     channel12 = get_channelstate(node1, node2, token_address)
 
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
     assert channel.get_balance(channel12.our_state, channel12.partner_state) == deposit
     assert channel12.our_state.contract_balance == deposit
-    assert api1.get_channel_list(token_address, api2.address) == [channel12]
+    assert api1.get_channel_list(registry_address, token_address, api2.address) == [channel12]
 
     # there is a channel open, they must be healthchecking each other
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_REACHABLE
@@ -76,7 +85,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
         for event in event_list2
     )
 
-    api1.channel_close(token_address, api2.address)
+    api1.channel_close(registry_address, token_address, api2.address)
     node1.raiden.poll_blockchain_events()
 
     # Load the new state with the channel closed

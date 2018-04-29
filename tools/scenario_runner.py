@@ -194,7 +194,7 @@ def run(
                 our_index = nodes.index(our_node)
                 peer = nodes[our_index + 1]
 
-                tools.token_network_register(token_address)
+                tools.token_network_register(app.raiden.default_registry.address, token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
                 while True:
@@ -208,7 +208,7 @@ def run(
                 while True:
                     try:
                         log.warning("Opening channel with {} for {}".format(peer, token_address))
-                        api.channel_open(token_address, peer)
+                        api.channel_open(app.raiden.default_registry.address, token_address, peer)
                         break
                     except KeyError:
                         log.warning("Error: could not open channel with {}".format(peer))
@@ -217,7 +217,12 @@ def run(
                 while True:
                     try:
                         log.warning("Funding channel with {} for {}".format(peer, token_address))
-                        api.channel_deposit(token_address, peer, amount)
+                        api.channel_deposit(
+                            app.raiden.default_registry.address,
+                            token_address,
+                            peer,
+                            amount
+                        )
                         break
                     except Exception:
                         log.warning("Error: could not deposit {} for {}".format(amount, peer))
@@ -245,6 +250,7 @@ def run(
                 times = [0] * total_transfers
                 for index in range(total_transfers):
                     RaidenAPI(app.raiden).transfer(
+                        app.raiden.default_registry.address,
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,

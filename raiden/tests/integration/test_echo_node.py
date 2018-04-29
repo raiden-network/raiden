@@ -27,6 +27,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
         transfer_event = RaidenAPI(app.raiden).transfer_async(
+            app.raiden.default_registry.address,
             token_address,
             amount,
             receiver_app.raiden.address,
@@ -82,6 +83,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
         transfer_event = RaidenAPI(app.raiden).transfer_async(
+            app.raiden.default_registry.address,
             token_address,
             amount,
             echo_app.raiden.address,
@@ -96,7 +98,12 @@ def test_echo_node_response(token_addresses, raiden_chain):
     # Check that all transfers were handled correctly
     for handled_transfer in echo_node.seen_transfers:
         app = address_to_app[handled_transfer['initiator']]
-        events = get_channel_events_for_token(app, token_address, 0)
+        events = get_channel_events_for_token(
+            app.raiden.default_registry.address,
+            app,
+            token_address,
+            0
+        )
         received = {}
 
         for event in events:
@@ -136,6 +143,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     amount = 7
     for num, app in enumerate([app0, app1, app2, app3, app4, app5]):
         transfer_event = RaidenAPI(app.raiden).transfer_async(
+            app.raiden.default_registry.address,
             token_address,
             amount,
             echo_app.raiden.address,
@@ -146,6 +154,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
 
     # test duplicated identifier + amount is ignored
     transfer_event = RaidenAPI(app5.raiden).transfer_async(
+        app.raiden.default_registry.address,
         token_address,
         amount,  # same amount as before
         echo_app.raiden.address,
@@ -155,6 +164,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     # test pool size querying
     pool_query_identifier = 77  # unused identifier different from previous one
     transfer_event = RaidenAPI(app5.raiden).transfer_async(
+        app.raiden.default_registry.address,
         token_address,
         amount,
         echo_app.raiden.address,
@@ -164,6 +174,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
 
     # fill the pool
     transfer_event = RaidenAPI(app6.raiden).transfer_async(
+        app.raiden.default_registry.address,
         token_address,
         amount,
         echo_app.raiden.address,
@@ -178,7 +189,12 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     # Check that payout was generated and pool_size_query answered
     for handled_transfer in echo_node.seen_transfers:
         app = address_to_app[handled_transfer['initiator']]
-        events = get_channel_events_for_token(app, token_address, 0)
+        events = get_channel_events_for_token(
+            app.raiden.default_registry.address,
+            app,
+            token_address,
+            0
+        )
 
         for event in events:
             if event['_event_type'] == b'EventTransferReceivedSuccess':

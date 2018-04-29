@@ -13,17 +13,16 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 
 
-def test_transfer_update_event(tester_channels, tester_events):
+def test_transfer_update_event(tester_registry_address, tester_channels, tester_events):
     """ The event TransferUpdated is emitted after a successful call to
     updateTransfer.
     """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
-    payment_network_identifier = factories.make_address()
 
     direct0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=90,
@@ -51,13 +50,12 @@ def test_transfer_update_event(tester_channels, tester_events):
     }
 
 
-def test_update_fails_on_open_channel(tester_channels):
+def test_update_fails_on_open_channel(tester_registry_address, tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -76,13 +74,17 @@ def test_update_fails_on_open_channel(tester_channels):
         )
 
 
-def test_update_not_allowed_after_settlement_period(settle_timeout, tester_channels, tester_chain):
+def test_update_not_allowed_after_settlement_period(
+        tester_registry_address,
+        settle_timeout,
+        tester_channels,
+        tester_chain):
+
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     direct0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=70,
@@ -104,13 +106,15 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
         )
 
 
-def test_update_not_allowed_for_the_closing_address(tester_channels):
+def test_update_not_allowed_for_the_closing_address(
+        tester_registry_address,
+        tester_channels):
+
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -118,7 +122,7 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
     )
 
     transfer1 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel1,
         channel0,
         amount=10,
@@ -153,7 +157,11 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, private_keys):
+def test_update_must_fail_with_a_nonparticipant_transfer(
+        tester_registry_address,
+        tester_channels,
+        private_keys):
+
     """ updateTransfer must not accept a transfer from a non participant. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     nonparticipant_key = private_keys[2]
@@ -165,6 +173,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
+        registry_address=tester_registry_address,
         token=channel0.token_address,
         channel=channel0.identifier,
         transferred_amount=10,
@@ -192,7 +201,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_update_must_fail_with_a_channel_address(tester_channels):
+def test_update_must_fail_with_a_channel_address(tester_registry_address, tester_channels):
     """ updateTransfer must not accept a transfer signed with the wrong channel address. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
@@ -204,6 +213,7 @@ def test_update_must_fail_with_a_channel_address(tester_channels):
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
+        registry_address=tester_registry_address,
         token=channel0.token_address,
         channel=wrong_channel,
         transferred_amount=10,
@@ -230,13 +240,12 @@ def test_update_must_fail_with_a_channel_address(tester_channels):
         )
 
 
-def test_update_called_multiple_times_same_transfer(tester_channels):
+def test_update_called_multiple_times_same_transfer(tester_registry_address, tester_channels):
     """ updateTransfer can be called only once. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -266,13 +275,12 @@ def test_update_called_multiple_times_same_transfer(tester_channels):
         )
 
 
-def test_update_called_multiple_times_new_transfer(tester_channels):
+def test_update_called_multiple_times_new_transfer(tester_registry_address, tester_channels):
     """ updateTransfer second call must fail even if there is a new transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -280,7 +288,7 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
     )
 
     transfer1 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -311,13 +319,12 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
         )
 
 
-def test_update_called_multiple_times_older_transfer(tester_channels):
+def test_update_called_multiple_times_older_transfer(tester_registry_address, tester_channels):
     """ updateTransfer second call must fail even if called with an older transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    payment_network_identifier = factories.make_address()
 
     transfer0 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,
@@ -325,7 +332,7 @@ def test_update_called_multiple_times_older_transfer(tester_channels):
     )
 
     transfer1 = make_direct_transfer_from_channel(
-        payment_network_identifier,
+        tester_registry_address,
         channel0,
         channel1,
         amount=10,

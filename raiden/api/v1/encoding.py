@@ -225,6 +225,7 @@ class ChannelStateSchema(BaseSchema):
 
 
 class ChannelRequestSchema(BaseSchema):
+    registry_address = AddressField(missing=None)
     channel_address = AddressField(missing=None)
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
@@ -256,6 +257,7 @@ class ChannelListSchema(BaseListSchema):
 
 
 class TransferSchema(BaseSchema):
+    registry_address = AddressField(missing=None)
     initiator_address = AddressField(missing=None)
     target_address = AddressField(missing=None)
     token_address = AddressField(missing=None)
