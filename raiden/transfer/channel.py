@@ -655,7 +655,7 @@ def compute_merkletree_without(merkletree, lockhash):
     return result
 
 
-def create_senddirecttransfer(channel_state, amount, identifier):
+def create_senddirecttransfer(registry_address, channel_state, amount, identifier):
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
@@ -688,6 +688,7 @@ def create_senddirecttransfer(channel_state, amount, identifier):
     direct_transfer = SendDirectTransfer(
         identifier,
         balance_proof,
+        registry_address,
         token,
         recipient,
     )
@@ -803,8 +804,9 @@ def create_unlock(channel_state, identifier, secret, lock):
     return unlock_lock, merkletree
 
 
-def send_directtransfer(channel_state, amount, identifier):
+def send_directtransfer(registry_address, channel_state, amount, identifier):
     direct_transfer = create_senddirecttransfer(
+        registry_address,
         channel_state,
         amount,
         identifier,
@@ -953,6 +955,7 @@ def handle_send_directtransfer(channel_state, state_change):
 
     if is_open and is_valid and can_pay:
         direct_transfer = send_directtransfer(
+            state_change.registry_address,
             channel_state,
             amount,
             identifier,

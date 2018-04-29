@@ -514,7 +514,7 @@ class RaidenService:
 
         return async_result
 
-    def direct_transfer_async(self, token_address, amount, target, identifier):
+    def direct_transfer_async(self, registry_address, token_address, amount, target, identifier):
         """ Do a direct transfer with target.
 
         Direct transfers are non cancellable and non expirable, since these
@@ -541,7 +541,6 @@ class RaidenService:
         if identifier is None:
             identifier = create_default_identifier()
 
-        registry_address = self.default_registry.address
         direct_transfer = ActionTransferDirect(
             registry_address,
             token_address,

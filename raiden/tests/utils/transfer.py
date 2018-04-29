@@ -13,7 +13,7 @@ from raiden.raiden_service import (
     target_init,
 )
 from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.factories import (factories, make_address)
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
@@ -313,9 +313,10 @@ def increase_transferred_amount(
         from_channel.partner_state,
     )
     assert distributable_from_to >= amount, 'operation would end up in a incosistent state'
-
+    registry_address = factories.make_address()
     identifier = 1
     event = channel.send_directtransfer(
+        registry_address,
         from_channel,
         amount,
         identifier,
@@ -363,6 +364,7 @@ def make_direct_transfer_from_channel(
         identifier,
         amount,
     )
+    
     iteration = channel.handle_send_directtransfer(
         from_channel,
         state_change,

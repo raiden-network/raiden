@@ -96,12 +96,12 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
 
 
 def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransfer):
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = message.registry_address
     token_address = message.token
     balance_proof = balanceproof_from_envelope(message)
 
     direct_transfer = ReceiveTransferDirect(
-        payment_network_identifier,
+        registry_address,
         token_address,
         message.identifier,
         balance_proof,

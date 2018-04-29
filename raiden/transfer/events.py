@@ -251,20 +251,23 @@ class SendDirectTransfer(Event):
             self,
             identifier,
             balance_proof,
+            registry_address,
             token,
             recipient):
 
         self.identifier = identifier
         self.balance_proof = balance_proof
+        self.registry_address = registry_address
         self.token = token
         self.recipient = recipient
 
     def __repr__(self):
         return (
-            '<SendDirectTransfer identifier:{} balance_proof:{} token:{} recipient:{}>'
+            '<SendDirectTransfer identifier:{} balance_proof:{} registry_address:{} token:{} recipient:{}>'
         ).format(
             self.identifier,
             self.balance_proof,
+            pex(self.registry_address),
             pex(self.token),
             pex(self.recipient),
         )
@@ -274,6 +277,7 @@ class SendDirectTransfer(Event):
             isinstance(other, SendDirectTransfer) and
             self.identifier == other.identifier and
             self.balance_proof == other.balance_proof and
+            self.registry_address == other.registry_address and
             self.token == other.token and
             self.recipient == other.recipient
         )

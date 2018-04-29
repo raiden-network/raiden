@@ -43,6 +43,7 @@ nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 identifier = make_field('identifier', 8, '8s', integer(0, UINT64_MAX))
 expiration = make_field('expiration', 8, '8s', integer(0, UINT64_MAX))
 
+registry_address = make_field('registry_address', 20, '20s')
 token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
@@ -126,6 +127,7 @@ DirectTransfer = namedbuffer(
         pad(3),
         nonce,
         identifier,
+        registry_address,
         token,
         channel,
         recipient,

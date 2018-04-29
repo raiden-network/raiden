@@ -530,10 +530,12 @@ def test_channelstate_send_direct_transfer():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
+    registry_address = factories.make_address()
 
     amount = 30
     identifier = 1
     channel.send_directtransfer(
+        registry_address,
         channel_state,
         amount,
         identifier,

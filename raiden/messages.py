@@ -547,6 +547,7 @@ class DirectTransfer(EnvelopeMessage):
             self,
             identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -564,6 +565,7 @@ class DirectTransfer(EnvelopeMessage):
         super().__init__()
         self.identifier = identifier
         self.nonce = nonce
+        self.registry_address = registry_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
@@ -575,6 +577,7 @@ class DirectTransfer(EnvelopeMessage):
         transfer = DirectTransfer(
             packed.identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -589,6 +592,7 @@ class DirectTransfer(EnvelopeMessage):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.token = self.token
+        packed.registry_address = self.registry_address
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
@@ -602,6 +606,7 @@ class DirectTransfer(EnvelopeMessage):
         return DirectTransfer(
             event.identifier,
             balance_proof.nonce,
+            event.registry_address,
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -629,6 +634,7 @@ class DirectTransfer(EnvelopeMessage):
         return {
             'identifier': self.identifier,
             'nonce': self.nonce,
+            'registry_address': self.registry_address,
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
@@ -642,6 +648,7 @@ class DirectTransfer(EnvelopeMessage):
         message = DirectTransfer(
             data['identifier'],
             data['nonce'],
+            data['registry_address'],
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
