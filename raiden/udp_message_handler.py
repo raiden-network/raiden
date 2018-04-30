@@ -59,7 +59,7 @@ def handle_message_secret(raiden: 'RaidenService', message: Secret):
 
 
 def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransfer):
-    registry_address = raiden.default_registry.address
+    registry_address = message.registry_address
     from_transfer = lockedtransfersigned_from_message(message)
     node_state = views.state_from_raiden(raiden)
 

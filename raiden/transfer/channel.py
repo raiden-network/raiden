@@ -748,6 +748,7 @@ def create_sendlockedtransfer(
 
     locked_transfer = LockedTransferUnsignedState(
         identifier,
+        channel_state.registry_address,
         token,
         balance_proof,
         lock,

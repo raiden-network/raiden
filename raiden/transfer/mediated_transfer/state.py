@@ -214,6 +214,7 @@ class LockedTransferUnsignedState(State):
 
     __slots__ = (
         'identifier',
+        'registry_address',
         'token',
         'balance_proof',
         'lock',
@@ -224,6 +225,7 @@ class LockedTransferUnsignedState(State):
     def __init__(
             self,
             identifier,
+            registry_address: typing.Address,
             token: typing.Address,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
@@ -242,6 +244,7 @@ class LockedTransferUnsignedState(State):
             raise ValueError('balance_proof must not be empty')
 
         self.identifier = identifier
+        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -250,9 +253,10 @@ class LockedTransferUnsignedState(State):
 
     def __repr__(self):
         return (
-            '<LockedTransferUnsignedState id:{} token:{} lock:{} target:{}>'
+            '<LockedTransferUnsignedState id:{} registry_addres:{} token:{} lock:{} target:{}>'
         ).format(
             self.identifier,
+            encode_hex(self.registry_address),
             encode_hex(self.token),
             self.lock,
             encode_hex(self.target),
@@ -262,6 +266,7 @@ class LockedTransferUnsignedState(State):
         return (
             isinstance(other, LockedTransferUnsignedState) and
             self.identifier == other.identifier and
+            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and

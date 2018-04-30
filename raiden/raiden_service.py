@@ -49,7 +49,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
-from raiden.messages import SignedMessage
+from raiden.messages import (LockedTransfer, SignedMessage)
 from raiden.network.protocol import RaidenProtocol
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
@@ -100,7 +100,7 @@ def initiator_init(
 
 def mediator_init(raiden, transfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
-    registry_address = raiden.default_registry.address
+    registry_address = transfer.registry_address
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
         registry_address,
@@ -123,13 +123,13 @@ def mediator_init(raiden, transfer):
     return init_mediator_statechange
 
 
-def target_init(raiden, transfer):
+def target_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_address,
     )
-    registry_address = raiden.default_registry.address
+    registry_address = transfer.registry_address
     init_target_statechange = ActionInitTarget(
         registry_address,
         from_route,
@@ -581,10 +581,10 @@ class RaidenService:
 
         return async_result
 
-    def mediate_mediated_transfer(self, transfer):
+    def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)
         self.handle_state_change(init_mediator_statechange)
 
-    def target_mediated_transfer(self, transfer):
+    def target_mediated_transfer(self, transfer: LockedTransfer):
         init_target_statechange = target_init(self, transfer)
         self.handle_state_change(init_target_statechange)

@@ -769,6 +769,7 @@ class LockedTransferBase(EnvelopeMessage):
             self,
             identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -788,6 +789,7 @@ class LockedTransferBase(EnvelopeMessage):
 
         self.identifier = identifier
         self.nonce = nonce
+        self.registry_address = registry_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount
@@ -806,6 +808,7 @@ class LockedTransferBase(EnvelopeMessage):
         locked_transfer = LockedTransferBase(
             packed.identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -819,6 +822,7 @@ class LockedTransferBase(EnvelopeMessage):
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
+        packed.registry_address = self.registry_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -859,6 +863,7 @@ class LockedTransfer(LockedTransferBase):
             self,
             identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -881,6 +886,7 @@ class LockedTransfer(LockedTransferBase):
         super().__init__(
             identifier,
             nonce,
+            registry_address,
             token,
             channel,
             transferred_amount,
@@ -923,6 +929,7 @@ class LockedTransfer(LockedTransferBase):
         mediated_transfer = LockedTransfer(
             packed.identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -939,6 +946,7 @@ class LockedTransfer(LockedTransferBase):
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
+        packed.registry_address = self.registry_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -970,6 +978,7 @@ class LockedTransfer(LockedTransferBase):
         return LockedTransfer(
             transfer.identifier,
             balance_proof.nonce,
+            transfer.registry_address,
             transfer.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -985,6 +994,7 @@ class LockedTransfer(LockedTransferBase):
         return {
             'identifier': self.identifier,
             'nonce': self.nonce,
+            'registry_address': self.registry_address.hex(),
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
@@ -1002,6 +1012,7 @@ class LockedTransfer(LockedTransferBase):
         message = LockedTransfer(
             data['identifier'],
             data['nonce'],
+            unhexlify(data['registry_address']),
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
@@ -1034,6 +1045,7 @@ class RefundTransfer(LockedTransfer):
         locked_transfer = RefundTransfer(
             packed.identifier,
             packed.nonce,
+            packed.registry_address,
             packed.token,
             packed.channel,
             packed.transferred_amount,
@@ -1060,6 +1072,7 @@ class RefundTransfer(LockedTransfer):
         return RefundTransfer(
             event.identifier,
             balance_proof.nonce,
+            event.registry_address,
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
@@ -1076,6 +1089,7 @@ class RefundTransfer(LockedTransfer):
         message = RefundTransfer(
             data['identifier'],
             data['nonce'],
+            unhexlify(data['registry_address']),
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
