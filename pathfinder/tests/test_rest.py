@@ -193,7 +193,7 @@ def test_put_fee(
         channel_identifier=123,
         chain_id=1,
         nonce=1,
-        percentage_fee=0.02
+        percentage_fee='0.02'
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -212,7 +212,7 @@ def test_put_fee(
     assert channel_id == 123
     assert is_same_address(sender, private_key_to_address(private_keys[0]))
     assert nonce == 1
-    assert fee == 0.02
+    assert fee == '0.02'
 
 
 def test_put_fee_sync_check(
@@ -231,7 +231,7 @@ def test_put_fee_sync_check(
         channel_identifier=123,
         chain_id=1,
         nonce=1,
-        percentage_fee=0.02
+        percentage_fee='0.02'
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -250,7 +250,7 @@ def test_put_fee_sync_check(
         channel_identifier=123,
         chain_id=1,
         nonce=1,
-        percentage_fee=0.02
+        percentage_fee='0.02'
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -319,7 +319,7 @@ def test_put_fee_validation(
         channel_identifier=123,
         chain_id=1,
         nonce=1,
-        percentage_fee=0.02
+        percentage_fee='0.02'
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 

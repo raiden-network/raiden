@@ -64,6 +64,7 @@ def test_pfs_with_mocked_client(
             transferred_amount=p1_transferred_amount,
             locked_amount=0,
             locksroot='0x%064x' % 0,
+            additional_hash='0x%064x' % 23
         )
         balance_proof_p2 = clients[p2_index].get_balance_proof(
             clients[p1_index].address,
@@ -71,6 +72,7 @@ def test_pfs_with_mocked_client(
             transferred_amount=p2_transferred_amount,
             locked_amount=0,
             locksroot='0x%064x' % 0,
+            additional_hash='0x%064x' % 23
         )
 
         pathfinding_service.transport.transmit_data(balance_proof_p1.serialize_full())
@@ -125,12 +127,12 @@ def test_pfs_with_mocked_client(
         fee_info_p1 = clients[p1_index].get_fee_info(
             clients[p2_index].address,
             nonce=channel_id + 1,
-            percentage_fee=p1_fee,
+            percentage_fee=str(p1_fee),
         )
         fee_info_p2 = clients[p2_index].get_fee_info(
             clients[p1_index].address,
             nonce=channel_id + 1,
-            percentage_fee=p2_fee,
+            percentage_fee=str(p2_fee),
         )
         pathfinding_service.transport.transmit_data(fee_info_p1.serialize_full())
         pathfinding_service.transport.transmit_data(fee_info_p2.serialize_full())
