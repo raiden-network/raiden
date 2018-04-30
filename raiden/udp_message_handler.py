@@ -81,6 +81,7 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
     if role == 'initiator':
         secret = random_secret()
         state_change = ReceiveTransferRefundCancelRoute(
+            registry_address,
             message.sender,
             routes,
             from_transfer,

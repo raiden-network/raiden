@@ -194,8 +194,8 @@ def make_transfer(
     )
 
     transfer_state = LockedTransferUnsignedState(
-        UNIT_REGISTRY_IDENTIFIER,
         identifier,
+        UNIT_REGISTRY_IDENTIFIER,
         token,
         unsigned_balance_proof,
         lock,

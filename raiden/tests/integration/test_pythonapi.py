@@ -121,6 +121,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
     with pytest.raises(InvalidAddress):
         # sending to an unknown/non-existant address
         RaidenAPI(app0.raiden).transfer(
+            app0.raiden.default_registry.address,
             token_address,
             10,
             target=non_existing_address,
@@ -252,6 +253,7 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
 
     with pytest.raises(InsufficientFunds):
         RaidenAPI(app0.raiden).transfer(
+            app0.raiden.default_registry.address,
             token_address,
             deposit + 1,
             target=app1.raiden.address,

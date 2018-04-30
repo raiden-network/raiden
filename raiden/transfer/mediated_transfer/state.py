@@ -31,8 +31,8 @@ def lockedtransfersigned_from_message(message):
     )
 
     transfer_state = LockedTransferSignedState(
-        message.registry_address,
         message.identifier,
+        message.registry_address,
         message.token,
         balance_proof,
         lock,

@@ -138,6 +138,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     mediated_transfer = LockedTransfer(
         identifier,
         nonce,
+        app0.raiden.default_registry.address,
         token,
         channelstate_0_1.identifier,
         transferred_amount,

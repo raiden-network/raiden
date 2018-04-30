@@ -12,7 +12,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     thus the close was failing if a transfer was made.
     """
     app0, app1 = raiden_network
-    registry_address = app0.radien.default_registry.address
+    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     api1 = RaidenAPI(app0.raiden)

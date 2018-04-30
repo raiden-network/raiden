@@ -99,7 +99,7 @@ def initiator_init(
     return init_initiator_statechange
 
 
-def mediator_init(raiden, transfer):
+def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     registry_address = transfer.registry_address
     routes = routing.get_best_routes(

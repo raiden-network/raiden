@@ -568,6 +568,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
         api_url_for(
             api_backend,
             'transfertotargetresource',
+            registry_address=address_encoder(app1.raiden.default_registry.address),
             token_address=address_encoder(token_address),
             target_address=address_encoder(target_address),
         ),

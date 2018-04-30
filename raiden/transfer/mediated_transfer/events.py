@@ -9,6 +9,7 @@ def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
     return SendRefundTransfer(
         transfer.identifier,
+        transfer.registry_address,
         transfer.token,
         transfer.balance_proof,
         transfer.lock,
@@ -183,6 +184,7 @@ class SendRefundTransfer(Event):
     def __init__(
             self,
             identifier,
+            registry_address,
             token,
             balance_proof,
             lock,
@@ -191,6 +193,7 @@ class SendRefundTransfer(Event):
             recipient):
 
         self.identifier = identifier
+        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -201,11 +204,12 @@ class SendRefundTransfer(Event):
     def __repr__(self):
         return (
             '<'
-            'SendRefundTransfer id:{} token:{} balance_proof:{} lock:{} '
+            'SendRefundTransfer id:{} registry_address:{} token:{} balance_proof:{} lock:{} '
             'initiator:{} target:{} recipient:{}'
             '>'
         ).format(
             self.identifier,
+            pex(self.registry_address),
             pex(self.token),
             self.balance_proof,
             self.lock,
@@ -218,6 +222,7 @@ class SendRefundTransfer(Event):
         return (
             isinstance(other, SendRefundTransfer) and
             self.identifier == other.identifier and
+            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and

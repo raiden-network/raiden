@@ -84,7 +84,8 @@ URLS_V1 = [
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
     ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
     (
-        '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
+        '''/transfers/<hexaddress:registry_address>/
+        <hexaddress:token_address>/<hexaddress:target_address>''',
         TransferToTargetResource,
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
@@ -484,13 +485,20 @@ class RestAPI:
         result = self.partner_per_token_list_schema.dump(schema_list)
         return api_response(result=result.data)
 
-    def initiate_transfer(self, token_address, target_address, amount, identifier):
+    def initiate_transfer(
+            self,
+            registry_address,
+            token_address,
+            target_address,
+            amount,
+            identifier):
 
         if identifier is None:
             identifier = create_default_identifier()
 
         try:
             transfer_result = self.raiden_api.transfer(
+                registry_address=registry_address,
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
@@ -516,6 +524,7 @@ class RestAPI:
 
         transfer = {
             'initiator_address': self.raiden_api.address,
+            'registry_address': registry_address,
             'token_address': token_address,
             'target_address': target_address,
             'amount': amount,

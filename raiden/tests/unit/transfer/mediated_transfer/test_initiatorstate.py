@@ -366,6 +366,7 @@ def test_refund_transfer_next_route():
     assert channel_state.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
+        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=refund_address,
         routes=available_routes,
         transfer=refund_transfer,
@@ -432,6 +433,7 @@ def test_refund_transfer_no_more_routes():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
+        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=channel_state.partner_state.address,
         routes=available_routes,
         transfer=refund_transfer,
@@ -488,6 +490,7 @@ def test_refund_transfer_invalid_sender():
 
     wrong_sender_address = factories.HOP3
     state_change = ReceiveTransferRefundCancelRoute(
+        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=wrong_sender_address,
         routes=available_routes,
         transfer=refund_transfer,
