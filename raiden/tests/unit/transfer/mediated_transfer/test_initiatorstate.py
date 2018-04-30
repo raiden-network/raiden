@@ -5,6 +5,7 @@ from copy import deepcopy
 from raiden.utils import random_secret
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
+    UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
@@ -95,6 +96,7 @@ def test_next_route():
     assert not state.cancelled_channels
 
     state_change = ActionCancelRoute(
+        UNIT_REGISTRY_IDENTIFIER,
         channel1.identifier,
         available_routes,
     )

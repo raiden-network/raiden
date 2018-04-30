@@ -107,7 +107,7 @@ class NettingChannelStateMachine(GenericStateMachine):
             self.tester_chain,
             self.nettingchannel_library_address,
         )
-        self.registry = new_registry(
+        self.registry, registry_address = new_registry(
             deploy_key,
             self.tester_chain,
             self.channel_manager_library_address,
@@ -145,8 +145,11 @@ class NettingChannelStateMachine(GenericStateMachine):
             make_address(),  # used to test invalid transfers
         ]
 
+        self.registry_address = [registry_address]
+
     def steps(self):
         transfer = direct_transfer(  # pylint: disable=no-value-for-parameter
+            sampled_from(self.registry_address),
             sampled_from(self.token_addresses),
             sampled_from(self.channel_addresses),
             sampled_from(self.addresses),

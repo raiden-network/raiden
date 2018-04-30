@@ -80,6 +80,7 @@ def make_lock(amount=7, expiration=1, secrethash=VALID_SECRETHASHES[0]):
 def make_refund_transfer(
         identifier=0,
         nonce=1,
+        registry_address=ADDRESS,
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
@@ -94,6 +95,7 @@ def make_refund_transfer(
     return RefundTransfer(
         identifier,
         nonce,
+        registry_address,
         token,
         channel,
         transferred_amount,
@@ -109,6 +111,7 @@ def make_refund_transfer(
 def make_mediated_transfer(
         identifier=0,
         nonce=1,
+        registry_address=ADDRESS,
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
@@ -131,6 +134,7 @@ def make_mediated_transfer(
     return LockedTransfer(
         identifier,
         nonce,
+        registry_address,
         token,
         channel,
         transferred_amount,
@@ -146,6 +150,7 @@ def make_mediated_transfer(
 def make_direct_transfer(
         identifier=0,
         nonce=1,
+        registry_address=ADDRESS,
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
@@ -155,6 +160,7 @@ def make_direct_transfer(
     return DirectTransfer(
         identifier,
         nonce,
+        registry_address,
         token,
         channel,
         transferred_amount,

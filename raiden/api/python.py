@@ -444,6 +444,7 @@ class RaidenAPI:
 
     def transfer_and_wait(
             self,
+            registry_address,
             token_address,
             amount,
             target,
@@ -453,6 +454,7 @@ class RaidenAPI:
         # pylint: disable=too-many-arguments
 
         async_result = self.transfer_async(
+            registry_address,
             token_address,
             amount,
             target,
@@ -462,6 +464,7 @@ class RaidenAPI:
 
     def transfer_async(
             self,
+            registry_address,
             token_address,
             amount,
             target,
@@ -496,6 +499,7 @@ class RaidenAPI:
         )
 
         async_result = self.raiden.mediated_transfer_async(
+            registry_address,
             token_address,
             amount,
             target,

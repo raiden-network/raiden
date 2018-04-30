@@ -42,6 +42,7 @@ from raiden.tests.utils.factories import (
     HOP4_KEY,
     HOP5_KEY,
     UNIT_SECRETHASH,
+    UNIT_REGISTRY_IDENTIFIER,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
@@ -122,6 +123,7 @@ def make_transfers_pair(privatekeys, amount):
         assert is_valid, msg
 
         lockedtransfer_event = channel.send_lockedtransfer(
+            UNIT_REGISTRY_IDENTIFIER,
             pay_channel,
             UNIT_TRANSFER_INITIATOR,
             UNIT_TRANSFER_TARGET,
@@ -554,6 +556,7 @@ def test_next_transfer_pair():
     available_routes = [factories.route_from_channel(channel1)]
 
     pair, events = mediator.next_transfer_pair(
+        factories.make_address(),
         payer_transfer,
         available_routes,
         channelmap,
@@ -715,6 +718,7 @@ def test_events_for_refund():
 
     small_timeout_blocks = refund_channel.reveal_timeout
     small_refund_events = mediator.events_for_refund_transfer(
+        UNIT_REGISTRY_IDENTIFIER,
         refund_channel,
         refund_transfer,
         small_timeout_blocks,
@@ -723,6 +727,7 @@ def test_events_for_refund():
     assert not small_refund_events
 
     events = mediator.events_for_refund_transfer(
+        UNIT_REGISTRY_IDENTIFIER,
         refund_channel,
         refund_transfer,
         timeout_blocks,
@@ -1202,6 +1207,7 @@ def test_mediate_transfer():
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
+        UNIT_REGISTRY_IDENTIFIER,
         mediator_state,
         possible_routes,
         payer_channel,
@@ -1642,6 +1648,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
+        UNIT_REGISTRY_IDENTIFIER,
         mediator_state,
         possible_routes,
         payer_channel,

@@ -246,6 +246,7 @@ class EchoNode:
             )
 
             self.api.transfer_and_wait(
+                transfer.registry_address,
                 self.token_address,
                 echo_amount,
                 transfer['initiator'],

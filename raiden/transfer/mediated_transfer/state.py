@@ -31,6 +31,7 @@ def lockedtransfersigned_from_message(message):
     )
 
     transfer_state = LockedTransferSignedState(
+        message.registry_address,
         message.identifier,
         message.token,
         balance_proof,
@@ -285,6 +286,7 @@ class LockedTransferSignedState(State):
 
     __slots__ = (
         'identifier',
+        'registry_address',
         'token',
         'balance_proof',
         'lock',
@@ -295,6 +297,7 @@ class LockedTransferSignedState(State):
     def __init__(
             self,
             identifier,
+            registry_address: typing.Address,
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
@@ -313,6 +316,7 @@ class LockedTransferSignedState(State):
             raise ValueError('balance_proof must not be empty')
 
         self.identifier = identifier
+        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -321,9 +325,10 @@ class LockedTransferSignedState(State):
 
     def __repr__(self):
         return (
-            '<LockedTransferSignedState id:{} token:{} lock:{} target:{}>'
+            '<LockedTransferSignedState id:{} registry_address:{} token:{} lock:{} target:{}>'
         ).format(
             self.identifier,
+            encode_hex(self.registry_address),
             encode_hex(self.token),
             self.lock,
             encode_hex(self.target),
@@ -333,6 +338,7 @@ class LockedTransferSignedState(State):
         return (
             isinstance(other, LockedTransferSignedState) and
             self.identifier == other.identifier and
+            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and

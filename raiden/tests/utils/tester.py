@@ -310,7 +310,7 @@ def new_registry(deploy_key, tester_chain, channel_manager_library_address, log_
         registry_address,
         log_listener,
     )
-    return registry
+    return registry, registry_address
 
 
 def new_token(deploy_key, tester_chain, token_amount, log_listener):

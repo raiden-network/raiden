@@ -68,9 +68,10 @@ def initiator_init(
         transfer_identifier,
         transfer_amount,
         transfer_secret,
+        registry_address,
         token_address,
         target_address):
-    registry_address = raiden.default_registry.address
+
     transfer_state = TransferDescriptionWithSecretState(
         transfer_identifier,
         transfer_amount,
@@ -493,7 +494,13 @@ class RaidenService:
                 self.alarm.wait_time,
             )
 
-    def mediated_transfer_async(self, token_address, amount, target, identifier):
+    def mediated_transfer_async(
+            self,
+            registry_address,
+            token_address,
+            amount,
+            target,
+            identifier):
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asyncronous transfer, the transfer might fail
@@ -506,6 +513,7 @@ class RaidenService:
         """
 
         async_result = self.start_mediated_transfer(
+            registry_address,
             token_address,
             amount,
             identifier,
@@ -551,7 +559,14 @@ class RaidenService:
 
         self.handle_state_change(direct_transfer)
 
-    def start_mediated_transfer(self, token_address, amount, identifier, target):
+    def start_mediated_transfer(
+            self,
+            registry_address,
+            token_address,
+            amount,
+            identifier,
+            target):
+
         self.protocol.start_health_check(target)
 
         if identifier is None:
@@ -568,6 +583,7 @@ class RaidenService:
             identifier,
             amount,
             secret,
+            registry_address,
             token_address,
             target,
         )

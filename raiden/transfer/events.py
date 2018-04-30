@@ -263,7 +263,12 @@ class SendDirectTransfer(Event):
 
     def __repr__(self):
         return (
-            '<SendDirectTransfer identifier:{} balance_proof:{} registry_address:{} token:{} recipient:{}>'
+            """<SendDirectTransfer
+                    identifier:{}
+                    balance_proof:{}
+                    registry_address:{}
+                    token:{}
+                    recipient:{}>"""
         ).format(
             self.identifier,
             self.balance_proof,

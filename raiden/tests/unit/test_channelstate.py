@@ -46,6 +46,9 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import (
+    UNIT_REGISTRY_IDENTIFIER
+)
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
     sha3,
@@ -153,7 +156,8 @@ def make_receive_transfer_direct(
         privkey,
         nonce,
         transferred_amount,
-        locksroot=EMPTY_MERKLE_ROOT):
+        locksroot=EMPTY_MERKLE_ROOT,
+        registry_address=UNIT_REGISTRY_IDENTIFIER):
 
     address = privatekey_to_address(privkey.secret)
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
@@ -163,6 +167,7 @@ def make_receive_transfer_direct(
     mediated_transfer_msg = DirectTransfer(
         identifier,
         nonce,
+        registry_address,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -189,7 +194,8 @@ def make_receive_transfer_mediated(
         nonce,
         transferred_amount,
         lock,
-        merkletree_leaves=None):
+        merkletree_leaves=None,
+        registry_address=UNIT_REGISTRY_IDENTIFIER):
 
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
@@ -212,6 +218,7 @@ def make_receive_transfer_mediated(
     mediated_transfer_msg = LockedTransfer(
         identifier,
         nonce,
+        registry_address,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -226,6 +233,7 @@ def make_receive_transfer_mediated(
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_lockedtransfer = LockedTransferSignedState(
+        registry_address,
         identifier,
         channel_state.token_address,
         balance_proof,
@@ -499,8 +507,10 @@ def test_channelstate_send_lockedtransfer():
     identifier = 1
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
+    registry_address = factories.make_address()
 
     channel.send_lockedtransfer(
+        registry_address,
         channel_state,
         transfer_initiator,
         transfer_target,

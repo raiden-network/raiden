@@ -88,7 +88,10 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_close_accepts_only_transfer_from_participants(tester_channels, private_keys):
+def test_close_accepts_only_transfer_from_participants(
+        tester_registry_address,
+        tester_channels,
+        private_keys):
     """ Close must not accept a transfer signed by a non participant. """
     pkey0, _, nettingchannel, channel0, _ = tester_channels[0]
     nonparticipant_key = private_keys[2]
@@ -98,6 +101,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     transfer_nonparticipant = DirectTransfer(
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
+        registry_address=tester_registry_address,
         token=channel0.token_address,
         channel=channel0.identifier,
         transferred_amount=10,
@@ -123,7 +127,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_close_wrong_channel(tester_channels):
+def test_close_wrong_channel(tester_registry_address, tester_channels):
     """ Close must not accept a transfer aimed at a different channel. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
@@ -133,6 +137,7 @@ def test_close_wrong_channel(tester_channels):
     transfer_wrong_channel = DirectTransfer(
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
+        registry_address=tester_registry_address,
         token=channel0.token_address,
         channel=wrong_address,
         transferred_amount=10,

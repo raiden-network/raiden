@@ -31,6 +31,7 @@ def test_failsfast_directtransfer_exceeding_distributable(
     token_address = token_addresses[0]
 
     async_result = alice_app.raiden.direct_transfer_async(
+        alice_app.raiden.default_registry.address,
         token_address,
         deposit * 2,
         bob_app.raiden.address,
@@ -54,7 +55,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=1,
-        registry=registry,
+        registry_address=registry,
         token=invalid_token_address,
         channel=channel_identifier,
         transferred_amount=0,
@@ -93,7 +94,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=1,
-        registry=registry,
+        registry_address=registry,
         token=token_address,
         channel=channel_identifier,
         transferred_amount=0,
@@ -128,7 +129,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
     direct_transfer_message = DirectTransfer(
         identifier=1,
         nonce=1,
-        registry=registry,
+        registry_address=registry,
         token=token_address,
         channel=channel_identifier,
         transferred_amount=10,
@@ -181,7 +182,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
     invalid_direct_transfer_message = DirectTransfer(
         identifier=same_identifier,
         nonce=1,
-        registry=registry_address,
+        registry_address=registry_address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=invalid_transferred_amount,
@@ -226,7 +227,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     direct_transfer_message = DirectTransfer(
         identifier=1,
         nonce=1,
-        registry=registry,
+        registry_address=registry,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=10,

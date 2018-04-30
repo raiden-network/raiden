@@ -141,7 +141,8 @@ class ActionCancelRoute(StateChange):
         timeouts.
     """
 
-    def __init__(self, identifier, routes):
+    def __init__(self, registry_address, identifier, routes):
+        self.registry_address = registry_address
         self.identifier = identifier
         self.routes = routes
 
@@ -153,6 +154,7 @@ class ActionCancelRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionCancelRoute) and
+            self.registry_address == self.registry_address and
             self.identifier == other.identifier and
             self.routes == other.routes
         )

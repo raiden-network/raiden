@@ -32,7 +32,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_OPENED,
 )
-from raiden.utils import sha3
+from raiden.utils import (sha3, typing)
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:
 # The payee could reveal the secret on it's lock expiration block, the lock
@@ -345,6 +345,7 @@ def next_channel_from_routes(
 
 
 def next_transfer_pair(
+        registry_address: typing.Address,
         payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
@@ -381,6 +382,7 @@ def next_transfer_pair(
         lock_expiration = lock_timeout + block_number
 
         lockedtransfer_event = channel.send_lockedtransfer(
+            registry_address,
             payee_channel,
             payer_transfer.initiator,
             payer_transfer.target,
@@ -517,7 +519,12 @@ def set_expired_pairs(transfers_pair, block_number):
     return events
 
 
-def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, block_number):
+def events_for_refund_transfer(
+        registry_address,
+        refund_channel,
+        refund_transfer,
+        timeout_blocks,
+        block_number):
     """ Refund the transfer.
     Args:
         refund_route (RouteState): The original route that sent the mediated
@@ -546,6 +553,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
         new_lock_expiration = new_lock_timeout + block_number
 
         refund_transfer = channel.send_refundtransfer(
+            registry_address,
             refund_channel,
             refund_transfer.initiator,
             refund_transfer.target,
@@ -772,6 +780,7 @@ def secret_learned(
 
 
 def mediate_transfer(
+        registry_address,
         state,
         possible_routes,
         payer_channel,
@@ -809,6 +818,7 @@ def mediate_transfer(
         assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
 
         transfer_pair, mediated_events = next_transfer_pair(
+            registry_address,
             payer_transfer,
             available_routes,
             channelidentifiers_to_channels,
@@ -830,6 +840,7 @@ def mediate_transfer(
             original_transfer = payer_transfer
 
         refund_events = events_for_refund_transfer(
+            registry_address,
             original_channel,
             original_transfer,
             timeout_blocks,
@@ -868,6 +879,7 @@ def handle_init(state_change, channelidentifiers_to_channels, block_number):
         return TransitionResult(None, [])
 
     iteration = mediate_transfer(
+        state_change.payment_network_identifier,
         mediator_state,
         routes,
         payer_channel,
@@ -915,7 +927,7 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
 
 def handle_refundtransfer(
         mediator_state,
-        mediator_state_change,
+        mediator_state_change: ReceiveTransferRefund,
         channelidentifiers_to_channels,
         block_number):
     """ Validate and handle a ReceiveTransferRefund mediator_state change.
@@ -951,6 +963,7 @@ def handle_refundtransfer(
             payer_channel = channelidentifiers_to_channels[channel_address]
 
             iteration = mediate_transfer(
+                mediator_state_change.transfer.registry_address,
                 mediator_state,
                 mediator_state_change.routes,
                 payer_channel,
