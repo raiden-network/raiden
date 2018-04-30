@@ -12,6 +12,7 @@ from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.transport import MatrixTransport
 from raiden_libs.types import Address
 from raiden_contracts.contract_manager import ContractManager
+from matrix_client.errors import MatrixRequestError
 
 from pathfinder.model import TokenNetwork
 
@@ -19,13 +20,24 @@ log = logging.getLogger(__name__)
 
 
 def error_handler(context, exc_info):
-    log.fatal("Unhandled exception. Terminating the program...")
-    traceback.print_exception(
-        etype=exc_info[0],
-        value=exc_info[1],
-        tb=exc_info[2]
-    )
-    sys.exit()
+    if exc_info[0] == MatrixRequestError:
+        log.error(
+            'Can not connect to the matrix system. Please check your settings. '
+            'Detailed error message: %s', exc_info[1]
+        )
+        sys.exit()
+    else:
+        log.fatal(
+            'Unhandled exception. Terminating the program...'
+            'Please report this issue at '
+            'https://github.com/raiden-network/raiden-pathfinding-service/issues'
+        )
+        traceback.print_exception(
+            etype=exc_info[0],
+            value=exc_info[1],
+            tb=exc_info[2]
+        )
+        sys.exit()
 
 
 class PathfindingService(gevent.Greenlet):

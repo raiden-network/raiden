@@ -16,6 +16,7 @@ from hexbytes import HexBytes
 from eth_utils import is_checksum_address
 from raiden_libs.no_ssl_patch import no_ssl_verification
 from raiden_libs.types import Address
+from requests.exceptions import ConnectionError
 
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.transport import MatrixTransport
@@ -96,14 +97,24 @@ def main(
 
     log.info("Starting Raiden Pathfinding Service")
 
-    log.info(f'Starting Web3 client for node at {eth_rpc}')
-    web3 = Web3(HTTPProvider(eth_rpc))
+    try:
+        log.info(f'Starting Web3 client for node at {eth_rpc}')
+        web3 = Web3(HTTPProvider(eth_rpc))
 
-    token_network_addresses = check_supplied_token_network_addresses(token_network_addresses, web3)
-    if token_network_addresses:
-        log.info(f'Following {len(token_network_addresses)} network(s):')
-    else:
-        log.info('Following all networks.')
+        token_network_addresses = check_supplied_token_network_addresses(
+            token_network_addresses,
+            web3
+        )
+        if token_network_addresses:
+            log.info(f'Following {len(token_network_addresses)} network(s):')
+        else:
+            log.info('Following all networks.')
+    except ConnectionError as error:
+        log.error(
+            'Can not connect to the Ethereum client. Please check that it is running and that '
+            'your settings are correct.'
+        )
+        sys.exit()
 
     with no_ssl_verification():
         service = None
