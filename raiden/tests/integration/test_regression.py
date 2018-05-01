@@ -57,6 +57,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     wait_for_partners(raiden_network)
 
     transfer = app0.raiden.mediated_transfer_async(
+        registry_address=app0.raiden.default_registry.address,
         token_address=token,
         amount=1,
         target=app4.raiden.address,
@@ -76,6 +77,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
 
     identifier = 1
     transfer = app0.raiden.mediated_transfer_async(
+        registry_address=app0.raiden.default_registry.address,
         token_address=token,
         amount=1,
         target=app2.raiden.address,
@@ -136,6 +138,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     mediated_transfer = LockedTransfer(
         identifier,
         nonce,
+        app0.raiden.default_registry.address,
         token,
         channelstate_0_1.identifier,
         transferred_amount,

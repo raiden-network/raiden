@@ -97,6 +97,7 @@ def test_throughput(apps, tokens, num_transfers, amount):
 
         for i in range(num_transfers):
             async_result = api.transfer_async(
+                curr_app.raiden.default_registry.address,
                 curr_token,
                 amount,
                 target,
@@ -141,6 +142,7 @@ def test_latency(apps, tokens, num_transfers, amount):
             api = curr_app.raiden.api
             for i in range(num_transfers):
                 async_result = api.transfer_async(
+                    curr_app.raiden.default_registry.address,
                     curr_token,
                     amount,
                     target,

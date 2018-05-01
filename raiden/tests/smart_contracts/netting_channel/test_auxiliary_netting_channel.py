@@ -211,6 +211,7 @@ def test_signature_split(tester_chain, tester_nettingchannel_library_address):
     msg = DirectTransfer(
         identifier=1,
         nonce=1,
+        registry_address='x' * 20,
         token='x' * 20,
         channel=auxiliary.address,
         transferred_amount=10,
@@ -244,6 +245,7 @@ def test_recoverAddressFromSignature(tester_chain, tester_nettingchannel_library
     msg = DirectTransfer(
         identifier=1,
         nonce=1,
+        registry_address='x' * 20,
         token='x' * 20,
         channel=auxiliary.address,
         transferred_amount=10,

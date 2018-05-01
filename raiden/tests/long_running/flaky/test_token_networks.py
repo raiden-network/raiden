@@ -23,6 +23,8 @@ log = logging.getLogger(__name__)
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
 def test_participant_selection(raiden_network, token_addresses):
+    registry_address = raiden_network[0].raiden.default_registry.address
+
     # pylint: disable=too-many-locals
     token_address = token_addresses[0]
 
@@ -124,6 +126,7 @@ def test_participant_selection(raiden_network, token_addresses):
     assert sender_channel.external_state.opened_block != 0
 
     RaidenAPI(sender).transfer_and_wait(
+        registry_address,
         token_address,
         1,
         receiver.address

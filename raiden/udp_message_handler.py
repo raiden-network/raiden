@@ -59,7 +59,7 @@ def handle_message_secret(raiden: 'RaidenService', message: Secret):
 
 
 def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransfer):
-    registry_address = raiden.default_registry.address
+    registry_address = message.registry_address
     from_transfer = lockedtransfersigned_from_message(message)
     node_state = views.state_from_raiden(raiden)
 
@@ -81,6 +81,7 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
     if role == 'initiator':
         secret = random_secret()
         state_change = ReceiveTransferRefundCancelRoute(
+            registry_address,
             message.sender,
             routes,
             from_transfer,
@@ -96,12 +97,12 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
 
 
 def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransfer):
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = message.registry_address
     token_address = message.token
     balance_proof = balanceproof_from_envelope(message)
 
     direct_transfer = ReceiveTransferDirect(
-        payment_network_identifier,
+        registry_address,
         token_address,
         message.identifier,
         balance_proof,

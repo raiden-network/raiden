@@ -37,6 +37,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     refund_amount = deposit // 2
     identifier = 1
     async_result = app0.raiden.mediated_transfer_async(
+        app0.raiden.default_registry.address,
         token_address,
         refund_amount,
         app2.raiden.address,
@@ -134,6 +135,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     identifier_refund = 3
     amount_refund = 50
     async_result = app0.raiden.mediated_transfer_async(
+        app0.raiden.default_registry.address,
         token_address,
         amount_refund,
         app2.raiden.address,

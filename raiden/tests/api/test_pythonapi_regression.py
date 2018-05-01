@@ -12,6 +12,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     thus the close was failing if a transfer was made.
     """
     app0, app1 = raiden_network
+    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     api1 = RaidenAPI(app0.raiden)
@@ -26,7 +27,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
 
     # Initialize app2 balance proof and close the channel
     amount = 10
-    assert api1.transfer(token_address, amount, api2.address)
+    assert api1.transfer(registry_address, token_address, amount, api2.address)
 
     api2.channel_close(token_address, api1.address)
 

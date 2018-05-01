@@ -141,7 +141,8 @@ class ActionCancelRoute(StateChange):
         timeouts.
     """
 
-    def __init__(self, identifier, routes):
+    def __init__(self, registry_address, identifier, routes):
+        self.registry_address = registry_address
         self.identifier = identifier
         self.routes = routes
 
@@ -153,6 +154,7 @@ class ActionCancelRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionCancelRoute) and
+            self.registry_address == self.registry_address and
             self.identifier == other.identifier and
             self.routes == other.routes
         )
@@ -225,12 +227,13 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     route.
     """
 
-    def __init__(self, sender, routes, transfer, secret):
+    def __init__(self, registry_address, sender, routes, transfer, secret):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         secrethash = sha3(secret)
 
+        self.registry_address = registry_address
         self.sender = sender
         self.transfer = transfer
         self.routes = routes
@@ -246,6 +249,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferRefundCancelRoute) and
+            self.registry_address == other.registry_address and
             self.sender == other.sender and
             self.transfer == other.transfer and
             self.routes == other.routes and

@@ -78,6 +78,7 @@ def next_channel_from_routes(
 
 
 def try_new_route(
+        registry_address: typing.Address,
         channelidentifiers_to_channels: ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
@@ -112,6 +113,7 @@ def try_new_route(
         )
 
         lockedtransfer_event = send_lockedtransfer(
+            registry_address,
             initiator_state,
             channel_state,
             block_number,
@@ -124,6 +126,7 @@ def try_new_route(
 
 
 def send_lockedtransfer(
+        registry_address: typing.Address,
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
@@ -141,6 +144,7 @@ def send_lockedtransfer(
     )
 
     lockedtransfer_event = channel.send_lockedtransfer(
+        registry_address,
         channel_state,
         transfer_description.initiator,
         transfer_description.target,

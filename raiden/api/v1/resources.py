@@ -128,8 +128,9 @@ class TransferToTargetResource(BaseResource):
     )
 
     @use_kwargs(post_schema, locations=('json',))
-    def post(self, token_address, target_address, amount, identifier):
+    def post(self, registry_address, token_address, target_address, amount, identifier):
         return self.rest_api.initiate_transfer(
+            registry_address=registry_address,
             token_address=token_address,
             target_address=target_address,
             amount=amount,

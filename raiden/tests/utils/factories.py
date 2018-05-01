@@ -195,6 +195,7 @@ def make_transfer(
 
     transfer_state = LockedTransferUnsignedState(
         identifier,
+        UNIT_REGISTRY_IDENTIFIER,
         token,
         unsigned_balance_proof,
         lock,
@@ -231,6 +232,7 @@ def make_signed_transfer(
     transfer = LockedTransfer(
         identifier,
         nonce,
+        UNIT_REGISTRY_IDENTIFIER,
         token,
         channel_identifier,
         transferred_amount,
