@@ -10,7 +10,7 @@ from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.utils import private_key_to_address
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
-from raiden_libs.types import Address
+from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
@@ -48,13 +48,13 @@ def channel_descriptions_case_1() -> List:
     #  \-------/
 
     channel_descriptions = [
-        (0, 100,  20, 0.0010, 1,  50,  10, 0.0015),  # capacities  90 --  60
-        (1,  40,  10, 0.0008, 2, 130, 100, 0.0012),  # capacities 130 --  40
-        (2,  90,  10, 0.0007, 3,  10,   0, 0.0010),  # capacities  80 --  10
-        (3,  50,  20, 0.0011, 4,  50,  20, 0.0011),  # capacities  50 --  50
-        (0,  40,  40, 0.0015, 2,  80,   0, 0.0025),  # capacities   0 -- 120
-        (1,  30,  10, 0.0100, 4,  40,  15, 0.0018),  # capacities  35 --  35
-        (5, 500, 900, 0.0030, 6, 750, 950, 0.0040),  # capacities 550 -- 700
+        (0, 100,  20,  10, 1,  50,  10, 15),  # capacities  90 --  60
+        (1,  40,  10,   8, 2, 130, 100, 12),  # capacities 130 --  40
+        (2,  90,  10,   7, 3,  10,   0, 10),  # capacities  80 --  10
+        (3,  50,  20,  11, 4,  50,  20, 11),  # capacities  50 --  50
+        (0,  40,  40,  15, 2,  80,   0, 25),  # capacities   0 -- 120
+        (1,  30,  10, 100, 4,  40,  15, 18),  # capacities  35 --  35
+        (5, 500, 900,  30, 6, 750, 950, 40),  # capacities 550 -- 700
     ]
     return channel_descriptions
 
@@ -84,13 +84,13 @@ def channel_descriptions_case_2() -> List:
     #       \-- 5 --/
 
     channel_descriptions = [
-        (0, 100,  20, 0.3, 1,  50,  10, 0.3),  # capacities  90 --  60
-        (1,  40,  10, 0.2, 4, 130, 100, 0.2),  # capacities 130 --  40
-        (0,  90,  10, 0.1, 2,  10,   0, 0.1),  # capacities  80 --  10
-        (2,  50,  20, 0.2, 3,  50,  20, 0.2),  # capacities  50 --  50
-        (3, 100,  40, 0.1, 4,  80,   0, 0.1),  # capacities  60 -- 120
-        (2,  30,  10, 0.1, 5,  40,  15, 0.1),  # capacities  35 --  35
-        (5, 500, 900, 0.1, 4, 750, 950, 0.1),  # capacities 550 -- 700
+        (0, 100,  20, 3000, 1,  50,  10, 3000),  # capacities  90 --  60
+        (1,  40,  10, 2000, 4, 130, 100, 2000),  # capacities 130 --  40
+        (0,  90,  10, 1000, 2,  10,   0, 1000),  # capacities  80 --  10
+        (2,  50,  20, 1500, 3,  50,  20, 1500),  # capacities  50 --  50
+        (3, 100,  40, 1000, 4,  80,   0, 1000),  # capacities  60 -- 120
+        (2,  30,  10, 1000, 5,  40,  15, 1000),  # capacities  35 --  35
+        (5, 500, 900, 1000, 4, 750, 950, 1000),  # capacities 550 -- 700
     ]
     return channel_descriptions
 
@@ -118,12 +118,14 @@ def populate_token_networks_random(
     random.seed(NUMBER_OF_CHANNELS)
 
     for token_network in token_networks:
-        for channel_id in range(NUMBER_OF_CHANNELS):
+        for channel_id_int in range(NUMBER_OF_CHANNELS):
+            channel_id = ChannelIdentifier(channel_id_int)
+
             private_key1, private_key2 = random.sample(private_keys, 2)
             address1 = Address(private_key_to_address(private_key1))
             address2 = Address(private_key_to_address(private_key2))
-            fee1 = abs(random.gauss(0.0002, 0.0001))
-            fee2 = abs(random.gauss(0.0002, 0.0001))
+            fee1 = random.randint(100, 10000)
+            fee2 = random.randint(100, 10000)
             token_network.handle_channel_opened_event(
                 channel_id,
                 address1,
@@ -181,31 +183,31 @@ def populate_token_networks() -> Callable:
         ) in enumerate(channel_descriptions):
             for token_network in token_networks:
                 token_network.handle_channel_opened_event(
-                    channel_id,
+                    ChannelIdentifier(channel_id),
                     addresses[p1_index],
                     addresses[p2_index]
                 )
 
                 token_network.handle_channel_new_deposit_event(
-                    channel_id,
+                    ChannelIdentifier(channel_id),
                     addresses[p1_index],
                     p1_deposit
                 )
                 token_network.handle_channel_new_deposit_event(
-                    channel_id,
+                    ChannelIdentifier(channel_id),
                     addresses[p2_index],
                     p2_deposit
                 )
 
                 token_network.update_balance(
-                    channel_id,
+                    ChannelIdentifier(channel_id),
                     addresses[p1_index],
                     1,
                     p1_transferred_amount,
                     0
                 )
                 token_network.update_balance(
-                    channel_id,
+                    ChannelIdentifier(channel_id),
                     addresses[p2_index],
                     1,
                     p2_transferred_amount,
@@ -213,16 +215,16 @@ def populate_token_networks() -> Callable:
                 )
 
                 token_network.update_fee(
-                    channel_identifier=channel_id,
+                    channel_identifier=ChannelIdentifier(channel_id),
                     signer=addresses[p1_index],
                     nonce=channel_id + 1,
-                    new_percentage_fee=p1_fee
+                    relative_fee=p1_fee
                 )
                 token_network.update_fee(
-                    channel_identifier=channel_id,
+                    channel_identifier=ChannelIdentifier(channel_id),
                     signer=addresses[p2_index],
                     nonce=channel_id + 1,
-                    new_percentage_fee=p2_fee
+                    relative_fee=p2_fee
                 )
 
     return populate_token_networks

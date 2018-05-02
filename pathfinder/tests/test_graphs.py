@@ -34,7 +34,7 @@ def test_routing_benchmark(
         fees = path_object['estimated_fee']
         for node1, node2 in zip(path[:-1], path[1:]):
             view: ChannelView = G[node1][node2]['view']
-            print('fee = ', view.percentage_fee, 'capacity = ', view.capacity)
+            print('fee = ', view.relative_fee, 'capacity = ', view.capacity)
         print('fee sum = ', fees)
     print(paths)
     print(np.mean(np.array(times)), np.min(np.array(times)), np.max(np.array(times)))
@@ -54,7 +54,7 @@ def test_routing_simple(
     assert view01.deposit == 100
     assert view01.transferred_amount == 20
     assert view01.locked_amount == 0
-    assert isclose(view01._percentage_fee, 0.001)
+    assert isclose(view01._relative_fee, 10)
     assert view01.capacity == 90
     assert view10.capacity == 60
 
@@ -64,7 +64,7 @@ def test_routing_simple(
     assert len(paths) == 1
     assert paths[0] == {
         'path': [addresses[0], addresses[1], addresses[2], addresses[3]],
-        'estimated_fee': 0.0025
+        'estimated_fee': 25
     }
 
     # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
@@ -90,11 +90,11 @@ def test_routing_disjoint_case1(
     assert len(paths) == 2
     assert paths[0] == {
         'path': [addresses[0], addresses[1], addresses[2]],
-        'estimated_fee': 0.0018,
+        'estimated_fee': 18,
     }
     assert paths[1] == {
         'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-        'estimated_fee': 0.0131
+        'estimated_fee': 131
     }
 
 
@@ -110,26 +110,26 @@ def test_routing_disjoint_case2(
     paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
     assert len(paths) == 3
     assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert isclose(paths[0]['estimated_fee'], 0.3)
+    assert paths[0]['estimated_fee'] == 3000
 
     assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert isclose(paths[1]['estimated_fee'], 0.4)
+    assert paths[1]['estimated_fee'] == 3500
 
     assert paths[2]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert isclose(paths[2]['estimated_fee'], 0.5)
+    assert paths[2]['estimated_fee'] == 5000
 
     # set diversity penalty higher
-    monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
+    monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 10000)
     paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
     assert len(paths) == 3
     assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert isclose(paths[0]['estimated_fee'], 0.3)
+    assert paths[0]['estimated_fee'] == 3000
 
     assert paths[1]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert isclose(paths[1]['estimated_fee'], 0.5)
+    assert paths[1]['estimated_fee'] == 5000
 
     assert paths[2]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert isclose(paths[2]['estimated_fee'], 0.4)
+    assert paths[2]['estimated_fee'] == 3500
 
 
 def test_routing_hop_fee_balance(
@@ -144,11 +144,11 @@ def test_routing_hop_fee_balance(
     paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=0)
     assert paths[0] == {
         'path': [addresses[1], addresses[2], addresses[3], addresses[4]],
-        'estimated_fee': 0.0026
+        'estimated_fee': 26
     }
     # Prefer fast over cheap.
     paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=1)
     assert paths[0] == {
         'path': [addresses[1], addresses[4]],
-        'estimated_fee': 0.01
+        'estimated_fee': 100
     }

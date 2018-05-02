@@ -26,7 +26,7 @@ def test_put_balance(
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
     balance_proof = BalanceProof(
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         token_network_address=token_network_addresses[0],
         nonce=1,
         chain_id=321,
@@ -70,7 +70,7 @@ def test_put_balance_sync_check(
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
     balance_proof = BalanceProof(
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         token_network_address=token_network_addresses[0],
         nonce=1,
         chain_id=321,
@@ -90,7 +90,7 @@ def test_put_balance_sync_check(
     )
 
     balance_proof = BalanceProof(
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         token_network_address=token_network_addresses[1],
         nonce=1,
         chain_id=321,
@@ -163,7 +163,7 @@ def test_put_balance_validation(
     # here the balance_hash property is missing
     body = dict(
         message_type='BalanceProof',
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         token_network_address=token_network_addresses[1],
         nonce=1,
         chain_id=321,
@@ -190,10 +190,10 @@ def test_put_fee(
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         chain_id=1,
         nonce=1,
-        percentage_fee='0.02'
+        relative_fee=1000
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -212,7 +212,7 @@ def test_put_fee(
     assert channel_id == 123
     assert is_same_address(sender, private_key_to_address(private_keys[0]))
     assert nonce == 1
-    assert fee == '0.02'
+    assert fee == 1000
 
 
 def test_put_fee_sync_check(
@@ -228,10 +228,10 @@ def test_put_fee_sync_check(
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         chain_id=1,
         nonce=1,
-        percentage_fee='0.02'
+        relative_fee=1000
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -247,10 +247,10 @@ def test_put_fee_sync_check(
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[1],
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         chain_id=1,
         nonce=1,
-        percentage_fee='0.02'
+        relative_fee=1000
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -316,10 +316,10 @@ def test_put_fee_validation(
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=123,
+        channel_identifier=ChannelIdentifier(123),
         chain_id=1,
         nonce=1,
-        percentage_fee='0.02'
+        relative_fee=1000
     )
     fee_info.signature = encode_hex(sign_data(private_keys[0], fee_info.serialize_bin()))
 
@@ -327,11 +327,11 @@ def test_put_fee_validation(
     body['message_type'] = 'FeeInfo'
 
     # remove the fee to make it an invalid message
-    del body['percentage_fee']
+    del body['relative_fee']
 
     response = requests.put(url, json=body)
     assert response.status_code == 400
-    assert response.json()['error'] == "'percentage_fee' is a required property"
+    assert response.json()['error'] == "'relative_fee' is a required property"
 
 
 #
@@ -449,11 +449,11 @@ def test_get_paths(
     assert paths == [
         {
             'path': [addresses[0], addresses[1], addresses[2]],
-            'estimated_fee': 0.0018
+            'estimated_fee': 18
         },
         {
             'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-            'estimated_fee': 0.0131
+            'estimated_fee': 131
         }
     ]
 

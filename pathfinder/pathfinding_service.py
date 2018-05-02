@@ -200,7 +200,7 @@ class PathfindingService(gevent.Greenlet):
                 fee_info.channel_identifier,
                 Address(to_checksum_address(fee_info.signer)),
                 fee_info.nonce,
-                fee_info.percentage_fee
+                fee_info.relative_fee
             )
 
     def on_balance_proof_message(self, balance_proof: BalanceProof):

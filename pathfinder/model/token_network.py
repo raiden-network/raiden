@@ -33,14 +33,13 @@ class TokenNetwork:
         """ Initializes a new TokenNetwork. """
 
         self.address = token_network_address
-        self.channel_id_to_addresses: Dict[int, Tuple[Address, Address]] = dict()
+        self.channel_id_to_addresses: Dict[ChannelIdentifier, Tuple[Address, Address]] = dict()
         self.G = DiGraph()
-        self.max_percentage_fee = 0.0
+        self.max_relative_fee = 0
 
     #
     # Contract event listener functions
     #
-
     def handle_channel_opened_event(
         self,
         channel_identifier: ChannelIdentifier,
@@ -114,7 +113,6 @@ class TokenNetwork:
     #
     # pathfinding endpoints
     #
-
     def update_balance(
         self,
         channel_identifier: ChannelIdentifier,
@@ -160,7 +158,7 @@ class TokenNetwork:
         channel_identifier: ChannelIdentifier,
         signer: Address,
         nonce: int,
-        new_percentage_fee: float,
+        relative_fee: int,
     ):
         """ Update the channel with a new fee.
 
@@ -180,25 +178,24 @@ class TokenNetwork:
         else:
             raise ValueError('Fee update signature does not match any of the participants.')
 
-        new_percentage_fee_casted = float(new_percentage_fee)
         channel_view: ChannelView = self.G[sender][receiver]['view']
 
         if nonce <= channel_view.fee_info_nonce:
             raise ValueError('Outdated fee info.')
 
-        if new_percentage_fee_casted >= self.max_percentage_fee:
+        if relative_fee >= self.max_relative_fee:
             # Equal case is included to avoid a recalculation of the max fee.
-            self.max_percentage_fee = new_percentage_fee_casted
-            channel_view._percentage_fee = new_percentage_fee_casted
-        elif channel_view._percentage_fee == self.max_percentage_fee:
+            self.max_relative_fee = relative_fee
+            channel_view._relative_fee = relative_fee
+        elif channel_view._relative_fee == self.max_relative_fee:
             # O(n) operation but rarely called, amortized likely constant.
-            channel_view._percentage_fee = new_percentage_fee_casted
-            self.max_percentage_fee = max(
-                edge_data['view'].percentage_fee
+            channel_view._relative_fee = relative_fee
+            self.max_relative_fee = max(
+                edge_data['view'].relative_fee
                 for _, _, edge_data in self.G.edges(data=True)
             )
 
-        channel_view.update_fee(nonce, new_percentage_fee_casted)
+        channel_view.update_fee(nonce, relative_fee)
 
     def get_paths(
         self,
@@ -223,12 +220,12 @@ class TokenNetwork:
             if view.capacity < value:
                 return None
             else:
-                return hop_bias * self.max_percentage_fee + \
-                       (1 - hop_bias) * view._percentage_fee + \
+                return hop_bias * self.max_relative_fee + \
+                       (1 - hop_bias) * view._relative_fee + \
                        visited.get(
                             view.channel_id,
                             0
-                        )
+                       )
 
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
         for _ in range(max_iterations):
@@ -250,7 +247,7 @@ class TokenNetwork:
         for path in paths:
             fee = 0
             for node1, node2 in zip(path[:-1], path[1:]):
-                fee += self.G[node1][node2]['view'].percentage_fee
+                fee += self.G[node1][node2]['view'].relative_fee
 
             result.append(dict(
                 path=path,

@@ -6,7 +6,6 @@ processes them. Additionally, it mocks the transport layer directly. It tests th
 interaction of many moving parts - yet, it is currently really slow.
 Therefore, usually mocked_integration should be used.
 """
-import math
 from typing import List
 
 import gevent
@@ -124,28 +123,24 @@ def test_pfs_with_mocked_client(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
-        fee_info_p1 = clients[p1_index].get_fee_info(
-            clients[p2_index].address,
+        client1 = clients[p1_index]
+        client2 = clients[p2_index]
+        fee_info_p1 = client1.get_fee_info(
+            client2.address,
             nonce=channel_id + 1,
-            percentage_fee=str(p1_fee),
+            relative_fee=p1_fee,
         )
-        fee_info_p2 = clients[p2_index].get_fee_info(
-            clients[p1_index].address,
+        fee_info_p2 = client2.get_fee_info(
+            client1.address,
             nonce=channel_id + 1,
-            percentage_fee=str(p2_fee),
+            relative_fee=p2_fee,
         )
         pathfinding_service.transport.transmit_data(fee_info_p1.serialize_full())
         pathfinding_service.transport.transmit_data(fee_info_p2.serialize_full())
 
         gevent.sleep(0)
-        assert math.isclose(
-            graph[clients[p1_index].address][clients[p2_index].address]['view'].percentage_fee,
-            p1_fee
-        )
-        assert math.isclose(
-            graph[clients[p2_index].address][clients[p1_index].address]['view'].percentage_fee,
-            p2_fee
-        )
+        assert graph[client1.address][client2.address]['view'].relative_fee == p1_fee
+        assert graph[client2.address][client1.address]['view'].relative_fee == p2_fee
 
     # now close all channels
     for channel_id, (

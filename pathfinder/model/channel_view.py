@@ -32,7 +32,7 @@ class ChannelView:
         self._transferred_amount = 0
         self._received_amount = 0
         self._locked_amount = 0
-        self._percentage_fee = DEFAULT_PERCENTAGE_FEE
+        self._relative_fee = DEFAULT_PERCENTAGE_FEE
         self._capacity = deposit
         self.state = ChannelView.State.OPEN
         self.channel_id = channel_id
@@ -64,13 +64,13 @@ class ChannelView:
             self.transferred_amount + self.locked_amount
         ) + self.received_amount
 
-    def update_fee(self, nonce: int = None, percentage_fee: float = None):
+    def update_fee(self, nonce: int = None, relative_fee: int = None):
         if nonce is not None:
             assert nonce > self.fee_info_nonce, 'Fee nonce must increase.'
             self.fee_info_nonce = nonce
 
-        if percentage_fee is not None:
-            self._percentage_fee = percentage_fee
+        if relative_fee is not None:
+            self._relative_fee = relative_fee
 
     @property
     def deposit(self) -> int:
@@ -93,8 +93,8 @@ class ChannelView:
         return self._capacity
 
     @property
-    def percentage_fee(self) -> float:
-        return self._percentage_fee
+    def relative_fee(self) -> int:
+        return self._relative_fee
 
     def __repr__(self):
         return '<ChannelView from={} to={} capacity={}>'.format(
