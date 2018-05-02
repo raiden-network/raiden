@@ -245,9 +245,6 @@ class JSONRPCClient:
         return quantity_decoder(self.call('eth_blockNumber'))
 
     def nonce(self, address):
-        if len(address) == 40:
-            address = unhexlify(address)
-
         with self.nonce_lock:
             initialized = self.nonce_current_value is not None
             query_time = now()
@@ -528,7 +525,10 @@ class JSONRPCClient:
         if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
             return jsonrpc_reply.result
         elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
-            raise EthNodeCommunicationError(jsonrpc_reply.error, jsonrpc_reply._jsonrpc_error_code)
+            raise EthNodeCommunicationError(
+                jsonrpc_reply.error,
+                jsonrpc_reply._jsonrpc_error_code,  # pylint: disable=protected-access
+            )
         else:
             raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
 
@@ -538,7 +538,7 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
-            nonce: int = None):
+    ):
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -556,9 +556,7 @@ class JSONRPCClient:
         if to == b'0' * 40:
             warnings.warn('For contract creation the empty string must be used.')
 
-        if nonce is None:
-            nonce = self.nonce(self.sender)
-
+        nonce = self.nonce(self.sender)
         startgas = self.check_startgas(startgas)
 
         tx = Transaction(
