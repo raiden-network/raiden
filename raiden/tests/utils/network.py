@@ -14,9 +14,14 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 
 
-def check_channel(app1, app2, netting_channel_address, deposit_amount):
+def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_amount):
     netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
     netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
+
+    # Check a valid settle timeout was used, the netting contract has an
+    # enforced minimum and maximum
+    assert settle_timeout == netcontract1.settle_timeout()
+    assert settle_timeout == netcontract2.settle_timeout()
 
     if deposit_amount > 0:
         assert netcontract1.can_transfer()
@@ -31,56 +36,48 @@ def check_channel(app1, app2, netting_channel_address, deposit_amount):
     assert app1_details['our_balance'] == app2_details['partner_balance']
     assert app1_details['partner_balance'] == app2_details['our_balance']
 
+    assert app1_details['our_balance'] == deposit_amount
+    assert app1_details['partner_balance'] == deposit_amount
+    assert app2_details['our_balance'] == deposit_amount
+    assert app2_details['partner_balance'] == deposit_amount
 
-def setup_channels(token_address, app_pairs, deposit, settle_timeout):
-    for first, second in app_pairs:
-        assert token_address
 
-        manager = first.raiden.default_registry.manager_by_token(token_address)
+def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
+    """ Open a new channel with app0 and app1 as participants """
+    assert token_address
 
-        netcontract_address = manager.new_netting_channel(
-            second.raiden.address,
-            settle_timeout,
-        )
+    manager = app0.raiden.default_registry.manager_by_token(token_address)
+    netcontract_address = manager.new_netting_channel(
+        app1.raiden.address,
+        settle_timeout,
+    )
+    assert netcontract_address
 
-        assert netcontract_address
+    for app in [app0, app1]:
+        # Use each app's own chain because of the private key / local signing
+        token = app.raiden.chain.token(token_address)
+        netting_channel = app.raiden.chain.netting_channel(netcontract_address)
 
-        # use each app's own chain because of the private key / local signing
-        for app in [first, second]:
-            token = app.raiden.chain.token(token_address)
-            netting_channel = app.raiden.chain.netting_channel(netcontract_address)
-            previous_balance = token.balance_of(app.raiden.address)
+        # This check can succeed and the deposit still fail, if channels are
+        # openned in parallel
+        previous_balance = token.balance_of(app.raiden.address)
+        assert previous_balance >= deposit
 
-            assert previous_balance >= deposit
+        token.approve(netcontract_address, deposit)
+        netting_channel.deposit(deposit)
 
-            token.approve(netcontract_address, deposit)
-            netting_channel.deposit(deposit)
+        # Balance must decrease by at least but not exactly `deposit` amount,
+        # because channels can be openned in parallel
+        new_balance = token.balance_of(app.raiden.address)
+        assert new_balance <= previous_balance - deposit
 
-            new_balance = token.balance_of(app.raiden.address)
-
-            assert previous_balance - deposit == new_balance
-
-            # netting contract does allow settle time lower than 30
-            contract_settle_timeout = netting_channel.settle_timeout()
-            assert contract_settle_timeout == max(6, settle_timeout)
-
-        check_channel(
-            first,
-            second,
-            netcontract_address,
-            deposit,
-        )
-
-        first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)
-        second_netting_channel = second.raiden.chain.netting_channel(netcontract_address)
-
-        details1 = first_netting_channel.detail()
-        details2 = second_netting_channel.detail()
-
-        assert details1['our_balance'] == deposit
-        assert details1['partner_balance'] == deposit
-        assert details2['our_balance'] == deposit
-        assert details2['partner_balance'] == deposit
+    check_channel(
+        app0,
+        app1,
+        netcontract_address,
+        settle_timeout,
+        deposit,
+    )
 
 
 def network_with_minimum_channels(apps, channels_per_node):
@@ -94,6 +91,9 @@ def network_with_minimum_channels(apps, channels_per_node):
     # pylint: disable=too-many-locals
     if channels_per_node > len(apps):
         raise ValueError("Can't create more channels than nodes")
+
+    if len(apps) == 1:
+        raise ValueError("Can't create channels with only one node")
 
     # If we use random nodes we can hit some edge cases, like the
     # following:
@@ -143,38 +143,23 @@ def network_with_minimum_channels(apps, channels_per_node):
             yield curr_app, least_connect
 
 
-def create_network_channels(
-        raiden_apps,
-        token_addresses,
-        channels_per_node,
-        deposit,
-        settle_timeout):
-
+def create_network_channels(raiden_apps, channels_per_node):
     num_nodes = len(raiden_apps)
 
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
-    for token in token_addresses:
-        if channels_per_node == CHAIN:
-            app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
-        else:
-            app_channels = list(network_with_minimum_channels(raiden_apps, channels_per_node))
+    if channels_per_node == 0:
+        app_channels = []
+    elif channels_per_node == CHAIN:
+        app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
+    else:
+        app_channels = list(network_with_minimum_channels(raiden_apps, channels_per_node))
 
-        setup_channels(
-            token,
-            app_channels,
-            deposit,
-            settle_timeout,
-        )
+    return app_channels
 
 
-def create_sequential_channels(
-        raiden_apps,
-        token_addresses,
-        channels_per_node,
-        deposit,
-        settle_timeout):
+def create_sequential_channels(raiden_apps, channels_per_node):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -206,12 +191,7 @@ def create_sequential_channels(
     if channels_per_node == CHAIN:
         app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
 
-    setup_channels(
-        token_addresses,
-        app_channels,
-        deposit,
-        settle_timeout,
-    )
+    return app_channels
 
 
 def create_apps(

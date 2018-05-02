@@ -581,6 +581,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
 
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_register_token(api_backend, token_amount, token_addresses, raiden_network):
     app0 = raiden_network[0]
     new_token_address = app0.raiden.chain.deploy_contract(

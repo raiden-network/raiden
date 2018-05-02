@@ -4,6 +4,7 @@ from binascii import hexlify
 from os import path
 from collections import namedtuple
 
+import gevent
 import pytest
 from ethereum import slogging
 from ethereum.tools._solidity import compile_file
@@ -31,6 +32,7 @@ from raiden.tests.utils.network import (
     create_apps,
     create_network_channels,
     create_sequential_channels,
+    netting_channel_open_and_deposit,
 )
 from raiden.settings import GAS_PRICE
 
@@ -104,7 +106,7 @@ def cached_genesis(request):
     """
 
     if not request.getfixturevalue('blockchain_cache'):
-        return
+        return None
 
     # this will create the tester _and_ deploy the Registry
     deploy_key = request.getfixturevalue('deploy_key')
@@ -162,22 +164,42 @@ def cached_genesis(request):
     )
 
     if 'raiden_network' in request.fixturenames:
-        create_network_channels(
+        app_channels = create_network_channels(
             raiden_apps,
-            token_contract_addresses,
             request.getfixturevalue('channels_per_node'),
-            request.getfixturevalue('deposit'),
-            request.getfixturevalue('settle_timeout'),
         )
 
+        greenlets = []
+        for token_address in token_contract_addresses:
+            for app_pair in app_channels:
+                greenlets.append(gevent.spawn(
+                    netting_channel_open_and_deposit,
+                    app_pair[0],
+                    app_pair[1],
+                    token_address,
+                    request.getfixturevalue('deposit'),
+                    request.getfixturevalue('settle_timeout'),
+                ))
+        gevent.wait(greenlets)
+
     elif 'raiden_chain' in request.fixturenames:
-        create_sequential_channels(
+        app_channels = create_sequential_channels(
             raiden_apps,
-            token_contract_addresses[0],
             request.getfixturevalue('channels_per_node'),
-            request.getfixturevalue('deposit'),
-            request.getfixturevalue('settle_timeout'),
         )
+
+        greenlets = []
+        for token_address in token_contract_addresses:
+            for app_pair in app_channels:
+                greenlets.append(gevent.spawn(
+                    netting_channel_open_and_deposit,
+                    app_pair[0],
+                    app_pair[1],
+                    token_address,
+                    request.getfixturevalue('deposit'),
+                    request.getfixturevalue('settle_timeout'),
+                ))
+        gevent.wait(greenlets)
 
     # else: a test that is not creating channels
 

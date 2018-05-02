@@ -13,9 +13,9 @@ from raiden.messages import (
 )
 from raiden.tests.fixtures.raiden_network import (
     CHAIN,
-    wait_for_partners,
+    wait_for_channels,
 )
-from raiden.tests.utils.network import setup_channels
+from raiden.tests.utils.network import netting_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -27,7 +27,12 @@ from raiden.utils import sha3
 @pytest.mark.parametrize('number_of_nodes', [5])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [32])  # default settlement is too low for 3 hops
-def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_timeout, deposit):
+def test_regression_unfiltered_routes(
+        raiden_network,
+        token_addresses,
+        settle_timeout,
+        deposit,
+):
     """ The transfer should proceed without triggering an assert.
 
     Transfers failed in networks where two or more paths to the destination are
@@ -35,6 +40,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     """
     app0, app1, app2, app3, app4 = raiden_network
     token = token_addresses[0]
+    registry_address = app0.raiden.default_registry.address
 
     # Topology:
     #
@@ -49,15 +55,24 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
         (app2, app4),
     ]
 
-    setup_channels(
-        token,
-        app_channels,
-        deposit,
-        settle_timeout,
-    )
+    greenlets = []
+    for first_app, second_app in app_channels:
+        greenlets.append(gevent.spawn(
+            netting_channel_open_and_deposit,
+            first_app,
+            second_app,
+            token,
+            deposit,
+            settle_timeout,
+        ))
+    gevent.wait(greenlets)
 
-    # poll the channel manager events
-    wait_for_partners(raiden_network)
+    wait_for_channels(
+        app_channels,
+        registry_address,
+        [token],
+        deposit,
+    )
 
     transfer = app0.raiden.mediated_transfer_async(
         token_address=token,
