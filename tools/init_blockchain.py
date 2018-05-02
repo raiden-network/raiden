@@ -29,7 +29,6 @@ def create_and_distribute_token(
     name = name or hexlify(sha3(''.join(receivers).encode()))
     contract_path = get_contract_path('HumanStandardToken.sol')
     token_proxy = client.deploy_solidity_contract(
-        client.sender,
         'HumanStandardToken',
         compile_file(contract_path),
         dict(),

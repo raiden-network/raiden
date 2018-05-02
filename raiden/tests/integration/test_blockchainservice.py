@@ -226,7 +226,6 @@ def test_blockchain(
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
     token_proxy = jsonrpc_client.deploy_solidity_contract(
-        address,
         'HumanStandardToken',
         humantoken_contracts,
         list(),
@@ -238,7 +237,6 @@ def test_blockchain(
     registry_path = get_contract_path('Registry.sol')
     registry_contracts = compile_file(registry_path)
     registry_proxy = jsonrpc_client.deploy_solidity_contract(
-        address,
         'Registry',
         registry_contracts,
         list(),

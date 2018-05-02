@@ -19,7 +19,6 @@ def deploy_rpc_test_contract(deploy_client):
     contracts = _solidity.compile_file(contract_path, libraries=dict())
 
     contract_proxy = deploy_client.deploy_solidity_contract(
-        deploy_client.sender,
         'RpcTest',
         contracts,
         libraries=dict(),
