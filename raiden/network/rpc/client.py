@@ -2,7 +2,7 @@
 import os
 import warnings
 from time import time as now
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from typing import Optional, List, Dict, Union
 
 import rlp
@@ -542,46 +542,6 @@ class JSONRPCClient:
         implementation that accepts the variables v, r, and s.
         """
 
-        if nonce is None:
-            nonce = self.nonce(self.sender)
-
-        startgas = self.check_startgas(startgas)
-
-        tx = Transaction(nonce, self.gasprice(), startgas, to=to, value=value, data=data)
-
-        tx.sign(self.privkey)
-        result = self.call(
-            'eth_sendRawTransaction',
-            data_encoder(rlp.encode(tx)),
-        )
-        return result[2 if result.startswith('0x') else 0:]
-
-    def eth_sendTransaction(
-            self,
-            sender: Address = b'',
-            to: Address = b'',
-            value: int = 0,
-            data: bytes = b'',
-            gas: int = GAS_LIMIT,
-            nonce: int = None
-    ) -> bytes:
-        """ Creates new message call transaction or a contract creation, if the
-        data field contains code.
-
-        Args:
-            sender: The address the transaction is sent from.
-            to: The address the transaction is directed to.
-                (optional when creating new contract)
-            gas: Gas provided for the transaction execution. It will
-                return unused gas.
-            gasPrice: gasPrice used for each unit of gas paid.
-            value: Value sent with this transaction.
-            data: The compiled code of a contract OR the hash of the
-                invoked method signature and encoded parameters.
-            nonce: This allows to overwrite your own pending transactions
-                that use the same nonce.
-        """
-
         if to == b'' and data.isalnum():
             warnings.warn(
                 'Verify that the data parameter is _not_ hex encoded, if this is the case '
@@ -592,24 +552,26 @@ class JSONRPCClient:
         if to == b'0' * 40:
             warnings.warn('For contract creation the empty string must be used.')
 
-        if sender is None:
-            raise ValueError('sender needs to be provided.')
+        if nonce is None:
+            nonce = self.nonce(self.sender)
 
-        json_data = format_data_for_call(
-            sender,
-            to,
-            value,
-            data,
-            gas,
-            self.gasprice()
+        startgas = self.check_startgas(startgas)
+
+        tx = Transaction(
+            nonce,
+            self.gasprice(),
+            startgas,
+            to=to,
+            value=value,
+            data=data,
         )
 
-        if nonce is not None:
-            json_data['nonce'] = quantity_encoder(nonce)
-
-        res = self.call('eth_sendTransaction', json_data)
-
-        return data_decoder(res)
+        tx.sign(self.privkey)
+        result = self.call(
+            'eth_sendRawTransaction',
+            data_encoder(rlp.encode(tx)),
+        )
+        return result[2 if result.startswith('0x') else 0:]
 
     def eth_call(
             self,
