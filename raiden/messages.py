@@ -159,6 +159,9 @@ class SignedMessage(Message):
 
         publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
+        if publickey is None:
+            return None
+
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
         return message
@@ -234,12 +237,15 @@ class EnvelopeMessage(SignedMessage):
 
         publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
+        if publickey is None:
+            return None
+
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
         return message
 
 
-class Processed(Message):
+class Processed(SignedMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
 
@@ -255,14 +261,17 @@ class Processed(Message):
 
     @staticmethod
     def unpack(packed):
-        return Processed(
+        processed = Processed(
             packed.sender,
             packed.processed_message_identifier,
         )
+        processed.signature = packed.signature
+        return processed
 
     def pack(self, packed):
         packed.processed_message_identifier = self.processed_message_identifier
         packed.sender = self.sender
+        packed.signature = self.signature
 
     def __repr__(self):
         return '<{} [processed_msgid:{}]>'.format(
@@ -297,8 +306,27 @@ class Delivered(SignedMessage):
         )
 
 
+class Pong(SignedMessage):
+    """ Response to a Ping message. """
+    cmdid = messages.PONG
+
+    def __init__(self, nonce):
+        super().__init__()
+        self.nonce = nonce
+
+    @staticmethod
+    def unpack(packed):
+        pong = Pong(packed.nonce)
+        pong.signature = packed.signature
+        return pong
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.signature = self.signature
+
+
 class Ping(SignedMessage):
-    """ Ping, should be responded by a `Processed` message. """
+    """ Healthcheck message. """
     cmdid = messages.PING
 
     def __init__(self, nonce):
@@ -1172,6 +1200,7 @@ class RefundTransfer(LockedTransfer):
 CMDID_TO_CLASS = {
     messages.PROCESSED: Processed,
     messages.PING: Ping,
+    messages.PONG: Pong,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,

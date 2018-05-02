@@ -7,6 +7,7 @@ from raiden.messages import (
     DirectTransfer,
     Lock,
     LockedTransfer,
+    Processed,
     RefundTransfer,
     RevealSecret,
     Secret,
@@ -21,6 +22,7 @@ from raiden.transfer.events import (
     EventTransferSentFailed,
     EventTransferSentSuccess,
     SendDirectTransfer,
+    SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
@@ -46,11 +48,12 @@ UNEVENTFUL_EVENTS = (
 
 def handle_send_lockedtransfer(
         raiden: 'RaidenService',
-        send_mediated_transfer: SendLockedTransfer,
+        send_locked_transfer: SendLockedTransfer,
 ):
-    mediated_transfer_message = LockedTransfer.from_event(send_mediated_transfer)
+    mediated_transfer_message = LockedTransfer.from_event(send_locked_transfer)
     raiden.sign(mediated_transfer_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        send_locked_transfer.queue_name,
         mediated_transfer_message.recipient,
         mediated_transfer_message,
     )
@@ -62,7 +65,8 @@ def handle_send_directtransfer(
 ):
     direct_transfer_message = DirectTransfer.from_event(send_direct_transfer)
     raiden.sign(direct_transfer_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        send_direct_transfer.queue_name,
         send_direct_transfer.recipient,
         direct_transfer_message,
     )
@@ -74,7 +78,8 @@ def handle_send_revealsecret(
 ):
     reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        reveal_secret_event.queue_name,
         reveal_secret_event.recipient,
         reveal_secret_message,
     )
@@ -86,7 +91,8 @@ def handle_send_balanceproof(
 ):
     secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        balance_proof_event.queue_name,
         balance_proof_event.recipient,
         secret_message,
     )
@@ -98,7 +104,8 @@ def handle_send_secretrequest(
 ):
     secret_request_message = SecretRequest.from_event(secret_request_event)
     raiden.sign(secret_request_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        secret_request_event.queue_name,
         secret_request_event.recipient,
         secret_request_message,
     )
@@ -110,9 +117,23 @@ def handle_send_refundtransfer(
 ):
     refund_transfer_message = RefundTransfer.from_event(refund_transfer_event)
     raiden.sign(refund_transfer_message)
-    raiden.send_async(
+    raiden.protocol.send_async(
+        refund_transfer_event.queue_name,
         refund_transfer_event.recipient,
         refund_transfer_message,
+    )
+
+
+def handle_send_processed(
+        raiden: 'RaidenService',
+        processed_event: SendProcessed,
+):
+    processed_message = Processed(raiden.address, processed_event.message_identifier)
+    raiden.sign(processed_message)
+    raiden.protocol.send_async(
+        processed_event.queue_name,
+        processed_event.recipient,
+        processed_message,
     )
 
 
@@ -234,6 +255,8 @@ def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
         handle_send_secretrequest(raiden, event)
     elif isinstance(event, SendRefundTransfer):
         handle_send_refundtransfer(raiden, event)
+    elif isinstance(event, SendProcessed):
+        handle_send_processed(raiden, event)
     elif isinstance(event, EventTransferSentSuccess):
         handle_transfersentsuccess(raiden, event)
     elif isinstance(event, EventTransferSentFailed):

@@ -401,40 +401,6 @@ class RaidenService:
 
         message.sign(self.private_key, self.address)
 
-    def send_async(self, recipient, message):
-        """ Send `message` to `recipient` using the raiden protocol.
-
-        The protocol will take care of resending the message on a given
-        interval until an Acknowledgment is received or a given number of
-        tries.
-        """
-
-        if not isaddress(recipient):
-            raise ValueError('recipient is not a valid address.')
-
-        if recipient == self.address:
-            raise ValueError('programming error, sending message to itself')
-
-        return self.protocol.send_async(recipient, message)
-
-    def send_and_wait(self, recipient, message, timeout):
-        """ Send `message` to `recipient` and wait for the response or `timeout`.
-
-        Args:
-            recipient (address): The address of the node that will receive the
-                message.
-            message: The transfer message.
-            timeout (float): How long should we wait for a response from `recipient`.
-
-        Returns:
-            None: If the wait timed out
-            object: The result from the event
-        """
-        if not isaddress(recipient):
-            raise ValueError('recipient is not a valid address.')
-
-        self.protocol.send_and_wait(recipient, message, timeout)
-
     def register_payment_network(self, registry_address, from_block=None):
         proxies = get_relevant_proxies(
             self.chain,

@@ -660,3 +660,13 @@ class ReceiveUnlock(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class ReceiveDelivered(StateChange):
+    def __init__(self, message_identifier):
+        self.message_identifier = message_identifier
+
+
+class ReceiveProcessed(StateChange):
+    def __init__(self, message_identifier):
+        self.message_identifier = message_identifier

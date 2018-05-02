@@ -27,6 +27,7 @@ def make_message(message, **attrs):
 
 PROCESSED = 0
 PING = 1
+PONG = 2
 SECRETREQUEST = 3
 SECRET = 4
 DIRECTTRANSFER = 5
@@ -82,6 +83,7 @@ Processed = namedbuffer(
         pad(3),
         sender,
         processed_message_identifier,
+        signature,
     ]
 )
 
@@ -91,6 +93,7 @@ Delivered = namedbuffer(
         cmdid(DELIVERED),
         pad(3),
         delivered_message_identifier,
+        signature,
     ]
 )
 
@@ -98,6 +101,16 @@ Ping = namedbuffer(
     'ping',
     [
         cmdid(PING),
+        pad(3),
+        nonce,
+        signature,
+    ]
+)
+
+Pong = namedbuffer(
+    'pong',
+    [
+        cmdid(PONG),
         pad(3),
         nonce,
         signature,
@@ -220,6 +233,7 @@ Lock = namedbuffer(
 CMDID_MESSAGE = {
     PROCESSED: Processed,
     PING: Ping,
+    PONG: Pong,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
