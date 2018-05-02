@@ -2,6 +2,7 @@
 import gevent
 from ethereum import slogging
 
+from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     CHANNEL_AFTER_CLOSE_STATES,
@@ -39,11 +40,12 @@ def wait_for_newchannel(
         )
 
 
-def wait_for_newbalance(
+def wait_for_participant_newbalance(
         raiden,
         payment_network_id,
         token_address,
         partner_address,
+        target_address,
         target_balance,
         poll_timeout):
     """Wait until a given channels balance exceeds the target balance.
@@ -51,6 +53,13 @@ def wait_for_newbalance(
     Note:
         This does not time out, use gevent.Timeout.
     """
+    if target_address == raiden.address:
+        balance = lambda channel_state: channel_state.our_state.contract_balance
+    elif target_address == partner_address:
+        balance = lambda channel_state: channel_state.partner_state.contract_balance
+    else:
+        raise ValueError('target_address must be one of the channel participants')
+
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden),
         payment_network_id,
@@ -58,7 +67,7 @@ def wait_for_newbalance(
         partner_address,
     )
 
-    while channel_state.our_state.contract_balance < target_balance:
+    while balance(channel_state) < target_balance:
         gevent.sleep(poll_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
@@ -149,3 +158,20 @@ def wait_for_settle_all_channels(raiden, poll_timeout):
                 channel_ids,
                 poll_timeout,
             )
+
+
+def wait_for_healthy(raiden, node_address, poll_timeout):
+    """Wait until `node_address` becomes healthy.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    network_statuses = views.get_networkstatuses(
+        views.state_from_raiden(raiden),
+    )
+
+    while network_statuses.get(node_address) != NODE_NETWORK_REACHABLE:
+        gevent.sleep(poll_timeout)
+        network_statuses = views.get_networkstatuses(
+            views.state_from_raiden(raiden),
+        )

@@ -268,11 +268,13 @@ class RaidenAPI:
 
             # Wait until the `ChannelNewBalance` event is processed.
             with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-                waiting.wait_for_newbalance(
+                target_address = self.raiden.address
+                waiting.wait_for_participant_newbalance(
                     self.raiden,
                     registry_address,
                     token_address,
                     partner_address,
+                    target_address,
                     target_balance,
                     self.raiden.alarm.wait_time,
                 )

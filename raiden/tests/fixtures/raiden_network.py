@@ -3,15 +3,15 @@ import gevent
 import pytest
 from ethereum import slogging
 
+from raiden import waiting
 from raiden.exceptions import RaidenShuttingDown
-from raiden.transfer import views
-from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
     create_apps,
     create_network_channels,
     create_sequential_channels,
+    netting_channel_open_and_deposit,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -34,30 +34,83 @@ def _raiden_cleanup(request, raiden_apps):
     request.addfinalizer(_cleanup)
 
 
-def wait_for_partners(app_list, sleep=0.5, timeout=10):
-    waiting = list(app_list)
+def wait_for_usable_channel(
+        app0,
+        app1,
+        registry_address,
+        token_address,
+        our_deposit,
+        partner_deposit,
+        events_poll_timeout=0.5,
+):
+    """ Wait until the channel from app0 to app1 is usable.
 
-    while waiting:
-        # Poll the events to register the new channels
-        app = waiting[0]
-        app.raiden.poll_blockchain_events()
+    The channel and the deposits are registered, and the partner network state
+    is reachable.
+    """
+    waiting.wait_for_newchannel(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        events_poll_timeout,
+    )
 
-        node_state = views.state_from_app(app)
-        network_statuses = views.get_networkstatuses(node_state)
+    waiting.wait_for_participant_newbalance(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        app0.raiden.address,
+        our_deposit,
+        events_poll_timeout,
+    )
 
-        all_healthy = all(
-            status == NODE_NETWORK_REACHABLE
-            for status in network_statuses.values()
-        )
+    waiting.wait_for_participant_newbalance(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        app1.raiden.address,
+        partner_deposit,
+        events_poll_timeout,
+    )
 
-        if timeout <= 0:
-            raise RuntimeError('fixture setup failed, nodes are unreachable')
+    waiting.wait_for_healthy(
+        app0.raiden,
+        app1.raiden.address,
+        events_poll_timeout,
+    )
 
-        if all_healthy:
-            waiting.pop(0)
-        else:
-            timeout -= sleep
-            gevent.sleep(sleep)
+
+def wait_for_channels(
+        app_channels,
+        registry_address,
+        token_addresses,
+        deposit,
+        events_poll_timeout=0.5,
+):
+    """ Wait until all channels are usable from both directions. """
+    for app0, app1 in app_channels:
+        for token_address in token_addresses:
+            wait_for_usable_channel(
+                app0,
+                app1,
+                registry_address,
+                token_address,
+                deposit,
+                deposit,
+                events_poll_timeout,
+            )
+            wait_for_usable_channel(
+                app1,
+                app0,
+                registry_address,
+                token_address,
+                deposit,
+                deposit,
+                events_poll_timeout,
+            )
 
 
 @pytest.fixture
@@ -108,19 +161,37 @@ def raiden_chain(
         nat_keepalive_timeout,
     )
 
-    if not cached_genesis:
-        create_sequential_channels(
-            raiden_apps,
-            token_addresses[0],
-            channels_per_node,
-            deposit,
-            settle_timeout,
-        )
-
     for app in raiden_apps:
         app.raiden.register_payment_network(app.raiden.default_registry.address)
 
-    wait_for_partners(raiden_apps)
+    app_channels = create_sequential_channels(
+        raiden_apps,
+        channels_per_node,
+    )
+
+    if not cached_genesis:
+        greenlets = []
+        for token_address in token_addresses:
+            for app_pair in app_channels:
+                greenlets.append(gevent.spawn(
+                    netting_channel_open_and_deposit,
+                    app_pair[0],
+                    app_pair[1],
+                    token_address,
+                    deposit,
+                    settle_timeout,
+                ))
+        gevent.wait(greenlets)
+
+    exception = RuntimeError('fixture setup failed, nodes are unreachable')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_channels(
+            app_channels,
+            blockchain_services.deploy_registry.address,
+            token_addresses,
+            deposit,
+        )
+
     _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
@@ -166,22 +237,37 @@ def raiden_network(
         nat_keepalive_timeout,
     )
 
+    app_channels = create_network_channels(
+        raiden_apps,
+        channels_per_node,
+    )
+
     if not cached_genesis:
-        create_network_channels(
-            raiden_apps,
+        greenlets = []
+        for token_address in token_addresses:
+            for app_pair in app_channels:
+                greenlets.append(gevent.spawn(
+                    netting_channel_open_and_deposit,
+                    app_pair[0],
+                    app_pair[1],
+                    token_address,
+                    deposit,
+                    settle_timeout,
+                ))
+        gevent.wait(greenlets)
+
+    exception = RuntimeError('fixture setup failed, nodes are unreachable')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_channels(
+            app_channels,
+            blockchain_services.deploy_registry.address,
             token_addresses,
-            channels_per_node,
             deposit,
-            settle_timeout
         )
 
-    wait_for_partners(raiden_apps)
     _raiden_cleanup(request, raiden_apps)
 
-    # The block_number is primed on the app creation, but after the app is
-    # created all the channels are deployed, for the tester implementation this
-    # will advance the block_number with synchronous execution, making the
-    # apps' block_number to greatly fall behind.
+    # Force blocknumber update for the tester backend
     if not cached_genesis:
         for app in raiden_apps:
             app.raiden.alarm.poll_for_new_block()
