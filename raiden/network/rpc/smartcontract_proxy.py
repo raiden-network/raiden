@@ -48,7 +48,6 @@ class ContractProxy:
 
         data = self.translator.encode_function_call(function_name, args)
         txhash = self.transaction_function(
-            sender=self.sender,
             to=self.contract_address,
             value=kargs.pop('value', 0),
             data=data,
