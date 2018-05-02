@@ -36,7 +36,7 @@ def main(private_key, eth_amount, targets_file, port, host):
     print("Sending {} eth to:".format(eth_amount))
     for target in targets:
         print("  - {}".format(target))
-        client.send_transaction(sender=client.sender, to=target, value=eth_amount * WEI_TO_ETH)
+        client.send_transaction(to=target, value=eth_amount * WEI_TO_ETH)
 
 
 if __name__ == "__main__":

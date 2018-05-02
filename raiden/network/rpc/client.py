@@ -187,6 +187,9 @@ class JSONRPCClient:
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0):
 
+        if privkey is None or len(privkey) != 32:
+            raise ValueError('Invalid private key')
+
         endpoint = 'http://{}:{}'.format(host, port)
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
@@ -401,7 +404,6 @@ class JSONRPCClient:
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash_hex = self.send_transaction(
-                    sender,
                     to=b'',
                     data=bytecode,
                 )
@@ -435,7 +437,6 @@ class JSONRPCClient:
             bytecode = contract['bin']
 
         transaction_hash_hex = self.send_transaction(
-            sender,
             to=b'',
             data=bytecode,
         )
@@ -529,7 +530,6 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            sender: Address,
             to: Address,
             value: int = 0,
             data: bytes = b'',
@@ -542,47 +542,19 @@ class JSONRPCClient:
         implementation that accepts the variables v, r, and s.
         """
 
-        if not self.privkey and not sender:
-            raise ValueError('Either privkey or sender needs to be supplied.')
-
-        if self.privkey:
-            privkey_address = privatekey_to_address(self.privkey)
-            sender = sender or privkey_address
-
-            if sender != privkey_address:
-                raise ValueError('sender for a different privkey.')
-
-            if nonce is None:
-                nonce = self.nonce(sender)
-        else:
-            if nonce is None:
-                nonce = 0
+        if nonce is None:
+            nonce = self.nonce(self.sender)
 
         startgas = self.check_startgas(startgas)
 
         tx = Transaction(nonce, self.gasprice(), startgas, to=to, value=value, data=data)
 
-        if self.privkey:
-            tx.sign(self.privkey)
-            result = self.call(
-                'eth_sendRawTransaction',
-                data_encoder(rlp.encode(tx)),
-            )
-            return result[2 if result.startswith('0x') else 0:]
-
-        else:
-
-            # rename the fields to match the eth_sendTransaction signature
-            tx_dict = tx.to_dict()
-            tx_dict.pop('hash')
-            tx_dict['sender'] = sender
-            tx_dict['gasPrice'] = tx_dict.pop('gasprice')
-            tx_dict['gas'] = tx_dict.pop('startgas')
-
-            res = self.eth_sendTransaction(**tx_dict)
-
-        assert len(res) in (20, 32)
-        return hexlify(res)
+        tx.sign(self.privkey)
+        result = self.call(
+            'eth_sendRawTransaction',
+            data_encoder(rlp.encode(tx)),
+        )
+        return result[2 if result.startswith('0x') else 0:]
 
     def eth_sendTransaction(
             self,
