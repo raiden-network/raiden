@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import pytest
+from unittest.mock import patch
 
+import pytest
 from ethereum.utils import encode_hex
+
 from raiden.accounts import AccountManager
 from raiden.utils import get_project_root
-
 
 KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
@@ -88,6 +89,22 @@ def test_account_manager_invalid_files(test_keystore, caplog):
         for record in caplog.records:
             message = record.getMessage()
             if msg in message and file_name in message and reason in message:
+                break
+        else:
+            assert False, "'{}' not in log messages".format(msg)
+
+
+def test_account_manager_invalid_directory(caplog):
+    with patch.object(os, 'listdir') as mock_listdir:
+        mock_listdir.side_effect = OSError
+        AccountManager('/some/path')
+
+    for msg, path, reason in [
+        ('Unable to list the specified directory', '/some/path', '')
+    ]:
+        for record in caplog.records:
+            message = record.getMessage()
+            if msg in message and path in message and reason in message:
                 break
         else:
             assert False, "'{}' not in log messages".format(msg)

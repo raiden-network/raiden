@@ -52,7 +52,14 @@ class AccountManager:
             self.keystore_path = find_keystoredir()
         if self.keystore_path is not None:
 
-            for f in os.listdir(self.keystore_path):
+            try:
+                files = os.listdir(self.keystore_path)
+            except OSError as ex:
+                msg = 'Unable to list the specified directory'
+                log.error('%s %s: %s', msg, self.keystore_path, ex)
+                return
+
+            for f in files:
                 fullpath = os.path.join(self.keystore_path, f)
                 if os.path.isfile(fullpath):
                     try:
