@@ -60,9 +60,14 @@ def check_address_has_code(
     """ Checks that the given address contains code. """
     result = client.eth_getCode(address, 'latest')
 
-    if len(result) == 0:
+    if not result:
+        if contract_name:
+            formated_contract_name = '[{}]: '.format(contract_name)
+        else:
+            formated_contract_name = ''
+
         raise AddressWithoutCode('{}Address {} does not contain code'.format(
-            '[{}]: '.format(contract_name) if contract_name else '',
+            formated_contract_name,
             address_encoder(address),
         ))
 
@@ -336,7 +341,6 @@ class JSONRPCClient:
 
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals
-            sender,
             contract_name,
             all_contracts,
             libraries,
@@ -420,7 +424,7 @@ class JSONRPCClient:
 
                 deployed_code = self.eth_getCode(address_decoder(contract_address))
 
-                if len(deployed_code) == 0:
+                if not deployed_code:
                     raise RuntimeError('Contract address has no code, check gas usage.')
 
             hex_bytecode = solidity_resolve_symbols(contract['bin_hex'], libraries)
@@ -448,7 +452,7 @@ class JSONRPCClient:
 
         deployed_code = self.eth_getCode(address_decoder(contract_address))
 
-        if len(deployed_code) == 0:
+        if not deployed_code:
             raise RuntimeError(
                 'Deployment of {} failed. Contract address has no code, check gas usage.'.format(
                     contract_name,

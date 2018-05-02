@@ -96,7 +96,6 @@ def deploy_file(contract, compiled_contracts, client):
     filename, _, name = contract.partition(":")
     log.info(f"Deploying {name}")
     proxy = client.deploy_solidity_contract(
-        client.sender,
         name,
         compiled_contracts,
         libraries,

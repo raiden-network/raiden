@@ -470,7 +470,6 @@ def _jsonrpc_services(
 
         log.info('Deploying registry contract')
         registry_proxy = deploy_client.deploy_solidity_contract(
-            address,
             'Registry',
             registry_contracts,
             dict(),

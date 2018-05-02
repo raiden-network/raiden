@@ -177,7 +177,6 @@ class BlockChainService:
         )
 
         proxy = self.client.deploy_solidity_contract(
-            self.node_address,
             contract_name,
             contracts,
             list(),

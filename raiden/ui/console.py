@@ -321,12 +321,13 @@ class ConsoleTools:
         contract_path = get_contract_path('HumanStandardToken.sol')
         # Deploy a new ERC20 token
         token_proxy = self._chain.client.deploy_solidity_contract(
-            self._raiden.address, 'HumanStandardToken',
+            'HumanStandardToken',
             compile_file(contract_path),
             dict(),
             (initial_alloc, name, decimals, symbol),
             contract_path=contract_path,
-            timeout=timeout)
+            timeout=timeout,
+        )
         token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:
             self.register_token(token_address_hex)
