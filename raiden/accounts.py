@@ -59,12 +59,12 @@ class AccountManager:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
                             self.accounts[str(data['address']).lower()] = str(fullpath)
-                    except (KeyError, IOError, json.decoder.JSONDecodeError) as ex:
+                    except (KeyError, OSError, IOError, json.decoder.JSONDecodeError) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
                             # Should be a valid account file - warn user
                             msg = 'Invalid account file'
-                            if isinstance(ex, IOError):
+                            if isinstance(ex, IOError) or isinstance(ex, OSError):
                                 msg = 'Can not read account file (errno=%s)' % ex.errno
                             if isinstance(ex, json.decoder.JSONDecodeError):
                                 msg = 'The account file is not valid JSON format'
