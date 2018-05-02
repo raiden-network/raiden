@@ -5,7 +5,7 @@ from copy import deepcopy
 from raiden.utils import random_secret
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
@@ -30,7 +30,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
-    SendMediatedTransfer,
+    SendLockedTransfer,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
@@ -138,7 +138,7 @@ def test_init_with_usable_routes():
     payment_state = transition.new_state
     assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
-    mediated_transfers = [e for e in transition.events if isinstance(e, SendMediatedTransfer)]
+    mediated_transfers = [e for e in transition.events if isinstance(e, SendLockedTransfer)]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
 
     send_mediated_transfer = mediated_transfers[0]
@@ -148,7 +148,7 @@ def test_init_with_usable_routes():
     assert transfer.token == factories.UNIT_TRANSFER_DESCRIPTION.token
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
     assert transfer.lock.expiration == expiration
-    assert transfer.lock.hashlock == factories.UNIT_TRANSFER_DESCRIPTION.hashlock
+    assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
     assert send_mediated_transfer.recipient == channel1.partner_state.address
 
 
@@ -194,7 +194,7 @@ def test_state_wait_secretrequest_valid():
     state_change = ReceiveSecretRequest(
         UNIT_TRANSFER_IDENTIFIER,
         UNIT_TRANSFER_AMOUNT,
-        UNIT_HASHLOCK,
+        UNIT_SECRETHASH,
         UNIT_TRANSFER_TARGET,
     )
 
@@ -381,12 +381,12 @@ def test_refund_transfer_next_route():
     assert len(iteration.events) == 2
 
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendMediatedTransfer))
+    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
 
     assert route_cancelled, 'The previous transfer must be cancelled'
     assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'
-    msg = 'the new transfer must use a new secret / hashlock'
-    assert new_transfer.transfer.lock.hashlock != refund_transfer.lock.hashlock, msg
+    msg = 'the new transfer must use a new secret / secrethash'
+    assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
     assert iteration.new_state.initiator is not None
 
 

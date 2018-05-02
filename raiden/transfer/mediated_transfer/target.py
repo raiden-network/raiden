@@ -35,7 +35,7 @@ def events_for_close(target_state, channel_state, block_number):
     )
     secret_known = channel.is_secret_known(
         channel_state.partner_state,
-        transfer.lock.hashlock,
+        transfer.lock.secrethash,
     )
 
     if not safe_to_wait and secret_known:
@@ -56,7 +56,7 @@ def handle_inittarget(state_change, channel_state, block_number):
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_address
-    is_valid, errormsg = channel.handle_receive_mediatedtransfer(
+    is_valid, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )
@@ -73,7 +73,7 @@ def handle_inittarget(state_change, channel_state, block_number):
         secret_request = SendSecretRequest(
             transfer.identifier,
             transfer.lock.amount,
-            transfer.lock.hashlock,
+            transfer.lock.secrethash,
             transfer.initiator,
         )
 
@@ -86,7 +86,7 @@ def handle_inittarget(state_change, channel_state, block_number):
 
         withdraw_failed = EventWithdrawFailed(
             identifier=transfer.identifier,
-            hashlock=transfer.lock.hashlock,
+            secrethash=transfer.lock.secrethash,
             reason=failure_reason,
         )
         iteration = TransitionResult(target_state, [withdraw_failed])
@@ -96,13 +96,13 @@ def handle_inittarget(state_change, channel_state, block_number):
 
 def handle_secretreveal(target_state, state_change, channel_state):
     """ Validates and handles a ReceiveSecretReveal state change. """
-    valid_secret = state_change.hashlock == target_state.transfer.lock.hashlock
+    valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
 
     if valid_secret:
         channel.register_secret(
             channel_state,
             state_change.secret,
-            state_change.hashlock,
+            state_change.secrethash,
         )
 
         transfer = target_state.transfer
@@ -146,7 +146,7 @@ def handle_unlock(target_state, state_change, channel_state):
 
             unlock_success = EventWithdrawSuccess(
                 transfer.identifier,
-                transfer.lock.hashlock,
+                transfer.lock.secrethash,
             )
 
             iteration = TransitionResult(None, [transfer_success, unlock_success])
@@ -161,14 +161,14 @@ def handle_block(target_state, channel_state, block_number):
     transfer = target_state.transfer
     secret_known = channel.is_secret_known(
         channel_state.partner_state,
-        transfer.lock.hashlock,
+        transfer.lock.secrethash,
     )
 
     if not secret_known and block_number > transfer.lock.expiration:
         # XXX: emit the event only once
         failed = EventWithdrawFailed(
             identifier=transfer.identifier,
-            hashlock=transfer.lock.hashlock,
+            secrethash=transfer.lock.secrethash,
             reason='lock expired',
         )
         target_state.state = 'expired'

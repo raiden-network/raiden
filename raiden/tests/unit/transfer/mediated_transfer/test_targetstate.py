@@ -23,7 +23,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
@@ -81,12 +81,12 @@ def test_events_for_close():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )
 
-    channel.register_secret(from_channel, UNIT_SECRET, UNIT_HASHLOCK)
+    channel.register_secret(from_channel, UNIT_SECRET, UNIT_SECRETHASH)
 
     safe_to_wait = expiration - from_channel.reveal_timeout - 1
     unsafe_to_wait = expiration - from_channel.reveal_timeout
@@ -127,7 +127,7 @@ def test_events_for_close_secret_unknown():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )
@@ -177,7 +177,7 @@ def test_handle_inittarget():
 
     assert events[0].identifier == from_transfer.identifier
     assert events[0].amount == from_transfer.lock.amount
-    assert events[0].hashlock == from_transfer.lock.hashlock
+    assert events[0].secrethash == from_transfer.lock.secrethash
     assert events[0].receiver == initiator
 
 
@@ -206,7 +206,7 @@ def test_handle_inittarget_bad_expiration():
         UNIT_SECRET,
     )
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         from_channel,
         from_transfer,
     )

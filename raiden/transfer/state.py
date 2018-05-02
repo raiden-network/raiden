@@ -58,7 +58,7 @@ def lockstate_from_lock(lock):
     return HashTimeLockState(
         lock.amount,
         lock.expiration,
-        lock.hashlock,
+        lock.secrethash,
     )
 
 
@@ -76,7 +76,7 @@ class NodeState(State):
     )
 
     def __init__(self, block_number: typing.BlockNumber):
-        if not isinstance(block_number, typing.BlockNumber):
+        if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be a block_number')
 
         self.block_number = block_number
@@ -88,7 +88,7 @@ class NodeState(State):
         return '<NodeState block:{} networks:{} qtd_transfers:{}>'.format(
             self.block_number,
             lpex(self.identifiers_to_paymentnetworks.keys()),
-            len(self.payment_mapping.hashlocks_to_task),
+            len(self.payment_mapping.secrethashes_to_task),
         )
 
     def __eq__(self, other):
@@ -118,7 +118,7 @@ class PaymentNetworkState(State):
             address: typing.Address,
             token_network_list: typing.List['TokenNetworkState']):
 
-        if not isinstance(address, typing.Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
         self.address = address
@@ -164,10 +164,10 @@ class TokenNetworkState(State):
             network_graph: 'TokenNetworkGraphState',
             partner_channels: typing.List['NettingChannelState']):
 
-        if not isinstance(address, typing.Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(token_address, typing.Address):
+        if not isinstance(token_address, typing.T_Address):
             raise ValueError('token_address must be an address instance')
 
         if not isinstance(network_graph, TokenNetworkGraphState):
@@ -234,23 +234,23 @@ class TokenNetworkGraphState(State):
 
 
 class PaymentMappingState(State):
-    """ Global map from hashlock to a transfer task.
-    This mapping is used to quickly dispatch state changes by hashlock, for
+    """ Global map from secrethash to a transfer task.
+    This mapping is used to quickly dispatch state changes by secrethash, for
     those that dont have a balance proof, e.g. SecretReveal.
-    This mapping forces one task per hashlock, assuming that hashlock collision
+    This mapping forces one task per secrethash, assuming that secrethash collision
     is unlikely. Features like token swaps, that span multiple networks, must
     be encapsulated in a single task to work with this structure.
     """
 
     # Because of retries, there may be multiple transfers for the same payment,
     # IOW there may be more than one task for the same transfer identifier. For
-    # this reason the mapping uses the hashlock as key.
+    # this reason the mapping uses the secrethash as key.
     #
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
     __slots__ = (
-        'hashlocks_to_task',
+        'secrethashes_to_task',
     )
 
     InitiatorTask = namedtuple('InitiatorTask', (
@@ -273,17 +273,17 @@ class PaymentMappingState(State):
     ))
 
     def __init__(self):
-        self.hashlocks_to_task = dict()
+        self.secrethashes_to_task = dict()
 
     def __repr__(self):
         return '<PaymentMappingState qtd_transfers:{}>'.format(
-            len(self.hashlocks_to_task)
+            len(self.secrethashes_to_task)
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, PaymentMappingState) and
-            self.hashlocks_to_task == other.hashlocks_to_task
+            self.secrethashes_to_task == other.secrethashes_to_task
         )
 
     def __ne__(self, other):
@@ -304,7 +304,7 @@ class RouteState(State):
     )
 
     def __init__(self, node_address: typing.Address, channel_identifier):
-        if not isinstance(node_address, typing.Address):
+        if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -347,13 +347,13 @@ class BalanceProofUnsignedState(State):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing.TokenAmount):
+        if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing.Keccak256):
+        if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_address, typing.Address):
+        if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
 
         if nonce <= 0:
@@ -432,22 +432,22 @@ class BalanceProofSignedState(State):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing.TokenAmount):
+        if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing.Keccak256):
+        if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_address, typing.Address):
+        if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
 
-        if not isinstance(message_hash, typing.Keccak256):
+        if not isinstance(message_hash, typing.T_Keccak256):
             raise ValueError('message_hash must be a keccak256 instance')
 
-        if not isinstance(signature, typing.Signature):
+        if not isinstance(signature, typing.T_Signature):
             raise ValueError('signature must be a signature instance')
 
-        if not isinstance(sender, typing.Address):
+        if not isinstance(sender, typing.T_Address):
             raise ValueError('sender must be an address instance')
 
         if nonce <= 0:
@@ -521,7 +521,7 @@ class HashTimeLockState(State):
     __slots__ = (
         'amount',
         'expiration',
-        'hashlock',
+        'secrethash',
         'encoded',
         'lockhash',
     )
@@ -530,34 +530,34 @@ class HashTimeLockState(State):
             self,
             amount: typing.TokenAmount,
             expiration: typing.BlockNumber,
-            hashlock: typing.Keccak256):
+            secrethash: typing.Keccak256):
 
-        if not isinstance(amount, typing.TokenAmount):
+        if not isinstance(amount, typing.T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
 
-        if not isinstance(expiration, typing.BlockNumber):
+        if not isinstance(expiration, typing.T_BlockNumber):
             raise ValueError('expiration must be a block_number instance')
 
-        if not isinstance(hashlock, typing.Keccak256):
-            raise ValueError('hashlock must be a keccak256 instance')
+        if not isinstance(secrethash, typing.T_Keccak256):
+            raise ValueError('secrethash must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
         packed.amount = amount
         packed.expiration = expiration
-        packed.hashlock = hashlock
+        packed.secrethash = secrethash
         encoded = bytes(packed.data)
 
         self.amount = amount
         self.expiration = expiration
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.encoded = encoded
         self.lockhash = sha3(encoded)
 
     def __repr__(self):
-        return '<HashTimeLockState amount:{} expiration:{} hashlock:{}>'.format(
+        return '<HashTimeLockState amount:{} expiration:{} secrethash:{}>'.format(
             self.amount,
             self.expiration,
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
@@ -565,7 +565,7 @@ class HashTimeLockState(State):
             isinstance(other, HashTimeLockState) and
             self.amount == other.amount and
             self.expiration == other.expiration and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -587,7 +587,7 @@ class UnlockPartialProofState(State):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
-        if not isinstance(secret, typing.Secret):
+        if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.lock = lock
@@ -624,7 +624,7 @@ class UnlockProofState(State):
             lock_encoded,
             secret: typing.Secret):
 
-        if not isinstance(secret, typing.Secret):
+        if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.merkle_proof = merkle_proof
@@ -724,24 +724,24 @@ class NettingChannelEndState(State):
     __slots__ = (
         'address',
         'contract_balance',
-        'hashlocks_to_pendinglocks',
-        'hashlocks_to_unclaimedlocks',
+        'secrethashes_to_lockedlocks',
+        'secrethashes_to_unlockedlocks',
         'merkletree',
         'balance_proof',
     )
 
     def __init__(self, address: typing.Address, balance: typing.TokenAmount):
-        if not isinstance(address, typing.Address):
+        if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(balance, typing.TokenAmount):
+        if not isinstance(balance, typing.T_TokenAmount):
             raise ValueError('balance must be a token_amount isinstance')
 
         self.address = address
         self.contract_balance = balance
 
-        self.hashlocks_to_pendinglocks = dict()
-        self.hashlocks_to_unclaimedlocks = dict()
+        self.secrethashes_to_lockedlocks = dict()
+        self.secrethashes_to_unlockedlocks = dict()
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof = None
 
@@ -757,8 +757,8 @@ class NettingChannelEndState(State):
             isinstance(other, NettingChannelEndState) and
             self.address == other.address and
             self.contract_balance == other.contract_balance and
-            self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
-            self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
+            self.secrethashes_to_lockedlocks == other.secrethashes_to_lockedlocks and
+            self.secrethashes_to_unlockedlocks == other.secrethashes_to_unlockedlocks and
             self.merkletree == other.merkletree and
             self.balance_proof == other.balance_proof
         )
@@ -873,10 +873,10 @@ class TransactionChannelNewBalance(State):
             contract_balance: typing.TokenAmount,
             deposit_block_number: typing.BlockNumber,
     ):
-        if not isinstance(participant_address, typing.Address):
+        if not isinstance(participant_address, typing.T_Address):
             raise ValueError('participant_address must be of type address')
 
-        if not isinstance(contract_balance, typing.BlockNumber):
+        if not isinstance(contract_balance, typing.T_BlockNumber):
             raise ValueError('contract_balance must be of type block_number')
 
         self.participant_address = participant_address

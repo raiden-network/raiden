@@ -4,7 +4,7 @@ from coincurve import PrivateKey
 
 from raiden.messages import (
     DirectTransfer,
-    MediatedTransfer,
+    LockedTransfer,
     Secret,
 )
 from raiden.raiden_service import (
@@ -16,7 +16,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
-from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import compute_layers
@@ -58,8 +58,8 @@ def get_channelstate(app0, app1, token_address) -> 'NettingChannelState':
 def transfer(initiator_app, target_app, token, amount, identifier):
     """ Nice to read shortcut to make a transfer.
 
-    The transfer is either a DirectTransfer or a MediatedTransfer, in both
-    cases all apps are synched, in the case of a MediatedTransfer the secret
+    The transfer is either a DirectTransfer or a LockedTransfer, in both
+    cases all apps are synched, in the case of a LockedTransfer the secret
     will be revealed.
     """
 
@@ -87,7 +87,7 @@ def direct_transfer(initiator_app, target_app, token_address, amount, identifier
 
 
 def mediated_transfer(initiator_app, target_app, token, amount, identifier=None, timeout=5):
-    """ Nice to read shortcut to make a MediatedTransfer.
+    """ Nice to read shortcut to make a LockedTransfer.
 
     The secret will be revealed and the apps will be synchronized."""
     # pylint: disable=too-many-arguments
@@ -103,17 +103,17 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
 
 
 def pending_mediated_transfer(app_chain, token, amount, identifier):
-    """ Nice to read shortcut to make a MediatedTransfer where the secret is _not_ revealed.
+    """ Nice to read shortcut to make a LockedTransfer where the secret is _not_ revealed.
 
     While the secret is not revealed all apps will be synchronized, meaning
-    they are all going to receive the MediatedTransfer message.
+    they are all going to receive the LockedTransfer message.
     Returns:
-        The secret used to generate the MediatedTransfer
+        The secret used to generate the LockedTransfer
     """
     # pylint: disable=too-many-locals
 
     if len(app_chain) < 2:
-        raise ValueError('Cannot make a MediatedTransfer with less than two apps')
+        raise ValueError('Cannot make a LockedTransfer with less than two apps')
 
     target = app_chain[-1].raiden.address
 
@@ -137,8 +137,8 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         init_initiator_statechange,
         initiator_app.raiden.get_block_number(),
     )
-    send_transfermessage = must_contain_entry(events, SendMediatedTransfer, {})
-    transfermessage = MediatedTransfer.from_event(send_transfermessage)
+    send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
+    transfermessage = LockedTransfer.from_event(send_transfermessage)
     initiator_app.raiden.sign(transfermessage)
 
     for mediator_app in app_chain[1:-1]:
@@ -147,8 +147,8 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
             mediator_init_statechange,
             mediator_app.raiden.get_block_number(),
         )
-        send_transfermessage = must_contain_entry(events, SendMediatedTransfer, {})
-        transfermessage = MediatedTransfer.from_event(send_transfermessage)
+        send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
+        transfermessage = LockedTransfer.from_event(send_transfermessage)
         mediator_app.raiden.sign(transfermessage)
 
     target_app = app_chain[-1]
@@ -162,7 +162,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
 
 def claim_lock(app_chain, identifier, token, secret):
     """ Unlock a pending transfer. """
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
@@ -171,7 +171,7 @@ def claim_lock(app_chain, identifier, token, secret):
             from_channel,
             identifier,
             secret,
-            hashlock,
+            secrethash,
         )
 
         secret_message = Secret(
@@ -275,8 +275,8 @@ def assert_locked(from_channel, pending_locks):
     assert from_channel.our_state.merkletree == tree
 
     for lock in pending_locks:
-        pending = lock.hashlock in from_channel.our_state.hashlocks_to_pendinglocks
-        unclaimed = lock.hashlock in from_channel.our_state.hashlocks_to_unclaimedlocks
+        pending = lock.secrethash in from_channel.our_state.secrethashes_to_lockedlocks
+        unclaimed = lock.secrethash in from_channel.our_state.secrethashes_to_unlockedlocks
         assert pending or unclaimed
 
 
@@ -406,16 +406,16 @@ def make_mediated_transfer(
     `partner_channel`."""
     identifier = channel.get_next_nonce(from_channel.our_state)
 
-    mediatedtransfer = channel.send_mediatedtransfer(
+    lockedtransfer = channel.send_lockedtransfer(
         from_channel,
         initiator,
         target,
         lock.amount,
         identifier,
         lock.expiration,
-        lock.hashlock,
+        lock.secrethash,
     )
-    mediated_transfer_msg = MediatedTransfer.from_event(mediatedtransfer)
+    mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
@@ -423,15 +423,15 @@ def make_mediated_transfer(
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-    mediatedtransfer.balance_proof = balance_proof
+    lockedtransfer.balance_proof = balance_proof
 
     # if this fails it's not the right key for the current `from_channel`
     assert mediated_transfer_msg.sender == from_channel.our_state.address
-    receive_mediatedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
+    receive_lockedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
 
-    channel.handle_receive_mediatedtransfer(
+    channel.handle_receive_lockedtransfer(
         partner_channel,
-        receive_mediatedtransfer,
+        receive_lockedtransfer,
     )
 
     if secret is not None:

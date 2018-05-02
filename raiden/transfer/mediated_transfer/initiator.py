@@ -1,19 +1,37 @@
 # -*- coding: utf-8 -*-
+from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.transfer.mediated_transfer.state import InitiatorTransferState
 from raiden.transfer.events import (
     EventTransferSentSuccess,
     EventTransferSentFailed,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
+    SendLockedTransfer,
     SendRevealSecret,
 )
+from raiden.transfer.mediated_transfer.state import (
+    InitiatorTransferState,
+    TransferDescriptionWithSecretState,
+)
+from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveSecretRequest,
+    ReceiveSecretReveal,
+)
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    RouteState,
+    NettingChannelState,
+)
+
+ChannelMap = typing.Dict[typing.ChannelID, NettingChannelState]
 
 
-def get_initial_lock_expiration(block_number, settle_timeout):
+def get_initial_lock_expiration(
+        block_number: typing.BlockNumber,
+        settle_timeout: typing.BlockTimeout,
+) -> typing.BlockExpiration:
     """ Returns the expiration for first hash-time-lock in a mediated transfer. """
     # The initiator doesn't need to learn the secret, so there is no need to
     # decrement reveal_timeout from the settle_timeout.
@@ -28,7 +46,11 @@ def get_initial_lock_expiration(block_number, settle_timeout):
     return lock_expiration
 
 
-def next_channel_from_routes(available_routes, channelidentifiers_to_channels, transfer_amount):
+def next_channel_from_routes(
+        available_routes: typing.List[RouteState],
+        channelidentifiers_to_channels: ChannelMap,
+        transfer_amount: typing.TokenAmount,
+) -> typing.Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
@@ -52,12 +74,15 @@ def next_channel_from_routes(available_routes, channelidentifiers_to_channels, t
 
         return channel_state
 
+    return None
+
 
 def try_new_route(
-        channelidentifiers_to_channels,
-        available_routes,
-        transfer_description,
-        block_number):
+        channelidentifiers_to_channels: ChannelMap,
+        available_routes: typing.List[RouteState],
+        transfer_description: TransferDescriptionWithSecretState,
+        block_number: typing.BlockNumber,
+) -> TransitionResult:
 
     channel_state = next_channel_from_routes(
         available_routes,
@@ -86,19 +111,23 @@ def try_new_route(
             channel_state.identifier,
         )
 
-        mediatedtransfer_event = send_mediatedtransfer(
+        lockedtransfer_event = send_lockedtransfer(
             initiator_state,
             channel_state,
             block_number,
         )
-        assert mediatedtransfer_event
+        assert lockedtransfer_event
 
-        events.append(mediatedtransfer_event)
+        events.append(lockedtransfer_event)
 
     return TransitionResult(initiator_state, events)
 
 
-def send_mediatedtransfer(initiator_state, channel_state, block_number):
+def send_lockedtransfer(
+        initiator_state: InitiatorTransferState,
+        channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
+) -> SendLockedTransfer:
     """ Create a mediated transfer using channel.
     Raises:
         AssertionError: If the channel does not have enough capacity.
@@ -111,26 +140,30 @@ def send_mediatedtransfer(initiator_state, channel_state, block_number):
         channel_state.settle_timeout,
     )
 
-    mediatedtransfer_event = channel.send_mediatedtransfer(
+    lockedtransfer_event = channel.send_lockedtransfer(
         channel_state,
         transfer_description.initiator,
         transfer_description.target,
         transfer_description.amount,
         transfer_description.identifier,
         lock_expiration,
-        transfer_description.hashlock,
+        transfer_description.secrethash,
     )
-    assert mediatedtransfer_event
+    assert lockedtransfer_event
 
-    initiator_state.transfer = mediatedtransfer_event.transfer
+    initiator_state.transfer = lockedtransfer_event.transfer
 
-    return mediatedtransfer_event
+    return lockedtransfer_event
 
 
-def handle_secretrequest(initiator_state, state_change):
+def handle_secretrequest(
+        initiator_state: InitiatorTransferState,
+        state_change: ReceiveSecretRequest,
+) -> TransitionResult:
+
     request_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
-        state_change.hashlock == initiator_state.transfer_description.hashlock
+        state_change.secrethash == initiator_state.transfer_description.secrethash
     )
 
     valid_secretrequest = (
@@ -175,13 +208,17 @@ def handle_secretrequest(initiator_state, state_change):
     return iteration
 
 
-def handle_secretreveal(initiator_state, state_change, channel_state):
+def handle_secretreveal(
+        initiator_state: InitiatorTransferState,
+        state_change: ReceiveSecretReveal,
+        channel_state: NettingChannelState,
+) -> TransitionResult:
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.
     """
     is_valid_secret_reveal = (
         state_change.sender == channel_state.partner_state.address and
-        state_change.hashlock == initiator_state.transfer_description.hashlock
+        state_change.secrethash == initiator_state.transfer_description.secrethash
     )
 
     # If the channel is closed the balance proof must not be sent
@@ -196,7 +233,7 @@ def handle_secretreveal(initiator_state, state_change, channel_state):
             channel_state,
             transfer_description.identifier,
             state_change.secret,
-            state_change.hashlock,
+            state_change.secrethash,
         )
 
         # TODO: Emit these events after on-chain withdraw
@@ -208,7 +245,7 @@ def handle_secretreveal(initiator_state, state_change, channel_state):
 
         unlock_success = EventUnlockSuccess(
             transfer_description.identifier,
-            transfer_description.hashlock,
+            transfer_description.secrethash,
         )
 
         iteration = TransitionResult(None, [transfer_success, unlock_success, unlock_lock])

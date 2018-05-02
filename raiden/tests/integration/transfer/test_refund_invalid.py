@@ -9,7 +9,7 @@ from raiden.messages import (
 from raiden.tests.utils.factories import (
     HOP1,
     HOP1_KEY,
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     UNIT_SECRET,
     make_address,
 )
@@ -19,7 +19,7 @@ from raiden.tests.utils.transfer import sign_and_inject
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_receive_hashlocktransfer_unknown(raiden_network, token_addresses):
+def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
 
@@ -33,9 +33,9 @@ def test_receive_hashlocktransfer_unknown(raiden_network, token_addresses):
         channel=other_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
-        locksroot=UNIT_HASHLOCK,
+        locksroot=UNIT_SECRETHASH,
         amount=amount,
-        hashlock=UNIT_HASHLOCK,
+        secrethash=UNIT_SECRETHASH,
     )
     sign_and_inject(refund_transfer_message, other_key, other_address, app0)
 
@@ -44,12 +44,12 @@ def test_receive_hashlocktransfer_unknown(raiden_network, token_addresses):
         nonce=1,
         channel=make_address(),
         transferred_amount=amount,
-        locksroot=UNIT_HASHLOCK,
+        locksroot=UNIT_SECRETHASH,
         secret=UNIT_SECRET,
     )
     sign_and_inject(secret, other_key, other_address, app0)
 
-    secret_request_message = SecretRequest(1, UNIT_HASHLOCK, 1)
+    secret_request_message = SecretRequest(1, UNIT_SECRETHASH, 1)
     sign_and_inject(secret_request_message, other_key, other_address, app0)
 
     reveal_secret_message = RevealSecret(UNIT_SECRET)

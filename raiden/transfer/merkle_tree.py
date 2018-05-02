@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-
-
-from itertools import zip_longest
-
+from raiden.utils import split_in_pairs
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3
 
@@ -57,10 +54,7 @@ def compute_layers(elements):
 
     layer = leaves
     while len(layer) > 1:
-        # [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]
-        iterator = iter(layer)
-        paired_items = zip_longest(iterator, iterator)
-
+        paired_items = split_in_pairs(layer)
         layer = [hash_pair(a, b) for a, b in paired_items]
         tree.append(layer)
 

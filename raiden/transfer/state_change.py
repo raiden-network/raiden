@@ -17,7 +17,7 @@ class Block(StateChange):
     """
 
     def __init__(self, block_number: typing.BlockNumber):
-        if not isinstance(block_number, typing.BlockNumber):
+        if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be of type block_number')
 
         self.block_number = block_number
@@ -114,11 +114,11 @@ class ActionTransferDirect(StateChange):
             self,
             payment_network_identifier,
             token_address,
-            receiver_address: typing.Address,
+            receiver_address: typing.T_Address,
             identifier,
-            amount: int
+            amount: int,
     ):
-        if not isinstance(receiver_address, typing.Address):
+        if not isinstance(receiver_address, typing.T_Address):
             raise ValueError('receiver_address must be address')
 
         if not isinstance(amount, int):
@@ -189,10 +189,10 @@ class ContractReceiveChannelClosed(StateChange):
             closing_address: typing.Address,
             closed_block_number: typing.BlockNumber):
 
-        if not isinstance(closing_address, typing.Address):
+        if not isinstance(closing_address, typing.T_Address):
             raise ValueError('closing_address must be of type address')
 
-        if not isinstance(closed_block_number, typing.BlockNumber):
+        if not isinstance(closed_block_number, typing.T_BlockNumber):
             raise ValueError('closed_block_number must be of type block_number')
 
         self.payment_network_identifier = payment_network_identifier
@@ -375,7 +375,7 @@ class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
     def __init__(self, node_address: typing.Address, network_state):
-        if not isinstance(node_address, typing.Address):
+        if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -471,23 +471,23 @@ class ContractReceiveChannelWithdraw(StateChange):
             secret,
             receiver: typing.Address):
 
-        if not isinstance(receiver, typing.Address):
+        if not isinstance(receiver, typing.T_Address):
             raise ValueError('receiver must be of type address')
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_identifier = channel_identifier
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.receiver = receiver
 
     def __repr__(self):
-        return '<ContractReceiveChannelWithdraw channel:{} receive:{} hashlock:{}>'.format(
+        return '<ContractReceiveChannelWithdraw channel:{} receive:{} secrethash:{}>'.format(
             pex(self.channel_identifier),
             pex(self.receiver),
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
@@ -497,7 +497,7 @@ class ContractReceiveChannelWithdraw(StateChange):
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.receiver == other.receiver
         )
 
@@ -509,10 +509,10 @@ class ContractReceiveNewRoute(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
     def __init__(self, participant1: typing.Address, participant2: typing.Address):
-        if not isinstance(participant1, typing.Address):
+        if not isinstance(participant1, typing.T_Address):
             raise ValueError('participant1 must be of type address')
 
-        if not isinstance(participant2, typing.Address):
+        if not isinstance(participant2, typing.T_Address):
             raise ValueError('participant2 must be of type address')
 
         self.participant1 = participant1
@@ -546,10 +546,10 @@ class ContractReceiveRouteNew(StateChange):
             participant2: typing.Address,
     ):
 
-        if not isinstance(participant1, typing.Address):
+        if not isinstance(participant1, typing.T_Address):
             raise ValueError('participant1 must be of type address')
 
-        if not isinstance(participant2, typing.Address):
+        if not isinstance(participant2, typing.T_Address):
             raise ValueError('participant2 must be of type address')
 
         self.payment_network_identifier = payment_network_identifier
@@ -624,15 +624,15 @@ class ReceiveUnlock(StateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<ReceiveUnlock hashlock: {} balance_proof: {}>'.format(
-            pex(self.hashlock),
+        return '<ReceiveUnlock secrethash: {} balance_proof: {}>'.format(
+            pex(self.secrethash),
             self.balance_proof,
         )
 
@@ -640,7 +640,7 @@ class ReceiveUnlock(StateChange):
         return (
             isinstance(other, ReceiveUnlock) and
             self.secret == other.secret and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.balance_proof == other.balance_proof
         )
 

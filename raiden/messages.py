@@ -20,8 +20,8 @@ __all__ = (
     'Secret',
     'DirectTransfer',
     'Lock',
+    'LockedTransferBase',
     'LockedTransfer',
-    'MediatedTransfer',
     'RefundTransfer',
 )
 
@@ -288,32 +288,32 @@ class Ping(SignedMessage):
 
 
 class SecretRequest(SignedMessage):
-    """ Requests the secret which unlocks a hashlock. """
+    """ Requests the secret which unlocks a secrethash. """
     cmdid = messages.SECRETREQUEST
 
-    def __init__(self, identifier, hashlock, amount):
+    def __init__(self, identifier, secrethash, amount):
         super().__init__()
         self.identifier = identifier
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.amount = amount
 
     def __repr__(self):
-        return '<{} [hashlock:{} amount:{} hash:{}]>'.format(
+        return '<{} [secrethash:{} amount:{} hash:{}]>'.format(
             self.__class__.__name__,
-            pex(self.hashlock),
+            pex(self.secrethash),
             self.amount,
             pex(self.hash),
         )
 
     @staticmethod
     def unpack(packed):
-        secret_request = SecretRequest(packed.identifier, packed.hashlock, packed.amount)
+        secret_request = SecretRequest(packed.identifier, packed.secrethash, packed.amount)
         secret_request.signature = packed.signature
         return secret_request
 
     def pack(self, packed):
         packed.identifier = self.identifier
-        packed.hashlock = self.hashlock
+        packed.secrethash = self.secrethash
         packed.amount = self.amount
         packed.signature = self.signature
 
@@ -321,14 +321,14 @@ class SecretRequest(SignedMessage):
     def from_event(event):
         return SecretRequest(
             event.identifier,
-            event.hashlock,
+            event.secrethash,
             event.amount,
         )
 
     def to_dict(self):
         return {
             'identifier': self.identifier,
-            'hashlock': self.hashlock.hex(),
+            'secrethash': self.secrethash.hex(),
             'amount': self.amount,
         }
 
@@ -336,7 +336,7 @@ class SecretRequest(SignedMessage):
     def from_dict(data):
         return SecretRequest(
             data['identifier'],
-            unhexlify(data['hashlock']),
+            unhexlify(data['secrethash']),
             data['amount'],
         )
 
@@ -382,12 +382,12 @@ class Secret(EnvelopeMessage):
         self.channel = channel
         self.transferred_amount = transferred_amount
         self.locksroot = locksroot
-        self._hashlock = None
+        self._secrethash = None
 
     def __repr__(self):
         return (
             '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} hashlock:{}]>'
+            'hash:{} secrethash:{}]>'
         ).format(
             self.__class__.__name__,
             pex(self.channel),
@@ -395,14 +395,14 @@ class Secret(EnvelopeMessage):
             self.transferred_amount,
             pex(self.locksroot),
             pex(self.hash),
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     @property
-    def hashlock(self):
-        if self._hashlock is None:
-            self._hashlock = sha3(self.secret)
-        return self._hashlock
+    def secrethash(self):
+        if self._secrethash is None:
+            self._secrethash = sha3(self.secret)
+        return self._secrethash
 
     @staticmethod
     def unpack(packed):
@@ -475,20 +475,20 @@ class RevealSecret(SignedMessage):
     def __init__(self, secret):
         super().__init__()
         self.secret = secret
-        self._hashlock = None
+        self._secrethash = None
 
     def __repr__(self):
-        return '<{} [hashlock:{} hash:{}]>'.format(
+        return '<{} [secrethash:{} hash:{}]>'.format(
             self.__class__.__name__,
-            pex(self.hashlock),
+            pex(self.secrethash),
             pex(self.hash),
         )
 
     @property
-    def hashlock(self):
-        if self._hashlock is None:
-            self._hashlock = sha3(self.secret)
-        return self._hashlock
+    def secrethash(self):
+        if self._secrethash is None:
+            self._secrethash = sha3(self.secret)
+        return self._secrethash
 
     @staticmethod
     def unpack(packed):
@@ -658,13 +658,13 @@ class Lock:
     Args:
         amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
-        hashlock: Hashed secret `sha3(secret)` used to register the transfer,
+        secrethash: Hashed secret `sha3(secret)` used to register the transfer,
         the real `secret` is necessary to release the locked amount.
     """
     # Lock is not a message, it is a serializable structure that is reused in
     # some messages
 
-    def __init__(self, amount, expiration, hashlock):
+    def __init__(self, amount, expiration, secrethash):
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if amount < 0:
@@ -679,10 +679,10 @@ class Lock:
         if expiration >= 2 ** 256:
             raise ValueError('expiration {} is too large'.format(amount))
 
-        assert ishash(hashlock)
+        assert ishash(secrethash)
         self.amount = amount
         self.expiration = expiration
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self._asbytes = None
 
     @property
@@ -691,7 +691,7 @@ class Lock:
             packed = messages.Lock(buffer_for(messages.Lock))
             packed.amount = self.amount
             packed.expiration = self.expiration
-            packed.hashlock = self.hashlock
+            packed.secrethash = self.secrethash
 
             self._asbytes = packed.data
 
@@ -709,7 +709,7 @@ class Lock:
         return cls(
             packed.amount,
             packed.expiration,
-            packed.hashlock,
+            packed.secrethash,
         )
 
     @staticmethod
@@ -717,7 +717,7 @@ class Lock:
         lock = Lock(
             state.amount,
             state.expiration,
-            state.hashlock,
+            state.secrethash,
         )
 
         return lock
@@ -734,28 +734,29 @@ class Lock:
         return {
             'amount': self.amount,
             'expiration': self.expiration,
-            'hashlock': self.hashlock.hex(),
+            'secrethash': self.secrethash.hex(),
         }
 
     @staticmethod
     def from_dict(data):
-        return Lock(data['amount'], data['expiration'], unhexlify(data['hashlock']))
+        return Lock(data['amount'], data['expiration'], unhexlify(data['secrethash']))
 
 
-class LockedTransfer(EnvelopeMessage):
+class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
-    she knows the secret to `hashlock`.
+    she knows the secret to `secrethash`.
 
     The token amount is implicitly represented in the `locksroot` and won't be
     reflected in the `transferred_amount` until the secret is revealed.
 
-    This signs Carol, that she can claim locked_amount from Bob if she knows the secret to hashlock
+    This signs Carol, that she can claim locked_amount from Bob if she knows
+    the secret to secrethash.
 
-    If the secret to hashlock becomes public, but Bob fails to sign Carol a netted balance,
-    with an updated rootlock which reflects the deletion of the lock, then
-    Carol can request settlement on chain by providing:
-    any signed [nonce, token, balance, recipient, locksroot, ...]
-    along a merkle proof from locksroot to the not yet netted formerly locked amount
+    If the secret to secrethash becomes public, but Bob fails to sign Carol a
+    netted balance, with an updated rootlock which reflects the deletion of the
+    lock, then Carol can request settlement on chain by providing: any signed
+    [nonce, token, balance, recipient, locksroot, ...] along a merkle proof
+    from locksroot to the not yet netted formerly locked amount.
     """
     def __init__(
             self,
@@ -792,10 +793,10 @@ class LockedTransfer(EnvelopeMessage):
         lock = Lock(
             packed.amount,
             packed.expiration,
-            packed.hashlock,
+            packed.secrethash,
         )
 
-        locked_transfer = LockedTransfer(
+        locked_transfer = LockedTransferBase(
             packed.identifier,
             packed.nonce,
             packed.token,
@@ -820,14 +821,14 @@ class LockedTransfer(EnvelopeMessage):
         lock = self.lock
         packed.amount = lock.amount
         packed.expiration = lock.expiration
-        packed.hashlock = lock.hashlock
+        packed.secrethash = lock.secrethash
 
         packed.signature = self.signature
 
 
-class MediatedTransfer(LockedTransfer):
+class LockedTransfer(LockedTransferBase):
     """
-    A MediatedTransfer has a `target` address to which a chain of transfers shall
+    A LockedTransfer has a `target` address to which a chain of transfers shall
     be established. Here the `haslock` is mandatory.
 
     `fee` is the remaining fee a recipient shall use to complete the mediated transfer.
@@ -842,10 +843,10 @@ class MediatedTransfer(LockedTransfer):
 
     Fees are always payable by the initiator.
 
-    `initiator` is the party that knows the secret to the `hashlock`
+    `initiator` is the party that knows the secret to the `secrethash`
     """
 
-    cmdid = messages.MEDIATEDTRANSFER
+    cmdid = messages.LOCKEDTRANSFER
 
     def __init__(
             self,
@@ -888,7 +889,7 @@ class MediatedTransfer(LockedTransfer):
     def __repr__(self):
         representation = (
             '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} id:{} hashlock:{} expiration:{} amount:{}]>'
+            'hash:{} id:{} secrethash:{} expiration:{} amount:{}]>'
         ).format(
             self.__class__.__name__,
             pex(self.channel),
@@ -897,7 +898,7 @@ class MediatedTransfer(LockedTransfer):
             pex(self.locksroot),
             pex(self.hash),
             self.identifier,
-            pex(self.lock.hashlock),
+            pex(self.lock.secrethash),
             self.lock.expiration,
             self.lock.amount,
         )
@@ -909,10 +910,10 @@ class MediatedTransfer(LockedTransfer):
         lock = Lock(
             packed.amount,
             packed.expiration,
-            packed.hashlock,
+            packed.secrethash,
         )
 
-        mediated_transfer = MediatedTransfer(
+        mediated_transfer = LockedTransfer(
             packed.identifier,
             packed.nonce,
             packed.token,
@@ -943,23 +944,23 @@ class MediatedTransfer(LockedTransfer):
         lock = self.lock
         packed.amount = lock.amount
         packed.expiration = lock.expiration
-        packed.hashlock = lock.hashlock
+        packed.secrethash = lock.secrethash
 
         packed.signature = self.signature
 
     @staticmethod
-    def from_event(event: 'SendMediatedTransfer') -> 'MediatedTransfer':
+    def from_event(event: 'SendLockedTransfer') -> 'LockedTransfer':
         transfer = event.transfer
         lock = transfer.lock
         balance_proof = transfer.balance_proof
         lock = Lock(
             lock.amount,
             lock.expiration,
-            lock.hashlock,
+            lock.secrethash,
         )
         fee = 0
 
-        return MediatedTransfer(
+        return LockedTransfer(
             transfer.identifier,
             balance_proof.nonce,
             transfer.token,
@@ -991,7 +992,7 @@ class MediatedTransfer(LockedTransfer):
 
     @staticmethod
     def from_dict(data):
-        message = MediatedTransfer(
+        message = LockedTransfer(
             data['identifier'],
             data['nonce'],
             unhexlify(data['token']),
@@ -1008,8 +1009,8 @@ class MediatedTransfer(LockedTransfer):
         return message
 
 
-class RefundTransfer(MediatedTransfer):
-    """ A special MediatedTransfer sent from a payee to a payer indicating that
+class RefundTransfer(LockedTransfer):
+    """ A special LockedTransfer sent from a payee to a payer indicating that
     no route is available, this transfer will effectively refund the payer the
     transfer amount allowing him to try a new path to complete the transfer.
     """
@@ -1020,7 +1021,7 @@ class RefundTransfer(MediatedTransfer):
         lock = Lock(
             packed.amount,
             packed.expiration,
-            packed.hashlock,
+            packed.secrethash,
         )
 
         locked_transfer = RefundTransfer(
@@ -1045,7 +1046,7 @@ class RefundTransfer(MediatedTransfer):
         lock = Lock(
             event.lock.amount,
             event.lock.expiration,
-            event.lock.hashlock,
+            event.lock.secrethash,
         )
         fee = 0
 
@@ -1089,6 +1090,6 @@ CMDID_TO_CLASS = {
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,
     messages.DIRECTTRANSFER: DirectTransfer,
-    messages.MEDIATEDTRANSFER: MediatedTransfer,
+    messages.LOCKEDTRANSFER: LockedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
 }

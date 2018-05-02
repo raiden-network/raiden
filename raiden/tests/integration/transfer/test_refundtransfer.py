@@ -3,7 +3,7 @@ import gevent
 import pytest
 
 from raiden.messages import (
-    MediatedTransfer,
+    LockedTransfer,
     RefundTransfer,
 )
 from raiden.tests.utils.network import CHAIN
@@ -14,7 +14,7 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.transport import MessageLoggerTransport
 from raiden.transfer.mediated_transfer.events import (
-    SendMediatedTransfer,
+    SendLockedTransfer,
     SendRefundTransfer,
 )
 from raiden.transfer.state import lockstate_from_lock
@@ -47,10 +47,10 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     # The transfer from app0 to app2 failed, so the balances did change.
     # Since the refund is not unlocked both channels have the corresponding
     # amount locked (issue #1091)
-    send_mediatedtransfer = next(
+    send_lockedtransfer = next(
         event
         for _, event in app0.raiden.wal.storage.get_events_by_block(0, 'latest')
-        if isinstance(event, SendMediatedTransfer)
+        if isinstance(event, SendLockedTransfer)
     )
 
     send_refundtransfer = next(
@@ -61,7 +61,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 
     assert_synched_channel_state(
         token_address,
-        app0, deposit, [send_mediatedtransfer.transfer.lock],
+        app0, deposit, [send_lockedtransfer.transfer.lock],
         app1, deposit, [send_refundtransfer.lock],
     )
 
@@ -148,7 +148,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     mediated_message = list(
         message
         for message in app0_messages
-        if isinstance(message, MediatedTransfer) and message.target == app2.raiden.address
+        if isinstance(message, LockedTransfer) and message.target == app2.raiden.address
     )[-1]
     assert mediated_message
 
@@ -161,7 +161,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     assert refund_message
 
     assert mediated_message.lock.amount == refund_message.lock.amount
-    assert mediated_message.lock.hashlock == refund_message.lock.hashlock
+    assert mediated_message.lock.secrethash == refund_message.lock.secrethash
     assert mediated_message.lock.expiration > refund_message.lock.expiration
 
     # Both channels have the amount locked because of the refund message

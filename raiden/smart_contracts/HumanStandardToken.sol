@@ -11,7 +11,7 @@ Machine-based, rapid creation of many tokens would not necessarily need these ex
 
 .*/
 
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.23;
 import "./StandardToken.sol";
 
 contract HumanStandardToken is StandardToken {
@@ -28,7 +28,7 @@ contract HumanStandardToken is StandardToken {
     string public symbol;                 //An identifier: eg SBX
     string public version = 'H0.1';       //human 0.1 standard. Just an arbitrary versioning scheme.
 
-    function HumanStandardToken(
+    constructor(
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,

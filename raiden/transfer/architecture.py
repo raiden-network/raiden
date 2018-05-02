@@ -19,7 +19,7 @@ from typing import List
 # - The function call `state_transition(curr_state, state_change)` must be
 # deterministic, the recovery depends on the re-execution of the state changes
 # from the WAL and must produce the same result.
-# - StateChange must be idenpotent because the partner node might be recovering
+# - StateChange must be idempotent because the partner node might be recovering
 # from a failure and a Event might be produced more than once.
 #
 # Requirements that are enforced:

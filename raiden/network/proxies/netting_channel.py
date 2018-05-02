@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from binascii import unhexlify
+from gevent.lock import RLock
 from typing import Optional, List
 
 from ethereum import slogging
@@ -10,7 +11,10 @@ from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.exceptions import TransactionThrew
+from raiden.exceptions import (
+    ChannelBusyError,
+    TransactionThrew
+)
 from raiden import messages
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.proxies.token import Token
@@ -30,6 +34,7 @@ from raiden.utils import (
     address_encoder,
     pex,
     privatekey_to_address,
+    releasing,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -45,7 +50,8 @@ class NettingChannel:
         self.address = channel_address
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
-
+        # Prevents concurrent deposit, close, or settle operations on the same channel
+        self.channel_operations_lock = RLock()
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
         self.proxy = jsonrpc_client.new_contract_proxy(
@@ -175,6 +181,7 @@ class NettingChannel:
 
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
+            ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the netting channel token address is empty.
         """
         if not isinstance(amount, int):
@@ -203,42 +210,51 @@ class NettingChannel:
                 amount=amount,
             )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
-            'deposit',
-            amount,
-        )
-
-        self.client.poll(
-            unhexlify(transaction_hash),
-            timeout=self.poll_timeout,
-        )
-
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            log.critical(
-                'deposit failed',
-                node=pex(self.node_address),
-                contract=pex(self.address),
+        if not self.channel_operations_lock.acquire(blocking=False):
+            raise ChannelBusyError(
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation.'
             )
 
-            self._check_exists()
-            raise TransactionThrew('Deposit', receipt_or_none)
-
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'deposit sucessfull',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                amount=amount,
+        with releasing(self.channel_operations_lock):
+            transaction_hash = estimate_and_transact(
+                self.proxy,
+                'deposit',
+                amount,
             )
+
+            self.client.poll(
+                unhexlify(transaction_hash),
+                timeout=self.poll_timeout,
+            )
+
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if receipt_or_none:
+                log.critical(
+                    'deposit failed',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                )
+
+                self._check_exists()
+                raise TransactionThrew('Deposit', receipt_or_none)
+
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'deposit successful',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                    amount=amount,
+                )
 
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
 
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
+            ChannelBusyError: If the channel is busy with another operation.
         """
+
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'close called',
@@ -251,43 +267,50 @@ class NettingChannel:
                 signature=encode_hex(signature),
             )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
-            'close',
-            nonce,
-            transferred_amount,
-            locksroot,
-            extra_hash,
-            signature,
-        )
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
-
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            log.critical(
-                'close failed',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                nonce=nonce,
-                transferred_amount=transferred_amount,
-                locksroot=encode_hex(locksroot),
-                extra_hash=encode_hex(extra_hash),
-                signature=encode_hex(signature),
+        if not self.channel_operations_lock.acquire(blocking=False):
+            raise ChannelBusyError(
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation.'
             )
-            self._check_exists()
-            raise TransactionThrew('Close', receipt_or_none)
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'close sucessfull',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                nonce=nonce,
-                transferred_amount=transferred_amount,
-                locksroot=encode_hex(locksroot),
-                extra_hash=encode_hex(extra_hash),
-                signature=encode_hex(signature),
+        with releasing(self.channel_operations_lock):
+            transaction_hash = estimate_and_transact(
+                self.proxy,
+                'close',
+                nonce,
+                transferred_amount,
+                locksroot,
+                extra_hash,
+                signature,
             )
+            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if receipt_or_none:
+                log.critical(
+                    'close failed',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                    nonce=nonce,
+                    transferred_amount=transferred_amount,
+                    locksroot=encode_hex(locksroot),
+                    extra_hash=encode_hex(extra_hash),
+                    signature=encode_hex(signature),
+                )
+                self._check_exists()
+                raise TransactionThrew('Close', receipt_or_none)
+
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'close successful',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                    nonce=nonce,
+                    transferred_amount=transferred_amount,
+                    locksroot=encode_hex(locksroot),
+                    extra_hash=encode_hex(extra_hash),
+                    signature=encode_hex(signature),
+                )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
@@ -335,7 +358,7 @@ class NettingChannel:
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'updateTransfer sucessfull',
+                    'updateTransfer successful',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                     nonce=nonce,
@@ -381,41 +404,53 @@ class NettingChannel:
 
         elif log.isEnabledFor(logging.INFO):
             log.info(
-                'withdraw sucessfull',
+                'withdraw successful',
                 node=pex(self.node_address),
                 contract=pex(self.address),
                 lock=unlock_proof,
             )
 
     def settle(self):
+        """ Settle the channel.
+
+        Raises:
+            ChannelBusyError: If the channel is busy with another operation
+        """
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'settle called',
                 node=pex(self.node_address),
             )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
-            'settle',
-        )
-
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            log.info(
-                'settle failed',
-                node=pex(self.node_address),
-                contract=pex(self.address),
+        if not self.channel_operations_lock.acquire(blocking=False):
+            raise ChannelBusyError(
+                f'Channel with address {self.address} is '
+                f'busy with another ongoing operation'
             )
-            self._check_exists()
-            raise TransactionThrew('Settle', receipt_or_none)
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'settle sucessfull',
-                node=pex(self.node_address),
-                contract=pex(self.address),
+        with releasing(self.channel_operations_lock):
+            transaction_hash = estimate_and_transact(
+                self.proxy,
+                'settle',
             )
+
+            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if receipt_or_none:
+                log.info(
+                    'settle failed',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                )
+                self._check_exists()
+                raise TransactionThrew('Settle', receipt_or_none)
+
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'settle successful',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                )
 
     def events_filter(
             self,

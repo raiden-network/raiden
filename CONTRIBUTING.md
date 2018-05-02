@@ -148,6 +148,34 @@ Thus we setup the following rules:
 
 ### Coding Style
 
+#### General Style
+
+In this section we are going to see style rules that should be followed across all languages.
+
+**Line breaks after operators**
+
+For long expressions where we break the expression at the operators the line break should come **after** the operator and not before.
+
+The following should be avoided:
+
+```python
+        participant1_amount = (
+            participant1_state.deposit
+            + participant2_state.transferred_amount
+            - participant1_state.transferred_amount
+        );
+```
+
+instead it should be:
+
+```python
+        participant1_amount = (
+            participant1_state.deposit +
+            participant2_state.transferred_amount -
+            participant1_state.transferred_amount
+        );
+```
+
 #### Python
 
 Raiden is written in Python and we follow the official Python style guide
@@ -346,6 +374,21 @@ style consistency's sake and may change in the future as there [may
 be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better)
 a tiny change in performance.
 
+**NewTypes and type comparisons**
+
+For often used types it makes sense to define new types using the `typing.NewType` function.
+New type names should be capitalized.
+```python
+Address = NewType('Address', bytes)
+```
+
+These type definitions can not be used for type comparisons. To make this possible always
+define a associated alias, which must start with `T_`.
+```python
+T_Address = bytes
+```
+
+
 #### Solidity
 
 For solidity we generally follow the style guide as shown in the [solidity
@@ -366,45 +409,6 @@ function iDoSomething(uint awesome_argument) {
 }
 ```
 
-**Modifiers in long function declarations**
-
-
-This is how the solidity documentation suggests it:
-
-```js
-function thisFunctionNameIsReallyLong(
-    address x,
-    address y,
-    address z,
-)
-    public
-    onlyowner
-    priced
-    returns (address)
-{
-    doSomething();
-}
-```
-
-This is the minor modification we make in order to make the code more readable
-when quickly skimming through it. The thinking here is to easily spot the start
-of the function's block when skimming and not have the modifiers appearing as
-if they are a block on their own due to the hanging parentheses.
-
-```js
-function thisFunctionNameIsReallyLong(
-    address x,
-    address y,
-    address z)
-
-    public
-    onlyowner
-    priced
-    returns (address)
-{
-    doSomething();
-}
-```
 
 **Documentation**
 

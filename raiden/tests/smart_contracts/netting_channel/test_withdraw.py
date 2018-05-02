@@ -4,10 +4,10 @@ from ethereum.utils import normalize_address
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import Lock, MediatedTransfer
+from raiden.messages import Lock, LockedTransfer
 from raiden.tests.utils.messages import (
-    HASHLOCK_FOR_MERKLETREE,
-    HASHLOCKS_SECRESTS,
+    SECRETHASHES_FOR_MERKLETREE,
+    SECRETHASHES_SECRESTS,
     make_direct_transfer,
     make_lock,
 )
@@ -45,11 +45,11 @@ def test_withdraw(
     lock_amount = 31
     lock_expiration = tester_chain.block.number + reveal_timeout + 5
     secret = b'secretsecretsecretsecretsecretse'
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock0 = Lock(lock_amount, lock_expiration, hashlock)
+    lock0 = Lock(lock_amount, lock_expiration, secrethash)
 
     mediated0 = make_mediated_transfer(
         channel0,
@@ -122,12 +122,12 @@ def test_withdraw_at_settlement_block(
     lock_amount = 31
     lock_expiration = tester_chain.block.number + settle_timeout
     secret = b'settlementsettlementsettlementse'
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
 
     lock0 = Lock(
         amount=lock_amount,
         expiration=lock_expiration,
-        hashlock=hashlock,
+        secrethash=secrethash,
     )
     lock0_bytes = bytes(lock0.as_bytes)
     lock0_hash = sha3(lock0_bytes)
@@ -135,7 +135,7 @@ def test_withdraw_at_settlement_block(
     opened_block = nettingchannel.opened(sender=pkey0)
     nonce = 1 + (opened_block * (2 ** 32))
 
-    mediated0 = MediatedTransfer(
+    mediated0 = LockedTransfer(
         identifier=1,
         nonce=nonce,
         token=tester_token.address,
@@ -189,11 +189,11 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_chain):
     lock_timeout = reveal_timeout + 5
     lock_expiration = tester_chain.block.number + lock_timeout
     secret = b'expiredlockexpiredlockexpiredloc'
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
     new_block = Block(tester_chain.block.number)
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
-    lock1 = Lock(amount=31, expiration=lock_expiration, hashlock=hashlock)
+    lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=secrethash)
 
     mediated0 = make_mediated_transfer(
         channel1,
@@ -249,7 +249,7 @@ def test_withdraw_both_participants(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     secret = b'secretsecretsecretsecretsecretse'
-    hashlock = sha3(secret)
+    secrethash = sha3(secret)
 
     lock_amount = 31
     lock01_expiration = tester_chain.block.number + settle_timeout - 1 * reveal_timeout
@@ -259,9 +259,9 @@ def test_withdraw_both_participants(
     channel.state_transition(channel0, new_block, new_block.block_number)
     channel.state_transition(channel1, new_block, new_block.block_number)
 
-    # using the same hashlock and amount is intentional
-    lock01 = Lock(lock_amount, lock01_expiration, hashlock)
-    lock10 = Lock(lock_amount, lock10_expiration, hashlock)
+    # using the same secrethash and amount is intentional
+    lock01 = Lock(lock_amount, lock01_expiration, secrethash)
+    lock10 = Lock(lock_amount, lock10_expiration, secrethash)
 
     mediated01 = make_mediated_transfer(
         channel0,
@@ -391,7 +391,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_chain):
         )
 
 
-@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+@pytest.mark.parametrize('tree', SECRETHASHES_FOR_MERKLETREE)
 def test_withdraw_fails_with_partial_merkle_proof(
         tree,
         tester_channels,
@@ -405,10 +405,10 @@ def test_withdraw_fails_with_partial_merkle_proof(
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
-            hashlock=hashlock,
+            secrethash=secrethash,
             expiration=expiration,
         )
-        for hashlock in tree
+        for secrethash in tree
     ]
 
     leaves = [sha3(lock.as_bytes) for lock in locks]
@@ -439,7 +439,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
     )
 
     for lock in locks:
-        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+        secret = SECRETHASHES_SECRESTS[lock.secrethash]
         lock_encoded = lock.as_bytes
         merkle_proof = compute_merkleproof_for(merkle_tree, sha3(lock_encoded))
 
@@ -457,7 +457,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
                 )
 
 
-@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+@pytest.mark.parametrize('tree', SECRETHASHES_FOR_MERKLETREE)
 def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, settle_timeout):
     """ withdraw must fail if the proof is tampered. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
@@ -466,10 +466,10 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, set
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
-            hashlock=hashlock,
+            secrethash=secrethash,
             expiration=expiration,
         )
-        for hashlock in tree
+        for secrethash in tree
     ]
 
     leaves = [sha3(lock.as_bytes) for lock in locks]
@@ -500,7 +500,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, set
     )
 
     for lock in locks:
-        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+        secret = SECRETHASHES_SECRESTS[lock.secrethash]
 
         lock_encoded = lock.as_bytes
         merkle_proof = compute_merkleproof_for(merkle_tree, sha3(lock_encoded))
@@ -524,7 +524,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, set
                 )
 
 
-@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+@pytest.mark.parametrize('tree', SECRETHASHES_FOR_MERKLETREE)
 def test_withdraw_tampered_lock_amount(
         tree,
         tester_channels,
@@ -539,10 +539,10 @@ def test_withdraw_tampered_lock_amount(
     expiration = current_block + settle_timeout - 1
     locks = [
         make_lock(
-            hashlock=hashlock,
+            secrethash=secrethash,
             expiration=expiration,
         )
-        for hashlock in tree
+        for secrethash in tree
     ]
 
     leaves = [sha3(lock.as_bytes) for lock in locks]
@@ -574,14 +574,14 @@ def test_withdraw_tampered_lock_amount(
     )
 
     for lock in locks:
-        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+        secret = SECRETHASHES_SECRESTS[lock.secrethash]
 
         lock_encoded = lock.as_bytes
         merkle_proof = compute_merkleproof_for(merkle_tree, sha3(lock_encoded))
 
         tampered_lock = make_lock(
             amount=lock.amount * 100,
-            hashlock=lock.hashlock,
+            secrethash=lock.secrethash,
             expiration=lock.expiration,
         )
         tampered_lock_encoded = sha3(tampered_lock.as_bytes)
@@ -619,11 +619,11 @@ def test_withdraw_lock_with_a_large_expiration(
 
     lock_amount = 29
     secret = sha3(b'test_withdraw_lock_with_a_large_expiration')
-    lock_hashlock = sha3(secret)
+    lock_secrethash = sha3(secret)
     lock = Lock(
         amount=lock_amount,
         expiration=lock_expiration,
-        hashlock=lock_hashlock,
+        secrethash=lock_secrethash,
     )
     mediated0 = make_mediated_transfer(
         channel0,

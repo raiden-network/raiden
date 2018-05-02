@@ -7,7 +7,7 @@ from raiden.transfer import channel
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.factories import (
-    UNIT_HASHLOCK,
+    UNIT_SECRETHASH,
     make_address,
     make_privkey_address,
 )
@@ -85,7 +85,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     balance1 = channel.get_balance(channel0.partner_state, channel0.our_state)
 
     identifier = 1
-    invalid_locksroot = UNIT_HASHLOCK
+    invalid_locksroot = UNIT_SECRETHASH
     channel_identifier = channel0.identifier
     direct_transfer_message = DirectTransfer(
         identifier=identifier,

@@ -6,6 +6,7 @@ import string
 import sys
 import time
 from typing import Tuple, Union, List, Iterable
+from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
@@ -329,3 +330,29 @@ def is_frozen():
 
 def event_decoder(event: Log, contract_translator: ContractTranslator):
     return contract_translator.decode_event(event.topics, event.data)
+
+
+def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
+    """ Split given iterable in pairs [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]"""
+    # We are using zip_longest with one clever hack:
+    # https://docs.python.org/3/library/itertools.html#itertools.zip_longest
+    # We create an iterator out of the list and then pass the same iterator to
+    # the function two times. Thus the function consumes a different element
+    # from the iterator each time and produces the desired result.
+    iterator = iter(arg)
+    return zip_longest(iterator, iterator)
+
+
+class releasing:
+    """context manager inspired by closing that will call release on __exit__
+    blocks, useful to release acquired locks.
+    """
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __enter__(self):
+        return self.obj
+
+    def __exit__(self, *exc_info):  # pylint: disable=unused-argument
+        self.obj.release()

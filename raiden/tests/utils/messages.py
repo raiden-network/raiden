@@ -11,7 +11,7 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.messages import (
     DirectTransfer,
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
     RefundTransfer,
 )
 
@@ -27,16 +27,16 @@ VALID_SECRETS = [
     letter.encode() * 32
     for letter in string.ascii_uppercase[:7]
 ]
-HASHLOCKS_SECRESTS = {
+SECRETHASHES_SECRESTS = {
     sha3(secret): secret
     for secret in VALID_SECRETS
 }
-VALID_HASHLOCKS = list(HASHLOCKS_SECRESTS.keys())
-HASHLOCK_FOR_MERKLETREE = [
-    VALID_HASHLOCKS[:1],
-    VALID_HASHLOCKS[:2],
-    VALID_HASHLOCKS[:3],
-    VALID_HASHLOCKS[:7],
+VALID_SECRETHASHES = list(SECRETHASHES_SECRESTS.keys())
+SECRETHASHES_FOR_MERKLETREE = [
+    VALID_SECRETHASHES[:1],
+    VALID_SECRETHASHES[:2],
+    VALID_SECRETHASHES[:3],
+    VALID_SECRETHASHES[:7],
 ]
 
 # zero is used to indicate novalue in solidity, that is why it's an invalid
@@ -69,11 +69,11 @@ MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
 }))
 
 
-def make_lock(amount=7, expiration=1, hashlock=VALID_HASHLOCKS[0]):
+def make_lock(amount=7, expiration=1, secrethash=VALID_SECRETHASHES[0]):
     return Lock(
         amount,
         expiration,
-        hashlock,
+        secrethash,
     )
 
 
@@ -89,7 +89,7 @@ def make_refund_transfer(
         target=ADDRESS,
         initiator=ADDRESS,
         fee=0,
-        hashlock=VALID_HASHLOCKS[0]):
+        secrethash=VALID_SECRETHASHES[0]):
 
     return RefundTransfer(
         identifier,
@@ -99,7 +99,7 @@ def make_refund_transfer(
         transferred_amount,
         recipient,
         locksroot,
-        make_lock(amount=amount, hashlock=hashlock),
+        make_lock(amount=amount, secrethash=secrethash),
         target,
         initiator,
         fee,
@@ -128,7 +128,7 @@ def make_mediated_transfer(
     if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
 
-    return MediatedTransfer(
+    return LockedTransfer(
         identifier,
         nonce,
         token,

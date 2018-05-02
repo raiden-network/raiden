@@ -6,7 +6,7 @@ from ethereum import slogging
 from raiden.messages import (
     DirectTransfer,
     Lock,
-    MediatedTransfer,
+    LockedTransfer,
     RefundTransfer,
     RevealSecret,
     Secret,
@@ -28,7 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
     SendBalanceProof,
-    SendMediatedTransfer,
+    SendLockedTransfer,
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
@@ -44,11 +44,11 @@ UNEVENTFUL_EVENTS = (
 )
 
 
-def handle_send_mediatedtransfer(
+def handle_send_lockedtransfer(
         raiden: 'RaidenService',
-        send_mediated_transfer: SendMediatedTransfer,
+        send_mediated_transfer: SendLockedTransfer,
 ):
-    mediated_transfer_message = MediatedTransfer.from_event(send_mediated_transfer)
+    mediated_transfer_message = LockedTransfer.from_event(send_mediated_transfer)
     raiden.sign(mediated_transfer_message)
     raiden.send_async(
         mediated_transfer_message.recipient,
@@ -142,7 +142,7 @@ def handle_unlockfailed(
     # pylint: disable=unused-argument
     log.error(
         'UnlockFailed!',
-        hashlock=pex(unlock_failed_event.hashlock),
+        secrethash=pex(unlock_failed_event.secrethash),
         reason=unlock_failed_event.reason
     )
 
@@ -222,8 +222,8 @@ def handle_contract_channelsettle(
 def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
     # pylint: disable=too-many-branches
 
-    if isinstance(event, SendMediatedTransfer):
-        handle_send_mediatedtransfer(raiden, event)
+    if isinstance(event, SendLockedTransfer):
+        handle_send_lockedtransfer(raiden, event)
     elif isinstance(event, SendDirectTransfer):
         handle_send_directtransfer(raiden, event)
     elif isinstance(event, SendRevealSecret):

@@ -13,7 +13,7 @@ from raiden.transfer.state import (
 
 
 def lockedtransfersigned_from_message(message):
-    """ Create LockedTransferSignedState from a MediatedTransfer message. """
+    """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = BalanceProofSignedState(
         message.nonce,
         message.transferred_amount,
@@ -27,7 +27,7 @@ def lockedtransfersigned_from_message(message):
     lock = HashTimeLockState(
         message.lock.amount,
         message.lock.expiration,
-        message.lock.hashlock,
+        message.lock.secrethash,
     )
 
     transfer_state = LockedTransferSignedState(
@@ -46,7 +46,7 @@ class InitiatorPaymentState(State):
     """ State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the
     transfers fails or timeouts another transfer will be started with a
-    different hashlock.
+    different secrethash.
     """
     __slots__ = (
         'initiator',
@@ -130,31 +130,31 @@ class MediatorTransferState(State):
     A mediator may manage multiple channels because of refunds, but all these
     channels will be used for the same transfer (not for different payments).
     Args:
-        hashlock: The hashlock used for this transfer.
+        secrethash: The secrethash used for this transfer.
     """
 
     __slots__ = (
-        'hashlock',
+        'secrethash',
         'secret',
         'transfers_pair',
     )
 
-    def __init__(self, hashlock: typing.Keccak256):
+    def __init__(self, secrethash: typing.Keccak256):
         # for convenience
-        self.hashlock = hashlock
+        self.secrethash = secrethash
         self.secret = None
         self.transfers_pair = list()
 
     def __repr__(self):
-        return '<MediatorTransferState hashlock:{} qtd_transfers:{}>'.format(
-            pex(self.hashlock),
+        return '<MediatorTransferState secrethash:{} qtd_transfers:{}>'.format(
+            pex(self.secrethash),
             len(self.transfers_pair),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, MediatorTransferState) and
-            self.hashlock == other.hashlock and
+            self.secrethash == other.secrethash and
             self.secret == other.secret and
             self.transfers_pair == other.transfers_pair
         )
@@ -352,7 +352,7 @@ class TransferDescriptionWithSecretState(State):
         'initiator',
         'target',
         'secret',
-        'hashlock',
+        'secrethash',
     )
 
     def __init__(
@@ -365,7 +365,7 @@ class TransferDescriptionWithSecretState(State):
             target: typing.Address,
             secret: typing.Secret):
 
-        hashlock = sha3(secret)
+        secrethash = sha3(secret)
 
         self.identifier = identifier
         self.amount = amount
@@ -374,16 +374,16 @@ class TransferDescriptionWithSecretState(State):
         self.initiator = initiator
         self.target = target
         self.secret = secret
-        self.hashlock = hashlock
+        self.secrethash = secrethash
 
     def __repr__(self):
         return (
-            '<TransferDescriptionWithSecretState network:{} token:{} amount:{} hashlock:{}>'
+            '<TransferDescriptionWithSecretState network:{} token:{} amount:{} secrethash:{}>'
         ).format(
             pex(self.registry),
             pex(self.token),
             self.amount,
-            pex(self.hashlock),
+            pex(self.secrethash),
         )
 
     def __eq__(self, other):
@@ -396,7 +396,7 @@ class TransferDescriptionWithSecretState(State):
             self.initiator == other.initiator and
             self.target == other.target and
             self.secret == other.secret and
-            self.hashlock == other.hashlock
+            self.secrethash == other.secrethash
         )
 
     def __ne__(self, other):
@@ -470,7 +470,7 @@ class MediationPairState(State):
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
-        if not isinstance(payee_address, typing.Address):
+        if not isinstance(payee_address, typing.T_Address):
             raise ValueError('payee_address must be an address')
 
         if not isinstance(payee_transfer, LockedTransferUnsignedState):

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "./Token.sol";
 import "./Utils.sol";
@@ -25,7 +25,7 @@ contract ChannelManagerContract is Utils {
         address partner
     );
 
-    function ChannelManagerContract(address token_address) public {
+    constructor(address token_address) public {
         data.token = Token(token_address);
     }
 

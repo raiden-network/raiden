@@ -3,6 +3,7 @@ from binascii import hexlify, unhexlify
 import os
 from collections import defaultdict
 from itertools import count
+from typing import Union
 
 from ethereum import slogging
 from ethereum.tools import tester, _solidity
@@ -376,7 +377,7 @@ class RegistryTesterMock:
         ]
         return result
 
-    def tokenadded_filter(self, **kwargs):
+    def tokenadded_filter(self, from_block=None, to_block=None):
         """May also receive from_block, to_block but they are not used here"""
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
         filter_ = FilterTesterMock(
@@ -507,7 +508,10 @@ class ChannelManagerTesterMock:
         ]
         return result
 
-    def channelnew_filter(self):
+    def channelnew_filter(
+            self,
+            from_block: Union[str, int] = 0,
+            to_block: Union[str, int] = 'latest'):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
         filter_ = FilterTesterMock(
             self.tester_chain,
@@ -731,7 +735,7 @@ class NettingChannelTesterMock:
         self.proxy.settle()
         self.tester_chain.mine(number_of_blocks=1)
 
-    def all_events_filter(self):
+    def all_events_filter(self, from_block=None, to_block=None):
         topics = None
         filter_ = FilterTesterMock(
             self.tester_chain,

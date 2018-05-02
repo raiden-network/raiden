@@ -240,9 +240,9 @@ class ConnectionManager:
             payment_network_id,
             self.token_address,
         )
-        known = set(channel_state.partner_address for channel_state in open_channels)
-        known = known.add(self.BOOTSTRAP_ADDR)
-        known = known.add(self.raiden.address)
+        known = set(channel_state.partner_state.address for channel_state in open_channels)
+        known.add(self.BOOTSTRAP_ADDR)
+        known.add(self.raiden.address)
 
         participants_addresses = views.get_participants_addresses(
             views.state_from_raiden(self.raiden),

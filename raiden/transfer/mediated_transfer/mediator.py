@@ -108,7 +108,7 @@ def is_valid_refund(
     return (
         original_transfer.identifier == refund_transfer.identifier and
         original_transfer.lock.amount == refund_transfer.lock.amount and
-        original_transfer.lock.hashlock == refund_transfer.lock.hashlock and
+        original_transfer.lock.secrethash == refund_transfer.lock.secrethash and
         original_transfer.target == refund_transfer.target and
 
         # The refund transfer is not tied to the other direction of the same
@@ -165,7 +165,7 @@ def is_send_transfer_almost_equal(
         send.identifier == received.identifier and
         send.token == received.token and
         send.lock.amount == received.lock.amount and
-        send.lock.hashlock == received.lock.hashlock and
+        send.lock.secrethash == received.lock.secrethash and
         send.initiator == received.initiator and
         send.target == received.target
     )
@@ -264,7 +264,7 @@ def sanity_check(state):
     # almost_equal check
     if state.transfers_pair:
         first_pair = state.transfers_pair[0]
-        assert state.hashlock == first_pair.payer_transfer.lock.hashlock
+        assert state.secrethash == first_pair.payer_transfer.lock.secrethash
 
     for pair in state.transfers_pair:
         assert is_send_transfer_almost_equal(pair.payee_transfer, pair.payer_transfer)
@@ -380,24 +380,24 @@ def next_transfer_pair(
         lock_timeout = timeout_blocks - payee_channel.reveal_timeout
         lock_expiration = lock_timeout + block_number
 
-        mediatedtransfer_event = channel.send_mediatedtransfer(
+        lockedtransfer_event = channel.send_lockedtransfer(
             payee_channel,
             payer_transfer.initiator,
             payer_transfer.target,
             payer_transfer.lock.amount,
             payer_transfer.identifier,
             lock_expiration,
-            payer_transfer.lock.hashlock
+            payer_transfer.lock.secrethash
         )
-        assert mediatedtransfer_event
+        assert lockedtransfer_event
 
         transfer_pair = MediationPairState(
             payer_transfer,
             payee_channel.partner_state.address,
-            mediatedtransfer_event.transfer,
+            lockedtransfer_event.transfer,
         )
 
-        mediated_events = [mediatedtransfer_event]
+        mediated_events = [lockedtransfer_event]
 
     return (
         transfer_pair,
@@ -405,7 +405,7 @@ def next_transfer_pair(
     )
 
 
-def set_secret(state, channelidentifiers_to_channels, secret, hashlock):
+def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
     """ Set the secret to all mediated transfers.
     It doesn't matter if the secret was learned through the blockchain or a
     secret reveal message.
@@ -419,7 +419,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, hashlock):
         channel.register_secret(
             payer_channel,
             secret,
-            hashlock,
+            secrethash,
         )
 
         payee_channel = channelidentifiers_to_channels[
@@ -428,7 +428,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, hashlock):
         channel.register_secret(
             payee_channel,
             secret,
-            hashlock,
+            secrethash,
         )
 
 
@@ -500,7 +500,7 @@ def set_expired_pairs(transfers_pair, block_number):
             pair.payer_state = 'payer_expired'
             withdraw_failed = EventWithdrawFailed(
                 pair.payer_transfer.identifier,
-                pair.payer_transfer.lock.hashlock,
+                pair.payer_transfer.lock.secrethash,
                 'lock expired',
             )
             events.append(withdraw_failed)
@@ -509,7 +509,7 @@ def set_expired_pairs(transfers_pair, block_number):
             pair.payee_state = 'payee_expired'
             unlock_failed = EventUnlockFailed(
                 pair.payee_transfer.identifier,
-                pair.payee_transfer.lock.hashlock,
+                pair.payee_transfer.lock.secrethash,
                 'lock expired',
             )
             events.append(unlock_failed)
@@ -532,7 +532,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
     Returns:
         An empty list if there are not enough blocks to safely create a refund,
         or a list with a refund event."""
-    # A refund transfer works like a special SendMediatedTransfer, so it must
+    # A refund transfer works like a special SendLockedTransfer, so it must
     # follow the same rules and decrement reveal_timeout from the
     # payee_transfer.
     new_lock_timeout = timeout_blocks - refund_channel.reveal_timeout
@@ -552,7 +552,7 @@ def events_for_refund_transfer(refund_channel, refund_transfer, timeout_blocks, 
             refund_transfer.lock.amount,
             refund_transfer.identifier,
             new_lock_expiration,
-            refund_transfer.lock.hashlock,
+            refund_transfer.lock.secrethash,
         )
 
         return [refund_transfer]
@@ -605,7 +605,7 @@ def events_for_balanceproof(
         transfers_pair,
         block_number,
         secret,
-        hashlock):
+        secrethash):
     """ Send the balance proof to nodes that know the secret. """
 
     events = list()
@@ -630,12 +630,12 @@ def events_for_balanceproof(
                 payee_channel,
                 pair.payee_transfer.identifier,
                 secret,
-                hashlock,
+                secrethash,
             )
 
             unlock_success = EventUnlockSuccess(
                 pair.payer_transfer.identifier,
-                pair.payer_transfer.lock.hashlock,
+                pair.payer_transfer.lock.secrethash,
             )
             events.append(unlock_lock)
             events.append(unlock_success)
@@ -665,7 +665,7 @@ def events_for_withdraw_if_closed(
         channelidentifiers_to_channels,
         transfers_pair,
         secret,
-        hashlock):
+        secrethash):
     """ Withdraw on chain if the payer channel is closed and the secret is known.
     If a channel is closed because of another task a balance proof will not be
     received, so there is no reason to wait for the unsafe region before
@@ -691,7 +691,7 @@ def events_for_withdraw_if_closed(
             pair.payer_state = 'payer_waiting_withdraw'
 
             partner_state = payer_channel.partner_state
-            lock = channel.get_lock(partner_state, hashlock)
+            lock = channel.get_lock(partner_state, secrethash)
             unlock_proof = channel.compute_proof_for_lock(
                 partner_state,
                 secret,
@@ -711,7 +711,7 @@ def secret_learned(
         channelidentifiers_to_channels,
         block_number,
         secret,
-        hashlock,
+        secrethash,
         payee_address,
         new_payee_state):
     """ Set the state of the `payee_address` transfer, check the secret is
@@ -729,7 +729,7 @@ def secret_learned(
             state,
             channelidentifiers_to_channels,
             secret,
-            hashlock,
+            secrethash,
         )
 
         # This task only needs to withdraw if the channel is closed when the
@@ -739,7 +739,7 @@ def secret_learned(
             channelidentifiers_to_channels,
             state.transfers_pair,
             secret,
-            hashlock,
+            secrethash,
         )
     else:
         withdraw = []
@@ -760,7 +760,7 @@ def secret_learned(
         state.transfers_pair,
         block_number,
         secret,
-        hashlock,
+        secrethash,
     )
 
     iteration = TransitionResult(
@@ -858,9 +858,9 @@ def handle_init(state_change, channelidentifiers_to_channels, block_number):
     if not payer_channel:
         return TransitionResult(None, [])
 
-    mediator_state = MediatorTransferState(from_transfer.lock.hashlock)
+    mediator_state = MediatorTransferState(from_transfer.lock.secrethash)
 
-    is_valid, _ = channel.handle_receive_mediatedtransfer(
+    is_valid, _ = channel.handle_receive_lockedtransfer(
         payer_channel,
         from_transfer,
     )
@@ -925,7 +925,7 @@ def handle_refundtransfer(
     point B is part of the path again and will try a new partner to proceed
     with the mediation through D, D finally reaches the target T.
     In the above scenario B has two pairs of payer and payee transfers:
-        payer:A payee:C from the first SendMediatedTransfer
+        payer:A payee:C from the first SendLockedTransfer
         payer:C payee:D from the following SendRefundTransfer
     Args:
         mediator_state (MediatorTransferState): Current mediator_state.
@@ -976,7 +976,7 @@ def handle_secretreveal(
     necessary.
     """
     is_secret_unknown = mediator_state.secret is None
-    is_valid_reveal = mediator_state_change.hashlock == mediator_state.hashlock
+    is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 
     if is_secret_unknown and is_valid_reveal:
         iteration = secret_learned(
@@ -984,7 +984,7 @@ def handle_secretreveal(
             channelidentifiers_to_channels,
             block_number,
             mediator_state_change.secret,
-            mediator_state_change.hashlock,
+            mediator_state_change.secrethash,
             mediator_state_change.sender,
             'payee_secret_revealed',
         )
@@ -997,7 +997,7 @@ def handle_secretreveal(
 
 def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels, block_number):
     """ Handle a NettingChannelUnlock state change. """
-    assert sha3(state.secret) == state.hashlock, 'secret must be validated by the smart contract'
+    assert sha3(state.secret) == state.secrethash, 'secret must be validated by the smart contract'
 
     # For all but the last pair in transfer pair a refund transfer ocurred,
     # meaning the same channel was used twice, once when this node sent the
@@ -1017,7 +1017,7 @@ def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels,
 
                 withdraw = EventWithdrawSuccess(
                     pair.payer_transfer.identifier,
-                    pair.payer_transfer.lock.hashlock,
+                    pair.payer_transfer.lock.secrethash,
                 )
                 events.append(withdraw)
 
@@ -1036,7 +1036,7 @@ def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels,
             if payee_channel.identifier == state_change.channel_identifier:
                 unlock = EventUnlockSuccess(
                     pair.payee_transfer.identifier,
-                    pair.payee_transfer.lock.hashlock,
+                    pair.payee_transfer.lock.secrethash,
                 )
                 events.append(unlock)
 
@@ -1047,7 +1047,7 @@ def handle_contractwithdraw(state, state_change, channelidentifiers_to_channels,
         channelidentifiers_to_channels,
         block_number,
         state_change.secret,
-        state_change.hashlock,
+        state_change.secrethash,
         state_change.receiver,
         'payee_contract_withdraw',
     )
@@ -1076,7 +1076,7 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
                 if is_valid:
                     withdraw = EventWithdrawSuccess(
                         pair.payee_transfer.identifier,
-                        pair.payee_transfer.lock.hashlock,
+                        pair.payee_transfer.lock.secrethash,
                     )
                     events.append(withdraw)
 
