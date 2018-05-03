@@ -11,7 +11,7 @@ def check_transaction_threw(client, transaction_hash):
        transaction's status indicator is 0x0.
     """
     encoded_transaction = data_encoder(unhexlify(transaction_hash))
-    receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
+    receipt = client.rpccall_with_retry('eth_getTransactionReceipt', encoded_transaction)
 
     if 'status' not in receipt:
         raise ValueError(

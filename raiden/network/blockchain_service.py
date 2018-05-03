@@ -49,7 +49,7 @@ class BlockChainService:
         return self.client.block_number()
 
     def is_synced(self) -> bool:
-        result = self.client.call('eth_syncing')
+        result = self.client.rpccall_with_retry('eth_syncing')
 
         # the node is synchronized
         if result is False:
@@ -87,7 +87,7 @@ class BlockChainService:
 
     def get_block_header(self, block_number: int):
         block_number = block_tag_encoder(block_number)
-        return self.client.call('eth_getBlockByNumber', block_number, False)
+        return self.client.rpccall_with_retry('eth_getBlockByNumber', block_number, False)
 
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1
@@ -166,7 +166,7 @@ class BlockChainService:
         return self.address_to_registry[registry_address]
 
     def uninstall_filter(self, filter_id_raw):
-        self.client.call('eth_uninstallFilter', filter_id_raw)
+        self.client.rpccall_with_retry('eth_uninstallFilter', filter_id_raw)
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         contracts = _solidity.compile_file(contract_path, libraries=dict())
