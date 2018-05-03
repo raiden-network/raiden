@@ -252,7 +252,6 @@ class JSONRPCClient:
             if self.nonce_last_update > query_time:
                 # Python's 2.7 time is not monotonic and it's affected by clock
                 # resets, force an update.
-                self.nonce_update_interval = query_time - self.nonce_update_interval
                 needs_update = True
 
             else:
@@ -274,7 +273,7 @@ class JSONRPCClient:
             # we may have hammered the server and not all tx are
             # registered as `pending` yet
             if initialized:
-                while nonce < self.nonce_current_value:
+                while nonce <= self.nonce_current_value:
                     log.debug(
                         'nonce on server too low; retrying',
                         server=nonce,
