@@ -1087,7 +1087,16 @@ def handle_receive_lockedtransfer(
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
-    return is_valid, msg
+        send_processed = SendProcessed(
+            mediated_transfer.balance_proof.sender,
+            b'global',
+            mediated_transfer.message_identifier,
+        )
+        events = [send_processed]
+    else:
+        events = list()
+
+    return is_valid, events, msg
 
 
 def handle_receive_refundtransfer(channel_state, refund_transfer):
@@ -1114,7 +1123,16 @@ def handle_unlock(channel_state, unlock):
 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
-    return is_valid, msg
+        send_processed = SendProcessed(
+            unlock.balance_proof.sender,
+            b'global',
+            unlock.message_identifier,
+        )
+        events = [send_processed]
+    else:
+        events = list()
+
+    return is_valid, events, msg
 
 
 def handle_block(channel_state, state_change, block_number):

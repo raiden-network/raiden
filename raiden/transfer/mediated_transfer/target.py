@@ -63,7 +63,7 @@ def handle_inittarget(
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_address
-    is_valid, errormsg = channel.handle_receive_lockedtransfer(
+    is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )
@@ -153,7 +153,7 @@ def handle_unlock(target_state, state_change, channel_state):
     balance_proof_sender = state_change.balance_proof.sender
 
     if balance_proof_sender == target_state.route.node_address:
-        is_valid, _ = channel.handle_unlock(
+        is_valid, events, _ = channel.handle_unlock(
             channel_state,
             state_change,
         )
@@ -177,7 +177,8 @@ def handle_unlock(target_state, state_change, channel_state):
                 state_change.message_identifier,
             )
 
-            iteration = TransitionResult(None, [transfer_success, unlock_success, send_processed])
+            events.extend([transfer_success, unlock_success, send_processed])
+            iteration = TransitionResult(None, events)
 
     return iteration
 

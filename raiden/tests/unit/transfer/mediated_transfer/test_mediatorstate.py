@@ -119,7 +119,7 @@ def make_transfers_pair(privatekeys, amount):
             sender=payer_address,
         )
 
-        is_valid, msg = channel.handle_receive_lockedtransfer(
+        is_valid, _, msg = channel.handle_receive_lockedtransfer(
             receive_channel,
             received_transfer,
         )
@@ -708,7 +708,7 @@ def test_events_for_refund():
         channel_identifier=refund_channel.identifier,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         refund_channel,
         received_transfer,
     )

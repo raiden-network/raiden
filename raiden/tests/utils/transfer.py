@@ -196,7 +196,7 @@ def claim_lock(app_chain, payment_identifier, token, secret):
             balance_proof,
         )
 
-        is_valid, msg = channel.handle_unlock(
+        is_valid, _, msg = channel.handle_unlock(
             partner_channel,
             receive_unlock,
         )

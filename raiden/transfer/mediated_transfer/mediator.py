@@ -902,12 +902,12 @@ def handle_init(
 
     mediator_state = MediatorTransferState(from_transfer.lock.secrethash)
 
-    is_valid, _ = channel.handle_receive_lockedtransfer(
+    is_valid, events, _ = channel.handle_receive_lockedtransfer(
         payer_channel,
         from_transfer,
     )
     if not is_valid:
-        return TransitionResult(None, [])
+        return TransitionResult(None, events)
 
     iteration = mediate_transfer(
         mediator_state,
@@ -918,7 +918,9 @@ def handle_init(
         from_transfer,
         block_number,
     )
-    return iteration
+
+    events.extend(iteration.events)
+    return TransitionResult(iteration.new_state, events)
 
 
 def handle_block(channelidentifiers_to_channels, state, state_change, block_number):
@@ -1132,10 +1134,11 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
             channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
             if channel_state:
-                is_valid, _ = channel.handle_unlock(
+                is_valid, channel_events, _ = channel.handle_unlock(
                     channel_state,
                     state_change,
                 )
+                events.extend(channel_events)
 
                 if is_valid:
                     withdraw = EventWithdrawSuccess(

@@ -202,10 +202,12 @@ def handle_transferrefund(
 
     events = list()
     if is_valid_lock and is_valid_refund:
-        is_valid, _ = channel.handle_receive_refundtransfer(
+        is_valid, channel_events, _ = channel.handle_receive_refundtransfer(
             channel_state,
             refund_transfer,
         )
+
+        events.extend(channel_events)
 
         if is_valid:
             old_description = payment_state.initiator.transfer_description
@@ -228,7 +230,7 @@ def handle_transferrefund(
                 block_number,
             )
 
-            events = sub_iteration.events
+            events.extend(sub_iteration.events)
             if sub_iteration.new_state is None:
                 payment_state = None
 

@@ -609,7 +609,7 @@ def test_channelstate_receive_lockedtransfer():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
@@ -654,7 +654,7 @@ def test_channelstate_receive_lockedtransfer():
         balance_proof,
     )
 
-    is_valid, msg = channel.handle_unlock(channel_state, unlock_state_change)
+    is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
     assert is_valid, msg
 
     our_model3 = our_model2._replace(
@@ -740,7 +740,7 @@ def test_channelstate_lockedtransfer_overspent():
         lock,
     )
 
-    is_valid, _ = channel.handle_receive_lockedtransfer(
+    is_valid, _, _ = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
@@ -779,7 +779,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         lock1,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer1,
     )
@@ -820,7 +820,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         merkletree_leaves=leaves,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer2,
     )
@@ -951,7 +951,7 @@ def test_interwoven_transfers():
             merkletree_leaves=merkletree_leaves,
         )
 
-        is_valid, msg = channel.handle_receive_lockedtransfer(
+        is_valid, _, msg = channel.handle_receive_lockedtransfer(
             channel_state,
             receive_lockedtransfer,
         )
@@ -1018,7 +1018,7 @@ def test_interwoven_transfers():
                 balance_proof,
             )
 
-            is_valid, msg = channel.handle_unlock(channel_state, unlock_state_change)
+            is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
             assert is_valid, msg
 
             assert_partner_state(
@@ -1073,7 +1073,7 @@ def test_channel_must_accept_expired_locks():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
@@ -1121,7 +1121,7 @@ def test_receive_lockedtransfer_before_deposit():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
@@ -1203,7 +1203,7 @@ def test_channelstate_withdraw():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
@@ -1251,7 +1251,7 @@ def test_channel_withdraw_must_not_change_merkletree():
         lock,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         channel_state,
         receive_lockedtransfer,
     )
