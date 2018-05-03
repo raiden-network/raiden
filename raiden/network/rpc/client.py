@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import warnings
-from time import time as now
+import time
 from binascii import unhexlify
 from typing import Optional, List, Dict, Union
 
@@ -215,7 +215,7 @@ class JSONRPCClient:
         self.stop_event = None
 
         self.nonce_last_update = 0
-        self.nonce_current_value = None
+        self.nonce_available_value = None
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
@@ -244,55 +244,49 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return quantity_decoder(self.call('eth_blockNumber'))
 
-    def nonce(self, address):
-        with self.nonce_lock:
-            initialized = self.nonce_current_value is not None
-            query_time = now()
+    def nonce_needs_update(self):
+        if self.nonce_available_value is None:
+            return True
 
-            if self.nonce_last_update > query_time:
-                # Python's 2.7 time is not monotonic and it's affected by clock
-                # resets, force an update.
-                needs_update = True
+        now = time.time()
 
-            else:
-                last_update_interval = query_time - self.nonce_last_update
-                needs_update = last_update_interval > self.nonce_update_interval
+        # Python's 2.7 time is not monotonic and it's affected by clock resets,
+        # force an update.
+        if self.nonce_last_update > now:
+            return True
 
-            if initialized and not needs_update:
-                self.nonce_current_value += 1
-                return self.nonce_current_value
+        return now - self.nonce_last_update > self.nonce_update_interval
 
-            pending_transactions_hex = self.call(
+    def nonce_update_from_node(self):
+        nonce = -2
+        nonce_available_value = self.nonce_available_value or -1
+
+        # Wait until all tx are registered as pending
+        while nonce < nonce_available_value:
+            pending_transactions_hex = self.rpccall_with_retry(
                 'eth_getTransactionCount',
-                address_encoder(address),
+                address_encoder(self.sender),
                 'pending',
             )
             pending_transactions = quantity_decoder(pending_transactions_hex)
             nonce = pending_transactions + self.nonce_offset
 
-            # we may have hammered the server and not all tx are
-            # registered as `pending` yet
-            if initialized:
-                while nonce <= self.nonce_current_value:
-                    log.debug(
-                        'nonce on server too low; retrying',
-                        server=nonce,
-                        local=self.nonce_current_value,
-                    )
+            log.debug(
+                'updated nonce from server',
+                server=nonce,
+                local=nonce_available_value,
+            )
 
-                    query_time = now()
-                    pending_transactions_hex = self.call(
-                        'eth_getTransactionCount',
-                        address_encoder(address),
-                        'pending',
-                    )
-                    pending_transactions = quantity_decoder(pending_transactions_hex)
-                    nonce = pending_transactions + self.nonce_offset
+        self.nonce_last_update = time.time()
+        self.nonce_available_value = nonce
 
-            self.nonce_current_value = nonce
-            self.nonce_last_update = query_time
+    def nonce(self):
+        with self.nonce_lock:
+            if self.nonce_needs_update():
+                self.nonce_update_from_node()
 
-            return self.nonce_current_value
+            self.nonce_available_value += 1
+            return self.nonce_available_value - 1
 
     def inject_stop_event(self, event):
         self.stop_event = event
@@ -555,7 +549,7 @@ class JSONRPCClient:
         if to == b'0' * 40:
             warnings.warn('For contract creation the empty string must be used.')
 
-        nonce = self.nonce(self.sender)
+        nonce = self.nonce()
         startgas = self.check_startgas(startgas)
 
         tx = Transaction(
