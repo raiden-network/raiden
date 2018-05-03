@@ -211,12 +211,11 @@ def make_receive_transfer_mediated(
 
     locksroot = layers[MERKLEROOT][0]
 
-    message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = nonce
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
     mediated_transfer_msg = LockedTransfer(
-        message_identifier,
+        random.randint(0, UINT64_MAX),
         payment_identifier,
         nonce,
         channel_state.token_address,
@@ -233,6 +232,7 @@ def make_receive_transfer_mediated(
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_lockedtransfer = LockedTransferSignedState(
+        random.randint(0, UINT64_MAX),
         payment_identifier,
         channel_state.token_address,
         balance_proof,

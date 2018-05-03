@@ -1393,8 +1393,8 @@ def test_no_valid_routes():
     )
     assert iteration.new_state is None
 
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRefundTransfer)
+    send_refund = next(e for e in iteration.events if isinstance(e, SendRefundTransfer))
+    assert send_refund
 
 
 def test_lock_timeout_lower_than_previous_channel_settlement_period():

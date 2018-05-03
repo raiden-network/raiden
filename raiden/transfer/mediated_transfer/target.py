@@ -79,7 +79,7 @@ def handle_inittarget(
     if is_valid and safe_to_wait:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         recipient = transfer.initiator
-        queue_name = 'global'
+        queue_name = b'global'
         secret_request = SendSecretRequest(
             recipient,
             queue_name,
@@ -129,7 +129,7 @@ def handle_secretreveal(
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         recipient = route.node_address
-        queue_name = 'global'
+        queue_name = b'global'
         reveal = SendRevealSecret(
             recipient,
             queue_name,
