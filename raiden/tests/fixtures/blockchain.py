@@ -463,8 +463,6 @@ def _jsonrpc_services(
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
     if registry_address is None:
-        address = privatekey_to_address(deploy_key)
-
         registry_path = get_contract_path('Registry.sol')
         registry_contracts = compile_file(registry_path, libraries=dict())
 

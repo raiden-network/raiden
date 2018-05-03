@@ -189,7 +189,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
     tries = 5
     while not jsonrpc_running and tries > 0:
         try:
-            block = deploy_client.call('eth_getBlockByNumber', '0x0', True)
+            block = deploy_client.rpccall_with_retry('eth_getBlockByNumber', '0x0', True)
         except ConnectionError:
             gevent.sleep(0.5)
             tries -= 1
@@ -211,7 +211,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
         tries = 10
         balance = '0x0'
         while balance == '0x0' and tries > 0:
-            balance = deploy_client.call('eth_getBalance', address, 'latest')
+            balance = deploy_client.rpccall_with_retry('eth_getBalance', address, 'latest')
             gevent.sleep(1)
             tries -= 1
 

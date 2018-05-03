@@ -127,7 +127,7 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
-def format_data_for_call(
+def format_data_for_rpccall(
         sender: Address = b'',
         to: Address = b'',
         value: int = 0,
@@ -144,31 +144,6 @@ def format_data_for_call(
         'gas': quantity_encoder(startgas),
         'data': data_encoder(data)
     }
-
-
-def check_node_connection(func):
-    """ A decorator to reconnect if the connection to the node is lost.
-    Decorator should only wrap methods of the JSONRPCClient class"""
-    def retry_on_disconnect(self, *args, **kwargs):
-        for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
-
-            if self.stop_event and self.stop_event.is_set():
-                raise RaidenShuttingDown()
-
-            try:
-                result = func(self, *args, **kwargs)
-                if i > 0:
-                    log.info('Client reconnected')
-                return result
-
-            except (requests.exceptions.ConnectionError, InvalidReplyError):
-                log.info(
-                    'Timeout in eth client connection to {}. Is the client offline? Trying '
-                    'again in {}s.'.format(self.transport.endpoint, timeout)
-                )
-            gevent.sleep(timeout)
-
-    return retry_on_disconnect
 
 
 class JSONRPCClient:
@@ -242,7 +217,7 @@ class JSONRPCClient:
 
     def block_number(self):
         """ Return the most recent block. """
-        return quantity_decoder(self.call('eth_blockNumber'))
+        return quantity_decoder(self.rpccall_with_retry('eth_blockNumber'))
 
     def nonce_needs_update(self):
         if self.nonce_available_value is None:
@@ -293,11 +268,11 @@ class JSONRPCClient:
 
     def balance(self, account: Address):
         """ Return the balance of the account of given address. """
-        res = self.call('eth_getBalance', address_encoder(account), 'pending')
+        res = self.rpccall_with_retry('eth_getBalance', address_encoder(account), 'pending')
         return quantity_decoder(res)
 
     def _gaslimit(self, location='pending') -> int:
-        last_block = self.call('eth_getBlockByNumber', location, True)
+        last_block = self.rpccall_with_retry('eth_getBlockByNumber', location, True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit * 8 // 10
 
@@ -305,7 +280,7 @@ class JSONRPCClient:
         if self.given_gas_price:
             return self.given_gas_price
 
-        gas_price = self.call('eth_gasPrice')
+        gas_price = self.rpccall_with_retry('eth_gasPrice')
         return quantity_decoder(gas_price)
 
     def check_startgas(self, startgas):
@@ -474,11 +449,11 @@ class JSONRPCClient:
 
             json_data['topics'] = [topic_encoder(topic) for topic in topics]
 
-        filter_id = self.call('eth_newFilter', json_data)
+        filter_id = self.rpccall_with_retry('eth_newFilter', json_data)
         return quantity_decoder(filter_id)
 
     def filter_changes(self, fid: int) -> List:
-        changes = self.call('eth_getFilterChanges', quantity_encoder(fid))
+        changes = self.rpccall_with_retry('eth_getFilterChanges', quantity_encoder(fid))
 
         if not changes:
             return list()
@@ -499,12 +474,11 @@ class JSONRPCClient:
             for c in changes
         ]
 
-    @check_node_connection
-    def call(self, method: str, *args):
+    def rpccall_with_retry(self, method: str, *args):
         """ Do the request and return the result.
 
         Args:
-            method: The RPC method.
+            method: The JSON-RPC method.
             args: The encoded arguments expected by the method.
                 - Object arguments must be supplied as a dictionary.
                 - Quantity arguments must be hex encoded starting with '0x' and
@@ -512,18 +486,39 @@ class JSONRPCClient:
                 - Data arguments must be hex encoded starting with '0x'
         """
         request = self.protocol.create_request(method, args)
-        reply = self.transport.send_message(request.serialize().encode())
+        request_serialized = request.serialize().encode()
 
-        jsonrpc_reply = self.protocol.parse_reply(reply)
-        if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
-            return jsonrpc_reply.result
-        elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
-            raise EthNodeCommunicationError(
-                jsonrpc_reply.error,
-                jsonrpc_reply._jsonrpc_error_code,  # pylint: disable=protected-access
-            )
-        else:
-            raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
+        for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
+            if self.stop_event and self.stop_event.is_set():
+                raise RaidenShuttingDown()
+
+            try:
+                reply = self.transport.send_message(request_serialized)
+            except (requests.exceptions.ConnectionError, InvalidReplyError):
+                log.info(
+                    'Timeout in eth client connection to {}. Is the client offline? Trying '
+                    'again in {}s.'.format(self.transport.endpoint, timeout)
+                )
+            else:
+                if self.stop_event and self.stop_event.is_set():
+                    raise RaidenShuttingDown()
+
+                if i > 0:
+                    log.info('Client reconnected')
+
+                jsonrpc_reply = self.protocol.parse_reply(reply)
+
+                if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
+                    return jsonrpc_reply.result
+                elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
+                    raise EthNodeCommunicationError(
+                        jsonrpc_reply.error,
+                        jsonrpc_reply._jsonrpc_error_code,  # pylint: disable=protected-access
+                    )
+                else:
+                    raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
+
+            gevent.sleep(timeout)
 
     def send_transaction(
             self,
@@ -562,7 +557,7 @@ class JSONRPCClient:
         )
 
         tx.sign(self.privkey)
-        result = self.call(
+        result = self.rpccall_with_retry(
             'eth_sendRawTransaction',
             data_encoder(rlp.encode(tx)),
         )
@@ -594,7 +589,7 @@ class JSONRPCClient:
                 call.
         """
         startgas = self.check_startgas(startgas)
-        json_data = format_data_for_call(
+        json_data = format_data_for_rpccall(
             sender,
             to,
             value,
@@ -602,7 +597,7 @@ class JSONRPCClient:
             startgas,
             self.gasprice(),
         )
-        res = self.call('eth_call', json_data, block_number)
+        res = self.rpccall_with_retry('eth_call', json_data, block_number)
 
         return data_decoder(res)
 
@@ -631,7 +626,7 @@ class JSONRPCClient:
                 call.
         """
         startgas = self.check_startgas(startgas)
-        json_data = format_data_for_call(
+        json_data = format_data_for_rpccall(
             sender,
             to,
             value,
@@ -639,7 +634,7 @@ class JSONRPCClient:
             startgas
         )
         try:
-            res = self.call('eth_estimateGas', json_data)
+            res = self.rpccall_with_retry('eth_estimateGas', json_data)
         except EthNodeCommunicationError as e:
             tx_would_fail = e.error_code and e.error_code in (-32015, -32000)
             if tx_would_fail:  # -32015 is parity and -32000 is geth
@@ -671,7 +666,7 @@ class JSONRPCClient:
             )
 
         transaction_hash = data_encoder(transaction_hash)
-        return self.call('eth_getTransactionReceipt', transaction_hash)
+        return self.rpccall_with_retry('eth_getTransactionReceipt', transaction_hash)
 
     def eth_getCode(self, code_address: Address, block: Union[int, str] = 'latest') -> bytes:
         """ Returns code at a given address.
@@ -692,7 +687,7 @@ class JSONRPCClient:
                 'address length must be 20 (it might be hex encoded)'
             )
 
-        result = self.call('eth_getCode', address_encoder(code_address), block)
+        result = self.rpccall_with_retry('eth_getCode', address_encoder(code_address), block)
         return data_decoder(result)
 
     def eth_getTransactionByHash(self, transaction_hash: bytes):
@@ -712,7 +707,7 @@ class JSONRPCClient:
             )
 
         transaction_hash = data_encoder(transaction_hash)
-        return self.call('eth_getTransactionByHash', transaction_hash)
+        return self.rpccall_with_retry('eth_getTransactionByHash', transaction_hash)
 
     def poll(
             self,
@@ -759,7 +754,10 @@ class JSONRPCClient:
             while True:
                 # Could return None for a short period of time, until the
                 # transaction is added to the pool
-                transaction = self.call('eth_getTransactionByHash', transaction_hash)
+                transaction = self.rpccall_with_retry(
+                    'eth_getTransactionByHash',
+                    transaction_hash,
+                )
 
                 # if the transaction was added to the pool and then removed
                 if transaction is None and last_result is not None:

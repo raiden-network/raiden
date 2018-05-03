@@ -39,7 +39,7 @@ def new_filter(
             for topic in topics
         ]
 
-    return jsonrpc_client.call('eth_newFilter', json_data)
+    return jsonrpc_client.rpccall_with_retry('eth_newFilter', json_data)
 
 
 def get_filter_events(
@@ -70,7 +70,7 @@ def get_filter_events(
             for topic in topics
         ]
 
-    filter_changes = jsonrpc_client.call('eth_getLogs', json_data)
+    filter_changes = jsonrpc_client.rpccall_with_retry('eth_getLogs', json_data)
 
     # geth could return None
     if filter_changes is None:
@@ -106,7 +106,7 @@ class Filter:
         self.client = jsonrpc_client
 
     def _query_filter(self, function: str) -> List[Dict]:
-        filter_changes = self.client.call(function, self.filter_id_raw)
+        filter_changes = self.client.rpccall_with_retry(function, self.filter_id_raw)
 
         # geth could return None
         if filter_changes is None:
@@ -142,4 +142,4 @@ class Filter:
         return self._query_filter('eth_getFilterLogs')
 
     def uninstall(self):
-        self.client.call('eth_uninstallFilter', self.filter_id_raw)
+        self.client.rpccall_with_retry('eth_uninstallFilter', self.filter_id_raw)

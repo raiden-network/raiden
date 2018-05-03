@@ -29,7 +29,7 @@ def all_contract_events_raw(
     Returns:
         events
     """
-    return rpc.call('eth_getLogs', {
+    return rpc.rpccall_with_retry('eth_getLogs', {
         'fromBlock': str(start_block),
         'toBlock': str(end_block),
         'address': address_encoder(normalize_address(contract_address)),

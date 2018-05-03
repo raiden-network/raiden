@@ -96,7 +96,7 @@ def toggle_trace_profiler(raiden):
 
 def check_json_rpc(client):
     try:
-        client_version = client.call('web3_clientVersion')
+        client_version = client.rpccall_with_retry('web3_clientVersion')
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
@@ -559,7 +559,7 @@ def app(
     check_json_rpc(rpc_client)
     check_discovery_registration_gas(blockchain_service, address)
 
-    net_id = int(blockchain_service.client.call('net_version'))
+    net_id = int(blockchain_service.client.rpccall_with_retry('net_version'))
     if sync_check:
         check_synced(net_id, blockchain_service)
 
