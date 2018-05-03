@@ -47,6 +47,7 @@ class PathfindingService(gevent.Greenlet):
         transport: MatrixTransport,
         token_network_listener: BlockchainListener,
         *,
+        chain_id: int = 1,
         follow_networks: List[Address] = None,
         token_network_registry_listener: BlockchainListener = None,
     ) -> None:
@@ -64,6 +65,7 @@ class PathfindingService(gevent.Greenlet):
         self.contract_manager = contract_manager
         self.transport = transport
         self.token_network_listener = token_network_listener
+        self.chain_id = chain_id
 
         self.token_network_registry_listener = token_network_registry_listener
         self.follow_networks = follow_networks
@@ -115,13 +117,19 @@ class PathfindingService(gevent.Greenlet):
 
     def on_message_event(self, message: Message):
         """This handles messages received over the Transport"""
-        assert isinstance(message, Message)
-        if isinstance(message, FeeInfo):
-            self.on_fee_info_message(message)
-        elif isinstance(message, BalanceProof):
-            self.on_balance_proof_message(message)
-        else:
-            log.error("Ignoring unknown message of type '%s'", (type(message)))
+        if not isinstance(message, Message):
+            log.warning('Received invalid parameter')
+            return
+
+        try:
+            if isinstance(message, FeeInfo):
+                self.on_fee_info_message(message)
+            elif isinstance(message, BalanceProof):
+                self.on_balance_proof_message(message)
+            else:
+                log.error("Ignoring unknown message of type '%s'", (type(message)))
+        except ValueError as error:
+            log.error('Could not handle message properly: %s', str(error))
 
     def follows_token_network(self, token_network_address: Address) -> bool:
         """ Checks if a token network is followed by the pathfinding service. """
@@ -138,6 +146,10 @@ class PathfindingService(gevent.Greenlet):
             return None
         else:
             return self.token_networks[token_network_address]
+
+    def _check_chain_id(self, received_chain_id: int):
+        if not received_chain_id == self.chain_id:
+            raise ValueError('Chain id does not match')
 
     def handle_channel_opened(self, event: Dict):
         token_network = self._get_token_network(event['address'])
@@ -188,13 +200,14 @@ class PathfindingService(gevent.Greenlet):
             token_network.handle_channel_closed_event(channel_identifier)
 
     def on_fee_info_message(self, fee_info: FeeInfo):
+        self._check_chain_id(fee_info.chain_id)
+
         token_network = self._get_token_network(fee_info.token_network_address)
 
         if token_network:
             log.debug('Received FeeInfo message for token network {}'.format(
                 token_network.address
             ))
-            # TODO: check chain id
 
             token_network.update_fee(
                 fee_info.channel_identifier,
@@ -204,13 +217,14 @@ class PathfindingService(gevent.Greenlet):
             )
 
     def on_balance_proof_message(self, balance_proof: BalanceProof):
+        self._check_chain_id(balance_proof.chain_id)
+
         token_network = self._get_token_network(balance_proof.token_network_address)
 
         if token_network:
             log.debug('Received BalanceProof message for token network {}'.format(
                 token_network.address
             ))
-            # TODO: check chain id
 
             token_network.update_balance(
                 balance_proof.channel_identifier,

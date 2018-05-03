@@ -18,6 +18,7 @@ from pathfinder.model import ChannelView
 
 
 def test_pfs_with_mocked_client(
+    web3,
     generate_raiden_clients,
     ethereum_tester,
     contracts_manager: ContractManager,
@@ -31,6 +32,7 @@ def test_pfs_with_mocked_client(
     pathfinding_service = PathfindingService(
         contracts_manager,
         transport=DummyTransport(),
+        chain_id=int(web3.net.version),
         token_network_listener=blockchain_listener,
         follow_networks=[network_address]
     )
@@ -141,6 +143,13 @@ def test_pfs_with_mocked_client(
         gevent.sleep(0)
         assert graph[client1.address][client2.address]['view'].relative_fee == p1_fee
         assert graph[client2.address][client1.address]['view'].relative_fee == p2_fee
+
+    paths = token_network.get_paths(clients[0].address, clients[3].address, 10, 5)
+    assert len(paths) == 2
+    assert paths[0]['path'] == [clients[0].address, clients[1].address, clients[2].address,
+                                clients[3].address]
+    assert paths[1]['path'] == [clients[0].address, clients[1].address, clients[4].address,
+                                clients[3].address]
 
     # now close all channels
     for channel_id, (

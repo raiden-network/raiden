@@ -100,7 +100,12 @@ class ChannelBalanceResource(PathfinderResource):
                 'error': 'Unsupported token network: {}'.format(token_network_address)
             }, 400
 
-        self.pathfinding_service.on_balance_proof_message(balance_proof)
+        try:
+            self.pathfinding_service.on_balance_proof_message(balance_proof)
+        except ValueError as error:
+            return {
+                'error': 'Error while updating balance proof: {}'.format(str(error))
+            }, 400
 
 
 class ChannelFeeResource(PathfinderResource):
@@ -143,7 +148,12 @@ class ChannelFeeResource(PathfinderResource):
                 'error': 'Unsupported token network: {}'.format(token_network_address)
             }, 400
 
-        self.pathfinding_service.on_fee_info_message(fee_info)
+        try:
+            self.pathfinding_service.on_fee_info_message(fee_info)
+        except ValueError as error:
+            return {
+                'error': 'Error while updating fee info: {}'.format(str(error))
+            }, 400
 
 
 class PathsResource(PathfinderResource):

@@ -20,14 +20,7 @@ log = logging.getLogger(__name__)
 
 
 class TokenNetwork:
-    """ Manages a token network for pathfinding.
-
-    Problems:
-    - Do we set a default fee? Otherwise we estimate all opened channels with a zero fee.
-      The other options to just take channels into account once a fee has been set.
-    - Are fees absolute or relative to the transferred value (or base + relative)?
-    TODO: test all these methods once we have sample data, DO NOT let these crucial functions
-    remain uncovered! """
+    """ Manages a token network for pathfinding. """
 
     def __init__(self, token_network_address: Address) -> None:
         """ Initializes a new TokenNetwork. """

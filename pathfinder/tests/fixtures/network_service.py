@@ -3,8 +3,6 @@ from typing import List, Callable
 
 from unittest.mock import Mock
 import pytest
-from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix
 from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.blockchain import BlockchainListener
@@ -15,12 +13,6 @@ from raiden_libs.types import Address, ChannelIdentifier
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.model.token_network import TokenNetwork
-
-
-def forge_fee_signature(private_key: str, fee: float) -> bytes:
-    fee_msg = str(fee).encode()
-    private_key_ecdsa = PrivateKey.from_hex(remove_0x_prefix(private_key))
-    return private_key_ecdsa.sign_recoverable(fee_msg)
 
 
 @pytest.fixture
@@ -273,9 +265,10 @@ def pathfinding_service_full_mock(
 ) -> PathfindingService:
     pathfinding_service = PathfindingService(
         contracts_manager,
-        transport=Mock(),
-        token_network_listener=Mock(),
-        token_network_registry_listener=Mock()
+        transport=Mock(),  # type: ignore
+        token_network_listener=Mock(),  # type: ignore
+        chain_id=1,
+        token_network_registry_listener=Mock()  # type: ignore
     )
     pathfinding_service.token_networks = {
         token_network.address: token_network
@@ -292,9 +285,10 @@ def pathfinding_service_mocked_listeners(
     """ Returns a PathfindingService with mocked blockchain listeners. """
     pathfinding_service = PathfindingService(
         contracts_manager,
-        transport=Mock(),
-        token_network_listener=BlockchainListenerMock(),
-        token_network_registry_listener=BlockchainListenerMock()
+        transport=Mock(),  # type: ignore
+        token_network_listener=BlockchainListenerMock(),  # type: ignore
+        chain_id=1,
+        token_network_registry_listener=BlockchainListenerMock()  # type: ignore
     )
 
     return pathfinding_service

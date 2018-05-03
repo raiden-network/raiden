@@ -140,6 +140,7 @@ def main(
                     CONTRACT_MANAGER,
                     transport,
                     token_network_listener,
+                    chain_id=int(web3.net.version),
                     follow_networks=token_network_addresses)
             else:
                 log.info('Starting TokenNetworkRegistry Listener...')
@@ -153,6 +154,7 @@ def main(
                     CONTRACT_MANAGER,
                     transport,
                     token_network_listener,
+                    chain_id=int(web3.net.version),
                     token_network_registry_listener=token_network_registry_listener)
 
             service.run()

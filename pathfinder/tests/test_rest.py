@@ -29,7 +29,7 @@ def test_put_balance(
         channel_identifier=ChannelIdentifier(123),
         token_network_address=token_network_addresses[0],
         nonce=1,
-        chain_id=321,
+        chain_id=1,
         locksroot="0x%064x" % 0,
         transferred_amount=1,
         locked_amount=0,
