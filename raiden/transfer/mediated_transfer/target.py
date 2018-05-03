@@ -173,7 +173,7 @@ def handle_unlock(target_state, state_change, channel_state):
 
             send_processed = SendProcessed(
                 balance_proof_sender,
-                'global',
+                b'global',
                 state_change.message_identifier,
             )
 

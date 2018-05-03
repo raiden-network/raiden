@@ -48,16 +48,16 @@ def test_hash():
 
 
 def test_processed():
-    processed_message_identifier = random.randint(0, UINT64_MAX)
-    processed_message = Processed(ADDRESS, processed_message_identifier)
+    message_identifier = random.randint(0, UINT64_MAX)
+    processed_message = Processed(ADDRESS, message_identifier)
 
-    assert processed_message.processed_message_identifier == processed_message_identifier
+    assert processed_message.message_identifier == message_identifier
 
     data = processed_message.encode()
     decoded_processed_message = decode(data)
 
-    assert decoded_processed_message.processed_message_identifier == processed_message_identifier
-    assert processed_message.processed_message_identifier == processed_message_identifier
+    assert decoded_processed_message.message_identifier == message_identifier
+    assert processed_message.message_identifier == message_identifier
     assert decoded_processed_message.sender == processed_message.sender
     assert sha3(decoded_processed_message.encode()) == sha3(data)
 

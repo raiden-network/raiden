@@ -31,6 +31,7 @@ def lockedtransfersigned_from_message(message):
     )
 
     transfer_state = LockedTransferSignedState(
+        message.message_identifier,
         message.payment_identifier,
         message.token,
         balance_proof,
@@ -279,6 +280,7 @@ class LockedTransferSignedState(State):
     """
 
     __slots__ = (
+        'message_identifier',
         'payment_identifier',
         'token',
         'balance_proof',
@@ -289,6 +291,7 @@ class LockedTransferSignedState(State):
 
     def __init__(
             self,
+            message_identifier,
             payment_identifier,
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
@@ -307,6 +310,7 @@ class LockedTransferSignedState(State):
         if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
+        self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.token = token
         self.balance_proof = balance_proof
@@ -316,8 +320,9 @@ class LockedTransferSignedState(State):
 
     def __repr__(self):
         return (
-            '<LockedTransferSignedState id:{} token:{} lock:{} target:{}>'
+            '<LockedTransferSignedState msgid:{} id:{} token:{} lock:{} target:{}>'
         ).format(
+            self.message_identifier,
             self.payment_identifier,
             encode_hex(self.token),
             self.lock,
@@ -327,6 +332,7 @@ class LockedTransferSignedState(State):
     def __eq__(self, other):
         return (
             isinstance(other, LockedTransferSignedState) and
+            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and

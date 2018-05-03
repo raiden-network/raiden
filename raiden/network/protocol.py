@@ -114,11 +114,11 @@ def timeout_two_stage(retries, timeout1, timeout2):
 def retry(protocol, messagedata, message_id, recipient, event_stop, timeout_backoff):
     """ Send messagedata until it's acknowledged.
 
-    Exits when the first of the following happen:
+    Exit when:
 
-    - The packet is acknowledged.
+    - The message is delivered.
     - Event_stop is set.
-    - The iterator timeout_backoff runs out of values.
+    - The iterator timeout_backoff runs out.
 
     Returns:
         bool: True if the message was acknowledged, False otherwise.
@@ -462,16 +462,7 @@ def healthcheck(
                 event_healthy.set()
 
 
-class RaidenProtocol:
-    """ Encode the message into a packet and send it.
-
-    Each message received is stored by hash and if it is received twice the
-    previous answer is resent.
-
-    Repeat sending messages until an acknowledgment is received or the maximum
-    number of retries is hit.
-    """
-
+class UDPTransport:
     def __init__(
             self,
             transport,
@@ -574,7 +565,11 @@ class RaidenProtocol:
                 ping_nonce,
             ))
 
-    def get_channel_queue(self, recipient, queue_name):
+    def get_queue_for(self, recipient, queue_name):
+        """ Return the queue identified by the pair `(recipient, queue_name)`.
+
+        If the queue doesn't exist it will be instantiated.
+        """
         queueid = (recipient, queue_name)
         queue = self.queueid_to_queue.get(queueid)
 
@@ -608,6 +603,11 @@ class RaidenProtocol:
         return queue
 
     def send_async(self, queue_name, recipient, message):
+        """ Send a new ordered message to recipient.
+
+        Messages that use the same `queue_name` are ordered.
+        """
+
         if not isaddress(recipient):
             raise ValueError('Invalid address {}'.format(pex(recipient)))
 
@@ -628,7 +628,7 @@ class RaidenProtocol:
         if message_id not in self.messageids_to_asyncresults:
             self.messageids_to_asyncresults[message_id] = AsyncResult()
 
-            queue = self.get_channel_queue(recipient, queue_name)
+            queue = self.get_queue_for(recipient, queue_name)
             queue.put((messagedata, message_id))
 
             if log.isEnabledFor(logging.DEBUG):
@@ -652,11 +652,12 @@ class RaidenProtocol:
         self.maybe_sendraw(host_port, messagedata)
 
     def maybe_sendraw_with_result(self, recipient, messagedata, message_id):
-        """ Send message to recipient if the transport is running and
-        returns an AsyncResult that will be set once the message is delivered.
+        """ Send message to recipient if the transport is running.
 
-        Returns the same AsyncResult instance as long as the message has not
-        been acknowledged with a Delivered message.
+        Returns:
+            An AsyncResult that will be set once the message is delivered. The
+            same AsyncResult instance as long as the message has not been
+            acknowledged with a Delivered message.
         """
         async_result = self.messageids_to_asyncresults.get(message_id)
         if async_result is None:
@@ -669,6 +670,7 @@ class RaidenProtocol:
         return async_result
 
     def maybe_sendraw(self, host_port, messagedata):
+        """ Send message to recipient if the transport is running. """
         # Check the udp socket is still available before trying to send the
         # message. There must be *no context-switches after this test*.
         if self.transport.server.started:
@@ -679,11 +681,12 @@ class RaidenProtocol:
             )
 
     def receive(self, messagedata):
+        """ Handle an UDP packet. """
         # pylint: disable=unidiomatic-typecheck
 
         if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
             log.error(
-                'receive packet larger than maximum size',
+                'INVALID MESSAGE: Packet larger than maximum size',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
                 length=len(messagedata),
@@ -696,19 +699,19 @@ class RaidenProtocol:
             self.receive_pong(message)
         elif type(message) == Ping:
             self.receive_ping(message)
-        elif type(message) != Delivered:
+        elif type(message) == Delivered:
             self.receive_delivered(message)
         elif message is not None:
             self.receive_message(message)
         elif log.isEnabledFor(logging.ERROR):
             log.error(
-                'Invalid message',
+                'INVALID MESSAGE: Unknown cmdid',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
             )
 
     def receive_message(self, message):
-        """ Handles a raiden protocol message.
+        """ Handle a Raiden protocol message.
 
         The protocol requires durability of the messages. The UDP transport
         relies on the node's WAL for durability, the message will be converted
@@ -719,6 +722,17 @@ class RaidenProtocol:
         # pylint: disable=unidiomatic-typecheck
 
         if on_udp_message(self.raiden, message):
+
+            # Sending Delivered after the message is decoded and *processed*
+            # gives a stronger guarantee than what is required from a
+            # transport.
+            #
+            # Alternatives are, from weakest to strongest options:
+            # - Just save it disk and asynchronously process the messages
+            # - Decode it, save to the WAL, and asynchronously process the
+            #   state change
+            # - Decode it, save to the WAL, and process it (the current
+            #   implementation)
             delivered_message = Delivered(message.message_identifier)
             self.raiden.sign(delivered_message)
 
@@ -728,6 +742,13 @@ class RaidenProtocol:
             )
 
     def receive_delivered(self, delivered: Delivered):
+        """ Handle a Delivered message.
+
+        The Delivered message is how the UDP transport guarantees persistence
+        by the partner node, the message itself is not part of the raiden
+        protocol, but it's required by this transport to provide the required
+        properties.
+        """
         processed = ReceiveDelivered(delivered.delivered_message_identifier)
         self.raiden.handle_state_change(processed)
 
@@ -743,7 +764,7 @@ class RaidenProtocol:
     # are /not/ part of the raiden protocol, only part of the UDP transport,
     # therefor these messages are not forwarded to the message handler.
     def receive_ping(self, ping):
-        """ Responds a Ping message with a Pong. """
+        """ Handle a Ping message by answering with a Pong. """
 
         if ping_log.isEnabledFor(logging.DEBUG):
             ping_log.debug(

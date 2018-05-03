@@ -50,7 +50,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import SignedMessage
-from raiden.network.protocol import RaidenProtocol
+from raiden.network.protocol import UDPTransport
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -204,7 +204,7 @@ class RaidenService:
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
-        self.protocol = RaidenProtocol(
+        self.protocol = UDPTransport(
             transport,
             discovery,
             self,

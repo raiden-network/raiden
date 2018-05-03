@@ -254,29 +254,29 @@ class Processed(SignedMessage):
     """
     cmdid = messages.PROCESSED
 
-    def __init__(self, sender, processed_message_identifier):
+    def __init__(self, sender, message_identifier):
         super().__init__()
         self.sender = sender
-        self.processed_message_identifier = processed_message_identifier
+        self.message_identifier = message_identifier
 
     @staticmethod
     def unpack(packed):
         processed = Processed(
             packed.sender,
-            packed.processed_message_identifier,
+            packed.message_identifier,
         )
         processed.signature = packed.signature
         return processed
 
     def pack(self, packed):
-        packed.processed_message_identifier = self.processed_message_identifier
+        packed.message_identifier = self.message_identifier
         packed.sender = self.sender
         packed.signature = self.signature
 
     def __repr__(self):
-        return '<{} [processed_msgid:{}]>'.format(
+        return '<{} [msgid:{}]>'.format(
             self.__class__.__name__,
-            self.processed_message_identifier,
+            self.message_identifier,
         )
 
 

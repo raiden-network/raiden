@@ -1048,7 +1048,7 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
         )
         send_processed = SendProcessed(
             direct_transfer.balance_proof.sender,
-            'global',
+            b'global',
             direct_transfer.message_identifier,
         )
         events = [transfer_sucess_event, send_processed]

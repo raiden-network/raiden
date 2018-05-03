@@ -1008,7 +1008,7 @@ def handle_refundtransfer(
             events = list(iteration.events)
             send_processed = SendProcessed(
                 mediator_state_change.transfer.balance_proof.sender,
-                'global',
+                b'global',
                 mediator_state_change.message_identifier,
             )
             events.append(send_processed)
@@ -1146,7 +1146,7 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
 
                     send_processed = SendProcessed(
                         balance_proof_sender,
-                        'global',
+                        b'global',
                         state_change.message_identifier,
                     )
                     events.append(send_processed)

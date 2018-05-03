@@ -123,7 +123,7 @@ def handle_message_lockedtransfer(raiden: 'RaidenService', message: LockedTransf
 
 
 def handle_message_processed(raiden: 'RaidenService', message: Processed):
-    processed = ReceiveProcessed(message.processed_message_identifier)
+    processed = ReceiveProcessed(message.message_identifier)
     raiden.handle_state_change(processed)
 
 
