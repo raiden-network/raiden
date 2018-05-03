@@ -9,6 +9,8 @@ from raiden.app import App
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
 
+from raiden.tests.utils.matrix import MockMatrixClient
+
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -228,7 +230,8 @@ def create_apps(
         throttle_fill_rate,
         nat_invitation_timeout,
         nat_keepalive_retries,
-        nat_keepalive_timeout):
+        nat_keepalive_timeout,
+        use_matrix=False):
 
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -236,20 +239,10 @@ def create_apps(
 
     apps = []
     for idx, (blockchain, discovery) in enumerate(services):
-        port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
         nodeid = privatekey_to_address(private_key)
 
-        host = '127.0.0.1'
-
-        discovery.register(nodeid, host, port)
-
         config = {
-            'host': host,
-            'port': port,
-            'transport_type': 'udp',
-            'external_ip': host,
-            'external_port': port,
             'privatekey_hex': hexlify(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
@@ -266,6 +259,30 @@ def create_apps(
             'rpc': True,
             'console': False,
         }
+
+        if use_matrix:
+            config.update({
+                'transport_type': 'matrix',
+                'matrix': {
+                    'client_class': MockMatrixClient,
+                    'server': 'matrix.mock',
+                    'default_rooms': dict()
+                }
+            })
+
+        else:
+            host = '127.0.0.1'
+            port = raiden_udp_ports[idx]
+            discovery.register(nodeid, host, port)
+
+            config.update({
+                'host': host,
+                'port': port,
+                'transport_type': 'udp',
+                'external_ip': host,
+                'external_port': port,
+            })
+
         copy = App.DEFAULT_CONFIG.copy()
         copy.update(config)
 
@@ -277,7 +294,8 @@ def create_apps(
             registry,
             discovery
         )
-        app.raiden.protocol.transport.throttle_policy = DummyPolicy()
+        if not use_matrix:
+            app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)
 
     return apps

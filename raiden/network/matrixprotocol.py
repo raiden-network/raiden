@@ -65,7 +65,8 @@ class RaidenMatrixProtocol:
     def __init__(self, raiden: 'raiden_service.RaidenService'):
         self.raiden = raiden
         self._server_name = self.raiden.config['matrix']['server']
-        self.client = GMatrixClient(self._server_name)
+        client_class = self.raiden.config['matrix'].get('client_class', GMatrixClient)
+        self.client = client_class(self._server_name)
 
         self._senthashes_to_states = dict()
         self._receivedhashes_to_processedmessages = dict()
