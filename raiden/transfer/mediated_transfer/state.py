@@ -457,7 +457,7 @@ class MediationPairState(State):
         'payer_waiting_close',      # ContractSendChannelClose was sent
         'payer_waiting_withdraw',   # ContractSendWithdraw was sent
         'payer_contract_withdraw',  # ContractChannelReceiveWithdraw for the above send received
-        'payer_balance_proof',      # ReceiveBalanceProof was received
+        'payer_balance_proof',      # ReceiveUnlock was received
         'payer_expired',            # None of the above happened and the lock expired
     )
 
