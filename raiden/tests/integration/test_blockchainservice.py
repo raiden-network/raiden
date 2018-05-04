@@ -258,6 +258,7 @@ def test_blockchain(
     assert token_proxy.call('balanceOf', address) == total_token
     transaction_hash = registry_proxy.transact(
         'addToken',
+        address,
         token_proxy.contract_address,
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)

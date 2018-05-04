@@ -66,7 +66,15 @@ class Channel:
 
 class ChannelNew:
 
-    def __init__(self, netting_channel_address, participant1, participant2, settle_timeout):
+    def __init__(
+            self,
+            registry_address,
+            netting_channel_address,
+            participant1,
+            participant2,
+            settle_timeout):
+
+        self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address
         self.participant1 = participant1
         self.participant2 = participant2
@@ -77,12 +85,14 @@ class ChannelNewBalance:
 
     def __init__(
             self,
+            registry_address,
             netting_channel_address,
             token_address,
             participant_address,
             new_balance,
             block_number):
 
+        self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address
         self.token_address = token_address
         self.participant_address = participant_address
@@ -92,7 +102,8 @@ class ChannelNewBalance:
 
 class ChannelClosed:
 
-    def __init__(self, netting_channel_address, closing_address, block_number):
+    def __init__(self, registry_address, netting_channel_address, closing_address, block_number):
+        self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address
         self.closing_address = closing_address
         self.block_number = block_number
@@ -100,13 +111,15 @@ class ChannelClosed:
 
 class ChannelSettled:
 
-    def __init__(self, netting_channel_address, block_number):
+    def __init__(self, registry_address, netting_channel_address, block_number):
+        self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address
         self.block_number = block_number
 
 
 class ChannelSecretRevealed:
 
-    def __init__(self, netting_channel_address, secret):
+    def __init__(self, registry_address, netting_channel_address, secret):
+        self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address
         self.secret = secret

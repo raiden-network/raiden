@@ -15,7 +15,7 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import privatekey_to_address, sha3, event_decoder, address_encoder
 
 
-def test_close_event(tester_nettingcontracts, tester_events):
+def test_close_event(tester_registry_address, tester_nettingcontracts, tester_events):
     """ The event ChannelClosed is emitted when close is called. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
     address = privatekey_to_address(pkey0)
@@ -27,6 +27,7 @@ def test_close_event(tester_nettingcontracts, tester_events):
     close_event = event_decoder(tester_events[-1], nettingchannel.translator)
     assert close_event == {
         '_event_type': b'ChannelClosed',
+        'registry_address': address_encoder(tester_registry_address),
         'closing_address': address_encoder(address),
     }
 

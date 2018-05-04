@@ -337,6 +337,7 @@ def new_channelmanager(
         tester_token_address):
 
     channel_manager_address = tester_registry.addToken(
+        tester_registry.address,
         tester_token_address,
         sender=deploy_key,
     )

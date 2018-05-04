@@ -22,6 +22,7 @@ def netting_channel_settled(tester_chain, nettingchannel, pkey, settle_timeout):
 
 def test_channelnew_event(
         settle_timeout,
+        tester_registry_address,
         tester_channelmanager,
         private_keys,
         tester_events):
@@ -41,6 +42,7 @@ def test_channelnew_event(
     last_event = event_decoder(tester_events[-1], tester_channelmanager.translator)
     assert last_event == {
         '_event_type': b'ChannelNew',
+        'registry_address': address_encoder(tester_registry_address),
         'netting_channel': netting_channel_address1_hex,
         'participant1': address_encoder(address0),
         'participant2': address_encoder(address1),
@@ -50,6 +52,7 @@ def test_channelnew_event(
 
 def test_channeldeleted_event(
         settle_timeout,
+        tester_registry_address,
         tester_channelmanager,
         tester_events,
         tester_nettingcontracts,
@@ -83,6 +86,7 @@ def test_channeldeleted_event(
     channeldelete_event = event_decoder(tester_events[-2], tester_channelmanager.translator)
     assert channeldelete_event == {
         '_event_type': b'ChannelDeleted',
+        'registry_address': address_encoder(tester_registry_address),
         'caller_address': address_encoder(address0),
         'partner': address_encoder(address1)
     }

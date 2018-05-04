@@ -358,7 +358,7 @@ class RegistryTesterMock:
         return channel_manager_address_hex
 
     def add_token(self, token_address):
-        self.registry_proxy.addToken(token_address)
+        self.registry_proxy.addToken(self.address, token_address)
         self.tester_chain.mine(number_of_blocks=1)
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
         return channel_manager_address_hex

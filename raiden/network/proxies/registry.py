@@ -95,6 +95,7 @@ class Registry:
         transaction_hash = estimate_and_transact(
             self.proxy,
             'addToken',
+            self.address,
             token_address,
         )
 

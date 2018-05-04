@@ -30,7 +30,9 @@ def handle_tokennetwork_new(raiden, event):
     data = event.event_data
     manager_address = data['channel_manager_address']
 
-    registry = raiden.default_registry
+    registry_address = data['registry_address']
+    registry = raiden.chain.registry(registry_address)
+
     manager_proxy = registry.manager(manager_address)
     netting_channel_proxies = get_channel_proxies(raiden.chain, raiden.address, manager_proxy)
 
@@ -54,9 +56,8 @@ def handle_tokennetwork_new(raiden, event):
 
 
 def handle_channel_new(raiden, event):
-    payment_network_identifier = raiden.default_registry.address
-
     data = event.event_data
+    registry_address = data['registry_address']
     participant1 = data['participant1']
     participant2 = data['participant2']
     is_participant = raiden.address in (participant1, participant2)
@@ -71,7 +72,7 @@ def handle_channel_new(raiden, event):
         )
 
         new_channel = ContractReceiveChannelNew(
-            payment_network_identifier,
+            registry_address,
             token_address,
             channel_state,
         )
@@ -79,13 +80,13 @@ def handle_channel_new(raiden, event):
 
         partner_address = channel_state.partner_state.address
         connection_manager = raiden.connection_manager_for_token(
-            payment_network_identifier, token_address
+            registry_address, token_address
         )
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
-        gevent.spawn(connection_manager.retry_connect, payment_network_identifier)
+        gevent.spawn(connection_manager.retry_connect, registry_address)
 
         # Start the listener *after* the channel is registered, to avoid None
         # exceptions (and not applying the event state change).
@@ -99,7 +100,7 @@ def handle_channel_new(raiden, event):
         token_address = manager.token_address()
 
         new_route = ContractReceiveRouteNew(
-            payment_network_identifier,
+            registry_address,
             token_address,
             participant1,
             participant2,
@@ -109,7 +110,7 @@ def handle_channel_new(raiden, event):
 
 def handle_channel_new_balance(raiden, event):
     data = event.event_data
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = data['registry_address']
     channel_identifier = event.originating_contract
     token_address = data['token_address']
     participant_address = data['participant']
@@ -118,7 +119,7 @@ def handle_channel_new_balance(raiden, event):
 
     previous_channel_state = views.get_channelstate_by_tokenaddress(
         views.state_from_raiden(raiden),
-        payment_network_identifier,
+        registry_address,
         token_address,
         channel_identifier,
     )
@@ -136,7 +137,7 @@ def handle_channel_new_balance(raiden, event):
             deposit_block_number,
         )
         newbalance_statechange = ContractReceiveChannelNewBalance(
-            payment_network_identifier,
+            registry_address,
             token_address,
             channel_identifier,
             deposit_transaction,
@@ -145,31 +146,31 @@ def handle_channel_new_balance(raiden, event):
 
         if balance_was_zero:
             connection_manager = raiden.connection_manager_for_token(
-                payment_network_identifier, token_address
+                registry_address, token_address
             )
 
             gevent.spawn(
                 connection_manager.join_channel,
-                payment_network_identifier,
+                registry_address,
                 participant_address,
                 new_balance,
             )
 
 
 def handle_channel_closed(raiden, event):
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = event.event_data['registry_address']
     channel_identifier = event.originating_contract
     data = event.event_data
 
     channel_state = views.search_for_channel(
         views.state_from_raiden(raiden),
-        payment_network_identifier,
+        registry_address,
         channel_identifier,
     )
 
     if channel_state:
         channel_closed = ContractReceiveChannelClosed(
-            payment_network_identifier,
+            registry_address,
             channel_state.token_address,
             channel_identifier,
             data['closing_address'],
@@ -179,19 +180,19 @@ def handle_channel_closed(raiden, event):
 
 
 def handle_channel_settled(raiden, event):
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = event.event_data['registry_address']
     data = event.event_data
     channel_identifier = event.originating_contract
 
     channel_state = views.search_for_channel(
         views.state_from_raiden(raiden),
-        payment_network_identifier,
+        registry_address,
         channel_identifier,
     )
 
     if channel_state:
         channel_settled = ContractReceiveChannelSettled(
-            payment_network_identifier,
+            registry_address,
             channel_state.token_address,
             channel_identifier,
             data['block_number'],
@@ -202,17 +203,17 @@ def handle_channel_settled(raiden, event):
 def handle_channel_withdraw(raiden, event):
     channel_identifier = event.originating_contract
     data = event.event_data
-    payment_network_identifier = raiden.default_registry.address
+    registry_address = data['registry_address']
 
     channel_state = views.search_for_channel(
         views.state_from_raiden(raiden),
-        payment_network_identifier,
+        registry_address,
         channel_identifier,
     )
 
     if channel_state:
         withdrawn_state_change = ContractReceiveChannelWithdraw(
-            payment_network_identifier,
+            registry_address,
             channel_state.token_address,
             channel_identifier,
             data['secret'],

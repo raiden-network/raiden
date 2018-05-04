@@ -8,11 +8,22 @@ contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    event ChannelNewBalance(address token_address, address participant, uint balance);
-    event ChannelClosed(address closing_address);
+    event ChannelNewBalance(
+        address registry_address,
+        address token_address,
+        address participant,
+        uint balance
+    );
+
+    event ChannelClosed(address registry_address, address closing_address);
     event TransferUpdated(address node_address);
-    event ChannelSettled();
-    event ChannelSecretRevealed(bytes32 secret, address receiver_address);
+    event ChannelSettled(address registry_address);
+
+    event ChannelSecretRevealed(
+        address registry_address,
+        bytes32 secret,
+        address receiver_address
+    );
 
     modifier settleTimeoutValid(uint t) {
         require(t >= 6 && t <= 2700000);
@@ -20,6 +31,7 @@ contract NettingChannelContract {
     }
 
     constructor(
+        address registry_address,
         address token_address,
         address participant1,
         address participant2,
@@ -35,6 +47,7 @@ contract NettingChannelContract {
         data.participant_index[participant1] = 1;
         data.participant_index[participant2] = 2;
 
+        data.registry_address = registry_address;
         data.token = Token(token_address);
         data.settle_timeout = timeout;
         data.opened = block.number;
@@ -53,7 +66,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(amount);
 
         if (success == true) {
-            emit ChannelNewBalance(data.token, msg.sender, balance);
+            emit ChannelNewBalance(data.registry_address, data.token, msg.sender, balance);
         }
 
         return success;
@@ -92,7 +105,7 @@ contract NettingChannelContract {
             extra_hash,
             signature
         );
-        emit ChannelClosed(msg.sender);
+        emit ChannelClosed(data.registry_address, msg.sender);
     }
 
     /// @notice Dispute the state after closing, called by the counterparty (the
@@ -123,7 +136,7 @@ contract NettingChannelContract {
     function withdraw(bytes locked_encoded, bytes merkle_proof, bytes32 secret) public {
         // throws if sender is not a participant
         data.withdraw(locked_encoded, merkle_proof, secret);
-        emit ChannelSecretRevealed(secret, msg.sender);
+        emit ChannelSecretRevealed(data.registry_address, secret, msg.sender);
     }
 
     /// @notice Settle the transfers and balances of the channel and pay out to
@@ -132,7 +145,7 @@ contract NettingChannelContract {
     ///         have passed.
     function settle() public {
         data.settle();
-        emit ChannelSettled();
+        emit ChannelSettled(data.registry_address);
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.

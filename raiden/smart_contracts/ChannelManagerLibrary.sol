@@ -8,6 +8,7 @@ library ChannelManagerLibrary {
 
     struct Data {
         Token token;
+        address registry_address;
 
         address[] all_channels;
         mapping(bytes32 => uint) partyhash_to_channelpos;
@@ -31,6 +32,7 @@ library ChannelManagerLibrary {
         uint channel_pos = self.partyhash_to_channelpos[party_hash];
 
         address new_channel_address = new NettingChannelContract(
+            self.registry_address,
             self.token,
             msg.sender,
             partner,

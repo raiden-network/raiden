@@ -80,6 +80,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     assert any(
         (
             event['_event_type'] == b'ChannelNewBalance' and
+            event['registry_address'] == address_encoder(registry_address) and
             event['participant'] == address_encoder(api1.address)
         )
         for event in event_list2
@@ -99,6 +100,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     assert any(
         (
             event['_event_type'] == b'ChannelClosed' and
+            event['registry_address'] == address_encoder(registry_address) and
             event['closing_address'] == address_encoder(api1.address)
         )
         for event in event_list3
