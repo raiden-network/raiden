@@ -190,23 +190,31 @@ def decode_event(event):
 
     # Note: All addresses inside the event_data must be decoded.
     if data['_event_type'] == b'TokenAdded':
+        data['registry_address'] = address_decoder(data['registry_address'])
         data['channel_manager_address'] = address_decoder(data['channel_manager_address'])
         data['token_address'] = address_decoder(data['token_address'])
 
     elif data['_event_type'] == b'ChannelNew':
+        data['registry_address'] = address_decoder(data['registry_address'])
         data['participant1'] = address_decoder(data['participant1'])
         data['participant2'] = address_decoder(data['participant2'])
         data['netting_channel'] = address_decoder(data['netting_channel'])
 
     elif data['_event_type'] == b'ChannelNewBalance':
+        data['registry_address'] = address_decoder(data['registry_address'])
         data['token_address'] = address_decoder(data['token_address'])
         data['participant'] = address_decoder(data['participant'])
 
     elif data['_event_type'] == b'ChannelClosed':
+        data['registry_address'] = address_decoder(data['registry_address'])
         data['closing_address'] = address_decoder(data['closing_address'])
 
     elif data['_event_type'] == b'ChannelSecretRevealed':
+        data['registry_address'] = address_decoder(data['registry_address'])
         data['receiver_address'] = address_decoder(data['receiver_address'])
+
+    elif data['_event_type'] == b'ChannelSettled':
+        data['registry_address'] = address_decoder(data['registry_address'])
 
     return event
 

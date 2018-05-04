@@ -36,6 +36,7 @@ library NettingChannelLibrary {
         uint opened;
         uint closed;
         address closing_address;
+        address registry_address;
         Token token;
         Participant[2] participants;
         mapping(address => uint8) participant_index;

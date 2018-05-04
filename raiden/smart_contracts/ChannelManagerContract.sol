@@ -14,6 +14,7 @@ contract ChannelManagerContract is Utils {
     ChannelManagerLibrary.Data data;
 
     event ChannelNew(
+        address registry_address,
         address netting_channel,
         address participant1,
         address participant2,
@@ -21,11 +22,13 @@ contract ChannelManagerContract is Utils {
     );
 
     event ChannelDeleted(
+        address registry_address,
         address caller_address,
         address partner
     );
 
-    constructor(address token_address) public {
+    constructor(address registry_address, address token_address) public {
+        data.registry_address = registry_address;
         data.token = Token(token_address);
     }
 
@@ -39,11 +42,11 @@ contract ChannelManagerContract is Utils {
     {
         address old_channel = getChannelWith(partner);
         if (old_channel != 0) {
-            emit ChannelDeleted(msg.sender, partner);
+            emit ChannelDeleted(data.registry_address, msg.sender, partner);
         }
 
         address new_channel = data.newChannel(partner, settle_timeout);
-        emit ChannelNew(new_channel, msg.sender, partner, settle_timeout);
+        emit ChannelNew(data.registry_address, new_channel, msg.sender, partner, settle_timeout);
         return new_channel;
     }
 

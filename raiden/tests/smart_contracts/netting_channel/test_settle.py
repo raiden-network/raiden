@@ -12,10 +12,15 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import channel
 from raiden.transfer.state_change import Block
-from raiden.utils import sha3, privatekey_to_address, event_decoder
+from raiden.utils import sha3, privatekey_to_address, event_decoder, address_encoder
 
 
-def test_settle_event(settle_timeout, tester_chain, tester_events, tester_nettingcontracts):
+def test_settle_event(
+        settle_timeout,
+        tester_registry_address,
+        tester_chain,
+        tester_events,
+        tester_nettingcontracts):
     """ The event ChannelSettled is emitted when the channel is settled. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
 
@@ -33,6 +38,7 @@ def test_settle_event(settle_timeout, tester_chain, tester_events, tester_nettin
     settle_event = event_decoder(tester_events[-1], nettingchannel.translator)
     assert settle_event == {
         '_event_type': b'ChannelSettled',
+        'registry_address': address_encoder(tester_registry_address)
     }
 
 

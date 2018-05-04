@@ -19,7 +19,11 @@ def test_registry(tester_registry, tester_events, private_keys, tester_chain):
 
     tester_chain.head_state.log_listeners.append(tester_events.append)
 
-    contract_address1 = tester_registry.addToken(token_address1, sender=privatekey0)
+    contract_address1 = tester_registry.addToken(
+        tester_registry.address,
+        token_address1,
+        sender=privatekey0)
+
     channel_manager_address1 = tester_registry.channelManagerByToken(
         token_address1,
         sender=privatekey0,
@@ -27,9 +31,14 @@ def test_registry(tester_registry, tester_events, private_keys, tester_chain):
     assert channel_manager_address1 == contract_address1
 
     with pytest.raises(tester.TransactionFailed):
-        tester_registry.addToken(token_address1, sender=privatekey0)
+        tester_registry.addToken(tester_registry.address, token_address1, sender=privatekey0)
 
-    contract_address2 = tester_registry.addToken(token_address2, sender=privatekey0)
+    contract_address2 = tester_registry.addToken(
+        tester_registry.address,
+        token_address2,
+        sender=privatekey0
+    )
+
     channel_manager_address2 = tester_registry.channelManagerByToken(
         token_address2,
         sender=privatekey0,
@@ -54,10 +63,12 @@ def test_registry(tester_registry, tester_events, private_keys, tester_chain):
     event1 = event_decoder(tester_events[1], tester_registry.translator)
 
     assert event0['_event_type'] == b'TokenAdded'
+    assert event0['registry_address'] == address_encoder(tester_registry.address)
     assert event0['token_address'] == address_encoder(token_address1)
     assert event0['channel_manager_address'] == contract_address1
 
     assert event1['_event_type'] == b'TokenAdded'
+    assert event1['registry_address'] == address_encoder(tester_registry.address)
     assert event1['token_address'] == address_encoder(token_address2)
     assert event1['channel_manager_address'] == contract_address2
 
@@ -66,7 +77,7 @@ def test_registry_reject_empty_address(tester_registry, tester_events, private_k
     privatekey0 = tester.k0
 
     with pytest.raises(Exception):
-        tester_registry.addToken('', sender=privatekey0)
+        tester_registry.addToken(tester_registry.address, '', sender=privatekey0)
 
 
 def test_registry_nonexistent_token(tester_registry, tester_events):
@@ -74,7 +85,7 @@ def test_registry_nonexistent_token(tester_registry, tester_events):
 
     fake_token_address = sha3(b'token')[:20]
     with pytest.raises(tester.TransactionFailed):
-        tester_registry.addToken(fake_token_address, sender=privatekey0)
+        tester_registry.addToken(tester_registry.address, fake_token_address, sender=privatekey0)
 
 
 def test_all_contracts_same_version(

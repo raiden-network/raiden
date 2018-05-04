@@ -143,7 +143,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     events = get_all_registry_events(
         app0.raiden.chain,
-        app0.raiden.default_registry.address,
+        registry_address,
         events=ALL_EVENTS,
         from_block=0,
         to_block='latest',
@@ -152,6 +152,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
         '_event_type': b'TokenAdded',
+        'registry_address': address_encoder(registry_address),
         'channel_manager_address': address_encoder(manager0.address),
         'token_address': address_encoder(token_address),
         'block_number': 'ignore',
@@ -185,6 +186,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
         '_event_type': b'ChannelNew',
+        'registry_address': address_encoder(registry_address),
         'settle_timeout': settle_timeout,
         'netting_channel': address_encoder(channel_address),
         'participant1': address_encoder(app0.raiden.address),
@@ -242,6 +244,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     new_balance_event = {
         '_event_type': b'ChannelNewBalance',
+        'registry_address': address_encoder(registry_address),
         'token_address': address_encoder(token_address),
         'participant': address_encoder(app0.raiden.address),
         'balance': deposit,
@@ -276,6 +279,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     closed_event = {
         '_event_type': b'ChannelClosed',
+        'registry_address': address_encoder(registry_address),
         'closing_address': address_encoder(app0.raiden.address),
         'block_number': 'ignore',
     }
@@ -304,6 +308,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     settled_event = {
         '_event_type': b'ChannelSettled',
+        'registry_address': address_encoder(registry_address),
         'block_number': 'ignore',
     }
 
