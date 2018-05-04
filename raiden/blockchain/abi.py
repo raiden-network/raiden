@@ -135,13 +135,14 @@ def validate_solc():
             "Couldn't find the solc in the current $PATH.\n"
             "Make sure the solidity compiler is installed and available on your $PATH."
         )
-    
-    elif LooseVersion(_solidity.compiler_version()) < LooseVersion(MIN_REQUIRED_SOLC):
+
+    elif LooseVersion(_solidity.compiler_version()) < LooseVersion(MIN_REQUIRED_SOLC[1:]):
         raise RuntimeError(
-            "You are currently using the solidity compiler version {}.\n".format(_solidity.compiler_version())
-            "Please upgrade to version {}".format(MIN_REQUIRED_SOLC)
+            "You are currently using the solidity compiler version {}.\n".format(
+                _solidity.compiler_version())
+            "Please upgrade to version " + MIN_REQUIRED_SOLC
         )
-        
+
     try:
         _solidity.compile_contract(
             get_contract_path('HumanStandardToken.sol'),
