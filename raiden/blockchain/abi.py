@@ -138,9 +138,9 @@ def validate_solc():
 
     elif LooseVersion(_solidity.compiler_version()) < LooseVersion(MIN_REQUIRED_SOLC[1:]):
         raise RuntimeError(
-            "You are currently using the solidity compiler version {}.\n".format(
+            'You are currently using the solidity compiler version {}.\n'.format(
                 _solidity.compiler_version())
-            "Please upgrade to version " + MIN_REQUIRED_SOLC
+            'Please upgrade to the compatible version {}.'.format(MIN_REQUIRED_SOLC)
         )
 
     try:
