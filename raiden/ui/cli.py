@@ -592,11 +592,7 @@ def app(
         discovery,
         mapped_socket,
         throttle_policy,
-        config['protocol']['retry_interval'],
-        config['protocol']['retries_before_backoff'],
-        config['protocol']['nat_keepalive_retries'],
-        config['protocol']['nat_keepalive_timeout'],
-        config['protocol']['nat_invitation_timeout'],
+        config['protocol'],
     )
 
     raiden_app = App(

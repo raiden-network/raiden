@@ -465,27 +465,16 @@ def healthcheck(
 
 
 class UDPTransport:
-    def __init__(
-            self,
-            discovery,
-            udpsocket,
-            throttle_policy,
-            retry_interval,
-            retries_before_backoff,
-            nat_keepalive_retries,
-            nat_keepalive_timeout,
-            nat_invitation_timeout,
-    ):
-
+    def __init__(self, discovery, udpsocket, throttle_policy, config):
         self.discovery = discovery
         self.raiden = None
+        self.config = config
 
-        self.retry_interval = retry_interval
-        self.retries_before_backoff = retries_before_backoff
-
-        self.nat_keepalive_retries = nat_keepalive_retries
-        self.nat_keepalive_timeout = nat_keepalive_timeout
-        self.nat_invitation_timeout = nat_invitation_timeout
+        self.retry_interval = config['retry_interval']
+        self.retries_before_backoff = config['retries_before_backoff']
+        self.nat_keepalive_retries = config['nat_keepalive_retries']
+        self.nat_keepalive_timeout = config['nat_keepalive_timeout']
+        self.nat_invitation_timeout = config['nat_invitation_timeout']
 
         self.event_stop = Event()
 
