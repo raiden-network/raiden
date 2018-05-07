@@ -120,40 +120,8 @@ test_requirements = []
 
 version = '0.3.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 
-
-def read_version_from_git():
-    try:
-        import shlex
-        git_version, _ = subprocess.Popen(
-            shlex.split('git describe --tags --abbrev=8'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        ).communicate()
-        # Popen returns bytes
-        git_version = git_version.decode()
-
-        if git_version.startswith('v'):
-            git_version = git_version[1:]
-
-        git_version = git_version.strip()
-        # if this is has commits after the tag, it's a prerelease:
-        if git_version.count('-') == 2:
-            _, _, commit = git_version.split('-')
-            if commit.startswith('g'):
-                commit = commit[1:]
-            return '{}+git.r{}'.format(version, commit)
-        elif git_version.count('.') == 2:
-            return git_version
-        else:
-            return version
-    except BaseException as e:
-        print('could not read version from git: {}'.format(e))
-        return version
-
-
 setup(
     name='raiden',
-    version=read_version_from_git(),
     description='',
     long_description=readme + '\n\n' + history,
     author='Brainbot Labs Est.',
@@ -178,6 +146,8 @@ setup(
         'compile_webui': CompileWebUI,
         'build_py': BuildPyCommand,
     },
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     install_requires=install_requires,
     tests_require=test_requirements,
     python_requires='>=3.6',
