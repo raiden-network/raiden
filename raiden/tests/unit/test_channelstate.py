@@ -200,7 +200,8 @@ def make_receive_transfer_mediated(
         transferred_amount,
         lock,
         merkletree_leaves=None,
-        registry_address=UNIT_REGISTRY_IDENTIFIER):
+        registry_address=UNIT_REGISTRY_IDENTIFIER,
+):
 
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')

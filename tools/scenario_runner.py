@@ -221,7 +221,7 @@ def run(
                             app.raiden.default_registry.address,
                             token_address,
                             peer,
-                            amount
+                            amount,
                         )
                         break
                     except Exception:

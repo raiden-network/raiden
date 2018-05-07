@@ -60,7 +60,8 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
         registry_address,
         token_address,
         api2.address,
-        deposit)
+        deposit,
+    )
 
     channel12 = get_channelstate(node1, node2, token_address)
 

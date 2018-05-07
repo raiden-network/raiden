@@ -90,8 +90,10 @@ URLS_V1 = [
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
     ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
     (
-        '''/transfers/<hexaddress:registry_address>/
-        <hexaddress:token_address>/<hexaddress:target_address>''',
+        (
+            '/transfers/<hexaddress:registry_address>/'
+            '<hexaddress:token_address>/<hexaddress:target_address>'
+        ),
         TransferToTargetResource,
     ),
     ('/connections/<hexaddress:registry_address>/<hexaddress:token_address>', ConnectionsResource),
@@ -452,7 +454,8 @@ class RestAPI:
         closed_channels = self.raiden_api.token_network_leave(
             registry_address,
             token_address,
-            only_receiving)
+            only_receiving,
+        )
         closed_channels = [channel_state.identifier for channel_state in closed_channels]
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
@@ -462,7 +465,7 @@ class RestAPI:
         raiden_service_result = self.raiden_api.get_channel_list(
             registry_address,
             token_address,
-            partner_address
+            partner_address,
         )
         assert isinstance(raiden_service_result, list)
 
@@ -479,14 +482,18 @@ class RestAPI:
 
     def get_network_events(self, registry_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_network_events(
-            registry_address, from_block, to_block
+            registry_address,
+            from_block,
+            to_block,
         )
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_token_network_events(self, token_address, from_block, to_block):
         try:
             raiden_service_result = self.raiden_api.get_token_network_events(
-                token_address, from_block, to_block
+                token_address,
+                from_block,
+                to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
@@ -502,8 +509,8 @@ class RestAPI:
         channel_state = self.raiden_api.get_channel(registry_address, channel_address)
         result = self.channel_schema.dump(channelstate_to_api_dict(
             channel_state,
-            registry_address)
-        )
+            registry_address,
+        ))
         return api_response(result=result.data)
 
     def get_partners_by_token(self, registry_address, token_address):
@@ -533,7 +540,8 @@ class RestAPI:
             token_address,
             target_address,
             amount,
-            identifier):
+            identifier,
+    ):
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -602,13 +610,13 @@ class RestAPI:
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address,
-            channel_state.identifier
+            channel_state.identifier,
         )
 
         result = self.channel_schema.dump(
             channelstate_to_api_dict(
                 updated_channel_state,
-                registry_address
+                registry_address,
             )
         )
         return api_response(result=result.data)
@@ -624,22 +632,23 @@ class RestAPI:
             self.raiden_api.channel_close(
                 registry_address,
                 channel_state.token_address,
-                channel_state.partner_state.address
+                channel_state.partner_state.address,
             )
         except ChannelBusyError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address,
-            channel_state.identifier)
+            channel_state.identifier,
+        )
 
         result = self.channel_schema.dump(
             channelstate_to_api_dict(
                 updated_channel_state,
-                registry_address
+                registry_address,
             )
         )
         return api_response(result=result.data)

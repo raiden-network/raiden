@@ -60,7 +60,8 @@ def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
     RaidenAPI(app0.raiden).channel_open(
         registry_address,
         token_address,
-        app1.raiden.address)
+        app1.raiden.address,
+    )
 
     gevent.sleep(events_poll_timeout)
 
@@ -100,7 +101,8 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         registry_address,
         token_address,
         app1.raiden.address,
-        deposit)
+        deposit,
+    )
 
     gevent.sleep(events_poll_timeout)
 
@@ -114,7 +116,8 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         registry_address,
         token_address,
         app0.raiden.address,
-        deposit)
+        deposit,
+    )
 
     gevent.sleep(events_poll_timeout)
 
@@ -170,7 +173,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     channel_address = RaidenAPI(app0.raiden).channel_open(
         registry_address,
         token_address,
-        app1.raiden.address
+        app1.raiden.address,
     )
 
     gevent.sleep(events_poll_timeout * 2)
@@ -221,7 +224,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         registry_address,
         token_address,
         app1.raiden.address,
-        deposit
+        deposit,
     )
 
     gevent.sleep(events_poll_timeout * 2)
@@ -257,7 +260,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     RaidenAPI(app0.raiden).channel_close(
         registry_address,
         token_address,
-        app1.raiden.address)
+        app1.raiden.address,
+    )
 
     gevent.sleep(events_poll_timeout * 2)
 
@@ -350,7 +354,8 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     netting_channel_proxy = app2.raiden.chain.netting_channel(channel_state2_1.identifier)
     netting_channel_proxy.channel_close(
         registry_address,
-        channel_state2_1.partner_state.balance_proof)
+        channel_state2_1.partner_state.balance_proof,
+    )
 
     # Reveal the secret through the blockchain (this needs to emit the
     # SecretRevealed event)

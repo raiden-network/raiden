@@ -41,7 +41,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     RaidenAPI(app1.raiden).channel_close(
         registry_address,
         token_address,
-        app0.raiden.address
+        app0.raiden.address,
     )
 
     waiting.wait_for_settle(
@@ -236,7 +236,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     RaidenAPI(app1.raiden).channel_close(
         registry_address,
         token_address,
-        app0.raiden.address
+        app0.raiden.address,
     )
 
     # The direct transfer locksroot must not contain the unlocked lock, the
@@ -428,7 +428,8 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     RaidenAPI(app0.raiden).channel_close(
         registry_address,
         token_address,
-        app1.raiden.address)
+        app1.raiden.address,
+    )
 
     # Bob needs to provide a transfer otherwise its netted balance will be
     # wrong, so he is incentivised to use Alice's transfer with the largest

@@ -270,13 +270,10 @@ class SendDirectTransfer(SendMessageEvent):
 
     def __repr__(self):
         return (
-            """<SendDirectTransfer
-                    msgid:{}
-                    paymentid:{}
-                    balance_proof:{}
-                    registry_address:{}
-                    token:{}
-                    recipient:{}>"""
+            '<'
+            'SendDirectTransfer msgid:{} paymentid:{} balance_proof:{} registry_address:{}'
+            ' token:{} recipient:{}'
+            '>'
         ).format(
             self.message_identifier,
             self.payment_identifier,

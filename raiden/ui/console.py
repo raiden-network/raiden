@@ -405,7 +405,7 @@ class ConsoleTools:
             registry_address,
             token_address,
             peer_address,
-            amount
+            amount,
         )
 
     def wait_for_contract(self, contract_address_hex, timeout=None):

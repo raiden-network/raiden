@@ -22,7 +22,8 @@ def test_registry(tester_registry, tester_events, private_keys, tester_chain):
     contract_address1 = tester_registry.addToken(
         tester_registry.address,
         token_address1,
-        sender=privatekey0)
+        sender=privatekey0,
+    )
 
     channel_manager_address1 = tester_registry.channelManagerByToken(
         token_address1,
@@ -36,7 +37,7 @@ def test_registry(tester_registry, tester_events, private_keys, tester_chain):
     contract_address2 = tester_registry.addToken(
         tester_registry.address,
         token_address2,
-        sender=privatekey0
+        sender=privatekey0,
     )
 
     channel_manager_address2 = tester_registry.channelManagerByToken(

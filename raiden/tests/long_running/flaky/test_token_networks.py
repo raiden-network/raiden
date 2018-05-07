@@ -32,7 +32,8 @@ def test_participant_selection(raiden_network, token_addresses):
     RaidenAPI(raiden_network[0].raiden).token_network_connect(
         registry_address,
         token_address,
-        100)
+        100,
+    )
 
     # connect the other nodes
     connect_greenlets = [
@@ -40,7 +41,7 @@ def test_participant_selection(raiden_network, token_addresses):
             RaidenAPI(app.raiden).token_network_connect,
             registry_address,
             token_address,
-            100
+            100,
         )
 
         for app in raiden_network[1:]
@@ -165,7 +166,8 @@ def test_participant_selection(raiden_network, token_addresses):
         try:
             RaidenAPI(raiden_network[0].raiden).token_network_leave(
                 registry_address,
-                token_address)
+                token_address,
+            )
         except gevent.timeout.Timeout:
             log.error('timeout while waiting for leave')
 
