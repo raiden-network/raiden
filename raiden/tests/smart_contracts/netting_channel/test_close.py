@@ -95,7 +95,8 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
 def test_close_accepts_only_transfer_from_participants(
         tester_registry_address,
         tester_channels,
-        private_keys):
+        private_keys,
+):
     """ Close must not accept a transfer signed by a non participant. """
     pkey0, _, nettingchannel, channel0, _ = tester_channels[0]
     nonparticipant_key = private_keys[2]

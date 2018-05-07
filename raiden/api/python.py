@@ -301,7 +301,8 @@ class RaidenAPI:
             registry_address,
             token_address,
             partner_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         """Close a channel opened with `partner_address` for the given
         `token_address`.
 

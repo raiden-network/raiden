@@ -43,7 +43,8 @@ class EchoNode:
 
         existing_channels = self.api.get_channel_list(
             api.raiden.default_registry.address,
-            self.token_address)
+            self.token_address,
+        )
 
         open_channels = [
             channel_state
@@ -106,7 +107,7 @@ class EchoNode:
                 else:
                     channels = self.api.get_channel_list(
                         registry_address=self.api.raiden.default_registry.address,
-                        token_address=self.token_address
+                        token_address=self.token_address,
                     )
                     received_transfers = list()
                     for channel_state in channels:

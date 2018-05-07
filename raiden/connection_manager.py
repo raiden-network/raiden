@@ -114,7 +114,8 @@ class ConnectionManager:
                 self.api.channel_open(
                     self.registry_address,
                     self.token_address,
-                    self.BOOTSTRAP_ADDR)
+                    self.BOOTSTRAP_ADDR,
+                )
             else:
                 self._open_channels(self.registry_address)
 

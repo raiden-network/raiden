@@ -20,7 +20,8 @@ def test_settle_event(
         tester_registry_address,
         tester_chain,
         tester_events,
-        tester_nettingcontracts):
+        tester_nettingcontracts,
+):
     """ The event ChannelSettled is emitted when the channel is settled. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
 
@@ -47,7 +48,8 @@ def test_settle_unused_channel(
         settle_timeout,
         tester_chain,
         tester_nettingcontracts,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle of a channel with no transfers. """
 
@@ -73,7 +75,8 @@ def test_settle_single_direct_transfer_for_closing_party(
         settle_timeout,
         tester_channels,
         tester_chain,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle of a channel with one direct transfer to the participant
     that called close.
@@ -120,7 +123,8 @@ def test_settle_single_direct_transfer_for_counterparty(
         settle_timeout,
         tester_channels,
         tester_chain,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle of a channel with one direct transfer to the participant
     that did not call close.
@@ -168,7 +172,8 @@ def test_settle_two_direct_transfers(
         settle_timeout,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle of a channel with two direct transfers. """
 
@@ -237,7 +242,8 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         reveal_timeout,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle with a locked mediated transfer for the counter party. """
 
@@ -317,7 +323,8 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         reveal_timeout,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     """ Test settle with a locked mediated transfer for the closing address. """
 
@@ -393,7 +400,8 @@ def test_settle_two_locked_mediated_transfer_messages(
         reveal_timeout,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
@@ -497,7 +505,8 @@ def test_two_direct_transfers(
         deposit,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     """ The value of both transfers must be account for. """
 
@@ -556,7 +565,8 @@ def test_mediated_after_direct_transfer(
         deposit,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     """ The transfer types must not change the behavior of the dispute. """
 
@@ -633,7 +643,8 @@ def test_settlement_with_unauthorized_token_transfer(
         settle_timeout,
         tester_chain,
         tester_channels,
-        tester_token):
+        tester_token,
+):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()

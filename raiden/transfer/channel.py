@@ -662,7 +662,8 @@ def create_senddirecttransfer(
         channel_state,
         amount,
         message_identifier,
-        payment_identifier):
+        payment_identifier,
+):
 
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state

@@ -80,7 +80,7 @@ class PartnersResourceByTokenAddress(BaseResource):
     def get(self, registry_address, token_address):
         return self.rest_api.get_partners_by_token(
             registry_address,
-            token_address
+            token_address,
         )
 
 
@@ -158,7 +158,8 @@ class ConnectionsResource(BaseResource):
             token_address,
             funds,
             initial_channel_target,
-            joinable_funds_target):
+            joinable_funds_target,
+    ):
 
         return self.rest_api.connect(
             registry_address=registry_address,

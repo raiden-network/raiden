@@ -36,7 +36,8 @@ def test_withdraw(
         reveal_timeout,
         tester_channels,
         tester_chain,
-        tester_token):
+        tester_token,
+):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     pseudo_random_generator = random.Random()
@@ -122,7 +123,8 @@ def test_withdraw_at_settlement_block(
         settle_timeout,
         tester_nettingcontracts,
         tester_chain,
-        tester_token):
+        tester_token,
+):
 
     """ It must be possible to unlock a lock up to and including the settlment
     block.
@@ -207,7 +209,8 @@ def test_withdraw_expired_lock(
         tester_registry_address,
         reveal_timeout,
         tester_channels,
-        tester_chain):
+        tester_chain,
+):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     pseudo_random_generator = random.Random()

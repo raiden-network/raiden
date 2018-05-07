@@ -72,7 +72,8 @@ class ChannelNew:
             netting_channel_address,
             participant1,
             participant2,
-            settle_timeout):
+            settle_timeout,
+    ):
 
         self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address

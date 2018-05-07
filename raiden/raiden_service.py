@@ -474,7 +474,8 @@ class RaidenService:
             token_address,
             amount,
             target,
-            identifier):
+            identifier,
+    ):
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asyncronous transfer, the transfer might fail
@@ -539,7 +540,8 @@ class RaidenService:
             token_address,
             amount,
             target,
-            identifier):
+            identifier,
+    ):
 
         self.protocol.start_health_check(target)
 
