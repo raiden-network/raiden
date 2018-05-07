@@ -158,7 +158,7 @@ def run(
             if 'token_address' in token:
                 token_address = token['token_address']
             else:
-                token_address = tools.create_token()
+                token_address = tools.create_token(registry_contract_address)
 
             transfers_with_amount = token['transfers_with_amount']
 

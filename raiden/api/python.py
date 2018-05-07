@@ -73,12 +73,15 @@ class RaidenAPI:
         """Register the `token_address` in the blockchain.
 
         Raises:
-            InvalidAddress: If the token_address is not a valid address.
+            InvalidAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
             TransactionThrew: If the register transaction failed, this may
                 happen because the account has not enough balance to pay for the
                 gas or this register call raced with another transaction and lost.
         """
+
+        if not isaddress(registry_address):
+            raise InvalidAddress('registry_address must be a valid address in binary')
 
         if not isaddress(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')

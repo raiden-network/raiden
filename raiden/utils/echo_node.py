@@ -40,8 +40,11 @@ class EchoNode:
 
         self.api = api
         self.token_address = token_address
-        registry_address = api.raiden.default_registry.address
-        existing_channels = self.api.get_channel_list(registry_address, self.token_address)
+
+        existing_channels = self.api.get_channel_list(
+            api.raiden.default_registry.address,
+            self.token_address)
+
         open_channels = [
             channel_state
             for channel_state in existing_channels
