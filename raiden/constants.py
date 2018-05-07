@@ -44,5 +44,5 @@ NETWORKNAME_TO_ID = {
     for id, name in ID_TO_NETWORKNAME.items()
 }
 
-MIN_REQUIRED_SOLC = 'v0.4.21'
+MIN_REQUIRED_SOLC = 'v0.4.23'
 NULL_ADDRESS = '0x' + '0' * 40
