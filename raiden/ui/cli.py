@@ -28,8 +28,10 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
+from raiden.network.transport import TokenBucket
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -490,6 +492,9 @@ def app(
     from raiden.app import App
     from raiden.network.blockchain_service import BlockChainService
 
+    if not mapped_socket:
+        raise RuntimeError('Missing socket')
+
     address_hex = address_encoder(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
     address = address_decoder(address_hex)
@@ -509,16 +514,9 @@ def app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
-
-    if mapped_socket:
-        config['socket'] = mapped_socket.socket
-        config['external_ip'] = mapped_socket.external_ip
-        config['external_port'] = mapped_socket.external_port
-    else:
-        config['socket'] = None
-        config['external_ip'] = listen_host
-        config['external_port'] = listen_port
-
+    config['socket'] = mapped_socket.socket
+    config['external_ip'] = mapped_socket.external_ip
+    config['external_port'] = mapped_socket.external_port
     config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_timeout'] = timeout
@@ -581,12 +579,35 @@ def app(
         blockchain_service.discovery(discovery_contract_address)
     )
 
-    return App(
+    registry = blockchain_service.registry(
+        registry_contract_address
+    )
+
+    throttle_policy = TokenBucket(
+        config['protocol']['throttle_capacity'],
+        config['protocol']['throttle_fill_rate']
+    )
+
+    transport = UDPTransport(
+        discovery,
+        mapped_socket,
+        throttle_policy,
+        config['protocol']['retry_interval'],
+        config['protocol']['retries_before_backoff'],
+        config['protocol']['nat_keepalive_retries'],
+        config['protocol']['nat_keepalive_timeout'],
+        config['protocol']['nat_invitation_timeout'],
+    )
+
+    raiden_app = App(
         config,
         blockchain_service,
         registry,
         discovery,
+        transport,
     )
+
+    return raiden_app
 
 
 def prompt_account(address_hex, keystore_path, password_file):
@@ -762,7 +783,7 @@ def run(ctx, **kwargs):
     is_flag=True,
     help='Only display Raiden version'
 )
-def version(short, **kwargs):
+def version(short, **kwargs):  # pylint: disable=unused-argument
     """Print version information and exit. """
     if short:
         print(get_system_spec()['raiden'])
@@ -780,7 +801,7 @@ def version(short, **kwargs):
     help='Drop into pdb on errors.'
 )
 @click.pass_context
-def smoketest(ctx, debug, **kwargs):
+def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane."""
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
@@ -910,6 +931,8 @@ def _removedb(netdir, address_hex):
         print('Local data deleted.')
     else:
         print('Aborted.')
+
+    return True
 
 
 @run.command()

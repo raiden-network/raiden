@@ -50,7 +50,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import (LockedTransfer, SignedMessage)
-from raiden.network.protocol import UDPTransport
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -206,19 +205,10 @@ class RaidenService:
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
-        self.protocol = UDPTransport(
-            transport,
-            discovery,
-            self,
-            config['protocol']['retry_interval'],
-            config['protocol']['retries_before_backoff'],
-            config['protocol']['nat_keepalive_retries'],
-            config['protocol']['nat_keepalive_timeout'],
-            config['protocol']['nat_invitation_timeout'],
-        )
+        self.protocol = transport
 
         # TODO: remove this cyclic dependency
-        transport.protocol = self.protocol
+        transport.raiden = self
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)

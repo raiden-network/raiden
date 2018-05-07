@@ -3,8 +3,6 @@
 A benchmark script to configure a test network and execute random Raiden
 transactions.
 """
-
-
 from binascii import unhexlify
 import codecs
 import random
@@ -14,12 +12,15 @@ import sys
 import yaml
 import gevent
 import networkx
+from gevent import server
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
+from raiden.network.transport import TokenBucket
+from raiden.network.protocol import UDPTransport
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery
-from raiden.network.rpc import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
 from raiden.settings import GAS_PRICE
 
@@ -190,10 +191,27 @@ def tps_run(
         print('We are not registered in the configuration file')
         sys.exit(1)
 
+    throttle_policy = TokenBucket(
+        config['protocol']['throttle_capacity'],
+        config['protocol']['throttle_fill_rate']
+    )
+
+    transport = UDPTransport(
+        discovery,
+        server._udp_socket((host, port)),
+        throttle_policy,
+        config['protocol']['retry_interval'],
+        config['protocol']['retries_before_backoff'],
+        config['protocol']['nat_keepalive_retries'],
+        config['protocol']['nat_keepalive_timeout'],
+        config['protocol']['nat_invitation_timeout'],
+    )
+
     app = App(
         config,
         blockchain_service,
         discovery,
+        transport,
     )
 
     for _ in range(parallel):

@@ -9,16 +9,18 @@ import random
 
 import click
 import gevent
-from gevent import monkey
+from gevent import monkey, server
 from ethereum import slogging
 from ethereum.utils import decode_hex
 
 from raiden.app import App
 from raiden.api.python import RaidenAPI
-from raiden.network.discovery import ContractDiscovery
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.discovery import ContractDiscovery
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
+from raiden.network.protocol import UDPTransport
+from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.transport import TokenBucket
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
 from raiden.settings import GAS_PRICE
@@ -110,11 +112,28 @@ def run(
         registry_contract_address
     )
 
+    throttle_policy = TokenBucket(
+        config['protocol']['throttle_capacity'],
+        config['protocol']['throttle_fill_rate']
+    )
+
+    transport = UDPTransport(
+        discovery,
+        server._udp_socket((listen_host, listen_port)),
+        throttle_policy,
+        config['protocol']['retry_interval'],
+        config['protocol']['retries_before_backoff'],
+        config['protocol']['nat_keepalive_retries'],
+        config['protocol']['nat_keepalive_timeout'],
+        config['protocol']['nat_invitation_timeout'],
+    )
+
     app = App(
         config,
         blockchain_service,
         registry,
         discovery,
+        transport,
     )
 
     app.discovery.register(

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
 import logging
 import random
+import socket
+from binascii import hexlify
 from collections import namedtuple
 from itertools import repeat
 
@@ -12,6 +13,7 @@ from gevent.event import (
     AsyncResult,
     Event,
 )
+from gevent.server import DatagramServer
 from ethereum import slogging
 
 from raiden.exceptions import (
@@ -465,18 +467,18 @@ def healthcheck(
 class UDPTransport:
     def __init__(
             self,
-            transport,
             discovery,
-            raiden,
+            udpsocket,
+            throttle_policy,
             retry_interval,
             retries_before_backoff,
             nat_keepalive_retries,
             nat_keepalive_timeout,
-            nat_invitation_timeout):
+            nat_invitation_timeout,
+    ):
 
-        self.transport = transport
         self.discovery = discovery
-        self.raiden = raiden
+        self.raiden = None
 
         self.retry_interval = retry_interval
         self.retries_before_backoff = retries_before_backoff
@@ -505,13 +507,19 @@ class UDPTransport:
         cache_wrapper = cachetools.cached(cache=cache)
         self.get_host_port = cache_wrapper(discovery.get)
 
+        self.throttle_policy = throttle_policy
+        self.server = DatagramServer(udpsocket, handle=self._receive)
+
     def start(self):
-        self.transport.start()
+        # server.stop() clears the handle, since this may be a restart the
+        # handle must always be set
+        self.server.set_handle(self._receive)
+        self.server.start()
 
     def stop_and_wait(self):
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
-        self.transport.stop_accepting()
+        self.server.stop_accepting()
 
         # Stop processing the outgoing queues
         self.event_stop.set()
@@ -520,7 +528,16 @@ class UDPTransport:
         # All outgoing tasks are stopped. Now it's safe to close the socket. At
         # this point there might be some incoming message being processed,
         # keeping the socket open is not useful for these.
-        self.transport.stop()
+        self.server.stop()
+
+        # Calling `.close()` on a gevent socket doesn't actually close the underlying os socket
+        # so we do that ourselves here.
+        # See: https://github.com/gevent/gevent/blob/master/src/gevent/_socket2.py#L208
+        # and: https://groups.google.com/forum/#!msg/gevent/Ro8lRra3nH0/ZENgEXrr6M0J
+        try:
+            self.server._socket.close()  # pylint: disable=protected-access
+        except socket.error:
+            pass
 
         # Set all the pending results to False
         for async_result in self.messageids_to_asyncresults.values():
@@ -673,14 +690,26 @@ class UDPTransport:
 
     def maybe_sendraw(self, host_port, messagedata):
         """ Send message to recipient if the transport is running. """
+
+        # Don't sleep if timeout is zero, otherwise a context-switch is done
+        # and the message is delayed, increasing it's latency
+        sleep_timeout = self.throttle_policy.consume(1)
+        if sleep_timeout:
+            gevent.sleep(sleep_timeout)
+
         # Check the udp socket is still available before trying to send the
         # message. There must be *no context-switches after this test*.
-        if self.transport.server.started:
-            self.transport.send(
-                self.raiden,
-                host_port,
+        if hasattr(self.server, 'socket'):
+            self.server.sendto(
                 messagedata,
+                host_port,
             )
+
+    def _receive(self, data, host_port):  # pylint: disable=unused-argument
+        try:
+            self.receive(data)
+        except RaidenShuttingDown:  # For a clean shutdown
+            return
 
     def receive(self, messagedata):
         """ Handle an UDP packet. """

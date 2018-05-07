@@ -3,10 +3,12 @@
 
 from binascii import hexlify
 
+from gevent import server
 from ethereum import slogging
 
 from raiden.app import App
-from raiden.network.transport import DummyPolicy
+from raiden.network.protocol import UDPTransport
+from raiden.network.transport import DummyPolicy, TokenBucket
 from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -199,7 +201,6 @@ def create_apps(
         endpoint_discovery_services,
         registry_address,
         raiden_udp_ports,
-        transport_class,
         reveal_timeout,
         settle_timeout,
         database_paths,
@@ -209,7 +210,8 @@ def create_apps(
         throttle_fill_rate,
         nat_invitation_timeout,
         nat_keepalive_retries,
-        nat_keepalive_timeout):
+        nat_keepalive_timeout,
+):
 
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -246,17 +248,33 @@ def create_apps(
             'rpc': True,
             'console': False,
         }
-        copy = App.DEFAULT_CONFIG.copy()
-        copy.update(config)
+        config_copy = App.DEFAULT_CONFIG.copy()
+        config_copy.update(config)
 
         registry = blockchain.registry(registry_address)
 
+        throttle_policy = TokenBucket(
+            config['protocol']['throttle_capacity'],
+            config['protocol']['throttle_fill_rate']
+        )
+
+        transport = UDPTransport(
+            discovery,
+            server._udp_socket((host, port)),  # pylint: disable=protected-access
+            throttle_policy,
+            config['protocol']['retry_interval'],
+            config['protocol']['retries_before_backoff'],
+            config['protocol']['nat_keepalive_retries'],
+            config['protocol']['nat_keepalive_timeout'],
+            config['protocol']['nat_invitation_timeout'],
+        )
+
         app = App(
-            copy,
+            config_copy,
             blockchain,
             registry,
             discovery,
-            transport_class,
+            transport,
         )
         app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)

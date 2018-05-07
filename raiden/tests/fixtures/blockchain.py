@@ -16,7 +16,6 @@ from raiden.utils import (
     get_contract_path,
     privatekey_to_address,
 )
-from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_chain
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
@@ -144,6 +143,8 @@ def cached_genesis(request):
         )
         for chain in blockchain_services
     ]
+
+    DummyTransport = lambda *args, **kwargs: None  # Blackhole
 
     raiden_apps = create_apps(
         blockchain_services,
