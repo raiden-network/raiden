@@ -76,8 +76,8 @@ def test_pfs_with_mocked_client(
             additional_hash='0x%064x' % 23
         )
 
-        pathfinding_service.transport.transmit_data(balance_proof_p1.serialize_full())
-        pathfinding_service.transport.transmit_data(balance_proof_p2.serialize_full())
+        pathfinding_service.transport.receive_fake_data(balance_proof_p1.serialize_full())
+        pathfinding_service.transport.receive_fake_data(balance_proof_p2.serialize_full())
         gevent.sleep(0)
 
     ethereum_tester.mine_blocks(1)
@@ -137,8 +137,8 @@ def test_pfs_with_mocked_client(
             nonce=channel_id + 1,
             relative_fee=p2_fee,
         )
-        pathfinding_service.transport.transmit_data(fee_info_p1.serialize_full())
-        pathfinding_service.transport.transmit_data(fee_info_p2.serialize_full())
+        pathfinding_service.transport.receive_fake_data(fee_info_p1.serialize_full())
+        pathfinding_service.transport.receive_fake_data(fee_info_p2.serialize_full())
 
         gevent.sleep(0)
         assert graph[client1.address][client2.address]['view'].relative_fee == p1_fee
