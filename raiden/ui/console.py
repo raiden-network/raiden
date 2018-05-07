@@ -296,6 +296,7 @@ class ConsoleTools:
 
     def create_token(
             self,
+            registry_address,
             initial_alloc=10 ** 6,
             name='raidentester',
             symbol='RDT',
@@ -330,28 +331,32 @@ class ConsoleTools:
         )
         token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:
-            self.register_token(token_address_hex)
+            self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(
             'and registered ' if auto_register else ' ',
             name
         ))
         return token_address_hex
 
-    def register_token(self, token_address_hex):
+    def register_token(self, registry_address_hex, token_address_hex):
         """ Register a token with the raiden token manager.
 
         Args:
+            registry_address: registry address
             token_address_hex (string): a hex encoded token address.
 
         Returns:
             channel_manager: the channel_manager contract_proxy.
         """
+
+        registry = self._raiden.chain.registry(registry_address_hex)
+
         # Add the ERC20 token to the raiden registry
         token_address = safe_address_decode(token_address_hex)
-        self._raiden.default_registry.add_token(token_address)
+        registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = self._raiden.default_registry.manager_by_token(token_address)
+        channel_manager = registry.manager_by_token(token_address)
 
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager.address)
@@ -359,6 +364,7 @@ class ConsoleTools:
 
     def open_channel_with_funding(
             self,
+            registry_address_hex,
             token_address_hex,
             peer_address_hex,
             amount,
@@ -367,6 +373,7 @@ class ConsoleTools:
         """ Convenience method to open a channel.
 
         Args:
+            registry_address_hex (str): hex encoded address of the registry for the channel.
             token_address_hex (str): hex encoded address of the token for the channel.
             peer_address_hex (str): hex encoded address of the channel peer.
             amount (int): amount of initial funding of the channel.
@@ -377,6 +384,7 @@ class ConsoleTools:
             netting_channel: the (newly opened) netting channel object.
         """
         # Check, if peer is discoverable
+        registry_address = safe_address_decode(registry_address_hex)
         peer_address = safe_address_decode(peer_address_hex)
         token_address = safe_address_decode(token_address_hex)
         try:
@@ -386,7 +394,7 @@ class ConsoleTools:
             return
 
         self._api.channel_open(
-            self._raiden.default_registry.address,
+            registry_address,
             token_address,
             peer_address,
             settle_timeout=settle_timeout,
@@ -394,7 +402,7 @@ class ConsoleTools:
         )
 
         return self._api.channel_deposit(
-            self._raiden.default_registry.address,
+            registry_address,
             token_address,
             peer_address,
             amount

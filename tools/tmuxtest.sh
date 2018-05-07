@@ -235,11 +235,11 @@ am2=raiden.default_registry.get_manager_by_token_address('${TOKEN2}'.decode('hex
     tmux send-keys -t raiden:4 "import time; time.sleep(10)  # wait for token registration"  C-m
     tmux send-keys -t raiden:5 "import time; time.sleep(10 + 10)  # wait for token registration and channel openning"  C-m
 
-    tmux send-keys -t raiden:3 "tools.open_channel_with_funding('${TOKEN1}', '${ADDRESS2}', 100)" C-m
-    tmux send-keys -t raiden:3 "tools.open_channel_with_funding('${TOKEN2}', '${ADDRESS2}', 100)" C-m
+    tmux send-keys -t raiden:3 "tools.open_channel_with_funding(raiden.default_registry.address, '${TOKEN1}', '${ADDRESS2}', 100)" C-m
+    tmux send-keys -t raiden:3 "tools.open_channel_with_funding(raiden.default_registry.address, '${TOKEN2}', '${ADDRESS2}', 100)" C-m
 
-    tmux send-keys -t raiden:4 "tools.open_channel_with_funding('${TOKEN1}', '${ADDRESS3}', 100)"  C-m
-    tmux send-keys -t raiden:4 "tools.open_channel_with_funding('${TOKEN2}', '${ADDRESS3}', 100)"  C-m
+    tmux send-keys -t raiden:4 "tools.open_channel_with_funding(raiden.default_registry.address, '${TOKEN1}', '${ADDRESS3}', 100)"  C-m
+    tmux send-keys -t raiden:4 "tools.open_channel_with_funding(raiden.default_registry.address, '${TOKEN2}', '${ADDRESS3}', 100)"  C-m
 
     tmux send-keys -t raiden:4 "tools.deposit('${TOKEN1}', '${ADDRESS1}', 100)" C-m
     tmux send-keys -t raiden:4 "tools.deposit('${TOKEN2}', '${ADDRESS1}', 100)" C-m
