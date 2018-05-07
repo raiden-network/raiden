@@ -13,7 +13,6 @@ from raiden.settings import (
     DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
     DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
 )
-from raiden.network.transport import UDPTransport
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 
@@ -104,11 +103,6 @@ def channels_per_node():
 def poll_timeout():
     """ Timeout in seconds for polling a cluster. Used for geth. """
     return DEFAULT_POLL_TIMEOUT
-
-
-@pytest.fixture
-def transport_class():
-    return UDPTransport
 
 
 @pytest.fixture

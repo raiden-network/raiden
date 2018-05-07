@@ -122,6 +122,7 @@ def run(
         server._udp_socket((listen_host, listen_port)),
         throttle_policy,
         config['protocol'],
+        dict(),
     )
 
     app = App(

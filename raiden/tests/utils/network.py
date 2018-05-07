@@ -8,7 +8,7 @@ from ethereum import slogging
 
 from raiden.app import App
 from raiden.network.protocol import UDPTransport
-from raiden.network.transport import DummyPolicy, TokenBucket
+from raiden.network.transport import TokenBucket
 from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -272,7 +272,6 @@ def create_apps(
             discovery,
             transport,
         )
-        app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)
 
     return apps

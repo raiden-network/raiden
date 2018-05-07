@@ -15,9 +15,9 @@ import click
 import gevent
 import gevent.monkey
 import requests
-from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
+from requests.exceptions import RequestException
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -590,7 +590,7 @@ def app(
 
     transport = UDPTransport(
         discovery,
-        mapped_socket,
+        mapped_socket.socket,
         throttle_policy,
         config['protocol'],
     )
@@ -860,44 +860,47 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     with open(password_file, 'w') as handler:
         handler.write('password')
 
-    args['mapped_socket'] = None
+    port = next(get_free_port('127.0.0.1', 5001))
     args['password_file'] = click.File()(password_file)
     args['datadir'] = args['keystore_path']
-    args['api_address'] = 'localhost:' + str(next(get_free_port('127.0.0.1', 5001)))
+    args['api_address'] = 'localhost:' + str(port)
     args['sync_check'] = False
 
-    # invoke the raiden app
-    app_ = ctx.invoke(app, **args)
+    with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
+        args['mapped_socket'] = mapped_socket
 
-    raiden_api = RaidenAPI(app_.raiden)
-    rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api)
-    (api_host, api_port) = split_endpoint(args['api_address'])
-    api_server.start(api_host, api_port)
+        # invoke the raiden app
+        app_ = ctx.invoke(app, **args)
 
-    success = False
-    try:
-        print('[4/5] running smoketests...')
-        error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
-        if error is not None:
-            append_report('smoketest assertion error', error)
+        raiden_api = RaidenAPI(app_.raiden)
+        rest_api = RestAPI(raiden_api)
+        api_server = APIServer(rest_api)
+        (api_host, api_port) = split_endpoint(args['api_address'])
+        api_server.start(api_host, api_port)
+
+        success = False
+        try:
+            print('[4/5] running smoketests...')
+            error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
+            if error is not None:
+                append_report('smoketest assertion error', error)
+            else:
+                success = True
+        finally:
+            app_.stop()
+            ethereum.send_signal(2)
+
+            err, out = ethereum.communicate()
+            append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
+            append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
+            append_report('ethereum stdout', out)
+            append_report('ethereum stderr', err)
+            append_report('smoketest configuration', json.dumps(smoketest_config))
+        if success:
+            print('[5/5] smoketest successful, report was written to {}'.format(report_file))
         else:
-            success = True
-    finally:
-        app_.stop()
-        ethereum.send_signal(2)
-
-        err, out = ethereum.communicate()
-        append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
-        append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
-        append_report('ethereum stdout', out)
-        append_report('ethereum stderr', err)
-        append_report('smoketest configuration', json.dumps(smoketest_config))
-    if success:
-        print('[5/5] smoketest successful, report was written to {}'.format(report_file))
-    else:
-        print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
-        sys.exit(1)
+            print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
+            sys.exit(1)
 
 
 def _removedb(netdir, address_hex):

@@ -4,9 +4,9 @@ from gevent.event import Event
 
 
 class NotifyingQueue(Event):
-    def __init__(self):
+    def __init__(self, maxsize=None, items=()):
         super().__init__()
-        self._queue = Queue()
+        self._queue = Queue(maxsize, items)
 
     def put(self, item):
         """ Add new item to the queue. """

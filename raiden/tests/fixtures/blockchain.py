@@ -144,14 +144,11 @@ def cached_genesis(request):
         for chain in blockchain_services
     ]
 
-    DummyTransport = lambda *args, **kwargs: None  # Blackhole
-
     raiden_apps = create_apps(
         blockchain_services,
         endpoint_discovery_services,
         registry_address,
         request.getfixturevalue('raiden_udp_ports'),
-        DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.getfixturevalue('reveal_timeout'),
         request.getfixturevalue('settle_timeout'),
         request.getfixturevalue('database_paths'),

@@ -24,7 +24,7 @@ from raiden.exceptions import (
 from raiden.constants import UDP_MAX_MESSAGE_SIZE
 from raiden.messages import decode, Delivered, Ping, Pong
 from raiden.settings import CACHE_TTL
-from raiden.utils import isaddress, pex
+from raiden.utils import isaddress, pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.udp_message_handler import on_udp_message
 from raiden.transfer import views
@@ -466,8 +466,11 @@ def healthcheck(
 
 class UDPTransport:
     def __init__(self, discovery, udpsocket, throttle_policy, config):
+        # these values are initialized by the start method
+        self.queueids_to_queues: typing.Dict
+        self.raiden: 'RaidenService'
+
         self.discovery = discovery
-        self.raiden = None
         self.config = config
 
         self.retry_interval = config['retry_interval']
@@ -478,7 +481,6 @@ class UDPTransport:
 
         self.event_stop = Event()
 
-        self.queueid_to_queue = dict()
         self.greenlets = list()
         self.addresses_events = dict()
 
@@ -499,10 +501,18 @@ class UDPTransport:
         self.throttle_policy = throttle_policy
         self.server = DatagramServer(udpsocket, handle=self._receive)
 
-    def start(self):
+    def start(self, raiden, queueids_to_queues):
+        self.raiden = raiden
+        self.queueids_to_queues = dict()
+
         # server.stop() clears the handle, since this may be a restart the
         # handle must always be set
         self.server.set_handle(self._receive)
+
+        for (recipient, queue_name), queue in queueids_to_queues.items():
+            queue_copy = list(queue)
+            self.init_queue_for(recipient, queue_name, queue_copy)
+
         self.server.start()
 
     def stop_and_wait(self):
@@ -571,19 +581,16 @@ class UDPTransport:
                 ping_nonce,
             ))
 
-    def get_queue_for(self, recipient, queue_name):
-        """ Return the queue identified by the pair `(recipient, queue_name)`.
-
-        If the queue doesn't exist it will be instantiated.
+    def init_queue_for(self, recipient, queue_name, items):
+        """ Create the queue identified by the pair `(recipient, queue_name)`
+        and initialize it with `items`.
         """
         queueid = (recipient, queue_name)
-        queue = self.queueid_to_queue.get(queueid)
+        queue = self.queueids_to_queues.get(queueid)
+        assert queue is None
 
-        if queue is not None:
-            return queue
-
-        queue = NotifyingQueue()
-        self.queueid_to_queue[queueid] = queue
+        queue = NotifyingQueue(items=items)
+        self.queueids_to_queues[queueid] = queue
 
         events = self.get_health_events(recipient)
 
@@ -607,6 +614,20 @@ class UDPTransport:
                 token=pex(queue_name),
                 to=pex(recipient),
             )
+
+        return queue
+
+    def get_queue_for(self, recipient, queue_name):
+        """ Return the queue identified by the pair `(recipient, queue_name)`.
+
+        If the queue doesn't exist it will be instantiated.
+        """
+        queueid = (recipient, queue_name)
+        queue = self.queueids_to_queues.get(queueid)
+
+        if queue is None:
+            items = ()
+            queue = self.init_queue_for(recipient, queue_name, items)
 
         return queue
 
