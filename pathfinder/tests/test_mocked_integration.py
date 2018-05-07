@@ -24,6 +24,7 @@ def test_pfs_with_mocked_events(
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
+    assert registry_listener
 
     token_network_address = token_networks[0].address
 
@@ -145,6 +146,7 @@ def test_pfs_idempotency_of_channel_openings(
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
+    assert registry_listener
 
     token_network_address = token_networks[0].address
 
@@ -199,6 +201,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
+    assert registry_listener
 
     token_network_address = token_networks[0].address
 
@@ -263,6 +266,7 @@ def test_pfs_events_from_unknown_token_network_ignored(
 ):
     network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
+    assert registry_listener
 
     token_network_address = token_networks[0].address
 
