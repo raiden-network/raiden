@@ -52,20 +52,29 @@ class AccountManager:
             self.keystore_path = find_keystoredir()
         if self.keystore_path is not None:
 
-            for f in os.listdir(self.keystore_path):
+            try:
+                files = os.listdir(self.keystore_path)
+            except OSError as ex:
+                msg = 'Unable to list the specified directory'
+                log.error('%s %s: %s', msg, self.keystore_path, ex)
+                return
+
+            for f in files:
                 fullpath = os.path.join(self.keystore_path, f)
                 if os.path.isfile(fullpath):
                     try:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
                             self.accounts[str(data['address']).lower()] = str(fullpath)
-                    except (ValueError, KeyError, IOError) as ex:
+                    except (KeyError, OSError, IOError, json.decoder.JSONDecodeError) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
                             # Should be a valid account file - warn user
                             msg = 'Invalid account file'
-                            if isinstance(ex, IOError):
-                                msg = 'Can not read account file'
+                            if isinstance(ex, IOError) or isinstance(ex, OSError):
+                                msg = 'Can not read account file (errno=%s)' % ex.errno
+                            if isinstance(ex, json.decoder.JSONDecodeError):
+                                msg = 'The account file is not valid JSON format'
                             log.warning('%s %s: %s', msg, fullpath, ex)
 
     def address_in_keystore(self, address):
