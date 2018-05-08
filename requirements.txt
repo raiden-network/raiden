@@ -10,6 +10,5 @@ gevent
 networkx
 requests
 
-git+https://github.com/matrix-org/matrix-python-sdk.git
 git+https://github.com/raiden-network/raiden-libs.git
 git+https://github.com/raiden-network/raiden-contracts.git
