@@ -3,19 +3,6 @@ from itertools import count
 from raiden.transfer.state import NODE_NETWORK_UNKNOWN
 
 
-class MockMatrixRoom:
-    def __init__(self, name):
-        self.canonical_alias = name
-        self.listeners = set()
-
-    def add_listener(self, listener):
-        self.listeners.add(listener)
-
-    @property
-    def aliases(self):
-        return [self.canonical_alias]
-
-
 class MockMatrixUser:
     _user_ids_to_display_names = dict()
 

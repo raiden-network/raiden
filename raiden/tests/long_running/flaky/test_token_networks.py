@@ -11,9 +11,13 @@ from raiden.transfer.state import CHANNEL_STATE_SETTLED
 log = logging.getLogger(__name__)
 
 
-# TODO: add test scenarios for
-# - subsequent `connect()` calls with different `funds` arguments
-# - `connect()` calls with preexisting channels
+# TODO:
+# - Add test scenarios for
+#   - subsequent `connect()` calls with different `funds` arguments
+#   - `connect()` calls with preexisting channels
+# - Check if this test needs to be adapted for the matrix transport
+#   layer when activating it again. It might as it depends on the
+#   raiden_network fixture.
 
 @pytest.mark.xfail(reason='Some issues in this test, see raiden #691')
 @pytest.mark.parametrize('number_of_nodes', [6])
