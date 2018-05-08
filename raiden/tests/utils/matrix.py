@@ -107,7 +107,10 @@ class MockMatrixClient:
         self.listener_thread_running = True
 
     def search_user_directory(self, term):
-        return [MockMatrixUser(term)]
+        user = MockMatrixUser(term)
+        if user.get_display_name() is None:
+            return []
+        return [user]
 
     def set_presence_state(self, new_state):
         self.presence_state = new_state

@@ -120,6 +120,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
     assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_payload_with_address_without_prefix(api_backend):
     """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -136,6 +137,7 @@ def test_payload_with_address_without_prefix(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_payload_with_address_invalid_chars(api_backend):
     """ Addresses cannot have invalid characters in it. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
@@ -152,6 +154,7 @@ def test_payload_with_address_invalid_chars(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_payload_with_address_invalid_length(api_backend):
     """ Encoded addresses must have the right length. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
@@ -168,6 +171,7 @@ def test_payload_with_address_invalid_length(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_api_query_our_address(api_backend):
     request = grequests.get(
         api_url_for(api_backend, 'addressresource')
@@ -180,6 +184,7 @@ def test_api_query_our_address(api_backend):
     assert response.json() == {'our_address': address_encoder(our_address)}
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_api_open_and_deposit_channel(api_backend, token_addresses, reveal_timeout):
     # let's create a new channel
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -282,6 +287,7 @@ def test_api_open_and_deposit_channel(api_backend, token_addresses, reveal_timeo
     assert response == expected_response
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_api_open_close_and_settle_channel(api_backend, token_addresses, reveal_timeout):
     # let's create a new channel
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -334,6 +340,7 @@ def test_api_open_close_and_settle_channel(api_backend, token_addresses, reveal_
     assert response.json() == expected_response
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_api_open_channel_invalid_input(api_backend, token_addresses, reveal_timeout):
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = token_addresses[0]
@@ -360,6 +367,7 @@ def test_api_open_channel_invalid_input(api_backend, token_addresses, reveal_tim
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_api_channel_state_change_errors(api_backend, token_addresses, reveal_timeout):
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = token_addresses[0]
@@ -437,6 +445,7 @@ def test_api_channel_state_change_errors(api_backend, token_addresses, reveal_ti
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_api_tokens(api_backend, token_addresses):
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -483,6 +492,7 @@ def test_api_tokens(api_backend, token_addresses):
     assert set(response) == set(expected_response)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 def test_query_partners_by_token(api_backend, token_addresses):
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
@@ -545,6 +555,7 @@ def test_query_partners_by_token(api_backend, token_addresses):
     assert all(r in response for r in expected_response)
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_transfers(api_backend, raiden_network, token_addresses):
     _, app1 = raiden_network
@@ -579,6 +590,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
     assert response == transfer
 
 
+@pytest.mark.parametrize('use_matrix', (True, False))
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 def test_register_token(api_backend, token_amount, token_addresses, raiden_network):
