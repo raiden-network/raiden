@@ -127,7 +127,7 @@ def handle_secretreveal(target_state, state_change, channel_state):
 
 
 def handle_unlock(target_state, state_change, channel_state):
-    """ Handles a ReceiveBalanceProof state change. """
+    """ Handles a ReceiveUnlock state change. """
     iteration = TransitionResult(target_state, list())
 
     if state_change.balance_proof.sender == target_state.route.node_address:

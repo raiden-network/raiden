@@ -283,32 +283,6 @@ class ReceiveTransferRefund(StateChange):
         return not self.__eq__(other)
 
 
-class ReceiveBalanceProof(StateChange):
-    """ A balance proof `identifier` was received. """
-    def __init__(self, identifier, node_address, balance_proof):
-        self.identifier = identifier
-        self.node_address = node_address
-        self.balance_proof = balance_proof
-
-    def __repr__(self):
-        return '<ReceiveBalanceProof id:{} node:{} balance_proof:{}>'.format(
-            self.identifier,
-            pex(self.node_address),
-            self.balance_proof,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ReceiveBalanceProof) and
-            self.identifier == other.identifier and
-            self.node_address == other.node_address and
-            self.balance_proof == other.balance_proof
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class ContractReceiveWithdraw(StateChange):
     """ A lock was withdrawn via the blockchain.
 
