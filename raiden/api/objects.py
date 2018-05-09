@@ -54,7 +54,8 @@ class Channel:
             settle_timeout,
             reveal_timeout,
             balance,
-            state):
+            state,
+    ):
         self.channel_address = channel_address
         self.token_address = token_address
         self.partner_address = partner_address
@@ -91,7 +92,8 @@ class ChannelNewBalance:
             token_address,
             participant_address,
             new_balance,
-            block_number):
+            block_number,
+    ):
 
         self.registry_address = registry_address
         self.netting_channel_address = netting_channel_address

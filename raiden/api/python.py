@@ -107,7 +107,8 @@ class RaidenAPI:
             token_address,
             funds,
             initial_channel_target=3,
-            joinable_funds_target=.4):
+            joinable_funds_target=.4,
+    ):
         """Automatically maintain channels open for the given token network.
 
         Args:
@@ -122,13 +123,13 @@ class RaidenAPI:
 
         connection_manager = self.raiden.connection_manager_for_token(
             registry_address,
-            token_address
+            token_address,
         )
 
         connection_manager.connect(
             funds,
             initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target
+            joinable_funds_target=joinable_funds_target,
         )
 
     def token_network_leave(self, registry_address, token_address, only_receiving=True):
@@ -141,7 +142,7 @@ class RaidenAPI:
 
         connection_manager = self.raiden.connection_manager_for_token(
             registry_address,
-            token_address
+            token_address,
         )
 
         return connection_manager.leave(only_receiving)
@@ -153,7 +154,8 @@ class RaidenAPI:
             partner_address,
             settle_timeout=None,
             reveal_timeout=None,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
 
         """ Open a channel with the peer at `partner_address`
         with the given `token_address`.
@@ -206,7 +208,8 @@ class RaidenAPI:
             token_address,
             partner_address,
             amount,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
@@ -320,7 +323,8 @@ class RaidenAPI:
             registry_address,
             token_address,
             partner_addresses,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         """Close a channel opened with `partner_address` for the given
         `token_address`.
 
@@ -519,7 +523,7 @@ class RaidenAPI:
             target=pex(target),
             token=pex(token_address),
             amount=amount,
-            identifier=identifier
+            identifier=identifier,
         )
 
         async_result = self.raiden.mediated_transfer_async(

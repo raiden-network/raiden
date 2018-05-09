@@ -70,7 +70,8 @@ def initiator_init(
         transfer_secret,
         registry_address,
         token_address,
-        target_address):
+        target_address,
+):
 
     transfer_state = TransferDescriptionWithSecretState(
         transfer_identifier,

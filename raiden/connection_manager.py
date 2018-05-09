@@ -76,7 +76,8 @@ class ConnectionManager:
             self,
             funds: int,
             initial_channel_target: int = 3,
-            joinable_funds_target: float = 0.4):
+            joinable_funds_target: float = 0.4,
+    ):
         """Connect to the network.
 
         Subsequent calls to `connect` are allowed, but will only affect the spendable
@@ -208,7 +209,7 @@ class ConnectionManager:
                 'joined a channel!',
                 funds=joining_funds,
                 me=pex(self.raiden.address),
-                partner=pex(partner_address)
+                partner=pex(partner_address),
             )
 
     def retry_connect(self, registry_address):
@@ -282,7 +283,7 @@ class ConnectionManager:
                 self.api.channel_open(
                     registry_address,
                     self.token_address,
-                    partner
+                    partner,
                 )
             except DuplicatedChannelError:
                 # This can fail because of a race condition, where the channel
@@ -312,7 +313,7 @@ class ConnectionManager:
         if self.initial_channel_target:
             return int(
                 self.funds * (1 - self.joinable_funds_target) /
-                self.initial_channel_target
+                self.initial_channel_target,
             )
 
         return 0

@@ -228,7 +228,7 @@ def snake_to_camel_case(snake_string):
     return snake_string.title().replace('_', '')
 
 
-def channelstate_to_api_dict(channel_state, registry_address=None):
+def channelstate_to_api_dict(channel_state):
     """Takes in a Channel Object and turns it into a dictionary for
     usage in the REST API. Decoding from binary to hex happens through
     the marshmallow AddressField in encoding.py.
@@ -239,7 +239,6 @@ def channelstate_to_api_dict(channel_state, registry_address=None):
         channel_state.partner_state,
     )
     return {
-        'registry_address': registry_address,
         'channel_address': channel_state.identifier,
         'token_address': channel_state.token_address,
         'partner_address': channel_state.partner_state.address,

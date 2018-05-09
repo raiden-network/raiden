@@ -93,7 +93,8 @@ def test_all_contracts_same_version(
         tester_registry,
         tester_channelmanager,
         tester_nettingcontracts,
-        endpoint_discovery_services):
+        endpoint_discovery_services,
+):
     """ Test that all contracts in the repository have the same version"""
     privatekey0 = tester.k0
 

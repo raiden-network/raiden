@@ -109,10 +109,7 @@ TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44
 
 def run_restapi_smoketests(raiden_service, test_config):
     """Test if REST api works. """
-    url = 'http://localhost:{port}/api/1/channels/{registry_address}'.format(
-        port=5001,
-        registry_address=address_encoder(raiden_service.default_registry.address)
-    )
+    url = 'http://localhost:{port}/api/1/channels'.format(port=5001)
 
     response = requests.get(url)
 

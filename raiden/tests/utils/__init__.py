@@ -8,7 +8,7 @@ def get_channel_events_for_token(app, registry_address, token_address, start_blo
     api = RaidenAPI(app.raiden)
     channels = api.get_channel_list(
         registry_address=registry_address,
-        token_address=token_address
+        token_address=token_address,
     )
     for channel in channels:
         events = api.get_channel_events(channel.identifier, start_block)
