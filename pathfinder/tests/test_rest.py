@@ -10,6 +10,9 @@ from raiden_libs.types import Address, ChannelIdentifier
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model import TokenNetwork
 
+HASH_12 = '0x000000000000000000000000000000000000000000000000000000000000000c'
+HASH_123 = '0x000000000000000000000000000000000000000000000000000000000000007b'
+
 
 #
 # tests for /balance endpoint
@@ -21,12 +24,12 @@ def test_put_balance(
     token_network_addresses: List[Address],
     private_keys: List[str],
 ):
-    url = api_url + '/{}/123/balance'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/balance'.format(token_network_addresses[0], HASH_123)
 
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
     balance_proof = BalanceProof(
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         token_network_address=token_network_addresses[0],
         nonce=1,
         chain_id=1,
@@ -51,7 +54,7 @@ def test_put_balance(
     transferred_amount: int = call_args[3]
     locked_amount: int = call_args[4]
 
-    assert channel_identifier == 123
+    assert channel_identifier == HASH_123
     assert is_same_address(signer, private_key_to_address(private_keys[0]))
     assert nonce == 1
     assert transferred_amount == 1
@@ -65,12 +68,12 @@ def test_put_balance_sync_check(
     token_network_addresses: List[Address],
     private_keys: List[str],
 ):
-    url = api_url + '/{}/12/balance'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/balance'.format(token_network_addresses[0], HASH_12)
 
     token_networks[0].update_balance = mock.Mock(return_value=None)  # type: ignore
 
     balance_proof = BalanceProof(
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         token_network_address=token_network_addresses[0],
         nonce=1,
         chain_id=321,
@@ -85,12 +88,13 @@ def test_put_balance_sync_check(
     response = requests.put(url, json=body)
     assert response.status_code == 400
     assert response.json()['error'].startswith(
-        'The channel id from the balance proof (123) and '
-        'the request (12) do not match'
+        'The channel identifier from the balance proof '
+        '(0x000000000000000000000000000000000000000000000000000000000000007b) and the request '
+        '(0x000000000000000000000000000000000000000000000000000000000000000c) do not match'
     )
 
     balance_proof = BalanceProof(
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         token_network_address=token_network_addresses[1],
         nonce=1,
         chain_id=321,
@@ -143,7 +147,7 @@ def test_put_balance_path_validation(
     url = api_url + '/{}/abc/balance'.format(token_network_addresses[0])
     response = requests.put(url, json=body)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Channel Id is not an integer: {}'.format(
+    assert response.json()['error'] == 'Channel Id is not a hash: {}'.format(
         'abc'
     )
 
@@ -153,7 +157,7 @@ def test_put_balance_validation(
     api_url: str,
     token_network_addresses: List[Address]
 ):
-    url = api_url + '/{}/123/balance'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/balance'.format(token_network_addresses[0], HASH_123)
 
     body: Dict = dict()
     response = requests.put(url, json=body)
@@ -163,7 +167,7 @@ def test_put_balance_validation(
     # here the balance_hash property is missing
     body = dict(
         message_type='BalanceProof',
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         token_network_address=token_network_addresses[1],
         nonce=1,
         chain_id=321,
@@ -184,13 +188,13 @@ def test_put_fee(
     token_network_addresses: List[Address],
     private_keys: List[str],
 ):
-    url = api_url + '/{}/123/fee'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/fee'.format(token_network_addresses[0], HASH_123)
 
     token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         chain_id=1,
         nonce=1,
         relative_fee=1000
@@ -209,7 +213,7 @@ def test_put_fee(
     nonce: int = call_args[2]
     fee: float = call_args[3]
 
-    assert channel_id == 123
+    assert channel_id == HASH_123
     assert is_same_address(sender, private_key_to_address(private_keys[0]))
     assert nonce == 1
     assert fee == 1000
@@ -222,13 +226,13 @@ def test_put_fee_sync_check(
     token_network_addresses: List[Address],
     private_keys: List[str],
 ):
-    url = api_url + '/{}/12/fee'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/fee'.format(token_network_addresses[0], HASH_12)
 
     token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         chain_id=1,
         nonce=1,
         relative_fee=1000
@@ -241,13 +245,14 @@ def test_put_fee_sync_check(
     response = requests.put(url, json=body)
     assert response.status_code == 400
     assert response.json()['error'].startswith(
-        'The channel id from the fee info (123) and '
-        'the request (12) do not match'
+        'The channel identifier from the fee info '
+        '(0x000000000000000000000000000000000000000000000000000000000000007b) and the request '
+        '(0x000000000000000000000000000000000000000000000000000000000000000c) do not match'
     )
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[1],
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         chain_id=1,
         nonce=1,
         relative_fee=1000
@@ -298,7 +303,7 @@ def test_put_fee_path_validation(
     url = api_url + '/{}/abc/fee'.format(token_network_addresses[0])
     response = requests.put(url, json=body)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Channel Id is not an integer: {}'.format(
+    assert response.json()['error'] == 'Channel Id is not a hash: {}'.format(
         'abc'
     )
 
@@ -310,13 +315,13 @@ def test_put_fee_validation(
     token_network_addresses: List[Address],
     private_keys: List[str],
 ):
-    url = api_url + '/{}/123/fee'.format(token_network_addresses[0])
+    url = api_url + '/{}/{}/fee'.format(token_network_addresses[0], HASH_123)
 
     token_networks[0].update_fee = mock.Mock(return_value=None)  # type: ignore
 
     fee_info = FeeInfo(
         token_network_address=token_network_addresses[0],
-        channel_identifier=ChannelIdentifier(123),
+        channel_identifier=ChannelIdentifier(HASH_123),
         chain_id=1,
         nonce=1,
         relative_fee=1000

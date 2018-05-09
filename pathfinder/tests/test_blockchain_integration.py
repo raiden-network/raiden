@@ -43,7 +43,9 @@ def test_pfs_with_mocked_client(
     # there should be one token network registered
     assert len(pathfinding_service.token_networks) == 1
 
-    for channel_id, (
+    channel_identifiers = []
+
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -54,14 +56,16 @@ def test_pfs_with_mocked_client(
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
         # order is important here because we check order later
-        clients[p1_index].open_channel(clients[p2_index].address)
+        channel_identifier = clients[p1_index].open_channel(clients[p2_index].address)
+        channel_identifiers.append(channel_identifier)
+
         clients[p1_index].deposit_to_channel(clients[p2_index].address, p1_deposit)
         clients[p2_index].deposit_to_channel(clients[p1_index].address, p2_deposit)
         gevent.sleep()
 
         balance_proof_p1 = clients[p1_index].get_balance_proof(
             clients[p2_index].address,
-            nonce=channel_id + 1,
+            nonce=index + 1,
             transferred_amount=p1_transferred_amount,
             locked_amount=0,
             locksroot='0x%064x' % 0,
@@ -69,7 +73,7 @@ def test_pfs_with_mocked_client(
         )
         balance_proof_p2 = clients[p2_index].get_balance_proof(
             clients[p1_index].address,
-            nonce=channel_id + 1,
+            nonce=index + 1,
             transferred_amount=p2_transferred_amount,
             locked_amount=0,
             locksroot='0x%064x' % 0,
@@ -87,7 +91,7 @@ def test_pfs_with_mocked_client(
     assert len(token_network.channel_id_to_addresses.keys()) == len(channel_descriptions_case_1)
 
     # check that deposits and transfers got registered
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -97,7 +101,8 @@ def test_pfs_with_mocked_client(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
-        p1_address, p2_address = token_network.channel_id_to_addresses[channel_id + 1]
+        channel_identifier = channel_identifiers[index]
+        p1_address, p2_address = token_network.channel_id_to_addresses[channel_identifier]
         view1: ChannelView = graph[p1_address][p2_address]['view']
         view2: ChannelView = graph[p2_address][p1_address]['view']
 
@@ -115,7 +120,7 @@ def test_pfs_with_mocked_client(
     assert paths[1]['path'] == [clients[0].address, clients[1].address, clients[4].address,
                                 clients[3].address]
     # send some fee messages and check if they get processed correctly
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -129,12 +134,12 @@ def test_pfs_with_mocked_client(
         client2 = clients[p2_index]
         fee_info_p1 = client1.get_fee_info(
             client2.address,
-            nonce=channel_id + 1,
+            nonce=index + 1,
             relative_fee=p1_fee,
         )
         fee_info_p2 = client2.get_fee_info(
             client1.address,
-            nonce=channel_id + 1,
+            nonce=index + 1,
             relative_fee=p2_fee,
         )
         pathfinding_service.transport.receive_fake_data(fee_info_p1.serialize_full())
@@ -152,7 +157,7 @@ def test_pfs_with_mocked_client(
                                 clients[3].address]
 
     # now close all channels
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,

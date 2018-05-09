@@ -7,6 +7,7 @@ be used most of the time to keep test times short.
 """
 from typing import List
 
+from eth_utils import decode_hex
 from unittest.mock import Mock
 from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
@@ -44,7 +45,7 @@ def test_pfs_with_mocked_events(
     token_network = pathfinding_service_mocked_listeners.token_networks[token_network_address]
 
     # Now initialize some channels in this network.
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -54,11 +55,12 @@ def test_pfs_with_mocked_events(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
+        channel_identifier = decode_hex('0x%064x' % index)
         network_listener.emit_event(dict(
             address=token_network_address,
             name='ChannelOpened',
             args=dict(
-                channel_identifier=channel_id,
+                channel_identifier=channel_identifier,
                 participant1=addresses[p1_index],
                 participant2=addresses[p2_index]
             )
@@ -68,7 +70,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelNewDeposit',
             args=dict(
-                channel_identifier=channel_id,
+                channel_identifier=channel_identifier,
                 participant=addresses[p1_index],
                 deposit=p1_deposit
             )
@@ -78,7 +80,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelNewDeposit',
             args=dict(
-                channel_identifier=channel_id,
+                channel_identifier=channel_identifier,
                 participant=addresses[p2_index],
                 deposit=p2_deposit
             )
@@ -88,7 +90,7 @@ def test_pfs_with_mocked_events(
     assert len(token_network.channel_id_to_addresses.keys()) == 7
 
     # check that deposits got registered
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -98,7 +100,7 @@ def test_pfs_with_mocked_events(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
-        p1, p2 = token_network.channel_id_to_addresses[channel_id]
+        p1, p2 = token_network.channel_id_to_addresses['0x%064x' % index]
         assert p1 == addresses[p1_index]
         assert p2 == addresses[p2_index]
 
@@ -116,7 +118,7 @@ def test_pfs_with_mocked_events(
     assert paths[2]['path'] == [addresses[0], addresses[1], addresses[2], addresses[3]]
 
     # wow close all channels
-    for channel_id, (
+    for index, (
         p1_index,
         p1_deposit,
         p1_transferred_amount,
@@ -130,7 +132,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelClosed',
             args=dict(
-                channel_identifier=channel_id,
+                channel_identifier=decode_hex('0x%064x' % index),
                 closing_participant=addresses[p1_index]
             )
         ))
@@ -171,7 +173,7 @@ def test_pfs_idempotency_of_channel_openings(
             address=token_network_address,
             name='ChannelOpened',
             args=dict(
-                channel_identifier=1,
+                channel_identifier=decode_hex('0x%064x' % 1),
                 participant1=addresses[0],
                 participant2=addresses[1]
             )
@@ -185,7 +187,7 @@ def test_pfs_idempotency_of_channel_openings(
         address=token_network_address,
         name='ChannelClosed',
         args=dict(
-            channel_identifier=1,
+            channel_identifier=decode_hex('0x%064x' % 1),
             closing_participant=addresses[0]
         )
     ))
@@ -225,7 +227,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
         address=token_network_address,
         name='ChannelOpened',
         args=dict(
-            channel_identifier=1,
+            channel_identifier=decode_hex('0x%064x' % 1),
             participant1=addresses[0],
             participant2=addresses[1]
         )
@@ -236,7 +238,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
         address=token_network_address,
         name='ChannelOpened',
         args=dict(
-            channel_identifier=2,
+            channel_identifier=decode_hex('0x%064x' % 2),
             participant1=addresses[1],
             participant2=addresses[0]
         )
@@ -250,7 +252,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
         address=token_network_address,
         name='ChannelClosed',
         args=dict(
-            channel_identifier=1,
+            channel_identifier=decode_hex('0x%064x' % 1),
             closing_participant=addresses[0]
         )
     ))
@@ -290,7 +292,7 @@ def test_pfs_events_from_unknown_token_network_ignored(
         address=token_network_address,
         name='ChannelOpened',
         args=dict(
-            channel_identifier=1,
+            channel_identifier=decode_hex('0x%064x' % 1),
             participant1=addresses[0],
             participant2=addresses[1]
         )
@@ -304,7 +306,7 @@ def test_pfs_events_from_unknown_token_network_ignored(
         address=token_networks[1].address,
         name='ChannelOpened',
         args=dict(
-            channel_identifier=1,
+            channel_identifier=decode_hex('0x%064x' % 1),
             participant1=addresses[0],
             participant2=addresses[1]
         )
