@@ -421,7 +421,7 @@ def handle_token_network_action(node_state, state_change):
 
 
 def handle_delivered(node_state, state_change):
-    # TODO: imporve the complexity of this algorithm
+    # TODO: improve the complexity of this algorithm
     for queueid, queue in node_state.queueids_to_queues.items():
         if queueid[1] == 'global':
             remove = []
@@ -614,7 +614,7 @@ def handle_receive_secret_reveal(node_state, state_change):
 
 
 def handle_processed(node_state, state_change):
-    # TODO: imporve the complexity of this algorithm
+    # TODO: improve the complexity of this algorithm
     for queue in node_state.queueids_to_queues.values():
         remove = []
 

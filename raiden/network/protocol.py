@@ -655,9 +655,9 @@ class UDPTransport:
         """ Send message to recipient if the transport is running.
 
         Returns:
-            An AsyncResult that will be set once the message is delivered. The
-            same AsyncResult instance as long as the message has not been
-            acknowledged with a Delivered message.
+            An AsyncResult that will be set once the message is delivered. As
+            long as the message has not been acknowledged with a Delivered
+            message the function will return the same AsyncResult.
         """
         async_result = self.messageids_to_asyncresults.get(message_id)
         if async_result is None:
@@ -714,9 +714,9 @@ class UDPTransport:
         """ Handle a Raiden protocol message.
 
         The protocol requires durability of the messages. The UDP transport
-        relies on the node's WAL for durability, the message will be converted
+        relies on the node's WAL for durability. The message will be converted
         to a state change, saved to the WAL, and *processed* before the
-        durability is confirmed, which is a stronger property then what is
+        durability is confirmed, which is a stronger property than what is
         required of any transport.
         """
         # pylint: disable=unidiomatic-typecheck
@@ -728,7 +728,7 @@ class UDPTransport:
             # transport.
             #
             # Alternatives are, from weakest to strongest options:
-            # - Just save it disk and asynchronously process the messages
+            # - Just save it on disk and asynchronously process the messages
             # - Decode it, save to the WAL, and asynchronously process the
             #   state change
             # - Decode it, save to the WAL, and process it (the current
@@ -745,7 +745,7 @@ class UDPTransport:
         """ Handle a Delivered message.
 
         The Delivered message is how the UDP transport guarantees persistence
-        by the partner node, the message itself is not part of the raiden
+        by the partner node. The message itself is not part of the raiden
         protocol, but it's required by this transport to provide the required
         properties.
         """
@@ -762,7 +762,7 @@ class UDPTransport:
 
     # Pings and Pongs are used to check the health status of another node. They
     # are /not/ part of the raiden protocol, only part of the UDP transport,
-    # therefor these messages are not forwarded to the message handler.
+    # therefore these messages are not forwarded to the message handler.
     def receive_ping(self, ping):
         """ Handle a Ping message by answering with a Pong. """
 
