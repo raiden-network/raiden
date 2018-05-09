@@ -302,7 +302,7 @@ class SendProcessed(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendDirectTransfer) and
+            isinstance(other, SendProcessed) and
             self.message_identifier == other.message_identifier and
             self.recipient == other.recipient
         )
