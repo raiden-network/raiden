@@ -75,28 +75,19 @@ ERROR_STATUS_CODES = [
 
 URLS_V1 = [
     ('/address', AddressResource),
-    ('/channels/<hexaddress:registry_address>', ChannelsResource),
-    (
-        '/channels/<hexaddress:registry_address>/<hexaddress:channel_address>',
-        ChannelsResourceByChannelAddress
-    ),
-    ('/tokens/<hexaddress:registry_address>', TokensResource),
-    (
-        '/tokens/<hexaddress:registry_address>/<hexaddress:token_address>/partners',
-        PartnersResourceByTokenAddress
-    ),
-    ('/tokens/<hexaddress:registry_address>/<hexaddress:token_address>', RegisterTokenResource),
-    ('/events/<hexaddress:registry_address>/network', NetworkEventsResource),
+    ('/channels', ChannelsResource),
+    ('/channels/<hexaddress:channel_address>', ChannelsResourceByChannelAddress),
+    ('/tokens', TokensResource),
+    ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
+    ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
+    ('/events/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
     ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
     (
-        (
-            '/transfers/<hexaddress:registry_address>/'
-            '<hexaddress:token_address>/<hexaddress:target_address>'
-        ),
+        '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
         TransferToTargetResource,
     ),
-    ('/connections/<hexaddress:registry_address>/<hexaddress:token_address>', ConnectionsResource),
+    ('/connections/<hexaddress:token_address>', ConnectionsResource),
 ]
 
 
@@ -110,7 +101,7 @@ def api_response(result, status_code=HTTPStatus.OK):
     response = make_response((
         data,
         status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'},
     ))
     return response
 
@@ -120,7 +111,7 @@ def api_error(errors, status_code):
     response = make_response((
         json.dumps(dict(errors=errors)),
         status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'},
     ))
     return response
 
@@ -293,17 +284,17 @@ class RestAPI:
         try:
             manager_address = self.raiden_api.token_network_register(
                 registry_address,
-                token_address
+                token_address,
             )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
 
         return api_response(
             result=dict(channel_manager_address=address_encoder(manager_address)),
-            status_code=HTTPStatus.CREATED
+            status_code=HTTPStatus.CREATED,
         )
 
     def open(
@@ -313,7 +304,8 @@ class RestAPI:
             token_address,
             settle_timeout=None,
             reveal_timeout=None,
-            balance=None):
+            balance=None,
+    ):
 
         try:
             self.raiden_api.channel_open(
@@ -327,7 +319,7 @@ class RestAPI:
                 AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
 
         if balance:
@@ -337,17 +329,17 @@ class RestAPI:
                     registry_address,
                     token_address,
                     partner_address,
-                    balance
+                    balance,
                 )
             except EthNodeCommunicationError as e:
                 return api_error(
                     errors=str(e),
-                    status_code=HTTPStatus.REQUEST_TIMEOUT
+                    status_code=HTTPStatus.REQUEST_TIMEOUT,
                 )
             except InsufficientFunds as e:
                 return api_error(
                     errors=str(e),
-                    status_code=HTTPStatus.PAYMENT_REQUIRED
+                    status_code=HTTPStatus.PAYMENT_REQUIRED,
                 )
 
         channel_state = views.get_channelstate_for(
@@ -357,16 +349,11 @@ class RestAPI:
             partner_address,
         )
 
-        result = self.channel_schema.dump(
-            channelstate_to_api_dict(
-                channel_state,
-                registry_address
-            )
-        )
+        result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
 
         return api_response(
             result=result.data,
-            status_code=HTTPStatus.CREATED
+            status_code=HTTPStatus.CREATED,
         )
 
     def deposit(self, registry_address, token_address, partner_address, amount):
@@ -375,30 +362,25 @@ class RestAPI:
                 registry_address,
                 token_address,
                 partner_address,
-                amount
+                amount,
             )
         except ChannelBusyError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
         except EthNodeCommunicationError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.REQUEST_TIMEOUT
+                status_code=HTTPStatus.REQUEST_TIMEOUT,
             )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        result = self.channel_schema.dump(
-            channelstate_to_api_dict(
-                raiden_service_result,
-                registry_address
-            )
-        )
+        result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
 
         return api_response(result=result.data)
 
@@ -407,12 +389,12 @@ class RestAPI:
             raiden_service_result = self.raiden_api.channel_close(
                 registry_address,
                 token_address,
-                partner_address
+                partner_address,
             )
         except ChannelBusyError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
@@ -424,7 +406,8 @@ class RestAPI:
             token_address,
             funds,
             initial_channel_target=None,
-            joinable_funds_target=None):
+            joinable_funds_target=None,
+    ):
 
         try:
             self.raiden_api.token_network_connect(
@@ -432,22 +415,22 @@ class RestAPI:
                 token_address,
                 funds,
                 initial_channel_target,
-                joinable_funds_target
+                joinable_funds_target,
             )
         except EthNodeCommunicationError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.REQUEST_TIMEOUT
+                status_code=HTTPStatus.REQUEST_TIMEOUT,
             )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
         return api_response(
             result=dict(),
-            status_code=HTTPStatus.NO_CONTENT
+            status_code=HTTPStatus.NO_CONTENT,
         )
 
     def leave(self, registry_address, token_address, only_receiving):
@@ -507,17 +490,14 @@ class RestAPI:
 
     def get_channel(self, registry_address, channel_address):
         channel_state = self.raiden_api.get_channel(registry_address, channel_address)
-        result = self.channel_schema.dump(channelstate_to_api_dict(
-            channel_state,
-            registry_address,
-        ))
+        result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
         return api_response(result=result.data)
 
     def get_partners_by_token(self, registry_address, token_address):
         return_list = []
         raiden_service_result = self.raiden_api.get_channel_list(
             registry_address,
-            token_address
+            token_address,
         )
         for result in raiden_service_result:
             return_list.append({
@@ -525,7 +505,6 @@ class RestAPI:
                 'channel': url_for(
                     # TODO: Somehow nicely parameterize this for future versions
                     'v1_resources.channelsresourcebychanneladdress',
-                    registry_address=registry_address,
                     channel_address=result.identifier,
                 ),
             })
@@ -552,24 +531,24 @@ class RestAPI:
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
-                identifier=identifier
+                identifier=identifier,
             )
         except (InvalidAmount, InvalidAddress) as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
         if transfer_result is False:
             return api_error(
                 errors="Payment couldn't be completed "
                 "(insufficient funds or no route to target).",
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
 
         transfer = {
@@ -595,17 +574,17 @@ class RestAPI:
                 registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
-                balance
+                balance,
             )
         except ChannelBusyError as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.CONFLICT
+                status_code=HTTPStatus.CONFLICT,
             )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
         updated_channel_state = self.raiden_api.get_channel(
@@ -613,12 +592,7 @@ class RestAPI:
             channel_state.identifier,
         )
 
-        result = self.channel_schema.dump(
-            channelstate_to_api_dict(
-                updated_channel_state,
-                registry_address,
-            )
-        )
+        result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
         return api_response(result=result.data)
 
     def _close(self, registry_address, channel_state):
@@ -645,12 +619,8 @@ class RestAPI:
             channel_state.identifier,
         )
 
-        result = self.channel_schema.dump(
-            channelstate_to_api_dict(
-                updated_channel_state,
-                registry_address,
-            )
-        )
+        result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
+
         return api_response(result=result.data)
 
     def patch_channel(self, registry_address, channel_address, balance=None, state=None):
@@ -669,7 +639,7 @@ class RestAPI:
         try:
             channel_state = self.raiden_api.get_channel(
                 registry_address,
-                channel_address
+                channel_address,
             )
 
         except ChannelNotFound:

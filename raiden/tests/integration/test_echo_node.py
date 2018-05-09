@@ -193,7 +193,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
             app.raiden.default_registry.address,
             app,
             token_address,
-            0
+            0,
         )
 
         for event in events:

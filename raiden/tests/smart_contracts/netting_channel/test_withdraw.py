@@ -279,7 +279,8 @@ def test_withdraw_both_participants(
         reveal_timeout,
         tester_channels,
         tester_chain,
-        tester_token):
+        tester_token,
+):
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     pseudo_random_generator = random.Random()
@@ -462,7 +463,8 @@ def test_withdraw_fails_with_partial_merkle_proof(
         tree,
         tester_channels,
         tester_chain,
-        settle_timeout):
+        settle_timeout,
+):
 
     """ withdraw must fail if informed proof is not complete. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
@@ -487,7 +489,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
         nonce=nonce,
         channel=channel0.identifier,
         locksroot=merkleroot(merkle_tree),
-        recipient=privatekey_to_address(pkey1)
+        recipient=privatekey_to_address(pkey1),
     )
 
     address = privatekey_to_address(pkey0)
@@ -548,7 +550,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_chain, set
         nonce=nonce,
         channel=channel0.identifier,
         locksroot=merkleroot(merkle_tree),
-        recipient=privatekey_to_address(pkey1)
+        recipient=privatekey_to_address(pkey1),
     )
 
     address = privatekey_to_address(pkey0)
@@ -596,7 +598,8 @@ def test_withdraw_tampered_lock_amount(
         tester_channels,
         tester_chain,
         tester_token,
-        settle_timeout):
+        settle_timeout,
+):
 
     """ withdraw must fail if the lock amonut is tampered. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
@@ -622,7 +625,7 @@ def test_withdraw_tampered_lock_amount(
         channel=channel0.identifier,
         locksroot=merkleroot(merkle_tree),
         token=tester_token.address,
-        recipient=privatekey_to_address(pkey1)
+        recipient=privatekey_to_address(pkey1),
     )
 
     address = privatekey_to_address(pkey0)
@@ -667,7 +670,8 @@ def test_withdraw_lock_with_a_large_expiration(
         tester_channels,
         tester_chain,
         tester_token,
-        settle_timeout):
+        settle_timeout,
+):
 
     """ Withdraw must accept a lock that expires after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]

@@ -78,7 +78,8 @@ def test_update_not_allowed_after_settlement_period(
         tester_registry_address,
         settle_timeout,
         tester_channels,
-        tester_chain):
+        tester_chain,
+):
 
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -108,7 +109,8 @@ def test_update_not_allowed_after_settlement_period(
 
 def test_update_not_allowed_for_the_closing_address(
         tester_registry_address,
-        tester_channels):
+        tester_channels,
+):
 
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -160,7 +162,8 @@ def test_update_not_allowed_for_the_closing_address(
 def test_update_must_fail_with_a_nonparticipant_transfer(
         tester_registry_address,
         tester_channels,
-        private_keys):
+        private_keys,
+):
 
     """ updateTransfer must not accept a transfer from a non participant. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]

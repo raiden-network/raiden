@@ -717,7 +717,8 @@ def create_sendlockedtransfer(
         message_identifier,
         payment_identifier,
         expiration,
-        secrethash):
+        secrethash,
+):
 
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -886,7 +887,8 @@ def send_refundtransfer(
         message_identifier,
         payment_identifier,
         expiration,
-        secrethash):
+        secrethash,
+):
 
     msg = 'Refunds are only valid for *know and pending* transfers'
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
@@ -1080,7 +1082,7 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
 
 def handle_receive_lockedtransfer(
         channel_state: 'NettingChannelState',
-        mediated_transfer: 'LockedTransferSignedState'
+        mediated_transfer: 'LockedTransferSignedState',
 ):
     """Register the latest known transfer.
 
@@ -1164,7 +1166,7 @@ def handle_block(channel_state, state_change, block_number):
             channel_state.settle_transaction = TransactionExecutionStatus(
                 state_change.block_number,
                 None,
-                None
+                None,
             )
             event = ContractSendChannelSettle(channel_state.identifier)
             events.append(event)

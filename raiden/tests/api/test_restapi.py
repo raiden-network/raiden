@@ -120,7 +120,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
     assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
-def test_payload_with_address_without_prefix(blockchain_services, api_backend):
+def test_payload_with_address_without_prefix(api_backend):
     """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
     channel_data_obj = {
@@ -132,7 +132,6 @@ def test_payload_with_address_without_prefix(blockchain_services, api_backend):
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -140,7 +139,7 @@ def test_payload_with_address_without_prefix(blockchain_services, api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
-def test_payload_with_address_invalid_chars(blockchain_services, api_backend):
+def test_payload_with_address_invalid_chars(api_backend):
     """ Addresses cannot have invalid characters in it. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
     channel_data_obj = {
@@ -152,7 +151,6 @@ def test_payload_with_address_invalid_chars(blockchain_services, api_backend):
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -160,7 +158,7 @@ def test_payload_with_address_invalid_chars(blockchain_services, api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
-def test_payload_with_address_invalid_length(blockchain_services, api_backend):
+def test_payload_with_address_invalid_length(api_backend):
     """ Encoded addresses must have the right length. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
     channel_data_obj = {
@@ -172,7 +170,6 @@ def test_payload_with_address_invalid_length(blockchain_services, api_backend):
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -194,7 +191,6 @@ def test_api_query_our_address(api_backend):
 
 def test_api_open_and_deposit_channel(
         api_backend,
-        blockchain_services,
         token_addresses,
         reveal_timeout,
 ):
@@ -213,7 +209,6 @@ def test_api_open_and_deposit_channel(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -245,7 +240,6 @@ def test_api_open_and_deposit_channel(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -267,7 +261,6 @@ def test_api_open_and_deposit_channel(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=first_channel_address,
         ),
         json={'balance': balance},
@@ -291,7 +284,6 @@ def test_api_open_and_deposit_channel(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=second_channel_address,
         )
     )
@@ -313,7 +305,6 @@ def test_api_open_and_deposit_channel(
 
 def test_api_open_close_and_settle_channel(
         api_backend,
-        blockchain_services,
         token_addresses,
         reveal_timeout,
 ):
@@ -330,7 +321,6 @@ def test_api_open_close_and_settle_channel(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -354,7 +344,6 @@ def test_api_open_close_and_settle_channel(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=channel_address,
         ),
         json={'state': CHANNEL_STATE_CLOSED},
@@ -374,7 +363,6 @@ def test_api_open_close_and_settle_channel(
 
 
 def test_api_open_channel_invalid_input(
-        blockchain_services,
         api_backend,
         token_addresses,
         reveal_timeout,
@@ -392,7 +380,6 @@ def test_api_open_channel_invalid_input(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -404,7 +391,6 @@ def test_api_open_channel_invalid_input(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -414,7 +400,6 @@ def test_api_open_channel_invalid_input(
 
 def test_api_channel_state_change_errors(
         api_backend,
-        blockchain_services,
         token_addresses,
         reveal_timeout,
 ):
@@ -431,7 +416,6 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -445,7 +429,6 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=channel_address,
         ),
         json=dict(state='inlimbo'),
@@ -457,8 +440,7 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
-            channel_address=channel_address,
+            channel_address=channel_address
         ),
         json=dict(state=CHANNEL_STATE_CLOSED, balance=200),
     )
@@ -469,7 +451,6 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=channel_address,
         ),
     )
@@ -481,7 +462,6 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=channel_address,
         ),
         json=dict(state=CHANNEL_STATE_CLOSED),
@@ -494,7 +474,6 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             channel_address=channel_address,
         ),
         json=dict(balance=500),
@@ -509,7 +488,6 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     token_address1 = token_addresses[0]
     token_address2 = token_addresses[1]
     settle_timeout = 1650
-    registry_address = blockchain_services.deploy_registry.address
 
     channel_data_obj = {
         'partner_address': partner_address,
@@ -520,7 +498,6 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -532,13 +509,12 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': address_encoder(token_address2),
-        'settle_timeout': settle_timeout
+        'settle_timeout': settle_timeout,
     }
     request = grequests.put(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address)
         ),
         json=channel_data_obj
     )
@@ -550,7 +526,6 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
         api_url_for(
             api_backend,
             'tokensresource',
-            registry_address=address_encoder(registry_address),
         )
     )
     response = request.send().response
@@ -571,13 +546,12 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     channel_data_obj = {
         'partner_address': first_partner_address,
         'token_address': address_encoder(token_address),
-        'settle_timeout': settle_timeout
+        'settle_timeout': settle_timeout,
     }
     request = grequests.put(
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -591,7 +565,6 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -607,7 +580,6 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
         api_url_for(
             api_backend,
             'channelsresource',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
         ),
         json=channel_data_obj,
     )
@@ -619,7 +591,6 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
         api_url_for(
             api_backend,
             'partnersresourcebytokenaddress',
-            registry_address=address_encoder(blockchain_services.deploy_registry.address),
             token_address=address_encoder(token_address),
         )
     )
@@ -629,14 +600,12 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     expected_response = [
         {
             'partner_address': first_partner_address,
-            'channel': '/api/1/channels/{}/{}'.format(
-                address_encoder(blockchain_services.deploy_registry.address),
+            'channel': '/api/1/channels/{}'.format(
                 first_channel_address,
             )
         }, {
             'partner_address': second_partner_address,
-            'channel': '/api/1/channels/{}/{}'.format(
-                address_encoder(blockchain_services.deploy_registry.address),
+            'channel': '/api/1/channels/{}'.format(
                 second_channel_address,
             )
         }
@@ -657,7 +626,6 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
 
     transfer = {
         'initiator_address': address_encoder(our_address),
-        'registry_address': address_encoder(app1.raiden.default_registry.address),
         'target_address': address_encoder(target_address),
         'token_address': address_encoder(token_address),
         'amount': amount,
@@ -668,7 +636,6 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
         api_url_for(
             api_backend,
             'transfertotargetresource',
-            registry_address=address_encoder(app1.raiden.default_registry.address),
             token_address=address_encoder(token_address),
             target_address=address_encoder(target_address),
         ),
@@ -694,7 +661,6 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     register_request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        registry_address=address_encoder(app0.raiden.default_registry.address),
         token_address=address_encoder(new_token_address),
     ))
     register_response = register_request.send().response
@@ -705,7 +671,6 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     conflict_request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        registry_address=address_encoder(app0.raiden.default_registry.address),
         token_address=address_encoder(new_token_address),
     ))
     conflict_response = conflict_request.send().response
@@ -715,7 +680,6 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
 @pytest.mark.skip
 def test_get_connection_managers_info(api_backend, blockchain_services):
     # check that no connection managers exists yet
-    registry_address = blockchain_services.deploy_registry.address
 
     request = grequests.get(
         api_url_for(api_backend, 'connectionmanagersresource'),
@@ -733,7 +697,6 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
         api_url_for(
             api_backend,
             'connectionsresource',
-            registry_address=registry_address,
             token_address=token_address1,
         ),
         json=connect_data_obj,
@@ -761,7 +724,6 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
         api_url_for(
             api_backend,
             'connectionsresource',
-            registry_address=registry_address,
             token_address=token_address2,
         ),
         json=connect_data_obj,
