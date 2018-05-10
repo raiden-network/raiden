@@ -125,6 +125,7 @@ def run_restapi_smoketests(raiden_service, test_config):
 def run_smoketests(raiden_service, test_config, debug=False):
     """ Test that the assembled raiden_service correctly reflects the configuration from the
     smoketest_genesis. """
+    ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
     try:
         chain = raiden_service.chain
         assert (
@@ -333,7 +334,6 @@ def init_with_genesis(smoketest_genesis):
 
 
 def start_ethereum(smoketest_genesis):
-    ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
     RST_RPC_PORT = next(get_free_port('127.0.0.1', 27854))
     os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
     cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
