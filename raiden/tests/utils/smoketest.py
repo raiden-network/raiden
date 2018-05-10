@@ -83,8 +83,6 @@ def ensure_executable(cmd):
         sys.exit(1)
 
 
-ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
-
 TEST_ACCOUNT = {
     'version': 3,
     'crypto': {
@@ -334,6 +332,7 @@ def init_with_genesis(smoketest_genesis):
 
 
 def start_ethereum(smoketest_genesis):
+    ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
     RST_RPC_PORT = next(get_free_port('127.0.0.1', 27854))
     os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
     cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
