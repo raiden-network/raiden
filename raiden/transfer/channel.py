@@ -16,6 +16,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
     SendDirectTransfer,
+    SendProcessed,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.mediated_transfer.events import (
@@ -1040,18 +1041,23 @@ def handle_receive_directtransfer(channel_state, direct_transfer):
         transfer_amount = new_transferred_amount - previous_transferred_amount
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
-        event = EventTransferReceivedSuccess(
+        transfer_sucess_event = EventTransferReceivedSuccess(
             direct_transfer.payment_identifier,
             transfer_amount,
             channel_state.partner_state.address,
         )
-        events = [event]
+        send_processed = SendProcessed(
+            direct_transfer.balance_proof.sender,
+            b'global',
+            direct_transfer.message_identifier,
+        )
+        events = [transfer_sucess_event, send_processed]
     else:
-        event = EventTransferReceivedInvalidDirectTransfer(
+        transfer_invalid_event = EventTransferReceivedInvalidDirectTransfer(
             direct_transfer.payment_identifier,
             reason=msg,
         )
-        events = [event]
+        events = [transfer_invalid_event]
 
     return TransitionResult(channel_state, events)
 
@@ -1081,7 +1087,16 @@ def handle_receive_lockedtransfer(
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
-    return is_valid, msg
+        send_processed = SendProcessed(
+            mediated_transfer.balance_proof.sender,
+            b'global',
+            mediated_transfer.message_identifier,
+        )
+        events = [send_processed]
+    else:
+        events = list()
+
+    return is_valid, events, msg
 
 
 def handle_receive_refundtransfer(channel_state, refund_transfer):
@@ -1108,7 +1123,16 @@ def handle_unlock(channel_state, unlock):
 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
-    return is_valid, msg
+        send_processed = SendProcessed(
+            unlock.balance_proof.sender,
+            b'global',
+            unlock.message_identifier,
+        )
+        events = [send_processed]
+    else:
+        events = list()
+
+    return is_valid, events, msg
 
 
 def handle_block(channel_state, state_change, block_number):

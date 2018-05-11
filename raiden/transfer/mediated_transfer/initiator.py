@@ -201,7 +201,7 @@ def handle_secretrequest(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         transfer_description = initiator_state.transfer_description
         recipient = transfer_description.target
-        queue_name = 'global'
+        queue_name = b'global'
         revealsecret = SendRevealSecret(
             recipient,
             queue_name,

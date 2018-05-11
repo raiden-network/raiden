@@ -170,10 +170,9 @@ def claim_lock(app_chain, payment_identifier, token, secret):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
 
-        message_identifier = random.randint(0, UINT64_MAX)
         unlock_lock = channel.send_unlock(
             from_channel,
-            message_identifier,
+            random.randint(0, UINT64_MAX),
             payment_identifier,
             secret,
             secrethash,
@@ -192,11 +191,12 @@ def claim_lock(app_chain, payment_identifier, token, secret):
 
         balance_proof = balanceproof_from_envelope(secret_message)
         receive_unlock = ReceiveUnlock(
+            random.randint(0, UINT64_MAX),
             unlock_lock.secret,
             balance_proof,
         )
 
-        is_valid, msg = channel.handle_unlock(
+        is_valid, _, msg = channel.handle_unlock(
             partner_channel,
             receive_unlock,
         )
@@ -341,6 +341,7 @@ def increase_transferred_amount(
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
+        message_identifier,
         payment_identifier,
         balance_proof,
     )
@@ -388,9 +389,11 @@ def make_direct_transfer_from_channel(
     assert direct_transfer_message.sender == from_channel.our_state.address
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
+    message_identifier = random.randint(0, UINT64_MAX)
     receive_direct = ReceiveTransferDirect(
         payment_network_identifier,
         from_channel.token_address,
+        message_identifier,
         payment_identifier,
         balance_proof,
     )

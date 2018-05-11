@@ -34,6 +34,8 @@ from raiden.transfer.state_change import (
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
+    ReceiveDelivered,
+    ReceiveProcessed,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -418,6 +420,22 @@ def handle_token_network_action(node_state, state_change):
     return TransitionResult(node_state, events)
 
 
+def handle_delivered(node_state, state_change):
+    # TODO: improve the complexity of this algorithm
+    for queueid, queue in node_state.queueids_to_queues.items():
+        if queueid[1] == 'global':
+            remove = []
+
+            for pos, message in enumerate(queue):
+                if message.message_identifier == state_change.message_identifier:
+                    remove.append(pos)
+
+            for removepos in reversed(remove):
+                queue.pop(removepos)
+
+    return TransitionResult(node_state, [])
+
+
 def handle_new_token_network(node_state, state_change):
     events = list()
 
@@ -595,6 +613,21 @@ def handle_receive_secret_reveal(node_state, state_change):
     return subdispatch_to_paymenttask(node_state, state_change, secrethash)
 
 
+def handle_processed(node_state, state_change):
+    # TODO: improve the complexity of this algorithm
+    for queue in node_state.queueids_to_queues.values():
+        remove = []
+
+        for pos, message in enumerate(queue):
+            if message.message_identifier == state_change.message_identifier:
+                remove.append(pos)
+
+        for removepos in reversed(remove):
+            queue.pop(removepos)
+
+    return TransitionResult(node_state, [])
+
+
 def handle_receive_unlock(node_state, state_change):
     secrethash = state_change.secrethash
     return subdispatch_to_paymenttask(node_state, state_change, secrethash)
@@ -692,6 +725,11 @@ def state_transition(node_state, state_change):
             node_state,
             state_change,
         )
+    elif type(state_change) == ReceiveDelivered:
+        iteration = handle_delivered(
+            node_state,
+            state_change,
+        )
     elif type(state_change) == ReceiveTransferDirect:
         iteration = handle_token_network_action(
             node_state,
@@ -719,6 +757,11 @@ def state_transition(node_state, state_change):
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_receive_secret_reveal(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ReceiveProcessed:
+        iteration = handle_processed(
             node_state,
             state_change,
         )

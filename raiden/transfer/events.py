@@ -289,3 +289,23 @@ class SendDirectTransfer(SendMessageEvent):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class SendProcessed(SendMessageEvent):
+    def __repr__(self):
+        return (
+            '<SendProcessed confirmed_msgid:{} recipient:{}>'
+        ).format(
+            self.message_identifier,
+            pex(self.recipient),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendProcessed) and
+            self.message_identifier == other.message_identifier and
+            self.recipient == other.recipient
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

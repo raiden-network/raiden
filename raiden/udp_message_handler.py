@@ -8,6 +8,7 @@ from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import (
+    ReceiveProcessed,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -15,6 +16,7 @@ from raiden.messages import (
     DirectTransfer,
     LockedTransfer,
     Message,
+    Processed,
     RefundTransfer,
     RevealSecret,
     Secret,
@@ -52,6 +54,7 @@ def handle_message_revealsecret(raiden: 'RaidenService', message: RevealSecret):
 def handle_message_secret(raiden: 'RaidenService', message: Secret):
     balance_proof = balanceproof_from_envelope(message)
     state_change = ReceiveUnlock(
+        message.message_identifier,
         message.secret,
         balance_proof,
     )
@@ -88,6 +91,7 @@ def handle_message_refundtransfer(raiden: 'RaidenService', message: RefundTransf
         )
     else:
         state_change = ReceiveTransferRefund(
+            message.message_identifier,
             message.sender,
             from_transfer,
         )
@@ -103,6 +107,7 @@ def handle_message_directtransfer(raiden: 'RaidenService', message: DirectTransf
     direct_transfer = ReceiveTransferDirect(
         payment_network_identifier,
         token_address,
+        message.message_identifier,
         message.payment_identifier,
         balance_proof,
     )
@@ -117,21 +122,31 @@ def handle_message_lockedtransfer(raiden: 'RaidenService', message: LockedTransf
         raiden.mediate_mediated_transfer(message)
 
 
+def handle_message_processed(raiden: 'RaidenService', message: Processed):
+    processed = ReceiveProcessed(message.message_identifier)
+    raiden.handle_state_change(processed)
+
+
 def on_udp_message(raiden: 'RaidenService', message: Message):
-    if isinstance(message, SecretRequest):
+    """ Return True if the message is known. """
+    # pylint: disable=unidiomatic-typecheck
+    if type(message) == SecretRequest:
         handle_message_secretrequest(raiden, message)
-    elif isinstance(message, RevealSecret):
+    elif type(message) == RevealSecret:
         handle_message_revealsecret(raiden, message)
-    elif isinstance(message, Secret):
+    elif type(message) == Secret:
         handle_message_secret(raiden, message)
-    elif isinstance(message, DirectTransfer):
+    elif type(message) == DirectTransfer:
         handle_message_directtransfer(raiden, message)
-    elif isinstance(message, RefundTransfer):
-        # The RefundTransfer must be prior to the LockedTransfer, since a
-        # RefundTransfer is also a LockedTransfer
+    elif type(message) == RefundTransfer:
         handle_message_refundtransfer(raiden, message)
-    elif isinstance(message, LockedTransfer):
+    elif type(message) == LockedTransfer:
         handle_message_lockedtransfer(raiden, message)
+    elif type(message) == Processed:
+        handle_message_processed(raiden, message)
     elif log.isEnabledFor(logging.ERROR):
-        # `Processed` and `Ping` messages are not forwarded to the handler
         log.error('Unknown message cmdid {}'.format(message.cmdid))
+        return False
+
+    # Inform the protocol that it's okay to send a Delivered message
+    return True

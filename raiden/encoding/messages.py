@@ -27,12 +27,14 @@ def make_message(message, **attrs):
 
 PROCESSED = 0
 PING = 1
+PONG = 2
 SECRETREQUEST = 3
 SECRET = 4
 DIRECTTRANSFER = 5
 LOCKEDTRANSFER = 7
 REFUNDTRANSFER = 8
 REVEALSECRET = 11
+DELIVERED = 12
 
 
 # pylint: disable=invalid-name
@@ -42,8 +44,8 @@ log = slogging.get_logger(__name__)
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
-processed_message_identifier = make_field(
-    'processed_message_identifier',
+delivered_message_identifier = make_field(
+    'delivered_message_identifier',
     8,
     '8s',
     integer(0, UINT64_MAX),
@@ -74,7 +76,18 @@ Processed = namedbuffer(
         cmdid(PROCESSED),
         pad(3),
         sender,
-        processed_message_identifier,
+        message_identifier,
+        signature,
+    ]
+)
+
+Delivered = namedbuffer(
+    'delivered',
+    [
+        cmdid(DELIVERED),
+        pad(3),
+        delivered_message_identifier,
+        signature,
     ]
 )
 
@@ -82,6 +95,16 @@ Ping = namedbuffer(
     'ping',
     [
         cmdid(PING),
+        pad(3),
+        nonce,
+        signature,
+    ]
+)
+
+Pong = namedbuffer(
+    'pong',
+    [
+        cmdid(PONG),
         pad(3),
         nonce,
         signature,
@@ -204,12 +227,14 @@ Lock = namedbuffer(
 CMDID_MESSAGE = {
     PROCESSED: Processed,
     PING: Ping,
+    PONG: Pong,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
+    DELIVERED: Delivered,
 }
 
 

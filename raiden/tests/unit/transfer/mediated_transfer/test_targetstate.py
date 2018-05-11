@@ -4,6 +4,7 @@ import random
 
 import pytest
 
+from raiden.constants import UINT64_MAX
 from raiden.transfer import channel
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer import target
@@ -441,6 +442,7 @@ def test_state_transition():
 
     payment_network_identifier = factories.make_address()
     balance_proof_state_change = ReceiveUnlock(
+        random.randint(0, UINT64_MAX),
         UNIT_SECRET,
         balance_proof,
     )

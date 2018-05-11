@@ -404,8 +404,6 @@ def test_refund_transfer_next_route():
     )
     assert iteration.new_state is not None
 
-    assert len(iteration.events) == 2
-
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
     new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
 
@@ -472,7 +470,6 @@ def test_refund_transfer_no_more_routes():
         block_number,
     )
     assert iteration.new_state is None
-    assert len(iteration.events) == 2
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
     sent_failed = next(e for e in iteration.events if isinstance(e, EventTransferSentFailed))

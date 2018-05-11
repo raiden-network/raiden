@@ -585,6 +585,7 @@ class ReceiveTransferDirect(StateChange):
             self,
             payment_network_identifier,
             token_address,
+            message_identifier,
             payment_identifier,
             balance_proof,
     ):
@@ -593,17 +594,19 @@ class ReceiveTransferDirect(StateChange):
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
+        self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
 
     def __repr__(self):
         return (
             '<ReceiveTransferDirect'
-            ' network:{} token:{} id:{} balance_proof:{}'
+            ' network:{} token:{} msgid:{} paymentid:{} balance_proof:{}'
             '>'
         ).format(
             pex(self.payment_network_identifier),
             pex(self.token_address),
+            self.message_identifier,
             self.payment_identifier,
             self.balance_proof,
         )
@@ -613,6 +616,7 @@ class ReceiveTransferDirect(StateChange):
             isinstance(other, ReceiveTransferDirect) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_address == other.token_address and
+            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.balance_proof == other.balance_proof
         )
@@ -622,18 +626,25 @@ class ReceiveTransferDirect(StateChange):
 
 
 class ReceiveUnlock(StateChange):
-    def __init__(self, secret, balance_proof: BalanceProofSignedState):
+    def __init__(
+            self,
+            message_identifier: typing.MessageID,
+            secret: typing.Secret,
+            balance_proof: BalanceProofSignedState,
+    ):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
         secrethash = sha3(secret)
 
+        self.message_identifier = message_identifier
         self.secret = secret
         self.secrethash = secrethash
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<ReceiveUnlock secrethash: {} balance_proof: {}>'.format(
+        return '<ReceiveUnlock msgid:{} secrethash:{} balance_proof:{}>'.format(
+            self.message_identifier,
             pex(self.secrethash),
             self.balance_proof,
         )
@@ -641,6 +652,7 @@ class ReceiveUnlock(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveUnlock) and
+            self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
             self.balance_proof == other.balance_proof
@@ -648,3 +660,13 @@ class ReceiveUnlock(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class ReceiveDelivered(StateChange):
+    def __init__(self, message_identifier):
+        self.message_identifier = message_identifier
+
+
+class ReceiveProcessed(StateChange):
+    def __init__(self, message_identifier):
+        self.message_identifier = message_identifier

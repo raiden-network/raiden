@@ -119,7 +119,7 @@ def make_transfers_pair(privatekeys, amount):
             sender=payer_address,
         )
 
-        is_valid, msg = channel.handle_receive_lockedtransfer(
+        is_valid, _, msg = channel.handle_receive_lockedtransfer(
             receive_channel,
             received_transfer,
         )
@@ -708,7 +708,7 @@ def test_events_for_refund():
         channel_identifier=refund_channel.identifier,
     )
 
-    is_valid, msg = channel.handle_receive_lockedtransfer(
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
         refund_channel,
         received_transfer,
     )
@@ -1393,8 +1393,8 @@ def test_no_valid_routes():
     )
     assert iteration.new_state is None
 
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRefundTransfer)
+    send_refund = next(e for e in iteration.events if isinstance(e, SendRefundTransfer))
+    assert send_refund
 
 
 def test_lock_timeout_lower_than_previous_channel_settlement_period():

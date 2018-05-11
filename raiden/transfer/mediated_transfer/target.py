@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import EventTransferReceivedSuccess
+from raiden.transfer.events import (
+    EventTransferReceivedSuccess,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
     EventWithdrawSuccess,
@@ -60,7 +63,7 @@ def handle_inittarget(
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_address
-    is_valid, errormsg = channel.handle_receive_lockedtransfer(
+    is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )
@@ -76,7 +79,7 @@ def handle_inittarget(
     if is_valid and safe_to_wait:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         recipient = transfer.initiator
-        queue_name = 'global'
+        queue_name = b'global'
         secret_request = SendSecretRequest(
             recipient,
             queue_name,
@@ -126,7 +129,7 @@ def handle_secretreveal(
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         recipient = route.node_address
-        queue_name = 'global'
+        queue_name = b'global'
         reveal = SendRevealSecret(
             recipient,
             queue_name,
@@ -147,9 +150,10 @@ def handle_secretreveal(
 def handle_unlock(target_state, state_change, channel_state):
     """ Handles a ReceiveUnlock state change. """
     iteration = TransitionResult(target_state, list())
+    balance_proof_sender = state_change.balance_proof.sender
 
-    if state_change.balance_proof.sender == target_state.route.node_address:
-        is_valid, _ = channel.handle_unlock(
+    if balance_proof_sender == target_state.route.node_address:
+        is_valid, events, _ = channel.handle_unlock(
             channel_state,
             state_change,
         )
@@ -167,7 +171,14 @@ def handle_unlock(target_state, state_change, channel_state):
                 transfer.lock.secrethash,
             )
 
-            iteration = TransitionResult(None, [transfer_success, unlock_success])
+            send_processed = SendProcessed(
+                balance_proof_sender,
+                b'global',
+                state_change.message_identifier,
+            )
+
+            events.extend([transfer_success, unlock_success, send_processed])
+            iteration = TransitionResult(None, events)
 
     return iteration
 

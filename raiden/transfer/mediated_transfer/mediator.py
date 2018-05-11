@@ -5,7 +5,10 @@ from typing import List, Dict
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import ContractSendChannelWithdraw
+from raiden.transfer.events import (
+    ContractSendChannelWithdraw,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
@@ -608,7 +611,7 @@ def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
-            queue_name = 'global'
+            queue_name = b'global'
             revealsecret = SendRevealSecret(
                 payer_transfer.balance_proof.sender,
                 queue_name,
@@ -899,12 +902,12 @@ def handle_init(
 
     mediator_state = MediatorTransferState(from_transfer.lock.secrethash)
 
-    is_valid, _ = channel.handle_receive_lockedtransfer(
+    is_valid, events, _ = channel.handle_receive_lockedtransfer(
         payer_channel,
         from_transfer,
     )
     if not is_valid:
-        return TransitionResult(None, [])
+        return TransitionResult(None, events)
 
     iteration = mediate_transfer(
         mediator_state,
@@ -915,7 +918,9 @@ def handle_init(
         from_transfer,
         block_number,
     )
-    return iteration
+
+    events.extend(iteration.events)
+    return TransitionResult(iteration.new_state, events)
 
 
 def handle_block(channelidentifiers_to_channels, state, state_change, block_number):
@@ -1001,6 +1006,14 @@ def handle_refundtransfer(
                 payer_transfer,
                 block_number,
             )
+
+            events = list(iteration.events)
+            send_processed = SendProcessed(
+                mediator_state_change.transfer.balance_proof.sender,
+                b'global',
+                mediator_state_change.message_identifier,
+            )
+            events.append(send_processed)
 
         # else: TODO: Use an event to notify about byzantine behavior
 
@@ -1121,10 +1134,11 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
             channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
             if channel_state:
-                is_valid, _ = channel.handle_unlock(
+                is_valid, channel_events, _ = channel.handle_unlock(
                     channel_state,
                     state_change,
                 )
+                events.extend(channel_events)
 
                 if is_valid:
                     withdraw = EventWithdrawSuccess(
@@ -1132,6 +1146,13 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
                         pair.payee_transfer.lock.secrethash,
                     )
                     events.append(withdraw)
+
+                    send_processed = SendProcessed(
+                        balance_proof_sender,
+                        b'global',
+                        state_change.message_identifier,
+                    )
+                    events.append(send_processed)
 
                     pair.payer_state = 'payer_balance_proof'
 

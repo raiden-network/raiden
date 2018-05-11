@@ -259,10 +259,11 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
-    def __init__(self, sender, transfer: LockedTransferSignedState):
+    def __init__(self, message_identifier, sender, transfer: LockedTransferSignedState):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
+        self.message_identifier = message_identifier
         self.sender = sender
         self.transfer = transfer
 
@@ -275,6 +276,7 @@ class ReceiveTransferRefund(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferRefund) and
+            self.message_identifier == other.message_identifier and
             self.sender == other.sender and
             self.transfer == other.transfer
         )

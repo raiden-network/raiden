@@ -3,16 +3,15 @@ import pytest
 
 from raiden.messages import (
     decode,
-    Processed,
     Ping,
+    Pong,
 )
 from raiden.tests.utils.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb
-from raiden.network.protocol import messageid_from_data
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_ping(raiden_network):
+def test_udp_ping_pong(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
@@ -21,19 +20,20 @@ def test_ping(raiden_network):
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
-    async_result = app0.raiden.protocol.send_raw_with_result(
-        ping_encoded,
+    messageid = ('ping', ping_message.nonce, app1.raiden.address)
+    async_result = app0.raiden.protocol.maybe_sendraw_with_result(
         app1.raiden.address,
+        ping_encoded,
+        messageid,
     )
     assert async_result.wait(2), 'The message was not processed'
 
-    expected_messageid = messageid_from_data(ping_encoded, app1.raiden.address)
     messages_decoded = [decode(m) for m in messages]
     processed_message = next(
-        decoded
-        for decoded in messages_decoded
-        if isinstance(decoded, Processed) and
-        decoded.processed_message_identifier == expected_messageid
+        pong
+        for pong in messages_decoded
+        if isinstance(pong, Pong) and
+        pong.nonce == ping_message.nonce
     )
 
     # the ping message was sent and processed
@@ -43,7 +43,7 @@ def test_ping(raiden_network):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_ping_unreachable(raiden_network):
+def test_udp_ping_pong_unreachable_node(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     # drop everything to force disabling of re-sends
@@ -58,9 +58,11 @@ def test_ping_unreachable(raiden_network):
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
-    async_result = app0.raiden.protocol.send_raw_with_result(
-        ping_encoded,
+    messageid = ('ping', ping_message.nonce, app1.raiden.address)
+    async_result = app0.raiden.protocol.maybe_sendraw_with_result(
         app1.raiden.address,
+        ping_encoded,
+        messageid,
     )
 
     assert async_result.wait(2) is None, "The message was dropped, it can't be acknowledged"

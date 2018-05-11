@@ -159,6 +159,9 @@ class SignedMessage(Message):
 
         publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
+        if publickey is None:
+            return None
+
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
         return message
@@ -234,12 +237,15 @@ class EnvelopeMessage(SignedMessage):
 
         publickey = recover_publickey_safe(data_that_was_signed, message_signature)
 
+        if publickey is None:
+            return None
+
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
         return message
 
 
-class Processed(Message):
+class Processed(SignedMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
 
@@ -248,31 +254,82 @@ class Processed(Message):
     """
     cmdid = messages.PROCESSED
 
-    def __init__(self, sender, processed_message_identifier):
+    def __init__(self, sender, message_identifier):
         super().__init__()
         self.sender = sender
-        self.processed_message_identifier = processed_message_identifier
+        self.message_identifier = message_identifier
 
     @staticmethod
     def unpack(packed):
-        return Processed(
+        processed = Processed(
             packed.sender,
-            packed.processed_message_identifier,
+            packed.message_identifier,
         )
+        processed.signature = packed.signature
+        return processed
 
     def pack(self, packed):
-        packed.processed_message_identifier = self.processed_message_identifier
+        packed.message_identifier = self.message_identifier
         packed.sender = self.sender
+        packed.signature = self.signature
 
     def __repr__(self):
-        return '<{} [processed_msgid:{}]>'.format(
+        return '<{} [msgid:{}]>'.format(
             self.__class__.__name__,
-            self.processed_message_identifier,
+            self.message_identifier,
         )
+
+
+class Delivered(SignedMessage):
+    """ Message used to inform the partner node that a message was received *and*
+    persisted.
+    """
+    cmdid = messages.DELIVERED
+
+    def __init__(self, delivered_message_identifier):
+        super().__init__()
+        self.delivered_message_identifier = delivered_message_identifier
+
+    @staticmethod
+    def unpack(packed):
+        delivered = Delivered(
+            packed.delivered_message_identifier,
+        )
+        delivered.signature = packed.signature
+        return delivered
+
+    def pack(self, packed):
+        packed.delivered_message_identifier = self.delivered_message_identifier
+        packed.signature = self.signature
+
+    def __repr__(self):
+        return '<{} [delivered_msgid:{}]>'.format(
+            self.__class__.__name__,
+            self.delivered_message_identifier,
+        )
+
+
+class Pong(SignedMessage):
+    """ Response to a Ping message. """
+    cmdid = messages.PONG
+
+    def __init__(self, nonce):
+        super().__init__()
+        self.nonce = nonce
+
+    @staticmethod
+    def unpack(packed):
+        pong = Pong(packed.nonce)
+        pong.signature = packed.signature
+        return pong
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.signature = self.signature
 
 
 class Ping(SignedMessage):
-    """ Ping, should be responded by a `Processed` message. """
+    """ Healthcheck message. """
     cmdid = messages.PING
 
     def __init__(self, nonce):
@@ -1146,10 +1203,12 @@ class RefundTransfer(LockedTransfer):
 CMDID_TO_CLASS = {
     messages.PROCESSED: Processed,
     messages.PING: Ping,
+    messages.PONG: Pong,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,
     messages.DIRECTTRANSFER: DirectTransfer,
     messages.LOCKEDTRANSFER: LockedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
+    messages.DELIVERED: Delivered,
 }

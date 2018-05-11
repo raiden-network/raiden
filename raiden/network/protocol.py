@@ -17,16 +17,16 @@ from ethereum import slogging
 from raiden.exceptions import (
     InvalidAddress,
     UnknownAddress,
-    UnknownTokenAddress,
     RaidenShuttingDown,
 )
-from raiden.constants import UDP_MAX_MESSAGE_SIZE, UINT64_MAX
-from raiden.messages import decode, Processed, Ping, SignedMessage
+from raiden.constants import UDP_MAX_MESSAGE_SIZE
+from raiden.messages import decode, Delivered, Ping, Pong
 from raiden.settings import CACHE_TTL
-from raiden.utils import isaddress, sha3, pex
+from raiden.utils import isaddress, pex
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.udp_message_handler import on_udp_message
 from raiden.transfer import views
+from raiden.transfer.state_change import ReceiveDelivered
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
@@ -39,11 +39,11 @@ healthcheck_log = slogging.get_logger(__name__ + '.healthcheck')
 ping_log = slogging.get_logger(__name__ + '.ping')
 
 # - async_result available for code that wants to block on message acknowledgment
-# - receiver_address used to tie back the message_id to the receiver (mainly for
+# - recipient used to tie back the message_id to the receiver (mainly for
 #   logging purposes)
 SentMessageState = namedtuple('SentMessageState', (
     'async_result',
-    'receiver_address',
+    'recipient',
 ))
 HealthEvents = namedtuple('HealthEvents', (
     'event_healthy',
@@ -59,17 +59,6 @@ HealthEvents = namedtuple('HealthEvents', (
 # may be safely inferred from it.
 # - The state of the node must be synchronized among all tasks that are
 # handling messages.
-
-
-def messageid_from_data(data, address):
-    # Messages that are not unique per receiver can result in hash collision,
-    # e.g. Secret messages. The hash collision has the undesired effect of
-    # aborting message resubmission once /one/ of the nodes replied with an
-    # Ack, adding the receiver address into the echohash to avoid these
-    # collisions.
-    data = data + address
-
-    return int.from_bytes(sha3(data), 'big') % UINT64_MAX
 
 
 def event_first_of(*events):
@@ -122,22 +111,23 @@ def timeout_two_stage(retries, timeout1, timeout2):
         yield timeout2
 
 
-def retry(protocol, data, receiver_address, event_stop, timeout_backoff):
-    """ Send data until it's acknowledged.
+def retry(protocol, messagedata, message_id, recipient, event_stop, timeout_backoff):
+    """ Send messagedata until it's acknowledged.
 
-    Exits when the first of the following happen:
+    Exit when:
 
-    - The packet is acknowledged.
+    - The message is delivered.
     - Event_stop is set.
-    - The iterator timeout_backoff runs out of values.
+    - The iterator timeout_backoff runs out.
 
     Returns:
         bool: True if the message was acknowledged, False otherwise.
     """
 
-    async_result = protocol.send_raw_with_result(
-        data,
-        receiver_address,
+    async_result = protocol.maybe_sendraw_with_result(
+        recipient,
+        messagedata,
+        message_id,
     )
 
     event_quit = event_first_of(
@@ -150,9 +140,10 @@ def retry(protocol, data, receiver_address, event_stop, timeout_backoff):
         if event_quit.wait(timeout=timeout) is True:
             break
 
-        protocol.send_raw_with_result(
-            data,
-            receiver_address,
+        protocol.maybe_sendraw_with_result(
+            recipient,
+            messagedata,
+            message_id,
         )
 
     return async_result.ready()
@@ -174,13 +165,15 @@ def wait_recovery(event_stop, event_healthy):
 
 def retry_with_recovery(
         protocol,
-        data,
-        receiver_address,
+        messagedata,
+        message_id,
+        recipient,
         event_stop,
         event_healthy,
         event_unhealthy,
-        backoff):
-    """ Send data while the node is healthy until it's acknowledged.
+        backoff,
+):
+    """ Send messagedata while the node is healthy until it's acknowledged.
 
     Note:
         backoff must be an infinite iterator, otherwise this task will
@@ -215,8 +208,9 @@ def retry_with_recovery(
 
         acknowledged = retry(
             protocol,
-            data,
-            receiver_address,
+            messagedata,
+            message_id,
+            recipient,
 
             # retry will stop when this event is set, allowing this task to
             # wait for recovery when the node becomes unhealthy or to quit if
@@ -233,7 +227,7 @@ def retry_with_recovery(
 
 def single_queue_send(
         protocol,
-        receiver_address,
+        recipient,
         queue,
         event_stop,
         event_healthy,
@@ -242,13 +236,13 @@ def single_queue_send(
         message_retry_timeout,
         message_retry_max_timeout):
 
-    """ Handles a single message queue for `receiver_address`.
+    """ Handles a single message queue for `recipient`.
 
     Notes:
     - This task must be the only consumer of queue.
     - This task can be killed at any time, but the intended usage is to stop it
       with the event_stop.
-    - If there are many queues for the same receiver_address, it is the
+    - If there are many queues for the same recipient, it is the
       caller's responsibility to not start them together to avoid congestion.
     - This task assumes the endpoint is never cleared after it's first known.
       If this assumption changes the code must be updated to handle unknown
@@ -281,7 +275,7 @@ def single_queue_send(
 
         # The queue is not empty at this point, so this won't raise Empty.
         # This task being the only consumer is a requirement.
-        data = queue.peek(block=False)
+        (messagedata, message_id) = queue.peek(block=False)
 
         backoff = timeout_exponential_backoff(
             message_retries,
@@ -292,8 +286,9 @@ def single_queue_send(
         try:
             acknowledged = retry_with_recovery(
                 protocol,
-                data,
-                receiver_address,
+                messagedata,
+                message_id,
+                recipient,
                 event_stop,
                 event_healthy,
                 event_unhealthy,
@@ -318,7 +313,7 @@ def single_queue_send(
 
 def healthcheck(
         protocol,
-        receiver_address,
+        recipient,
         event_stop,
         event_healthy,
         event_unhealthy,
@@ -327,21 +322,21 @@ def healthcheck(
         nat_invitation_timeout,
         ping_nonce):
 
-    """ Sends a periodical Ping to `receiver_address` to check its health. """
+    """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches
 
     if log.isEnabledFor(logging.DEBUG):
         log.debug(
             'starting healthcheck for',
             node=pex(protocol.raiden.address),
-            to=pex(receiver_address),
+            to=pex(recipient),
         )
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
     last_state = NODE_NETWORK_UNKNOWN
     protocol.set_node_network_state(
-        receiver_address,
+        recipient,
         last_state,
     )
 
@@ -350,13 +345,13 @@ def healthcheck(
 
     # Wait for the end-point registration or for the node to quit
     try:
-        protocol.get_host_port(receiver_address)
+        protocol.get_host_port(recipient)
     except UnknownAddress:
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
                 'waiting for endpoint registration',
                 node=pex(protocol.raiden.address),
-                to=pex(receiver_address),
+                to=pex(recipient),
             )
 
         event_healthy.clear()
@@ -371,7 +366,7 @@ def healthcheck(
 
         while not event_stop.wait(sleep):
             try:
-                protocol.get_host_port(receiver_address)
+                protocol.get_host_port(recipient)
             except UnknownAddress:
                 sleep = next(backoff)
             else:
@@ -387,16 +382,16 @@ def healthcheck(
         sleep = nat_keepalive_timeout
 
         ping_nonce['nonce'] += 1
-        data = protocol.get_ping(
-            ping_nonce['nonce'],
-        )
+        messagedata = protocol.get_ping(ping_nonce['nonce'])
+        message_id = ('ping', ping_nonce['nonce'], recipient)
 
         # Send Ping a few times before setting the node as unreachable
         try:
             acknowledged = retry(
                 protocol,
-                data,
-                receiver_address,
+                messagedata,
+                message_id,
+                recipient,
                 event_stop,
                 [nat_keepalive_timeout] * nat_keepalive_retries,
             )
@@ -411,7 +406,7 @@ def healthcheck(
                 log.debug(
                     'node is unresponsive',
                     node=pex(protocol.raiden.address),
-                    to=pex(receiver_address),
+                    to=pex(recipient),
                     current_state=last_state,
                     new_state=NODE_NETWORK_UNREACHABLE,
                     retries=nat_keepalive_retries,
@@ -422,7 +417,7 @@ def healthcheck(
             # tasks
             last_state = NODE_NETWORK_UNREACHABLE
             protocol.set_node_network_state(
-                receiver_address,
+                recipient,
                 last_state,
             )
             event_healthy.clear()
@@ -434,8 +429,9 @@ def healthcheck(
             try:
                 acknowledged = retry(
                     protocol,
-                    data,
-                    receiver_address,
+                    messagedata,
+                    message_id,
+                    recipient,
                     event_stop,
                     repeat(nat_invitation_timeout),
                 )
@@ -446,12 +442,12 @@ def healthcheck(
             if log.isEnabledFor(logging.DEBUG):
                 current_state = views.get_node_network_status(
                     views.state_from_raiden(protocol.raiden),
-                    receiver_address,
+                    recipient,
                 )
                 log.debug(
                     'node answered',
                     node=pex(protocol.raiden.address),
-                    to=pex(receiver_address),
+                    to=pex(recipient),
                     current_state=current_state,
                     new_state=NODE_NETWORK_REACHABLE,
                 )
@@ -459,23 +455,14 @@ def healthcheck(
             if last_state != NODE_NETWORK_REACHABLE:
                 last_state = NODE_NETWORK_REACHABLE
                 protocol.set_node_network_state(
-                    receiver_address,
+                    recipient,
                     last_state,
                 )
                 event_unhealthy.clear()
                 event_healthy.set()
 
 
-class RaidenProtocol:
-    """ Encode the message into a packet and send it.
-
-    Each message received is stored by hash and if it is received twice the
-    previous answer is resent.
-
-    Repeat sending messages until an acknowledgment is received or the maximum
-    number of retries is hit.
-    """
-
+class UDPTransport:
     def __init__(
             self,
             transport,
@@ -500,17 +487,12 @@ class RaidenProtocol:
 
         self.event_stop = Event()
 
-        self.channel_queue = dict()  # TODO: Change keys to the channel address
+        self.queueid_to_queue = dict()
         self.greenlets = list()
         self.addresses_events = dict()
 
-        # Maps received and *sucessfully* processed message ids to the
-        # corresponding `Processed` message. Used to ignored duplicate messages
-        # and resend the `Processed` message.
-        self.messageids_to_processedmessages = dict()
-
         # Maps the message_id to a SentMessageState
-        self.messageids_to_states = dict()
+        self.messageids_to_asyncresults = dict()
 
         # Maps the addresses to a dict with the latest nonce (using a dict
         # because python integers are immutable)
@@ -541,25 +523,25 @@ class RaidenProtocol:
         self.transport.stop()
 
         # Set all the pending results to False
-        for wait_processed in self.messageids_to_states.values():
-            wait_processed.async_result.set(False)
+        for async_result in self.messageids_to_asyncresults.values():
+            async_result.set(False)
 
-    def get_health_events(self, receiver_address):
-        """ Starts a healthcheck taks for `receiver_address` and returns a
+    def get_health_events(self, recipient):
+        """ Starts a healthcheck taks for `recipient` and returns a
         HealthEvents with locks to react on its current state.
         """
-        if receiver_address not in self.addresses_events:
-            self.start_health_check(receiver_address)
+        if recipient not in self.addresses_events:
+            self.start_health_check(recipient)
 
-        return self.addresses_events[receiver_address]
+        return self.addresses_events[recipient]
 
-    def start_health_check(self, receiver_address):
-        """ Starts a task for healthchecking `receiver_address` if there is not
+    def start_health_check(self, recipient):
+        """ Starts a task for healthchecking `recipient` if there is not
         one yet.
         """
-        if receiver_address not in self.addresses_events:
+        if recipient not in self.addresses_events:
             ping_nonce = self.nodeaddresses_to_nonces.setdefault(
-                receiver_address,
+                recipient,
                 {'nonce': 0},  # HACK: Allows the task to mutate the object
             )
 
@@ -568,12 +550,12 @@ class RaidenProtocol:
                 event_unhealthy=Event(),
             )
 
-            self.addresses_events[receiver_address] = events
+            self.addresses_events[recipient] = events
 
             self.greenlets.append(gevent.spawn(
                 healthcheck,
                 self,
-                receiver_address,
+                recipient,
                 self.event_stop,
                 events.event_healthy,
                 events.event_unhealthy,
@@ -583,24 +565,26 @@ class RaidenProtocol:
                 ping_nonce,
             ))
 
-    def get_channel_queue(self, receiver_address, token_address):
-        key = (
-            receiver_address,
-            token_address,
-        )
+    def get_queue_for(self, recipient, queue_name):
+        """ Return the queue identified by the pair `(recipient, queue_name)`.
 
-        if key in self.channel_queue:
-            return self.channel_queue[key]
+        If the queue doesn't exist it will be instantiated.
+        """
+        queueid = (recipient, queue_name)
+        queue = self.queueid_to_queue.get(queueid)
+
+        if queue is not None:
+            return queue
 
         queue = NotifyingQueue()
-        self.channel_queue[key] = queue
+        self.queueid_to_queue[queueid] = queue
 
-        events = self.get_health_events(receiver_address)
+        events = self.get_health_events(recipient)
 
         self.greenlets.append(gevent.spawn(
             single_queue_send,
             self,
-            receiver_address,
+            recipient,
             queue,
             self.event_stop,
             events.event_healthy,
@@ -614,18 +598,24 @@ class RaidenProtocol:
             log.debug(
                 'new queue created for',
                 node=pex(self.raiden.address),
-                token=pex(token_address),
-                to=pex(receiver_address),
+                token=pex(queue_name),
+                to=pex(recipient),
             )
 
         return queue
 
-    def send_async(self, receiver_address, message):
-        if not isaddress(receiver_address):
-            raise ValueError('Invalid address {}'.format(pex(receiver_address)))
+    def send_async(self, queue_name, recipient, message):
+        """ Send a new ordered message to recipient.
 
-        if isinstance(message, (Processed, Ping)):
-            raise ValueError('Do not use send for `Processed` or `Ping` messages')
+        Messages that use the same `queue_name` are ordered.
+        """
+
+        if not isaddress(recipient):
+            raise ValueError('Invalid address {}'.format(pex(recipient)))
+
+        # These are not protocol messages, but transport specific messages
+        if isinstance(message, (Delivered, Ping, Pong)):
+            raise ValueError('Do not use send for {} messages'.format(message.__class__.__name__))
 
         messagedata = message.encode()
         if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
@@ -633,83 +623,183 @@ class RaidenProtocol:
                 'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE)
             )
 
-        message_id = messageid_from_data(messagedata, receiver_address)
+        # message identifiers must be unique
+        message_id = message.message_identifier
 
-        # All messages must be ordered, but only on a per channel basis.
-        token_address = getattr(message, 'token', b'')
+        # ignore duplicates
+        if message_id not in self.messageids_to_asyncresults:
+            self.messageids_to_asyncresults[message_id] = AsyncResult()
 
-        # Ignore duplicated messages
-        if message_id not in self.messageids_to_states:
-            async_result = AsyncResult()
-            self.messageids_to_states[message_id] = SentMessageState(
-                async_result,
-                receiver_address,
-            )
-
-            queue = self.get_channel_queue(
-                receiver_address,
-                token_address,
-            )
+            queue = self.get_queue_for(recipient, queue_name)
+            queue.put((messagedata, message_id))
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'SENDING MESSAGE',
-                    to=pex(receiver_address),
+                    'MESSAGE QUEUED',
                     node=pex(self.raiden.address),
+                    queue_name=queue_name,
+                    to=pex(recipient),
                     message=message,
-                    message_id=message_id,
                 )
 
-            queue.put(messagedata)
-        else:
-            wait_processed = self.messageids_to_states[message_id]
-            async_result = wait_processed.async_result
+    def maybe_send(self, recipient, message):
+        """ Send message to recipient if the transport is running. """
+
+        if not isaddress(recipient):
+            raise InvalidAddress('Invalid address {}'.format(pex(recipient)))
+
+        messagedata = message.encode()
+        host_port = self.get_host_port(recipient)
+
+        self.maybe_sendraw(host_port, messagedata)
+
+    def maybe_sendraw_with_result(self, recipient, messagedata, message_id):
+        """ Send message to recipient if the transport is running.
+
+        Returns:
+            An AsyncResult that will be set once the message is delivered. As
+            long as the message has not been acknowledged with a Delivered
+            message the function will return the same AsyncResult.
+        """
+        async_result = self.messageids_to_asyncresults.get(message_id)
+        if async_result is None:
+            async_result = AsyncResult()
+            self.messageids_to_asyncresults[message_id] = async_result
+
+        host_port = self.get_host_port(recipient)
+        self.maybe_sendraw(host_port, messagedata)
 
         return async_result
 
-    def send_and_wait(self, receiver_address, message, timeout=None):
-        """Sends a message and wait for the response 'Processed' message."""
-        async_result = self.send_async(receiver_address, message)
-        return async_result.wait(timeout=timeout)
-
-    def maybe_send_processed(self, receiver_address, processed_message):
-        """ Send processed_message to receiver_address if the transport is running. """
-        if not isaddress(receiver_address):
-            raise InvalidAddress('Invalid address {}'.format(pex(receiver_address)))
-
-        if not isinstance(processed_message, Processed):
-            raise ValueError('Use _maybe_send_processed only for `Processed` messages')
-
-        messagedata = processed_message.encode()
-        message_id = processed_message.processed_message_identifier
-
-        self.messageids_to_processedmessages[message_id] = (
-            receiver_address,
-            messagedata
-        )
-
-        self._maybe_send_processed(*self.messageids_to_processedmessages[message_id])
-
-    def _maybe_send_processed(self, receiver_address, messagedata):
-        """ `Processed` messages must not go into the queue, otherwise nodes will deadlock
-        waiting for the confirmation.
-        """
-        host_port = self.get_host_port(receiver_address)
-
-        # `Processed` messages are sent at the end of the receive method, after the message is
-        # sucessfully processed. It may be the case that the server is stopped
-        # after the message is received but before the processed message is sent, under that
-        # circumstance the udp socket would be unavaiable and then an exception
-        # is raised.
-        #
-        # This check verifies the udp socket is still available before trying
-        # to send the `Processed` message. There must be *no context-switches after this test*.
+    def maybe_sendraw(self, host_port, messagedata):
+        """ Send message to recipient if the transport is running. """
+        # Check the udp socket is still available before trying to send the
+        # message. There must be *no context-switches after this test*.
         if self.transport.server.started:
             self.transport.send(
                 self.raiden,
                 host_port,
                 messagedata,
             )
+
+    def receive(self, messagedata):
+        """ Handle an UDP packet. """
+        # pylint: disable=unidiomatic-typecheck
+
+        if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
+            log.error(
+                'INVALID MESSAGE: Packet larger than maximum size',
+                node=pex(self.raiden.address),
+                message=hexlify(messagedata),
+                length=len(messagedata),
+            )
+            return
+
+        message = decode(messagedata)
+
+        if type(message) == Pong:
+            self.receive_pong(message)
+        elif type(message) == Ping:
+            self.receive_ping(message)
+        elif type(message) == Delivered:
+            self.receive_delivered(message)
+        elif message is not None:
+            self.receive_message(message)
+        elif log.isEnabledFor(logging.ERROR):
+            log.error(
+                'INVALID MESSAGE: Unknown cmdid',
+                node=pex(self.raiden.address),
+                message=hexlify(messagedata),
+            )
+
+    def receive_message(self, message):
+        """ Handle a Raiden protocol message.
+
+        The protocol requires durability of the messages. The UDP transport
+        relies on the node's WAL for durability. The message will be converted
+        to a state change, saved to the WAL, and *processed* before the
+        durability is confirmed, which is a stronger property than what is
+        required of any transport.
+        """
+        # pylint: disable=unidiomatic-typecheck
+
+        if on_udp_message(self.raiden, message):
+
+            # Sending Delivered after the message is decoded and *processed*
+            # gives a stronger guarantee than what is required from a
+            # transport.
+            #
+            # Alternatives are, from weakest to strongest options:
+            # - Just save it on disk and asynchronously process the messages
+            # - Decode it, save to the WAL, and asynchronously process the
+            #   state change
+            # - Decode it, save to the WAL, and process it (the current
+            #   implementation)
+            delivered_message = Delivered(message.message_identifier)
+            self.raiden.sign(delivered_message)
+
+            self.maybe_send(
+                message.sender,
+                delivered_message,
+            )
+
+    def receive_delivered(self, delivered: Delivered):
+        """ Handle a Delivered message.
+
+        The Delivered message is how the UDP transport guarantees persistence
+        by the partner node. The message itself is not part of the raiden
+        protocol, but it's required by this transport to provide the required
+        properties.
+        """
+        processed = ReceiveDelivered(delivered.delivered_message_identifier)
+        self.raiden.handle_state_change(processed)
+
+        message_id = delivered.delivered_message_identifier
+        async_result = self.raiden.protocol.messageids_to_asyncresults.get(message_id)
+
+        # clear the async result, otherwise we have a memory leak
+        if async_result is not None:
+            del self.messageids_to_asyncresults[message_id]
+            async_result.set()
+
+    # Pings and Pongs are used to check the health status of another node. They
+    # are /not/ part of the raiden protocol, only part of the UDP transport,
+    # therefore these messages are not forwarded to the message handler.
+    def receive_ping(self, ping):
+        """ Handle a Ping message by answering with a Pong. """
+
+        if ping_log.isEnabledFor(logging.DEBUG):
+            ping_log.debug(
+                'PING RECEIVED',
+                node=pex(self.raiden.address),
+                message_id=ping.nonce,
+                message=ping,
+                sender=pex(ping.sender),
+            )
+
+        pong = Pong(ping.nonce)
+        self.raiden.sign(pong)
+
+        try:
+            self.maybe_send(ping.sender, pong)
+        except (InvalidAddress, UnknownAddress) as e:
+            log.debug("Couldn't send the `Delivered` message", e=e)
+
+    def receive_pong(self, pong):
+        """ Handles a Pong message. """
+
+        message_id = ('ping', pong.nonce, pong.sender)
+        async_result = self.messageids_to_asyncresults.get(message_id)
+
+        if async_result is not None:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'PONG RECEIVED',
+                    node=pex(self.raiden.address),
+                    message_id=pong.nonce,
+                )
+
+            async_result.set(True)
 
     def get_ping(self, nonce):
         """ Returns a signed Ping message.
@@ -723,137 +813,6 @@ class RaidenProtocol:
 
         return message_data
 
-    def send_raw_with_result(self, data, receiver_address):
-        """ Sends data to receiver_address and returns an AsyncResult that will
-        be set once the message is acknowledged.
-
-        Always returns same AsyncResult instance for equal input.
-        """
-        host_port = self.get_host_port(receiver_address)
-        message_id = messageid_from_data(data, receiver_address)
-
-        if message_id not in self.messageids_to_states:
-            async_result = AsyncResult()
-            self.messageids_to_states[message_id] = SentMessageState(
-                async_result,
-                receiver_address,
-            )
-        else:
-            async_result = self.messageids_to_states[message_id].async_result
-
-        if not async_result.ready():
-            self.transport.send(
-                self.raiden,
-                host_port,
-                data,
-            )
-
-        return async_result
-
     def set_node_network_state(self, node_address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
         self.raiden.handle_state_change(state_change)
-
-    def receive(self, data):
-        if len(data) > UDP_MAX_MESSAGE_SIZE:
-            log.error('receive packet larger than maximum size', length=len(data))
-            return
-
-        # Repeat the 'PROCESSED' message if the message has been handled before
-        message_id = messageid_from_data(data, self.raiden.address)
-        if message_id in self.messageids_to_processedmessages:
-            self._maybe_send_processed(*self.messageids_to_processedmessages[message_id])
-            return
-
-        message = decode(data)
-
-        if isinstance(message, Processed):
-            self.receive_processed(message)
-
-        elif isinstance(message, Ping):
-            self.receive_ping(message, message_id)
-
-        elif isinstance(message, SignedMessage):
-            self.receive_message(message, message_id)
-
-        elif log.isEnabledFor(logging.ERROR):
-            log.error(
-                'Invalid message',
-                message=hexlify(data),
-            )
-
-    def receive_processed(self, processed):
-        waitprocessed = self.messageids_to_states.get(processed.processed_message_identifier)
-
-        if waitprocessed is None:
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'PROCESSED FOR UNKNOWN',
-                    node=pex(self.raiden.address),
-                    message_id=processed.processed_message_identifier,
-                )
-
-        else:
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'PROCESSED RECEIVED',
-                    node=pex(self.raiden.address),
-                    receiver=pex(waitprocessed.receiver_address),
-                    message_id=processed.processed_message_identifier,
-                )
-
-            waitprocessed.async_result.set(True)
-
-    def receive_ping(self, ping, message_id):
-        if ping_log.isEnabledFor(logging.DEBUG):
-            ping_log.debug(
-                'PING RECEIVED',
-                node=pex(self.raiden.address),
-                message_id=message_id,
-                message=ping,
-                sender=pex(ping.sender),
-            )
-
-        processed_message = Processed(self.raiden.address, message_id)
-
-        try:
-            self.maybe_send_processed(
-                ping.sender,
-                processed_message,
-            )
-        except (InvalidAddress, UnknownAddress) as e:
-            log.debug("Couldn't send the `Processed` message", e=e)
-
-    def receive_message(self, message, message_id):
-        is_debug_log_enabled = log.isEnabledFor(logging.DEBUG)
-
-        if is_debug_log_enabled:
-            log.info(
-                'MESSAGE RECEIVED',
-                node=pex(self.raiden.address),
-                message_id=message_id,
-                message=message,
-                message_sender=pex(message.sender)
-            )
-
-        try:
-            on_udp_message(self.raiden, message)
-
-            # only send the Processed message if the message was handled without exceptions
-            processed_message = Processed(self.raiden.address, message_id)
-
-            self.maybe_send_processed(
-                message.sender,
-                processed_message,
-            )
-        except (InvalidAddress, UnknownAddress, UnknownTokenAddress) as e:
-            if is_debug_log_enabled:
-                log.warn(str(e))
-        else:
-            if is_debug_log_enabled:
-                log.debug(
-                    'PROCESSED',
-                    node=pex(self.raiden.address),
-                    to=pex(message.sender),
-                    message_id=message_id,
-                )
