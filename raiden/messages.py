@@ -281,7 +281,7 @@ class Processed(SignedMessage):
 
 
 class Delivered(SignedMessage):
-    """ Message used to inform the partner node that a messa was received *and*
+    """ Message used to inform the partner node that a message was received *and*
     persisted.
     """
     cmdid = messages.DELIVERED
