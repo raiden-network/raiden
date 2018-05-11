@@ -573,32 +573,34 @@ class UDPTransport:
         queueid = (recipient, queue_name)
         queue = self.queueid_to_queue.get(queueid)
 
-        if queue is None:
-            queue = NotifyingQueue()
-            self.queueid_to_queue[queueid] = queue
+        if queue is not None:
+            return queue
 
-            events = self.get_health_events(recipient)
+        queue = NotifyingQueue()
+        self.queueid_to_queue[queueid] = queue
 
-            self.greenlets.append(gevent.spawn(
-                single_queue_send,
-                self,
-                recipient,
-                queue,
-                self.event_stop,
-                events.event_healthy,
-                events.event_unhealthy,
-                self.retries_before_backoff,
-                self.retry_interval,
-                self.retry_interval * 10,
-            ))
+        events = self.get_health_events(recipient)
 
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'new queue created for',
-                    node=pex(self.raiden.address),
-                    token=pex(queue_name),
-                    to=pex(recipient),
-                )
+        self.greenlets.append(gevent.spawn(
+            single_queue_send,
+            self,
+            recipient,
+            queue,
+            self.event_stop,
+            events.event_healthy,
+            events.event_unhealthy,
+            self.retries_before_backoff,
+            self.retry_interval,
+            self.retry_interval * 10,
+        ))
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'new queue created for',
+                node=pex(self.raiden.address),
+                token=pex(queue_name),
+                to=pex(recipient),
+            )
 
         return queue
 
@@ -612,7 +614,7 @@ class UDPTransport:
             raise ValueError('Invalid address {}'.format(pex(recipient)))
 
         # These are not protocol messages, but transport specific messages
-        if isinstance(message, (Delivered, Pong, Ping)):
+        if isinstance(message, (Delivered, Ping, Pong)):
             raise ValueError('Do not use send for {} messages'.format(message.__class__.__name__))
 
         messagedata = message.encode()

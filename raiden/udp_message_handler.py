@@ -128,6 +128,7 @@ def handle_message_processed(raiden: 'RaidenService', message: Processed):
 
 
 def on_udp_message(raiden: 'RaidenService', message: Message):
+    """ Return True if the message is known. """
     # pylint: disable=unidiomatic-typecheck
     if type(message) == SecretRequest:
         handle_message_secretrequest(raiden, message)

@@ -281,6 +281,9 @@ class Processed(SignedMessage):
 
 
 class Delivered(SignedMessage):
+    """ Message used to inform the partner node that a messa was received *and*
+    persisted.
+    """
     cmdid = messages.DELIVERED
 
     def __init__(self, delivered_message_identifier):
