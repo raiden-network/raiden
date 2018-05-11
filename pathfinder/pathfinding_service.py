@@ -7,7 +7,7 @@ from typing import Dict, Optional, List
 import gevent
 from eth_utils import is_checksum_address, to_checksum_address, encode_hex
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.messages import Message, FeeInfo, BalanceProof
+from raiden_libs.messages import Message, FeeInfo, BalanceProof, PathsRequest, PathsReply
 from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.transport import MatrixTransport
 from raiden_libs.types import Address
@@ -71,7 +71,7 @@ class PathfindingService(gevent.Greenlet):
         self.follow_networks = follow_networks
 
         self.is_running = gevent.event.Event()
-        self.transport.add_message_callback(lambda message: self.on_message_event(message))
+        self.transport.add_message_callback(self.on_message_event)
         self.token_networks: Dict[Address, TokenNetwork] = {}
 
         assert (
@@ -126,6 +126,8 @@ class PathfindingService(gevent.Greenlet):
                 self.on_fee_info_message(message)
             elif isinstance(message, BalanceProof):
                 self.on_balance_proof_message(message)
+            elif isinstance(message, PathsRequest):
+                self.on_paths_request_message(message)
             else:
                 log.error("Ignoring unknown message of type '%s'", (type(message)))
         except ValueError as error:
@@ -154,85 +156,135 @@ class PathfindingService(gevent.Greenlet):
     def handle_channel_opened(self, event: Dict):
         token_network = self._get_token_network(event['address'])
 
-        if token_network:
-            log.debug('Received ChannelOpened event for token network {}'.format(
-                token_network.address
-            ))
+        if token_network is None:
+            return
 
-            channel_identifier = encode_hex(event['args']['channel_identifier'])
-            participant1 = event['args']['participant1']
-            participant2 = event['args']['participant2']
+        log.debug('Received ChannelOpened event for token network {}'.format(
+            token_network.address
+        ))
 
-            token_network.handle_channel_opened_event(
-                channel_identifier,
-                participant1,
-                participant2
-            )
+        channel_identifier = encode_hex(event['args']['channel_identifier'])
+        participant1 = event['args']['participant1']
+        participant2 = event['args']['participant2']
+
+        token_network.handle_channel_opened_event(
+            channel_identifier,
+            participant1,
+            participant2
+        )
 
     def handle_channel_new_deposit(self, event: Dict):
         token_network = self._get_token_network(event['address'])
 
-        if token_network:
-            log.debug('Received ChannelNewDeposit event for token network {}'.format(
-                token_network.address
-            ))
+        if token_network is None:
+            return
 
-            channel_identifier = encode_hex(event['args']['channel_identifier'])
-            participant_address = event['args']['participant']
-            total_deposit = event['args']['deposit']
+        log.debug('Received ChannelNewDeposit event for token network {}'.format(
+            token_network.address
+        ))
 
-            token_network.handle_channel_new_deposit_event(
-                channel_identifier,
-                participant_address,
-                total_deposit
-            )
+        channel_identifier = encode_hex(event['args']['channel_identifier'])
+        participant_address = event['args']['participant']
+        total_deposit = event['args']['deposit']
+
+        token_network.handle_channel_new_deposit_event(
+            channel_identifier,
+            participant_address,
+            total_deposit
+        )
 
     def handle_channel_closed(self, event: Dict):
         token_network = self._get_token_network(event['address'])
 
-        if token_network:
-            log.debug('Received ChannelClosed event for token network {}'.format(
-                token_network.address
-            ))
+        if token_network is None:
+            return
 
-            channel_identifier = encode_hex(event['args']['channel_identifier'])
+        log.debug('Received ChannelClosed event for token network {}'.format(
+            token_network.address
+        ))
 
-            token_network.handle_channel_closed_event(channel_identifier)
+        channel_identifier = encode_hex(event['args']['channel_identifier'])
+
+        token_network.handle_channel_closed_event(channel_identifier)
 
     def on_fee_info_message(self, fee_info: FeeInfo):
-        self._check_chain_id(fee_info.chain_id)
+        try:
+            self._check_chain_id(fee_info.chain_id)
+        except ValueError as error:
+            log.error('FeeInfo chain_id does not match: %s', str(error))
 
         token_network = self._get_token_network(fee_info.token_network_address)
 
-        if token_network:
-            log.debug('Received FeeInfo message for token network {}'.format(
-                token_network.address
-            ))
+        if token_network is None:
+            return
 
-            token_network.update_fee(
-                fee_info.channel_identifier,
-                Address(to_checksum_address(fee_info.signer)),
-                fee_info.nonce,
-                fee_info.relative_fee
-            )
+        log.debug('Received FeeInfo message for token network {}'.format(
+            token_network.address
+        ))
+
+        token_network.update_fee(
+            fee_info.channel_identifier,
+            Address(to_checksum_address(fee_info.signer)),
+            fee_info.nonce,
+            fee_info.relative_fee
+        )
 
     def on_balance_proof_message(self, balance_proof: BalanceProof):
-        self._check_chain_id(balance_proof.chain_id)
+        try:
+            self._check_chain_id(balance_proof.chain_id)
+        except ValueError as error:
+            log.error('BalanceProof chain_id does not match: %s', str(error))
 
         token_network = self._get_token_network(balance_proof.token_network_address)
 
-        if token_network:
-            log.debug('Received BalanceProof message for token network {}'.format(
-                token_network.address
-            ))
+        if token_network is None:
+            return
 
-            token_network.update_balance(
-                balance_proof.channel_identifier,
-                Address(to_checksum_address(balance_proof.signer)),
-                balance_proof.nonce,
-                balance_proof.transferred_amount,
-                balance_proof.locked_amount,
-            )
+        log.debug('Received BalanceProof message for token network {}'.format(
+            token_network.address
+        ))
+
+        token_network.update_balance(
+            balance_proof.channel_identifier,
+            Address(to_checksum_address(balance_proof.signer)),
+            balance_proof.nonce,
+            balance_proof.transferred_amount,
+            balance_proof.locked_amount,
+        )
+
+    def on_paths_request_message(self, paths_request: PathsRequest):
+        try:
+            self._check_chain_id(paths_request.chain_id)
+        except ValueError as error:
+            log.error('PathsRequest chain_id does not match: %s', str(error))
+
+        token_network = self._get_token_network(paths_request.token_network_address)
+
+        if token_network is None:
+            return
+
+        log.debug('Received PathsRequest message for token network {}'.format(
+            token_network.address
+        ))
+        paths_reply: PathsReply = PathsReply(
+            paths_request.token_network_address,
+            paths_request.target_address,
+            paths_request.value,
+            paths_request.chain_id,
+            nonce=1,
+            paths_and_fees=token_network.get_paths(
+                paths_request.source_address,
+                paths_request.target_address,
+                paths_request.value,
+                paths_request.num_paths,
+
+            ),
+            signature=''
+        )
+
+        # FIXME: Verify Signature and Nonce, see PFS Issue #51
+
+        self.transport.send_message(paths_reply, paths_request.source_address)
 
     def handle_token_network_created(self, event):
         token_network_address = event['args']['token_network_address']

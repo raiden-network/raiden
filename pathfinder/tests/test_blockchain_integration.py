@@ -19,29 +19,36 @@ from pathfinder.model import ChannelView
 
 def test_pfs_with_mocked_client(
     web3,
-    generate_raiden_clients,
     ethereum_tester,
     contracts_manager: ContractManager,
     blockchain_listener: BlockchainListener,
-    channel_descriptions_case_1: List
+    channel_descriptions_case_1: List,
+    generate_dummy_network,
+    get_random_address
 ):
-    """Instantiates a pathfinding service with mocked transport,
-    listening and processing blockchain events created by mocked Raiden clients"""
-    clients = generate_raiden_clients(7)
-    network_address = clients[0].contract.address
-    pathfinding_service = PathfindingService(
+    """Instantiates a DummyNetwork some Mockclients and the pathfinding service exchange messages
+    over. Mocks blockchain events to setup a token network with a given topology, specified in
+    the channel_description fixture. Tests all PFS methods w.r.t. to that topology"""
+
+    network, clients = generate_dummy_network(7)
+    pfs_address = get_random_address()
+    pfs_transport = DummyTransport(network)
+    network.add_transport(pfs_address, pfs_transport)
+    token_network_address = clients[0].contract.address
+
+    pfs = PathfindingService(
         contracts_manager,
-        transport=DummyTransport(),
+        transport=pfs_transport,
         chain_id=int(web3.net.version),
         token_network_listener=blockchain_listener,
-        follow_networks=[network_address]
+        follow_networks=[token_network_address]
     )
 
-    pathfinding_service.start()
-    token_network = pathfinding_service.token_networks[network_address]
+    token_network = pfs.token_networks[token_network_address]
     graph = token_network.G
+
     # there should be one token network registered
-    assert len(pathfinding_service.token_networks) == 1
+    assert len(pfs.token_networks) == 1
 
     channel_identifiers = []
 
@@ -80,9 +87,15 @@ def test_pfs_with_mocked_client(
             additional_hash='0x%064x' % 23
         )
 
-        pathfinding_service.transport.receive_fake_data(balance_proof_p1.serialize_full())
-        pathfinding_service.transport.receive_fake_data(balance_proof_p2.serialize_full())
-        gevent.sleep(0)
+        clients[p1_index].transport.send_message(
+            balance_proof_p1.serialize_full(),
+            pfs_address
+        )
+
+        clients[p2_index].transport.send_message(
+            balance_proof_p2.serialize_full(),
+            pfs_address
+        )
 
     ethereum_tester.mine_blocks(1)
     gevent.sleep(0)
@@ -112,13 +125,6 @@ def test_pfs_with_mocked_client(
         assert view1.transferred_amount == p1_transferred_amount
         assert view2.transferred_amount == p2_transferred_amount
 
-    # check pathfinding
-    paths = token_network.get_paths(clients[0].address, clients[3].address, 10, 5)
-    assert len(paths) == 2
-    assert paths[0]['path'] == [clients[0].address, clients[1].address, clients[2].address,
-                                clients[3].address]
-    assert paths[1]['path'] == [clients[0].address, clients[1].address, clients[4].address,
-                                clients[3].address]
     # send some fee messages and check if they get processed correctly
     for index, (
         p1_index,
@@ -142,15 +148,40 @@ def test_pfs_with_mocked_client(
             nonce=index + 1,
             relative_fee=p2_fee,
         )
-        pathfinding_service.transport.receive_fake_data(fee_info_p1.serialize_full())
-        pathfinding_service.transport.receive_fake_data(fee_info_p2.serialize_full())
 
-        gevent.sleep(0)
+        clients[p1_index].transport.send_message(
+            fee_info_p1.serialize_full(),
+            pfs_address
+        )
+
+        clients[p2_index].transport.send_message(
+            fee_info_p2.serialize_full(),
+            pfs_address
+        )
+
         assert graph[client1.address][client2.address]['view'].relative_fee == p1_fee
         assert graph[client2.address][client1.address]['view'].relative_fee == p2_fee
 
-    paths = token_network.get_paths(clients[0].address, clients[3].address, 10, 5)
-    assert len(paths) == 2
+    # send a path paths_request from a client to the PFS
+
+    paths_request = clients[0].request_paths(
+        clients[3].address,
+        value=10,
+        num_paths=5,
+        chain_id=1,
+        nonce=1,
+    )
+
+    clients[0].transport.send_message(paths_request, pfs_address)
+
+    # This is implicitly testing the following steps:
+    # PathRequest arrives at PFS
+    # PFS.get_paths gives correct answer
+    # PFS.paths_reply response is triggered, send over transport back to the requesting client
+    # Requesting client is receiving the reply
+
+    paths = clients[0].paths_and_fees
+
     assert paths[0]['path'] == [clients[0].address, clients[1].address, clients[2].address,
                                 clients[3].address]
     assert paths[1]['path'] == [clients[0].address, clients[1].address, clients[4].address,
