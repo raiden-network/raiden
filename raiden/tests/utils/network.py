@@ -231,7 +231,8 @@ def create_apps(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        use_matrix=False):
+        use_matrix=False,
+        local_matrix_url=None):
 
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -261,13 +262,20 @@ def create_apps(
         }
 
         if use_matrix:
-            config.update({
-                'transport_type': 'matrix',
-                'matrix': {
+            if local_matrix_url is not None:
+                matrix_config = {
+                    'server': local_matrix_url,
+                    'default_rooms': dict()
+                }
+            else:
+                matrix_config = {
                     'client_class': MockMatrixClient,
                     'server': 'matrix.mock',
                     'default_rooms': dict()
                 }
+            config.update({
+                'transport_type': 'matrix',
+                'matrix': matrix_config
             })
 
         else:
