@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import random
-
 import pytest
 
 from raiden.messages import Lock
@@ -237,7 +235,6 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -256,18 +253,8 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(
-        channel0,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
-    channel.state_transition(
-        channel1,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
+    channel.state_transition(channel0, new_block, new_block.block_number)
+    channel.state_transition(channel1, new_block, new_block.block_number)
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
@@ -316,7 +303,6 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -335,18 +321,8 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(
-        channel0,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
-    channel.state_transition(
-        channel1,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
+    channel.state_transition(channel0, new_block, new_block.block_number)
+    channel.state_transition(channel1, new_block, new_block.block_number)
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
@@ -389,7 +365,6 @@ def test_settle_two_locked_mediated_transfer_messages(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -417,18 +392,8 @@ def test_settle_two_locked_mediated_transfer_messages(
 
     expiration0 = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(
-        channel0,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
-    channel.state_transition(
-        channel1,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
+    channel.state_transition(channel0, new_block, new_block.block_number)
+    channel.state_transition(channel1, new_block, new_block.block_number)
     lock0 = Lock(amount=29, expiration=expiration0, secrethash=sha3(b'lock1'))
     mediated0 = make_mediated_transfer(
         channel0,
@@ -552,7 +517,6 @@ def test_mediated_after_direct_transfer(
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     address0 = privatekey_to_address(pkey0)
     address1 = privatekey_to_address(pkey1)
@@ -571,18 +535,8 @@ def test_mediated_after_direct_transfer(
 
     lock_expiration = tester_chain.block.number + reveal_timeout + 5
     new_block = Block(tester_chain.block.number)
-    channel.state_transition(
-        channel0,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
-    channel.state_transition(
-        channel1,
-        new_block,
-        pseudo_random_generator,
-        new_block.block_number,
-    )
+    channel.state_transition(channel0, new_block, new_block.block_number)
+    channel.state_transition(channel1, new_block, new_block.block_number)
     lock1 = Lock(amount=31, expiration=lock_expiration, secrethash=sha3(b'lock2'))
     second_mediated0 = make_mediated_transfer(
         channel0,

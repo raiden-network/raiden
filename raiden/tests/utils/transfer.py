@@ -7,6 +7,7 @@ from coincurve import PrivateKey
 from raiden.constants import UINT64_MAX
 from raiden.messages import (
     DirectTransfer,
+    Lock,
     LockedTransfer,
     Secret,
 )
@@ -18,8 +19,8 @@ from raiden.raiden_service import (
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
-from raiden.transfer.events import SendDirectTransfer
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.events import SendDirectTransferInternal
+from raiden.transfer.mediated_transfer.events import SendLockedTransferInternal
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import compute_layers
@@ -140,7 +141,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         init_initiator_statechange,
         initiator_app.raiden.get_block_number(),
     )
-    send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
+    send_transfermessage = must_contain_entry(events, SendLockedTransferInternal, {})
     transfermessage = LockedTransfer.from_event(send_transfermessage)
     initiator_app.raiden.sign(transfermessage)
 
@@ -150,7 +151,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
             mediator_init_statechange,
             mediator_app.raiden.get_block_number(),
         )
-        send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
+        send_transfermessage = must_contain_entry(events, SendLockedTransferInternal, {})
         transfermessage = LockedTransfer.from_event(send_transfermessage)
         mediator_app.raiden.sign(transfermessage)
 
@@ -170,17 +171,16 @@ def claim_lock(app_chain, payment_identifier, token, secret):
         from_channel = get_channelstate(from_, to_, token)
         partner_channel = get_channelstate(to_, from_, token)
 
-        message_identifier = random.randint(0, UINT64_MAX)
         unlock_lock = channel.send_unlock(
             from_channel,
-            message_identifier,
             payment_identifier,
             secret,
             secrethash,
         )
 
+        message_identifier = random.randint(0, UINT64_MAX)
         secret_message = Secret(
-            unlock_lock.message_identifier,
+            message_identifier,
             unlock_lock.payment_identifier,
             unlock_lock.balance_proof.nonce,
             unlock_lock.balance_proof.channel_address,
@@ -320,16 +320,25 @@ def increase_transferred_amount(
     )
     assert distributable_from_to >= amount, 'operation would end up in a incosistent state'
 
-    message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = 1
-    event = channel.send_directtransfer(
+    send_directtransfer_internal = channel.send_directtransfer(
         from_channel,
         amount,
         payment_identifier,
-        message_identifier,
     )
 
-    direct_transfer_message = DirectTransfer.from_event(event)
+    balance_proof = send_directtransfer_internal.balance_proof
+    message_identifier = random.randint(0, UINT64_MAX)
+    direct_transfer_message = DirectTransfer(
+        message_identifier,
+        send_directtransfer_internal.payment_identifier,
+        balance_proof.nonce,
+        send_directtransfer_internal.token,
+        balance_proof.channel_address,
+        balance_proof.transferred_amount,
+        send_directtransfer_internal.recipient,
+        balance_proof.locksroot,
+    )
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
     direct_transfer_message.sign(sign_key, address)
@@ -363,7 +372,6 @@ def make_direct_transfer_from_channel(
     """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`."""
     payment_identifier = channel.get_next_nonce(from_channel.our_state)
-    pseudo_random_generator = random.Random()
 
     state_change = ActionTransferDirect(
         payment_network_identifier,
@@ -375,10 +383,22 @@ def make_direct_transfer_from_channel(
     iteration = channel.handle_send_directtransfer(
         from_channel,
         state_change,
-        pseudo_random_generator,
     )
-    assert isinstance(iteration.events[0], SendDirectTransfer)
-    direct_transfer_message = DirectTransfer.from_event(iteration.events[0])
+    assert isinstance(iteration.events[0], SendDirectTransferInternal)
+    send_directtransfer_internal = iteration.events[0]
+
+    balance_proof = send_directtransfer_internal.balance_proof
+    message_identifier = random.randint(0, UINT64_MAX)
+    direct_transfer_message = DirectTransfer(
+        message_identifier,
+        send_directtransfer_internal.payment_identifier,
+        balance_proof.nonce,
+        send_directtransfer_internal.token,
+        balance_proof.channel_address,
+        balance_proof.transferred_amount,
+        send_directtransfer_internal.recipient,
+        balance_proof.locksroot,
+    )
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
@@ -415,31 +435,53 @@ def make_mediated_transfer(
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`."""
     payment_identifier = channel.get_next_nonce(from_channel.our_state)
-    message_identifier = random.randint(0, UINT64_MAX)
 
-    lockedtransfer = channel.send_lockedtransfer(
+    send_lockedtransfer_internal = channel.send_lockedtransfer(
         from_channel,
         initiator,
         target,
         lock.amount,
-        message_identifier,
         payment_identifier,
         lock.expiration,
         lock.secrethash,
     )
-    mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
+    transfer_description = send_lockedtransfer_internal.transfer
+    lock = transfer_description.lock
+    balance_proof = transfer_description.balance_proof
+    lock = Lock(
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
+    )
+    fee = 0
+
+    message_identifier = random.randint(0, UINT64_MAX)
+    lockedtransfer_msg = LockedTransfer(
+        message_identifier,
+        transfer_description.payment_identifier,
+        balance_proof.nonce,
+        transfer_description.token,
+        balance_proof.channel_address,
+        balance_proof.transferred_amount,
+        send_lockedtransfer_internal.recipient,
+        balance_proof.locksroot,
+        lock,
+        transfer_description.target,
+        transfer_description.initiator,
+        fee,
+    )
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key, address)
+    lockedtransfer_msg.sign(sign_key, address)
 
     # compute the signature
-    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-    lockedtransfer.balance_proof = balance_proof
+    balance_proof = balanceproof_from_envelope(lockedtransfer_msg)
+    send_lockedtransfer_internal.balance_proof = balance_proof
 
     # if this fails it's not the right key for the current `from_channel`
-    assert mediated_transfer_msg.sender == from_channel.our_state.address
-    receive_lockedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
+    assert lockedtransfer_msg.sender == from_channel.our_state.address
+    receive_lockedtransfer = lockedtransfersigned_from_message(lockedtransfer_msg)
 
     channel.handle_receive_lockedtransfer(
         partner_channel,
@@ -455,4 +497,4 @@ def make_mediated_transfer(
         partner_secretreveal = ReceiveSecretReveal(secret, random_sender)
         channel.handle_receive_secretreveal(partner_channel, partner_secretreveal)
 
-    return mediated_transfer_msg
+    return lockedtransfer_msg

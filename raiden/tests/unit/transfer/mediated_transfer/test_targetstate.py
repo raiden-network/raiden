@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,too-many-locals
-import random
-
 import pytest
 
 from raiden.transfer import channel
@@ -14,8 +12,8 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.mediated_transfer.events import (
     EventWithdrawFailed,
-    SendRevealSecret,
-    SendSecretRequest,
+    SendRevealSecretInternal,
+    SendSecretRequestInternal,
 )
 from raiden.transfer.state_change import (
     Block,
@@ -147,7 +145,6 @@ def test_handle_inittarget():
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
         our_address=target_address,
@@ -175,13 +172,12 @@ def test_handle_inittarget():
     iteration = target.handle_inittarget(
         state_change,
         from_channel,
-        pseudo_random_generator,
         block_number,
     )
 
     events = iteration.events
     assert events
-    assert isinstance(events[0], SendSecretRequest)
+    assert isinstance(events[0], SendSecretRequestInternal)
 
     assert events[0].payment_identifier == from_transfer.payment_identifier
     assert events[0].amount == from_transfer.lock.amount
@@ -196,7 +192,6 @@ def test_handle_inittarget_bad_expiration():
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
         our_address=target_address,
@@ -221,12 +216,7 @@ def test_handle_inittarget_bad_expiration():
     )
 
     state_change = ActionInitTarget(payment_network_identifier, from_route, from_transfer)
-    iteration = target.handle_inittarget(
-        state_change,
-        from_channel,
-        pseudo_random_generator,
-        block_number,
-    )
+    iteration = target.handle_inittarget(state_change, from_channel, block_number)
     assert must_contain_entry(iteration.events, EventWithdrawFailed, {})
 
 
@@ -240,7 +230,6 @@ def test_handle_secretreveal():
     initiator = factories.HOP1
     our_address = factories.ADDR
     secret = factories.UNIT_SECRET
-    pseudo_random_generator = random.Random()
 
     channel_state, state = make_target_state(
         our_address,
@@ -255,12 +244,11 @@ def test_handle_secretreveal():
         state,
         state_change,
         channel_state,
-        pseudo_random_generator,
     )
     assert len(iteration.events) == 1
 
     reveal = iteration.events[0]
-    assert isinstance(reveal, SendRevealSecret)
+    assert isinstance(reveal, SendRevealSecretInternal)
 
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.secret == secret
@@ -273,7 +261,6 @@ def test_handle_block():
     our_address = factories.ADDR
     amount = 3
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
         our_address,
@@ -287,7 +274,6 @@ def test_handle_block():
         state,
         new_block,
         from_channel,
-        pseudo_random_generator,
         new_block.block_number,
     )
     assert iteration.new_state
@@ -300,7 +286,6 @@ def test_handle_block_equal_block_number():
     our_address = factories.ADDR
     amount = 3
     block_number = 1
-    pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
         our_address,
@@ -314,7 +299,6 @@ def test_handle_block_equal_block_number():
         state,
         new_block,
         from_channel,
-        pseudo_random_generator,
         new_block.block_number,
     )
     assert iteration.new_state
@@ -327,7 +311,6 @@ def test_handle_block_lower_block_number():
     our_address = factories.ADDR
     amount = 3
     block_number = 10
-    pseudo_random_generator = random.Random()
 
     from_channel, state = make_target_state(
         our_address,
@@ -341,7 +324,6 @@ def test_handle_block_lower_block_number():
         state,
         new_block,
         from_channel,
-        pseudo_random_generator,
         new_block.block_number,
     )
     assert iteration.new_state
@@ -354,7 +336,6 @@ def test_state_transition():
     block_number = 1
     initiator = factories.HOP6
     payment_network_identifier = factories.make_address()
-    pseudo_random_generator = random.Random()
 
     our_balance = 100
     our_address = factories.make_address()
@@ -388,7 +369,6 @@ def test_state_transition():
         None,
         init,
         from_channel,
-        pseudo_random_generator,
         block_number,
     )
     assert init_transition.new_state is not None
@@ -400,7 +380,6 @@ def test_state_transition():
         init_transition.new_state,
         first_new_block,
         from_channel,
-        pseudo_random_generator,
         first_new_block.block_number,
     )
 
@@ -409,7 +388,6 @@ def test_state_transition():
         first_block_iteration.new_state,
         secret_reveal,
         from_channel,
-        pseudo_random_generator,
         first_new_block,
     )
     assert reveal_iteration.events
@@ -419,7 +397,6 @@ def test_state_transition():
         init_transition.new_state,
         second_new_block,
         from_channel,
-        pseudo_random_generator,
         second_new_block.block_number,
     )
     assert not iteration.events
@@ -449,7 +426,6 @@ def test_state_transition():
         init_transition.new_state,
         balance_proof_state_change,
         from_channel,
-        pseudo_random_generator,
         block_number + 2,
     )
     assert proof_iteration.new_state is None

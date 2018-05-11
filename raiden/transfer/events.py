@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 from raiden.constants import UINT256_MAX
-from raiden.transfer.architecture import (
-    Event,
-    SendMessageEvent,
-)
+from raiden.transfer.architecture import Event
 from raiden.utils import pex
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -247,30 +244,29 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
         return not self.__eq__(other)
 
 
-class SendDirectTransfer(SendMessageEvent):
+class SendDirectTransferInternal(Event):
     """ Event emitted when a direct transfer message must be sent. """
 
     def __init__(
             self,
             recipient,
             queue_name,
-            message_identifier,
             payment_identifier,
             balance_proof,
             token,
     ):
-
-        super().__init__(recipient, queue_name, message_identifier)
-
+        self.recipient = recipient
+        self.queue_name = queue_name
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
         self.token = token
 
     def __repr__(self):
         return (
-            '<SendDirectTransfer msgid:{} paymentid:{} balance_proof:{} token:{} recipient:{}>'
+            '<'
+            'SendDirectTransferInternal paymentid:{} balance_proof:{} token:{} recipient:{}'
+            '>'
         ).format(
-            self.message_identifier,
             self.payment_identifier,
             self.balance_proof,
             pex(self.token),
@@ -279,8 +275,7 @@ class SendDirectTransfer(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendDirectTransfer) and
-            self.message_identifier == other.message_identifier and
+            isinstance(other, SendDirectTransferInternal) and
             self.payment_identifier == other.payment_identifier and
             self.balance_proof == other.balance_proof and
             self.token == other.token and
@@ -289,3 +284,9 @@ class SendDirectTransfer(SendMessageEvent):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class SendDirectTransfer(Event):
+    def __init__(self, message_identifier, send_event):
+        self.message_identifier = message_identifier
+        self.send_event = send_event

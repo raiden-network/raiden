@@ -165,12 +165,10 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
 
     transferred_amount = 10
     same_payment_identifier = 1
-    message_identifier = random.randint(0, UINT64_MAX)
 
     event = channel.send_directtransfer(
         channel0,
         transferred_amount,
-        message_identifier,
         same_payment_identifier,
     )
 

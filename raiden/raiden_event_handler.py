@@ -63,7 +63,7 @@ def handle_send_directtransfer(
     direct_transfer_message = DirectTransfer.from_event(send_direct_transfer)
     raiden.sign(direct_transfer_message)
     raiden.send_async(
-        send_direct_transfer.recipient,
+        send_direct_transfer.send_event.recipient,
         direct_transfer_message,
     )
 
@@ -75,7 +75,7 @@ def handle_send_revealsecret(
     reveal_secret_message = RevealSecret.from_event(reveal_secret_event)
     raiden.sign(reveal_secret_message)
     raiden.send_async(
-        reveal_secret_event.recipient,
+        reveal_secret_event.send_event.recipient,
         reveal_secret_message,
     )
 
@@ -87,7 +87,7 @@ def handle_send_balanceproof(
     secret_message = Secret.from_event(balance_proof_event)
     raiden.sign(secret_message)
     raiden.send_async(
-        balance_proof_event.recipient,
+        balance_proof_event.send_event.recipient,
         secret_message,
     )
 
@@ -99,7 +99,7 @@ def handle_send_secretrequest(
     secret_request_message = SecretRequest.from_event(secret_request_event)
     raiden.sign(secret_request_message)
     raiden.send_async(
-        secret_request_event.recipient,
+        secret_request_event.send_event.recipient,
         secret_request_message,
     )
 
@@ -111,7 +111,7 @@ def handle_send_refundtransfer(
     refund_transfer_message = RefundTransfer.from_event(refund_transfer_event)
     raiden.sign(refund_transfer_message)
     raiden.send_async(
-        refund_transfer_event.recipient,
+        refund_transfer_event.send_event.recipient,
         refund_transfer_message,
     )
 
