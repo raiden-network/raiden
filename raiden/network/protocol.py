@@ -505,7 +505,7 @@ class UDPTransport:
         self.raiden = raiden
         self.queueids_to_queues = dict()
 
-        # server.stop() clears the handle, since this may be a restart the
+        # server.stop() clears the handle. Since this may be a restart the
         # handle must always be set
         self.server.set_handle(self._receive)
 
