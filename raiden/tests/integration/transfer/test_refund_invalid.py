@@ -49,6 +49,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         nonce=1,
         channel=make_address(),
         transferred_amount=amount,
+        locked_amount=0,
         locksroot=UNIT_SECRETHASH,
         secret=UNIT_SECRET,
     )

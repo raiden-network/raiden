@@ -148,9 +148,9 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     secret = sha3(b'test_regression_multiple_revealsecret')
     secrethash = sha3(secret)
     expiration = app0.raiden.get_block_number() + 100
-    amount = 10
+    lock_amount = 10
     lock = Lock(
-        amount,
+        lock_amount,
         expiration,
         secrethash,
     )
@@ -165,6 +165,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
         token,
         channelstate_0_1.identifier,
         transferred_amount,
+        lock_amount,
         app1.raiden.address,
         lock.secrethash,
         lock,
@@ -188,7 +189,8 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
         channel=channelstate_0_1.identifier,
-        transferred_amount=amount,
+        transferred_amount=lock_amount,
+        locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=secret,
     )

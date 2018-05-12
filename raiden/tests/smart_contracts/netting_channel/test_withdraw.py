@@ -163,6 +163,7 @@ def test_withdraw_at_settlement_block(
         token=tester_token.address,
         channel=normalize_address(nettingchannel.address),
         transferred_amount=0,
+        locked_amount=lock_amount,
         recipient=address1,
         locksroot=lock0_hash,
         lock=lock0,

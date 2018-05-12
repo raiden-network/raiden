@@ -64,6 +64,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
         token=invalid_token_address,
         channel=channel_identifier,
         transferred_amount=0,
+        locked_amount=0,
         recipient=app1.raiden.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
@@ -106,6 +107,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
         token=token_address,
         channel=channel_identifier,
         transferred_amount=0,
+        locked_amount=0,
         recipient=app1.raiden.address,
         locksroot=invalid_locksroot,
     )
@@ -144,6 +146,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
         token=token_address,
         channel=channel_identifier,
         transferred_amount=10,
+        locked_amount=0,
         recipient=app0.raiden.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
@@ -203,6 +206,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=invalid_transferred_amount,
+        locked_amount=0,
         recipient=app1.raiden.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
@@ -251,6 +255,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=10,
+        locked_amount=0,
         recipient=app0.raiden.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )

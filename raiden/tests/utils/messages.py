@@ -89,6 +89,7 @@ def make_refund_transfer(
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
+        locked_amount=None,
         amount=1,
         locksroot=EMPTY_MERKLE_ROOT,
         recipient=ADDRESS,
@@ -100,6 +101,11 @@ def make_refund_transfer(
     if message_identifier is None:
         message_identifier = random.randint(0, UINT64_MAX)
 
+    if locked_amount is None:
+        locked_amount = amount
+    else:
+        assert locked_amount >= amount
+
     return RefundTransfer(
         message_identifier,
         payment_identifier,
@@ -108,6 +114,7 @@ def make_refund_transfer(
         token,
         channel,
         transferred_amount,
+        locked_amount,
         recipient,
         locksroot,
         make_lock(amount=amount, secrethash=secrethash),
@@ -125,6 +132,7 @@ def make_mediated_transfer(
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
+        locked_amount=None,
         amount=1,
         expiration=1,
         locksroot=EMPTY_MERKLE_ROOT,
@@ -144,6 +152,11 @@ def make_mediated_transfer(
     if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
 
+    if locked_amount is None:
+        locked_amount = amount
+    else:
+        assert locked_amount >= amount
+
     return LockedTransfer(
         message_identifier,
         payment_identifier,
@@ -152,6 +165,7 @@ def make_mediated_transfer(
         token,
         channel,
         transferred_amount,
+        locked_amount,
         recipient,
         locksroot,
         lock,
@@ -169,8 +183,10 @@ def make_direct_transfer(
         token=ADDRESS,
         channel=ADDRESS,
         transferred_amount=0,
+        locked_amount=0,
         recipient=ADDRESS,
-        locksroot=EMPTY_MERKLE_ROOT):
+        locksroot=EMPTY_MERKLE_ROOT,
+):
 
     if message_identifier is None:
         message_identifier = random.randint(0, UINT64_MAX)
@@ -183,6 +199,7 @@ def make_direct_transfer(
         token,
         channel,
         transferred_amount,
+        locked_amount,
         recipient,
         locksroot,
     )

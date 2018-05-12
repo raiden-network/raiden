@@ -106,6 +106,7 @@ def test_receive_lockedtransfer_invalidnonce(
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=amount,
+        locked_amount=amount,
         recipient=app1.raiden.address,
         locksroot=UNIT_SECRETHASH,
         lock=Lock(amount, expiration, UNIT_SECRETHASH),
@@ -142,7 +143,7 @@ def test_receive_lockedtransfer_invalidsender(
     other_key, other_address = make_privkey_address()
 
     channel0 = get_channelstate(app0, app1, token_address)
-    amount = 10
+    lock_amount = 10
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         message_identifier=random.randint(0, UINT64_MAX),
@@ -152,9 +153,10 @@ def test_receive_lockedtransfer_invalidsender(
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
+        locked_amount=lock_amount,
         recipient=app0.raiden.address,
         locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount, expiration, UNIT_SECRETHASH),
+        lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app0.raiden.address,
         initiator=other_address,
         fee=0
@@ -189,7 +191,7 @@ def test_receive_lockedtransfer_invalidrecipient(
 
     payment_identifier = 1
     invalid_recipient = make_address()
-    amount = 10
+    lock_amount = 10
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         message_identifier=random.randint(0, UINT64_MAX),
@@ -199,9 +201,10 @@ def test_receive_lockedtransfer_invalidrecipient(
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
+        locked_amount=lock_amount,
         recipient=invalid_recipient,
         locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount, expiration, UNIT_SECRETHASH),
+        lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0
@@ -248,7 +251,7 @@ def test_received_lockedtransfer_closedchannel(
     )
 
     # Now receive one mediated transfer for the closed channel
-    amount = 10
+    lock_amount = 10
     payment_identifier = 1
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
@@ -259,9 +262,10 @@ def test_received_lockedtransfer_closedchannel(
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
+        locked_amount=lock_amount,
         recipient=app1.raiden.address,
         locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount, expiration, UNIT_SECRETHASH),
+        lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0

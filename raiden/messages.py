@@ -31,7 +31,7 @@ __all__ = (
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
+def assert_envelope_values(nonce, channel, transferred_amount, locked_amount, locksroot):
     if nonce <= 0:
         raise ValueError('nonce cannot be zero or negative')
 
@@ -46,6 +46,12 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
 
     if transferred_amount > UINT256_MAX:
         raise ValueError('transferred_amount is too large')
+
+    if locked_amount < 0:
+        raise ValueError('locked_amount cannot be negative')
+
+    if locked_amount > UINT256_MAX:
+        raise ValueError('locked_amount is too large')
 
     if len(locksroot) != 32:
         raise ValueError('locksroot must have length 32')
@@ -172,6 +178,7 @@ class EnvelopeMessage(SignedMessage):
         super().__init__()
         self.nonce = 0
         self.transferred_amount = 0
+        self.locked_amount = 0
         self.locksroot = EMPTY_MERKLE_ROOT
         self.channel = b''
 
@@ -200,6 +207,7 @@ class EnvelopeMessage(SignedMessage):
         data_to_sign = pack_signing_data(
             klass.get_bytes_from(data, 'nonce'),
             klass.get_bytes_from(data, 'transferred_amount'),
+            # klass.get_bytes_from(data, 'locked_amount'),
             klass.get_bytes_from(data, 'channel'),
             klass.get_bytes_from(data, 'locksroot'),
             self.message_hash,
@@ -230,6 +238,7 @@ class EnvelopeMessage(SignedMessage):
         data_that_was_signed = pack_signing_data(
             message_type.get_bytes_from(data, 'nonce'),
             message_type.get_bytes_from(data, 'transferred_amount'),
+            # message_type.get_bytes_from(data, 'locked_amount'),
             message_type.get_bytes_from(data, 'channel'),
             message_type.get_bytes_from(data, 'locksroot'),
             message_hash,
@@ -429,6 +438,7 @@ class Secret(EnvelopeMessage):
             nonce,
             channel,
             transferred_amount,
+            locked_amount,
             locksroot,
             secret,
     ):
@@ -438,6 +448,7 @@ class Secret(EnvelopeMessage):
             nonce,
             channel,
             transferred_amount,
+            locked_amount,
             locksroot,
         )
 
@@ -456,13 +467,14 @@ class Secret(EnvelopeMessage):
         self.nonce = nonce
         self.channel = channel
         self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
         self.locksroot = locksroot
         self._secrethash = None
 
     def __repr__(self):
         return (
-            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} secrethash:{}]>'
+            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
+            'locked_amount:{} locksroot:{} hash:{} secrethash:{}]>'
         ).format(
             self.__class__.__name__,
             self.message_identifier,
@@ -470,6 +482,7 @@ class Secret(EnvelopeMessage):
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
+            self.locked_amount,
             pex(self.locksroot),
             pex(self.hash),
             pex(self.secrethash),
@@ -489,6 +502,7 @@ class Secret(EnvelopeMessage):
             packed.nonce,
             packed.channel,
             packed.transferred_amount,
+            packed.locked_amount,
             packed.locksroot,
             packed.secret,
         )
@@ -501,6 +515,7 @@ class Secret(EnvelopeMessage):
         packed.nonce = self.nonce
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
         packed.locksroot = self.locksroot
         packed.secret = self.secret
         packed.signature = self.signature
@@ -513,6 +528,7 @@ class Secret(EnvelopeMessage):
             event.balance_proof.nonce,
             event.balance_proof.channel_address,
             event.balance_proof.transferred_amount,
+            event.balance_proof.locked_amount,
             event.balance_proof.locksroot,
             event.secret,
         )
@@ -525,6 +541,7 @@ class Secret(EnvelopeMessage):
             'nonce': self.nonce,
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
             'locksroot': self.locksroot.hex(),
             'signature': self.signature.hex(),
         }
@@ -538,6 +555,7 @@ class Secret(EnvelopeMessage):
             data['nonce'],
             unhexlify(data['channel']),
             data['transferred_amount'],
+            data['locked_amount'],
             unhexlify(data['locksroot']),
         )
         message.signature = unhexlify(data['signature'])
@@ -645,13 +663,16 @@ class DirectTransfer(EnvelopeMessage):
             token,
             channel,
             transferred_amount,
+            locked_amount,
             recipient,
-            locksroot):
+            locksroot,
+    ):
 
         assert_envelope_values(
             nonce,
             channel,
             transferred_amount,
+            locked_amount,
             locksroot,
         )
         assert_transfer_values(payment_identifier, token, recipient)
@@ -664,6 +685,7 @@ class DirectTransfer(EnvelopeMessage):
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
+        self.locked_amount = locked_amount  #: total amount of token locked in the merkle tree
         self.recipient = recipient  #: partner's address
         self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
 
@@ -677,6 +699,7 @@ class DirectTransfer(EnvelopeMessage):
             packed.token,
             packed.channel,
             packed.transferred_amount,
+            packed.locked_amount,
             packed.recipient,
             packed.locksroot,
         )
@@ -692,6 +715,7 @@ class DirectTransfer(EnvelopeMessage):
         packed.registry_address = self.registry_address
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
         packed.signature = self.signature
@@ -708,6 +732,7 @@ class DirectTransfer(EnvelopeMessage):
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
+            balance_proof.locked_amount,
             event.recipient,
             balance_proof.locksroot,
         )
@@ -715,7 +740,8 @@ class DirectTransfer(EnvelopeMessage):
     def __repr__(self):
         representation = (
             '<{} ['
-            'msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} hash:{}'
+            'msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
+            'locked_amount:{} locksroot:{} hash:{}'
             ']>'
         ).format(
             self.__class__.__name__,
@@ -724,6 +750,7 @@ class DirectTransfer(EnvelopeMessage):
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
+            self.locked_amount,
             pex(self.locksroot),
             pex(self.hash),
         )
@@ -739,6 +766,7 @@ class DirectTransfer(EnvelopeMessage):
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
             'recipient': self.recipient.hex(),
             'locksroot': self.locksroot.hex(),
             'signature': self.signature.hex(),
@@ -754,6 +782,7 @@ class DirectTransfer(EnvelopeMessage):
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
+            data['locked_amount'],
             unhexlify(data['recipient']),
             unhexlify(data['locksroot']),
         )
@@ -876,6 +905,7 @@ class LockedTransferBase(EnvelopeMessage):
             token,
             channel,
             transferred_amount,
+            locked_amount,
             recipient,
             locksroot,
             lock):
@@ -885,6 +915,7 @@ class LockedTransferBase(EnvelopeMessage):
             nonce,
             channel,
             transferred_amount,
+            locked_amount,
             locksroot,
         )
 
@@ -897,6 +928,7 @@ class LockedTransferBase(EnvelopeMessage):
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
         self.recipient = recipient
         self.locksroot = locksroot
         self.lock = lock
@@ -917,6 +949,7 @@ class LockedTransferBase(EnvelopeMessage):
             packed.token,
             packed.channel,
             packed.transferred_amount,
+            packed.locked_amount,
             packed.recipient,
             packed.locksroot,
             lock,
@@ -932,6 +965,7 @@ class LockedTransferBase(EnvelopeMessage):
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
 
@@ -974,6 +1008,7 @@ class LockedTransfer(LockedTransferBase):
             token,
             channel,
             transferred_amount,
+            locked_amount,
             recipient,
             locksroot,
             lock,
@@ -998,6 +1033,7 @@ class LockedTransfer(LockedTransferBase):
             token,
             channel,
             transferred_amount,
+            locked_amount,
             recipient,
             locksroot,
             lock,
@@ -1009,8 +1045,8 @@ class LockedTransfer(LockedTransferBase):
 
     def __repr__(self):
         representation = (
-            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} locksroot:{} '
-            'hash:{} secrethash:{} expiration:{} amount:{}]>'
+            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
+            'locked_amount:{} locksroot:{} hash:{} secrethash:{} expiration:{} amount:{}]>'
         ).format(
             self.__class__.__name__,
             self.message_identifier,
@@ -1018,6 +1054,7 @@ class LockedTransfer(LockedTransferBase):
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
+            self.locked_amount,
             pex(self.locksroot),
             pex(self.hash),
             pex(self.lock.secrethash),
@@ -1043,6 +1080,7 @@ class LockedTransfer(LockedTransferBase):
             packed.token,
             packed.channel,
             packed.transferred_amount,
+            packed.locked_amount,
             packed.recipient,
             packed.locksroot,
             lock,
@@ -1061,6 +1099,7 @@ class LockedTransfer(LockedTransferBase):
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
         packed.target = self.target
@@ -1094,6 +1133,7 @@ class LockedTransfer(LockedTransferBase):
             transfer.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
+            balance_proof.locked_amount,
             event.recipient,
             balance_proof.locksroot,
             lock,
@@ -1111,6 +1151,7 @@ class LockedTransfer(LockedTransferBase):
             'token': self.token.hex(),
             'channel': self.channel.hex(),
             'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
             'recipient': self.recipient.hex(),
             'locksroot': self.locksroot.hex(),
             'lock': self.lock.to_dict(),
@@ -1130,6 +1171,7 @@ class LockedTransfer(LockedTransferBase):
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
+            data['locked_amount'],
             unhexlify(data['recipient']),
             unhexlify(data['locksroot']),
             Lock.from_dict(data['lock']),
@@ -1164,6 +1206,7 @@ class RefundTransfer(LockedTransfer):
             packed.token,
             packed.channel,
             packed.transferred_amount,
+            packed.locked_amount,
             packed.recipient,
             packed.locksroot,
             lock,
@@ -1192,6 +1235,7 @@ class RefundTransfer(LockedTransfer):
             event.token,
             balance_proof.channel_address,
             balance_proof.transferred_amount,
+            balance_proof.locked_amount,
             event.recipient,
             balance_proof.locksroot,
             lock,
@@ -1210,6 +1254,7 @@ class RefundTransfer(LockedTransfer):
             unhexlify(data['token']),
             unhexlify(data['channel']),
             data['transferred_amount'],
+            data['locked_amount'],
             unhexlify(data['recipient']),
             unhexlify(data['locksroot']),
             Lock.from_dict(data['lock']),
