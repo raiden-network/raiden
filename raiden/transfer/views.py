@@ -58,6 +58,10 @@ def state_from_app(app):
     return app.raiden.wal.state_manager.current_state
 
 
+def get_all_messagequeues(node_state: NodeState) -> typing.Dict:
+    return node_state.queueids_to_queues
+
+
 def get_networkstatuses(node_state: NodeState) -> typing.Dict:
     return node_state.nodeaddresses_to_networkstates
 

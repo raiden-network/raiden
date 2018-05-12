@@ -2,17 +2,12 @@
 import gevent
 import pytest
 
-from raiden.messages import (
-    LockedTransfer,
-    RefundTransfer,
-)
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
     direct_transfer,
     mediated_transfer,
 )
-from raiden.tests.utils.transport import MessageLoggerTransport
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendRefundTransfer,
@@ -77,7 +72,6 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
 def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     """A failed transfer must send a refund back.
 
@@ -146,31 +140,32 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     gevent.sleep(0.2)
 
     # A lock structure with the correct amount
-    app0_messages = app0.raiden.protocol.transport.get_sent_messages(app0.raiden.address)
-    mediated_message = list(
-        message
-        for message in app0_messages
-        if isinstance(message, LockedTransfer) and message.target == app2.raiden.address
-    )[-1]
-    assert mediated_message
 
-    app1_messages = app1.raiden.protocol.transport.get_sent_messages(app1.raiden.address)
-    refund_message = next(
-        message
-        for message in app1_messages
-        if isinstance(message, RefundTransfer) and message.recipient == app0.raiden.address
+    send_locked = next(
+        event
+        for _, event in app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
     )
-    assert refund_message
+    assert send_locked
 
-    assert mediated_message.lock.amount == refund_message.lock.amount
-    assert mediated_message.lock.secrethash == refund_message.lock.secrethash
-    assert mediated_message.lock.expiration > refund_message.lock.expiration
+    send_refund = next(
+        event
+        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendRefundTransfer)
+    )
+    assert send_refund
+
+    lock = send_locked.transfer.lock
+    refund_lock = send_refund.lock
+    assert lock.amount == refund_lock.amount
+    assert lock.secrethash
+    assert lock.expiration
 
     # Both channels have the amount locked because of the refund message
     assert_synched_channel_state(
         token_address,
-        app0, deposit - amount_path, [lockstate_from_lock(mediated_message.lock)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_message.lock)],
+        app0, deposit - amount_path, [lockstate_from_lock(lock)],
+        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
     )
     assert_synched_channel_state(
         token_address,

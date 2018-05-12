@@ -7,7 +7,6 @@ from raiden.constants import (
     UINT64_MAX,
     UINT256_MAX,
 )
-from raiden.network.transport import DummyTransport
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.tests.utils.factories import make_privkey_address
@@ -186,18 +185,6 @@ def make_direct_transfer(
         recipient,
         locksroot,
     )
-
-
-def setup_messages_cb():
-    """ Record the messages sent so that we can assert on them. """
-    messages = []
-
-    def callback(sender_raiden, host_port, msg):  # pylint: disable=unused-argument
-        messages.append(msg)
-
-    DummyTransport.network.on_send_cbs.append(callback)
-
-    return messages
 
 
 def dump_messages(message_list):

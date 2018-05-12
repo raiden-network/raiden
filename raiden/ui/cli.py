@@ -15,9 +15,9 @@ import click
 import gevent
 import gevent.monkey
 import requests
-from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
+from requests.exceptions import RequestException
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -28,8 +28,10 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
+from raiden.network.transport import TokenBucket
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -490,6 +492,9 @@ def app(
     from raiden.app import App
     from raiden.network.blockchain_service import BlockChainService
 
+    if not mapped_socket:
+        raise RuntimeError('Missing socket')
+
     address_hex = address_encoder(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
     address = address_decoder(address_hex)
@@ -509,16 +514,9 @@ def app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
-
-    if mapped_socket:
-        config['socket'] = mapped_socket.socket
-        config['external_ip'] = mapped_socket.external_ip
-        config['external_port'] = mapped_socket.external_port
-    else:
-        config['socket'] = None
-        config['external_ip'] = listen_host
-        config['external_port'] = listen_port
-
+    config['socket'] = mapped_socket.socket
+    config['external_ip'] = mapped_socket.external_ip
+    config['external_port'] = mapped_socket.external_port
     config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_timeout'] = timeout
@@ -581,12 +579,31 @@ def app(
         blockchain_service.discovery(discovery_contract_address)
     )
 
-    return App(
+    registry = blockchain_service.registry(
+        registry_contract_address
+    )
+
+    throttle_policy = TokenBucket(
+        config['protocol']['throttle_capacity'],
+        config['protocol']['throttle_fill_rate']
+    )
+
+    transport = UDPTransport(
+        discovery,
+        mapped_socket.socket,
+        throttle_policy,
+        config['protocol'],
+    )
+
+    raiden_app = App(
         config,
         blockchain_service,
         registry,
         discovery,
+        transport,
     )
+
+    return raiden_app
 
 
 def prompt_account(address_hex, keystore_path, password_file):
@@ -762,7 +779,7 @@ def run(ctx, **kwargs):
     is_flag=True,
     help='Only display Raiden version'
 )
-def version(short, **kwargs):
+def version(short, **kwargs):  # pylint: disable=unused-argument
     """Print version information and exit. """
     if short:
         print(get_system_spec()['raiden'])
@@ -780,7 +797,7 @@ def version(short, **kwargs):
     help='Drop into pdb on errors.'
 )
 @click.pass_context
-def smoketest(ctx, debug, **kwargs):
+def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane."""
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
@@ -843,44 +860,47 @@ def smoketest(ctx, debug, **kwargs):
     with open(password_file, 'w') as handler:
         handler.write('password')
 
-    args['mapped_socket'] = None
+    port = next(get_free_port('127.0.0.1', 5001))
     args['password_file'] = click.File()(password_file)
     args['datadir'] = args['keystore_path']
-    args['api_address'] = 'localhost:' + str(next(get_free_port('127.0.0.1', 5001)))
+    args['api_address'] = 'localhost:' + str(port)
     args['sync_check'] = False
 
-    # invoke the raiden app
-    app_ = ctx.invoke(app, **args)
+    with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
+        args['mapped_socket'] = mapped_socket
 
-    raiden_api = RaidenAPI(app_.raiden)
-    rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api)
-    (api_host, api_port) = split_endpoint(args['api_address'])
-    api_server.start(api_host, api_port)
+        # invoke the raiden app
+        app_ = ctx.invoke(app, **args)
 
-    success = False
-    try:
-        print('[4/5] running smoketests...')
-        error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
-        if error is not None:
-            append_report('smoketest assertion error', error)
+        raiden_api = RaidenAPI(app_.raiden)
+        rest_api = RestAPI(raiden_api)
+        api_server = APIServer(rest_api)
+        (api_host, api_port) = split_endpoint(args['api_address'])
+        api_server.start(api_host, api_port)
+
+        success = False
+        try:
+            print('[4/5] running smoketests...')
+            error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
+            if error is not None:
+                append_report('smoketest assertion error', error)
+            else:
+                success = True
+        finally:
+            app_.stop()
+            ethereum.send_signal(2)
+
+            err, out = ethereum.communicate()
+            append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
+            append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
+            append_report('ethereum stdout', out)
+            append_report('ethereum stderr', err)
+            append_report('smoketest configuration', json.dumps(smoketest_config))
+        if success:
+            print('[5/5] smoketest successful, report was written to {}'.format(report_file))
         else:
-            success = True
-    finally:
-        app_.stop()
-        ethereum.send_signal(2)
-
-        err, out = ethereum.communicate()
-        append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
-        append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
-        append_report('ethereum stdout', out)
-        append_report('ethereum stderr', err)
-        append_report('smoketest configuration', json.dumps(smoketest_config))
-    if success:
-        print('[5/5] smoketest successful, report was written to {}'.format(report_file))
-    else:
-        print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
-        sys.exit(1)
+            print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
+            sys.exit(1)
 
 
 def _removedb(netdir, address_hex):
@@ -910,6 +930,8 @@ def _removedb(netdir, address_hex):
         print('Local data deleted.')
     else:
         print('Aborted.')
+
+    return True
 
 
 @run.command()

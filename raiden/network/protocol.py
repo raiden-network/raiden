@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
 import logging
 import random
+import socket
+from binascii import hexlify
 from collections import namedtuple
 from itertools import repeat
 
@@ -12,6 +13,7 @@ from gevent.event import (
     AsyncResult,
     Event,
 )
+from gevent.server import DatagramServer
 from ethereum import slogging
 
 from raiden.exceptions import (
@@ -22,7 +24,7 @@ from raiden.exceptions import (
 from raiden.constants import UDP_MAX_MESSAGE_SIZE
 from raiden.messages import decode, Delivered, Ping, Pong
 from raiden.settings import CACHE_TTL
-from raiden.utils import isaddress, pex
+from raiden.utils import isaddress, pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.udp_message_handler import on_udp_message
 from raiden.transfer import views
@@ -463,31 +465,22 @@ def healthcheck(
 
 
 class UDPTransport:
-    def __init__(
-            self,
-            transport,
-            discovery,
-            raiden,
-            retry_interval,
-            retries_before_backoff,
-            nat_keepalive_retries,
-            nat_keepalive_timeout,
-            nat_invitation_timeout):
+    def __init__(self, discovery, udpsocket, throttle_policy, config):
+        # these values are initialized by the start method
+        self.queueids_to_queues: typing.Dict
+        self.raiden: 'RaidenService'
 
-        self.transport = transport
         self.discovery = discovery
-        self.raiden = raiden
+        self.config = config
 
-        self.retry_interval = retry_interval
-        self.retries_before_backoff = retries_before_backoff
-
-        self.nat_keepalive_retries = nat_keepalive_retries
-        self.nat_keepalive_timeout = nat_keepalive_timeout
-        self.nat_invitation_timeout = nat_invitation_timeout
+        self.retry_interval = config['retry_interval']
+        self.retries_before_backoff = config['retries_before_backoff']
+        self.nat_keepalive_retries = config['nat_keepalive_retries']
+        self.nat_keepalive_timeout = config['nat_keepalive_timeout']
+        self.nat_invitation_timeout = config['nat_invitation_timeout']
 
         self.event_stop = Event()
 
-        self.queueid_to_queue = dict()
         self.greenlets = list()
         self.addresses_events = dict()
 
@@ -505,13 +498,27 @@ class UDPTransport:
         cache_wrapper = cachetools.cached(cache=cache)
         self.get_host_port = cache_wrapper(discovery.get)
 
-    def start(self):
-        self.transport.start()
+        self.throttle_policy = throttle_policy
+        self.server = DatagramServer(udpsocket, handle=self._receive)
+
+    def start(self, raiden, queueids_to_queues):
+        self.raiden = raiden
+        self.queueids_to_queues = dict()
+
+        # server.stop() clears the handle. Since this may be a restart the
+        # handle must always be set
+        self.server.set_handle(self._receive)
+
+        for (recipient, queue_name), queue in queueids_to_queues.items():
+            queue_copy = list(queue)
+            self.init_queue_for(recipient, queue_name, queue_copy)
+
+        self.server.start()
 
     def stop_and_wait(self):
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
-        self.transport.stop_accepting()
+        self.server.stop_accepting()
 
         # Stop processing the outgoing queues
         self.event_stop.set()
@@ -520,7 +527,16 @@ class UDPTransport:
         # All outgoing tasks are stopped. Now it's safe to close the socket. At
         # this point there might be some incoming message being processed,
         # keeping the socket open is not useful for these.
-        self.transport.stop()
+        self.server.stop()
+
+        # Calling `.close()` on a gevent socket doesn't actually close the underlying os socket
+        # so we do that ourselves here.
+        # See: https://github.com/gevent/gevent/blob/master/src/gevent/_socket2.py#L208
+        # and: https://groups.google.com/forum/#!msg/gevent/Ro8lRra3nH0/ZENgEXrr6M0J
+        try:
+            self.server._socket.close()  # pylint: disable=protected-access
+        except socket.error:
+            pass
 
         # Set all the pending results to False
         for async_result in self.messageids_to_asyncresults.values():
@@ -565,19 +581,16 @@ class UDPTransport:
                 ping_nonce,
             ))
 
-    def get_queue_for(self, recipient, queue_name):
-        """ Return the queue identified by the pair `(recipient, queue_name)`.
-
-        If the queue doesn't exist it will be instantiated.
+    def init_queue_for(self, recipient, queue_name, items):
+        """ Create the queue identified by the pair `(recipient, queue_name)`
+        and initialize it with `items`.
         """
         queueid = (recipient, queue_name)
-        queue = self.queueid_to_queue.get(queueid)
+        queue = self.queueids_to_queues.get(queueid)
+        assert queue is None
 
-        if queue is not None:
-            return queue
-
-        queue = NotifyingQueue()
-        self.queueid_to_queue[queueid] = queue
+        queue = NotifyingQueue(items=items)
+        self.queueids_to_queues[queueid] = queue
 
         events = self.get_health_events(recipient)
 
@@ -601,6 +614,20 @@ class UDPTransport:
                 token=pex(queue_name),
                 to=pex(recipient),
             )
+
+        return queue
+
+    def get_queue_for(self, recipient, queue_name):
+        """ Return the queue identified by the pair `(recipient, queue_name)`.
+
+        If the queue doesn't exist it will be instantiated.
+        """
+        queueid = (recipient, queue_name)
+        queue = self.queueids_to_queues.get(queueid)
+
+        if queue is None:
+            items = ()
+            queue = self.init_queue_for(recipient, queue_name, items)
 
         return queue
 
@@ -673,14 +700,26 @@ class UDPTransport:
 
     def maybe_sendraw(self, host_port, messagedata):
         """ Send message to recipient if the transport is running. """
+
+        # Don't sleep if timeout is zero, otherwise a context-switch is done
+        # and the message is delayed, increasing it's latency
+        sleep_timeout = self.throttle_policy.consume(1)
+        if sleep_timeout:
+            gevent.sleep(sleep_timeout)
+
         # Check the udp socket is still available before trying to send the
         # message. There must be *no context-switches after this test*.
-        if self.transport.server.started:
-            self.transport.send(
-                self.raiden,
-                host_port,
+        if hasattr(self.server, 'socket'):
+            self.server.sendto(
                 messagedata,
+                host_port,
             )
+
+    def _receive(self, data, host_port):  # pylint: disable=unused-argument
+        try:
+            self.receive(data)
+        except RaidenShuttingDown:  # For a clean shutdown
+            return
 
     def receive(self, messagedata):
         """ Handle an UDP packet. """
