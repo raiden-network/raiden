@@ -15,12 +15,13 @@ from raiden.utils import (
     privatekey_to_address,
     sha3
 )
+from raiden.settings import INITIAL_PORT
 
 # DEFAULTS
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
 CLUSTER_NAME = 'raiden'
-RAIDEN_PORT = 40001
+RAIDEN_PORT = INITIAL_PORT
 DEFAULT_PW = 'notsosecret'
 
 

@@ -9,7 +9,7 @@
       logstash: "{{ hostvars[groups['role_infrastructure'][0]]['private_ip'] }}"
     hostname: "{{ hostname }}"
     ports:
-      - 40001:40001/udp
+      - 38647:38647/udp
       - 5001:5001
     volumes:
       - "{{ raiden_root }}:/root/.raiden"

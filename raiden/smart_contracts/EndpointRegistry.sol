@@ -27,7 +27,7 @@ contract EndpointRegistry{
     /*
      * @notice Registers the Ethereum Address to the Endpoint socket.
      * @dev Registers the Ethereum Address to the Endpoint socket.
-     * @param string of socket in this format "127.0.0.1:40001"
+     * @param string of socket in this format "127.0.0.1:38647"
      */
     function registerEndpoint(string socket)
         public
@@ -61,7 +61,7 @@ contract EndpointRegistry{
     /*
      * @notice Finds Ethreum Address if given an existing socket address
      * @dev Finds Ethreum Address if given an existing socket address
-     * @param string of socket in this format "127.0.0.1:40001"
+     * @param string of socket in this format "127.0.0.1:38647"
      * @return An ethereum address
      */
     function findAddressByEndpoint(string socket) public constant returns (address eth_address)
