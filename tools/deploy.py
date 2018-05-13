@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 import os
+from binascii import hexlify
 
 import click
 from ethereum import slogging
@@ -8,8 +9,8 @@ from ethereum.tools._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils import get_contract_path, address_encoder
-
+from raiden.ui.cli import prompt_account
+from raiden.utils import address_encoder, get_contract_path
 
 log = slogging.getLogger(__name__)
 
@@ -115,15 +116,22 @@ def deploy_all(client):
     return deployed
 
 
+def get_privatekey_hex(keystore_path):
+    address_hex, privatekey_bin = prompt_account(None, keystore_path, None)
+    return hexlify(privatekey_bin)
+
+
 @click.command(help="Deploy the Raiden smart contracts.\n\n"
                     "Requires the private key to an account with enough balance to deploy all "
                     "four contracts.")
 @click.option("--pretty", is_flag=True)
 @click.option("--gas-price", default=4, help="Gas price to use in GWei", show_default=True)
 @click.option("--port", type=int, default=8545, show_default=True)
-@click.argument("privatekey_hex")
-def main(privatekey_hex, pretty, gas_price, port):
+@click.option("--keystore-path", type=click.Path(exists=True))
+def main(keystore_path, pretty, gas_price, port):
     slogging.configure(':debug')
+
+    privatekey_hex = get_privatekey_hex(keystore_path)
 
     privatekey = decode_hex(privatekey_hex)
 
