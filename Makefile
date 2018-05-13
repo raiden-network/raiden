@@ -95,5 +95,5 @@ blockchain-geth:
 	rm -f blockchain.log
 	./tools/startcluster.py
 
-deploy: compile
-	./tools/deploy.py
+deploy:
+	./tools/deploy.py --keystore-path=${KEYSTORE}
