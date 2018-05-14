@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from binascii import hexlify, unhexlify
+from json import JSONDecodeError
 
 from ethereum.tools import keys
 from ethereum.slogging import get_logger
@@ -66,7 +67,13 @@ class AccountManager:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
                             self.accounts[str(data['address']).lower()] = str(fullpath)
-                    except (KeyError, OSError, IOError, json.decoder.JSONDecodeError) as ex:
+                    except (
+                        IOError,
+                        JSONDecodeError,
+                        KeyError,
+                        OSError,
+                        UnicodeDecodeError
+                    ) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
                             # Should be a valid account file - warn user
