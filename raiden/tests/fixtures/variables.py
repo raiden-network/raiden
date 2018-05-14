@@ -13,7 +13,6 @@ from raiden.settings import (
     DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
     DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
 )
-from raiden.network.transport import UDPTransport
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 

@@ -7,7 +7,6 @@ from raiden.messages import (
     Processed,
     Ping,
 )
-from raiden.tests.utils.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb
 
 
@@ -43,7 +42,7 @@ def test_ping(raiden_network):
 
 @pytest.mark.skip('transport_class can no longer be set')
 @pytest.mark.parametrize('number_of_nodes', [2])
-#@pytest.mark.parametrize('transport_class', [UnreliableTransport])
+# @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_ping_unreachable(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 

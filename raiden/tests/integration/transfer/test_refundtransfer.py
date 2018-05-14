@@ -12,7 +12,6 @@ from raiden.tests.utils.transfer import (
     direct_transfer,
     mediated_transfer,
 )
-from raiden.tests.utils.transport import MessageLoggerTransport
 from raiden.transfer.mediated_transfer.events import (
     SendMediatedTransfer,
     SendRefundTransfer,
@@ -77,7 +76,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-#@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
+# @pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
 def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     """A failed transfer must send a refund back.
 
