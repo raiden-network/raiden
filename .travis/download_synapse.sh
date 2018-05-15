@@ -50,8 +50,8 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     INSTALL_OPT="--user"
 fi
 
-pip2 install $INSTALL_OPT --upgrade setuptools
-pip2 install $INSTALL_OPT $SYNAPSE_URL
+sudo pip2 install --upgrade setuptools
+sudo pip2 install $SYNAPSE_URL
 
 mkdir -p $HOME/.synapse
 cp $HOME/raiden/tests/test_files/synapse-config.yaml $HOME/.synapse/config
