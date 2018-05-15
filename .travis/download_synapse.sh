@@ -54,11 +54,12 @@ sudo pip2 install --upgrade setuptools
 sudo pip2 install $SYNAPSE_URL
 
 mkdir -p $HOME/.synapse
-pwd
 cp $HOME/build/raiden-network/raiden/raiden/tests/test_files/synapse-config.yaml $HOME/.synapse/config
 
 alias run-synapse="python2 -m synapse.homeserver.app --server-name=${SYNAPSE_SERVER_NAME} --config-path=${HOME}/.synapse/config"
 cd $HOME/.synapse
+alias -p
 run-synapse --generate-keys
+ls
 
 info 'installed synapse'
