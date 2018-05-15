@@ -22,6 +22,6 @@ RUN git clone https://github.com/raiden-network/raiden.git /apps/raiden \
 
 WORKDIR /apps/raiden
 
-EXPOSE 40001/udp
+EXPOSE 38647/udp
 
 ENTRYPOINT ["raiden"]

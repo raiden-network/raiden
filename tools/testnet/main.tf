@@ -79,8 +79,8 @@ resource "aws_security_group" "raiden" {
 
     // Allow Raiden P2P in
     ingress {
-        from_port = 40001
-        to_port = 40001
+        from_port = 38647
+        to_port = 38647
         protocol = "udp"
         cidr_blocks = ["0.0.0.0/0"]
     }

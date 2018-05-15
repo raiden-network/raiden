@@ -2,7 +2,7 @@
 from binascii import hexlify
 from ethereum.utils import denoms, int_to_big_endian
 
-INITIAL_PORT = 40001
+INITIAL_PORT = 38647
 
 RPC_CACHE_TTL = 600
 CACHE_TTL = 60
