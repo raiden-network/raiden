@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from ethereum.tools import tester, _solidity
 from raiden.utils import get_contract_path, address_encoder, event_decoder
+from raiden.settings import INITIAL_PORT
 
 
 def test_endpointregistry(tester_chain, tester_events):
@@ -24,9 +25,9 @@ def test_endpointregistry(tester_chain, tester_events):
         endpointregistry_address
     )
 
-    endpoint_registry.registerEndpoint('127.0.0.1:4001')
-    assert endpoint_registry.findAddressByEndpoint('127.0.0.1:4001') == sender
-    assert endpoint_registry.findEndpointByAddress(sender) == b'127.0.0.1:4001'
+    endpoint_registry.registerEndpoint('127.0.0.1:{}'.format(INITIAL_PORT))
+    assert endpoint_registry.findAddressByEndpoint('127.0.0.1:{}'.format(INITIAL_PORT)) == sender
+    assert endpoint_registry.findEndpointByAddress(sender) == f'127.0.0.1:{INITIAL_PORT}'.encode()
 
     endpoint_registry.registerEndpoint('192.168.0.1:4002')
     assert endpoint_registry.findAddressByEndpoint('192.168.0.1:4002') == sender
