@@ -7,3 +7,4 @@ set -x
 
 .travis/download_solc.sh
 .travis/download_geth.sh
+.travis/download_synapse.sh

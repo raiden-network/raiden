@@ -12,9 +12,11 @@ env:
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.21/solc-static-linux'
   - SOLC_URL_MACOS='https://www.dropbox.com/s/w8x7mu56993rkiw/solc_0.4.21?dl=0'
   - SOLC_VERSION='v0.4.21'
+  - SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=synapse'
+  - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   matrix:
   - TEST_TYPE='unit'
-  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
+  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache' SYNAPSE_COMMAND='--local-matrix=run-synapse'
   - TEST_TYPE='smart_contracts'
   - TEST_TYPE='property'
   - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
@@ -34,7 +36,7 @@ install:
 before_script:
   ./.travis/before_script.sh
 script:
-  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE $SYNAPSE_COMMAND ./raiden/tests/$TEST_TYPE
 after_success:
   - coveralls
 notifications:
