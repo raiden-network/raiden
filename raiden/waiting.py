@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import gevent
-from ethereum import slogging
+import structlog
 
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.transfer.state import (
@@ -9,7 +9,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer import channel, views
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def wait_for_newchannel(

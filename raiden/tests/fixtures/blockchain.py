@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import gevent
 import pytest
-from ethereum import slogging
+import structlog
 from ethereum.tools._solidity import compile_file
 
 from raiden.utils import (
@@ -43,7 +43,7 @@ BlockchainServices = namedtuple(
         'blockchain_services',
     )
 )
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 

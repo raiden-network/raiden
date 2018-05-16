@@ -5,11 +5,11 @@ from binascii import hexlify
 import json
 
 from ethereum.tools import tester
-from ethereum import slogging
+import structlog
+from raiden.log_config import configure_logging
 from raiden.utils import privatekey_to_address, get_contract_path
 
-slogging.configure(":INFO")
-log = slogging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 TARGETS = dict(
     registry='Registry.sol',
@@ -215,4 +215,5 @@ def main():
 
 
 if __name__ == '__main__':
+    configure_logging('DEBUG')
     main()

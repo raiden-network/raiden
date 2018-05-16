@@ -2,7 +2,7 @@
 import time
 
 import gevent
-from ethereum import slogging
+import structlog
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.tester_client import (
@@ -24,7 +24,7 @@ from raiden.tests.benchmark.utils import (
 )
 from raiden.utils import sha3
 
-log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
+log = structlog.get_logger('test.speed')  # pylint: disable=invalid-name
 
 
 def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
@@ -190,7 +190,7 @@ def main():
     args = parser.parse_args()
 
     if args.log:
-        slogging.configure(':DEBUG')
+        structlog.configure(':DEBUG')
 
     if args.profile:
         import GreenletProfiler

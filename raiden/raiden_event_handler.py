@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
-
-from ethereum import slogging
+import structlog
 
 from raiden.messages import (
     DirectTransfer,
@@ -37,7 +35,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.utils import pex
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
     EventTransferReceivedSuccess,
     EventUnlockSuccess,
@@ -273,5 +271,5 @@ def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
         handle_contract_channelsettle(raiden, event)
     elif isinstance(event, UNEVENTFUL_EVENTS):
         pass
-    elif log.isEnabledFor(logging.ERROR):
+    else:
         log.error('Unknown event {}'.format(type(event)))

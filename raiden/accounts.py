@@ -7,12 +7,12 @@ from binascii import hexlify, unhexlify
 from json import JSONDecodeError
 from typing import Dict
 
-from ethereum.slogging import get_logger
 from eth_keyfile import decode_keyfile_json
+import structlog
 
 from raiden.utils import privtopub, privatekey_to_address
 
-log = get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 
 def find_datadir():
@@ -89,7 +89,7 @@ class AccountManager:
                 files = os.listdir(self.keystore_path)
             except OSError as ex:
                 msg = 'Unable to list the specified directory'
-                log.error('%s %s: %s', msg, self.keystore_path, ex)
+                log.error('OsError', msg=msg, path=self.keystore_path, ex=ex)
                 return
 
             for f in files:
@@ -114,7 +114,7 @@ class AccountManager:
                                 msg = 'Can not read account file (errno=%s)' % ex.errno
                             if isinstance(ex, json.decoder.JSONDecodeError):
                                 msg = 'The account file is not valid JSON format'
-                            log.warning('%s %s: %s', msg, fullpath, ex)
+                            log.warning('OsError', msg=msg, path=fullpath, ex=ex)
 
     def address_in_keystore(self, address):
         if address is None:

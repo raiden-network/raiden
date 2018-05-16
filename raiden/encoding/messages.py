@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ethereum import slogging
+import structlog
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer, optional_bytes
@@ -38,7 +38,7 @@ DELIVERED = 12
 
 
 # pylint: disable=invalid-name
-log = slogging.get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
-import logging
 import os
 import random
 import sys
@@ -10,7 +9,7 @@ import filelock
 import gevent
 from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
-from ethereum import slogging
+import structlog
 
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
@@ -59,7 +58,7 @@ from raiden.utils import (
 )
 from raiden.storage import wal, serialize, sqlite
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def initiator_init(
@@ -360,10 +359,7 @@ class RaidenService:
         self._block_number = block_number
 
     def handle_state_change(self, state_change, block_number=None):
-        is_logging = log.isEnabledFor(logging.DEBUG)
-
-        if is_logging:
-            log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
+        log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
 
         if block_number is None:
             block_number = self.get_block_number()
@@ -371,8 +367,7 @@ class RaidenService:
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
         for event in event_list:
-            if is_logging:
-                log.debug('EVENT', node=pex(self.address), event=event)
+            log.debug('EVENT', node=pex(self.address), chain_event=event)
 
             on_raiden_event(self, event)
 

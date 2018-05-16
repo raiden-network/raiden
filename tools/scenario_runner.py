@@ -10,7 +10,7 @@ import random
 import click
 import gevent
 from gevent import monkey, server
-from ethereum import slogging
+import structlog
 
 from raiden.app import App
 from raiden.api.python import RaidenAPI
@@ -25,7 +25,7 @@ from raiden.utils import split_endpoint, decode_hex
 from raiden.settings import GAS_PRICE
 
 monkey.patch_all()
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @click.option(  # noqa
@@ -45,7 +45,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     type=str,
 )
 @click.option(  # noqa
-    '--logging',
+    '--structlog',
     default=':INFO',
     type=str,
 )
@@ -72,14 +72,14 @@ def run(
         registry_contract_address,
         discovery_contract_address,
         listen_address,
-        logging,
+        structlog,
         logfile,
         scenario,
         stage_prefix
 ):  # pylint: disable=unused-argument
 
-    # TODO: only enabled logging on "initiators"
-    slogging.configure(logging, log_file=logfile)
+    # TODO: only enabled structlog on "initiators"
+    structlog.configure(structlog, log_file=logfile)
 
     (listen_host, listen_port) = split_endpoint(listen_address)
 

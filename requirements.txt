@@ -28,3 +28,5 @@ tinyrpc[gevent,httpclient]==0.8
 webargs==1.8.1
 eth-keyfile==0.5.1
 eth_utils==1.0.3
+structlog
+colorama

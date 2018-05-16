@@ -9,11 +9,11 @@ from gevent import monkey
 monkey.patch_all()
 
 import pytest
-from ethereum import slogging
 from ethereum.tools.keys import PBKDF2_CONSTANTS
 
 from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures import *  # noqa: F401,F403
+from raiden.log_config import configure_logging
 
 gevent.get_hub().SYSTEM_ERROR = BaseException
 gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
@@ -48,6 +48,12 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
+        '--plain-log',
+        action='store_true',
+        default=False,
+        help='Do not colorize console log output'
+    )
+    parser.addoption(
         '--profiler',
         default=None,
         choices=['cpu', 'sample'],
@@ -80,28 +86,25 @@ def profiler(request, tmpdir):
         yield
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope='session')
 def logging_level(request):
-    """ Configure the logging level.
+    """ Configure the structlog level.
 
     For integration tests this also sets the geth verbosity.
     """
-    if request.config.option.log_format is not None:
-        slogging.PRINT_FORMAT = request.config.option.log_format
-    if request.config.option.log_config is not None:
-        slogging.configure(request.config.option.log_config)
-
-    elif request.config.option.verbose > 5:
-        slogging.configure(':TRACE')
-
-    elif request.config.option.verbose > 3:
-        slogging.configure(':DEBUG')
-
+    if request.config.option.verbose > 3:
+        level = 'DEBUG'
     elif request.config.option.verbose > 1:
-        slogging.configure(':INFO')
-
+        level = 'INFO'
     else:
-        slogging.configure(':WARNING')
+        level = 'WARNING'
+    if request.config.option.log_cli_level:
+        level = request.config.option.log_cli_level
+    configure_logging(
+        level,
+        colorize=not request.config.option.plain_log,
+        log_file=request.config.option.log_file
+    )
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -118,17 +121,17 @@ def validate_solidity_compiler():
     validate_solc()
 
 
-# Connect catchlog's handler to slogging's root logger
-@pytest.hookimpl(hookwrapper=True, trylast=True)
-def pytest_runtest_call(item):
-    catchlog_handler = getattr(item, CATCH_LOG_HANDLER_NAME, None)
-    if catchlog_handler and catchlog_handler not in slogging.rootLogger.handlers:
-        slogging.rootLogger.addHandler(catchlog_handler)
+# Connect catchlog's handler to structlog's root logger
+# @pytest.hookimpl(hookwrapper=True, trylast=True)
+# def pytest_runtest_call(item):
+#    catchlog_handler = getattr(item, CATCH_LOG_HANDLER_NAME, None)
+#    if catchlog_handler and catchlog_handler not in structlog.rootLogger.handlers:
+#        structlog.rootLogger.addHandler(catchlog_handler)
 
-    yield
+#    yield
 
-    if catchlog_handler and catchlog_handler in slogging.rootLogger.handlers:
-        slogging.rootLogger.removeHandler(catchlog_handler)
+#    if catchlog_handler and catchlog_handler in structlog.rootLogger.handlers:
+#        structlog.rootLogger.removeHandler(catchlog_handler)
 
 
 if sys.platform == 'darwin':

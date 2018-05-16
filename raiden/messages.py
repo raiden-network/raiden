@@ -1,5 +1,6 @@
-from ethereum.slogging import getLogger
+# -*- coding: utf-8 -*-
 from eth_utils import big_endian_to_int
+import structlog
 
 from raiden.constants import (
     UINT256_MAX,
@@ -37,7 +38,7 @@ __all__ = (
     'from_dict',
 )
 
-log = getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def assert_envelope_values(nonce, channel, transferred_amount, locked_amount, locksroot):

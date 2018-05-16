@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import gevent
 import pytest
-from ethereum import slogging
+import structlog
 
 from raiden import waiting
 from raiden.exceptions import RaidenShuttingDown
@@ -14,7 +14,7 @@ from raiden.tests.utils.network import (
     netting_channel_open_and_deposit,
 )
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def _raiden_cleanup(request, raiden_apps):

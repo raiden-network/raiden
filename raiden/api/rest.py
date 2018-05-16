@@ -12,7 +12,7 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from gevent.pywsgi import WSGIServer
 
-from ethereum import slogging
+import structlog
 
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -63,7 +63,7 @@ from raiden.raiden_service import (
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
 from raiden.utils import address_encoder, channelstate_to_api_dict, split_endpoint, is_frozen
 
-log = slogging.get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 ERROR_STATUS_CODES = [
     HTTPStatus.CONFLICT,

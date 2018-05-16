@@ -7,7 +7,7 @@ from gevent.queue import Queue
 from gevent.lock import BoundedSemaphore
 from gevent.event import Event
 from gevent.timeout import Timeout
-from ethereum import slogging
+import structlog
 import click
 
 from raiden.api.python import RaidenAPI
@@ -20,7 +20,7 @@ from raiden.utils import pex, get_system_spec
 from raiden.utils.cli import ADDRESS_TYPE
 
 
-log = slogging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 # number of transfers we will check for duplicates
 TRANSFER_MEMORY = 4096
@@ -270,16 +270,16 @@ def runner(ctx, **kwargs):
     # This is largely a copy&paste job from `raiden.ui.cli::run`, with the difference that
     # an `EchoNode` is instantiated from the App's `RaidenAPI`.
     print('Welcome to Raiden, version {} [Echo Node]'.format(get_system_spec()['raiden']))
-    slogging.configure(
-        kwargs['logging'],
+    structlog.configure(
+        kwargs['structlog'],
         log_json=kwargs['log_json'],
         log_file=kwargs['logfile']
     )
     if kwargs['logfile']:
-        # Disable stream logging
-        root = slogging.getLogger()
+        # Disable stream structlog
+        root = structlog.get_logger()
         for handler in root.handlers:
-            if isinstance(handler, slogging.logging.StreamHandler):
+            if isinstance(handler, structlog.structlog.StreamHandler):
                 root.handlers.remove(handler)
                 break
 

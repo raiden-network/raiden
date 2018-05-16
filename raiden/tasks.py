@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 
-from ethereum import slogging
+import structlog
 
 import gevent
 from gevent.event import AsyncResult
@@ -11,7 +11,7 @@ from gevent.queue import (
 from raiden.exceptions import RaidenShuttingDown
 
 REMOVE_CALLBACK = object()
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class AlarmTask(gevent.Greenlet):
@@ -81,10 +81,7 @@ class AlarmTask(gevent.Greenlet):
 
         if current_block > self.last_block_number + 1:
             difference = current_block - self.last_block_number - 1
-            log.error(
-                'alarm missed %s blocks',
-                difference,
-            )
+            log.error('alarm missed %s blocks' % (difference))
 
         if current_block != self.last_block_number:
             log.debug(

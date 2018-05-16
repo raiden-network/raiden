@@ -4,7 +4,8 @@ import os
 import sys
 from json import JSONEncoder
 
-from ethereum import slogging
+import logging
+from raiden.log_config import configure_logging
 from logstash import LogstashFormatterVersion1, UDPLogstashHandler
 from pkg_resources import load_entry_point
 
@@ -45,8 +46,8 @@ class NotCrashingUDPLogstashHandler(UDPLogstashHandler):
 
 if __name__ == "__main__":
     if 'RAIDEN_LOGSTASH_HOST' in os.environ:
-        slogging.configure()
-        slogging.rootLogger.addHandler(
+        configure_logging('WARN', colorize=False)
+        logging.root.addHandler(
             NotCrashingUDPLogstashHandler(
                 os.environ.get('RAIDEN_LOGSTASH_HOST'),
                 int(os.environ.get('RAIDEN_LOGSTASH_PORT', 9595)),

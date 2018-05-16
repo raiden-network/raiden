@@ -10,8 +10,8 @@ import termios
 import time
 import gevent
 
-from ethereum import slogging
 from eth_utils import denoms
+import structlog
 from requests import ConnectionError
 
 from raiden.utils import (
@@ -22,7 +22,7 @@ from raiden.utils import (
 )
 from raiden.tests.utils.genesis import GENESIS_STUB
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_BALANCE = denoms.ether * 10000000
 DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
@@ -58,7 +58,7 @@ def geth_to_cmd(node, datadir, verbosity):
     Args:
         node (dict): a node configuration
         datadir (str): the node's datadir
-        verbosity (int): geth logging verbosity, 0 - nothing, 5 - max
+        verbosity (int): geth structlog verbosity, 0 - nothing, 5 - max
 
     Return:
         List[str]: cmd-args list

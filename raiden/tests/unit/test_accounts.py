@@ -11,6 +11,9 @@ from raiden.utils import get_project_root, encode_hex
 KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
 
+import structlog
+log = structlog.get_logger()
+
 
 @pytest.yield_fixture(scope='module')
 def test_keystore():

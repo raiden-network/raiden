@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
-
-from ethereum import slogging
+import structlog
 
 from raiden.utils import random_secret
 from raiden.routing import get_best_routes
@@ -30,7 +28,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def handle_message_secretrequest(raiden: 'RaidenService', message: SecretRequest):
@@ -145,7 +143,7 @@ def on_udp_message(raiden: 'RaidenService', message: Message):
         handle_message_lockedtransfer(raiden, message)
     elif type(message) == Processed:
         handle_message_processed(raiden, message)
-    elif log.isEnabledFor(logging.ERROR):
+    else:
         log.error('Unknown message cmdid {}'.format(message.cmdid))
         return False
 

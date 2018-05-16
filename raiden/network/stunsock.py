@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import stun
-from ethereum import slogging as logging
+import structlog as structlog
 
 from raiden.exceptions import STUNUnavailableException
 
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 def stun_socket(

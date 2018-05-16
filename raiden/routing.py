@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import logging
 from typing import List, Tuple
 from heapq import heappush, heappop
 
 import networkx
-from ethereum import slogging
+import structlog
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -15,7 +14,7 @@ from raiden.transfer.state import (
 from raiden.utils import isaddress, pex, typing
 from raiden.transfer.state import RouteState
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def make_graph(
@@ -109,12 +108,9 @@ def get_best_routes(
         to_address,
     )
 
-    if not neighbors_heap and log.isEnabledFor(logging.WARNING):
-        log.warn(
-            'No routes available from %s to %s',
-            pex(from_address),
-            pex(to_address),
-        )
+    log.warn(
+        'No routes available from %s to %s' % (pex(from_address), pex(to_address))
+    )
 
     while neighbors_heap:
         _, partner_address = heappop(neighbors_heap)
@@ -131,12 +127,10 @@ def get_best_routes(
             continue
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'channel %s - %s is not opened, ignoring',
-                    pex(from_address),
-                    pex(partner_address),
-                )
+            log.info(
+                'channel %s - %s is not opened, ignoring' %
+                (pex(from_address), pex(partner_address))
+            )
             continue
 
         distributable = channel.get_distributable(
@@ -145,24 +139,18 @@ def get_best_routes(
         )
 
         if amount > distributable:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'channel %s - %s doesnt have enough funds [%s], ignoring',
-                    pex(from_address),
-                    pex(partner_address),
-                    amount,
-                )
+            log.info(
+                'channel %s - %s doesnt have enough funds [%s], ignoring' %
+                (pex(from_address), pex(partner_address), amount)
+            )
             continue
 
         network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
         if network_state != NODE_NETWORK_REACHABLE:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'partner for channel %s - %s is not %s, ignoring',
-                    pex(from_address),
-                    pex(partner_address),
-                    NODE_NETWORK_REACHABLE,
-                )
+            log.info(
+                'partner for channel %s - %s is not %s, ignoring' %
+                (pex(from_address), pex(partner_address), NODE_NETWORK_REACHABLE)
+            )
             continue
 
         route_state = RouteState(partner_address, channel_state.identifier)

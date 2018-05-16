@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-import logging
 from binascii import hexlify, unhexlify
 
-from ethereum import slogging
+import structlog
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -35,7 +34,7 @@ from raiden.network.rpc.filters import (
     Filter,
 )
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class Registry:
@@ -84,13 +83,12 @@ class Registry:
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'add_token called',
-                node=pex(self.node_address),
-                token_address=pex(token_address),
-                registry_address=pex(self.address),
-            )
+        log.info(
+            'add_token called',
+            node=pex(self.node_address),
+            token_address=pex(token_address),
+            registry_address=pex(self.address),
+        )
 
         transaction_hash = estimate_and_transact(
             self.proxy,
@@ -102,36 +100,33 @@ class Registry:
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'add_token failed',
-                    node=pex(self.node_address),
-                    token_address=pex(token_address),
-                    registry_address=pex(self.address),
-                )
+            log.info(
+                'add_token failed',
+                node=pex(self.node_address),
+                token_address=pex(token_address),
+                registry_address=pex(self.address),
+            )
             raise TransactionThrew('AddToken', receipt_or_none)
 
         manager_address = self.manager_address_by_token(token_address)
 
         if manager_address is None:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'add_token failed and check_transaction_threw didnt detect it',
-                    node=pex(self.node_address),
-                    token_address=pex(token_address),
-                    registry_address=pex(self.address),
-                )
-
-            raise RuntimeError('channelManagerByToken failed')
-
-        if log.isEnabledFor(logging.INFO):
             log.info(
-                'add_token sucessful',
+                'add_token failed and check_transaction_threw didnt detect it',
                 node=pex(self.node_address),
                 token_address=pex(token_address),
                 registry_address=pex(self.address),
-                manager_address=pex(manager_address),
             )
+
+            raise RuntimeError('channelManagerByToken failed')
+
+        log.info(
+            'add_token sucessful',
+            node=pex(self.node_address),
+            token_address=pex(token_address),
+            registry_address=pex(self.address),
+            manager_address=pex(manager_address),
+        )
 
         return manager_address
 

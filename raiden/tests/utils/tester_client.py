@@ -5,7 +5,7 @@ from collections import defaultdict
 from itertools import count
 from typing import Union
 
-from ethereum import slogging
+import structlog
 from ethereum.tools import tester, _solidity
 from ethereum.tools.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
@@ -46,7 +46,7 @@ from raiden.network.rpc.client import (
 )
 from raiden.exceptions import SamePeerAddress
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
 
 # NOTE: mine after each transaction to reset block.gas_used
