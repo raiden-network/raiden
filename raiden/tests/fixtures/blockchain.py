@@ -148,7 +148,6 @@ def cached_genesis(request):
         endpoint_discovery_services,
         registry_address,
         request.getfixturevalue('raiden_udp_ports'),
-        DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.getfixturevalue('reveal_timeout'),
         request.getfixturevalue('settle_timeout'),
         request.getfixturevalue('database_paths'),
