@@ -15,7 +15,6 @@ from raiden.utils import (
     get_contract_path,
     privatekey_to_address,
 )
-from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_chain
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
