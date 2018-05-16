@@ -10,7 +10,7 @@ from flask_restful import Api, abort
 from flask_cors import CORS
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 
 from ethereum import slogging
 

@@ -66,7 +66,3 @@ python2 -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
   --config-path=${HOME}/.synapse/config
 """ > run.sh
 chmod 775 run.sh
-
-cat run.sh
-ls -l
-info 'installed synapse'
