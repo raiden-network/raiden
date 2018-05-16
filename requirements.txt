@@ -22,7 +22,7 @@ pycryptodome>=3.5.1
 pysha3==1.0.2
 # raiden-libs==???
 # FIXME: replace with released version before merge
-git+https://github.com/raiden-network/raiden-libs/tree/e0dac0e3780014ecb96fb144f42543a036115314#egg=raiden-libs
+git+https://github.com/raiden-network/raiden-libs.git#egg=raiden-libs
 repoze.lru==0.7.0
 rlp==0.6
 tinyrpc[gevent,httpclient]==0.8
