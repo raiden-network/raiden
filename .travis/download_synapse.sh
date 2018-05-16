@@ -44,22 +44,29 @@ warn() {
 [ -z "${SYNAPSE_URL}" ] && fail 'missing SYNAPSE_URL'
 [ -z "${SYNAPSE_SERVER_NAME}" ] && fail 'missing SYNAPSE_SERVER_NAME'
 
-INSTALL_OPT=""
-if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-    # install into user dir on macos to avoid sudo
-    INSTALL_OPT="--user"
+if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+    sudo apt-get -qq update
+    sudo apt-get install -y sqlite3
 fi
 
 sudo pip2 install --upgrade setuptools
 sudo pip2 install $SYNAPSE_URL
 
 mkdir -p $HOME/.synapse
-cp $HOME/build/raiden-network/raiden/raiden/tests/test_files/synapse-config.yaml $HOME/.synapse/config
-
 cd $HOME/.synapse
-python2 -m synapse.homeserver.app --server-name=${SYNAPSE_SERVER_NAME} --config-path=${HOME}/.synapse/config --generate-keys
-echo "python2 -m synapse.homeserver.app --server-name=${SYNAPSE_SERVER_NAME} --config-path=${HOME}/.synapse/config" > run.sh
-chmod a+x run.sh
-ls
 
+cp $HOME/build/raiden-network/raiden/raiden/tests/test_files/synapse-config.yaml ./config
+python2 -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
+	--config-path=${HOME}/.synapse/config --generate-keys
+
+echo """
+#!/usr/bin/env bash
+cd ${HOME}/.synapse
+python2 -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
+  --config-path=${HOME}/.synapse/config
+""" > run.sh
+chmod 775 run.sh
+
+cat run.sh
+ls -l
 info 'installed synapse'
