@@ -179,6 +179,10 @@ class BlockChainServiceTesterMock:
         self.address_to_registry = dict()
         self.client = ClientMock()
 
+    @property
+    def network_id(self):
+        return 627
+
     def block_number(self):
         return self.tester_chain.block.number
 
