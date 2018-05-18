@@ -207,6 +207,7 @@ class EnvelopeMessage(SignedMessage):
         data_to_sign = pack_signing_data(
             klass.get_bytes_from(data, 'nonce'),
             klass.get_bytes_from(data, 'transferred_amount'),
+            # Locked amount should get signed when smart contracts change to include it
             # klass.get_bytes_from(data, 'locked_amount'),
             klass.get_bytes_from(data, 'channel'),
             klass.get_bytes_from(data, 'locksroot'),
@@ -238,6 +239,7 @@ class EnvelopeMessage(SignedMessage):
         data_that_was_signed = pack_signing_data(
             message_type.get_bytes_from(data, 'nonce'),
             message_type.get_bytes_from(data, 'transferred_amount'),
+            # Locked amount should get signed when smart contracts change to include it
             # message_type.get_bytes_from(data, 'locked_amount'),
             message_type.get_bytes_from(data, 'channel'),
             message_type.get_bytes_from(data, 'locksroot'),
