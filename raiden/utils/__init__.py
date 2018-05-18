@@ -64,6 +64,16 @@ def sha3(data: bytes) -> bytes:
     return keccak_256(data).digest()
 
 
+def eth_sign_sha3(data: bytes) -> bytes:
+    """
+    eth_sign/recover compatible hasher
+    Prefixes data with "\x19Ethereum Signed Message:\n<len(data)>"
+    """
+    if not data.startswith(b'\x19Ethereum Signed Message:'):
+        data = b'\x19Ethereum Signed Message:\n%d%s' % (len(data), data)
+    return sha3(data)
+
+
 def ishash(data: bytes) -> bool:
     return isinstance(data, bytes) and len(data) == 32
 

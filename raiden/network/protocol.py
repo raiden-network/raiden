@@ -252,7 +252,7 @@ def single_queue_send(
     """
 
     # A NotifyingQueue is required to implement cancelability, otherwise the
-    # task cannot be stoped while the greenlet waits for an element to be
+    # task cannot be stopped while the greenlet waits for an element to be
     # inserted in the queue.
     if not isinstance(queue, NotifyingQueue):
         raise ValueError('queue must be a NotifyingQueue.')
@@ -543,7 +543,7 @@ class UDPTransport:
             async_result.set(False)
 
     def get_health_events(self, recipient):
-        """ Starts a healthcheck taks for `recipient` and returns a
+        """ Starts a healthcheck task for `recipient` and returns a
         HealthEvents with locks to react on its current state.
         """
         if recipient not in self.addresses_events:

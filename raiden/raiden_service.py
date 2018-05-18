@@ -167,7 +167,15 @@ def endpoint_registry_exception_handler(greenlet):
 class RaidenService:
     """ A Raiden node. """
 
-    def __init__(self, chain, default_registry, private_key_bin, transport, discovery, config):
+    def __init__(
+        self,
+        chain,
+        default_registry,
+        private_key_bin,
+        transport,
+        config,
+        discovery=None
+    ):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -195,13 +203,14 @@ class RaidenService:
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
 
-        endpoint_registration_event = gevent.spawn(
-            discovery.register,
-            self.address,
-            config['external_ip'],
-            config['external_port'],
-        )
-        endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
+        if config['transport_type'] == 'udp':
+            endpoint_registration_event = gevent.spawn(
+                discovery.register,
+                self.address,
+                config['external_ip'],
+                config['external_port'],
+            )
+            endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
@@ -233,9 +242,10 @@ class RaidenService:
             self.serialization_file = None
             self.db_lock = None
 
-        # If the endpoint registration fails the node will quit, this must
-        # finish before starting the protocol
-        endpoint_registration_event.join()
+        if config['transport_type'] == 'udp':
+            # If the endpoint registration fails the node will quit, this must
+            # finish before starting the protocol
+            endpoint_registration_event.join()
 
         # Lock used to serialize calls to `poll_blockchain_events`, this is
         # important to give a consistent view of the node state.
@@ -317,7 +327,7 @@ class RaidenService:
         self.alarm.stop_async()
 
         wait_for = [self.alarm]
-        wait_for.extend(self.protocol.greenlets)
+        wait_for.extend(getattr(self.protocol, 'greenlets', []))
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         gevent.wait(wait_for, timeout=self.shutdown_timeout)

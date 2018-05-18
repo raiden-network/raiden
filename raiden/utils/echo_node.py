@@ -15,16 +15,10 @@ from raiden.network.sockfactory import SocketFactory
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.ui.cli import (
-    options,
-    app,
-    split_endpoint,
-    signal,
-    APIServer,
-    RestAPI,
-    ADDRESS_TYPE
-)
+from raiden.ui.cli import options, app, split_endpoint, signal, APIServer, RestAPI
 from raiden.utils import pex, get_system_spec
+from raiden.utils.cli import ADDRESS_TYPE
+
 
 log = slogging.getLogger(__name__)
 

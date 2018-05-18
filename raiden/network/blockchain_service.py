@@ -2,6 +2,7 @@
 import os
 
 import gevent
+from cachetools.func import ttl_cache
 from ethereum import slogging
 from ethereum.tools import _solidity
 
@@ -201,3 +202,8 @@ class BlockChainService:
         registry.add_token(token_address)
 
         return token_address
+
+    @property
+    @ttl_cache(ttl=10)
+    def network_id(self) -> int:
+        return int(self.client.rpccall_with_retry('net_version'))
