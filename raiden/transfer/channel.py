@@ -200,7 +200,7 @@ def is_valid_directtransfer(direct_transfer, channel_state, sender_state, receiv
         result = (False, msg)
 
     elif received_balance_proof.locked_amount != expected_locked_amount:
-        # Direct transfers must not change the locked_amount, otherwise the
+        # Direct transfers must not change the locked_amount. Otherwise the
         # sender is trying to play the protocol and steal token.
         msg = (
             "Invalid DirectTransfer message. "
@@ -450,7 +450,7 @@ def is_valid_unlock(unlock, channel_state, sender_state):
 
     elif received_balance_proof.transferred_amount != expected_transferred_amount:
         # Secret messages must decrease the locked_amount by lock amount.
-        # otherwise the sender is trying to play the protocol and steal token.
+        # Otherwise the sender is trying to play the protocol and steal token.
         msg = (
             "Invalid Secret message. "
             "Balance proof's wrong locked_amount, expected: {} got: {}."
