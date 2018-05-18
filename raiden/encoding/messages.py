@@ -64,6 +64,7 @@ locksroot = make_field('locksroot', 32, '32s')
 secrethash = make_field('secrethash', 32, '32s')
 secret = make_field('secret', 32, '32s')
 transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
+locked_amount = make_field('locked_amount', 32, '32s', integer(0, UINT256_MAX))
 amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
 fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
 
@@ -136,6 +137,7 @@ Secret = namedbuffer(
         nonce,
         channel,
         transferred_amount,
+        locked_amount,
         locksroot,
         signature,
     ]
@@ -165,6 +167,7 @@ DirectTransfer = namedbuffer(
         channel,
         recipient,
         transferred_amount,
+        locked_amount,
         locksroot,
         signature,
     ]
@@ -188,6 +191,7 @@ LockedTransfer = namedbuffer(
         locksroot,
         secrethash,
         transferred_amount,
+        locked_amount,
         amount,
         fee,
         signature,
@@ -212,6 +216,7 @@ RefundTransfer = namedbuffer(
         locksroot,
         secrethash,
         transferred_amount,
+        locked_amount,
         amount,
         fee,
         signature,

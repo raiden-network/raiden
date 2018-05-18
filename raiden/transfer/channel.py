@@ -140,6 +140,7 @@ def is_valid_directtransfer(direct_transfer, channel_state, sender_state, receiv
     current_locksroot, _, current_transferred_amount = current_balance_proof
     distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
+    expected_locked_amount = get_amount_locked(sender_state)
 
     amount = received_balance_proof.transferred_amount - current_transferred_amount
 
@@ -198,6 +199,19 @@ def is_valid_directtransfer(direct_transfer, channel_state, sender_state, receiv
 
         result = (False, msg)
 
+    elif received_balance_proof.locked_amount != expected_locked_amount:
+        # Direct transfers must not change the locked_amount. Otherwise the
+        # sender is trying to play the protocol and steal token.
+        msg = (
+            "Invalid DirectTransfer message. "
+            "Balance proof's locked_amount is invalid, expected: {} got: {}."
+        ).format(
+            expected_locked_amount,
+            received_balance_proof.locked_amount,
+        )
+
+        result = (False, msg)
+
     elif received_balance_proof.channel_address != channel_state.identifier:
         # The balance proof must be tied to this channel, otherwise the
         # on-chain contract would be sucesstible to replay attacks across
@@ -236,12 +250,13 @@ def is_valid_lockedtransfer(mediated_transfer, channel_state, sender_state, rece
     received_balance_proof = mediated_transfer.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
+    lock = mediated_transfer.lock
+    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
+
     _, _, current_transferred_amount = current_balance_proof
     distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
-
-    lock = mediated_transfer.lock
-    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
+    expected_locked_amount = get_amount_locked(sender_state) + lock.amount
 
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
         msg = 'Invalid direct message. The channel is already closed.'
@@ -303,6 +318,18 @@ def is_valid_lockedtransfer(mediated_transfer, channel_state, sender_state, rece
 
             result = (False, msg, None)
 
+        elif received_balance_proof.locked_amount != expected_locked_amount:
+            # Mediated transfers must increase the locked_amount by lock.amount
+            msg = (
+                "Invalid LockedTransfer message. "
+                "Balance proof's locked_amount is invalid, expected: {} got: {}."
+            ).format(
+                expected_locked_amount,
+                received_balance_proof.locked_amount,
+            )
+
+            result = (False, msg, None)
+
         elif received_balance_proof.channel_address != channel_state.identifier:
             # The balance proof must be tied to this channel, otherwise the
             # on-chain contract would be sucesstible to replay attacks across
@@ -350,6 +377,7 @@ def is_valid_unlock(unlock, channel_state, sender_state):
         expected_nonce = get_next_nonce(sender_state)
 
         expected_transferred_amount = current_transferred_amount + lock.amount
+        expected_locked_amount = get_amount_locked(sender_state) - lock.amount
 
         is_valid, signature_msg = is_valid_signature(
             received_balance_proof,
@@ -416,6 +444,19 @@ def is_valid_unlock(unlock, channel_state, sender_state):
         ).format(
             expected_transferred_amount,
             received_balance_proof.transferred_amount,
+        )
+
+        result = (False, msg, None)
+
+    elif received_balance_proof.transferred_amount != expected_transferred_amount:
+        # Secret messages must decrease the locked_amount by lock amount.
+        # Otherwise the sender is trying to play the protocol and steal token.
+        msg = (
+            "Invalid Secret message. "
+            "Balance proof's wrong locked_amount, expected: {} got: {}."
+        ).format(
+            expected_locked_amount,
+            received_balance_proof.locked_amount,
         )
 
         result = (False, msg, None)
@@ -686,10 +727,12 @@ def create_senddirecttransfer(
     nonce = get_next_nonce(our_state)
     token = channel_state.token_address
     recipient = partner_state.address
+    locked_amount = get_amount_locked(our_state)
 
     balance_proof = BalanceProofUnsignedState(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         channel_state.identifier,
     )
@@ -753,10 +796,12 @@ def create_sendlockedtransfer(
     token = channel_state.token_address
     nonce = get_next_nonce(channel_state.our_state)
     recipient = channel_state.partner_state.address
+    locked_amount = get_amount_locked(our_state) + amount  # the new lock is not registered yet
 
     balance_proof = BalanceProofUnsignedState(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         channel_state.identifier,
     )
@@ -783,31 +828,35 @@ def create_sendlockedtransfer(
 
 
 def create_unlock(channel_state, message_identifier, payment_identifier, secret, lock):
+    our_state = channel_state.our_state
+
     msg = 'caller must make sure the lock is known'
-    assert is_lock_pending(channel_state.our_state, lock.secrethash), msg
+    assert is_lock_pending(our_state, lock.secrethash), msg
 
     msg = 'caller must make sure the channel is open'
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
-    our_balance_proof = channel_state.our_state.balance_proof
+    our_balance_proof = our_state.balance_proof
     if our_balance_proof:
         transferred_amount = lock.amount + our_balance_proof.transferred_amount
     else:
         transferred_amount = lock.amount
 
     merkletree = compute_merkletree_without(
-        channel_state.our_state.merkletree,
+        our_state.merkletree,
         lock.lockhash,
     )
     locksroot = merkleroot(merkletree)
 
     token = channel_state.token_address
-    nonce = get_next_nonce(channel_state.our_state)
+    nonce = get_next_nonce(our_state)
     recipient = channel_state.partner_state.address
+    locked_amount = get_amount_locked(our_state) - lock.amount  # the lock is still registered
 
     balance_proof = BalanceProofUnsignedState(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         channel_state.identifier,
     )

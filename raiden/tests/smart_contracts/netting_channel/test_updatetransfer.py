@@ -180,6 +180,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(
         token=channel0.token_address,
         channel=channel0.identifier,
         transferred_amount=10,
+        locked_amount=0,
         recipient=channel1.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
@@ -220,6 +221,7 @@ def test_update_must_fail_with_a_channel_address(tester_registry_address, tester
         token=channel0.token_address,
         channel=wrong_channel,
         transferred_amount=10,
+        locked_amount=0,
         recipient=channel1.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )

@@ -218,6 +218,7 @@ def test_signature_split(tester_chain, tester_nettingchannel_library_address):
         token='x' * 20,
         channel=auxiliary.address,
         transferred_amount=10,
+        locked_amount=0,
         recipient='y' * 20,
         locksroot=HASH
     )
@@ -254,6 +255,7 @@ def test_recoverAddressFromSignature(tester_chain, tester_nettingchannel_library
         token='x' * 20,
         channel=auxiliary.address,
         transferred_amount=10,
+        locked_amount=0,
         recipient='y' * 20,
         locksroot=HASH
     )

@@ -172,6 +172,7 @@ def make_transfer(
         identifier=1,
         nonce=1,
         transferred_amount=0,
+        locked_amount=None,
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         locksroot=None,
         token=UNIT_TOKEN_ADDRESS
@@ -186,10 +187,14 @@ def make_transfer(
 
     if locksroot is None:
         locksroot = lock.lockhash
+        locked_amount = amount
+    else:
+        assert locked_amount
 
     unsigned_balance_proof = BalanceProofUnsignedState(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         channel_identifier,
     )
@@ -217,6 +222,7 @@ def make_signed_transfer(
         message_identifier=None,
         nonce=1,
         transferred_amount=0,
+        locked_amount=None,
         recipient=UNIT_TRANSFER_TARGET,
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         token=UNIT_TOKEN_ADDRESS,
@@ -234,6 +240,11 @@ def make_signed_transfer(
         secrethash,
     )
 
+    if locked_amount is None:
+        locked_amount = amount
+    else:
+        assert locked_amount >= amount
+
     transfer = LockedTransfer(
         message_identifier,
         payment_identifier,
@@ -242,6 +253,7 @@ def make_signed_transfer(
         token,
         channel_identifier,
         transferred_amount,
+        locked_amount,
         recipient,
         lock.lockhash,
         lock,
@@ -256,6 +268,7 @@ def make_signed_transfer(
 def make_signed_balance_proof(
         nonce,
         transferred_amount,
+        locked_amount,
         channel_address,
         locksroot,
         extra_hash,
@@ -275,6 +288,7 @@ def make_signed_balance_proof(
     signed_balance_proof = BalanceProofSignedState(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         channel_address,
         extra_hash,

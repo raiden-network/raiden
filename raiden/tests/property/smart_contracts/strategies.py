@@ -25,6 +25,7 @@ def direct_transfer(draw, registry_address, token, channel, recipient, locksroot
         draw(token),
         draw(channel),
         draw(transferred_amount),
+        0,
         draw(recipient),
         draw(locksroot),
     )

@@ -189,6 +189,7 @@ def claim_lock(app_chain, payment_identifier, token, secret):
             unlock_lock.balance_proof.nonce,
             unlock_lock.balance_proof.channel_address,
             unlock_lock.balance_proof.transferred_amount,
+            unlock_lock.balance_proof.locked_amount,
             unlock_lock.balance_proof.locksroot,
             unlock_lock.secret,
         )

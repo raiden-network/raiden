@@ -159,11 +159,16 @@ def make_receive_transfer_direct(
         nonce,
         transferred_amount,
         locksroot=EMPTY_MERKLE_ROOT,
-        registry_address=UNIT_REGISTRY_IDENTIFIER):
+        registry_address=UNIT_REGISTRY_IDENTIFIER,
+        locked_amount=None,
+):
 
     address = privatekey_to_address(privkey.secret)
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError('Private key does not match any of the participants.')
+
+    if locked_amount is None:
+        locked_amount = channel.get_amount_locked(channel_state.our_state)
 
     message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = nonce
@@ -175,6 +180,7 @@ def make_receive_transfer_direct(
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
+        locked_amount,
         channel_state.partner_state.address,
         locksroot,
     )
@@ -201,6 +207,7 @@ def make_receive_transfer_mediated(
         lock,
         merkletree_leaves=None,
         registry_address=UNIT_REGISTRY_IDENTIFIER,
+        locked_amount=None,
 ):
 
     if not isinstance(lock, HashTimeLockState):
@@ -216,6 +223,11 @@ def make_receive_transfer_mediated(
         assert lock.lockhash in merkletree_leaves
         layers = compute_layers(merkletree_leaves)
 
+    if locked_amount is None:
+        locked_amount = lock.amount
+
+    assert locked_amount >= lock.amount
+
     locksroot = layers[MERKLEROOT][0]
 
     payment_identifier = nonce
@@ -229,6 +241,7 @@ def make_receive_transfer_mediated(
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
+        locked_amount,
         channel_state.partner_state.address,
         locksroot,
         lock,
@@ -655,6 +668,7 @@ def test_channelstate_receive_lockedtransfer():
         nonce=2,
         channel=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
+        locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
@@ -930,12 +944,14 @@ def test_interwoven_transfers():
     block_number = 1000
     nonce = 0
     transferred_amount = 0
+    locked_amount = 0
     our_model_current = our_model
     partner_model_current = partner_model
 
     for i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
         nonce += 1
         block_number += 1
+        locked_amount += lock_amount
 
         lock_expiration = block_number + channel_state.settle_timeout - 1
         lock_secrethash = sha3(lock_secret)
@@ -962,6 +978,7 @@ def test_interwoven_transfers():
             transferred_amount,
             lock,
             merkletree_leaves=merkletree_leaves,
+            locked_amount=locked_amount,
         )
 
         is_valid, _, msg = channel.handle_receive_lockedtransfer(
@@ -994,6 +1011,7 @@ def test_interwoven_transfers():
             #   - the receiver balance and distributable is incremented by the lock amount
             nonce += 1
             transferred_amount += lock_amount
+            locked_amount -= lock_amount
 
             merkletree_leaves = list(partner_model_current.merkletree_leaves)
             merkletree_leaves.remove(lock.lockhash)
@@ -1019,6 +1037,7 @@ def test_interwoven_transfers():
                 nonce=nonce,
                 channel=channel_state.identifier,
                 transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
                 locksroot=locksroot,
                 secret=lock_secret,
             )

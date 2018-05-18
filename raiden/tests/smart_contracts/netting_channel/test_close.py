@@ -112,6 +112,7 @@ def test_close_accepts_only_transfer_from_participants(
         token=channel0.token_address,
         channel=channel0.identifier,
         transferred_amount=10,
+        locked_amount=0,
         recipient=channel0.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )
@@ -150,6 +151,7 @@ def test_close_wrong_channel(tester_registry_address, tester_channels):
         token=channel0.token_address,
         channel=wrong_address,
         transferred_amount=10,
+        locked_amount=0,
         recipient=channel0.our_state.address,
         locksroot=EMPTY_MERKLE_ROOT,
     )

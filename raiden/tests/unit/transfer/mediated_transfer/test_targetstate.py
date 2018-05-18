@@ -429,10 +429,12 @@ def test_state_transition():
     transferred_amount = lock_amount
     locksroot = EMPTY_MERKLE_ROOT
     invalid_message_hash = b'\x00' * 32
+    locked_amount = 0
 
     balance_proof = factories.make_signed_balance_proof(
         nonce,
         transferred_amount,
+        locked_amount,
         from_route.channel_identifier,
         locksroot,
         invalid_message_hash,

@@ -47,6 +47,7 @@ def balanceproof_from_envelope(envelope_message):
     return BalanceProofSignedState(
         envelope_message.nonce,
         envelope_message.transferred_amount,
+        envelope_message.locked_amount,
         envelope_message.locksroot,
         envelope_message.channel,
         envelope_message.message_hash,
@@ -344,6 +345,7 @@ class BalanceProofUnsignedState(State):
     __slots__ = (
         'nonce',
         'transferred_amount',
+        'locked_amount',
         'locksroot',
         'channel_address',
     )
@@ -352,14 +354,19 @@ class BalanceProofUnsignedState(State):
             self,
             nonce: int,
             transferred_amount: typing.TokenAmount,
+            locked_amount: typing.TokenAmount,
             locksroot: typing.Keccak256,
-            channel_address: typing.Address):
+            channel_address: typing.Address,
+    ):
 
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
         if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
+
+        if not isinstance(locked_amount, typing.T_TokenAmount):
+            raise ValueError('locked_amount must be a token_amount instance')
 
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
@@ -387,6 +394,7 @@ class BalanceProofUnsignedState(State):
 
         self.nonce = nonce
         self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
         self.locksroot = locksroot
         self.channel_address = channel_address
 
@@ -394,11 +402,12 @@ class BalanceProofUnsignedState(State):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
-            'locksroot:{} channel_address:{}'
+            'locked_amount:{} locksroot:{} channel_address:{}'
             '>'
         ).format(
             self.nonce,
             self.transferred_amount,
+            self.locked_amount,
             pex(self.locksroot),
             pex(self.channel_address),
         )
@@ -408,6 +417,7 @@ class BalanceProofUnsignedState(State):
             isinstance(other, BalanceProofUnsignedState) and
             self.nonce == other.nonce and
             self.transferred_amount == other.transferred_amount and
+            self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
             self.channel_address == other.channel_address
         )
@@ -424,6 +434,7 @@ class BalanceProofSignedState(State):
     __slots__ = (
         'nonce',
         'transferred_amount',
+        'locked_amount',
         'locksroot',
         'channel_address',
         'message_hash',
@@ -435,16 +446,22 @@ class BalanceProofSignedState(State):
             self,
             nonce: int,
             transferred_amount: typing.TokenAmount,
+            locked_amount: typing.TokenAmount,
             locksroot: typing.Keccak256,
             channel_address: typing.Address,
             message_hash: typing.Keccak256,
             signature: typing.Signature,
-            sender: typing.Address):
+            sender: typing.Address,
+    ):
+
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
         if not isinstance(transferred_amount, typing.T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
+
+        if not isinstance(locked_amount, typing.T_TokenAmount):
+            raise ValueError('locked_amount must be a token_amount instance')
 
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
@@ -487,6 +504,7 @@ class BalanceProofSignedState(State):
 
         self.nonce = nonce
         self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
         self.locksroot = locksroot
         self.channel_address = channel_address
         self.message_hash = message_hash
@@ -497,12 +515,13 @@ class BalanceProofSignedState(State):
         return (
             '<'
             'BalanceProofSignedState nonce:{} transferred_amount:{} '
-            'locksroot:{} channel_address:{} message_hash:{}'
+            'locked_amount:{} locksroot:{} channel_address:{} message_hash:{}'
             'signature:{} sender:{}'
             '>'
         ).format(
             self.nonce,
             self.transferred_amount,
+            self.locked_amount,
             pex(self.locksroot),
             pex(self.channel_address),
             pex(self.message_hash),
@@ -515,6 +534,7 @@ class BalanceProofSignedState(State):
             isinstance(other, BalanceProofSignedState) and
             self.nonce == other.nonce and
             self.transferred_amount == other.transferred_amount and
+            self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
             self.channel_address == other.channel_address and
             self.message_hash == other.message_hash and

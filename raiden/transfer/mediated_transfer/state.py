@@ -6,6 +6,7 @@ from raiden.transfer.architecture import State
 from raiden.utils import pex, sha3, typing
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
+    balanceproof_from_envelope,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
@@ -14,15 +15,7 @@ from raiden.transfer.state import (
 
 def lockedtransfersigned_from_message(message):
     """ Create LockedTransferSignedState from a LockedTransfer message. """
-    balance_proof = BalanceProofSignedState(
-        message.nonce,
-        message.transferred_amount,
-        message.locksroot,
-        message.channel,
-        message.message_hash,
-        message.signature,
-        message.sender,
-    )
+    balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(
         message.lock.amount,
@@ -255,11 +248,15 @@ class LockedTransferUnsignedState(State):
 
     def __repr__(self):
         return (
-            '<LockedTransferUnsignedState id:{} registry_addres:{} token:{} lock:{} target:{}>'
+            '<'
+            'LockedTransferUnsignedState id:{} registry_addres:{} token:{} balance_proof:{} '
+            'lock:{} target:{}'
+            '>'
         ).format(
             self.payment_identifier,
             encode_hex(self.registry_address),
             encode_hex(self.token),
+            self.balance_proof,
             self.lock,
             encode_hex(self.target),
         )
