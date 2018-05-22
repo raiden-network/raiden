@@ -2,7 +2,7 @@
 from binascii import hexlify
 
 from ethereum.tools import tester, _solidity
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.constants import (
@@ -238,9 +238,9 @@ def channel_from_nettingcontract(our_key, netting_contract, reveal_timeout):
     settled_block_number = None
 
     identifier = address_decoder(netting_contract.address)
-    token_address = normalize_address(token_address_hex)
-    address1 = normalize_address(address1_hex)
-    address2 = normalize_address(address2_hex)
+    token_address = to_canonical_address(token_address_hex)
+    address1 = to_canonical_address(address1_hex)
+    address2 = to_canonical_address(address2_hex)
 
     if our_address == address1:
         our_balance = balance1

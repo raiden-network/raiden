@@ -3,7 +3,7 @@
 from typing import List, Dict, Union
 
 from ethereum.abi import ContractTranslator
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -32,7 +32,7 @@ def all_contract_events_raw(
     return rpc.rpccall_with_retry('eth_getLogs', {
         'fromBlock': str(start_block),
         'toBlock': str(end_block),
-        'address': address_encoder(normalize_address(contract_address)),
+        'address': address_encoder(to_canonical_address(contract_address)),
         'topics': [],
     })
 

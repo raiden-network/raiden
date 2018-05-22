@@ -2,7 +2,7 @@
 import contextlib
 
 from coincurve import PrivateKey
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 from ethereum.tools.tester import TransactionFailed
 from ethereum.exceptions import BlockGasLimitReached
 from hypothesis import assume
@@ -312,7 +312,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != normalize_address(self.netting_channel.address):
+        elif transfer.channel != to_canonical_address(self.netting_channel.address):
             msg = 'close called with a transfer for a different channe didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.close(  # pylint: disable=no-member
@@ -398,7 +398,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != normalize_address(self.netting_channel.address):
+        elif transfer.channel != to_canonical_address(self.netting_channel.address):
             msg = 'updateTransfer called with a transfer for a different channel didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member

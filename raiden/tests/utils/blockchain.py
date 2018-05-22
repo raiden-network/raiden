@@ -11,13 +11,14 @@ import time
 import gevent
 
 from ethereum import slogging
-from ethereum.utils import denoms, encode_hex
+from eth_utils import denoms
 from requests import ConnectionError
 
 from raiden.utils import (
     address_encoder,
     privatekey_to_address,
-    privtopub
+    privtopub,
+    encode_hex,
 )
 from raiden.tests.utils.genesis import GENESIS_STUB
 

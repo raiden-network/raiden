@@ -11,7 +11,6 @@ import click
 import gevent
 from gevent import monkey, server
 from ethereum import slogging
-from ethereum.utils import decode_hex
 
 from raiden.app import App
 from raiden.api.python import RaidenAPI
@@ -22,7 +21,7 @@ from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import TokenBucket
 from raiden.ui.console import ConsoleTools
-from raiden.utils import split_endpoint
+from raiden.utils import split_endpoint, decode_hex
 from raiden.settings import GAS_PRICE
 
 monkey.patch_all()

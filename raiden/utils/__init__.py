@@ -10,7 +10,7 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from ethereum.utils import remove_0x_head
+from eth_utils import remove_0x_prefix
 from ethereum.abi import ContractTranslator
 from ethereum.messages import Log
 from sha3 import keccak_256
@@ -34,6 +34,22 @@ def safe_address_decode(address):
 
 def random_secret():
     return os.urandom(32)
+
+
+def decode_hex(s) -> bytes:
+    if isinstance(s, str):
+        return bytes.fromhex(s)
+    if isinstance(s, (bytes, bytearray)):
+        return unhexlify(s)
+    raise TypeError('Value must be an instance of str or bytes')
+
+
+def encode_hex(b) -> str:
+    if isinstance(b, str):
+        b = bytes(b, 'utf-8')
+    if isinstance(b, (bytes, bytearray)):
+        return str(hexlify(b), 'utf-8')
+    raise TypeError('Value must be an instance of str or bytes')
 
 
 def sha3(data: bytes) -> bytes:
@@ -203,7 +219,7 @@ def get_contract_path(contract_name: str) -> str:
 
 def safe_lstrip_hex(val):
     if isinstance(val, str):
-        return remove_0x_head(val)
+        return remove_0x_prefix(val)
     return val
 
 

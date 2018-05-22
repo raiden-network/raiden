@@ -2,7 +2,7 @@
 import random
 
 import pytest
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 from ethereum.tools.tester import TransactionFailed
 from coincurve import PrivateKey
 
@@ -161,7 +161,7 @@ def test_withdraw_at_settlement_block(
         nonce=nonce,
         registry_address=tester_registry_address,
         token=tester_token.address,
-        channel=normalize_address(nettingchannel.address),
+        channel=to_canonical_address(nettingchannel.address),
         transferred_amount=0,
         locked_amount=lock_amount,
         recipient=address1,

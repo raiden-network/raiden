@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -83,7 +83,7 @@ class Discovery:
         if address == self.not_found_address:  # the 0 address means nothing found
             return None
 
-        return normalize_address(address)
+        return to_canonical_address(address)
 
     def version(self):
         return self.proxy.call('contract_version')

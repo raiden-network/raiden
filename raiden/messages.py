@@ -2,7 +2,7 @@
 from binascii import unhexlify
 
 from ethereum.slogging import getLogger
-from ethereum.utils import big_endian_to_int
+from eth_utils import big_endian_to_int
 
 from raiden.constants import (
     UINT256_MAX,

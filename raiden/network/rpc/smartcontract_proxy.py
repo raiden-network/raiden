@@ -2,7 +2,7 @@
 from typing import Callable, Optional, Dict
 
 from ethereum.abi import ContractTranslator
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 
 from raiden.exceptions import InvalidFunctionName
 from raiden.utils.typing import Address
@@ -20,8 +20,8 @@ class ContractProxy:
             transact_function: Callable,
             estimate_function: Optional[Callable] = None):
 
-        sender = normalize_address(sender)
-        contract_address = normalize_address(contract_address)
+        sender = to_canonical_address(sender)
+        contract_address = to_canonical_address(contract_address)
         translator = ContractTranslator(abi)
 
         self.abi = abi
