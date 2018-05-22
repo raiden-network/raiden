@@ -16,7 +16,6 @@ netifaces==0.10.6
 networkx==2.0.0
 psutil==5.4.3
 pycryptodome==3.6.1
-pysha3==1.0.2
 # raiden-libs==???
 # FIXME: replace with released version before merge
 git+https://github.com/raiden-network/raiden-libs.git@47c01904ca9b05b107e40071adbcd1c126bcbc66#egg=raiden-libs
