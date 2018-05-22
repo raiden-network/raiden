@@ -206,4 +206,4 @@ class BlockChainService:
     @property
     @ttl_cache(ttl=10)
     def network_id(self) -> int:
-        return int(self.client.rpccall_with_retry('net_version'))
+        return int(self.client.web3.version.network)

@@ -5,14 +5,20 @@ from raiden.utils import (
 )
 
 
-class MockClient:
+class MockVersion:
+    def __init__(self, node):
+        self.node = node
 
+
+class MockWeb3:
     def __init__(self, version):
-        self.version_string = version
+        self.version = version
 
-    def call(self, func):
-        assert func == 'web3_clientVersion'
-        return self.version_string
+
+class MockClient:
+    def __init__(self, version):
+        version = MockVersion(version)
+        self.web3 = MockWeb3(version)
 
 
 def test_check_json_rpc_geth():
