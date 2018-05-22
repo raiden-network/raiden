@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
-
-from raiden.utils import data_encoder
 from raiden.settings import GAS_LIMIT
 
 
@@ -10,15 +7,14 @@ def check_transaction_threw(client, transaction_hash):
        Returns None in case of success and the transaction receipt if the
        transaction's status indicator is 0x0.
     """
-    encoded_transaction = data_encoder(unhexlify(transaction_hash))
-    receipt = client.rpccall_with_retry('eth_getTransactionReceipt', encoded_transaction)
+    receipt = client.web3.eth.getTransactionReceipt(transaction_hash)
 
     if 'status' not in receipt:
         raise ValueError(
             'Transaction receipt does not contain a status field. Upgrade your client'
         )
 
-    if receipt['status'] == '0x0':
+    if receipt['status'] == 0:
         return receipt
 
     return None
