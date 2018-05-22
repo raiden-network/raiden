@@ -34,7 +34,6 @@ from raiden.network.transport.udp import udp_utils
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
-    address_decoder,
     address_encoder,
     data_decoder,
     data_encoder,
@@ -382,7 +381,7 @@ class JSONRPCClient:
 
                 libraries[deploy_contract] = contract_address
 
-                deployed_code = self.eth_getCode(address_decoder(contract_address))
+                deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
 
                 if not deployed_code:
                     raise RuntimeError('Contract address has no code, check gas usage.')
@@ -413,7 +412,7 @@ class JSONRPCClient:
         receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
-        deployed_code = self.eth_getCode(address_decoder(contract_address))
+        deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
 
         if not deployed_code:
             raise RuntimeError(
@@ -596,28 +595,6 @@ class JSONRPCClient:
                 raise e
 
         return quantity_decoder(res)
-
-    def eth_getCode(self, code_address: Address, block: Union[int, str] = 'latest') -> bytes:
-        """ Returns code at a given address.
-
-        Args:
-            code_address: An address.
-            block: Integer block number, or the string 'latest',
-                'earliest' or 'pending'. Default is 'latest'.
-        """
-        if code_address.startswith(b'0x'):
-            warnings.warn(
-                'address seems to be already encoded, this will result '
-                'in unexpected behavior'
-            )
-
-        if len(code_address) != 20:
-            raise ValueError(
-                'address length must be 20 (it might be hex encoded)'
-            )
-
-        result = self.rpccall_with_retry('eth_getCode', address_encoder(code_address), block)
-        return data_decoder(result)
 
     def poll(
             self,
