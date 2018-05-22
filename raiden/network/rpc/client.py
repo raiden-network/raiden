@@ -643,25 +643,6 @@ class JSONRPCClient:
         result = self.rpccall_with_retry('eth_getCode', address_encoder(code_address), block)
         return data_decoder(result)
 
-    def eth_getTransactionByHash(self, transaction_hash: bytes):
-        """ Returns the information about a transaction requested by
-        transaction hash.
-        """
-
-        if transaction_hash.startswith(b'0x'):
-            warnings.warn(
-                'transaction_hash seems to be already encoded, this will'
-                ' result in unexpected behavior'
-            )
-
-        if len(transaction_hash) != 32:
-            raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encoded)'
-            )
-
-        transaction_hash = data_encoder(transaction_hash)
-        return self.rpccall_with_retry('eth_getTransactionByHash', transaction_hash)
-
     def poll(
             self,
             transaction_hash: bytes,
@@ -707,10 +688,7 @@ class JSONRPCClient:
             while True:
                 # Could return None for a short period of time, until the
                 # transaction is added to the pool
-                transaction = self.rpccall_with_retry(
-                    'eth_getTransactionByHash',
-                    transaction_hash,
-                )
+                transaction = self.web3.eth.getTransaction(transaction_hash)
 
                 # if the transaction was added to the pool and then removed
                 if transaction is None and last_result is not None:
