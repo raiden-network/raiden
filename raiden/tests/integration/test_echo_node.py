@@ -22,7 +22,6 @@ from raiden.tests.utils.events import must_contain_entry
 def test_event_transfer_received_success(token_addresses, raiden_chain):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
-    start_block = receiver_app.raiden.get_block_number()
 
     expected = dict()
 
