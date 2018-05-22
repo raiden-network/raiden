@@ -15,7 +15,6 @@ from raiden.network.proxies import (
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
-    block_tag_encoder,
     isaddress,
     privatekey_to_address,
     quantity_decoder,
@@ -50,7 +49,7 @@ class BlockChainService:
         return self.client.block_number()
 
     def is_synced(self) -> bool:
-        result = self.client.rpccall_with_retry('eth_syncing')
+        result = self.client.web3.eth.syncing
 
         # the node is synchronized
         if result is False:
@@ -87,8 +86,7 @@ class BlockChainService:
         return delta / interval
 
     def get_block_header(self, block_number: int):
-        block_number = block_tag_encoder(block_number)
-        return self.client.rpccall_with_retry('eth_getBlockByNumber', block_number, False)
+        return self.client.web3.getBlock(block_number, False)
 
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1
