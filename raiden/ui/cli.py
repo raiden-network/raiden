@@ -112,7 +112,7 @@ def toggle_trace_profiler(raiden):
 
 def check_json_rpc(client):
     try:
-        client_version = client.rpccall_with_retry('web3_clientVersion')
+        client_version = client.web3.version.node
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
