@@ -212,6 +212,7 @@ class PathfindingService(gevent.Greenlet):
             self._check_chain_id(fee_info.chain_id)
         except ValueError as error:
             log.error('FeeInfo chain_id does not match: %s', str(error))
+            return
 
         token_network = self._get_token_network(fee_info.token_network_address)
 
@@ -234,6 +235,7 @@ class PathfindingService(gevent.Greenlet):
             self._check_chain_id(balance_proof.chain_id)
         except ValueError as error:
             log.error('BalanceProof chain_id does not match: %s', str(error))
+            return
 
         token_network = self._get_token_network(balance_proof.token_network_address)
 
@@ -257,6 +259,7 @@ class PathfindingService(gevent.Greenlet):
             self._check_chain_id(paths_request.chain_id)
         except ValueError as error:
             log.error('PathsRequest chain_id does not match: %s', str(error))
+            return
 
         token_network = self._get_token_network(paths_request.token_network_address)
 
