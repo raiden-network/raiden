@@ -2,8 +2,11 @@
 import warnings
 import time
 from binascii import unhexlify
-from typing import Optional, List, Dict, Union
+from typing import Optional, Dict, Union
 
+from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware
+from eth_utils import to_checksum_address
 import rlp
 import os
 import gevent
@@ -33,14 +36,11 @@ from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
     address_decoder,
     address_encoder,
-    block_tag_encoder,
     data_decoder,
     data_encoder,
     privatekey_to_address,
     quantity_decoder,
     quantity_encoder,
-    topic_decoder,
-    topic_encoder,
 )
 from raiden.utils.typing import Address
 from raiden.utils.solc import (
@@ -53,11 +53,11 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def check_address_has_code(
-        client,
+        client: 'JSONRPCClient',
         address: Address,
         contract_name: str = ''):
     """ Checks that the given address contains code. """
-    result = client.eth_getCode(address, 'latest')
+    result = client.web3.eth.getCode(to_checksum_address(address), 'latest')
 
     if not result:
         if contract_name:
@@ -208,6 +208,11 @@ class JSONRPCClient:
         cache_wrapper = cachetools.cached(cache=cache)
         self.gasprice = cache_wrapper(self._gasprice)
 
+        # web3
+        self.web3: Web3 = Web3(HTTPProvider(endpoint))
+        # we use a PoA chain for smoketest, use this middleware to fix this
+        self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+
     def __del__(self):
         self.session.close()
 
@@ -216,7 +221,7 @@ class JSONRPCClient:
 
     def block_number(self):
         """ Return the most recent block. """
-        return quantity_decoder(self.rpccall_with_retry('eth_blockNumber'))
+        return self.web3.eth.blockNumber
 
     def nonce_needs_update(self):
         if self.nonce_available_value is None:
@@ -237,12 +242,9 @@ class JSONRPCClient:
 
         # Wait until all tx are registered as pending
         while nonce < nonce_available_value:
-            pending_transactions_hex = self.rpccall_with_retry(
-                'eth_getTransactionCount',
-                address_encoder(self.sender),
-                'pending',
+            pending_transactions = self.web3.eth.getTransactionCount(
+                to_checksum_address(self.sender)
             )
-            pending_transactions = quantity_decoder(pending_transactions_hex)
             nonce = pending_transactions + self.nonce_offset
 
             log.debug(
@@ -267,20 +269,17 @@ class JSONRPCClient:
 
     def balance(self, account: Address):
         """ Return the balance of the account of given address. """
-        res = self.rpccall_with_retry('eth_getBalance', address_encoder(account), 'pending')
-        return quantity_decoder(res)
+        return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
     def _gaslimit(self, location='pending') -> int:
-        last_block = self.rpccall_with_retry('eth_getBlockByNumber', location, True)
-        gas_limit = quantity_decoder(last_block['gasLimit'])
+        gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
     def _gasprice(self) -> int:
         if self.given_gas_price:
             return self.given_gas_price
 
-        gas_price = self.rpccall_with_retry('eth_gasPrice')
-        return quantity_decoder(gas_price)
+        return self.web3.eth.gasPrice
 
     def check_startgas(self, startgas):
         if not startgas:

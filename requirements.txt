@@ -28,3 +28,4 @@ eth_utils==1.0.3
 structlog
 colorama
 py-solc
+web3==4.2.1
