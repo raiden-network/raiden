@@ -427,51 +427,6 @@ class JSONRPCClient:
             contract_address,
         )
 
-    def new_filter(self, fromBlock=None, toBlock=None, address=None, topics=None):
-        """ Creates a filter object, based on filter options, to notify when
-        the state changes (logs). To check if the state has changed, call
-        eth_getFilterChanges.
-        """
-
-        json_data = {
-            'fromBlock': block_tag_encoder(fromBlock or ''),
-            'toBlock': block_tag_encoder(toBlock or ''),
-        }
-
-        if address is not None:
-            json_data['address'] = address_encoder(address)
-
-        if topics is not None:
-            if not isinstance(topics, list):
-                raise ValueError('topics must be a list')
-
-            json_data['topics'] = [topic_encoder(topic) for topic in topics]
-
-        filter_id = self.rpccall_with_retry('eth_newFilter', json_data)
-        return quantity_decoder(filter_id)
-
-    def filter_changes(self, fid: int) -> List:
-        changes = self.rpccall_with_retry('eth_getFilterChanges', quantity_encoder(fid))
-
-        if not changes:
-            return list()
-
-        assert isinstance(changes, list)
-        decoders = {
-            'blockHash': data_decoder,
-            'transactionHash': data_decoder,
-            'data': data_decoder,
-            'address': address_decoder,
-            'topics': lambda x: [topic_decoder(t) for t in x],
-            'blockNumber': quantity_decoder,
-            'logIndex': quantity_decoder,
-            'transactionIndex': quantity_decoder
-        }
-        return [
-            {k: decoders[k](v) for k, v in c.items() if v is not None}
-            for c in changes
-        ]
-
     def rpccall_with_retry(self, method: str, *args):
         """ Do the request and return the result.
 
