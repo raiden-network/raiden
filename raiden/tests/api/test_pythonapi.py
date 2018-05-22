@@ -54,6 +54,12 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     )
     assert event_list1 == []
 
+    token_events = api1.get_token_network_events(
+        token_address,
+        channel12.open_transaction.finished_block_number,
+    )
+    assert token_events[0]['_event_type'] == b'ChannelNew'
+
     registry_address = api1.raiden.default_registry.address
     # Load the new state with the deposit
     api1.channel_deposit(

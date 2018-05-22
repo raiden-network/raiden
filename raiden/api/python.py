@@ -10,6 +10,7 @@ from raiden.blockchain.events import (
     ALL_EVENTS,
     get_all_registry_events,
     get_all_netting_channel_events,
+    get_all_channel_manager_events
 )
 from raiden.transfer import views
 from raiden.transfer.events import (
@@ -560,6 +561,40 @@ class RaidenAPI:
             from_block=from_block,
             to_block=to_block,
         )
+        # Here choose which raiden internal events we want to expose to the end user
+        for block_number, event in raiden_events:
+            if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
+                new_event = {
+                    'block_number': block_number,
+                    '_event_type': type(event).__name__.encode(),
+                }
+                new_event.update(event.__dict__)
+                returned_events.append(new_event)
+
+        return returned_events
+
+    def get_token_network_events(self, token_address, from_block, to_block='latest'):
+
+        if not isaddress(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_token_network_events'
+            )
+        channel_manager_address = self.raiden.default_registry.manager_address_by_token(
+            token_address
+        )
+        returned_events = get_all_channel_manager_events(
+            self.raiden.chain,
+            channel_manager_address,
+            events=ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
+        )
+
+        raiden_events = self.raiden.wal.storage.get_events_by_block(
+            from_block=from_block,
+            to_block=to_block,
+        )
+
         # Here choose which raiden internal events we want to expose to the end user
         for block_number, event in raiden_events:
             if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
