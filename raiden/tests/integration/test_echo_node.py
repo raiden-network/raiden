@@ -11,7 +11,6 @@ from raiden.tests.utils import get_channel_events_for_token
 
 
 # `RaidenAPI.get_channel_events` is not supported in tester
-@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -35,8 +34,10 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
         transfer_event.wait(timeout=20)
         expected[app.raiden.address] = amount
 
+    gevent.sleep(1)
     events = get_channel_events_for_token(
         receiver_app,
+        app.raiden.default_registry.address,
         token_address,
         start_block,
     )
