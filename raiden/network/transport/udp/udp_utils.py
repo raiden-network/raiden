@@ -8,8 +8,10 @@ from gevent.event import (
     Event,
 )
 
+from raiden.utils import typing
 
-def event_first_of(*events):
+
+def event_first_of(*events: _AbstractLinkable) -> Event:
     """ Waits until one of `events` is set.
 
     The event returned is /not/ cleared with any of the `events`, this value
@@ -26,7 +28,11 @@ def event_first_of(*events):
     return first_finished
 
 
-def timeout_exponential_backoff(retries, timeout, maximum):
+def timeout_exponential_backoff(
+        retries: int,
+        timeout: int,
+        maximum: int,
+) -> typing.Generator[int, None, None]:
     """ Timeouts generator with an exponential backoff strategy.
 
     Timeouts start spaced by `timeout`, after `retries` exponentially increase
@@ -47,7 +53,11 @@ def timeout_exponential_backoff(retries, timeout, maximum):
         yield maximum
 
 
-def timeout_two_stage(retries, timeout1, timeout2):
+def timeout_two_stage(
+        retries: int,
+        timeout1: int,
+        timeout2: int,
+) -> int:
     """ Timeouts generator with a two stage strategy
 
     Timeouts start spaced by `timeout1`, after `retries` increase
@@ -59,7 +69,14 @@ def timeout_two_stage(retries, timeout1, timeout2):
         yield timeout2
 
 
-def retry(protocol, messagedata, message_id, recipient, event_stop, timeout_backoff):
+def retry(
+        protocol: 'UDPTransport',
+        messagedata: bytes,
+        message_id: int,
+        recipient: typing.Address,
+        event_stop: Event,
+        timeout_backoff: typing.Generator[int, None, None],
+) -> bool:
     """ Send messagedata until it's acknowledged.
 
     Exit when:
@@ -97,7 +114,7 @@ def retry(protocol, messagedata, message_id, recipient, event_stop, timeout_back
     return async_result.ready()
 
 
-def wait_recovery(event_stop, event_healthy):
+def wait_recovery(event_stop: Event, event_healthy: Event):
     event_first_of(
         event_stop,
         event_healthy,
@@ -112,15 +129,15 @@ def wait_recovery(event_stop, event_healthy):
 
 
 def retry_with_recovery(
-        protocol,
-        messagedata,
-        message_id,
-        recipient,
-        event_stop,
-        event_healthy,
-        event_unhealthy,
-        backoff,
-):
+        protocol: 'UDPTransport',
+        messagedata: bytes,
+        message_id: int,
+        recipient: typing.Address,
+        event_stop: Event,
+        event_healthy: Event,
+        event_unhealthy: Event,
+        backoff: typing.Generator[int, None, None],
+) -> bool:
     """ Send messagedata while the node is healthy until it's acknowledged.
 
     Note:

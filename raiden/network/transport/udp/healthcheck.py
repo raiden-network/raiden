@@ -2,13 +2,14 @@
 from collections import namedtuple
 from itertools import repeat
 
+from gevent.event import Event
 import structlog
 
 from raiden.exceptions import (
     UnknownAddress,
     RaidenShuttingDown,
 )
-from raiden.utils import pex
+from raiden.utils import pex, typing
 from raiden.transfer import views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -27,15 +28,16 @@ HealthEvents = namedtuple('HealthEvents', (
 
 
 def healthcheck(
-        protocol,
-        recipient,
-        event_stop,
-        event_healthy,
-        event_unhealthy,
-        nat_keepalive_retries,
-        nat_keepalive_timeout,
-        nat_invitation_timeout,
-        ping_nonce):
+        protocol: 'UDPTransport',
+        recipient: typing.Address,
+        event_stop: Event,
+        event_healthy: Event,
+        event_unhealthy: Event,
+        nat_keepalive_retries: int,
+        nat_keepalive_timeout: int,
+        nat_invitation_timeout: int,
+        ping_nonce: int,
+):
 
     """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches

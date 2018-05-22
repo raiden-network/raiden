@@ -11,13 +11,21 @@ from gevent.event import (
 from gevent.server import DatagramServer
 import structlog
 
+from raiden.transfer.architecture import SendMessageEvent
 from raiden.exceptions import (
     InvalidAddress,
     UnknownAddress,
     RaidenShuttingDown,
 )
 from raiden.constants import UDP_MAX_MESSAGE_SIZE
-from raiden.messages import decode, Delivered, Ping, Pong
+from raiden.messages import (
+    message_from_sendevent,
+    decode,
+    Delivered,
+    Message,
+    Ping,
+    Pong,
+)
 from raiden.settings import CACHE_TTL
 from raiden.utils import isaddress, pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -33,6 +41,8 @@ from raiden.network.transport.udp.udp_utils import (
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
+QueueItem_T = typing.Tuple[bytes, int]
+Queue_T = typing.List[QueueItem_T]
 
 # GOALS:
 # - Each netting channel must have the messages processed in-order, the
@@ -46,15 +56,16 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def single_queue_send(
-        protocol,
-        recipient,
-        queue,
-        event_stop,
-        event_healthy,
-        event_unhealthy,
-        message_retries,
-        message_retry_timeout,
-        message_retry_max_timeout):
+        protocol: 'UDPTransport',
+        recipient: typing.Address,
+        queue: Queue_T,
+        event_stop: Event,
+        event_healthy: Event,
+        event_unhealthy: Event,
+        message_retries: int,
+        message_retry_timeout: int,
+        message_retry_max_timeout: int,
+):
 
     """ Handles a single message queue for `recipient`.
 
@@ -167,7 +178,11 @@ class UDPTransport:
         self.throttle_policy = throttle_policy
         self.server = DatagramServer(udpsocket, handle=self._receive)
 
-    def start(self, raiden, queueids_to_queues):
+    def start(
+            self,
+            raiden: 'RaidenService',
+            queueids_to_queues: typing.List[SendMessageEvent],
+    ):
         self.raiden = raiden
         self.queueids_to_queues = dict()
 
@@ -176,8 +191,16 @@ class UDPTransport:
         self.server.set_handle(self._receive)
 
         for (recipient, queue_name), queue in queueids_to_queues.items():
-            queue_copy = list(queue)
-            self.init_queue_for(recipient, queue_name, queue_copy)
+            encoded_queue = list()
+
+            for sendevent in queue:
+                message = message_from_sendevent(sendevent, raiden.address)
+                raiden.sign(message)
+                encoded = message.encode()
+
+                encoded_queue.append((encoded, sendevent.message_identifier))
+
+            self.init_queue_for(recipient, queue_name, encoded_queue)
 
         self.server.start()
 
@@ -247,7 +270,12 @@ class UDPTransport:
                 ping_nonce,
             ))
 
-    def init_queue_for(self, recipient, queue_name, items):
+    def init_queue_for(
+            self,
+            recipient: typing.Address,
+            queue_name: bytes,
+            items: typing.List[QueueItem_T],
+    ) -> Queue_T:
         """ Create the queue identified by the pair `(recipient, queue_name)`
         and initialize it with `items`.
         """
@@ -282,7 +310,11 @@ class UDPTransport:
 
         return queue
 
-    def get_queue_for(self, recipient, queue_name):
+    def get_queue_for(
+            self,
+            recipient: typing.Address,
+            queue_name: bytes,
+    ) -> Queue_T:
         """ Return the queue identified by the pair `(recipient, queue_name)`.
 
         If the queue doesn't exist it will be instantiated.
@@ -296,7 +328,12 @@ class UDPTransport:
 
         return queue
 
-    def send_async(self, queue_name, recipient, message):
+    def send_async(
+            self,
+            recipient: typing.Address,
+            queue_name: bytes,
+            message: 'Message',
+    ):
         """ Send a new ordered message to recipient.
 
         Messages that use the same `queue_name` are ordered.
@@ -333,7 +370,7 @@ class UDPTransport:
                 message=message,
             )
 
-    def maybe_send(self, recipient, message):
+    def maybe_send(self, recipient: typing.Address, message: Message):
         """ Send message to recipient if the transport is running. """
 
         if not isaddress(recipient):
@@ -344,7 +381,12 @@ class UDPTransport:
 
         self.maybe_sendraw(host_port, messagedata)
 
-    def maybe_sendraw_with_result(self, recipient, messagedata, message_id):
+    def maybe_sendraw_with_result(
+            self,
+            recipient: typing.Address,
+            messagedata: bytes,
+            message_id: int,
+    ) -> AsyncResult:
         """ Send message to recipient if the transport is running.
 
         Returns:
@@ -362,7 +404,7 @@ class UDPTransport:
 
         return async_result
 
-    def maybe_sendraw(self, host_port, messagedata):
+    def maybe_sendraw(self, host_port: typing.Tuple[int, int], messagedata: bytes):
         """ Send message to recipient if the transport is running. """
 
         # Don't sleep if timeout is zero, otherwise a context-switch is done
@@ -385,7 +427,7 @@ class UDPTransport:
         except RaidenShuttingDown:  # For a clean shutdown
             return
 
-    def receive(self, messagedata):
+    def receive(self, messagedata: bytes):
         """ Handle an UDP packet. """
         # pylint: disable=unidiomatic-typecheck
 
@@ -415,7 +457,7 @@ class UDPTransport:
                 message=hexlify(messagedata),
             )
 
-    def receive_message(self, message):
+    def receive_message(self, message: Message):
         """ Handle a Raiden protocol message.
 
         The protocol requires durability of the messages. The UDP transport
@@ -468,7 +510,7 @@ class UDPTransport:
     # Pings and Pongs are used to check the health status of another node. They
     # are /not/ part of the raiden protocol, only part of the UDP transport,
     # therefore these messages are not forwarded to the message handler.
-    def receive_ping(self, ping):
+    def receive_ping(self, ping: Ping):
         """ Handle a Ping message by answering with a Pong. """
 
         log.debug(
@@ -487,7 +529,7 @@ class UDPTransport:
         except (InvalidAddress, UnknownAddress) as e:
             log.debug("Couldn't send the `Delivered` message", e=e)
 
-    def receive_pong(self, pong):
+    def receive_pong(self, pong: Pong):
         """ Handles a Pong message. """
 
         message_id = ('ping', pong.nonce, pong.sender)
@@ -502,7 +544,7 @@ class UDPTransport:
 
             async_result.set(True)
 
-    def get_ping(self, nonce):
+    def get_ping(self, nonce: int) -> Ping:
         """ Returns a signed Ping message.
 
         Note: Ping messages don't have an enforced ordering, so a Ping message
@@ -514,6 +556,6 @@ class UDPTransport:
 
         return message_data
 
-    def set_node_network_state(self, node_address, node_state):
+    def set_node_network_state(self, node_address: typing.Address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
         self.raiden.handle_state_change(state_change)

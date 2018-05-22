@@ -20,7 +20,17 @@ from raiden.utils import (
     pex,
     sha3
 )
-
+from raiden.transfer.events import (
+    SendDirectTransfer,
+    SendProcessed,
+)
+from raiden.transfer.mediated_transfer.events import (
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendRefundTransfer,
+    SendRevealSecret,
+    SendSecretRequest,
+)
 
 __all__ = (
     'Delivered',
@@ -97,6 +107,27 @@ def from_dict(data):
             'Invalid message type (data["type"] = {})'.format(data['type'])
         ) from None
     return klass.from_dict(data)
+
+
+def message_from_sendevent(send_event, our_address):
+    if type(send_event) == SendLockedTransfer:
+        message = LockedTransfer.from_event(send_event)
+    elif type(send_event) == SendDirectTransfer:
+        message = DirectTransfer.from_event(send_event)
+    elif type(send_event) == SendRevealSecret:
+        message = RevealSecret.from_event(send_event)
+    elif type(send_event) == SendBalanceProof:
+        message = Secret.from_event(send_event)
+    elif type(send_event) == SendSecretRequest:
+        message = SecretRequest.from_event(send_event)
+    elif type(send_event) == SendRefundTransfer:
+        message = RefundTransfer.from_event(send_event)
+    elif type(send_event) == SendProcessed:
+        message = Processed.from_event(send_event, our_address)
+    else:
+        raise ValueError('unknown event type')
+
+    return message
 
 
 class Message:
