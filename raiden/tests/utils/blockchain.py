@@ -10,7 +10,7 @@ import termios
 import time
 import gevent
 
-from eth_utils import denoms
+from eth_utils import denoms, to_checksum_address
 import structlog
 from requests import ConnectionError
 
@@ -206,16 +206,16 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
         raise ValueError('geth didnt start the jsonrpc interface')
 
     for key in sorted(set(privatekeys)):
-        address = address_encoder(privatekey_to_address(key))
+        address = to_checksum_address(privatekey_to_address(key))
 
         tries = 10
-        balance = '0x0'
-        while balance == '0x0' and tries > 0:
-            balance = deploy_client.rpccall_with_retry('eth_getBalance', address, 'latest')
+        balance = 0
+        while balance == 0 and tries > 0:
+            balance = deploy_client.web3.eth.getBalance(address, 'latest')
             gevent.sleep(1)
             tries -= 1
 
-        if balance == '0x0':
+        if balance == 0:
             raise ValueError('account is with a balance of 0')
 
 
