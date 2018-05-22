@@ -9,7 +9,8 @@ import pytest
 from ethereum.abi import ValueOutOfBounds
 from ethereum.tools import _solidity, tester
 from ethereum.tools.tester import TransactionFailed
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
+
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
 from raiden.messages import DirectTransfer, Lock
@@ -272,4 +273,4 @@ def test_recoverAddressFromSignature(tester_chain, tester_nettingchannel_library
         signature
     )
 
-    assert normalize_address(computed_address) == msg.sender
+    assert to_canonical_address(computed_address) == msg.sender

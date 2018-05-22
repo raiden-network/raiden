@@ -5,7 +5,6 @@ from gevent.lock import RLock
 from typing import Optional, List
 
 from ethereum import slogging
-from ethereum.utils import encode_hex
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -35,6 +34,7 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     releasing,
+    encode_hex,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name

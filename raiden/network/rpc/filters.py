@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import List, Dict, Union, Optional
 
-from ethereum.utils import normalize_address
+from eth_utils import to_canonical_address
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import (
@@ -30,7 +30,7 @@ def new_filter(
     json_data = {
         'fromBlock': from_block,
         'toBlock': to_block,
-        'address': address_encoder(normalize_address(contract_address)),
+        'address': address_encoder(to_canonical_address(contract_address)),
     }
 
     if topics is not None:
@@ -61,7 +61,7 @@ def get_filter_events(
     json_data = {
         'fromBlock': from_block,
         'toBlock': to_block,
-        'address': address_encoder(normalize_address(contract_address)),
+        'address': address_encoder(to_canonical_address(contract_address)),
     }
 
     if topics is not None:

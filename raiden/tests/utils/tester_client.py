@@ -9,7 +9,6 @@ from ethereum import slogging
 from ethereum.tools import tester, _solidity
 from ethereum.tools.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
-from ethereum.utils import encode_hex
 from ethereum.tools._solidity import solidity_get_contract_key
 
 from raiden import messages
@@ -28,6 +27,7 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
+    encode_hex,
 )
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,

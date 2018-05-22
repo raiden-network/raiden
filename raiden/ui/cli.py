@@ -16,7 +16,7 @@ import gevent
 import gevent.monkey
 import requests
 from ethereum import slogging
-from ethereum.utils import denoms
+from eth_utils import denoms
 from requests.exceptions import RequestException
 
 from raiden.accounts import AccountManager

@@ -11,7 +11,7 @@ from logging import StreamHandler, Formatter
 
 from ethereum.slogging import getLogger
 from ethereum.tools._solidity import compile_file
-from ethereum.utils import denoms
+from eth_utils import denoms
 import gevent
 from gevent.event import Event
 from gevent import Greenlet

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from ethereum.utils import encode_hex
-
 from raiden.transfer.architecture import State
-from raiden.utils import pex, sha3, typing
+from raiden.utils import pex, sha3, typing, encode_hex
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,

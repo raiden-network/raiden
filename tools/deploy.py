@@ -6,11 +6,10 @@ from binascii import hexlify
 import click
 from ethereum import slogging
 from ethereum.tools._solidity import compile_contract
-from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
-from raiden.utils import address_encoder, get_contract_path
+from raiden.utils import address_encoder, get_contract_path, decode_hex
 
 log = slogging.getLogger(__name__)
 
