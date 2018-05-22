@@ -2,7 +2,7 @@
 import warnings
 import time
 from binascii import unhexlify
-from typing import Optional, Dict, Union
+from typing import Optional, Union
 
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
@@ -374,7 +374,7 @@ class JSONRPCClient:
                 transaction_hash = unhexlify(transaction_hash_hex)
 
                 self.poll(transaction_hash, timeout=timeout)
-                receipt = self.eth_getTransactionReceipt(transaction_hash)
+                receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
 
                 contract_address = receipt['contractAddress']
                 # remove the hexadecimal prefix 0x from the address
@@ -410,7 +410,7 @@ class JSONRPCClient:
         transaction_hash = unhexlify(transaction_hash_hex)
 
         self.poll(transaction_hash, timeout=timeout)
-        receipt = self.eth_getTransactionReceipt(transaction_hash)
+        receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
         deployed_code = self.eth_getCode(address_decoder(contract_address))
@@ -596,30 +596,6 @@ class JSONRPCClient:
                 raise e
 
         return quantity_decoder(res)
-
-    def eth_getTransactionReceipt(self, transaction_hash: bytes) -> Dict:
-        """ Returns the receipt of a transaction by transaction hash.
-
-        Args:
-            transaction_hash: Hash of a transaction.
-
-        Returns:
-            A dict representing the transaction receipt object, or null when no
-            receipt was found.
-        """
-        if transaction_hash.startswith(b'0x'):
-            warnings.warn(
-                'transaction_hash seems to be already encoded, this will'
-                ' result in unexpected behavior'
-            )
-
-        if len(transaction_hash) != 32:
-            raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encoded)'
-            )
-
-        transaction_hash = data_encoder(transaction_hash)
-        return self.rpccall_with_retry('eth_getTransactionReceipt', transaction_hash)
 
     def eth_getCode(self, code_address: Address, block: Union[int, str] = 'latest') -> bytes:
         """ Returns code at a given address.
