@@ -70,7 +70,7 @@ def test_get_privkey(test_keystore):
     # failures
     with pytest.raises(ValueError) as exc:
         account_manager.get_privkey('0x3593403033d18b82f7b4a0f18e1ed24623d23b20', '456')
-    assert 'MAC mismatch. Password incorrect?' in str(exc.value)
+    assert 'MAC mismatch' in str(exc.value)
     with pytest.raises(ValueError) as exc:
         account_manager.get_privkey('a05934d3033d18b82f7b4adf18e1ed24e3d23b19', '123')
     assert 'Keystore file not found for a05934d3033d18b82f7b4adf18e1ed24e3d23b19' in str(exc.value)

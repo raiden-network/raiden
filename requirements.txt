@@ -1,7 +1,6 @@
 # temporary until pystun creates a new release
 git+https://github.com/LefterisJP/pystun@develop#egg=pystun
 
-bitcoin==1.1.42
 cachetools==2.0.1
 coincurve==7.1.0
 ethereum==2.3.1
@@ -24,3 +23,4 @@ repoze.lru==0.7.0
 rlp==0.6
 tinyrpc[gevent,httpclient]==0.8
 webargs==1.8.1
+eth-keyfile==0.5.1

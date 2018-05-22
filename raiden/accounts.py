@@ -5,9 +5,10 @@ import os
 import sys
 from binascii import hexlify, unhexlify
 from json import JSONDecodeError
+from typing import Dict
 
-from ethereum.tools import keys
 from ethereum.slogging import get_logger
+from eth_keyfile import decode_keyfile_json
 
 from raiden.utils import privtopub, privatekey_to_address
 
@@ -43,6 +44,37 @@ def find_keystoredir():
         # can't find a keystore under the found data directory
         return None
     return keystore_path
+
+
+def check_keystore_json(jsondata: Dict) -> bool:
+    """ Check if ``jsondata`` has the structure of a keystore file version 3.
+
+    Note that this test is not complete, e.g. it doesn't check key derivation or cipher parameters.
+    Copied from https://github.com/vbuterin/pybitcointools
+
+    Args:
+        jsondata: Dictionary containing the data from the json file
+
+    Returns:
+        `True` if the data appears to be valid, otherwise `False`
+    """
+    if 'crypto' not in jsondata and 'Crypto' not in jsondata:
+        return False
+    if 'version' not in jsondata:
+        return False
+    if jsondata['version'] != 3:
+        return False
+
+    crypto = jsondata.get('crypto', jsondata.get('Crypto'))
+    if 'cipher' not in crypto:
+        return False
+    if 'ciphertext' not in crypto:
+        return False
+    if 'kdf' not in crypto:
+        return False
+    if 'mac' not in crypto:
+        return False
+    return True
 
 
 class AccountManager:
@@ -126,12 +158,11 @@ class AccountManager:
 class Account:
     """Represents an account.  """
 
-    def __init__(self, keystore, password=None, path=None):
+    def __init__(self, keystore: Dict, password: str = None, path: str = None):
         """
         Args:
             keystore: the key store as a dictionary (as decoded from json)
-            locked: `True` if the account is locked and neither private nor public keys can be
-                      accessed, otherwise `False`
+            password: The password used to unlock the keystore
             path: absolute path to the associated keystore file (`None` for in-memory accounts)
         """
         if path is not None:
@@ -161,7 +192,7 @@ class Account:
         """
         with open(path) as f:
             keystore = json.load(f)
-        if not keys.check_keystore_json(keystore):
+        if not check_keystore_json(keystore):
             raise ValueError('Invalid keystore file')
         return Account(keystore, password, path=path)
 
@@ -188,7 +219,7 @@ class Account:
             d['id'] = self.uuid
         return json.dumps(d)
 
-    def unlock(self, password):
+    def unlock(self, password: str):
         """Unlock the account with a password.
 
         If the account is already unlocked, nothing happens, even if the password is wrong.
@@ -198,7 +229,7 @@ class Account:
             (and the account is locked)
         """
         if self.locked:
-            self._privkey = keys.decode_keystore_json(self.keystore, password)
+            self._privkey = decode_keyfile_json(self.keystore, password.encode('UTF-8'))
             self.locked = False
             self.address  # get address such that it stays accessible after a subsequent lock
 
