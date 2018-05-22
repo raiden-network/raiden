@@ -51,15 +51,7 @@ def encode_hex(b) -> str:
 
 
 def sha3(data: bytes) -> bytes:
-    """
-    Raises:
-        RuntimeError: If Keccak lib initialization failed, or if the function
-        failed to compute the hash.
-
-        TypeError: This function does not accept unicode objects, they must be
-        encoded prior to usage.
-    """
-    return keccak_256(data).digest()
+    return keccak(data)
 
 
 def eth_sign_sha3(data: bytes) -> bytes:
