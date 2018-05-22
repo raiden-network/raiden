@@ -2,10 +2,13 @@
 import pytest
 import gevent
 
+from raiden.transfer.events import EventTransferReceivedSuccess
 from raiden.utils.echo_node import EchoNode
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils import get_channel_events_for_token
+from raiden.tests.utils.events import must_contain_entry
+
 
 # pylint: disable=too-many-locals
 
@@ -34,31 +37,26 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
         transfer_event.wait(timeout=20)
         expected[app.raiden.address] = amount
 
+    # sleep is for the receiver's node to have time to process all events
     gevent.sleep(1)
-    events = get_channel_events_for_token(
-        receiver_app,
-        app.raiden.default_registry.address,
-        token_address,
-        start_block,
+    events = receiver_app.raiden.wal.storage.get_events_by_block(0, 'latest')
+    events = [e[1] for e in events]
+
+    assert must_contain_entry(
+        events,
+        EventTransferReceivedSuccess,
+        {'amount': 1, 'initiator': app0.raiden.address}
     )
-
-    transfer_initiators = list()
-    events_received = list()
-    for event in events:
-        if event['_event_type'] == b'EventTransferReceivedSuccess':
-            events_received.append(event)
-            transfer_initiators.append(event['initiator'])
-
-            assert expected[event['initiator']] == event['amount']
-
-    assert len(events_received) == len(expected), '# of events must be equal to # of transfers'
-
-    without_receiver_app = [
-        app0.raiden.address,
-        app1.raiden.address,
-        app2.raiden.address,
-    ]
-    assert set(without_receiver_app) == set(transfer_initiators)
+    assert must_contain_entry(
+        events,
+        EventTransferReceivedSuccess,
+        {'amount': 2, 'initiator': app1.raiden.address}
+    )
+    assert must_contain_entry(
+        events,
+        EventTransferReceivedSuccess,
+        {'amount': 3, 'initiator': app2.raiden.address}
+    )
 
 
 # `RaidenAPI.get_channel_events` is not supported in tester
