@@ -333,7 +333,7 @@ def options(func):
                 '--gas-price',
                 help=(
                     'Set the gas price for ethereum transactions. If not provided '
-                    'the value of the RPC calls eth_gasPrice is going to be used'
+                    'the value of the RPC call eth_gasPrice is going to be used'
                 ),
                 default=None,
                 type=int
@@ -618,7 +618,7 @@ def app(
     elif transport == 'matrix':
         transport = MatrixTransport(config['matrix'])
     else:
-        raise RuntimeError(f'Unknown transport type "{transport}"')
+        raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_app = App(
         config,

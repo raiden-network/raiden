@@ -278,7 +278,7 @@ class MatrixTransport:
                 peer_address = self._get_peer_address_from_room(room.canonical_alias)
                 if not peer_address:
                     log.warning(
-                        'Member of room we\'re not supposed to be a member of - ignoring',
+                        'Member of a room we\'re not supposed to be a member of - ignoring',
                         room=room
                     )
                     return
@@ -295,19 +295,19 @@ class MatrixTransport:
         """ Join all invited rooms """
         room = self._client.join_room(room_id)
         if not room.canonical_alias:
-            log.warning('Got invited to room without canonical alias - ignoring', room=room)
+            log.warning('Got invited to a room without canonical alias - ignoring', room=room)
             return
         peer_address = self._get_peer_address_from_room(room.canonical_alias)
         if not peer_address:
             log.warning(
-                'Got invited to room we\'re not supposed to be a member of - ignoring',
+                'Got invited to a room we\'re not supposed to be a member of - ignoring',
                 room=room
             )
             return
         self._address_to_roomid[peer_address] = room.room_id
         room.add_listener(self._handle_message, 'm.room.message')
         log.debug(
-            'Invited to room',
+            'Invited to a room',
             room_id=room_id,
             aliases=room.aliases
         )
@@ -376,7 +376,7 @@ class MatrixTransport:
             )
 
     def _receive_delivered(self, delivered: Delivered):
-        # FIXME: The signature doesn't seem to verified - check in UDPTransport as well
+        # FIXME: The signature doesn't seem to be verified - check in UDPTransport as well
         self._raiden_service.handle_state_change(
             ReceiveDelivered(delivered.delivered_message_identifier)
         )
@@ -417,7 +417,7 @@ class MatrixTransport:
 
         try:
             if on_udp_message(self._raiden_service, message):
-                # TODO: Maybe replace with Matrix read reciepts.
+                # TODO: Maybe replace with Matrix read receipts.
                 #       Unfortunately those work on an 'up to' basis, not on individual messages
                 #       which means that message order is important which isn't guaranteed between
                 #       federated servers.

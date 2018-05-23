@@ -36,7 +36,8 @@ def local_matrix_server(
         use_local_matrix_server,
         local_matrix,
         matrix_host,
-        matrix_port):
+        matrix_port
+):
 
     if not (use_matrix and use_local_matrix_server):
         yield None
