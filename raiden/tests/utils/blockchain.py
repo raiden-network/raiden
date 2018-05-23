@@ -189,13 +189,16 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
     tries = 5
     while not jsonrpc_running and tries > 0:
         try:
-            block = deploy_client.rpccall_with_retry('eth_getBlockByNumber', '0x0', True)
+            block = deploy_client.web3.eth.getBlock(0, False)
         except ConnectionError:
             gevent.sleep(0.5)
             tries -= 1
         else:
             jsonrpc_running = True
-            running_marker = block['extraData'][2:len(random_marker) + 2]
+
+            # the 'proofOfAuthorityData' key gets added by the web3 PoA middleware. See
+            # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
+            running_marker = encode_hex(block['proofOfAuthorityData'])[:len(random_marker)]
             if running_marker != random_marker:
                 raise RuntimeError(
                     'the test marker does not match, maybe two tests are running in '
