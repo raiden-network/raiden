@@ -26,6 +26,7 @@ class MockMatrixClient:
         self.token = None
         self.user_id = None
         self.user = None
+        self.sync_thread = None
 
         self.listener_thread_running = False
         self.invite_listeners = set()
