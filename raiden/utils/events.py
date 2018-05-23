@@ -2,13 +2,13 @@
 """
 from typing import List, Dict, Union
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.utils import address_encoder
+from raiden.utils import address_encoder, data_decoder, topic_decoder
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies.netting_channel import NettingChannel
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -29,10 +29,10 @@ def all_contract_events_raw(
     Returns:
         events
     """
-    return rpc.rpccall_with_retry('eth_getLogs', {
-        'fromBlock': str(start_block),
-        'toBlock': str(end_block),
-        'address': address_encoder(to_canonical_address(contract_address)),
+    return rpc.web3.eth.getLogs({
+        'fromBlock': start_block,
+        'toBlock': end_block,
+        'address': to_checksum_address(contract_address),
         'topics': [],
     })
 
