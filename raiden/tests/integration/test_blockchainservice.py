@@ -241,10 +241,9 @@ def test_blockchain(
         timeout=poll_timeout,
     )
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },
@@ -261,10 +260,9 @@ def test_blockchain(
 
     assert len(registry_proxy.call('tokenAddresses')) == 1
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },
@@ -296,10 +294,9 @@ def test_blockchain(
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },

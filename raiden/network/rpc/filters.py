@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import List, Dict, Union, Optional
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, add_0x_prefix
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import (
@@ -10,6 +10,7 @@ from raiden.utils import (
     data_decoder,
     topic_decoder,
     topic_encoder,
+    encode_hex,
 )
 from raiden.utils.typing import Address
 
@@ -21,12 +22,6 @@ def new_filter(
         from_block: Union[str, int] = 0,
         to_block: Union[str, int] = 'latest'):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
-    if isinstance(from_block, int):
-        from_block = hex(from_block)
-
-    if isinstance(to_block, int):
-        to_block = hex(to_block)
-
     json_data = {
         'fromBlock': from_block,
         'toBlock': to_block,
@@ -39,7 +34,8 @@ def new_filter(
             for topic in topics
         ]
 
-    return jsonrpc_client.rpccall_with_retry('eth_newFilter', json_data)
+    new_filter = jsonrpc_client.web3.eth.filter(json_data)
+    return new_filter.filter_id
 
 
 def get_filter_events(
@@ -52,12 +48,6 @@ def get_filter_events(
 
     This handles bad encoding from geth rpc.
     """
-    if isinstance(from_block, int):
-        from_block = hex(from_block)
-
-    if isinstance(to_block, int):
-        to_block = hex(to_block)
-
     json_data = {
         'fromBlock': from_block,
         'toBlock': to_block,
@@ -70,7 +60,7 @@ def get_filter_events(
             for topic in topics
         ]
 
-    filter_changes = jsonrpc_client.rpccall_with_retry('eth_getLogs', json_data)
+    filter_changes = jsonrpc_client.web3.eth.getLogs(json_data)
 
     # geth could return None
     if filter_changes is None:
@@ -81,14 +71,10 @@ def get_filter_events(
         address = address_decoder(log_event['address'])
         data = data_decoder(log_event['data'])
         topics = [
-            topic_decoder(topic)
+            topic_decoder(add_0x_prefix(encode_hex(topic)))
             for topic in log_event['topics']
         ]
-        block_number = log_event.get('blockNumber')
-        if not block_number:
-            block_number = 0
-        else:
-            block_number = int(block_number, 0)
+        block_number = log_event.get('blockNumber', 0)
 
         result.append({
             'topics': topics,
@@ -106,9 +92,7 @@ class Filter:
         self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
 
-    def _query_filter(self, function: str) -> List[Dict]:
-        filter_changes = self.client.rpccall_with_retry(function, self.filter_id_raw)
-
+    def _process_filter_results(self, filter_changes: List) -> List[Dict]:
         # geth could return None
         if filter_changes is None:
             return []
@@ -118,14 +102,10 @@ class Filter:
             address = address_decoder(log_event['address'])
             data = data_decoder(log_event['data'])
             topics = [
-                topic_decoder(topic)
+                topic_decoder(add_0x_prefix(encode_hex(topic)))
                 for topic in log_event['topics']
             ]
             block_number = log_event.get('blockNumber')
-            if not block_number:
-                block_number = 0
-            else:
-                block_number = int(block_number, 0)
 
             result.append({
                 'topics': topics,
@@ -138,10 +118,12 @@ class Filter:
         return result
 
     def changes(self) -> List[Dict]:
-        return self._query_filter('eth_getFilterChanges')
+        changes = self.client.web3.eth.getFilterChanges(self.filter_id_raw)
+        return self._process_filter_results(changes)
 
     def getall(self) -> List[Dict]:
-        return self._query_filter('eth_getFilterLogs')
+        changes = self.client.web3.eth.getFilterChanges(self.filter_id_raw)
+        return self._process_filter_results(changes)
 
     def uninstall(self):
-        self.client.rpccall_with_retry('eth_uninstallFilter', self.filter_id_raw)
+        self.client.web3.eth.uninstallFilter(self.filter_id_raw)

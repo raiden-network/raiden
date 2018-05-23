@@ -165,7 +165,7 @@ class BlockChainService:
         return self.address_to_registry[registry_address]
 
     def uninstall_filter(self, filter_id_raw):
-        self.client.rpccall_with_retry('eth_uninstallFilter', filter_id_raw)
+        self.client.web3.eth.uninstallFilter(filter_id_raw)
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         contracts = compile_files_cwd([contract_path])
