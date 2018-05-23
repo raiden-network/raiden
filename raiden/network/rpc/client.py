@@ -7,8 +7,6 @@ from typing import Optional, Union
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 from eth_utils import to_checksum_address
-import rlp
-import os
 import gevent
 import cachetools
 from eth_abi import encode_abi
@@ -40,6 +38,7 @@ from raiden.utils import (
     privatekey_to_address,
     quantity_decoder,
     quantity_encoder,
+    encode_hex,
 )
 from raiden.utils.typing import Address
 from raiden.utils.solc import (
@@ -367,7 +366,7 @@ class JSONRPCClient:
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash_hex = self.send_transaction(
-                    to=b'',
+                    to=Address(b''),
                     data=bytecode,
                 )
                 transaction_hash = unhexlify(transaction_hash_hex)
@@ -403,7 +402,7 @@ class JSONRPCClient:
             bytecode = contract['bin']
 
         transaction_hash_hex = self.send_transaction(
-            to=b'',
+            to=Address(b''),
             data=bytecode,
         )
         transaction_hash = unhexlify(transaction_hash_hex)
@@ -493,27 +492,26 @@ class JSONRPCClient:
                 'behavior.'
             )
 
-        if to == b'0' * 40:
+        if to == b'0' * 20:
             warnings.warn('For contract creation the empty string must be used.')
 
-        nonce = self.nonce()
-        startgas = self.check_startgas(startgas)
-
-        tx = Transaction(
-            nonce,
-            self.gasprice(),
-            startgas,
-            to=to,
+        transaction = dict(
+            nonce=self.nonce(),
+            gasPrice=self.gasprice(),
+            gas=self.check_startgas(startgas),
             value=value,
-            data=data,
+            data=data
         )
 
-        tx.sign(self.privkey)
-        result = self.rpccall_with_retry(
-            'eth_sendRawTransaction',
-            data_encoder(rlp.encode(tx)),
-        )
-        return result[2 if result.startswith('0x') else 0:]
+        # add the to address if not deploying a contract
+        if to != b'':
+            transaction['to'] = to_checksum_address(to)
+
+        signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
+
+        result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+        encoded_result = encode_hex(result)
+        return encoded_result[2 if encoded_result.startswith('0x') else 0:]
 
     def eth_call(
             self,
