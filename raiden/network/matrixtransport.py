@@ -278,7 +278,7 @@ class MatrixTransport:
                 peer_address = self._get_peer_address_from_room(room.canonical_alias)
                 if not peer_address:
                     log.warning(
-                        'Member of a room we\'re not supposed to be a member of - ignoring',
+                        "Member of a room we're not supposed to be a member of - ignoring",
                         room=room
                     )
                     return
