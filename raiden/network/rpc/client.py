@@ -33,7 +33,6 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
     address_encoder,
-    data_decoder,
     data_encoder,
     privatekey_to_address,
     quantity_decoder,
@@ -547,9 +546,7 @@ class JSONRPCClient:
             startgas,
             self.gasprice(),
         )
-        res = self.rpccall_with_retry('eth_call', json_data, block_number)
-
-        return data_decoder(res)
+        return self.web3.eth.call(json_data, block_number)
 
     def eth_estimateGas(
             self,
