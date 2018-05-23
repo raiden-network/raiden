@@ -135,8 +135,8 @@ def format_data_for_rpccall(
     """ Helper to format the transaction data. """
 
     return {
-        'from': address_encoder(sender),
-        'to': data_encoder(to),
+        'from': to_checksum_address(sender),
+        'to': to_checksum_address(to),
         'value': quantity_encoder(value),
         'gasPrice': quantity_encoder(gasprice),
         'gas': quantity_encoder(startgas),
@@ -586,15 +586,18 @@ class JSONRPCClient:
             startgas
         )
         try:
-            res = self.rpccall_with_retry('eth_estimateGas', json_data)
-        except EthNodeCommunicationError as e:
-            tx_would_fail = e.error_code and e.error_code in (-32015, -32000)
+            return self.web3.eth.estimateGas(json_data)
+        except ValueError as err:
+            print(err)
+            tx_would_fail = (
+                '-32015' in str(err) or
+                '-32000' in str(err)
+            )
+            # tx_would_fail = e.error_code and e.error_code in (-32015, -32000)
             if tx_would_fail:  # -32015 is parity and -32000 is geth
                 return None
             else:
-                raise e
-
-        return quantity_decoder(res)
+                raise err
 
     def poll(
             self,
