@@ -2,7 +2,7 @@
 
 import filelock
 import sys
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -20,8 +20,8 @@ from raiden.settings import (
 )
 from raiden.utils import (
     pex,
-    privatekey_to_address
-)
+    privatekey_to_address,
+    address_encoder)
 
 
 class App:  # pylint: disable=too-few-public-methods
@@ -47,9 +47,22 @@ class App:  # pylint: disable=too-few-public-methods
         'rpc': True,
         'console': False,
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
+        'transport_type': 'udp',
+        'matrix': {
+            'server': 'auto',
+            'available_servers': [
+                'https://transport01.raiden.network',
+                'https://transport02.raiden.network',
+                'https://transport03.raiden.network',
+            ],
+            'discovery_room': {
+                'alias_fragment': 'discovery',
+                'server': 'transport01.raiden.network',
+            }
+        }
     }
 
-    def __init__(self, config, chain, default_registry, discovery, transport):
+    def __init__(self, config, chain, default_registry, transport, discovery=None):
         self.config = config
         self.discovery = discovery
 
@@ -59,13 +72,17 @@ class App:  # pylint: disable=too-few-public-methods
                 default_registry,
                 unhexlify(config['privatekey_hex']),
                 transport,
-                discovery,
                 config,
+                discovery,
             )
         except filelock.Timeout:
-            pubkey = privatekey_to_address(unhexlify(self.config['privatekey_hex']))
-            print('FATAL: Another Raiden instance already running for account 0x%s' %
-                  hexlify(str(pubkey)))
+            pubkey = address_encoder(
+                privatekey_to_address(unhexlify(self.config['privatekey_hex']))
+            )
+            print(
+                f'FATAL: Another Raiden instance already running for account {pubkey} on '
+                f'network id {chain.network_id}'
+            )
             sys.exit(1)
         self.start_console = self.config['console']
 

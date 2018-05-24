@@ -297,3 +297,9 @@ def database_paths(tmpdir, private_keys, in_memory_database):
         database_paths.append(os.path.join(app_dir, 'log.db'))
 
     return database_paths
+
+
+@pytest.fixture
+def use_matrix():
+    """Parametrize this to switch transport layer (udp/matrix)"""
+    return False

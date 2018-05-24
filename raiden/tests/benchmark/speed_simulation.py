@@ -203,11 +203,12 @@ def tps_run(
         config['protocol'],
     )
 
+    # FIXME: This is missing the registry
     app = App(
         config,
         blockchain_service,
-        discovery,
         transport,
+        discovery,
     )
 
     for _ in range(parallel):

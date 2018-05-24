@@ -128,8 +128,8 @@ def run(
         config,
         blockchain_service,
         registry,
-        discovery,
         transport,
+        discovery,
     )
 
     app.discovery.register(

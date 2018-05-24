@@ -8,8 +8,8 @@ import socket
 import errno
 import signal
 import shutil
+from copy import deepcopy
 from itertools import count
-from ipaddress import IPv4Address, AddressValueError
 
 import click
 import gevent
@@ -28,6 +28,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
@@ -53,6 +54,16 @@ from raiden.tests.utils.smoketest import (
     start_ethereum,
     run_smoketests,
 )
+from raiden.utils.cli import (
+    ADDRESS_TYPE,
+    command,
+    group,
+    MatrixServerType,
+    NATChoiceType,
+    option,
+    option_group,
+)
+
 
 gevent.monkey.patch_all()
 
@@ -116,7 +127,8 @@ def check_json_rpc(client):
             sys.exit(1)
 
 
-def check_synced(net_id, blockchain_service):
+def check_synced(blockchain_service):
+    net_id = blockchain_service.network_id
     try:
         network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
@@ -236,232 +248,238 @@ def wait_for_sync(blockchain_service, url, tolerance, sleep):
         wait_for_sync_rpc_api(blockchain_service, sleep)
 
 
-class AddressType(click.ParamType):
-    name = 'address'
-
-    def convert(self, value, param, ctx):
-        try:
-            return address_decoder(value)
-        except TypeError:
-            self.fail('Please specify a valid hex-encoded address.')
-
-
-class NATChoiceType(click.Choice):
-    def convert(self, value, param, ctx):
-        if value.startswith('ext:'):
-            ip, _, port = value[4:].partition(':')
-            try:
-                IPv4Address(ip)
-            except AddressValueError:
-                self.fail('invalid IP address: {}'.format(ip), param, ctx)
-            if port:
-                try:
-                    port = int(port, 0)
-                except ValueError:
-                    self.fail('invalid port number: {}'.format(port), param, ctx)
-            else:
-                port = None
-            return ip, port
-        return super().convert(value, param, ctx)
-
-
-ADDRESS_TYPE = AddressType()
-
-
-OPTIONS = [
-    click.option(
-        '--address',
-        help=(
-            'The ethereum address you would like raiden to use and for which '
-            'a keystore file exists in your local system.'
-        ),
-        default=None,
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--keystore-path',
-        help=(
-            'If you have a non-standard path for the ethereum keystore directory'
-            ' provide it using this argument.'
-        ),
-        default=None,
-        type=click.Path(exists=True),
-        show_default=True,
-    ),
-    click.option(
-        '--gas-price',
-        help=(
-            'Set the gas price for ethereum transactions. If not provided '
-            'the value of the RPC calls eth_gasPrice is going to be used'
-        ),
-        default=None,
-        type=int
-    ),
-    click.option(
-        '--eth-rpc-endpoint',
-        help=(
-            '"host:port" address of ethereum JSON-RPC server.\n'
-            'Also accepts a protocol prefix (http:// or https://) with optional port'
-        ),
-        default='127.0.0.1:8545',  # geth default jsonrpc port
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--registry-contract-address',
-        help='hex encoded address of the registry contract.',
-        default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--discovery-contract-address',
-        help='hex encoded address of the discovery contract.',
-        default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
-        type=ADDRESS_TYPE,
-        show_default=True,
-    ),
-    click.option(
-        '--listen-address',
-        help='"host:port" for the raiden service to listen on.',
-        default='0.0.0.0:{}'.format(INITIAL_PORT),
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--rpccorsdomain',
-        help='Comma separated list of domains to accept cross origin requests.',
-        default='http://localhost:*/*',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--logging',
-        help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
-        default=':INFO',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--logfile',
-        help='file path for logging to file',
-        default=None,
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--log-json',
-        help='Output log lines in JSON format',
-        is_flag=True
-    ),
-    click.option(
-        '--max-unresponsive-time',
-        help=(
-            'Max time in seconds for which an address can send no packets and '
-            'still be considered healthy.'
-        ),
-        default=30,
-        type=int,
-        show_default=True,
-    ),
-    click.option(
-        '--send-ping-time',
-        help=(
-            'Time in seconds after which if we have received no message from a '
-            'node we have a connection with, we are going to send a PING message'
-        ),
-        default=60,
-        type=int,
-        show_default=True,
-    ),
-    click.option(
-        '--console',
-        help='Start the interactive raiden console',
-        is_flag=True
-    ),
-    click.option(
-        '--rpc/--no-rpc',
-        help='Start with or without the RPC server.',
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--sync-check/--no-sync-check',
-        help='Checks if the ethereum node is synchronized against etherscan.',
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--api-address',
-        help='"host:port" for the RPC server to listen on.',
-        default='127.0.0.1:5001',
-        type=str,
-        show_default=True,
-    ),
-    click.option(
-        '--datadir',
-        help='Directory for storing raiden data.',
-        default=os.path.join(os.path.expanduser('~'), '.raiden'),
-        type=click.Path(
-            exists=False,
-            dir_okay=True,
-            file_okay=False,
-            writable=True,
-            resolve_path=True,
-            allow_dash=False,
-        ),
-        show_default=True,
-    ),
-    click.option(
-        '--password-file',
-        help='Text file containing the password for the provided account',
-        default=None,
-        type=click.File(lazy=True),
-        show_default=True,
-    ),
-    click.option(
-        '--web-ui/--no-web-ui',
-        help=(
-            'Start with or without the web interface. Requires --rpc. '
-            'It will be accessible at http://<api-address>. '
-        ),
-        default=True,
-        show_default=True,
-    ),
-    click.option(
-        '--eth-client-communication',
-        help='Print all communication with the underlying eth client',
-        is_flag=True,
-    ),
-    click.option(
-        '--nat',
-        help=(
-            'Manually specify method to use for determining public IP / NAT traversal.\n'
-            'Available methods:\n'
-            '"auto" - Try UPnP, then STUN, fallback to none\n'
-            '"upnp" - Try UPnP, fallback to none\n'
-            '"stun" - Try STUN, fallback to none\n'
-            '"none" - Use the local interface address '
-            '(this will likely cause connectivity issues)\n'
-            '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port no.)'
-        ),
-        type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
-        default='auto',
-        show_default=True
-    )
-]
-
-
 def options(func):
     """Having the common app options as a decorator facilitates reuse."""
-    for option in OPTIONS:
-        func = option(func)
+
+    # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
+    # for every use
+    options_ = [
+        option(
+            '--datadir',
+            help='Directory for storing raiden data.',
+            default=os.path.join(os.path.expanduser('~'), '.raiden'),
+            type=click.Path(
+                exists=False,
+                dir_okay=True,
+                file_okay=False,
+                writable=True,
+                resolve_path=True,
+                allow_dash=False,
+            ),
+            show_default=True,
+        ),
+        option(
+            '--keystore-path',
+            help=(
+                'If you have a non-standard path for the ethereum keystore directory'
+                ' provide it using this argument.'
+            ),
+            default=None,
+            type=click.Path(exists=True),
+            show_default=True,
+        ),
+        option(
+            '--address',
+            help=(
+                'The ethereum address you would like raiden to use and for which '
+                'a keystore file exists in your local system.'
+            ),
+            default=None,
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--password-file',
+            help='Text file containing the password for the provided account',
+            default=None,
+            type=click.File(lazy=True),
+            show_default=True,
+        ),
+        option(
+            '--registry-contract-address',
+            help='hex encoded address of the registry contract.',
+            default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--discovery-contract-address',
+            help='hex encoded address of the discovery contract.',
+            default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
+            '--console',
+            help='Start the interactive raiden console',
+            is_flag=True
+        ),
+        option(
+            '--transport',
+            help='Transport system to use. Matrix is experimental.',
+            type=click.Choice(['udp', 'matrix']),
+            default='udp',
+            show_default=True
+        ),
+        option_group(
+            'Ethereum Node Options',
+            option(
+                '--sync-check/--no-sync-check',
+                help='Checks if the ethereum node is synchronized against etherscan.',
+                default=True,
+                show_default=True,
+            ),
+            option(
+                '--gas-price',
+                help=(
+                    'Set the gas price for ethereum transactions. If not provided '
+                    'the value of the RPC call eth_gasPrice is going to be used'
+                ),
+                default=None,
+                type=int
+            ),
+            option(
+                '--eth-rpc-endpoint',
+                help=(
+                    '"host:port" address of ethereum JSON-RPC server.\n'
+                    'Also accepts a protocol prefix (http:// or https://) with optional port'
+                ),
+                default='127.0.0.1:8545',  # geth default jsonrpc port
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--eth-client-communication',
+                help='Print all communication with the underlying eth client',
+                is_flag=True,
+            ),
+        ),
+        option_group(
+            'UDP Transport Options',
+            option(
+                '--listen-address',
+                help='"host:port" for the raiden service to listen on.',
+                default='0.0.0.0:{}'.format(INITIAL_PORT),
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--max-unresponsive-time',
+                help=(
+                    'Max time in seconds for which an address can send no packets and '
+                    'still be considered healthy.'
+                ),
+                default=30,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--send-ping-time',
+                help=(
+                    'Time in seconds after which if we have received no message from a '
+                    'node we have a connection with, we are going to send a PING message'
+                ),
+                default=60,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--nat',
+                help=(
+                    'Manually specify method to use for determining public IP / NAT traversal.\n'
+                    'Available methods:\n'
+                    '"auto" - Try UPnP, then STUN, fallback to none\n'
+                    '"upnp" - Try UPnP, fallback to none\n'
+                    '"stun" - Try STUN, fallback to none\n'
+                    '"none" - Use the local interface address '
+                    '(this will likely cause connectivity issues)\n'
+                    '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port '
+                    'number)'
+                ),
+                type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
+                default='auto',
+                show_default=True,
+                option_group='udp_transport'
+            ),
+        ),
+        option_group(
+            'Matrix Transport Options',
+            option(
+                '--matrix-server',
+                help=(
+                    'Matrix homeserver to use for communication.\n'
+                    'Valid values:\n'
+                    '"auto" - automatically select a suitable homeserver\n'
+                    'A URL pointing to a Raiden matrix homeserver'
+                ),
+                default='auto',
+                type=MatrixServerType(['auto', '<url>']),
+                show_default=True,
+            )
+        ),
+        option_group(
+            'Logging Options',
+            option(
+                '--logging',
+                help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
+                default=':INFO',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--logfile',
+                help='file path for logging to file',
+                default=None,
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--log-json',
+                help='Output log lines in JSON format',
+                is_flag=True
+            ),
+        ),
+        option_group(
+            'RPC Options',
+            option(
+                '--rpc/--no-rpc',
+                help='Start with or without the RPC server.',
+                default=True,
+                show_default=True,
+            ),
+            option(
+                '--rpccorsdomain',
+                help='Comma separated list of domains to accept cross origin requests.',
+                default='http://localhost:*/*',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--api-address',
+                help='"host:port" for the RPC server to listen on.',
+                default='127.0.0.1:5001',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--web-ui/--no-web-ui',
+                help=(
+                    'Start with or without the web interface. Requires --rpc. '
+                    'It will be accessible at http://<api-address>. '
+                ),
+                default=True,
+                show_default=True,
+            ),
+        ),
+    ]
+
+    for option_ in reversed(options_):
+        func = option_(func)
     return func
 
 
 @options
-@click.command()
+@command()
 def app(
         address,
         keystore_path,
@@ -486,13 +504,15 @@ def app(
         datadir,
         eth_client_communication,
         nat,
+        transport,
+        matrix_server
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
     from raiden.network.blockchain_service import BlockChainService
 
-    if not mapped_socket:
+    if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
 
     address_hex = address_encoder(address) if address else None
@@ -505,7 +525,7 @@ def app(
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
-    config = App.DEFAULT_CONFIG.copy()
+    config = deepcopy(App.DEFAULT_CONFIG)
 
     config['host'] = listen_host
     config['port'] = listen_port
@@ -514,9 +534,12 @@ def app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
-    config['socket'] = mapped_socket.socket
-    config['external_ip'] = mapped_socket.external_ip
-    config['external_port'] = mapped_socket.external_port
+    if mapped_socket:
+        config['socket'] = mapped_socket.socket
+        config['external_ip'] = mapped_socket.external_ip
+        config['external_port'] = mapped_socket.external_port
+    config['transport_type'] = transport
+    config['matrix']['server'] = matrix_server
     config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_timeout'] = timeout
@@ -555,52 +578,54 @@ def app(
 
     # this assumes the eth node is already online
     check_json_rpc(rpc_client)
-    check_discovery_registration_gas(blockchain_service, address)
 
-    net_id = int(blockchain_service.client.rpccall_with_retry('net_version'))
     if sync_check:
-        check_synced(net_id, blockchain_service)
+        check_synced(blockchain_service)
 
+    net_id = blockchain_service.network_id
     database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
     config['database_path'] = database_path
     print(
-        'You are connected to the {} network and the DB path is: {}'.format(
+        'You are connected to the \'{}\' network and the DB path is: {}'.format(
             ID_TO_NETWORKNAME[net_id],
             database_path,
         )
     )
 
     registry = blockchain_service.registry(
-        registry_contract_address,
-    )
-
-    discovery = ContractDiscovery(
-        blockchain_service.node_address,
-        blockchain_service.discovery(discovery_contract_address)
-    )
-
-    registry = blockchain_service.registry(
         registry_contract_address
     )
 
-    throttle_policy = TokenBucket(
-        config['protocol']['throttle_capacity'],
-        config['protocol']['throttle_fill_rate']
-    )
+    discovery = None
+    if transport == 'udp':
+        check_discovery_registration_gas(blockchain_service, address)
+        discovery = ContractDiscovery(
+            blockchain_service.node_address,
+            blockchain_service.discovery(discovery_contract_address)
+        )
 
-    transport = UDPTransport(
-        discovery,
-        mapped_socket.socket,
-        throttle_policy,
-        config['protocol'],
-    )
+        throttle_policy = TokenBucket(
+            config['protocol']['throttle_capacity'],
+            config['protocol']['throttle_fill_rate']
+        )
+
+        transport = UDPTransport(
+            discovery,
+            mapped_socket.socket,
+            throttle_policy,
+            config['protocol'],
+        )
+    elif transport == 'matrix':
+        transport = MatrixTransport(config['matrix'])
+    else:
+        raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_app = App(
         config,
         blockchain_service,
         registry,
-        discovery,
         transport,
+        discovery,
     )
 
     return raiden_app
@@ -634,7 +659,7 @@ def prompt_account(address_hex, keystore_path, password_file):
         while should_prompt:
             idx = click.prompt('Select one of them by index to continue', type=int)
 
-            if idx >= 0 and idx < len(addresses):
+            if 0 <= idx < len(addresses):
                 should_prompt = False
             else:
                 print('\nError: Provided index "{}" is out of bounds\n'.format(idx))
@@ -676,88 +701,97 @@ def prompt_account(address_hex, keystore_path, password_file):
     return address_hex, privatekey_bin
 
 
-@click.group(invoke_without_command=True)
+@group(invoke_without_command=True, context_settings={'max_content_width': 120})
 @options
 @click.pass_context
 def run(ctx, **kwargs):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    if ctx.invoked_subcommand is None:
-        print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
-        from raiden.ui.console import Console
-        from raiden.api.python import RaidenAPI
+    if ctx.invoked_subcommand is not None:
+        # Pass parsed args on to subcommands.
+        ctx.obj = kwargs
+        return
 
-        slogging.configure(
-            kwargs['logging'],
-            log_json=kwargs['log_json'],
-            log_file=kwargs['logfile']
-        )
-        if kwargs['logfile']:
-            # Disable stream logging
-            root = slogging.getLogger()
-            for handler in root.handlers:
-                if isinstance(handler, slogging.logging.StreamHandler):
-                    root.handlers.remove(handler)
-                    break
+    print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
+    from raiden.ui.console import Console
+    from raiden.api.python import RaidenAPI
 
-        # TODO:
-        # - Ask for confirmation to quit if there are any locked transfers that did
-        # not timeout.
+    slogging.configure(
+        kwargs['logging'],
+        log_json=kwargs['log_json'],
+        log_file=kwargs['logfile']
+    )
+    if kwargs['logfile']:
+        # Disable stream logging
+        root = slogging.getLogger()
+        for handler in root.handlers:
+            if isinstance(handler, slogging.logging.StreamHandler):
+                root.handlers.remove(handler)
+                break
+
+    def _run_app():
+        app_ = ctx.invoke(app, **kwargs)
+
+        domain_list = []
+        if kwargs['rpccorsdomain']:
+            if ',' in kwargs['rpccorsdomain']:
+                for domain in kwargs['rpccorsdomain'].split(','):
+                    domain_list.append(str(domain))
+            else:
+                domain_list.append(str(kwargs['rpccorsdomain']))
+
+        api_server = None
+        if ctx.params['rpc']:
+            raiden_api = RaidenAPI(app_.raiden)
+            rest_api = RestAPI(raiden_api)
+            api_server = APIServer(
+                rest_api,
+                cors_domain_list=domain_list,
+                web_ui=ctx.params['web_ui'],
+                eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
+            )
+            (api_host, api_port) = split_endpoint(kwargs['api_address'])
+            api_server.start(api_host, api_port)
+
+            print(
+                'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
+                'See the Raiden documentation for all available endpoints at\n'
+                'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
+                    api_host,
+                    api_port,
+                )
+            )
+
+        if ctx.params['console']:
+            console = Console(app_)
+            console.start()
+
+        # wait for interrupt
+        event = gevent.event.Event()
+        gevent.signal(signal.SIGQUIT, event.set)
+        gevent.signal(signal.SIGTERM, event.set)
+        gevent.signal(signal.SIGINT, event.set)
+
+        gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
+        gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
+
+        event.wait()
+        print('Signal received. Shutting down ...')
+        if api_server:
+            api_server.stop()
+
+        return app_
+
+    # TODO:
+    # - Ask for confirmation to quit if there are any locked transfers that did
+    # not timeout.
+    if kwargs['transport'] == 'udp':
         (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
         try:
             with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
                 kwargs['mapped_socket'] = mapped_socket
+                app_ = _run_app()
 
-                app_ = ctx.invoke(app, **kwargs)
-
-                domain_list = []
-                if kwargs['rpccorsdomain']:
-                    if ',' in kwargs['rpccorsdomain']:
-                        for domain in kwargs['rpccorsdomain'].split(','):
-                            domain_list.append(str(domain))
-                    else:
-                        domain_list.append(str(kwargs['rpccorsdomain']))
-
-                if ctx.params['rpc']:
-                    raiden_api = RaidenAPI(app_.raiden)
-                    rest_api = RestAPI(raiden_api)
-                    api_server = APIServer(
-                        rest_api,
-                        cors_domain_list=domain_list,
-                        web_ui=ctx.params['web_ui'],
-                        eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
-                    )
-                    (api_host, api_port) = split_endpoint(kwargs['api_address'])
-                    api_server.start(api_host, api_port)
-
-                    print(
-                        'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
-                        'See the Raiden documentation for all available endpoints at\n'
-                        'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
-                            api_host,
-                            api_port,
-                        )
-                    )
-
-                if ctx.params['console']:
-                    console = Console(app_)
-                    console.start()
-
-                # wait for interrupt
-                event = gevent.event.Event()
-                gevent.signal(signal.SIGQUIT, event.set)
-                gevent.signal(signal.SIGTERM, event.set)
-                gevent.signal(signal.SIGINT, event.set)
-
-                gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
-                gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
-
-                event.wait()
-                print('Signal received. Shutting down ...')
-                try:
-                    api_server.stop()
-                except NameError:
-                    pass
         except socket.error as v:
             if v.args[0] == errno.EADDRINUSE:
                 print(
@@ -767,14 +801,18 @@ def run(ctx, **kwargs):
                 )
                 sys.exit(1)
             raise
-        app_.stop(leave_channels=False)
+    elif kwargs['transport'] == 'matrix':
+        print('WARNING: The Matrix transport is experimental')
+        kwargs['mapped_socket'] = None
+        app_ = _run_app()
     else:
-        # Pass parsed args on to subcommands.
-        ctx.obj = kwargs
+        # Shouldn't happen
+        raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
+    app_.stop(leave_channels=False)
 
 
 @run.command()
-@click.option(
+@option(
     '--short',
     is_flag=True,
     help='Only display Raiden version'
@@ -791,7 +829,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 
 
 @run.command()
-@click.option(
+@option(
     '--debug',
     is_flag=True,
     help='Drop into pdb on errors.'
@@ -818,7 +856,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:
-            handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
+            handler.write(f'{f" {subject.upper} ":=^80}{os.linesep}')
             if data is not None:
                 if isinstance(data, bytes):
                     data = data.decode()
@@ -850,11 +888,11 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
     )
-    for option in app.params:
-        if option.name in args.keys():
-            args[option.name] = option.process_value(ctx, args[option.name])
+    for option_ in app.params:
+        if option_.name in args.keys():
+            args[option_.name] = option_.process_value(ctx, args[option_.name])
         else:
-            args[option.name] = option.default
+            args[option_.name] = option_.default
 
     password_file = os.path.join(args['keystore_path'], 'password')
     with open(password_file, 'w') as handler:

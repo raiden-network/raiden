@@ -7,8 +7,10 @@ from gevent import server
 from ethereum import slogging
 
 from raiden.app import App
+from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.protocol import UDPTransport
 from raiden.network.transport import TokenBucket
+from raiden.tests.utils.matrix import MockMatrixClient
 from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -211,6 +213,8 @@ def create_apps(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
+        use_matrix=False,
+        local_matrix_url=None,
 ):
 
     """ Create the apps."""
@@ -251,26 +255,44 @@ def create_apps(
         config_copy = App.DEFAULT_CONFIG.copy()
         config_copy.update(config)
 
+        if use_matrix:
+            if local_matrix_url is not None:
+                matrix_config = {
+                    'server': local_matrix_url,
+                }
+            else:
+                matrix_config = {
+                    'client_class': MockMatrixClient,
+                    'server': 'http://matrix.mock',
+                }
+            config.update({
+                'transport_type': 'matrix',
+                'matrix': matrix_config
+            })
+
         registry = blockchain.registry(registry_address)
 
-        throttle_policy = TokenBucket(
-            config['protocol']['throttle_capacity'],
-            config['protocol']['throttle_fill_rate']
-        )
+        if use_matrix:
+            transport = MatrixTransport(config['matrix'])
+        else:
+            throttle_policy = TokenBucket(
+                config['protocol']['throttle_capacity'],
+                config['protocol']['throttle_fill_rate']
+            )
 
-        transport = UDPTransport(
-            discovery,
-            server._udp_socket((host, port)),  # pylint: disable=protected-access
-            throttle_policy,
-            config['protocol'],
-        )
+            transport = UDPTransport(
+                discovery,
+                server._udp_socket((host, port)),  # pylint: disable=protected-access
+                throttle_policy,
+                config['protocol'],
+            )
 
         app = App(
             config_copy,
             blockchain,
             registry,
-            discovery,
             transport,
+            discovery,
         )
         apps.append(app)
 
