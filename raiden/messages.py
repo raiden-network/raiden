@@ -125,7 +125,7 @@ def message_from_sendevent(send_event, our_address):
     elif type(send_event) == SendProcessed:
         message = Processed.from_event(send_event, our_address)
     else:
-        raise ValueError('unknown event type')
+        raise ValueError(f'Unknown event type {send_event}')
 
     return message
 

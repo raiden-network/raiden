@@ -120,7 +120,7 @@ def handle_send_processed(
         raiden: 'RaidenService',
         processed_event: SendProcessed,
 ):
-    processed_message = message_from_sendevent(processed_event.message_identifier, raiden.address)
+    processed_message = message_from_sendevent(processed_event, raiden.address)
     raiden.sign(processed_message)
     raiden.protocol.send_async(
         processed_event.recipient,
@@ -235,35 +235,35 @@ def handle_contract_channelsettle(
 def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
     # pylint: disable=too-many-branches
 
-    if isinstance(event, SendLockedTransfer):
+    if type(event) == SendLockedTransfer:
         handle_send_lockedtransfer(raiden, event)
-    elif isinstance(event, SendDirectTransfer):
+    elif type(event) == SendDirectTransfer:
         handle_send_directtransfer(raiden, event)
-    elif isinstance(event, SendRevealSecret):
+    elif type(event) == SendRevealSecret:
         handle_send_revealsecret(raiden, event)
-    elif isinstance(event, SendBalanceProof):
+    elif type(event) == SendBalanceProof:
         handle_send_balanceproof(raiden, event)
-    elif isinstance(event, SendSecretRequest):
+    elif type(event) == SendSecretRequest:
         handle_send_secretrequest(raiden, event)
-    elif isinstance(event, SendRefundTransfer):
+    elif type(event) == SendRefundTransfer:
         handle_send_refundtransfer(raiden, event)
-    elif isinstance(event, SendProcessed):
+    elif type(event) == SendProcessed:
         handle_send_processed(raiden, event)
-    elif isinstance(event, EventTransferSentSuccess):
+    elif type(event) == EventTransferSentSuccess:
         handle_transfersentsuccess(raiden, event)
-    elif isinstance(event, EventTransferSentFailed):
+    elif type(event) == EventTransferSentFailed:
         handle_transfersentfailed(raiden, event)
-    elif isinstance(event, EventUnlockFailed):
+    elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
-    elif isinstance(event, ContractSendChannelClose):
+    elif type(event) == ContractSendChannelClose:
         handle_contract_channelclose(raiden, event)
-    elif isinstance(event, ContractSendChannelUpdateTransfer):
+    elif type(event) == ContractSendChannelUpdateTransfer:
         handle_contract_channelupdate(raiden, event)
-    elif isinstance(event, ContractSendChannelWithdraw):
+    elif type(event) == ContractSendChannelWithdraw:
         handle_contract_channelwithdraw(raiden, event)
-    elif isinstance(event, ContractSendChannelSettle):
+    elif type(event) == ContractSendChannelSettle:
         handle_contract_channelsettle(raiden, event)
-    elif isinstance(event, UNEVENTFUL_EVENTS):
+    elif type(event) in UNEVENTFUL_EVENTS:
         pass
     else:
         log.error('Unknown event {}'.format(type(event)))
