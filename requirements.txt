@@ -17,7 +17,7 @@ miniupnpc==2.0.2
 netifaces==0.10.6
 networkx==2.0.0
 psutil==5.4.3
-pycryptodome==3.5.1
+pycryptodome==3.6.1
 pysha3==1.0.2
 # raiden-libs==???
 # FIXME: replace with released version before merge
