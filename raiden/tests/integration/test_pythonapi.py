@@ -203,11 +203,11 @@ def test_api_channel_events(raiden_chain, token_addresses):
     channel_0_1 = get_channelstate(app0, app1, token_address)
     app0_events = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
 
-    assert must_have_event(app0_events, {'_event_type': b'ChannelNewBalance'})
+    assert must_have_event(app0_events, {'event': 'ChannelNewBalance'})
 
     # This event was temporarily removed. Confirmation from the protocol layer
     # as a state change is necessary to properly fire this event.
-    # assert must_have_event(results, {'_event_type': b'EventTransferSentSuccess'})
+    # assert must_have_event(results, {'event': 'EventTransferSentSuccess'})
 
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
     max_block = max(event[0] for event in app0_events)
@@ -219,8 +219,8 @@ def test_api_channel_events(raiden_chain, token_addresses):
     assert not results
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events(channel_0_1.identifier, 0)
-    assert must_have_event(app1_events, {'_event_type': b'ChannelNewBalance'})
-    assert must_have_event(app1_events, {'_event_type': b'EventTransferReceivedSuccess'})
+    assert must_have_event(app1_events, {'event': 'ChannelNewBalance'})
+    assert must_have_event(app1_events, {'event': 'EventTransferReceivedSuccess'})
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

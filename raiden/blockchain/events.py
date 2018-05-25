@@ -16,10 +16,11 @@ from raiden.exceptions import (
 )
 from raiden.network.rpc.filters import get_filter_events
 from raiden.utils import address_decoder, pex
+from raiden.network.rpc.smartcontract_proxy import decode_event
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'translator', 'filter_creation_function'),
+    ('event_name', 'filter', 'abi', 'filter_creation_function'),
 )
 Proxies = namedtuple(
     'Proxies',
@@ -31,14 +32,14 @@ ALL_EVENTS = None
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def poll_event_listener(eth_filter, translator):
+def poll_event_listener(eth_filter, abi):
     result = list()
 
     for log_event in eth_filter.changes():
-        decoded_event = translator.decode_event(
-            log_event['topics'],
-            log_event['data'],
-        )
+        decoded_event = dict(decode_event(
+            abi,
+            log_event['event_data']
+        ))
 
         if decoded_event is not None:
             decoded_event['block_number'] = log_event.get('block_number')
@@ -53,7 +54,7 @@ def poll_event_listener(eth_filter, translator):
 
 def get_contract_events(
         chain,
-        translator,
+        abi,
         contract_address,
         topics,
         from_block,
@@ -77,7 +78,7 @@ def get_contract_events(
 
     result = []
     for event in events:
-        decoded_event = translator.decode_event(event['topics'], event['data'])
+        decoded_event = dict(decode_event(abi, event['event_data']))
         if event.get('block_number'):
             decoded_event['block_number'] = event['block_number']
         result.append(decoded_event)
@@ -99,7 +100,7 @@ def get_all_channel_manager_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_translator(CONTRACT_CHANNEL_MANAGER),
+        CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
         events,
         from_block,
@@ -118,7 +119,7 @@ def get_all_registry_events(
     """
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
+        CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
         registry_address,
         events,
         from_block,
@@ -138,7 +139,7 @@ def get_all_netting_channel_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
+        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
         events,
         from_block,
@@ -183,38 +184,37 @@ def get_relevant_proxies(chain, node_address, registry_address):
     return proxies
 
 
-def decode_event(event):
+def decode_event_to_internal(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data
-    assert isinstance(data['_event_type'], bytes)
 
     # Note: All addresses inside the event_data must be decoded.
-    if data['_event_type'] == b'TokenAdded':
-        data['registry_address'] = address_decoder(data['registry_address'])
-        data['channel_manager_address'] = address_decoder(data['channel_manager_address'])
-        data['token_address'] = address_decoder(data['token_address'])
+    if data['event'] == 'TokenAdded':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
+        data['token_address'] = address_decoder(data['args']['token_address'])
 
-    elif data['_event_type'] == b'ChannelNew':
-        data['registry_address'] = address_decoder(data['registry_address'])
-        data['participant1'] = address_decoder(data['participant1'])
-        data['participant2'] = address_decoder(data['participant2'])
-        data['netting_channel'] = address_decoder(data['netting_channel'])
+    elif data['event'] == 'ChannelNew':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['participant1'] = address_decoder(data['args']['participant1'])
+        data['participant2'] = address_decoder(data['args']['participant2'])
+        data['netting_channel'] = address_decoder(data['args']['netting_channel'])
 
-    elif data['_event_type'] == b'ChannelNewBalance':
-        data['registry_address'] = address_decoder(data['registry_address'])
-        data['token_address'] = address_decoder(data['token_address'])
-        data['participant'] = address_decoder(data['participant'])
+    elif data['event'] == 'ChannelNewBalance':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['token_address'] = address_decoder(data['args']['token_address'])
+        data['participant'] = address_decoder(data['args']['participant'])
 
-    elif data['_event_type'] == b'ChannelClosed':
-        data['registry_address'] = address_decoder(data['registry_address'])
-        data['closing_address'] = address_decoder(data['closing_address'])
+    elif data['event'] == 'ChannelClosed':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['closing_address'] = address_decoder(data['args']['closing_address'])
 
-    elif data['_event_type'] == b'ChannelSecretRevealed':
-        data['registry_address'] = address_decoder(data['registry_address'])
-        data['receiver_address'] = address_decoder(data['receiver_address'])
+    elif data['event'] == 'ChannelSecretRevealed':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['receiver_address'] = address_decoder(data['args']['receiver_address'])
 
-    elif data['_event_type'] == b'ChannelSettled':
-        data['registry_address'] = address_decoder(data['registry_address'])
+    elif data['event'] == 'ChannelSettled':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
 
     return event
 
@@ -246,7 +246,7 @@ class BlockchainEvents:
                 for event_listener in self.event_listeners:
                     decoded_events = poll_event_listener(
                         event_listener.filter,
-                        event_listener.translator,
+                        event_listener.abi,
                     )
                     result.extend(decoded_events)
                 break
@@ -265,7 +265,7 @@ class BlockchainEvents:
                         new_listener = EventListener(
                             event_listener.event_name,
                             event_listener.filter_creation_function(from_block=from_block),
-                            event_listener.translator,
+                            event_listener.abi,
                             event_listener.filter_creation_function,
                         )
                         updated_event_listerners.append(new_listener)
@@ -278,7 +278,7 @@ class BlockchainEvents:
 
     def poll_blockchain_events(self, from_block=None):
         for event in self.poll_all_event_listeners(from_block):
-            yield decode_event(event)
+            yield decode_event_to_internal(event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
@@ -286,16 +286,16 @@ class BlockchainEvents:
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, eth_filter, translator, filter_creation_function):
+    def add_event_listener(self, event_name, eth_filter, abi, filter_creation_function):
         event = EventListener(
             event_name,
             eth_filter,
-            translator,
+            abi,
             filter_creation_function,
         )
         self.event_listeners.append(event)
 
-        return poll_event_listener(eth_filter, translator)
+        return poll_event_listener(eth_filter, abi)
 
     def add_registry_listener(self, registry_proxy, from_block=None):
         tokenadded = registry_proxy.tokenadded_filter(from_block)
@@ -304,7 +304,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
-            CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
+            CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
             registry_proxy.tokenadded_filter,
         )
 
@@ -315,7 +315,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
-            CONTRACT_MANAGER.get_translator('channel_manager'),
+            CONTRACT_MANAGER.get_abi('channel_manager'),
             channel_manager_proxy.channelnew_filter,
         )
 
@@ -326,7 +326,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
-            CONTRACT_MANAGER.get_translator('netting_channel'),
+            CONTRACT_MANAGER.get_abi('netting_channel'),
             netting_channel_proxy.all_events_filter,
         )
 

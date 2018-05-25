@@ -371,7 +371,7 @@ class NettingChannel:
         if isinstance(unlock_proof.lock_encoded, messages.Lock):
             raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
 
-        merkleproof_encoded = ''.join(unlock_proof.merkle_proof)
+        merkleproof_encoded = b''.join(unlock_proof.merkle_proof)
 
         transaction_hash = estimate_and_transact(
             self.proxy,

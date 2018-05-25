@@ -11,8 +11,6 @@ from itertools import zip_longest
 import gevent
 from coincurve import PrivateKey
 from eth_utils import remove_0x_prefix
-from ethereum.abi import ContractTranslator
-from ethereum.messages import Log
 from sha3 import keccak_256
 
 import raiden
@@ -334,10 +332,6 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
 
 def is_frozen():
     return getattr(sys, 'frozen', False)
-
-
-def event_decoder(event: Log, contract_translator: ContractTranslator):
-    return contract_translator.decode_event(event.topics, event.data)
 
 
 def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:

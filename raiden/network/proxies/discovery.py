@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -69,7 +69,7 @@ class Discovery:
             raise TransactionThrew('Register Endpoint', receipt_or_none)
 
     def endpoint_by_address(self, node_address_bin):
-        node_address_hex = hexlify(node_address_bin)
+        node_address_hex = to_checksum_address(node_address_bin)
         endpoint = self.proxy.call('findEndpointByAddress', node_address_hex)
 
         if endpoint == b'':
