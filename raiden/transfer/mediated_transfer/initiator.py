@@ -81,7 +81,6 @@ def next_channel_from_routes(
 
 
 def try_new_route(
-        registry_address: typing.Address,
         channelidentifiers_to_channels: ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
@@ -118,7 +117,6 @@ def try_new_route(
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
-            registry_address,
             initiator_state,
             channel_state,
             message_identifier,
@@ -132,7 +130,6 @@ def try_new_route(
 
 
 def send_lockedtransfer(
-        registry_address: typing.Address,
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
         message_identifier,
@@ -143,7 +140,8 @@ def send_lockedtransfer(
     Raises:
         AssertionError: If the channel does not have enough capacity.
     """
-    assert channel_state.token_address == initiator_state.transfer_description.token
+    transfer_token_address = initiator_state.transfer_description.token_network_identifier
+    assert channel_state.token_network_identifier == transfer_token_address
 
     transfer_description = initiator_state.transfer_description
     lock_expiration = get_initial_lock_expiration(
@@ -152,7 +150,6 @@ def send_lockedtransfer(
     )
 
     lockedtransfer_event = channel.send_lockedtransfer(
-        registry_address,
         channel_state,
         transfer_description.initiator,
         transfer_description.target,
@@ -211,7 +208,6 @@ def handle_secretrequest(
             queue_name,
             message_identifier,
             transfer_description.secret,
-            transfer_description.token,
         )
 
         initiator_state.revealsecret = revealsecret

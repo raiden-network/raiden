@@ -52,6 +52,7 @@ def balanceproof_from_envelope(envelope_message):
         envelope_message.transferred_amount,
         envelope_message.locked_amount,
         envelope_message.locksroot,
+        envelope_message.token_network_address,
         envelope_message.channel,
         envelope_message.message_hash,
         envelope_message.signature,
@@ -269,20 +270,17 @@ class PaymentMappingState(State):
     )
 
     InitiatorTask = namedtuple('InitiatorTask', (
-        'payment_network_identifier',
-        'token_address',
+        'token_network_identifier',
         'manager_state',
     ))
 
     MediatorTask = namedtuple('MediatorTask', (
-        'payment_network_identifier',
-        'token_address',
+        'token_network_identifier',
         'mediator_state',
     ))
 
     TargetTask = namedtuple('TargetTask', (
-        'payment_network_identifier',
-        'token_address',
+        'token_network_identifier',
         'channel_identifier',
         'target_state',
     ))
@@ -350,6 +348,7 @@ class BalanceProofUnsignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
+        'token_network_identifier',
         'channel_address',
     )
 
@@ -359,6 +358,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
             locksroot: typing.Keccak256,
+            token_network_identifier: typing.Address,
             channel_address: typing.Address,
     ):
 
@@ -399,19 +399,21 @@ class BalanceProofUnsignedState(State):
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
+        self.token_network_identifier = token_network_identifier
         self.channel_address = channel_address
 
     def __repr__(self):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} channel_address:{}'
+            'locked_amount:{} locksroot:{} token_network:{} channel_address:{}'
             '>'
         ).format(
             self.nonce,
             self.transferred_amount,
             self.locked_amount,
             pex(self.locksroot),
+            pex(self.token_network_identifier),
             pex(self.channel_address),
         )
 
@@ -422,6 +424,7 @@ class BalanceProofUnsignedState(State):
             self.transferred_amount == other.transferred_amount and
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_address == other.channel_address
         )
 
@@ -439,6 +442,7 @@ class BalanceProofSignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
+        'token_network_identifier',
         'channel_address',
         'message_hash',
         'signature',
@@ -451,6 +455,7 @@ class BalanceProofSignedState(State):
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
             locksroot: typing.Keccak256,
+            token_network_identifier: typing.Address,
             channel_address: typing.Address,
             message_hash: typing.Keccak256,
             signature: typing.Signature,
@@ -468,6 +473,9 @@ class BalanceProofSignedState(State):
 
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
+
+        if not isinstance(token_network_identifier, typing.T_Address):
+            raise ValueError('token_network_identifier must be an address instance')
 
         if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
@@ -509,6 +517,7 @@ class BalanceProofSignedState(State):
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
+        self.token_network_identifier = token_network_identifier
         self.channel_address = channel_address
         self.message_hash = message_hash
         self.signature = signature
@@ -518,14 +527,15 @@ class BalanceProofSignedState(State):
         return (
             '<'
             'BalanceProofSignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} channel_address:{} message_hash:{}'
-            'signature:{} sender:{}'
+            'locked_amount:{} locksroot:{} token_network:{} channel_address:{} '
+            'message_hash:{} signature:{} sender:{}'
             '>'
         ).format(
             self.nonce,
             self.transferred_amount,
             self.locked_amount,
             pex(self.locksroot),
+            pex(self.token_network_identifier),
             pex(self.channel_address),
             pex(self.message_hash),
             pex(self.signature),
@@ -539,6 +549,7 @@ class BalanceProofSignedState(State):
             self.transferred_amount == other.transferred_amount and
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_address == other.channel_address and
             self.message_hash == other.message_hash and
             self.signature == other.signature and
@@ -817,6 +828,7 @@ class NettingChannelState(State):
         'our_state',
         'partner_state',
         'token_address',
+        'token_network_identifier',
         'reveal_timeout',
         'settle_timeout',
         'deposit_transaction_queue',
@@ -829,6 +841,7 @@ class NettingChannelState(State):
             self,
             identifier,
             token_address: typing.Address,
+            token_network_identifier: typing.Address,
             reveal_timeout: typing.BlockNumber,
             settle_timeout: typing.BlockNumber,
             our_state: NettingChannelEndState,
@@ -873,6 +886,7 @@ class NettingChannelState(State):
 
         self.identifier = identifier
         self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.our_state = our_state
@@ -897,6 +911,7 @@ class NettingChannelState(State):
             self.our_state == other.our_state and
             self.partner_state == other.partner_state and
             self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.reveal_timeout == other.reveal_timeout and
             self.settle_timeout == other.settle_timeout and
             self.deposit_transaction_queue == other.deposit_transaction_queue and

@@ -66,16 +66,14 @@ def initiator_init(
         transfer_identifier,
         transfer_amount,
         transfer_secret,
-        registry_address,
-        token_address,
+        token_network_identifier,
         target_address,
 ):
 
     transfer_state = TransferDescriptionWithSecretState(
         transfer_identifier,
         transfer_amount,
-        registry_address,
-        token_address,
+        token_network_identifier,
         raiden.address,
         target_address,
         transfer_secret,
@@ -83,15 +81,13 @@ def initiator_init(
     previous_address = None
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
-        registry_address,
-        token_address,
+        token_network_identifier,
         raiden.address,
         target_address,
         transfer_amount,
         previous_address,
     )
     init_initiator_statechange = ActionInitInitiator(
-        registry_address,
         transfer_state,
         routes,
     )
@@ -100,11 +96,9 @@ def initiator_init(
 
 def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
-    registry_address = transfer.registry_address
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
-        registry_address,
-        from_transfer.token,
+        from_transfer.balance_proof.token_network_identifier,
         raiden.address,
         from_transfer.target,
         from_transfer.lock.amount,
@@ -115,7 +109,6 @@ def mediator_init(raiden, transfer: LockedTransfer):
         from_transfer.balance_proof.channel_address,
     )
     init_mediator_statechange = ActionInitMediator(
-        registry_address,
         routes,
         from_route,
         from_transfer,
@@ -123,15 +116,13 @@ def mediator_init(raiden, transfer: LockedTransfer):
     return init_mediator_statechange
 
 
-def target_init(raiden, transfer: LockedTransfer):
+def target_init(transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_address,
     )
-    registry_address = transfer.registry_address
     init_target_statechange = ActionInitTarget(
-        registry_address,
         from_route,
         from_transfer,
     )
@@ -163,13 +154,13 @@ class RaidenService:
     """ A Raiden node. """
 
     def __init__(
-        self,
-        chain,
-        default_registry,
-        private_key_bin,
-        transport,
-        config,
-        discovery=None
+            self,
+            chain,
+            default_registry,
+            private_key_bin,
+            transport,
+            config,
+            discovery=None,
     ):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
@@ -459,8 +450,7 @@ class RaidenService:
 
     def mediated_transfer_async(
             self,
-            registry_address,
-            token_address,
+            token_network_identifier,
             amount,
             target,
             identifier,
@@ -477,8 +467,7 @@ class RaidenService:
         """
 
         async_result = self.start_mediated_transfer(
-            registry_address,
-            token_address,
+            token_network_identifier,
             amount,
             target,
             identifier,
@@ -486,7 +475,7 @@ class RaidenService:
 
         return async_result
 
-    def direct_transfer_async(self, registry_address, token_address, amount, target, identifier):
+    def direct_transfer_async(self, token_network_identifier, amount, target, identifier):
         """ Do a direct transfer with target.
 
         Direct transfers are non cancellable and non expirable, since these
@@ -514,8 +503,7 @@ class RaidenService:
             identifier = create_default_identifier()
 
         direct_transfer = ActionTransferDirect(
-            registry_address,
-            token_address,
+            token_network_identifier,
             target,
             identifier,
             amount,
@@ -525,8 +513,7 @@ class RaidenService:
 
     def start_mediated_transfer(
             self,
-            registry_address,
-            token_address,
+            token_network_identifier,
             amount,
             target,
             identifier,
@@ -548,8 +535,7 @@ class RaidenService:
             identifier,
             amount,
             secret,
-            registry_address,
-            token_address,
+            token_network_identifier,
             target,
         )
 
@@ -567,5 +553,5 @@ class RaidenService:
         self.handle_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer):
-        init_target_statechange = target_init(self, transfer)
+        init_target_statechange = target_init(transfer)
         self.handle_state_change(init_target_statechange)

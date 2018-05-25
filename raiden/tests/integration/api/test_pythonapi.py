@@ -4,7 +4,7 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.blockchain import wait_until_block
-from raiden.transfer import channel
+from raiden.transfer import channel, views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
@@ -35,6 +35,11 @@ def test_token_addresses(raiden_network, token_addresses):
 def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(node1),
+        node1.raiden.default_registry.address,
+        token_address,
+    )
 
     api1 = RaidenAPI(node1.raiden)
     api2 = RaidenAPI(node2.raiden)
@@ -51,7 +56,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     channels = api1.get_channel_list(registry_address, token_address, api2.address)
     assert len(channels) == 1
 
-    channel12 = get_channelstate(node1, node2, token_address)
+    channel12 = get_channelstate(node1, node2, token_network_identifier)
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
 
     event_list1 = api1.get_channel_events(
@@ -75,7 +80,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
         deposit,
     )
 
-    channel12 = get_channelstate(node1, node2, token_address)
+    channel12 = get_channelstate(node1, node2, token_network_identifier)
 
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
     assert channel.get_balance(channel12.our_state, channel12.partner_state) == deposit
@@ -109,7 +114,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     node1.raiden.poll_blockchain_events()
 
     # Load the new state with the channel closed
-    channel12 = get_channelstate(node1, node2, token_address)
+    channel12 = get_channelstate(node1, node2, token_network_identifier)
 
     event_list3 = api1.get_channel_events(
         channel12.identifier,
@@ -140,7 +145,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     wait_until_block(node1.raiden.chain, settlement_block)
 
     # Load the new state with the channel settled
-    channel12 = get_channelstate(node1, node2, token_address)
+    channel12 = get_channelstate(node1, node2, token_network_identifier)
 
     node1.raiden.poll_blockchain_events()
     assert channel.get_status(channel12) == CHANNEL_STATE_SETTLED

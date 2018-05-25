@@ -47,12 +47,10 @@ def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
 
 
-def get_channelstate(app0, app1, token_address) -> 'NettingChannelState':
-    registry_address = app0.raiden.default_registry.address
-    channel_state = views.get_channelstate_for(
+def get_channelstate(app0, app1, token_network_identifier) -> 'NettingChannelState':
+    channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0),
-        registry_address,
-        token_address,
+        token_network_identifier,
         app1.raiden.address,
     )
     return channel_state
@@ -65,10 +63,14 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     cases all apps are synched, in the case of a LockedTransfer the secret
     will be revealed.
     """
-
-    async_result = initiator_app.raiden.mediated_transfer_async(
-        initiator_app.raiden.default_registry.address,
+    payment_network_identifier = initiator_app.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(initiator_app),
+        payment_network_identifier,
         token,
+    )
+    async_result = initiator_app.raiden.mediated_transfer_async(
+        token_network_identifier,
         amount,
         target_app.raiden.address,
         identifier
@@ -76,13 +78,25 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     assert async_result.wait()
 
 
-def direct_transfer(initiator_app, target_app, token_address, amount, identifier=None, timeout=5):
+def direct_transfer(
+        initiator_app,
+        target_app,
+        token_network_identifier,
+        amount,
+        identifier=None,
+        timeout=5,
+):
     """ Nice to read shortcut to make a DirectTransfer. """
-    channel_state = get_channelstate(initiator_app, target_app, token_address)
+
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        views.state_from_app(initiator_app),
+        token_network_identifier,
+        target_app.raiden.address,
+    )
     assert channel_state, 'there is not a direct channel'
+
     initiator_app.raiden.direct_transfer_async(
-        initiator_app.raiden.default_registry.address,
-        token_address,
+        token_network_identifier,
         amount,
         target_app.raiden.address,
         identifier,
@@ -108,7 +122,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
     gevent.sleep(0.3)  # let the other nodes synch
 
 
-def pending_mediated_transfer(app_chain, token, amount, identifier):
+def pending_mediated_transfer(app_chain, token_network_identifier, amount, identifier):
     """ Nice to read shortcut to make a LockedTransfer where the secret is _not_ revealed.
 
     While the secret is not revealed all apps will be synchronized, meaning
@@ -124,7 +138,11 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
     target = app_chain[-1].raiden.address
 
     # Generate a secret
-    initiator_channel = get_channelstate(app_chain[0], app_chain[1], token)
+    initiator_channel = views.get_channelstate_by_token_network_and_partner(
+        views.state_from_app(app_chain[0]),
+        token_network_identifier,
+        app_chain[1],
+    )
     address = initiator_channel.identifier
     nonce_int = channel.get_next_nonce(initiator_channel.our_state)
     nonce_bytes = nonce_int.to_bytes(2, 'big')
@@ -136,8 +154,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         identifier,
         amount,
         secret,
-        initiator_app.raiden.default_registry.address,
-        token,
+        token_network_identifier,
         target,
     )
     events = initiator_app.raiden.wal.log_and_dispatch(
@@ -159,7 +176,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
         mediator_app.raiden.sign(transfermessage)
 
     target_app = app_chain[-1]
-    mediator_init_statechange = target_init(target_app.raiden, transfermessage)
+    mediator_init_statechange = target_init(transfermessage)
     events = target_app.raiden.wal.log_and_dispatch(
         mediator_init_statechange,
         target_app.raiden.get_block_number(),
@@ -167,12 +184,12 @@ def pending_mediated_transfer(app_chain, token, amount, identifier):
     return secret
 
 
-def claim_lock(app_chain, payment_identifier, token, secret):
+def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
     """ Unlock a pending transfer. """
     secrethash = sha3(secret)
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
-        from_channel = get_channelstate(from_, to_, token)
-        partner_channel = get_channelstate(to_, from_, token)
+        from_channel = get_channelstate(from_, to_, token_network_identifier)
+        partner_channel = get_channelstate(to_, from_, token_network_identifier)
 
         unlock_lock = channel.send_unlock(
             from_channel,
@@ -186,6 +203,7 @@ def claim_lock(app_chain, payment_identifier, token, secret):
             unlock_lock.message_identifier,
             unlock_lock.payment_identifier,
             unlock_lock.balance_proof.nonce,
+            partner_channel.token_network_address,
             unlock_lock.balance_proof.channel_address,
             unlock_lock.balance_proof.transferred_amount,
             unlock_lock.balance_proof.locked_amount,
@@ -209,7 +227,7 @@ def claim_lock(app_chain, payment_identifier, token, secret):
 
 
 def assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0,
         balance0,
         pending_locks0,
@@ -224,8 +242,8 @@ def assert_synched_channel_state(
         hasn't been delivered yet or has been completely lost."""
     # pylint: disable=too-many-arguments
 
-    channel0 = get_channelstate(app0, app1, token_address)
-    channel1 = get_channelstate(app1, app0, token_address)
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
+    channel1 = get_channelstate(app1, app0, token_network_identifier)
 
     assert channel0.our_state.contract_balance == channel1.partner_state.contract_balance
     assert channel0.partner_state.contract_balance == channel1.our_state.contract_balance
@@ -311,12 +329,13 @@ def assert_balance(from_channel, balance, locked):
 
 
 def increase_transferred_amount(
-        payment_network_identifier,
         from_channel,
         partner_channel,
         amount,
         pkey,
 ):
+    assert from_channel.token_network_identifier == partner_channel.token_network_identifier
+
     # increasing the transferred amount by a value larger than distributable
     # would put one end of the channel in a negative balance, which is forbidden
     distributable_from_to = channel.get_distributable(
@@ -327,9 +346,7 @@ def increase_transferred_amount(
 
     message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = 1
-    registry_address = make_address()
     event = channel.send_directtransfer(
-        registry_address,
         from_channel,
         amount,
         payment_identifier,
@@ -346,8 +363,7 @@ def increase_transferred_amount(
 
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
     receive_direct = ReceiveTransferDirect(
-        payment_network_identifier,
-        from_channel.token_address,
+        from_channel.token_network_identifier,
         message_identifier,
         payment_identifier,
         balance_proof,
@@ -362,7 +378,6 @@ def increase_transferred_amount(
 
 
 def make_direct_transfer_from_channel(
-        payment_network_identifier,
         from_channel,
         partner_channel,
         amount,
@@ -370,12 +385,14 @@ def make_direct_transfer_from_channel(
 ):
     """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`."""
+    assert from_channel.token_network_identifier == partner_channel.token_network_identifier
+
+    token_network_identifier = from_channel.token_network_identifier
     payment_identifier = channel.get_next_nonce(from_channel.our_state)
     pseudo_random_generator = random.Random()
 
     state_change = ActionTransferDirect(
-        payment_network_identifier,
-        from_channel.token_address,
+        token_network_identifier,
         from_channel.partner_state.address,
         payment_identifier,
         amount,
@@ -399,8 +416,7 @@ def make_direct_transfer_from_channel(
     balance_proof = balanceproof_from_envelope(direct_transfer_message)
     message_identifier = random.randint(0, UINT64_MAX)
     receive_direct = ReceiveTransferDirect(
-        payment_network_identifier,
-        from_channel.token_address,
+        token_network_identifier,
         message_identifier,
         payment_identifier,
         balance_proof,
@@ -415,7 +431,6 @@ def make_direct_transfer_from_channel(
 
 
 def make_mediated_transfer(
-        registry_address,
         from_channel,
         partner_channel,
         initiator,
@@ -430,7 +445,6 @@ def make_mediated_transfer(
     message_identifier = random.randint(0, UINT64_MAX)
 
     lockedtransfer = channel.send_lockedtransfer(
-        registry_address,
         from_channel,
         initiator,
         target,

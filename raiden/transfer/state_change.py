@@ -66,12 +66,10 @@ class ActionChannelClose(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
     ):
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
@@ -82,8 +80,7 @@ class ActionChannelClose(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionChannelClose) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier
         )
 
@@ -119,9 +116,8 @@ class ActionCancelTransfer(StateChange):
 class ActionTransferDirect(StateChange):
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenNetworkID,
-            receiver_address: typing.T_Address,
+            token_network_identifier: typing.TokenNetworkIdentifier,
+            receiver_address: typing.Address,
             payment_identifier: typing.PaymentID,
             amount: typing.PaymentAmount,
     ):
@@ -131,8 +127,7 @@ class ActionTransferDirect(StateChange):
         if not isinstance(amount, int):
             raise ValueError('amount must be int')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.amount = amount
         self.receiver_address = receiver_address
         self.payment_identifier = payment_identifier
@@ -147,8 +142,7 @@ class ActionTransferDirect(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionTransferDirect) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.receiver_address == other.receiver_address and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount
@@ -163,26 +157,22 @@ class ContractReceiveChannelNew(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             channel_state: NettingChannelState,
     ):
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_state = channel_state
 
     def __repr__(self):
-        return '<ContractReceiveChannelNew network:{} token:{} state:{}>'.format(
-            pex(self.payment_network_identifier),
-            pex(self.token_address),
+        return '<ContractReceiveChannelNew token_network:{} state:{}>'.format(
+            pex(self.token_network_identifier),
             self.channel_state,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNew) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_state == other.channel_state
         )
 
@@ -195,8 +185,7 @@ class ContractReceiveChannelClosed(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             closing_address: typing.Address,
             closed_block_number: typing.BlockNumber,
@@ -208,8 +197,7 @@ class ContractReceiveChannelClosed(StateChange):
         if not isinstance(closed_block_number, typing.T_BlockNumber):
             raise ValueError('closed_block_number must be of type block_number')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.closing_address = closing_address
         self.closed_block_number = closed_block_number
@@ -217,11 +205,10 @@ class ContractReceiveChannelClosed(StateChange):
     def __repr__(self):
         return (
             '<ContractReceiveChannelClosed'
-            ' network:{} token:{} channel:{} closer:{} closed_at:{}'
+            ' token_network:{} channel:{} closer:{} closed_at:{}'
             '>'
         ).format(
-            pex(self.payment_network_identifier),
-            pex(self.token_address),
+            pex(self.token_network_identifier),
             pex(self.channel_identifier),
             pex(self.closing_address),
             self.closed_block_number
@@ -230,8 +217,7 @@ class ContractReceiveChannelClosed(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelClosed) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.closing_address == other.closing_address and
             self.closed_block_number == other.closing_address
@@ -305,22 +291,18 @@ class ContractReceiveChannelNewBalance(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             deposit_transaction: TransactionChannelNewBalance,
     ):
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.deposit_transaction = deposit_transaction
 
     def __repr__(self):
         return (
-            '<ContractReceiveChannelNewBalance network:{} token:{} '
-            'channel:{} transaction:{}>'.format(
-                pex(self.payment_network_identifier),
-                pex(self.token_address),
+            '<ContractReceiveChannelNewBalance token_network:{} channel:{} transaction:{}>'.format(
+                pex(self.token_network_identifier),
                 pex(self.channel_identifier),
                 self.deposit_transaction,
             )
@@ -329,8 +311,7 @@ class ContractReceiveChannelNewBalance(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNewBalance) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.deposit_transaction == other.deposit_transaction
         )
@@ -344,27 +325,23 @@ class ContractReceiveChannelSettled(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             settle_block_number: typing.BlockNumber,
     ):
         if not isinstance(settle_block_number, int):
             raise ValueError('settle_block_number must be of type int')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.settle_block_number = settle_block_number
 
     def __repr__(self):
         return (
-            '<ContractReceiveChannelSettled'
-            ' network:{} token:{} channel:{} settle_block:{}'
+            '<ContractReceiveChannelSettled token_network:{} channel:{} settle_block:{}'
             '>'
         ).format(
-            pex(self.payment_network_identifier),
-            pex(self.token_address),
+            pex(self.token_network_identifier),
             pex(self.channel_identifier),
             self.settle_block_number,
         )
@@ -372,8 +349,7 @@ class ContractReceiveChannelSettled(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelSettled) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.settle_block_number == other.settle_block_number
         )
@@ -573,8 +549,7 @@ class ContractReceiveRouteNew(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             participant1: typing.Address,
             participant2: typing.Address,
     ):
@@ -585,15 +560,13 @@ class ContractReceiveRouteNew(StateChange):
         if not isinstance(participant2, typing.T_Address):
             raise ValueError('participant2 must be of type address')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.participant1 = participant1
         self.participant2 = participant2
 
     def __repr__(self):
-        return '<ContractReceiveRouteNew network:{} token:{} node1:{} node2:{}>'.format(
-            pex(self.payment_network_identifier),
-            pex(self.token_address),
+        return '<ContractReceiveRouteNew token_network:{} node1:{} node2:{}>'.format(
+            pex(self.token_network_identifier),
             pex(self.participant1),
             pex(self.participant2),
         )
@@ -601,8 +574,7 @@ class ContractReceiveRouteNew(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveRouteNew) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2
         )
@@ -614,8 +586,7 @@ class ContractReceiveRouteNew(StateChange):
 class ReceiveTransferDirect(StateChange):
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.TokenNetworkID,
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
             balance_proof: BalanceProofSignedState,
@@ -623,8 +594,7 @@ class ReceiveTransferDirect(StateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
@@ -632,11 +602,10 @@ class ReceiveTransferDirect(StateChange):
     def __repr__(self):
         return (
             '<ReceiveTransferDirect'
-            ' network:{} token:{} msgid:{} paymentid:{} balance_proof:{}'
+            ' token_network:{} msgid:{} paymentid:{} balance_proof:{}'
             '>'
         ).format(
-            pex(self.payment_network_identifier),
-            pex(self.token_address),
+            pex(self.token_network_identifier),
             self.message_identifier,
             self.payment_identifier,
             self.balance_proof,
@@ -645,8 +614,7 @@ class ReceiveTransferDirect(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferDirect) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.balance_proof == other.balance_proof

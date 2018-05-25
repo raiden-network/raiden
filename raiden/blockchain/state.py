@@ -9,7 +9,12 @@ from raiden.transfer.state import (
 )
 
 
-def get_channel_state(token_address, reveal_timeout, netting_channel_proxy):
+def get_channel_state(
+        token_address,
+        token_network_address,
+        reveal_timeout,
+        netting_channel_proxy,
+):
     channel_details = netting_channel_proxy.detail()
 
     our_state = NettingChannelEndState(
@@ -58,6 +63,7 @@ def get_channel_state(token_address, reveal_timeout, netting_channel_proxy):
     channel = NettingChannelState(
         identifier,
         token_address,
+        token_network_address,
         reveal_timeout,
         settle_timeout,
         our_state,
@@ -82,6 +88,7 @@ def get_token_network_state_from_proxies(raiden, manager_proxy, netting_channel_
     for channel_proxy in netting_channel_proxies:
         channel_state = get_channel_state(
             token_address,
+            manager_address,
             raiden.config['reveal_timeout'],
             channel_proxy,
         )

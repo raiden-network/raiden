@@ -350,6 +350,11 @@ class RaidenAPI:
             token_address,
             partner_addresses,
         )
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            registry_address,
+            token_address,
+        )
 
         # If concurrent operations are happening on one of the channels, fail entire
         # request.
@@ -371,8 +376,7 @@ class RaidenAPI:
 
             for channel_state in channels_to_close:
                 channel_close = ActionChannelClose(
-                    registry_address,
-                    token_address,
+                    token_network_identifier,
                     channel_state.identifier,
                 )
 
@@ -525,9 +529,14 @@ class RaidenAPI:
             identifier=identifier,
         )
 
-        async_result = self.raiden.mediated_transfer_async(
-            registry_address,
+        payment_network_identifier = self.raiden.default_registry.address
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            payment_network_identifier,
             token_address,
+        )
+        async_result = self.raiden.mediated_transfer_async(
+            token_network_identifier,
             amount,
             target,
             identifier,

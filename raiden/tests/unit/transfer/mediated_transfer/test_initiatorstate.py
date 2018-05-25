@@ -7,9 +7,10 @@ from raiden.utils import random_secret
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     UNIT_REGISTRY_IDENTIFIER,
-    UNIT_SECRETHASH,
     UNIT_SECRET,
+    UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
+    UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
@@ -52,7 +53,6 @@ def make_initiator_state(
         payment_network_identifier = factories.make_address()
 
     init_state_change = ActionInitInitiator(
-        payment_network_identifier,
         transfer_description,
         routes,
     )
@@ -71,9 +71,21 @@ def make_initiator_state(
 
 def test_next_route():
     amount = UNIT_TRANSFER_AMOUNT
-    channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
-    channel2 = factories.make_channel(our_balance=0, token_address=UNIT_TOKEN_ADDRESS)
-    channel3 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel2 = factories.make_channel(
+        our_balance=0,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel3 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
     pseudo_random_generator = random.Random()
 
     channelmap = {
@@ -122,14 +134,13 @@ def test_init_with_usable_routes():
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
 
-    payment_network_identifier = factories.make_address()
     init_state_change = ActionInitInitiator(
-        payment_network_identifier,
         factories.UNIT_TRANSFER_DESCRIPTION,
         available_routes,
     )
@@ -156,7 +167,7 @@ def test_init_with_usable_routes():
     transfer = send_mediated_transfer.transfer
     expiration = block_number + channel1.settle_timeout
 
-    assert transfer.token == factories.UNIT_TRANSFER_DESCRIPTION.token
+    assert transfer.balance_proof.token_network_identifier == channel1.token_network_identifier
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
@@ -166,11 +177,9 @@ def test_init_with_usable_routes():
 def test_init_without_routes():
     block_number = 1
     routes = []
-    payment_network_identifier = factories.make_address()
     pseudo_random_generator = random.Random()
 
     init_state_change = ActionInitInitiator(
-        payment_network_identifier,
         factories.UNIT_TRANSFER_DESCRIPTION,
         routes,
     )
@@ -196,7 +205,11 @@ def test_state_wait_secretrequest_valid():
     block_number = 1
     pseudo_random_generator = random.Random()
 
-    channel1 = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     current_state = make_initiator_state(
@@ -233,6 +246,7 @@ def test_state_wait_unlock_valid():
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -251,7 +265,6 @@ def test_state_wait_unlock_valid():
         'global',
         UNIT_TRANSFER_IDENTIFIER,
         UNIT_SECRET,
-        UNIT_TOKEN_ADDRESS,
     )
 
     state_change = ReceiveSecretReveal(
@@ -283,12 +296,12 @@ def test_state_wait_unlock_invalid():
     identifier = 1
     block_number = 1
     target_address = factories.HOP2
-    token = factories.UNIT_TOKEN_ADDRESS
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -306,7 +319,6 @@ def test_state_wait_unlock_invalid():
         'global',
         identifier,
         UNIT_SECRET,
-        token,
     )
 
     before_state = deepcopy(current_state)
@@ -339,16 +351,19 @@ def test_refund_transfer_next_route():
         our_address=our_address,
         partner_address=refund_address,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=0,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel3 = factories.make_channel(
         our_balance=amount,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
 
     channelmap = {
@@ -391,7 +406,6 @@ def test_refund_transfer_next_route():
     assert channel_state.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=refund_address,
         routes=available_routes,
         transfer=refund_transfer,
@@ -429,6 +443,7 @@ def test_refund_transfer_no_more_routes():
         our_address=UNIT_TRANSFER_INITIATOR,
         partner_address=refund_address,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -459,7 +474,6 @@ def test_refund_transfer_no_more_routes():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=channel_state.partner_state.address,
         routes=available_routes,
         transfer=refund_transfer,
@@ -491,6 +505,7 @@ def test_refund_transfer_invalid_sender():
         our_balance=amount,
         our_address=UNIT_TRANSFER_INITIATOR,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -518,7 +533,6 @@ def test_refund_transfer_invalid_sender():
 
     wrong_sender_address = factories.HOP3
     state_change = ReceiveTransferRefundCancelRoute(
-        registry_address=UNIT_REGISTRY_IDENTIFIER,
         sender=wrong_sender_address,
         routes=available_routes,
         transfer=refund_transfer,
@@ -547,6 +561,7 @@ def test_cancel_transfer():
         our_balance=amount,
         our_address=UNIT_TRANSFER_INITIATOR,
         token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]

@@ -2,6 +2,7 @@
 import gevent
 import pytest
 
+from raiden.transfer import views
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
@@ -31,9 +32,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 
     refund_amount = deposit // 2
     identifier = 1
-    async_result = app0.raiden.mediated_transfer_async(
-        app0.raiden.default_registry.address,
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
         token_address,
+    )
+    async_result = app0.raiden.mediated_transfer_async(
+        token_network_identifier,
         refund_amount,
         app2.raiden.address,
         identifier,
@@ -128,9 +134,14 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    async_result = app0.raiden.mediated_transfer_async(
-        app0.raiden.default_registry.address,
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
         token_address,
+    )
+    async_result = app0.raiden.mediated_transfer_async(
+        token_network_identifier,
         amount_refund,
         app2.raiden.address,
         identifier_refund,

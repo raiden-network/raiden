@@ -147,7 +147,6 @@ def test_handle_inittarget():
     block_number = 1
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
-    payment_network_identifier = factories.make_address()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -168,7 +167,6 @@ def test_handle_inittarget():
     )
 
     state_change = ActionInitTarget(
-        payment_network_identifier,
         from_route,
         from_transfer,
     )
@@ -196,7 +194,6 @@ def test_handle_inittarget_bad_expiration():
     amount = 3
     initiator = factories.HOP1
     target_address = UNIT_TRANSFER_TARGET
-    payment_network_identifier = factories.make_address()
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -221,7 +218,7 @@ def test_handle_inittarget_bad_expiration():
         from_transfer,
     )
 
-    state_change = ActionInitTarget(payment_network_identifier, from_route, from_transfer)
+    state_change = ActionInitTarget(from_route, from_transfer)
     iteration = target.handle_inittarget(
         state_change,
         from_channel,
@@ -354,7 +351,6 @@ def test_state_transition():
     lock_amount = 7
     block_number = 1
     initiator = factories.HOP6
-    payment_network_identifier = factories.make_address()
     pseudo_random_generator = random.Random()
 
     our_balance = 100
@@ -380,7 +376,6 @@ def test_state_transition():
     )
 
     init = ActionInitTarget(
-        payment_network_identifier,
         from_route,
         from_transfer,
     )
@@ -435,6 +430,7 @@ def test_state_transition():
         nonce,
         transferred_amount,
         locked_amount,
+        from_channel.token_network_identifier,
         from_route.channel_identifier,
         locksroot,
         invalid_message_hash,
@@ -442,7 +438,6 @@ def test_state_transition():
         UNIT_TRANSFER_SENDER,
     )
 
-    payment_network_identifier = factories.make_address()
     balance_proof_state_change = ReceiveUnlock(
         random.randint(0, UINT64_MAX),
         UNIT_SECRET,

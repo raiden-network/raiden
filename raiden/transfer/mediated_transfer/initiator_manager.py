@@ -91,7 +91,6 @@ def handle_init(
 ) -> TransitionResult:
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
-            state_change.payment_network_identifier,
             channelidentifiers_to_channels,
             state_change.routes,
             state_change.transfer,
@@ -124,7 +123,6 @@ def handle_cancelroute(
         msg = 'The previous transfer must be cancelled prior to trying a new route'
         assert payment_state.initiator is None, msg
         sub_iteration = initiator.try_new_route(
-            state_change.registry_address,
             channelidentifiers_to_channels,
             state_change.routes,
             transfer_description,
@@ -216,8 +214,7 @@ def handle_transferrefundcancelroute(
             transfer_description = TransferDescriptionWithSecretState(
                 old_description.payment_identifier,
                 old_description.amount,
-                old_description.registry,
-                old_description.token,
+                old_description.token_network_identifier,
                 old_description.initiator,
                 old_description.target,
                 state_change.secret,
