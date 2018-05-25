@@ -7,9 +7,9 @@ import select
 import signal
 import sys
 import time
-from structlog import StreamHandler, Formatter
 
-from ethereum.structlog import get_logger
+import structlog
+from structlog import StreamHandler, Formatter
 from ethereum.tools._solidity import compile_file
 from eth_utils import denoms
 import gevent
@@ -235,7 +235,7 @@ class Console(BaseService):
         print_usage()
 
         # Remove handlers that log to stderr
-        root = get_logger()
+        root = structlog.get_logger()
         for handler in root.handlers[:]:
             if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
                 root.removeHandler(handler)
