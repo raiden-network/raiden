@@ -12,9 +12,12 @@ env:
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.23/solc-static-linux'
   - SOLC_URL_MACOS='https://www.dropbox.com/s/4amq3on2ds1dq36/solc_0.4.23?dl=0'
   - SOLC_VERSION='v0.4.23'
+  - SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=synapse'
+  - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   matrix:
   - TEST='./raiden/tests/unit'
-  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api'
+  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api' SYNAPSE_COMMAND=""
+  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api' SYNAPSE_COMMAND="--local-matrix=${HOME}/.synapse/run.sh"
   - TEST='./raiden/tests/integration/transfer'
   - TEST='./raiden/tests/integration/long_running'
   - TEST='./raiden/tests/integration/api'
@@ -33,7 +36,7 @@ install:
 before_script:
   ./.travis/before_script.sh
 script:
-  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random --blockchain-type=geth $TEST
+  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random --blockchain-type=geth $SYNAPSE_COMMAND $TEST
 after_script:
   - coveralls
 notifications:
