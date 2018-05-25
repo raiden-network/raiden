@@ -10,7 +10,7 @@ from typing import Dict, Set, Tuple, List
 from urllib.parse import urlparse
 
 import gevent
-from ethereum import slogging
+import structlog
 from gevent.event import AsyncResult
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
@@ -54,7 +54,7 @@ from raiden.utils import (
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
-log = slogging.get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 SentMessageState = namedtuple('SentMessageState', (
     'async_result',
