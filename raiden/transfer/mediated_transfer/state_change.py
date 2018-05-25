@@ -23,24 +23,21 @@ class ActionInitInitiator(StateChange):
         secret: The secret that must be used with the transfer.
     """
 
-    def __init__(self, payment_network_identifier, transfer_description, routes):
+    def __init__(self, transfer_description, routes):
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
 
-        self.payment_network_identifier = payment_network_identifier
         self.transfer = transfer_description
         self.routes = routes
 
     def __repr__(self):
-        return '<ActionInitInitiator network:{} transfer:{}>'.format(
-            self.payment_network_identifier,
+        return '<ActionInitInitiator transfer:{}>'.format(
             self.transfer,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitInitiator) and
-            self.payment_network_identifier == other.payment_network_identifier and
             self.transfer == other.transfer and
             self.routes == other.routes
         )
@@ -60,10 +57,10 @@ class ActionInitMediator(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier,
             routes: typing.List[RouteState],
             from_route: RouteState,
-            from_transfer: LockedTransferSignedState):
+            from_transfer: LockedTransferSignedState,
+    ):
 
         if not isinstance(from_route, RouteState):
             raise ValueError('from_route must be a RouteState instance')
@@ -71,14 +68,12 @@ class ActionInitMediator(StateChange):
         if not isinstance(from_transfer, LockedTransferSignedState):
             raise ValueError('from_transfer must be a LockedTransferSignedState instance')
 
-        self.payment_network_identifier = payment_network_identifier
         self.routes = routes
         self.from_route = from_route
         self.from_transfer = from_transfer
 
     def __repr__(self):
-        return '<ActionInitMediator network:{} from_route:{} from_transfer:{}>'.format(
-            self.payment_network_identifier,
+        return '<ActionInitMediator from_route:{} from_transfer:{}>'.format(
             self.from_route,
             self.from_transfer,
         )
@@ -86,7 +81,6 @@ class ActionInitMediator(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitMediator) and
-            self.payment_network_identifier == other.payment_network_identifier and
             self.routes == other.routes and
             self.from_route == other.from_route and
             self.from_transfer == other.from_transfer
@@ -104,20 +98,18 @@ class ActionInitTarget(StateChange):
         transfer: The payee transfer.
     """
 
-    def __init__(self, payment_network_identifier, route, transfer):
+    def __init__(self, route, transfer):
         if not isinstance(route, RouteState):
             raise ValueError('route must be a RouteState instance')
 
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be a LockedTransferSignedState instance')
 
-        self.payment_network_identifier = payment_network_identifier
         self.route = route
         self.transfer = transfer
 
     def __repr__(self):
-        return '<ActionInitTarget network:{} route:{} transfer:{}>'.format(
-            self.payment_network_identifier,
+        return '<ActionInitTarget route:{} transfer:{}>'.format(
             self.route,
             self.transfer,
         )
@@ -125,7 +117,6 @@ class ActionInitTarget(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitTarget) and
-            self.payment_network_identifier == other.payment_network_identifier and
             self.route == other.route and
             self.transfer == other.transfer
         )
@@ -227,13 +218,12 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     route.
     """
 
-    def __init__(self, registry_address, sender, routes, transfer, secret):
+    def __init__(self, sender, routes, transfer, secret):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         secrethash = sha3(secret)
 
-        self.registry_address = registry_address
         self.sender = sender
         self.transfer = transfer
         self.routes = routes
@@ -249,7 +239,6 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferRefundCancelRoute) and
-            self.registry_address == other.registry_address and
             self.sender == other.sender and
             self.transfer == other.transfer and
             self.routes == other.routes and

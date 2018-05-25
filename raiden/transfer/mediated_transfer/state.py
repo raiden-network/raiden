@@ -24,7 +24,6 @@ def lockedtransfersigned_from_message(message):
     transfer_state = LockedTransferSignedState(
         message.message_identifier,
         message.payment_identifier,
-        message.registry_address,
         message.token,
         balance_proof,
         lock,
@@ -207,7 +206,6 @@ class LockedTransferUnsignedState(State):
 
     __slots__ = (
         'payment_identifier',
-        'registry_address',
         'token',
         'balance_proof',
         'lock',
@@ -218,7 +216,6 @@ class LockedTransferUnsignedState(State):
     def __init__(
             self,
             payment_identifier,
-            registry_address: typing.Address,
             token: typing.Address,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
@@ -237,7 +234,6 @@ class LockedTransferUnsignedState(State):
             raise ValueError('balance_proof must not be empty')
 
         self.payment_identifier = payment_identifier
-        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -247,12 +243,11 @@ class LockedTransferUnsignedState(State):
     def __repr__(self):
         return (
             '<'
-            'LockedTransferUnsignedState id:{} registry_addres:{} token:{} balance_proof:{} '
+            'LockedTransferUnsignedState id:{} token:{} balance_proof:{} '
             'lock:{} target:{}'
             '>'
         ).format(
             self.payment_identifier,
-            encode_hex(self.registry_address),
             encode_hex(self.token),
             self.balance_proof,
             self.lock,
@@ -263,7 +258,6 @@ class LockedTransferUnsignedState(State):
         return (
             isinstance(other, LockedTransferUnsignedState) and
             self.payment_identifier == other.payment_identifier and
-            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and
@@ -283,7 +277,6 @@ class LockedTransferSignedState(State):
     __slots__ = (
         'message_identifier',
         'payment_identifier',
-        'registry_address',
         'token',
         'balance_proof',
         'lock',
@@ -295,7 +288,6 @@ class LockedTransferSignedState(State):
             self,
             message_identifier,
             payment_identifier,
-            registry_address: typing.Address,
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
@@ -315,7 +307,6 @@ class LockedTransferSignedState(State):
 
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
-        self.registry_address = registry_address
         self.token = token
         self.balance_proof = balance_proof
         self.lock = lock
@@ -325,13 +316,12 @@ class LockedTransferSignedState(State):
     def __repr__(self):
         return (
             '<'
-            'LockedTransferSignedState msgid:{} id:{} registry_address:{} token:{} lock:{}'
+            'LockedTransferSignedState msgid:{} id:{} token:{} lock:{}'
             ' target:{}'
             '>'
         ).format(
             self.message_identifier,
             self.payment_identifier,
-            encode_hex(self.registry_address),
             encode_hex(self.token),
             self.lock,
             encode_hex(self.target),
@@ -342,7 +332,6 @@ class LockedTransferSignedState(State):
             isinstance(other, LockedTransferSignedState) and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
-            self.registry_address == other.registry_address and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and
@@ -362,8 +351,7 @@ class TransferDescriptionWithSecretState(State):
     __slots__ = (
         'payment_identifier',
         'amount',
-        'registry',
-        'token',
+        'token_network_identifier',
         'initiator',
         'target',
         'secret',
@@ -374,18 +362,17 @@ class TransferDescriptionWithSecretState(State):
             self,
             payment_identifier,
             amount: typing.TokenAmount,
-            registry: typing.Address,
-            token: typing.Address,
+            token_network_identifier: typing.TokenNetworkIdentifier,
             initiator: typing.Address,
             target: typing.Address,
-            secret: typing.Secret):
+            secret: typing.Secret,
+    ):
 
         secrethash = sha3(secret)
 
         self.payment_identifier = payment_identifier
         self.amount = amount
-        self.registry = registry
-        self.token = token
+        self.token_network_identifier = token_network_identifier
         self.initiator = initiator
         self.target = target
         self.secret = secret
@@ -393,10 +380,9 @@ class TransferDescriptionWithSecretState(State):
 
     def __repr__(self):
         return (
-            '<TransferDescriptionWithSecretState network:{} token:{} amount:{} secrethash:{}>'
+            '<TransferDescriptionWithSecretState token_network:{} amount:{} secrethash:{}>'
         ).format(
-            pex(self.registry),
-            pex(self.token),
+            pex(self.token_network_identifier),
             self.amount,
             pex(self.secrethash),
         )
@@ -406,8 +392,7 @@ class TransferDescriptionWithSecretState(State):
             isinstance(other, TransferDescriptionWithSecretState) and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
-            self.registry == other.registry and
-            self.token == other.token and
+            self.token_network_identifier == other.token_network_identifier and
             self.initiator == other.initiator and
             self.target == other.target and
             self.secret == other.secret and

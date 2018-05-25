@@ -64,7 +64,7 @@ def get_networks(node_state, payment_network_identifier, token_address):
     return payment_network_state, token_network_state
 
 
-def get_token_network(node_state, payment_network_identifier, token_address):
+def get_token_network_by_token_address(node_state, payment_network_identifier, token_address):
     _, token_network_state = get_networks(
         node_state,
         payment_network_identifier,
@@ -111,13 +111,10 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
         pseudo_random_generator = node_state.pseudo_random_generator
 
         if isinstance(sub_task, PaymentMappingState.InitiatorTask):
-            payment_network_identifier = sub_task.payment_network_identifier
-            token_address = sub_task.token_address
-
-            token_network_state = get_token_network(
+            token_network_identifier = sub_task.token_network_identifier
+            token_network_state = views.get_token_network_by_identifier(
                 node_state,
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
             )
 
             if token_network_state:
@@ -131,13 +128,10 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                 events = sub_iteration.events
 
         elif isinstance(sub_task, PaymentMappingState.MediatorTask):
-            payment_network_identifier = sub_task.payment_network_identifier
-            token_address = sub_task.token_address
-
-            token_network_state = get_token_network(
+            token_network_identifier = sub_task.token_network_identifier
+            token_network_state = views.get_token_network_by_identifier(
                 node_state,
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
             )
 
             if token_network_state:
@@ -151,14 +145,16 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                 events = sub_iteration.events
 
         elif isinstance(sub_task, PaymentMappingState.TargetTask):
-            payment_network_identifier = sub_task.payment_network_identifier
-            token_address = sub_task.token_address
+            token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
-
-            channel_state = views.get_channelstate_by_tokenaddress(
+            token_network_state = views.get_token_network_by_identifier(
                 node_state,
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
+            )
+
+            channel_state = views.get_channelstate_by_token_network_identifier(
+                node_state,
+                token_network_identifier,
                 channel_identifier,
             )
 
@@ -181,9 +177,9 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
 def subdispatch_initiatortask(
         node_state,
         state_change,
-        payment_network_identifier,
-        token_address,
-        secrethash):
+        token_network_identifier,
+        secrethash,
+):
 
     block_number = node_state.block_number
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -194,8 +190,7 @@ def subdispatch_initiatortask(
 
     elif sub_task and isinstance(sub_task, PaymentMappingState.InitiatorTask):
         is_valid_subtask = (
-            payment_network_identifier == sub_task.payment_network_identifier and
-            token_address == sub_task.token_address
+            token_network_identifier == sub_task.token_network_identifier
         )
         manager_state = sub_task.manager_state
     else:
@@ -205,10 +200,9 @@ def subdispatch_initiatortask(
     if is_valid_subtask:
         pseudo_random_generator = node_state.pseudo_random_generator
 
-        token_network_state = get_token_network(
+        token_network_state = views.get_token_network_by_identifier(
             node_state,
-            payment_network_identifier,
-            token_address,
+            token_network_identifier,
         )
         iteration = initiator_manager.state_transition(
             manager_state,
@@ -221,8 +215,7 @@ def subdispatch_initiatortask(
 
         if iteration.new_state:
             sub_task = PaymentMappingState.InitiatorTask(
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
                 iteration.new_state,
             )
             node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
@@ -235,9 +228,9 @@ def subdispatch_initiatortask(
 def subdispatch_mediatortask(
         node_state,
         state_change,
-        payment_network_identifier,
-        token_address,
-        secrethash):
+        token_network_identifier,
+        secrethash,
+):
 
     block_number = node_state.block_number
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -248,8 +241,7 @@ def subdispatch_mediatortask(
 
     elif sub_task and isinstance(sub_task, PaymentMappingState.MediatorTask):
         is_valid_subtask = (
-            payment_network_identifier == sub_task.payment_network_identifier and
-            token_address == sub_task.token_address
+            token_network_identifier == sub_task.token_network_identifier
         )
         mediator_state = sub_task.mediator_state
     else:
@@ -257,10 +249,9 @@ def subdispatch_mediatortask(
 
     events = list()
     if is_valid_subtask:
-        token_network_state = get_token_network(
+        token_network_state = views.get_token_network_by_identifier(
             node_state,
-            payment_network_identifier,
-            token_address,
+            token_network_identifier,
         )
 
         pseudo_random_generator = node_state.pseudo_random_generator
@@ -275,8 +266,7 @@ def subdispatch_mediatortask(
 
         if iteration.new_state:
             sub_task = PaymentMappingState.MediatorTask(
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
                 iteration.new_state,
             )
             node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
@@ -289,10 +279,11 @@ def subdispatch_mediatortask(
 def subdispatch_targettask(
         node_state,
         state_change,
-        payment_network_identifier,
+        token_network_identifier,
         token_address,
         channel_identifier,
-        secrethash):
+        secrethash,
+):
 
     block_number = node_state.block_number
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -303,7 +294,7 @@ def subdispatch_targettask(
 
     elif sub_task and isinstance(sub_task, PaymentMappingState.TargetTask):
         is_valid_subtask = (
-            payment_network_identifier == sub_task.payment_network_identifier and
+            token_network_identifier == sub_task.token_network_identifier and
             token_address == sub_task.token_address
         )
         target_state = sub_task.target_state
@@ -313,10 +304,9 @@ def subdispatch_targettask(
     events = list()
     channel_state = None
     if is_valid_subtask:
-        channel_state = views.get_channelstate_by_tokenaddress(
+        channel_state = views.get_channelstate_by_token_network_identifier(
             node_state,
-            payment_network_identifier,
-            token_address,
+            token_network_identifier,
             channel_identifier,
         )
 
@@ -334,8 +324,7 @@ def subdispatch_targettask(
 
         if iteration.new_state:
             sub_task = PaymentMappingState.TargetTask(
-                payment_network_identifier,
-                token_address,
+                token_network_identifier,
                 channel_identifier,
                 iteration.new_state,
             )
@@ -365,7 +354,7 @@ def maybe_add_tokennetwork(node_state, payment_network_identifier, token_network
         ids_to_payments = node_state.identifiers_to_paymentnetworks
         ids_to_payments[payment_network_identifier] = payment_network_state
 
-    elif token_network_state_previous is None:
+    if token_network_state_previous is None:
         ids_to_tokens = payment_network_state.tokenidentifiers_to_tokennetworks
         addrs_to_tokens = payment_network_state.tokenaddresses_to_tokennetworks
 
@@ -405,11 +394,9 @@ def handle_node_init(node_state, state_change):
 
 
 def handle_token_network_action(node_state, state_change):
-    token_address = state_change.token_address
-    payment_network_state, token_network_state = get_networks(
+    token_network_state = views.get_token_network_by_identifier(
         node_state,
-        state_change.payment_network_identifier,
-        token_address,
+        state_change.token_network_identifier,
     )
 
     events = list()
@@ -423,7 +410,17 @@ def handle_token_network_action(node_state, state_change):
         )
 
         if iteration.new_state is None:
-            del payment_network_state.tokenaddresses_to_tokennetworks[token_address]
+            payment_network_state = views.search_payment_network_by_token_network_id(
+                node_state,
+                state_change.token_network_identifier,
+            )
+
+            del payment_network_state.tokenaddresses_to_tokennetworks[
+                token_network_state.token_address
+            ]
+            del payment_network_state.tokenidentifiers_to_tokennetworks[
+                token_network_state.address
+            ]
 
         events = iteration.events
 
@@ -447,17 +444,16 @@ def handle_delivered(node_state, state_change):
 
 
 def handle_new_token_network(node_state, state_change):
-    events = list()
-
     token_network_state = state_change.token_network
     payment_network_identifier = state_change.payment_network_identifier
-    payment_network = node_state.identifiers_to_paymentnetworks.get(payment_network_identifier)
 
-    if payment_network is not None:
-        tokens_to_networks = payment_network.tokenidentifiers_to_tokennetworks
-        tokens_to_networks[token_network_state.address] = token_network_state
+    maybe_add_tokennetwork(
+        node_state,
+        payment_network_identifier,
+        token_network_state,
+    )
 
-    # TODO: add ContractSend
+    events = list()
     return TransitionResult(node_state, events)
 
 
@@ -553,14 +549,11 @@ def handle_secret_reveal(node_state, state_change):
 def handle_init_initiator(node_state, state_change):
     transfer = state_change.transfer
     secrethash = transfer.secrethash
-    payment_network_identifier = state_change.payment_network_identifier
-    token_address = transfer.token
 
     return subdispatch_initiatortask(
         node_state,
         state_change,
-        payment_network_identifier,
-        token_address,
+        transfer.token_network_identifier,
         secrethash,
     )
 
@@ -568,14 +561,12 @@ def handle_init_initiator(node_state, state_change):
 def handle_init_mediator(node_state, state_change):
     transfer = state_change.from_transfer
     secrethash = transfer.lock.secrethash
-    payment_network_identifier = state_change.payment_network_identifier
-    token_address = transfer.token
+    token_network_identifier = transfer.balance_proof.token_network_identifier
 
     return subdispatch_mediatortask(
         node_state,
         state_change,
-        payment_network_identifier,
-        token_address,
+        token_network_identifier,
         secrethash,
     )
 
@@ -583,14 +574,14 @@ def handle_init_mediator(node_state, state_change):
 def handle_init_target(node_state, state_change):
     transfer = state_change.transfer
     secrethash = transfer.lock.secrethash
-    payment_network_identifier = state_change.payment_network_identifier
     token_address = transfer.token
     channel_identifier = transfer.balance_proof.channel_address
+    token_network_identifier = transfer.balance_proof.token_network_identifier
 
     return subdispatch_targettask(
         node_state,
         state_change,
-        payment_network_identifier,
+        token_network_identifier,
         token_address,
         channel_identifier,
         secrethash,

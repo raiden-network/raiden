@@ -43,6 +43,7 @@ UNIT_SECRETHASH = sha3(UNIT_SECRET)
 
 UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
+UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
 UNIT_CHANNEL_ADDRESS = b'channelchannelchanne'
 
 UNIT_TRANSFER_IDENTIFIER = 37
@@ -51,8 +52,7 @@ UNIT_TRANSFER_TARGET = b'targettargettargetta'
 UNIT_TRANSFER_DESCRIPTION = TransferDescriptionWithSecretState(
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_AMOUNT,
-    UNIT_REGISTRY_IDENTIFIER,
-    UNIT_TOKEN_ADDRESS,
+    UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
     UNIT_SECRET,
@@ -112,6 +112,7 @@ def make_channel(
         our_address=None,
         partner_address=None,
         token_address=None,
+        token_network_identifier=None,
         channel_address=None,
         reveal_timeout=10,
         settle_timeout=50
@@ -120,6 +121,7 @@ def make_channel(
     our_address = our_address or make_address()
     partner_address = partner_address or make_address()
     token_address = token_address or make_address()
+    token_network_identifier = token_network_identifier or make_address()
     channel_address = channel_address or make_address()
 
     our_state = make_endstate(our_address, our_balance)
@@ -137,6 +139,7 @@ def make_channel(
     channel_state = NettingChannelState(
         channel_address,
         token_address,
+        token_network_identifier,
         reveal_timeout,
         settle_timeout,
         our_state,
@@ -159,6 +162,7 @@ def make_transfer(
         nonce=1,
         transferred_amount=0,
         locked_amount=None,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         locksroot=None,
         token=UNIT_TOKEN_ADDRESS
@@ -182,12 +186,12 @@ def make_transfer(
         transferred_amount,
         locked_amount,
         locksroot,
+        token_network_identifier,
         channel_identifier,
     )
 
     transfer_state = LockedTransferUnsignedState(
         identifier,
-        UNIT_REGISTRY_IDENTIFIER,
         token,
         unsigned_balance_proof,
         lock,
@@ -255,11 +259,12 @@ def make_signed_balance_proof(
         nonce,
         transferred_amount,
         locked_amount,
+        token_network_address,
         channel_address,
         locksroot,
         extra_hash,
         private_key,
-        sender_address
+        sender_address,
 ):
 
     data_to_sign = balance_proof.signing_data(
@@ -276,6 +281,7 @@ def make_signed_balance_proof(
         transferred_amount,
         locked_amount,
         locksroot,
+        token_network_address,
         channel_address,
         extra_hash,
         signature,

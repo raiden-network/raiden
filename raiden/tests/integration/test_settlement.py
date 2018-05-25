@@ -17,7 +17,7 @@ from raiden.tests.utils.transfer import (
     get_channelstate,
     pending_mediated_transfer,
 )
-from raiden.transfer import channel
+from raiden.transfer import channel, views
 from raiden.transfer.merkle_tree import validate_proof, merkleroot
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
@@ -34,7 +34,13 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    channel_identifier = get_channelstate(app0, app1, token_address).identifier
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+
+    channel_identifier = get_channelstate(app0, app1, token_network_identifier)
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
@@ -63,7 +69,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         to_identifier='latest',
     )
 
-    channel_state = get_channelstate(app0, app1, token_address)
+    channel_state = get_channelstate(app0, app1, token_network_identifier)
     assert channel_state.close_transaction.finished_block_number
     assert channel_state.settle_transaction.finished_block_number
 
@@ -90,6 +96,11 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
     token_proxy = alice_app.raiden.chain.token(token_address)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(alice_app),
+        alice_app.raiden.default_registry.address,
+        token_address,
+    )
 
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
@@ -110,8 +121,8 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     #    B -> A SecretRequest
     #    - protocol didn't continue
 
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_address)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_address)
+    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
+    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     lock = channel.get_lock(alice_bob_channel.our_state, secrethash)
     assert lock
@@ -162,8 +173,8 @@ def test_withdraw(raiden_network, token_addresses, deposit):
         alice_app.raiden.alarm.wait_time,
     )
 
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_address)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_address)
+    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
+    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     alice_netted_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_netted_balance = bob_initial_balance + deposit + alice_to_bob_amount
@@ -177,8 +188,8 @@ def test_withdraw(raiden_network, token_addresses, deposit):
         to_identifier='latest',
     )
 
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_address)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_address)
+    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
+    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     assert must_contain_entry(state_changes, ContractReceiveChannelWithdraw, {
         'payment_network_identifier': registry_address,
@@ -199,6 +210,11 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     amount = 30
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     address0 = app0.raiden.address
     address1 = app1.raiden.address
@@ -222,7 +238,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     secrethash = sha3(secret)
 
     # Compute the merkle proof for the pending transfer, and then unlock
-    channelstate_0_1 = get_channelstate(app0, app1, token_address)
+    channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
     lock = channel.get_lock(channelstate_0_1.our_state, secrethash)
     unlock_proof = channel.compute_proof_for_lock(
         channelstate_0_1.our_state,
@@ -265,6 +281,11 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     token_proxy = app0.raiden.chain.token(token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
@@ -289,7 +310,7 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     app0.raiden.sign(reveal_secret)
     udp_message_handler.on_udp_message(app1.raiden, reveal_secret)
 
-    channel_state = get_channelstate(app0, app1, token_address)
+    channel_state = get_channelstate(app0, app1, token_network_identifier)
     waiting.wait_for_settle(
         app0.raiden,
         app0.raiden.default_registry.address,
@@ -322,6 +343,11 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     token = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token,
+    )
 
     # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
@@ -333,10 +359,14 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     )
     secrethash = sha3(secret)
 
-    attack_channel = get_channelstate(app2, app1, token)
+    attack_channel = get_channelstate(app2, app1, token_network_identifier)
     attack_transfer = None  # TODO
     attack_contract = attack_channel.external_state.netting_channel.address
-    hub_contract = get_channelstate(app1, app0, token).external_state.netting_channel.address
+    hub_contract = (
+        get_channelstate(app1, app0, token_network_identifier)
+        .external_state
+        .netting_channel.address
+    )
 
     # the attacker can create a merkle proof of the locked transfer
     lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
@@ -393,8 +423,13 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
-    channel0 = get_channelstate(app0, app1, token_address)
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
     token_proxy = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)

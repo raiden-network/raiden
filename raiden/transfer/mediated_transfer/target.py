@@ -122,9 +122,7 @@ def handle_secretreveal(
             state_change.secrethash,
         )
 
-        transfer = target_state.transfer
         route = target_state.route
-
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
@@ -135,7 +133,6 @@ def handle_secretreveal(
             queue_name,
             message_identifier,
             target_state.secret,
-            transfer.token,
         )
 
         iteration = TransitionResult(target_state, [reveal])

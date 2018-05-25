@@ -6,7 +6,7 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
-from raiden.transfer import channel
+from raiden.transfer import channel, views
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.factories import (
@@ -50,7 +50,13 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
     app0, app1 = raiden_network
     registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    channel0 = get_channelstate(app0, app1, token_address)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
     message_identifier = random.randint(0, UINT64_MAX)
 
     payment_identifier = 1
@@ -89,8 +95,13 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     app0, app1 = raiden_network
     registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
-    channel0 = get_channelstate(app0, app1, token_address)
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
     balance0 = channel.get_balance(channel0.our_state, channel0.partner_state)
     balance1 = channel.get_balance(channel0.partner_state, channel0.our_state)
 
@@ -133,8 +144,13 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
     registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     other_key, other_address = make_privkey_address()
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
-    channel0 = get_channelstate(app0, app1, token_address)
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
     channel_identifier = channel0.identifier
     message_identifier = random.randint(0, UINT64_MAX)
 
@@ -170,16 +186,19 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
 def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addresses):
 
     app0, app1 = raiden_network
-    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    channel0 = get_channelstate(app0, app1, token_address)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
 
     transferred_amount = 10
     same_payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
 
     event = channel.send_directtransfer(
-        registry_address,
         channel0,
         transferred_amount,
         message_identifier,
@@ -202,7 +221,6 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
         message_identifier=message_identifier,
         payment_identifier=same_payment_identifier,
         nonce=1,
-        registry_address=registry_address,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=invalid_transferred_amount,
@@ -232,7 +250,12 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    channel0 = get_channelstate(app0, app1, token_address)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
 
     RaidenAPI(app1.raiden).channel_close(
         registry_address,

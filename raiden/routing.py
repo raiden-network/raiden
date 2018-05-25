@@ -76,8 +76,7 @@ def get_ordered_partners(
 
 def get_best_routes(
         node_state: 'NodeState',
-        payment_network_id: typing.Address,
-        token_address: typing.Address,
+        token_network_id: typing.Address,
         from_address: typing.Address,
         to_address: typing.Address,
         amount: int,
@@ -94,10 +93,9 @@ def get_best_routes(
 
     available_routes = list()
 
-    token_network = views.get_token_network_by_token_address(
+    token_network = views.get_token_network_by_identifier(
         node_state,
-        payment_network_id,
-        token_address,
+        token_network_id,
     )
 
     network_statuses = views.get_networkstatuses(node_state)
@@ -116,10 +114,9 @@ def get_best_routes(
     while neighbors_heap:
         _, partner_address = heappop(neighbors_heap)
 
-        channel_state = views.get_channelstate_for(
+        channel_state = views.get_channelstate_by_token_network_and_partner(
             node_state,
-            payment_network_id,
-            token_address,
+            token_network_id,
             partner_address,
         )
 

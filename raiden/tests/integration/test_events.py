@@ -84,9 +84,14 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     token_address = token_addresses[0]
 
     registry_address = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
-    channel0 = get_channelstate(app0, app1, token_address)
-    channel1 = get_channelstate(app1, app0, token_address)
+    channel0 = get_channelstate(app0, app1, token_network_identifier)
+    channel1 = get_channelstate(app1, app0, token_network_identifier)
     assert channel0 is None
     assert channel1 is None
 
@@ -328,6 +333,11 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     app0, app1, app2 = raiden_chain
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     amount = 10
     identifier = 1
@@ -341,7 +351,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
 
     gevent.sleep(.1)  # wait for the messages
 
-    channel_state2_1 = get_channelstate(app2, app1, token_address)
+    channel_state2_1 = get_channelstate(app2, app1, token_network_identifier)
 
     # the secret hasn't been revealed yet (through messages)
 

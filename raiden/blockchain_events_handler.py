@@ -71,6 +71,7 @@ def handle_tokennetwork_new(raiden, event):
 def handle_channel_new(raiden, event):
     data = event.event_data
     registry_address = data['registry_address']
+    token_network_address = event.originating_contract
     participant1 = data['participant1']
     participant2 = data['participant2']
     is_participant = raiden.address in (participant1, participant2)
@@ -80,13 +81,13 @@ def handle_channel_new(raiden, event):
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
             token_address,
+            token_network_address,
             raiden.config['reveal_timeout'],
             channel_proxy,
         )
 
         new_channel = ContractReceiveChannelNew(
-            registry_address,
-            token_address,
+            token_network_address,
             channel_state,
         )
         raiden.handle_state_change(new_channel)
@@ -109,12 +110,8 @@ def handle_channel_new(raiden, event):
         raiden.blockchain_events.add_netting_channel_listener(channel_proxy)
 
     else:
-        manager = raiden.chain.channel_manager(event.originating_contract)
-        token_address = manager.token_address()
-
         new_route = ContractReceiveRouteNew(
-            registry_address,
-            token_address,
+            token_network_address,
             participant1,
             participant2,
         )
@@ -143,6 +140,11 @@ def handle_channel_new_balance(raiden, event):
     if is_participant:
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(raiden),
+            registry_address,
+            token_address,
+        )
 
         deposit_transaction = TransactionChannelNewBalance(
             participant_address,
@@ -150,8 +152,7 @@ def handle_channel_new_balance(raiden, event):
             deposit_block_number,
         )
         newbalance_statechange = ContractReceiveChannelNewBalance(
-            registry_address,
-            token_address,
+            token_network_identifier,
             channel_identifier,
             deposit_transaction,
         )
@@ -182,9 +183,14 @@ def handle_channel_closed(raiden, event):
     )
 
     if channel_state:
-        channel_closed = ContractReceiveChannelClosed(
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(raiden),
             registry_address,
             channel_state.token_address,
+        )
+
+        channel_closed = ContractReceiveChannelClosed(
+            token_network_identifier,
             channel_identifier,
             data['closing_address'],
             data['block_number'],
@@ -204,9 +210,14 @@ def handle_channel_settled(raiden, event):
     )
 
     if channel_state:
-        channel_settled = ContractReceiveChannelSettled(
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(raiden),
             registry_address,
             channel_state.token_address,
+        )
+
+        channel_settled = ContractReceiveChannelSettled(
+            token_network_identifier,
             channel_identifier,
             data['block_number'],
         )

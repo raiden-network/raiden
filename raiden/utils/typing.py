@@ -74,5 +74,8 @@ SecretHash = NewType('SecretHash', T_SecretHash)
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
 
+T_TokenNetworkIdentifier = bytes
+TokenNetworkIdentifier = NewType('TokenNetworkIdentifier', bytes)
+
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]

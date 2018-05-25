@@ -17,6 +17,7 @@ from raiden.tests.integration.fixtures.raiden_network import (
 )
 from raiden.tests.utils.network import netting_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
@@ -74,9 +75,14 @@ def test_regression_unfiltered_routes(
         deposit,
     )
 
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
+        token,
+    )
     transfer = app0.raiden.mediated_transfer_async(
-        registry_address=app0.raiden.default_registry.address,
-        token_address=token,
+        token_network_identifier=token_network_identifier,
         amount=1,
         target=app4.raiden.address,
         identifier=1,
@@ -94,9 +100,14 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
     token = token_addresses[0]
 
     identifier = 1
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
+        token,
+    )
     transfer = app0.raiden.mediated_transfer_async(
-        registry_address=app0.raiden.default_registry.address,
-        token_address=token,
+        token_network_identifier,
         amount=1,
         target=app2.raiden.address,
         identifier=identifier,
@@ -142,7 +153,12 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     """
     app0, app1 = raiden_network
     token = token_addresses[0]
-    channelstate_0_1 = get_channelstate(app0, app1, token)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token,
+    )
+    channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
 
     payment_identifier = 1
     secret = sha3(b'test_regression_multiple_revealsecret')
@@ -184,10 +200,12 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     app0.raiden.sign(reveal_secret)
     reveal_secret_data = reveal_secret.encode()
 
+    token_network_address = channelstate_0_1.token_network_address
     secret = Secret(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
+        token_network_address=token_network_address,
         channel=channelstate_0_1.identifier,
         transferred_amount=lock_amount,
         locked_amount=0,

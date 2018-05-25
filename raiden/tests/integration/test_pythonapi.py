@@ -15,6 +15,7 @@ from raiden.tests.utils.transfer import (
     direct_transfer,
     get_channelstate,
 )
+from raiden.transfer import views
 from raiden.utils import get_contract_path
 
 # Use a large enough settle timeout to have valid transfer messages
@@ -105,12 +106,17 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     api0 = RaidenAPI(app0.raiden)
 
-    old_state = get_channelstate(app0, app1, token_address)
+    old_state = get_channelstate(app0, app1, token_network_identifier)
     api0.channel_deposit(registry_address, token_address, app1.raiden.address, 10)
-    new_state = get_channelstate(app0, app1, token_address)
+    new_state = get_channelstate(app0, app1, token_network_identifier)
 
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
 
@@ -191,6 +197,11 @@ def test_token_swap(raiden_network, deposit, token_addresses):
 def test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     amount = 30
     direct_transfer(
@@ -201,7 +212,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         identifier=1,
     )
 
-    channel_0_1 = get_channelstate(app0, app1, token_address)
+    channel_0_1 = get_channelstate(app0, app1, token_network_identifier)
     app0_events = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
 
     assert must_have_event(app0_events, {'event': EVENT_CHANNEL_NEW_BALANCE})

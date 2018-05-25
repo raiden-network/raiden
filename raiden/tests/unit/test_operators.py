@@ -43,25 +43,21 @@ def test_transfer_statechange_operators():
     assert a != c
     assert not a == c
 
-    payment_network_identifier = factories.make_address()
-    token_address = factories.make_address()
+    token_network_identifier = factories.make_address()
     a = ActionTransferDirect(
-        payment_network_identifier,
-        token_address,
+        token_network_identifier,
         receiver_address=ADDRESS,
         payment_identifier=2,
         amount=2,
     )
     b = ActionTransferDirect(
-        payment_network_identifier,
-        token_address,
+        token_network_identifier,
         receiver_address=ADDRESS,
         payment_identifier=2,
         amount=2,
     )
     c = ActionTransferDirect(
-        payment_network_identifier,
-        token_address,
+        token_network_identifier,
         receiver_address=ADDRESS2,  # different recipient
         payment_identifier=2,
         amount=2,

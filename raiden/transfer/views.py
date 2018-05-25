@@ -135,6 +135,24 @@ def total_deposit_by_token_network(
     return total_deposit
 
 
+def get_token_network_identifier_by_token_address(
+        node_state: NodeState,
+        payment_network_id: typing.Address,
+        token_address: typing.Address,
+) -> typing.Address:
+    token_network = get_token_network_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    token_network_id = None
+    if token_network is not None:
+        token_network_id = token_network.address
+
+    return token_network_id
+
+
 def get_token_network_addresses_for(
         node_state: NodeState,
         payment_network_id: typing.PaymentNetworkID,
@@ -170,7 +188,7 @@ def total_token_network_channels(
     return result
 
 
-def get_token_network(
+def get_token_network_by_token_address(
         node_state: NodeState,
         payment_network_id: typing.PaymentNetworkID,
         token_network_id: typing.Address,
@@ -178,22 +196,26 @@ def get_token_network(
 
     payment_network = node_state.identifiers_to_paymentnetworks.get(payment_network_id)
     if payment_network is not None:
-        return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_id)
+        return payment_network.tokenaddresses_to_tokennetworks.get(token_network_id)
 
     return None
 
 
-def get_token_network_by_token_address(
+def get_token_network_by_identifier(
         node_state: NodeState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
+        token_network_id: typing.TokenAddress,
 ) -> typing.Optional[TokenNetworkState]:
 
-    payment_network = node_state.identifiers_to_paymentnetworks.get(payment_network_id)
-    if payment_network is not None:
-        return payment_network.tokenaddresses_to_tokennetworks.get(token_address)
+    token_network_state = None
+    for payment_network_state in node_state.identifiers_to_paymentnetworks.values():
+        token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
+            token_network_id,
+        )
 
-    return None
+        if token_network_state:
+            return token_network_state
+
+    return token_network_state
 
 
 def get_channelstate_for(
@@ -212,6 +234,42 @@ def get_channelstate_for(
     channel_state = None
     if token_network:
         channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+
+    return channel_state
+
+
+def get_channelstate_by_token_network_and_partner(
+        node_state: NodeState,
+        token_network_id: typing.Address,
+        partner_address: typing.Address,
+):
+    """ Return the NettingChannelState if it exists, None otherwise. """
+    token_network = get_token_network_by_identifier(
+        node_state,
+        token_network_id,
+    )
+
+    channel_state = None
+    if token_network:
+        channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+
+    return channel_state
+
+
+def get_channelstate_by_token_network_identifier(
+        node_state: NodeState,
+        token_network_id: typing.Address,
+        channel_id: typing.Address,
+):
+    """ Return the NettingChannelState if it exists, None otherwise. """
+    token_network = get_token_network_by_identifier(
+        node_state,
+        token_network_id,
+    )
+
+    channel_state = None
+    if token_network:
+        channel_state = token_network.channelidentifiers_to_channels.get(channel_id)
 
     return channel_state
 
@@ -405,6 +463,23 @@ def search_for_channel(
                 break
 
     return result
+
+
+def search_payment_network_by_token_network_id(
+        node_state: NodeState,
+        token_network_id: typing.Address,
+) -> typing.Optional['TokenNetworkState']:
+
+    payment_network_state = None
+    for payment_network in node_state.identifiers_to_paymentnetworks.values():
+        token_network_state = payment_network.tokenidentifiers_to_tokennetworks.get(
+            token_network_id,
+        )
+
+        if token_network_state:
+            return payment_network_state
+
+    return payment_network_state
 
 
 def filter_channels_by_partneraddress(

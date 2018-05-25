@@ -16,6 +16,7 @@ from raiden.tests.utils.factories import (
     UNIT_SECRET,
     make_address,
 )
+from raiden.transfer import views
 from raiden.tests.utils.messages import make_refund_transfer
 from raiden.tests.utils.transfer import sign_and_inject
 
@@ -25,6 +26,12 @@ from raiden.tests.utils.transfer import sign_and_inject
 def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
+
+    token_network_address = views.get_token_network_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     other_key = HOP1_KEY
     other_address = HOP1
@@ -48,6 +55,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         payment_identifier=1,
         nonce=1,
         channel=make_address(),
+        token_network_address=token_network_address,
         transferred_amount=amount,
         locked_amount=0,
         locksroot=UNIT_SECRETHASH,

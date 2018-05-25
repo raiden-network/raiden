@@ -114,6 +114,7 @@ def create_channel_from_models(our_model, partner_model):
 
     identifier = factories.make_address()
     token_address = factories.make_address()
+    token_network_identifier = factories.make_address()
     reveal_timeout = 10
     settle_timeout = 100
     opened_transaction = TransactionExecutionStatus(
@@ -128,6 +129,7 @@ def create_channel_from_models(our_model, partner_model):
     channel_state = NettingChannelState(
         identifier,
         token_address,
+        token_network_identifier,
         reveal_timeout,
         settle_timeout,
         our_state,
@@ -153,13 +155,12 @@ def create_channel_from_models(our_model, partner_model):
 
 
 def make_receive_transfer_direct(
-        payment_network_identifier,
         channel_state,
         privkey,
         nonce,
         transferred_amount,
         locksroot=EMPTY_MERKLE_ROOT,
-        registry_address=UNIT_REGISTRY_IDENTIFIER,
+        token_network_identifier=UNIT_REGISTRY_IDENTIFIER,
         locked_amount=None,
 ):
 
@@ -176,7 +177,7 @@ def make_receive_transfer_direct(
         message_identifier,
         payment_identifier,
         nonce,
-        registry_address,
+        channel_state.token_network_identifier,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -189,8 +190,7 @@ def make_receive_transfer_direct(
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_directtransfer = ReceiveTransferDirect(
-        payment_network_identifier,
-        channel_state.token_address,
+        token_network_identifier,
         message_identifier,
         payment_identifier,
         balance_proof,
@@ -206,7 +206,7 @@ def make_receive_transfer_mediated(
         transferred_amount,
         lock,
         merkletree_leaves=None,
-        registry_address=UNIT_REGISTRY_IDENTIFIER,
+        token_network_address=UNIT_REGISTRY_IDENTIFIER,
         locked_amount=None,
 ):
 
@@ -237,7 +237,7 @@ def make_receive_transfer_mediated(
         random.randint(0, UINT64_MAX),
         payment_identifier,
         nonce,
-        registry_address,
+        token_network_address,
         channel_state.token_address,
         channel_state.identifier,
         transferred_amount,
@@ -255,7 +255,6 @@ def make_receive_transfer_mediated(
     receive_lockedtransfer = LockedTransferSignedState(
         random.randint(0, UINT64_MAX),
         payment_identifier,
-        registry_address,
         channel_state.token_address,
         balance_proof,
         lock,
@@ -311,8 +310,6 @@ def test_channelstate_update_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    token_address = factories.make_address()
-    payment_network_identifier = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -323,8 +320,7 @@ def test_channelstate_update_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -359,8 +355,6 @@ def test_channelstate_decreasing_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
-    token_address = factories.make_address()
 
     amount = 10
     balance1_new = our_model1.balance - amount
@@ -371,8 +365,7 @@ def test_channelstate_decreasing_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -400,8 +393,6 @@ def test_channelstate_repeated_contract_balance():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
-    token_address = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -412,8 +403,7 @@ def test_channelstate_repeated_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -446,8 +436,6 @@ def test_deposit_must_wait_for_confirmation():
     our_model1, _ = create_model(0)
     partner_model1, _ = create_model(0)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
-    token_address = factories.make_address()
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -467,8 +455,7 @@ def test_deposit_must_wait_for_confirmation():
         block_number,
     )
     new_balance = ContractReceiveChannelNewBalance(
-        payment_network_identifier,
-        token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
     )
@@ -539,10 +526,8 @@ def test_channelstate_send_lockedtransfer():
     message_identifier = random.randint(0, UINT64_MAX)
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
-    registry_address = factories.make_address()
 
     channel.send_lockedtransfer(
-        registry_address,
         channel_state,
         transfer_initiator,
         transfer_target,
@@ -573,13 +558,11 @@ def test_channelstate_send_direct_transfer():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    registry_address = factories.make_address()
 
     amount = 30
     payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
     channel.send_directtransfer(
-        registry_address,
         channel_state,
         amount,
         message_identifier,
@@ -662,10 +645,12 @@ def test_channelstate_receive_lockedtransfer():
     # - Update the balances
     transferred_amount = 0
     message_identifier = random.randint(0, UINT64_MAX)
+    token_network_identifier = channel_state.token_network_identifier
     secret_message = Secret(
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
+        token_network_address=token_network_identifier,
         channel=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
@@ -706,14 +691,12 @@ def test_channelstate_directtransfer_overspent():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
 
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
 
     nonce = 1
     transferred_amount = distributable + 1
     receive_lockedtransfer = make_receive_transfer_direct(
-        payment_network_identifier,
         channel_state,
         privkey2,
         nonce,
@@ -860,6 +843,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 
 def test_invalid_timeouts():
     token_address = factories.make_address()
+    token_network_identifier = factories.make_address()
     reveal_timeout = 5
     settle_timeout = 10
     identifier = factories.make_address()
@@ -888,6 +872,7 @@ def test_invalid_timeouts():
         NettingChannelState(
             identifier,
             token_address,
+            token_network_identifier,
             large_reveal_timeout,
             small_settle_timeout,
             our_state,
@@ -903,6 +888,7 @@ def test_invalid_timeouts():
             NettingChannelState(
                 identifier,
                 token_address,
+                token_network_identifier,
                 invalid_value,
                 settle_timeout,
                 our_state,
@@ -916,6 +902,7 @@ def test_invalid_timeouts():
             NettingChannelState(
                 identifier,
                 token_address,
+                token_network_identifier,
                 reveal_timeout,
                 invalid_value,
                 our_state,
@@ -947,6 +934,7 @@ def test_interwoven_transfers():
     locked_amount = 0
     our_model_current = our_model
     partner_model_current = partner_model
+    token_network_address = channel_state.token_network_identifier
 
     for i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
         nonce += 1
@@ -1035,6 +1023,7 @@ def test_interwoven_transfers():
                 message_identifier=message_identifier,
                 payment_identifier=nonce,
                 nonce=nonce,
+                token_network_address=token_network_address,
                 channel=channel_state.identifier,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
@@ -1169,12 +1158,10 @@ def test_receive_directdtransfer_before_deposit():
     our_model1, _ = create_model(0)  # our deposit is 0
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
 
     nonce = 1
     transferred_amount = 30
     receive_directtransfer = make_receive_transfer_direct(
-        payment_network_identifier,
         channel_state,
         privkey2,
         nonce,
@@ -1194,12 +1181,10 @@ def test_channelstate_withdraw_without_locks():
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
 
     closed_block_number = 77
     state_change = ContractReceiveChannelClosed(
-        payment_network_identifier,
-        channel_state.token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         partner_model1.participant_address,
         closed_block_number,
@@ -1213,7 +1198,6 @@ def test_channelstate_withdraw():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
 
     lock_amount = 10
     lock_expiration = 100
@@ -1247,8 +1231,7 @@ def test_channelstate_withdraw():
     # at risk of expiring
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     state_change = ContractReceiveChannelClosed(
-        payment_network_identifier,
-        channel_state.token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         partner_model1.participant_address,
         closed_block_number,
@@ -1294,8 +1277,7 @@ def test_channel_withdraw_must_not_change_merkletree():
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     state_change = ContractReceiveChannelClosed(
-        payment_network_identifier,
-        channel_state.token_address,
+        channel_state.token_network_identifier,
         channel_state.identifier,
         partner_model1.participant_address,
         closed_block_number,

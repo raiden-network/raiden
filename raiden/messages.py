@@ -245,6 +245,7 @@ class EnvelopeMessage(SignedMessage):
         self.locked_amount = 0
         self.locksroot = EMPTY_MERKLE_ROOT
         self.channel = b''
+        self.token_network_address = b''
 
     @property
     def message_hash(self):
@@ -545,6 +546,7 @@ class Secret(EnvelopeMessage):
             message_identifier,
             payment_identifier,
             nonce,
+            token_network_address,
             channel,
             transferred_amount,
             locked_amount,
@@ -574,6 +576,7 @@ class Secret(EnvelopeMessage):
         self.payment_identifier = payment_identifier
         self.secret = secret
         self.nonce = nonce
+        self.token_network_address = token_network_address
         self.channel = channel
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
@@ -582,12 +585,15 @@ class Secret(EnvelopeMessage):
 
     def __repr__(self):
         return (
-            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} hash:{} secrethash:{}]>'
+            '<{} ['
+            'msgid:{} paymentid:{} token_network:{} channel:{} nonce:{} transferred_amount:{} '
+            'locked_amount:{} locksroot:{} hash:{} secrethash:{}'
+            ']>'
         ).format(
             self.__class__.__name__,
             self.message_identifier,
             self.payment_identifier,
+            pex(self.token_network_address),
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
@@ -609,6 +615,7 @@ class Secret(EnvelopeMessage):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
+            token_network_address=packed.token_network_address,
             channel=packed.channel,
             transferred_amount=packed.transferred_amount,
             locked_amount=packed.locked_amount,
@@ -622,6 +629,7 @@ class Secret(EnvelopeMessage):
         packed.message_identifier = self.message_identifier
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
+        packed.token_network_address = self.token_network_address
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.locked_amount = self.locked_amount
@@ -631,14 +639,16 @@ class Secret(EnvelopeMessage):
 
     @classmethod
     def from_event(cls, event):
+        balance_proof = event.balance_proof
         return cls(
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
-            nonce=event.balance_proof.nonce,
-            channel=event.balance_proof.channel_address,
-            transferred_amount=event.balance_proof.transferred_amount,
-            locked_amount=event.balance_proof.locked_amount,
-            locksroot=event.balance_proof.locksroot,
+            nonce=balance_proof.nonce,
+            token_network_address=balance_proof.token_network_identifier,
+            channel=balance_proof.channel_address,
+            transferred_amount=balance_proof.transferred_amount,
+            locked_amount=balance_proof.locked_amount,
+            locksroot=balance_proof.locksroot,
             secret=event.secret,
         )
 
@@ -649,6 +659,7 @@ class Secret(EnvelopeMessage):
             'payment_identifier': self.payment_identifier,
             'secret': data_encoder(self.secret),
             'nonce': self.nonce,
+            'token_network_address': address_encoder(self.token_network_address),
             'channel': address_encoder(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
@@ -664,6 +675,7 @@ class Secret(EnvelopeMessage):
             payment_identifier=data['payment_identifier'],
             secret=data_decoder(data['secret']),
             nonce=data['nonce'],
+            token_network_address=address_decoder(data['token_network_address']),
             channel=address_decoder(data['channel']),
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
@@ -773,7 +785,7 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier,
             payment_identifier,
             nonce,
-            registry_address,
+            token_network_address,
             token,
             channel,
             transferred_amount,
@@ -795,7 +807,7 @@ class DirectTransfer(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.nonce = nonce
-        self.registry_address = registry_address
+        self.token_network_address = token_network_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
@@ -809,7 +821,7 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            registry_address=packed.registry_address,
+            token_network_address=packed.token_network_address,
             token=packed.token,
             channel=packed.channel,
             transferred_amount=packed.transferred_amount,
@@ -826,7 +838,7 @@ class DirectTransfer(EnvelopeMessage):
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
         packed.token = self.token
-        packed.registry_address = self.registry_address
+        packed.token_network_address = self.token_network_address
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.locked_amount = self.locked_amount
@@ -842,7 +854,7 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
-            registry_address=event.registry_address,
+            token_network_address=balance_proof.token_network_identifier,
             token=event.token,
             channel=balance_proof.channel_address,
             transferred_amount=balance_proof.transferred_amount,
@@ -854,13 +866,14 @@ class DirectTransfer(EnvelopeMessage):
     def __repr__(self):
         representation = (
             '<{} ['
-            'msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
+            'msgid:{} paymentid:{} token_network:{} channel:{} nonce:{} transferred_amount:{} '
             'locked_amount:{} locksroot:{} hash:{}'
             ']>'
         ).format(
             self.__class__.__name__,
             self.message_identifier,
             self.payment_identifier,
+            pex(self.token_network_address),
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
@@ -877,7 +890,7 @@ class DirectTransfer(EnvelopeMessage):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'registry_address': address_encoder(self.registry_address),
+            'token_network_address': address_encoder(self.token_network_address),
             'token': address_encoder(self.token),
             'channel': address_encoder(self.channel),
             'transferred_amount': self.transferred_amount,
@@ -894,7 +907,7 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            registry_address=address_decoder(data['registry_address']),
+            token_network_address=address_decoder(data['token_network_address']),
             token=address_decoder(data['token']),
             channel=address_decoder(data['channel']),
             transferred_amount=data['transferred_amount'],
@@ -1023,7 +1036,7 @@ class LockedTransferBase(EnvelopeMessage):
             message_identifier,
             payment_identifier,
             nonce,
-            registry_address,
+            token_network_address,
             token,
             channel,
             transferred_amount,
@@ -1046,7 +1059,7 @@ class LockedTransferBase(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.nonce = nonce
-        self.registry_address = registry_address
+        self.token_network_address = token_network_address
         self.token = token
         self.channel = channel
         self.transferred_amount = transferred_amount
@@ -1067,7 +1080,7 @@ class LockedTransferBase(EnvelopeMessage):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            registry_address=packed.registry_address,
+            token_network_address=packed.token_network_address,
             token=packed.token,
             channel=packed.channel,
             transferred_amount=packed.transferred_amount,
@@ -1083,7 +1096,7 @@ class LockedTransferBase(EnvelopeMessage):
         packed.message_identifier = self.message_identifier
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
-        packed.registry_address = self.registry_address
+        packed.token_network_address = self.token_network_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -1126,7 +1139,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier,
             payment_identifier,
             nonce,
-            registry_address,
+            token_network_address,
             token,
             channel,
             transferred_amount,
@@ -1151,7 +1164,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier,
             payment_identifier,
             nonce,
-            registry_address,
+            token_network_address,
             token,
             channel,
             transferred_amount,
@@ -1167,12 +1180,15 @@ class LockedTransfer(LockedTransferBase):
 
     def __repr__(self):
         representation = (
-            '<{} [msgid:{} paymentid:{} channel:{} nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} hash:{} secrethash:{} expiration:{} amount:{}]>'
+            '<{} ['
+            'msgid:{} paymentid:{} token_network:{} channel:{} nonce:{} transferred_amount:{} '
+            'locked_amount:{} locksroot:{} hash:{} secrethash:{} expiration:{} amount:{}'
+            ']>'
         ).format(
             self.__class__.__name__,
             self.message_identifier,
             self.payment_identifier,
+            pex(self.token_network_address),
             pex(self.channel),
             self.nonce,
             self.transferred_amount,
@@ -1198,7 +1214,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            registry_address=packed.registry_address,
+            token_network_address=packed.token_network_address,
             token=packed.token,
             channel=packed.channel,
             transferred_amount=packed.transferred_amount,
@@ -1217,7 +1233,7 @@ class LockedTransfer(LockedTransferBase):
         packed.message_identifier = self.message_identifier
         packed.payment_identifier = self.payment_identifier
         packed.nonce = self.nonce
-        packed.registry_address = self.registry_address
+        packed.token_network_address = self.token_network_address
         packed.token = self.token
         packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
@@ -1251,7 +1267,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
-            registry_address=transfer.registry_address,
+            token_network_address=balance_proof.token_network_identifier,
             token=transfer.token,
             channel=balance_proof.channel_address,
             transferred_amount=balance_proof.transferred_amount,
@@ -1270,7 +1286,7 @@ class LockedTransfer(LockedTransferBase):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'registry_address': address_encoder(self.registry_address),
+            'token_network_address': address_encoder(self.token_network_address),
             'token': address_encoder(self.token),
             'channel': address_encoder(self.channel),
             'transferred_amount': self.transferred_amount,
@@ -1290,7 +1306,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            registry_address=address_decoder(data['registry_address']),
+            token_network_address=address_decoder(data['token_network_address']),
             token=address_decoder(data['token']),
             channel=address_decoder(data['channel']),
             transferred_amount=data['transferred_amount'],
@@ -1325,7 +1341,7 @@ class RefundTransfer(LockedTransfer):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            registry_address=packed.registry_address,
+            token_network_address=packed.token_network_address,
             token=packed.token,
             channel=packed.channel,
             transferred_amount=packed.transferred_amount,
@@ -1354,7 +1370,7 @@ class RefundTransfer(LockedTransfer):
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
-            registry_address=event.registry_address,
+            token_network_address=balance_proof.token_network_identifier,
             token=event.token,
             channel=balance_proof.channel_address,
             transferred_amount=balance_proof.transferred_amount,
@@ -1373,7 +1389,7 @@ class RefundTransfer(LockedTransfer):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'registry_address': address_encoder(self.registry_address),
+            'token_network_address': address_encoder(self.token_network_address),
             'token': address_encoder(self.token),
             'channel': address_encoder(self.channel),
             'transferred_amount': self.transferred_amount,
@@ -1393,7 +1409,7 @@ class RefundTransfer(LockedTransfer):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            registry_address=address_decoder(data['registry_address']),
+            token_network_address=address_decoder(data['token_network_address']),
             token=address_decoder(data['token']),
             channel=address_decoder(data['channel']),
             transferred_amount=data['transferred_amount'],
