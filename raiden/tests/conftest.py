@@ -121,19 +121,6 @@ def validate_solidity_compiler():
     validate_solc()
 
 
-# Connect catchlog's handler to structlog's root logger
-# @pytest.hookimpl(hookwrapper=True, trylast=True)
-# def pytest_runtest_call(item):
-#    catchlog_handler = getattr(item, CATCH_LOG_HANDLER_NAME, None)
-#    if catchlog_handler and catchlog_handler not in structlog.rootLogger.handlers:
-#        structlog.rootLogger.addHandler(catchlog_handler)
-
-#    yield
-
-#    if catchlog_handler and catchlog_handler in structlog.rootLogger.handlers:
-#        structlog.rootLogger.removeHandler(catchlog_handler)
-
-
 if sys.platform == 'darwin':
     # On macOS the temp directory base path is already very long.
     # To avoid failures on ipc tests (ipc path length is limited to 104/108 chars on macOS/linux)
