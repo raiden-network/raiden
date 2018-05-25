@@ -2,7 +2,7 @@
 import socket
 from typing import Tuple
 
-from ethereum import slogging
+import structlog
 
 from raiden.exceptions import UnknownAddress
 from raiden.network import proxies
@@ -14,7 +14,7 @@ from raiden.utils import (
 )
 from raiden.exceptions import InvalidAddress
 
-log = slogging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class Discovery:

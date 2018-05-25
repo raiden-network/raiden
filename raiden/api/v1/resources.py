@@ -11,9 +11,9 @@ from raiden.api.v1.encoding import (
     ConnectionsLeaveSchema,
 )
 
-from ethereum import slogging
+import structlog
 
-log = slogging.get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 
 def create_blueprint():

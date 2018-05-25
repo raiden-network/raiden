@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-import logging
+import structlog
 import os
 import time
 import subprocess
 import sys
-from logging import getLogger
+import logging
 
 import click
 from datetime import datetime, timedelta
@@ -15,7 +15,7 @@ import requests
 from web3 import Web3, IPCProvider
 from web3.utils.compat.compat_stdlib import Timeout
 
-log = getLogger(__name__)
+log = struct.get_logger(__name__)
 
 # Since this will run inside a docker container and is written for Python 3 we
 # have to disable flake8 since it will run with Python 2 and break on Travis-CI

@@ -9,7 +9,7 @@ import rlp
 import gevent
 import cachetools
 from gevent.lock import Semaphore
-from ethereum import slogging
+import structlog
 from ethereum.tools import _solidity
 from ethereum.abi import ContractTranslator
 from ethereum.transactions import Transaction
@@ -49,7 +49,7 @@ from raiden.utils import (
 )
 from raiden.utils.typing import Address
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 

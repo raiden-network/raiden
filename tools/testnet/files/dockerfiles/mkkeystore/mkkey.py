@@ -4,9 +4,9 @@ import os
 from json import JSONEncoder
 
 import click
+import logging
 from coincurve import PrivateKey
 from datetime import datetime
-from ethereum import slogging
 
 
 from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
@@ -63,5 +63,5 @@ def make_keystore_json_patched(private_key, password):
 
 
 if __name__ == "__main__":
-    slogging.configure(":ERROR")
+    logging.basicConfig(level=logging.ERROR)
     main()

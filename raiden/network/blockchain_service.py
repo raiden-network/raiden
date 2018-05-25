@@ -3,7 +3,7 @@ import os
 
 import gevent
 from cachetools.func import ttl_cache
-from ethereum import slogging
+import structlog
 from ethereum.tools import _solidity
 
 from raiden.network.rpc.client import JSONRPCClient
@@ -22,7 +22,7 @@ from raiden.utils import (
     quantity_decoder,
 )
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class BlockChainService:
@@ -173,8 +173,8 @@ class BlockChainService:
         contracts = _solidity.compile_file(contract_path, libraries=dict())
 
         log.info(
-            'Deploying "%s" contract',
-            os.path.basename(contract_path),
+            'Deploying contract: ',
+            path=os.path.basename(contract_path)
         )
 
         proxy = self.client.deploy_solidity_contract(

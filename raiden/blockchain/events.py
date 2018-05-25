@@ -2,7 +2,7 @@
 import itertools
 from collections import namedtuple, defaultdict
 
-from ethereum import slogging
+import structlog
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -28,7 +28,7 @@ Proxies = namedtuple(
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def poll_event_listener(eth_filter, translator):
@@ -255,8 +255,7 @@ class BlockchainEvents:
                 # filters will no longer exist there. In that case we will need
                 # to recreate all the filters.
                 if not reinstalled_filters and str(e) == 'filter not found':
-                    if log.isEnabledFor('DEBUG'):
-                        log.debug('reinstalling eth filters')
+                    log.debug('reinstalling eth filters')
 
                     result = list()
                     reinstalled_filters = True

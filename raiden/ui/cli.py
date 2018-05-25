@@ -15,8 +15,8 @@ import click
 import gevent
 import gevent.monkey
 import requests
-from ethereum import slogging
 from eth_utils import denoms
+import structlog
 from requests.exceptions import RequestException
 
 from raiden.accounts import AccountManager
@@ -54,6 +54,7 @@ from raiden.tests.utils.smoketest import (
     start_ethereum,
     run_smoketests,
 )
+
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     command,
@@ -63,6 +64,9 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
+
+
+from raiden.log_config import configure_logging
 
 
 gevent.monkey.patch_all()
@@ -79,7 +83,7 @@ def toogle_cpu_profiler(raiden):
     try:
         from raiden.utils.profiling.cpu import CpuProfiler
     except ImportError:
-        slogging.get_logger(__name__).exception('cannot start cpu profiler')
+        structlog.get_logger(__name__).exception('cannot start cpu profiler')
         return
 
     if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, CpuProfiler):
@@ -95,7 +99,7 @@ def toggle_trace_profiler(raiden):
     try:
         from raiden.utils.profiling.trace import TraceProfiler
     except ImportError:
-        slogging.get_logger(__name__).exception('cannot start tracer profiler')
+        structlog.get_logger(__name__).exception('cannot start tracer profiler')
         return
 
     if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, TraceProfiler):
@@ -420,13 +424,6 @@ def options(func):
         option_group(
             'Logging Options',
             option(
-                '--logging',
-                help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
-                default=':INFO',
-                type=str,
-                show_default=True,
-            ),
-            option(
                 '--logfile',
                 help='file path for logging to file',
                 default=None,
@@ -490,7 +487,6 @@ def app(
         listen_address,
         rpccorsdomain,
         mapped_socket,
-        logging,
         logfile,
         log_json,
         max_unresponsive_time,
@@ -716,18 +712,14 @@ def run(ctx, **kwargs):
     from raiden.ui.console import Console
     from raiden.api.python import RaidenAPI
 
-    slogging.configure(
-        kwargs['logging'],
+    configure_logging(
         log_json=kwargs['log_json'],
         log_file=kwargs['logfile']
     )
-    if kwargs['logfile']:
-        # Disable stream logging
-        root = slogging.getLogger()
-        for handler in root.handlers:
-            if isinstance(handler, slogging.logging.StreamHandler):
-                root.handlers.remove(handler)
-                break
+
+    # TODO:
+    # - Ask for confirmation to quit if there are any locked transfers that did
+    # not timeout.
 
     def _run_app():
         app_ = ctx.invoke(app, **kwargs)
@@ -852,7 +844,6 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     )
 
     report_file = tempfile.mktemp(suffix='.log')
-    open(report_file, 'w+')
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:
@@ -873,13 +864,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
 
     print('[3/5] starting raiden')
 
-    # setup logging to log only into our report file
-    slogging.configure(':DEBUG', log_file=report_file)
-    root = slogging.getLogger()
-    for handler in root.handlers:
-        if isinstance(handler, slogging.logging.StreamHandler):
-            root.handlers.remove(handler)
-            break
+    configure_logging('DEBUG', log_file=report_file)
     # setup cli arguments for starting raiden
     args = dict(
         discovery_contract_address=smoketest_config['contracts']['discovery_address'],

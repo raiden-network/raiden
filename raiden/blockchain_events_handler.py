@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import logging
-
 import gevent
-from ethereum import slogging
+import structlog
 
 from raiden.blockchain.events import get_channel_proxies
 from raiden.blockchain.state import (
@@ -23,7 +21,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import pex
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def handle_tokennetwork_new(raiden, event):
@@ -224,8 +222,7 @@ def handle_channel_withdraw(raiden, event):
 
 
 def on_blockchain_event(raiden, event):
-    if log.isEnabledFor(logging.DEBUG):
-        log.debug('EVENT', node=pex(raiden.address), event=event)
+    log.debug('EVENT', node=pex(raiden.address), chain_event=event)
 
     data = event.event_data
     assert isinstance(data['_event_type'], bytes)
@@ -248,5 +245,5 @@ def on_blockchain_event(raiden, event):
     elif data['_event_type'] == b'ChannelSecretRevealed':
         handle_channel_withdraw(raiden, event)
 
-    elif log.isEnabledFor(logging.ERROR):
+    else:
         log.error('Unknown event type', event=event)

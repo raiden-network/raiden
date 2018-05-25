@@ -4,14 +4,15 @@ import os
 from binascii import hexlify
 
 import click
-from ethereum import slogging
+import structlog
 from ethereum.tools._solidity import compile_contract
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
 from raiden.utils import address_encoder, get_contract_path, decode_hex
+from raiden.log_config import configure_logging
 
-log = slogging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 # Source files for all to be deployed solidity contracts
@@ -128,7 +129,7 @@ def get_privatekey_hex(keystore_path):
 @click.option("--port", type=int, default=8545, show_default=True)
 @click.option("--keystore-path", type=click.Path(exists=True))
 def main(keystore_path, pretty, gas_price, port):
-    slogging.configure(':debug')
+    configure_logging('DEBUG', colorize=True)
 
     privatekey_hex = get_privatekey_hex(keystore_path)
 

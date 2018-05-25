@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import logging
 from binascii import unhexlify
 from gevent.lock import RLock
 from typing import Optional, List
 
-from ethereum import slogging
+import structlog
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -37,7 +36,7 @@ from raiden.utils import (
     encode_hex,
 )
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class NettingChannel:
@@ -202,13 +201,12 @@ class NettingChannel:
                 current_balance,
             ))
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'deposit called',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                amount=amount,
-            )
+        log.info(
+            'deposit called',
+            node=pex(self.node_address),
+            contract=pex(self.address),
+            amount=amount,
+        )
 
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
@@ -239,13 +237,12 @@ class NettingChannel:
                 self._check_exists()
                 raise TransactionThrew('Deposit', receipt_or_none)
 
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'deposit successful',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    amount=amount,
-                )
+            log.info(
+                'deposit successful',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                amount=amount,
+            )
 
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
@@ -255,17 +252,16 @@ class NettingChannel:
             ChannelBusyError: If the channel is busy with another operation.
         """
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'close called',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                nonce=nonce,
-                transferred_amount=transferred_amount,
-                locksroot=encode_hex(locksroot),
-                extra_hash=encode_hex(extra_hash),
-                signature=encode_hex(signature),
-            )
+        log.info(
+            'close called',
+            node=pex(self.node_address),
+            contract=pex(self.address),
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locksroot=encode_hex(locksroot),
+            extra_hash=encode_hex(extra_hash),
+            signature=encode_hex(signature),
+        )
 
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
@@ -300,31 +296,29 @@ class NettingChannel:
                 self._check_exists()
                 raise TransactionThrew('Close', receipt_or_none)
 
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'close successful',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    nonce=nonce,
-                    transferred_amount=transferred_amount,
-                    locksroot=encode_hex(locksroot),
-                    extra_hash=encode_hex(extra_hash),
-                    signature=encode_hex(signature),
-                )
+            log.info(
+                'close successful',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
+            )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'updateTransfer called',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    nonce=nonce,
-                    transferred_amount=transferred_amount,
-                    locksroot=encode_hex(locksroot),
-                    extra_hash=encode_hex(extra_hash),
-                    signature=encode_hex(signature),
-                )
+            log.info(
+                'updateTransfer called',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
+            )
 
             transaction_hash = estimate_and_transact(
                 self.proxy,
@@ -356,25 +350,23 @@ class NettingChannel:
                 self._check_exists()
                 raise TransactionThrew('Update Transfer', receipt_or_none)
 
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'updateTransfer successful',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    nonce=nonce,
-                    transferred_amount=transferred_amount,
-                    locksroot=encode_hex(locksroot),
-                    extra_hash=encode_hex(extra_hash),
-                    signature=encode_hex(signature),
-                )
-
-    def withdraw(self, unlock_proof):
-        if log.isEnabledFor(logging.INFO):
             log.info(
-                'withdraw called',
+                'updateTransfer successful',
                 node=pex(self.node_address),
                 contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
             )
+
+    def withdraw(self, unlock_proof):
+        log.info(
+            'withdraw called',
+            node=pex(self.node_address),
+            contract=pex(self.address),
+        )
 
         if isinstance(unlock_proof.lock_encoded, messages.Lock):
             raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
@@ -402,13 +394,12 @@ class NettingChannel:
             self._check_exists()
             raise TransactionThrew('Withdraw', receipt_or_none)
 
-        elif log.isEnabledFor(logging.INFO):
-            log.info(
-                'withdraw successful',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                lock=unlock_proof,
-            )
+        log.info(
+            'withdraw successful',
+            node=pex(self.node_address),
+            contract=pex(self.address),
+            lock=unlock_proof,
+        )
 
     def settle(self):
         """ Settle the channel.
@@ -416,11 +407,10 @@ class NettingChannel:
         Raises:
             ChannelBusyError: If the channel is busy with another operation
         """
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'settle called',
-                node=pex(self.node_address),
-            )
+        log.info(
+            'settle called',
+            node=pex(self.node_address),
+        )
 
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
@@ -445,12 +435,11 @@ class NettingChannel:
                 self._check_exists()
                 raise TransactionThrew('Settle', receipt_or_none)
 
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'settle successful',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                )
+            log.info(
+                'settle successful',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+            )
 
     def events_filter(
             self,

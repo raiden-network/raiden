@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from ethereum import slogging
+import structlog
 from ethereum.tools import tester
 
 from raiden.tests.fixtures.tester import tester_token_address
 from raiden.utils import sha3, address_encoder, event_decoder
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def test_registry(tester_registry, tester_events, private_keys, tester_chain):

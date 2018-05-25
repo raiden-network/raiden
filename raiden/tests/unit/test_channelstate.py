@@ -7,7 +7,7 @@ from copy import deepcopy
 from itertools import cycle
 
 import pytest
-from ethereum import slogging
+import structlog
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import (
@@ -57,7 +57,7 @@ from raiden.utils import (
     privatekey_to_address,
 )
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 PartnerStateModel = namedtuple(

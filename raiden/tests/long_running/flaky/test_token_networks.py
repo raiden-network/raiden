@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+import structlog
 
 import pytest
 import gevent
@@ -8,7 +8,7 @@ from raiden.api.python import RaidenAPI
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer.state import CHANNEL_STATE_SETTLED
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 # TODO: add test scenarios for

@@ -3,7 +3,7 @@ from binascii import hexlify
 
 import gevent
 from contextlib import ExitStack
-from ethereum import slogging
+import structlog
 
 from raiden import waiting
 from raiden.blockchain.events import (
@@ -38,7 +38,7 @@ from raiden.utils import (
     releasing,
 )
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 EVENTS_EXTERNALLY_VISIBLE = (
     EventTransferSentSuccess,

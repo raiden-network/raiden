@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from coincurve import PublicKey
-from ethereum.slogging import getLogger
+import structlog
 
 from raiden.utils import sha3, publickey_to_address
 
 
-log = getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def recover_publickey(messagedata, signature, hasher=sha3):

@@ -5,7 +5,7 @@ import gevent
 from gevent.lock import Semaphore
 from gevent.event import AsyncResult
 
-from ethereum import slogging
+import structlog
 
 from raiden import waiting
 from raiden.exceptions import DuplicatedChannelError
@@ -17,7 +17,7 @@ from raiden.exceptions import (
 )
 from raiden.transfer import views
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def log_open_channels(raiden, registry_address, token_address, funds):

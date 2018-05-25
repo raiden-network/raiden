@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import logging
 from binascii import unhexlify
 from gevent.event import AsyncResult
 from typing import List, Union, Tuple
 
-from ethereum import slogging
+import structlog
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -42,7 +41,7 @@ from raiden.utils import (
 from raiden.utils.typing import Address
 from raiden.constants import NULL_ADDRESS
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class ChannelManager:
@@ -136,13 +135,12 @@ class ChannelManager:
 
         netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
 
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'new_netting_channel called',
-                peer1=pex(local_address),
-                peer2=pex(other_peer),
-                netting_channel=pex(netting_channel_address_bin),
-            )
+        log.info(
+            'new_netting_channel called',
+            peer1=pex(local_address),
+            peer2=pex(other_peer),
+            netting_channel=pex(netting_channel_address_bin),
+        )
 
         return netting_channel_address_bin
 

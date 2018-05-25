@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 import random
 import socket
 from binascii import hexlify
@@ -14,7 +13,7 @@ from gevent.event import (
     Event,
 )
 from gevent.server import DatagramServer
-from ethereum import slogging
+import structlog
 
 from raiden.exceptions import (
     InvalidAddress,
@@ -36,13 +35,13 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 
-log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
-healthcheck_log = slogging.get_logger(__name__ + '.healthcheck')
-ping_log = slogging.get_logger(__name__ + '.ping')
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+healthcheck_log = structlog.get_logger(__name__ + '.healthcheck')
+ping_log = structlog.get_logger(__name__ + '.ping')
 
 # - async_result available for code that wants to block on message acknowledgment
 # - recipient used to tie back the message_id to the receiver (mainly for
-#   logging purposes)
+#   structlog purposes)
 SentMessageState = namedtuple('SentMessageState', (
     'async_result',
     'recipient',
@@ -327,12 +326,11 @@ def healthcheck(
     """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches
 
-    if log.isEnabledFor(logging.DEBUG):
-        log.debug(
-            'starting healthcheck for',
-            node=pex(protocol.raiden.address),
-            to=pex(recipient),
-        )
+    log.debug(
+        'starting healthcheck for',
+        node=pex(protocol.raiden.address),
+        to=pex(recipient),
+    )
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
@@ -349,12 +347,11 @@ def healthcheck(
     try:
         protocol.get_host_port(recipient)
     except UnknownAddress:
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'waiting for endpoint registration',
-                node=pex(protocol.raiden.address),
-                to=pex(recipient),
-            )
+        log.debug(
+            'waiting for endpoint registration',
+            node=pex(protocol.raiden.address),
+            to=pex(recipient),
+        )
 
         event_healthy.clear()
         event_unhealthy.set()
@@ -404,16 +401,15 @@ def healthcheck(
             return
 
         if not acknowledged:
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'node is unresponsive',
-                    node=pex(protocol.raiden.address),
-                    to=pex(recipient),
-                    current_state=last_state,
-                    new_state=NODE_NETWORK_UNREACHABLE,
-                    retries=nat_keepalive_retries,
-                    timeout=nat_keepalive_timeout,
-                )
+            log.debug(
+                'node is unresponsive',
+                node=pex(protocol.raiden.address),
+                to=pex(recipient),
+                current_state=last_state,
+                new_state=NODE_NETWORK_UNREACHABLE,
+                retries=nat_keepalive_retries,
+                timeout=nat_keepalive_timeout,
+            )
 
             # The node is not healthy, clear the event to stop all queue
             # tasks
@@ -441,18 +437,17 @@ def healthcheck(
                 return
 
         if acknowledged:
-            if log.isEnabledFor(logging.DEBUG):
-                current_state = views.get_node_network_status(
-                    views.state_from_raiden(protocol.raiden),
-                    recipient,
-                )
-                log.debug(
-                    'node answered',
-                    node=pex(protocol.raiden.address),
-                    to=pex(recipient),
-                    current_state=current_state,
-                    new_state=NODE_NETWORK_REACHABLE,
-                )
+            current_state = views.get_node_network_status(
+                views.state_from_raiden(protocol.raiden),
+                recipient,
+            )
+            log.debug(
+                'node answered',
+                node=pex(protocol.raiden.address),
+                to=pex(recipient),
+                current_state=current_state,
+                new_state=NODE_NETWORK_REACHABLE,
+            )
 
             if last_state != NODE_NETWORK_REACHABLE:
                 last_state = NODE_NETWORK_REACHABLE
@@ -607,13 +602,12 @@ class UDPTransport:
             self.retry_interval * 10,
         ))
 
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'new queue created for',
-                node=pex(self.raiden.address),
-                token=pex(queue_name),
-                to=pex(recipient),
-            )
+        log.debug(
+            'new queue created for',
+            node=pex(self.raiden.address),
+            token=pex(queue_name),
+            to=pex(recipient),
+        )
 
         return queue
 
@@ -660,14 +654,13 @@ class UDPTransport:
             queue = self.get_queue_for(recipient, queue_name)
             queue.put((messagedata, message_id))
 
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'MESSAGE QUEUED',
-                    node=pex(self.raiden.address),
-                    queue_name=queue_name,
-                    to=pex(recipient),
-                    message=message,
-                )
+            log.debug(
+                'MESSAGE QUEUED',
+                node=pex(self.raiden.address),
+                queue_name=queue_name,
+                to=pex(recipient),
+                message=message,
+            )
 
     def maybe_send(self, recipient, message):
         """ Send message to recipient if the transport is running. """
@@ -744,7 +737,7 @@ class UDPTransport:
             self.receive_delivered(message)
         elif message is not None:
             self.receive_message(message)
-        elif log.isEnabledFor(logging.ERROR):
+        else:
             log.error(
                 'INVALID MESSAGE: Unknown cmdid',
                 node=pex(self.raiden.address),
@@ -807,14 +800,13 @@ class UDPTransport:
     def receive_ping(self, ping):
         """ Handle a Ping message by answering with a Pong. """
 
-        if ping_log.isEnabledFor(logging.DEBUG):
-            ping_log.debug(
-                'PING RECEIVED',
-                node=pex(self.raiden.address),
-                message_id=ping.nonce,
-                message=ping,
-                sender=pex(ping.sender),
-            )
+        ping_log.debug(
+            'PING RECEIVED',
+            node=pex(self.raiden.address),
+            message_id=ping.nonce,
+            message=ping,
+            sender=pex(ping.sender),
+        )
 
         pong = Pong(ping.nonce)
         self.raiden.sign(pong)
@@ -831,12 +823,11 @@ class UDPTransport:
         async_result = self.messageids_to_asyncresults.get(message_id)
 
         if async_result is not None:
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'PONG RECEIVED',
-                    node=pex(self.raiden.address),
-                    message_id=pong.nonce,
-                )
+            log.debug(
+                'PONG RECEIVED',
+                node=pex(self.raiden.address),
+                message_id=pong.nonce,
+            )
 
             async_result.set(True)
 

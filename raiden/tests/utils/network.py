@@ -4,7 +4,7 @@
 from binascii import hexlify
 
 from gevent import server
-from ethereum import slogging
+import structlog
 
 from raiden.app import App
 from raiden.network.matrixtransport import MatrixTransport
@@ -13,7 +13,7 @@ from raiden.network.transport import TokenBucket
 from raiden.tests.utils.matrix import MockMatrixClient
 from raiden.utils import privatekey_to_address
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import miniupnpc
 import ipaddress
-from ethereum import slogging
+import structlog
 
 MAX_PORT = 65535
 RAIDEN_IDENTIFICATOR = 'raiden-network udp service'
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 NON_MAPPABLE = [
     '127.0.0.1',

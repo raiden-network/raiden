@@ -1,12 +1,12 @@
 import socket
 
-from ethereum import slogging
+import structlog
 import netifaces
 
 from raiden.exceptions import STUNUnavailableException
 from raiden.network import upnpsock, stunsock
 
-log = slogging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class PortMappedSocket:
