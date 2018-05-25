@@ -35,9 +35,9 @@ def event_dicts_are_equal(dict1, dict2):
 
         v2 = dict2[k]
         if isinstance(v2, str) and v2.startswith('0x'):
-            v2 = v2[2:]
+            v2 = v2[2:].lower()
         if isinstance(v, str) and v.startswith('0x'):
-            v = v[2:]
+            v = v[2:].lower()
         if v2 != v:
             return False
 
@@ -152,8 +152,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
 
     assert len(events) == 1
-    assert event_dicts_are_equal(events[0], {
-        '_event_type': b'TokenAdded',
+    assert events[0]['event'] == 'TokenAdded'
+    assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': address_encoder(registry_address),
         'channel_manager_address': address_encoder(manager0.address),
         'token_address': address_encoder(token_address),
@@ -186,8 +186,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
 
     assert len(events) == 1
-    assert event_dicts_are_equal(events[0], {
-        '_event_type': b'ChannelNew',
+    assert events[0]['event'] == 'ChannelNew'
+    assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': address_encoder(registry_address),
         'settle_timeout': settle_timeout,
         'netting_channel': address_encoder(channel_address),
@@ -244,8 +244,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 1
     assert len(events) == 1
 
+    assert events[0]['event'] == 'ChannelNewBalance'
     new_balance_event = {
-        '_event_type': b'ChannelNewBalance',
         'registry_address': address_encoder(registry_address),
         'token_address': address_encoder(token_address),
         'participant': address_encoder(app0.raiden.address),
@@ -253,8 +253,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         'block_number': 'ignore',
     }
 
-    assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
-    assert event_dicts_are_equal(events[0], new_balance_event)
+    assert event_dicts_are_equal(all_netting_channel_events[-1]['args'], new_balance_event)
+    assert event_dicts_are_equal(events[0]['args'], new_balance_event)
 
     RaidenAPI(app0.raiden).channel_close(
         registry_address,
@@ -280,15 +280,15 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 2
     assert len(events) == 1
 
+    assert events[0]['event'] == 'ChannelClosed'
     closed_event = {
-        '_event_type': b'ChannelClosed',
         'registry_address': address_encoder(registry_address),
         'closing_address': address_encoder(app0.raiden.address),
         'block_number': 'ignore',
     }
 
-    assert event_dicts_are_equal(all_netting_channel_events[-1], closed_event)
-    assert event_dicts_are_equal(events[0], closed_event)
+    assert event_dicts_are_equal(all_netting_channel_events[-1]['args'], closed_event)
+    assert event_dicts_are_equal(events[0]['args'], closed_event)
 
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout + 5
     wait_until_block(app0.raiden.chain, settle_expiration)
@@ -309,14 +309,14 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 3
     assert len(events) == 1
 
+    assert events[0]['event'] == 'ChannelSettled'
     settled_event = {
-        '_event_type': b'ChannelSettled',
         'registry_address': address_encoder(registry_address),
         'block_number': 'ignore',
     }
 
-    assert event_dicts_are_equal(all_netting_channel_events[-1], settled_event)
-    assert event_dicts_are_equal(events[0], settled_event)
+    assert event_dicts_are_equal(all_netting_channel_events[-1]['args'], settled_event)
+    assert event_dicts_are_equal(events[0]['args'], settled_event)
 
 
 @pytest.mark.xfail(reason='out-of-gas for unlock and settle')

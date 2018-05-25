@@ -8,10 +8,11 @@ from typing import Optional, List, Dict, Union
 import rlp
 import gevent
 import cachetools
+from eth_abi import encode_abi
+from web3.utils.abi import get_constructor_abi, get_abi_input_types
 from gevent.lock import Semaphore
 import structlog
 from ethereum.tools import _solidity
-from ethereum.abi import ContractTranslator
 from ethereum.transactions import Transaction
 from ethereum.tools._solidity import (
     solidity_unresolved_symbols,
@@ -399,8 +400,9 @@ class JSONRPCClient:
             contract['bin'] = bytecode
 
         if constructor_parameters:
-            translator = ContractTranslator(contract_interface)
-            parameters = translator.encode_constructor_arguments(constructor_parameters)
+            constructor_abi = get_constructor_abi(contract_interface)
+            constructor_types = get_abi_input_types(constructor_abi)
+            parameters = encode_abi(constructor_types, constructor_parameters)
             bytecode = contract['bin'] + parameters
         else:
             bytecode = contract['bin']

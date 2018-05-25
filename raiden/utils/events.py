@@ -2,16 +2,16 @@
 """
 from typing import List, Dict, Union
 
-from ethereum.abi import ContractTranslator
 from eth_utils import to_canonical_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.utils import address_encoder, data_decoder, topic_decoder
+from raiden.utils import address_encoder
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies.netting_channel import NettingChannel
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 
 def all_contract_events_raw(
@@ -55,8 +55,6 @@ def all_contract_events(
         A list of all events from the given contract.
     """
 
-    translator = ContractTranslator(abi)
-
     events_raw = all_contract_events_raw(
         rpc,
         contract_address,
@@ -66,13 +64,7 @@ def all_contract_events(
 
     events = list()
     for event_encoded in events_raw:
-        topics_ids = [
-            topic_decoder(topic)
-            for topic in event_encoded['topics']
-        ]
-        event_data = data_decoder(event_encoded['data'])
-
-        event = translator.decode_event(topics_ids, event_data)
+        event = ContractProxy.decode_event(abi, event_encoded)
         events.append(event)
     return events
 

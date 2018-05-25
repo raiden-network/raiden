@@ -95,6 +95,7 @@ def get_filter_events(
             'data': data,
             'address': address,
             'block_number': block_number,
+            'event_data': log_event
         })
 
     return result
@@ -131,6 +132,7 @@ class Filter:
                 'data': data,
                 'address': address,
                 'block_number': block_number,
+                'event_data': log_event
             })
 
         return result

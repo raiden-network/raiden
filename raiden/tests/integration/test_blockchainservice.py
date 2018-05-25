@@ -16,7 +16,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
-from raiden.utils import privatekey_to_address, get_contract_path, topic_decoder
+from raiden.utils import privatekey_to_address, get_contract_path
 
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
@@ -282,18 +282,11 @@ def test_blockchain(
     channel_manager_address = to_canonical_address(channel_manager_address_encoded)
 
     log = log_list[0]
-    log_topics = [
-        topic_decoder(topic)
-        for topic in log['topics']  # pylint: disable=invalid-sequence-index
-    ]
-    log_data = log['data']  # pylint: disable=invalid-sequence-index
-    event = registry_proxy.translator.decode_event(
-        log_topics,
-        unhexlify(log_data[2:]),
-    )
+    event = registry_proxy.decode_event(log)
+    event_args = event['args']
 
-    assert channel_manager_address == to_canonical_address(event['channel_manager_address'])
-    assert token_proxy.contract_address == to_canonical_address(event['token_address'])
+    assert channel_manager_address == to_canonical_address(event_args['channel_manager_address'])
+    assert token_proxy.contract_address == to_canonical_address(event_args['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),

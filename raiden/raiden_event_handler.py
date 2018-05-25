@@ -176,9 +176,9 @@ def handle_contract_channelclose(
     else:
         nonce = 0
         transferred_amount = 0
-        locksroot = ''
-        signature = ''
-        message_hash = ''
+        locksroot = b''
+        signature = b''
+        message_hash = b''
 
     channel = raiden.chain.netting_channel(channel_close_event.channel_identifier)
 

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify
-
 import gevent
 from contextlib import ExitStack
 import structlog
@@ -253,7 +251,7 @@ class RaidenAPI:
             raise InvalidAddress('No channel with partner_address for the given token')
 
         token = self.raiden.chain.token(token_address)
-        balance = token.balance_of(hexlify(self.raiden.address))
+        balance = token.balance_of(self.raiden.address)
 
         # If this check succeeds it does not imply the the `deposit` will
         # succeed, since the `deposit` transaction may race with another
@@ -566,7 +564,7 @@ class RaidenAPI:
             if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
                 new_event = {
                     'block_number': block_number,
-                    '_event_type': type(event).__name__.encode(),
+                    'event': type(event).__name__,
                 }
                 new_event.update(event.__dict__)
                 returned_events.append(new_event)
@@ -600,7 +598,7 @@ class RaidenAPI:
             if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
                 new_event = {
                     'block_number': block_number,
-                    '_event_type': type(event).__name__.encode(),
+                    'event': type(event).__name__,
                 }
                 new_event.update(event.__dict__)
                 returned_events.append(new_event)

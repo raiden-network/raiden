@@ -107,7 +107,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
         received = {}
 
         for event in events:
-            if event['_event_type'] == b'EventTransferReceivedSuccess':
+            if event['event'] == 'EventTransferReceivedSuccess':
                 received[repr(event)] = event
 
         assert len(received) == 1
@@ -197,7 +197,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         )
 
         for event in events:
-            if event['_event_type'] == b'EventTransferReceivedSuccess':
+            if event['event'] == 'EventTransferReceivedSuccess':
                 received[repr(event)] = event
 
     assert len(received) == 2

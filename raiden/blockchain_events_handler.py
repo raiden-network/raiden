@@ -9,6 +9,7 @@ from raiden.blockchain.state import (
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
+from raiden.utils import address_decoder, pex
 from raiden.transfer.state import TransactionChannelNewBalance
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -19,7 +20,6 @@ from raiden.transfer.state_change import (
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
 )
-from raiden.utils import pex
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -225,24 +225,38 @@ def on_blockchain_event(raiden, event):
     log.debug('EVENT', node=pex(raiden.address), chain_event=event)
 
     data = event.event_data
-    assert isinstance(data['_event_type'], bytes)
 
-    if data['_event_type'] == b'TokenAdded':
+    if data['event'] == 'TokenAdded':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
         handle_tokennetwork_new(raiden, event)
 
-    elif data['_event_type'] == b'ChannelNew':
+    elif data['event'] == 'ChannelNew':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['participant1'] = address_decoder(data['args']['participant1'])
+        data['participant2'] = address_decoder(data['args']['participant2'])
         handle_channel_new(raiden, event)
 
-    elif data['_event_type'] == b'ChannelNewBalance':
+    elif data['event'] == 'ChannelNewBalance':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['token_address'] = address_decoder(data['args']['token_address'])
+        data['participant'] = address_decoder(data['args']['participant'])
+        data['balance'] = data['args']['balance']
         handle_channel_new_balance(raiden, event)
 
-    elif data['_event_type'] == b'ChannelClosed':
+    elif data['event'] == 'ChannelClosed':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['closing_address'] = address_decoder(data['args']['closing_address'])
         handle_channel_closed(raiden, event)
 
-    elif data['_event_type'] == b'ChannelSettled':
+    elif data['event'] == 'ChannelSettled':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
         handle_channel_settled(raiden, event)
 
-    elif data['_event_type'] == b'ChannelSecretRevealed':
+    elif data['event'] == 'ChannelSecretRevealed':
+        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['receiver_address'] = address_decoder(data['args']['receiver_address'])
+        data['secret'] = data['args']['secret']
         handle_channel_withdraw(raiden, event)
 
     else:

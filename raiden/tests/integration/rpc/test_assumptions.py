@@ -4,6 +4,7 @@ import os
 
 import pytest
 from ethereum.tools import _solidity
+from eth_utils import decode_hex
 
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.rpc.filters import new_filter, get_filter_events
@@ -58,7 +59,7 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert len(deploy_client.eth_getCode(address)) > 0
 
-    selector = contract_proxy.translator.encode_function_call('ret', args=[])
+    selector = decode_hex(contract_proxy.encode_function_call('ret', args=[]))
     next_byte = chr(selector[0] + 1).encode()
     wrong_selector = next_byte + selector[1:]
     result = deploy_client.eth_call(
@@ -170,7 +171,7 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    gas = contract_proxy.estimate_gas('createEvent') * 2
+    gas = contract_proxy.estimate_gas('createEvent', 1) * 2
     transaction_hex_1 = contract_proxy.transact('createEvent', 1, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_1))
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
@@ -209,7 +210,7 @@ def test_filter_end_block_inclusive(deploy_client, blockchain_backend):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    gas = contract_proxy.estimate_gas('createEvent') * 2
+    gas = contract_proxy.estimate_gas('createEvent', 1) * 2
     transaction_hex_1 = contract_proxy.transact('createEvent', 1, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_1))
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
