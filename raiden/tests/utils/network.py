@@ -251,13 +251,16 @@ def create_apps(
             'rpc': True,
             'console': False,
         }
-        config_copy = App.DEFAULT_CONFIG.copy()
-        config_copy.update(config)
 
         if use_matrix:
             if local_matrix_url is not None:
                 matrix_config = {
                     'server': local_matrix_url,
+                    'server_name': 'matrix.local.raiden',
+                    'discovery_room': {
+                        'alias_fragment': 'discovery',
+                        'server': 'matrix.local.raiden'
+                    }
                 }
             else:
                 matrix_config = {
@@ -268,6 +271,9 @@ def create_apps(
                 'transport_type': 'matrix',
                 'matrix': matrix_config
             })
+
+        config_copy = App.DEFAULT_CONFIG.copy()
+        config_copy.update(config)
 
         registry = blockchain.registry(registry_address)
 

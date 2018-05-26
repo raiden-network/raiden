@@ -72,7 +72,7 @@ class MatrixTransport:
     def __init__(self, config: dict):
         self._raiden_service: RaidenService = None
         self._server_url: str = self._select_server(config)
-        self._server_name = urlparse(self._server_url).hostname
+        self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
         client_class = config.get('client_class', GMatrixClient)
         self._client: GMatrixClient = client_class(self._server_url)
 
