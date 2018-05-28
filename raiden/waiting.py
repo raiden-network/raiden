@@ -2,7 +2,7 @@
 import gevent
 import structlog
 
-from raiden.network.protocol import NODE_NETWORK_REACHABLE
+from raiden.transfer.state import NODE_NETWORK_REACHABLE
 from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     CHANNEL_AFTER_CLOSE_STATES,

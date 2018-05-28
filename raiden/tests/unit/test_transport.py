@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from raiden.network.transport import TokenBucket
+from raiden.network.throttle import TokenBucket
 
 
 def test_token_bucket():

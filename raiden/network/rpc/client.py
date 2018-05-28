@@ -32,7 +32,7 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenShuttingDown,
 )
-from raiden.network.protocol import timeout_two_stage
+from raiden.network.transport.udp import udp_utils
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
@@ -488,7 +488,7 @@ class JSONRPCClient:
         request = self.protocol.create_request(method, args)
         request_serialized = request.serialize().encode()
 
-        for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
+        for i, timeout in enumerate(udp_utils.timeout_two_stage(10, 3, 10)):
             if self.stop_event and self.stop_event.is_set():
                 raise RaidenShuttingDown()
 

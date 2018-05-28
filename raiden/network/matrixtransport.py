@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 import binascii
 import json
 import logging
 import re
-from collections import namedtuple
 from enum import Enum
 from operator import itemgetter
 from random import Random
@@ -32,7 +32,7 @@ from raiden.messages import (
     Pong,
     Message
 )
-from raiden.network.protocol import timeout_exponential_backoff
+from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.transfer import events as transfer_events
@@ -55,11 +55,6 @@ from raiden_libs.network.matrix import GMatrixClient, Room
 
 
 log = structlog.get_logger(__name__)
-
-SentMessageState = namedtuple('SentMessageState', (
-    'async_result',
-    'receiver_address',
-))
 
 
 class UserPresence(Enum):
@@ -457,7 +452,7 @@ class MatrixTransport:
         data: str
     ):
         def retry():
-            timeout_generator = timeout_exponential_backoff(
+            timeout_generator = udp_utils.timeout_exponential_backoff(
                 self._raiden_service.config['protocol']['retries_before_backoff'],
                 self._raiden_service.config['protocol']['retry_interval'],
                 self._raiden_service.config['protocol']['retry_interval'] * 10

@@ -8,8 +8,8 @@ import structlog
 
 from raiden.app import App
 from raiden.network.matrixtransport import MatrixTransport
-from raiden.network.protocol import UDPTransport
-from raiden.network.transport import TokenBucket
+from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.throttle import TokenBucket
 from raiden.tests.utils.matrix import MockMatrixClient
 from raiden.utils import privatekey_to_address
 

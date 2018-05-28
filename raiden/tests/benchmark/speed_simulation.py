@@ -16,7 +16,7 @@ from gevent import server
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
-from raiden.network.transport import TokenBucket
+from raiden.network.throttle import TokenBucket
 from raiden.network.protocol import UDPTransport
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery

@@ -30,10 +30,10 @@ from raiden.constants import (
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
-from raiden.network.protocol import UDPTransport
+from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
-from raiden.network.transport import TokenBucket
+from raiden.network.throttle import TokenBucket
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
