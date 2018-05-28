@@ -76,11 +76,6 @@ HOP6 = privatekey_to_address(b'66666666666666666666666666666666')
 
 ADDR = b'addraddraddraddraddr'
 
-# add the current block number to get the expiration
-HOP1_TIMEOUT = UNIT_SETTLE_TIMEOUT
-HOP2_TIMEOUT = HOP1_TIMEOUT - UNIT_REVEAL_TIMEOUT
-HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
-
 
 def make_address():
     return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
@@ -152,15 +147,6 @@ def make_channel(
     )
 
     return channel_state
-
-
-def make_channel_mapping(channels_descriptions):
-    mapping = {}
-    for description in channels_descriptions:
-        channel_state = make_channel(**description)
-        mapping[channel_state.identifier] = channel_state
-
-    return mapping
 
 
 def make_transfer(
@@ -350,29 +336,3 @@ def make_signed_transfer_for(
     assert is_valid, msg
 
     return mediated_transfer
-
-
-def make_transfer_description(
-        amount,
-        secret,
-        identifier,
-        initiator=None,
-        target=None,
-        token_address=UNIT_TOKEN_ADDRESS,
-        registry=UNIT_REGISTRY_IDENTIFIER
-):
-
-    initiator = initiator or make_address()
-    target = target or make_address()
-
-    transfer_description = TransferDescriptionWithSecretState(
-        identifier,
-        amount,
-        registry,
-        token_address,
-        initiator,
-        target,
-        secret,
-    )
-
-    return transfer_description
