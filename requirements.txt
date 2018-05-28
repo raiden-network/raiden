@@ -20,7 +20,6 @@ pysha3==1.0.2
 # raiden-libs==???
 # FIXME: replace with released version before merge
 git+https://github.com/raiden-network/raiden-libs.git@47c01904ca9b05b107e40071adbcd1c126bcbc66#egg=raiden-libs
-repoze.lru==0.7.0
 rlp==0.6
 tinyrpc[gevent,httpclient]==0.8
 webargs==1.8.1
