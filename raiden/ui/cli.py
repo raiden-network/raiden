@@ -14,6 +14,7 @@ from itertools import count
 import click
 import gevent
 import gevent.monkey
+gevent.monkey.patch_all()
 import requests
 from eth_utils import denoms
 import structlog
@@ -68,8 +69,6 @@ from raiden.utils.cli import (
 
 from raiden.log_config import configure_logging
 
-
-gevent.monkey.patch_all()
 
 # ansi escape code for moving the cursor and clearing the line
 CURSOR_STARTLINE = '\x1b[1000D'
@@ -844,6 +843,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     )
 
     report_file = tempfile.mktemp(suffix='.log')
+    configure_logging('DEBUG', log_file=report_file)
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:
@@ -864,7 +864,6 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
 
     print('[3/5] starting raiden')
 
-    configure_logging('DEBUG', log_file=report_file)
     # setup cli arguments for starting raiden
     args = dict(
         discovery_contract_address=smoketest_config['contracts']['discovery_address'],
