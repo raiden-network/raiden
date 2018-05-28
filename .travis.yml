@@ -13,10 +13,8 @@ env:
   - SOLC_URL_MACOS='https://www.dropbox.com/s/4amq3on2ds1dq36/solc_0.4.23?dl=0'
   - SOLC_VERSION='v0.4.23'
   matrix:
-  - TEST_TYPE='unit'
   - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-  - TEST_TYPE='smart_contracts'
-  - TEST_TYPE='property'
+  - TEST_TYPE='unit'
   - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
 cache:
