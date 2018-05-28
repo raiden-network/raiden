@@ -19,7 +19,7 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.transport import TokenBucket
+from raiden.network.throttle import TokenBucket
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint, decode_hex
 from raiden.settings import GAS_PRICE
