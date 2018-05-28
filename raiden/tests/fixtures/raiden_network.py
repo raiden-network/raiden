@@ -123,7 +123,6 @@ def raiden_chain(
         blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
-        cached_genesis,
         reveal_timeout,
         database_paths,
         retry_interval,
@@ -172,19 +171,18 @@ def raiden_chain(
         channels_per_node,
     )
 
-    if not cached_genesis:
-        greenlets = []
-        for token_address in token_addresses:
-            for app_pair in app_channels:
-                greenlets.append(gevent.spawn(
-                    netting_channel_open_and_deposit,
-                    app_pair[0],
-                    app_pair[1],
-                    token_address,
-                    deposit,
-                    settle_timeout,
-                ))
-        gevent.wait(greenlets)
+    greenlets = []
+    for token_address in token_addresses:
+        for app_pair in app_channels:
+            greenlets.append(gevent.spawn(
+                netting_channel_open_and_deposit,
+                app_pair[0],
+                app_pair[1],
+                token_address,
+                deposit,
+                settle_timeout,
+            ))
+    gevent.wait(greenlets)
 
     exception = RuntimeError('fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
@@ -210,7 +208,6 @@ def raiden_network(
         blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
-        cached_genesis,
         reveal_timeout,
         database_paths,
         retry_interval,
@@ -248,19 +245,18 @@ def raiden_network(
         channels_per_node,
     )
 
-    if not cached_genesis:
-        greenlets = []
-        for token_address in token_addresses:
-            for app_pair in app_channels:
-                greenlets.append(gevent.spawn(
-                    netting_channel_open_and_deposit,
-                    app_pair[0],
-                    app_pair[1],
-                    token_address,
-                    deposit,
-                    settle_timeout,
-                ))
-        gevent.wait(greenlets)
+    greenlets = []
+    for token_address in token_addresses:
+        for app_pair in app_channels:
+            greenlets.append(gevent.spawn(
+                netting_channel_open_and_deposit,
+                app_pair[0],
+                app_pair[1],
+                token_address,
+                deposit,
+                settle_timeout,
+            ))
+    gevent.wait(greenlets)
 
     exception = RuntimeError('fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
@@ -274,8 +270,7 @@ def raiden_network(
     _raiden_cleanup(request, raiden_apps)
 
     # Force blocknumber update for the tester backend
-    if not cached_genesis:
-        for app in raiden_apps:
-            app.raiden.alarm.poll_for_new_block()
+    for app in raiden_apps:
+        app.raiden.alarm.poll_for_new_block()
 
     return raiden_apps

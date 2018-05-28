@@ -13,10 +13,11 @@ env:
   - SOLC_URL_MACOS='https://www.dropbox.com/s/4amq3on2ds1dq36/solc_0.4.23?dl=0'
   - SOLC_VERSION='v0.4.23'
   matrix:
-  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-  - TEST_TYPE='unit'
-  - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-  - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
+  - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth' TEST_IGNORE='raiden/tests/integration/transfer'
+  - TEST_TYPE='integration/transfer' BLOCKCHAIN_TYPE='--blockchain-type=geth' TEST_IGNORE=''
+  - TEST_TYPE='unit' TEST_IGNORE=''
+  - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth' TEST_IGNORE=''
+  - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth' TEST_IGNORE=''
 cache:
   pip: true
   directories:
@@ -32,7 +33,7 @@ install:
 before_script:
   ./.travis/before_script.sh
 script:
-  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE --ignore=$TEST_IGNORE
 after_script:
   - coveralls
 notifications:

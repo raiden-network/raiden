@@ -30,12 +30,6 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        '--blockchain-cache',
-        action='store_true',
-        default=False,
-    )
-
-    parser.addoption(
         '--initial-port',
         type=int,
         default=29870,

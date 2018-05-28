@@ -130,7 +130,6 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('cached_genesis', [None])
 def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, events_poll_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address

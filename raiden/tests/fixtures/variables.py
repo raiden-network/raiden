@@ -187,16 +187,6 @@ def blockchain_type(request):
     return request.config.option.blockchain_type
 
 
-@pytest.fixture(autouse=True)
-def blockchain_cache(request):
-    """Expose flag --blockchain-cache value.
-
-    This fixture allows tests to overwrite the blockchain_cache and force its
-    value to True/False.
-    """
-    return request.config.option.blockchain_cache
-
-
 @pytest.fixture
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden

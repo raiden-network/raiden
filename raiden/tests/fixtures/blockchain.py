@@ -1,38 +1,21 @@
 # -*- coding: utf-8 -*-
-import json
-from binascii import hexlify
-from os import path
 from collections import namedtuple
 
-import gevent
 import pytest
 import structlog
 from ethereum.tools._solidity import compile_file
 
 from raiden.utils import (
-    address_decoder,
-    address_encoder,
-    fix_tester_storage,
     get_contract_path,
     privatekey_to_address,
 )
 from raiden.tests.fixtures.tester import tester_chain
-from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.blockchain import (
-    clique_extradata,
-    geth_create_blockchain,
-)
-from raiden.tests.utils.network import (
-    create_apps,
-    create_network_channels,
-    create_sequential_channels,
-    netting_channel_open_and_deposit,
-)
+from raiden.tests.utils.blockchain import geth_create_blockchain
 from raiden.settings import GAS_PRICE
 
 BlockchainServices = namedtuple(
@@ -54,7 +37,8 @@ def _token_addresses(
         deploy_service,
         registry,
         participants,
-        register):
+        register
+):
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
     distributed among `blockchain_services`. Optionally the instances will be registered with
     the raiden registry.
@@ -95,169 +79,6 @@ def _token_addresses(
 
 
 @pytest.fixture
-def cached_genesis(request):
-    """
-    Deploy all contracts that are required by the fixtures into a tester and
-    then serialize the accounts into a genesis block.
-
-    Returns:
-        dict: A dictionary representing the genesis block.
-    """
-
-    if not request.getfixturevalue('blockchain_cache'):
-        return None
-
-    # this will create the tester _and_ deploy the Registry
-    deploy_key = request.getfixturevalue('deploy_key')
-    private_keys = request.getfixturevalue('private_keys')
-    registry, deploy_service, blockchain_services = _tester_services(
-        deploy_key,
-        private_keys,
-        request.getfixturevalue('tester_blockgas_limit'),
-    )
-
-    registry_address = registry.address
-
-    # create_network only registers the tokens,
-    # the contracts must be deployed previously
-    register = True
-    participants = [privatekey_to_address(privatekey) for privatekey in private_keys]
-    token_contract_addresses = _token_addresses(
-        request.getfixturevalue('token_amount'),
-        request.getfixturevalue('number_of_tokens'),
-        deploy_service,
-        registry,
-        participants,
-        register
-    )
-
-    endpoint_discovery_address = deploy_service.deploy_contract(
-        'EndpointRegistry',
-        get_contract_path('EndpointRegistry.sol'),
-    )
-
-    endpoint_discovery_services = [
-        ContractDiscovery(
-            chain.node_address,
-            chain.discovery(endpoint_discovery_address),
-        )
-        for chain in blockchain_services
-    ]
-
-    raiden_apps = create_apps(
-        blockchain_services,
-        endpoint_discovery_services,
-        registry_address,
-        request.getfixturevalue('raiden_udp_ports'),
-        request.getfixturevalue('reveal_timeout'),
-        request.getfixturevalue('settle_timeout'),
-        request.getfixturevalue('database_paths'),
-        request.getfixturevalue('retry_interval'),
-        request.getfixturevalue('retries_before_backoff'),
-        request.getfixturevalue('throttle_capacity'),
-        request.getfixturevalue('throttle_fill_rate'),
-        request.getfixturevalue('nat_invitation_timeout'),
-        request.getfixturevalue('nat_keepalive_retries'),
-        request.getfixturevalue('nat_keepalive_timeout'),
-    )
-
-    if 'raiden_network' in request.fixturenames:
-        app_channels = create_network_channels(
-            raiden_apps,
-            request.getfixturevalue('channels_per_node'),
-        )
-
-        greenlets = []
-        for token_address in token_contract_addresses:
-            for app_pair in app_channels:
-                greenlets.append(gevent.spawn(
-                    netting_channel_open_and_deposit,
-                    app_pair[0],
-                    app_pair[1],
-                    token_address,
-                    request.getfixturevalue('deposit'),
-                    request.getfixturevalue('settle_timeout'),
-                ))
-        gevent.wait(greenlets)
-
-    elif 'raiden_chain' in request.fixturenames:
-        app_channels = create_sequential_channels(
-            raiden_apps,
-            request.getfixturevalue('channels_per_node'),
-        )
-
-        greenlets = []
-        for token_address in token_contract_addresses:
-            for app_pair in app_channels:
-                greenlets.append(gevent.spawn(
-                    netting_channel_open_and_deposit,
-                    app_pair[0],
-                    app_pair[1],
-                    token_address,
-                    request.getfixturevalue('deposit'),
-                    request.getfixturevalue('settle_timeout'),
-                ))
-        gevent.wait(greenlets)
-
-    # else: a test that is not creating channels
-
-    for app in raiden_apps:
-        app.stop(leave_channels=False)
-
-    # save the state from the last block into a genesis dict
-    tester = blockchain_services[0].tester_chain
-    tester.mine()
-
-    genesis_alloc = dict()
-    for account_address in tester.head_state.to_dict():
-        account_alloc = tester.head_state.account_to_dict(account_address)
-
-        # Both keys and values of the account storage associative array
-        # must now be encoded with 64 hex digits
-        if account_alloc['storage']:
-            account_alloc['storage'] = fix_tester_storage(account_alloc['storage'])
-
-        # code must be hex encoded with 0x prefix
-        account_alloc['code'] = account_alloc.get('code', '')
-
-        # account_to_dict returns accounts with nonce=0 and the nonce must
-        # be encoded with 16 hex digits
-        account_alloc['nonce'] = '0x%016x' % tester.head_state.get_nonce(account_address)
-
-        genesis_alloc[account_address] = account_alloc
-
-    all_keys = set(private_keys)
-    all_keys.add(deploy_key)
-    all_keys = sorted(all_keys)
-    account_addresses = [
-        privatekey_to_address(key)
-        for key in all_keys
-    ]
-
-    for address in account_addresses:
-        address_hex = hexlify(address).decode()
-        genesis_alloc[address_hex]['balance'] = DEFAULT_BALANCE_BIN
-
-    genesis = GENESIS_STUB.copy()
-    genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
-
-    random_marker = request.getfixturevalue('random_marker')
-    genesis['extraData'] = clique_extradata(
-        random_marker,
-        address_encoder(account_addresses[0])[2:],
-    )
-    genesis['alloc'] = genesis_alloc
-    genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
-    genesis['config']['defaultRegistryAddress'] = address_encoder(registry_address)
-    genesis['config']['tokenAddresses'] = [
-        address_encoder(token_address)
-        for token_address in token_contract_addresses
-    ]
-
-    return genesis
-
-
-@pytest.fixture
 def register_tokens():
     """ Should fixture generated tokens be registered with raiden (default: True). """
     return True
@@ -269,8 +90,8 @@ def token_addresses(
         token_amount,
         number_of_tokens,
         blockchain_services,
-        cached_genesis,
-        register_tokens):
+        register_tokens
+):
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `blockchain_services` and
     potentially pre-registered with the raiden Registry.
@@ -282,24 +103,18 @@ def token_addresses(
         register_tokens (bool): controls if tokens will be registered with raiden Registry
     """
 
-    if cached_genesis:
-        token_addresses = [
-            address_decoder(token_address)
-            for token_address in cached_genesis['config']['tokenAddresses']
-        ]
-    else:
-        participants = [
-            privatekey_to_address(blockchain_service.private_key) for
-            blockchain_service in blockchain_services.blockchain_services
-        ]
-        token_addresses = _token_addresses(
-            token_amount,
-            number_of_tokens,
-            blockchain_services.deploy_service,
-            blockchain_services.deploy_registry,
-            participants,
-            register_tokens
-        )
+    participants = [
+        privatekey_to_address(blockchain_service.private_key) for
+        blockchain_service in blockchain_services.blockchain_services
+    ]
+    token_addresses = _token_addresses(
+        token_amount,
+        number_of_tokens,
+        blockchain_services.deploy_service,
+        blockchain_services.deploy_registry,
+        participants,
+        register_tokens
+    )
 
     return token_addresses
 
@@ -316,13 +131,9 @@ def blockchain_services(
         blockchain_rpc_ports,
         blockchain_type,
         tester_blockgas_limit,
-        cached_genesis):
+):
 
     registry_address = None
-    if cached_genesis and 'defaultRegistryAddress' in cached_genesis['config']:
-        registry_address = address_decoder(
-            cached_genesis['config']['defaultRegistryAddress']
-        )
 
     if blockchain_type == 'geth':
         return _jsonrpc_services(
@@ -338,19 +149,11 @@ def blockchain_services(
 
 
 @pytest.fixture
-def endpoint_discovery_services(blockchain_services, cached_genesis):
-    discovery_address = None
-
-    if cached_genesis and 'defaultDiscoveryAddress' in cached_genesis['config']:
-        discovery_address = address_decoder(
-            cached_genesis['config']['defaultDiscoveryAddress']
-        )
-
-    if discovery_address is None:
-        discovery_address = blockchain_services.deploy_service.deploy_contract(
-            'EndpointRegistry',
-            get_contract_path('EndpointRegistry.sol'),
-        )
+def endpoint_discovery_services(blockchain_services):
+    discovery_address = blockchain_services.deploy_service.deploy_contract(
+        'EndpointRegistry',
+        get_contract_path('EndpointRegistry.sol'),
+    )
 
     return [
         ContractDiscovery(chain.node_address, chain.discovery(discovery_address))
@@ -370,14 +173,9 @@ def blockchain_backend(
         tmpdir,
         random_marker,
         blockchain_type,
-        cached_genesis):
+):
 
     genesis_path = None
-    if cached_genesis:
-        genesis_path = path.join(str(tmpdir), 'generated_genesis.json')
-
-        with open(genesis_path, 'w') as handler:
-            json.dump(cached_genesis, handler)
 
     if blockchain_type == 'geth':
         return _geth_blockchain(
@@ -456,7 +254,8 @@ def _jsonrpc_services(
         private_keys,
         verbose,
         poll_timeout,
-        registry_address=None):
+        registry_address=None
+):
 
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient

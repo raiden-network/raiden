@@ -185,9 +185,6 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     )
 
 
-# ChannelNewBalance events are not emmited with the blockchain cache (because
-# the deposit will be part of the smart contract state in the genesis)
-@pytest.mark.parametrize('blockchain_cache', [False])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_channel_events(raiden_chain, token_addresses):
