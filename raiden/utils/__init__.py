@@ -275,24 +275,6 @@ def channelstate_to_api_dict(channel_state):
     }
 
 
-def fix_tester_storage(storage):
-    """ pyethereum tester doesn't follow the canonical storage encoding:
-    Both keys and values of the account storage associative array must be encoded with 64 hex
-    digits. Also account_to_dict() from pyethereum can return 0x for a storage
-    position. That is an invalid way of representing 0x0.
-    Args:
-        storage (dict): the storage dictionary from tester
-    Returns:
-        newstorage (dict): the canonical representation
-    """
-    new_storage = dict()
-    for key, val in storage.items():
-        new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
-        new_val = '0x%064x' % int(val if val != '0x' else '0x0', 16)
-        new_storage[new_key] = new_val
-    return new_storage
-
-
 def get_system_spec():
     """Collect information about the system and installation.
     """

@@ -9,9 +9,7 @@ from raiden.utils import (
     get_contract_path,
     privatekey_to_address,
 )
-from raiden.tests.fixtures.tester import tester_chain
 from raiden.tests.utils.tests import cleanup_tasks
-from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
@@ -130,7 +128,6 @@ def blockchain_services(
                              # the geth subprocesses
         blockchain_rpc_ports,
         blockchain_type,
-        tester_blockgas_limit,
 ):
 
     registry_address = None
@@ -256,7 +253,6 @@ def _jsonrpc_services(
         poll_timeout,
         registry_address=None
 ):
-
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
     if registry_address is None:
@@ -297,44 +293,6 @@ def _jsonrpc_services(
             privkey,
             rpc_client,
             GAS_PRICE,
-        )
-        blockchain_services.append(blockchain)
-
-    return BlockchainServices(
-        deploy_registry,
-        deploy_blockchain,
-        blockchain_services,
-    )
-
-
-def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
-    # calling the fixture directly because we don't want to force all
-    # blockchain_services to instantiate a state
-    tester = tester_chain(
-        deploy_key,
-        private_keys,
-        tester_blockgas_limit,
-    )
-
-    tester_registry_address = tester_deploy_contract(
-        tester,
-        deploy_key,
-        contract_name='Registry',
-        contract_path=get_contract_path('Registry.sol'),
-    )
-
-    deploy_blockchain = BlockChainServiceTesterMock(
-        deploy_key,
-        tester,
-    )
-
-    deploy_registry = deploy_blockchain.registry(tester_registry_address)
-
-    blockchain_services = list()
-    for privkey in private_keys:
-        blockchain = BlockChainServiceTesterMock(
-            privkey,
-            tester,
         )
         blockchain_services.append(blockchain)
 
