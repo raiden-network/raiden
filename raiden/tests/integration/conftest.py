@@ -1,5 +1,10 @@
-def pytest_addoption(parser):
+# -*- coding: utf-8 -*-
+from raiden.tests.integration.fixtures.blockchain import *  # noqa: F401,F403
+from raiden.tests.integration.fixtures.matrix import *  # noqa: F401,F403
+from raiden.tests.integration.fixtures.raiden_network import *  # noqa: F401,F403
 
+
+def pytest_addoption(parser):
     parser.addoption(
         '--local-matrix',
         action='store',
@@ -29,7 +34,6 @@ def pytest_addoption(parser):
 
 
 def pytest_generate_tests(metafunc):
-
     local_matrix = metafunc.config.getoption('local_matrix')
 
     if local_matrix is not None and 'local_matrix' in metafunc.fixturenames:
