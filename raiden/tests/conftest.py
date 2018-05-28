@@ -12,7 +12,7 @@ import pytest
 from ethereum.tools.keys import PBKDF2_CONSTANTS
 
 from raiden.exceptions import RaidenShuttingDown
-from raiden.tests.fixtures import *  # noqa: F401,F403
+from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
 
 gevent.get_hub().SYSTEM_ERROR = BaseException

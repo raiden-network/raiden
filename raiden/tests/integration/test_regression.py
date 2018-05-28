@@ -11,7 +11,7 @@ from raiden.messages import (
     RevealSecret,
     Secret,
 )
-from raiden.tests.fixtures.raiden_network import (
+from raiden.tests.integration.fixtures.raiden_network import (
     CHAIN,
     wait_for_channels,
 )
