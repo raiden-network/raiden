@@ -10,8 +10,7 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
 
         is_rlp = 'rlp' in path
         is_encoding = 'encoding' in path
-        is_umsgpack = 'msgpack' in path
-        if is_rlp or is_encoding or is_umsgpack:
+        if is_rlp or is_encoding:
             # primitive calls dont count recursion
             # total calls count recursion
             # total time is the time for the function itself (excluding subcalls)
