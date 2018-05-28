@@ -51,7 +51,7 @@ from raiden.utils import (
     split_endpoint,
 )
 from raiden.tests.utils.smoketest import (
-    load_or_create_smoketest_config,
+    load_smoketest_config,
     start_ethereum,
     run_smoketests,
 )
@@ -857,7 +857,12 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     append_report('raiden log', None)
 
     print('[1/5] getting smoketest configuration')
-    smoketest_config = load_or_create_smoketest_config()
+    smoketest_config = load_smoketest_config()
+    if not smoketest_config:
+        append_report(
+            'smoketest configuration',
+            'Could not load the smoketest genesis configuration file.'
+        )
 
     print('[2/5] starting ethereum')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])

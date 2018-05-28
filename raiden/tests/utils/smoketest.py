@@ -15,25 +15,12 @@ import tempfile
 import time
 import traceback
 
-from ethereum.tools._solidity import get_solidity
-
-from raiden.tests.utils.tester_client import (
-    tester_deploy_contract,
-    BlockChainServiceTesterMock,
-    NettingChannelTesterMock,
-)
 from raiden.utils import (
-    get_contract_path,
     get_project_root,
-    fix_tester_storage,
-    address_encoder,
     address_decoder,
 )
-from raiden.blockchain.abi import contract_checksum
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.tests.utils.tester import create_tester_chain
 from raiden.network.utils import get_free_port
 from raiden.connection_manager import ConnectionManager
 
@@ -171,147 +158,17 @@ def run_smoketests(raiden_service, test_config, debug=False):
         return error
 
 
-def load_or_create_smoketest_config():
-    # get the contract and compiler (if available) versions
-    versions = dict()
-    for file in os.listdir(get_contract_path('')):
-        if file.endswith('.sol'):
-            versions[file] = contract_checksum(get_contract_path(file))
-    # if solc is available, record its version, too
-    if get_solidity() is not None:
-        solc_version_out, _ = subprocess.Popen(
-            [get_solidity().compiler_available(), '--version'],
-            stdout=subprocess.PIPE
-        ).communicate()
-        versions['solc'] = solc_version_out.split()[-1].decode()
+def load_smoketest_config():
+    smoketest_config_path = os.path.join(get_project_root(), 'smoketest_config.json')
 
-    smoketest_config_path = os.path.join(
-        get_project_root(),
-        'smoketest_config.json'
-    )
-    # try to load an existing smoketest genesis config
+    # try to load the existing smoketest genesis config
     smoketest_config = dict()
     if os.path.exists(smoketest_config_path):
         with open(smoketest_config_path) as handler:
             smoketest_config = json.load(handler)
-        # if the file versions still fit, return the genesis config (ignore solc if not available)
-        config_matches = [
-            versions[key] == smoketest_config['versions'][key]
-            for key in versions.keys()
-        ]
-        if all(config_matches):
             return smoketest_config
 
-    # something did not fit -- we will create the genesis
-    smoketest_config['versions'] = versions
-    raiden_config, smoketest_genesis = complete_genesis()
-    smoketest_config['genesis'] = smoketest_genesis
-    smoketest_config.update(raiden_config)
-    with open(os.path.join(get_project_root(), 'smoketest_config.json'), 'w') as handler:
-        json.dump(smoketest_config, handler)
-    return smoketest_config
-
-
-def deploy_and_open_channel_alloc(deployment_key):
-    """ Compiles, deploys and dumps a minimal raiden smart contract environment for use in a
-    genesis block. This will:
-        - deploy the raiden Registry contract stack
-        - deploy a token contract
-        - open a channel for the TEST_ACCOUNT address
-        - deploy the EndpointRegistry/discovery contract
-        - register a known value for the TEST_ACCOUNT address
-        - dump the complete state in a genesis['alloc'] compatible format
-        - return the state dump and the contract addresses
-    """
-    deployment_key_bin = unhexlify(deployment_key)
-    state = create_tester_chain(
-        deployment_key_bin,
-        [deployment_key_bin],
-        6 * 10 ** 6
-    )
-
-    registry_address = tester_deploy_contract(
-        state,
-        deployment_key_bin,
-        'Registry',
-        get_contract_path('Registry.sol'),
-    )
-
-    discovery_address = tester_deploy_contract(
-        state,
-        deployment_key_bin,
-        'EndpointRegistry',
-        get_contract_path('EndpointRegistry.sol'),
-    )
-
-    client = BlockChainServiceTesterMock(
-        deployment_key_bin,
-        state,
-    )
-
-    registry = client.registry(registry_address)
-
-    token_address = client.deploy_and_register_token(
-        registry,
-        'HumanStandardToken',
-        get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(100, 'smoketesttoken', 2, 'RST')
-    )
-
-    manager = registry.manager_by_token(token_address)
-    assert manager.private_key == deployment_key_bin
-
-    channel_address = manager.new_netting_channel(
-        unhexlify(TEST_PARTNER_ADDRESS),
-        50
-    )
-
-    client.token(token_address).approve(channel_address, TEST_DEPOSIT_AMOUNT)
-    channel = NettingChannelTesterMock(
-        state,
-        deployment_key_bin,
-        channel_address
-    )
-    channel.deposit(TEST_DEPOSIT_AMOUNT)
-
-    discovery = client.discovery(discovery_address)
-    discovery.proxy.registerEndpoint(TEST_ENDPOINT)
-
-    contracts = dict(
-        registry_address=address_encoder(registry_address),
-        token_address=address_encoder(token_address),
-        discovery_address=address_encoder(discovery_address),
-        channel_address=address_encoder(channel_address),
-    )
-
-    alloc = dict()
-    # preserve all accounts and contracts
-    for address in state.head_state.to_dict().keys():
-        alloc[address] = state.head_state.account_to_dict(address)
-
-    for account, content in alloc.items():
-        alloc[account]['storage'] = fix_tester_storage(content['storage'])
-
-    return dict(
-        alloc=alloc,
-        contracts=contracts,
-    )
-
-
-def complete_genesis():
-    smoketest_genesis = GENESIS_STUB.copy()
-    smoketest_genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
-    smoketest_genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
-        hexlify(b'raiden').decode(),
-        TEST_ACCOUNT['address'],
-    )
-    smoketest_genesis['alloc'][TEST_ACCOUNT['address']] = dict(balance=hex(10 ** 18))
-
-    raiden_config = deploy_and_open_channel_alloc(deployment_key=TEST_PRIVKEY)
-    smoketest_genesis['alloc'].update(
-        raiden_config['alloc']
-    )
-    return raiden_config, smoketest_genesis
+    return None
 
 
 def init_with_genesis(smoketest_genesis):
