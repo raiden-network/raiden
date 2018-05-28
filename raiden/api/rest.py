@@ -3,6 +3,7 @@
 from http import HTTPStatus
 import json
 import sys
+import logging
 
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
@@ -252,7 +253,14 @@ class APIServer:
         self.flask_app.run(host=host, port=port, **kwargs)
 
     def start(self, host='127.0.0.1', port=5001):
-        self.wsgiserver = WSGIServer((host, port), self.flask_app, log=log, error_log=log)
+        # WSGI expects a stdlib logger, with structlog there's conflict of method names
+        wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+        self.wsgiserver = WSGIServer(
+            (host, port),
+            self.flask_app,
+            log=wsgi_log,
+            error_log=wsgi_log
+        )
         self.wsgiserver.start()
 
     def stop(self, timeout=5):
