@@ -8,7 +8,6 @@ filelock==3.0
 Flask-Cors==3.0.3
 Flask-Restful==0.3.6
 Flask==0.12.2
-ipaddress==1.0.19
 ipython<5.0.0
 marshmallow==2.15.0
 marshmallow_polyfield==3.2
