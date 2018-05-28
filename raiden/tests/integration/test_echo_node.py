@@ -6,8 +6,10 @@ from raiden.transfer.events import EventTransferReceivedSuccess
 from raiden.utils.echo_node import EchoNode
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils import get_channel_events_for_token
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import (
+    must_contain_entry,
+    get_channel_events_for_token,
+)
 
 
 # pylint: disable=too-many-locals

@@ -202,10 +202,3 @@ def make_direct_transfer(
         recipient,
         locksroot,
     )
-
-
-def dump_messages(message_list):
-    print('dumping {} messages'.format(len(message_list)))
-
-    for message in message_list:
-        print(message)

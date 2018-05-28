@@ -1,29 +1,8 @@
 # -*- coding: utf-8 -*-
 import gc
-import os
 from itertools import chain, combinations, product
 
 import gevent
-
-from raiden.utils import get_project_root
-
-
-def get_test_contract_path(contract_name):
-    contract_path = os.path.join(
-        get_project_root(),
-        'tests',
-        'smart_contracts',
-        contract_name
-    )
-    return os.path.realpath(contract_path)
-
-
-def get_relative_contract(relative_to, contract_name):
-    contract_path = os.path.join(
-        os.path.dirname(os.path.realpath(relative_to)),
-        contract_name
-    )
-    return contract_path
 
 
 def cleanup_tasks():
