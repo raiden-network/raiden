@@ -269,7 +269,7 @@ def raiden_network(
 
     _raiden_cleanup(request, raiden_apps)
 
-    # Force blocknumber update for the tester backend
+    # Force blocknumber update
     for app in raiden_apps:
         app.raiden.alarm.poll_for_new_block()
 
