@@ -50,11 +50,11 @@ def count_token_network_channels(
     return count
 
 
-def state_from_raiden(raiden):
+def state_from_raiden(raiden) -> 'NodeState':
     return raiden.wal.state_manager.current_state
 
 
-def state_from_app(app):
+def state_from_app(app) -> 'NodeState':
     return app.raiden.wal.state_manager.current_state
 
 
@@ -199,7 +199,8 @@ def get_channelstate_for(
         node_state: NodeState,
         payment_network_id: typing.Address,
         token_address: typing.Address,
-        partner_address: typing.Address):
+        partner_address: typing.Address,
+) -> typing.Optional['NettingChannelState']:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_token_address(
         node_state,
@@ -218,7 +219,8 @@ def get_channelstate_by_id(
         node_state: NodeState,
         payment_network_id: typing.Address,
         token_address: typing.Address,
-        channel_id):
+        channel_id: typing.Address,
+) -> typing.Optional['NettingChannelState']:
     token_network = get_token_network_by_token_address(
         node_state,
         payment_network_id,
@@ -235,7 +237,8 @@ def get_channelstate_by_id(
 def get_channestate_for_receiving(
         node_state: NodeState,
         payment_network_id: typing.Address,
-        token_address: typing.Address):
+        token_address: typing.Address,
+) -> typing.List['NettingChannelState']:
     """Return the state of channels that had received any transfers in this
     token network.
     """
