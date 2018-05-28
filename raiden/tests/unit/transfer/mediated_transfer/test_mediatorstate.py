@@ -36,7 +36,7 @@ from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
     HOP1_KEY,
-    HOP1_TIMEOUT,
+    UNIT_SETTLE_TIMEOUT,
     HOP2,
     HOP2_KEY,
     HOP3,
@@ -1134,7 +1134,7 @@ def test_events_for_close_hold_for_unpaid_payee():
 def test_secret_learned():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
-    from_expiration = HOP1_TIMEOUT
+    from_expiration = UNIT_SETTLE_TIMEOUT
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1273,7 +1273,7 @@ def test_mediate_transfer():
 def test_init_mediator():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
-    from_expiration = HOP1_TIMEOUT
+    from_expiration = UNIT_SETTLE_TIMEOUT
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1342,7 +1342,7 @@ def test_init_mediator():
 def test_no_valid_routes():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
-    from_expiration = HOP1_TIMEOUT
+    from_expiration = UNIT_SETTLE_TIMEOUT
     pseudo_random_generator = random.Random()
 
     from_channel = factories.make_channel(
@@ -1528,7 +1528,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     #   has enough time to follow the protocol without closing the channel B-C.
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    from_expiration = HOP1_TIMEOUT
+    from_expiration = UNIT_SETTLE_TIMEOUT
     pseudo_random_generator = random.Random()
 
     # C's channel with the Attacker node A2
