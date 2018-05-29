@@ -7,9 +7,9 @@ import select
 import signal
 import sys
 import time
-
 import structlog
-from structlog import StreamHandler, Formatter
+from logging import StreamHandler, Formatter
+
 from ethereum.tools._solidity import compile_file
 from eth_utils import denoms
 import gevent
