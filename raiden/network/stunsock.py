@@ -17,7 +17,7 @@ def stun_socket(
 ):
     timeout = socket.gettimeout()
     socket.settimeout(2)
-    log.debug('Initiating STUN for %s:%s', source_ip, source_port)
+    log.debug('Initiating STUN', source_ip=source_ip, source_port=source_port)
     nat_type, nat = stun.get_nat_type(
         socket,
         source_ip,
