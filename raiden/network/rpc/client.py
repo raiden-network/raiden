@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import warnings
 import time
+import os
 from binascii import unhexlify
 from typing import Optional, Union
+from json.decoder import JSONDecodeError
 
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
@@ -13,22 +15,12 @@ from eth_abi import encode_abi
 from web3.utils.abi import get_constructor_abi, get_abi_input_types
 from gevent.lock import Semaphore
 import structlog
-from ethereum.transactions import Transaction
-from tinyrpc.protocols.jsonrpc import (
-    JSONRPCErrorResponse,
-    JSONRPCProtocol,
-    JSONRPCSuccessResponse,
-)
-from tinyrpc.transports.http import HttpPostClientTransport
-from tinyrpc.exc import InvalidReplyError
-import requests
 
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
     RaidenShuttingDown,
 )
-from raiden.network.transport.udp import udp_utils
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
@@ -47,6 +39,35 @@ from raiden.utils.solc import (
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def make_connection_test_middleware(client):
+    def connection_test_middleware(make_request, web3):
+        """ Creates middleware that checks if the provider is connected. """
+
+        # not sure why this is necessary, but otherwise the first rpc call fails
+        web3.providers[0].make_request('web3_clientVersion', [])
+
+        def middleware(method, params):
+            # raise exception when shutting down
+            if client.stop_event and client.stop_event.is_set():
+                raise RaidenShuttingDown()
+
+            try:
+                if web3.isConnected():
+                    return make_request(method, params)
+                else:
+                    raise EthNodeCommunicationError('Web3 provider not connected')
+
+            # the isConnected check doesn't currently catch JSON errors
+            # see https://github.com/ethereum/web3.py/issues/866
+            except JSONDecodeError:
+                raise EthNodeCommunicationError('Web3 provider not connected')
+            except EthNodeCommunicationError:
+                raise EthNodeCommunicationError('Web3 provider not connected')
+
+        return middleware
+    return connection_test_middleware
 
 
 def check_address_has_code(
@@ -167,19 +188,9 @@ class JSONRPCClient:
             raise ValueError('Invalid private key')
 
         endpoint = 'http://{}:{}'.format(host, port)
-        self.session = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(pool_maxsize=50)
-        self.session.mount(endpoint, adapter)
-
-        self.transport = HttpPostClientTransport(
-            endpoint,
-            post_method=self.session.post,
-            headers={'content-type': 'application/json'},
-        )
 
         self.port = port
         self.privkey = privkey
-        self.protocol = JSONRPCProtocol()
         self.sender = privatekey_to_address(privkey)
         # Needs to be initialized to None in the beginning since JSONRPCClient
         # gets constructed before the RaidenService Object.
@@ -210,8 +221,9 @@ class JSONRPCClient:
         # we use a PoA chain for smoketest, use this middleware to fix this
         self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
 
-    def __del__(self):
-        self.session.close()
+        # create the connection test middleware
+        connection_test = make_connection_test_middleware(self)
+        self.web3.middleware_stack.inject(connection_test, layer=0)
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
@@ -423,52 +435,6 @@ class JSONRPCClient:
             contract_interface,
             contract_address,
         )
-
-    def rpccall_with_retry(self, method: str, *args):
-        """ Do the request and return the result.
-
-        Args:
-            method: The JSON-RPC method.
-            args: The encoded arguments expected by the method.
-                - Object arguments must be supplied as a dictionary.
-                - Quantity arguments must be hex encoded starting with '0x' and
-                without left zeros.
-                - Data arguments must be hex encoded starting with '0x'
-        """
-        request = self.protocol.create_request(method, args)
-        request_serialized = request.serialize().encode()
-
-        for i, timeout in enumerate(udp_utils.timeout_two_stage(10, 3, 10)):
-            if self.stop_event and self.stop_event.is_set():
-                raise RaidenShuttingDown()
-
-            try:
-                reply = self.transport.send_message(request_serialized)
-            except (requests.exceptions.ConnectionError, InvalidReplyError):
-                log.info(
-                    'Timeout in eth client connection to {}. Is the client offline? Trying '
-                    'again in {}s.'.format(self.transport.endpoint, timeout)
-                )
-            else:
-                if self.stop_event and self.stop_event.is_set():
-                    raise RaidenShuttingDown()
-
-                if i > 0:
-                    log.info('Client reconnected')
-
-                jsonrpc_reply = self.protocol.parse_reply(reply)
-
-                if isinstance(jsonrpc_reply, JSONRPCSuccessResponse):
-                    return jsonrpc_reply.result
-                elif isinstance(jsonrpc_reply, JSONRPCErrorResponse):
-                    raise EthNodeCommunicationError(
-                        jsonrpc_reply.error,
-                        jsonrpc_reply._jsonrpc_error_code,  # pylint: disable=protected-access
-                    )
-                else:
-                    raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
-
-            gevent.sleep(timeout)
 
     def send_transaction(
             self,
