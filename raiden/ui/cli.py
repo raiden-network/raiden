@@ -732,7 +732,11 @@ def run(ctx, **kwargs):
     # not timeout.
 
     def _run_app():
-        app_ = ctx.invoke(app, **kwargs)
+        # this catches exceptions raised when waiting for the stalecheck to complete
+        try:
+            app_ = ctx.invoke(app, **kwargs)
+        except EthNodeCommunicationError as err:
+            sys.exit(1)
 
         domain_list = []
         if kwargs['rpccorsdomain']:
