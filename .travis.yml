@@ -49,7 +49,7 @@ jobs:
       install: ./.travis/install.sh
       before_script: ./.travis/before_script.sh
       script: RAIDENVERSION=$TRAVIS_TAG make bundle-docker
-      env: TEST_TYPE=""
+      env: TEST=""
       deploy:
       - provider: releases
         api_key:
@@ -75,7 +75,7 @@ jobs:
       os: osx
       language: generic
       osx_image: xcode8.3
-      env: TEST_TYPE=""
+      env: TEST=""
       before_install:
         - sysctl -n machdep.cpu.brand_string
         - mkdir -p $HOME/.bin
