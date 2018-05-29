@@ -455,3 +455,11 @@ git push hackaugusto travis_build
 ```
 
 Congratulations, you have added to someone else's PR!
+
+#### Integrating Pull Requests
+
+When integrating a succesfull Pull Request into the codebase we have the option of using either a "Rebase and Merge" or to "Create a Merge commit". Unfortunately in Github the default option is to "Create a Merge commit". This is not our preferred option as
+in this way we can't be sure that the result of the merge will also have all tests passing, since there may be other patches merged since the PR opened. But there are many PRs which we definitely know won't have any conflicts and for which enforcing rebase would make no sense and only waste our time. As such we provide the option to use both at our own discretion. So the general guidelines are:
+
+- If there are patches that have been merged to master since the PR was opened, on top of which our current PR may have different behaviour then use **Rebase and Merge**.
+- If there are patches that have been merged to master since the PR was opened which touch documentation, infrastucture or completely unrelated parts of the code then you can freely use **Create a Merge Commit** and save the time of rebasing.
