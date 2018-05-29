@@ -82,7 +82,6 @@ def geth_to_cmd(node, datadir, verbosity):
     # dont use the '--dev' flag
     cmd.extend([
         '--nodiscover',
-        '--ipcdisable',
         '--rpc',
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
