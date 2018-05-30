@@ -57,6 +57,9 @@ class NettingChannel:
             CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
         )
+        CONTRACT_MANAGER.check_contract_version(
+            self.proxy.call('contract_version').decode(),
+            CONTRACT_NETTING_CHANNEL)
 
         # check we are a participant of the given channel
         self.detail()

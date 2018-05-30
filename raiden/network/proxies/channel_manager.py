@@ -62,6 +62,11 @@ class ChannelManager:
             address_encoder(manager_address),
         )
 
+        CONTRACT_MANAGER.check_contract_version(
+            proxy.call('contract_version').decode(),
+            CONTRACT_CHANNEL_MANAGER
+        )
+
         self.address = manager_address
         self.proxy = proxy
         self.client = jsonrpc_client

@@ -5,14 +5,18 @@ import hashlib
 import json
 import os
 import subprocess
+import re
 
 from threading import Lock
 
 from solc import compile_files, get_solc_version
 from ethereum.abi import event_id, normalize_name
 
-from raiden.utils import get_contract_path
+
+from raiden.utils import get_contract_path, compare_versions
 from raiden.constants import MIN_REQUIRED_SOLC
+from raiden.exceptions import ContractVersionMismatch
+
 
 __all__ = (
     'CONTRACT_MANAGER',
@@ -44,6 +48,8 @@ EVENT_CHANNEL_SECRET_REVEALED = 'ChannelSecretRevealed'
 EVENT_CHANNEL_SETTLED = 'ChannelSettled'
 EVENT_TOKEN_ADDED = 'TokenAdded'
 
+CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$' # noqa
+
 
 def get_event(full_abi, event_name):
     for description in full_abi:
@@ -69,6 +75,15 @@ def get_eventname_types(event_description):
         for element in event_description['inputs']
     ]
     return name, encode_types
+
+
+def parse_contract_version(contract_file, version_re):
+    contract_file = get_contract_path(contract_file)
+    with open(contract_file, 'r') as original:
+        for line in original.readlines():
+            match = version_re.match(line)
+            if match:
+                return match.group(1)
 
 
 def get_static_or_compile(
@@ -188,6 +203,7 @@ class ContractManager:
             'ChannelSettled': CONTRACT_NETTING_CHANNEL,
             'TokenAdded': CONTRACT_REGISTRY,
         }
+        self.contract_to_version = dict()
 
         self.human_standard_token_compiled = None
         self.channel_manager_compiled = None
@@ -231,6 +247,26 @@ class ContractManager:
             )
 
             self.is_instantiated = True
+            self.init_contract_versions()
+
+    def init_contract_versions(self):
+        contracts = [
+            ('HumanStandardToken.sol', CONTRACT_HUMAN_STANDARD_TOKEN),
+            ('ChannelManagerContract.sol', CONTRACT_CHANNEL_MANAGER),
+            ('EndpointRegistry.sol', CONTRACT_ENDPOINT_REGISTRY),
+            ('NettingChannelContract.sol', CONTRACT_NETTING_CHANNEL),
+            ('Registry.sol', CONTRACT_REGISTRY)
+        ]
+        version_re = re.compile(CONTRACT_VERSION_RE)
+        for contract_file, contract_name in contracts:
+            self.contract_to_version[contract_name] = parse_contract_version(
+                contract_file,
+                version_re
+            )
+
+    def get_version(self, contract_name):
+        """Return version of the contract."""
+        return self.contract_to_version[contract_name]
 
     def get_abi(self, contract_name):
         self.instantiate()
@@ -243,6 +279,12 @@ class ContractManager:
         """
         event = get_event(self.get_abi(self.event_to_contract[event_name]), event_name)
         return event_id(*get_eventname_types(event))
+
+    def check_contract_version(self, deployed_version, contract_name):
+        """Check if the deployed contract version matches used contract version."""
+        our_version = CONTRACT_MANAGER.get_version(contract_name)
+        if compare_versions(deployed_version, our_version) is False:
+            raise ContractVersionMismatch('Incompatible ABI for %s' % contract_name)
 
 
 CONTRACT_MANAGER = ContractManager()
