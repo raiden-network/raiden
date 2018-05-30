@@ -8,7 +8,7 @@ import subprocess
 
 from threading import Lock
 
-from ethereum.tools import _solidity
+from solc import compile_files, get_solc_version
 from ethereum.abi import event_id, normalize_name
 
 from raiden.utils import get_contract_path
@@ -107,8 +107,8 @@ def get_static_or_compile(
 
     validate_solc()
 
-    compiled = _solidity.compile_contract(
-        contract_path,
+    compiled = compile_files(
+        [contract_path],
         contract_name,
         **compiler_flags
     )
@@ -118,7 +118,12 @@ def get_static_or_compile(
         with open(precompiled_path, 'w') as f:
             json.dump(compiled, f)
         print("'{}' written".format(precompiled_path))
-    return compiled
+    compiled_abi = [
+        v for k, v in compiled.items()
+        if k.split(':')[1] == contract_name
+    ]
+    assert len(compiled_abi) == 1
+    return compiled_abi[0]
 
 
 def contract_checksum(contract_path):
@@ -128,17 +133,16 @@ def contract_checksum(contract_path):
 
 
 def validate_solc():
-    if _solidity.get_solidity() is None:
+    if get_solc_version() is None:
         raise RuntimeError(
             "Couldn't find the solc in the current $PATH.\n"
             "Make sure the solidity compiler is installed and available on your $PATH."
         )
 
     try:
-        _solidity.compile_contract(
-            get_contract_path('HumanStandardToken.sol'),
+        compile_files(
+            [get_contract_path('HumanStandardToken.sol')],
             'HumanStandardToken',
-            combined='abi',
             optimize=False,
         )
     except subprocess.CalledProcessError as e:
@@ -199,35 +203,30 @@ class ContractManager:
             self.human_standard_token_compiled = get_static_or_compile(
                 get_contract_path('HumanStandardToken.sol'),
                 'HumanStandardToken',
-                combined='abi',
                 optimize=False,
             )
 
             self.channel_manager_compiled = get_static_or_compile(
                 get_contract_path('ChannelManagerContract.sol'),
                 'ChannelManagerContract',
-                combined='abi',
                 optimize=False,
             )
 
             self.endpoint_registry_compiled = get_static_or_compile(
                 get_contract_path('EndpointRegistry.sol'),
                 'EndpointRegistry',
-                combined='abi',
                 optimize=False,
             )
 
             self.netting_channel_compiled = get_static_or_compile(
                 get_contract_path('NettingChannelContract.sol'),
                 'NettingChannelContract',
-                combined='abi',
                 optimize=False,
             )
 
             self.registry_compiled = get_static_or_compile(
                 get_contract_path('Registry.sol'),
                 'Registry',
-                combined='abi',
                 optimize=False,
             )
 

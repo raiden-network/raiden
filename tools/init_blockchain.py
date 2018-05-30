@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify
 
-from ethereum.tools._solidity import compile_file
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3
+from raiden.utils.solc import compile_files_cwd
 
 
 def connect(host='127.0.0.1', port=8545):
@@ -30,7 +30,7 @@ def create_and_distribute_token(
     contract_path = get_contract_path('HumanStandardToken.sol')
     token_proxy = client.deploy_solidity_contract(
         'HumanStandardToken',
-        compile_file(contract_path),
+        compile_files_cwd([contract_path]),
         dict(),
         (
             len(receivers) * amount_per_receiver,

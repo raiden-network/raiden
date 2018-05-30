@@ -1,24 +1,18 @@
 # -*- coding: utf-8 -*-
-import os
 import warnings
 import time
 from binascii import unhexlify
 from typing import Optional, List, Dict, Union
 
 import rlp
+import os
 import gevent
 import cachetools
 from eth_abi import encode_abi
 from web3.utils.abi import get_constructor_abi, get_abi_input_types
 from gevent.lock import Semaphore
 import structlog
-from ethereum.tools import _solidity
 from ethereum.transactions import Transaction
-from ethereum.tools._solidity import (
-    solidity_unresolved_symbols,
-    solidity_library_symbol,
-    solidity_resolve_symbols
-)
 from tinyrpc.protocols.jsonrpc import (
     JSONRPCErrorResponse,
     JSONRPCProtocol,
@@ -49,9 +43,13 @@ from raiden.utils import (
     topic_encoder,
 )
 from raiden.utils.typing import Address
+from raiden.utils.solc import (
+    solidity_unresolved_symbols,
+    solidity_library_symbol,
+    solidity_resolve_symbols
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
 def check_address_has_code(
@@ -86,7 +84,7 @@ def deploy_dependencies_symbols(all_contract):
         symbols_to_contract[symbol] = contract_name
 
     for contract_name, contract in all_contract.items():
-        unresolved_symbols = solidity_unresolved_symbols(contract['bin_hex'])
+        unresolved_symbols = solidity_unresolved_symbols(contract['bin'])
         dependencies[contract_name] = [
             symbols_to_contract[unresolved]
             for unresolved in unresolved_symbols
@@ -326,13 +324,11 @@ class JSONRPCClient:
                                  the contract data from the `all_contracts` dict.
             timeout (int): Amount of time to poll the chain to confirm deployment
         """
-
         if contract_name in all_contracts:
             contract_key = contract_name
 
         elif contract_path is not None:
-            _, filename = os.path.split(contract_path)
-            contract_key = filename + ':' + contract_name
+            contract_key = os.path.basename(contract_path) + ':' + contract_name
 
             if contract_key not in all_contracts:
                 raise ValueError('Unknown contract {}'.format(contract_name))
@@ -344,7 +340,7 @@ class JSONRPCClient:
         libraries = dict(libraries)
         contract = all_contracts[contract_key]
         contract_interface = contract['abi']
-        symbols = solidity_unresolved_symbols(contract['bin_hex'])
+        symbols = solidity_unresolved_symbols(contract['bin'])
 
         if symbols:
             available_symbols = list(map(solidity_library_symbol, all_contracts.keys()))
@@ -367,10 +363,9 @@ class JSONRPCClient:
             for deploy_contract in deployment_order:
                 dependency_contract = all_contracts[deploy_contract]
 
-                hex_bytecode = solidity_resolve_symbols(dependency_contract['bin_hex'], libraries)
+                hex_bytecode = solidity_resolve_symbols(dependency_contract['bin'], libraries)
                 bytecode = unhexlify(hex_bytecode)
 
-                dependency_contract['bin_hex'] = hex_bytecode
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash_hex = self.send_transaction(
@@ -393,11 +388,13 @@ class JSONRPCClient:
                 if not deployed_code:
                     raise RuntimeError('Contract address has no code, check gas usage.')
 
-            hex_bytecode = solidity_resolve_symbols(contract['bin_hex'], libraries)
+            hex_bytecode = solidity_resolve_symbols(contract['bin'], libraries)
             bytecode = unhexlify(hex_bytecode)
 
-            contract['bin_hex'] = hex_bytecode
             contract['bin'] = bytecode
+
+        if isinstance(contract['bin'], str):
+            contract['bin'] = unhexlify(contract['bin'])
 
         if constructor_parameters:
             constructor_abi = get_constructor_abi(contract_interface)

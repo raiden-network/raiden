@@ -216,13 +216,21 @@ def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
+def get_relative_path(file_name) -> str:
+    prefix = os.path.commonprefix([
+        os.path.realpath('.'),
+        os.path.realpath(file_name)
+    ])
+    return file_name.replace(prefix + '/', '')
+
+
 def get_contract_path(contract_name: str) -> str:
     contract_path = os.path.join(
         get_project_root(),
         'smart_contracts',
         contract_name
     )
-    return os.path.realpath(contract_path)
+    return get_relative_path(contract_path)
 
 
 def safe_lstrip_hex(val):

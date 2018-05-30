@@ -4,7 +4,6 @@ import os
 import gevent
 from cachetools.func import ttl_cache
 import structlog
-from ethereum.tools import _solidity
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -21,6 +20,7 @@ from raiden.utils import (
     privatekey_to_address,
     quantity_decoder,
 )
+from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -170,7 +170,7 @@ class BlockChainService:
         self.client.rpccall_with_retry('eth_uninstallFilter', filter_id_raw)
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
-        contracts = _solidity.compile_file(contract_path, libraries=dict())
+        contracts = compile_files_cwd([contract_path])
 
         log.info(
             'Deploying contract: ',

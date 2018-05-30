@@ -27,3 +27,4 @@ eth-keyfile==0.5.1
 eth_utils==1.0.3
 structlog
 colorama
+py-solc
