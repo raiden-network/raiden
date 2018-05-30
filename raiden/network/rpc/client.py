@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_canonical_address, remove_0x_prefix
 import gevent
 import cachetools
 from eth_abi import encode_abi
@@ -37,6 +37,7 @@ from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols
 )
+from raiden.constants import NULL_ADDRESS
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -44,9 +45,6 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def make_connection_test_middleware(client):
     def connection_test_middleware(make_request, web3):
         """ Creates middleware that checks if the provider is connected. """
-
-        # not sure why this is necessary, but otherwise the first rpc call fails
-        web3.providers[0].make_request('web3_clientVersion', [])
 
         def middleware(method, params):
             # raise exception when shutting down
@@ -62,8 +60,6 @@ def make_connection_test_middleware(client):
             # the isConnected check doesn't currently catch JSON errors
             # see https://github.com/ethereum/web3.py/issues/866
             except JSONDecodeError:
-                raise EthNodeCommunicationError('Web3 provider not connected')
-            except EthNodeCommunicationError:
                 raise EthNodeCommunicationError('Web3 provider not connected')
 
         return middleware
@@ -457,7 +453,7 @@ class JSONRPCClient:
                 'behavior.'
             )
 
-        if to == b'0' * 20:
+        if to == to_canonical_address(NULL_ADDRESS):
             warnings.warn('For contract creation the empty string must be used.')
 
         transaction = dict(
@@ -465,7 +461,7 @@ class JSONRPCClient:
             gasPrice=self.gasprice(),
             gas=self.check_startgas(startgas),
             value=value,
-            data=data
+            data=data,
         )
 
         # add the to address if not deploying a contract
@@ -476,7 +472,7 @@ class JSONRPCClient:
 
         result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
         encoded_result = encode_hex(result)
-        return encoded_result[2 if encoded_result.startswith('0x') else 0:]
+        return remove_0x_prefix(encoded_result)
 
     def eth_call(
             self,
@@ -549,12 +545,10 @@ class JSONRPCClient:
         try:
             return self.web3.eth.estimateGas(json_data)
         except ValueError as err:
-            print(err)
             tx_would_fail = (
                 '-32015' in str(err) or
                 '-32000' in str(err)
             )
-            # tx_would_fail = e.error_code and e.error_code in (-32015, -32000)
             if tx_would_fail:  # -32015 is parity and -32000 is geth
                 return None
             else:
