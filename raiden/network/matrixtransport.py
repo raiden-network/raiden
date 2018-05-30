@@ -186,10 +186,6 @@ class MatrixTransport:
                 'Do not use send_async for {} messages'.format(message.__class__.__name__),
             )
 
-        if isinstance(message, SignedMessage) and not message.sender:
-            # FIXME: This can't be right
-            message.sender = self._client.user_id
-
         # Ignore duplicated messages
         message_id = message.message_identifier
         if message_id not in self._messageids_to_asyncresult:
@@ -394,10 +390,6 @@ class MatrixTransport:
             message_dict = json.loads(data)
             self.log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
-
-        if isinstance(message, SignedMessage) and not message.sender:
-            # FIXME: This can't be right
-            message.sender = peer_address
 
         if isinstance(message, Delivered):
             self._receive_delivered(message)
