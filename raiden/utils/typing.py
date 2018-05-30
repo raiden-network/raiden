@@ -12,7 +12,7 @@ T_BlockNumber = int
 BlockNumber = NewType('BlockNumber', T_BlockNumber)
 
 T_BlockTimeout = int
-BlockTimeout = NewType('BlockNumber', T_BlockTimeout)
+BlockTimeout = NewType('BlockTimeout', T_BlockTimeout)
 
 T_ChannelID = bytes
 ChannelID = NewType('ChannelID', T_ChannelID)
@@ -20,11 +20,29 @@ ChannelID = NewType('ChannelID', T_ChannelID)
 T_MessageID = int
 MessageID = NewType('MessageID', T_MessageID)
 
+T_PaymentID = bytes
+PaymentID = NewType('PaymentID', T_PaymentID)
+
+T_PaymentAmount = int
+PaymentAmount = NewType('PaymentAmount', T_PaymentAmount)
+
+T_PaymentNetworkID = bytes
+PaymentNetworkID = NewType('PaymentNetworkID', T_PaymentNetworkID)
+
 T_Keccak256 = bytes
 Keccak256 = NewType('Keccak256', T_Keccak256)
 
+T_TokenAddress = bytes
+TokenAddress = NewType('TokenAddres', T_TokenAddress)
+
+T_TokenNetworkID = bytes
+TokenNetworkID = NewType('TokenNetworkID', T_TokenNetworkID)
+
 T_TokenAmount = int
 TokenAmount = NewType('TokenAmount', T_TokenAmount)
+
+T_TransferID = bytes
+TransferID = NewType('TransferID', T_TransferID)
 
 T_Secret = bytes
 Secret = NewType('Secret', T_Secret)
