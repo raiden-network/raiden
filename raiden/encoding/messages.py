@@ -57,7 +57,6 @@ token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
 initiator = make_field('initiator', 20, '20s')
-sender = make_field('sender', 20, '20s')
 channel = make_field('channel', 20, '20s')
 
 locksroot = make_field('locksroot', 32, '32s')
@@ -77,7 +76,6 @@ Processed = namedbuffer(
     [
         cmdid(PROCESSED),
         pad(3),
-        sender,
         message_identifier,
         signature,
     ],
