@@ -130,7 +130,7 @@ def main(bootnode):
     try:
         web3.eth.syncing
     except FileNotFoundError:
-        log.fatal("Can't connect to geth ipc port - check previous output")
+        log.critical("Can't connect to geth ipc port - check previous output")
         geth_proc.terminate()
         sys.exit(1)
 
@@ -153,7 +153,7 @@ def main(bootnode):
         except Timeout:
             err_cnt += 1
             if err_cnt > 10:
-                log.fatal("Timeout connecting to geth")
+                log.critical("Timeout connecting to geth")
                 geth_proc.terminate()
                 sys.exit(3)
             log.warning("Timeout connecting to geth, retrying.")
@@ -165,7 +165,7 @@ def main(bootnode):
                 synced = True
                 break
             if time.monotonic() - start > SYNC_START_DELAY:
-                log.fatal("Node hasn't started syncing after {}s".format(SYNC_START_DELAY))
+                log.critical("Node hasn't started syncing after {}s".format(SYNC_START_DELAY))
                 geth_proc.terminate()
                 sys.exit(2)
             continue
@@ -192,7 +192,7 @@ def main(bootnode):
     geth_proc.wait(10)
 
     if not synced:
-        log.fatal("Geth terminated without finished syncing")
+        log.critical("Geth terminated without finished syncing")
         sys.exit(4)
 
     log.info("Restarting geth")
