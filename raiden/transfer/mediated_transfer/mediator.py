@@ -569,8 +569,8 @@ def events_for_refund_transfer(
             refund_transfer.initiator,
             refund_transfer.target,
             refund_transfer.lock.amount,
-            refund_transfer.payment_identifier,
             message_identifier,
+            refund_transfer.payment_identifier,
             new_lock_expiration,
             refund_transfer.lock.secrethash,
         )
