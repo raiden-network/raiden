@@ -114,7 +114,7 @@ class AccountManager:
                                 msg = 'Can not read account file (errno=%s)' % ex.errno
                             if isinstance(ex, json.decoder.JSONDecodeError):
                                 msg = 'The account file is not valid JSON format'
-                            log.warning('OsError', msg=msg, path=fullpath, ex=ex)
+                            log.warning(msg, path=fullpath, ex=ex)
 
     def address_in_keystore(self, address):
         if address is None:
