@@ -10,7 +10,8 @@ import re
 from threading import Lock
 
 from solc import compile_files, get_solc_version
-from ethereum.abi import event_id, normalize_name
+from eth_utils import event_abi_to_log_topic, encode_hex
+from web3.utils.contracts import find_matching_event_abi
 
 
 from raiden.utils import get_contract_path, compare_versions
@@ -49,32 +50,6 @@ EVENT_CHANNEL_SETTLED = 'ChannelSettled'
 EVENT_TOKEN_ADDED = 'TokenAdded'
 
 CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$' # noqa
-
-
-def get_event(full_abi, event_name):
-    for description in full_abi:
-        name = description.get('name')
-
-        # skip constructors
-        if name is None:
-            continue
-
-        normalized_name = normalize_name(name)
-
-        if normalized_name == event_name:
-            return description
-
-
-def get_eventname_types(event_description):
-    if 'name' not in event_description:
-        raise ValueError('Not an event description, missing the name.')
-
-    name = normalize_name(event_description['name'])
-    encode_types = [
-        element['type']
-        for element in event_description['inputs']
-    ]
-    return name, encode_types
 
 
 def parse_contract_version(contract_file, version_re):
@@ -273,12 +248,14 @@ class ContractManager:
         compiled = getattr(self, '{}_compiled'.format(contract_name))
         return compiled['abi']
 
-    def get_event_id(self, event_name):
+    def get_event_id(self, event_name: str) -> int:
         """ Not really generic, as it maps event names to events of specific contracts,
         but it is good enough for what we want to accomplish.
         """
-        event = get_event(self.get_abi(self.event_to_contract[event_name]), event_name)
-        return event_id(*get_eventname_types(event))
+        contract_abi = self.get_abi(self.event_to_contract[event_name])
+        event_abi = find_matching_event_abi(contract_abi, event_name)
+        log_id = event_abi_to_log_topic(event_abi)
+        return int(encode_hex(log_id), 16)
 
     def check_contract_version(self, deployed_version, contract_name):
         """Check if the deployed contract version matches used contract version."""
