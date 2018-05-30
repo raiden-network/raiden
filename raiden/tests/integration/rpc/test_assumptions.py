@@ -3,13 +3,13 @@ from binascii import unhexlify
 import os
 
 import pytest
-from ethereum.tools import _solidity
 from eth_utils import decode_hex
 
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.rpc.filters import new_filter, get_filter_events
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.utils.solc import compile_files_cwd
 
 # pylint: disable=unused-argument,protected-access
 
@@ -17,7 +17,7 @@ from raiden.network.rpc.client import JSONRPCClient
 def deploy_rpc_test_contract(deploy_client):
     here = os.path.dirname(os.path.relpath(__file__))
     contract_path = os.path.join(here, 'RpcTest.sol')
-    contracts = _solidity.compile_file(contract_path, libraries=dict())
+    contracts = compile_files_cwd([contract_path])
 
     contract_proxy = deploy_client.deploy_solidity_contract(
         'RpcTest',
