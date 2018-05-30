@@ -1,12 +1,15 @@
 import logging.config
 import structlog
+from typing import Dict
 
 
-def get_log_handler(formatter, log_file, level):
+DEFAULT_LOG_LEVEL = 'INFO'
+
+
+def _get_log_handler(formatter, log_file):
     if log_file:
         return {
             'file': {
-                'level': level,
                 'class': 'logging.handlers.WatchedFileHandler',
                 'filename': log_file,
                 'formatter': formatter,
@@ -15,7 +18,6 @@ def get_log_handler(formatter, log_file, level):
     else:
         return {
             'default': {
-                'level': level,
                 'class': 'logging.StreamHandler',
                 'formatter': formatter,
             }
@@ -23,17 +25,19 @@ def get_log_handler(formatter, log_file, level):
 
 
 def configure_logging(
-    level='WARN',
-    colorize=True,
-    log_json=None,
-    log_file=None
+    logger_level_config: Dict[str, str] =None,
+    colorize: bool = True,
+    log_json: bool = False,
+    log_file: str = None
 ):
+    if logger_level_config is None:
+        logger_level_config = {'': DEFAULT_LOG_LEVEL}
     timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S")
     pre_chain = [structlog.stdlib.add_log_level, timestamper]
-    formatter = 'colorized' if colorize and log_file is '' else 'plain'
+    formatter = 'colorized' if colorize and not log_file else 'plain'
     if log_json:
         formatter = 'json'
-    log_handler = get_log_handler(formatter, log_file, level)
+    log_handler = _get_log_handler(formatter, log_file)
     logging.config.dictConfig(
         {
             'version': 1,
@@ -58,7 +62,7 @@ def configure_logging(
             'loggers': {
                 '': {
                     'handlers': list(log_handler.keys()),
-                    'level': level,
+                    'level': logger_level_config.get('', DEFAULT_LOG_LEVEL),
                     'propagate': True,
                 },
             }
@@ -66,6 +70,7 @@ def configure_logging(
     )
     structlog.configure(
         processors=[
+            structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
             structlog.stdlib.PositionalArgumentsFormatter(),
             timestamper,
@@ -73,5 +78,9 @@ def configure_logging(
             structlog.processors.format_exc_info,
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
-        logger_factory=structlog.stdlib.LoggerFactory()
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
     )
+
+    for logger_name, level_name in logger_level_config.items():
+        logging.getLogger(logger_name).setLevel(level_name)

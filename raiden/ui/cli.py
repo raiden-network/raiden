@@ -64,6 +64,7 @@ from raiden.utils.cli import (
     NATChoiceType,
     option,
     option_group,
+    LOG_LEVEL_CONFIG_TYPE
 )
 
 
@@ -423,7 +424,15 @@ def options(func):
         option_group(
             'Logging Options',
             option(
-                '--logfile',
+                '--log-config',
+                help='Log level configuration.\n'
+                     'Format: [<logger-name-1>]:<level>[,<logger-name-2>:level][,...]',
+                type=LOG_LEVEL_CONFIG_TYPE,
+                default=':info',
+                show_default=True,
+            ),
+            option(
+                '--log-file',
                 help='file path for logging to file',
                 default=None,
                 type=str,
@@ -486,7 +495,8 @@ def app(
         listen_address,
         rpccorsdomain,
         mapped_socket,
-        logfile,
+        log_config,
+        log_file,
         log_json,
         max_unresponsive_time,
         send_ping_time,
@@ -723,8 +733,9 @@ def run(ctx, **kwargs):
     from raiden.api.python import RaidenAPI
 
     configure_logging(
+        kwargs['log_config'],
         log_json=kwargs['log_json'],
-        log_file=kwargs['logfile']
+        log_file=kwargs['log_file']
     )
 
     # TODO:
