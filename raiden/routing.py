@@ -108,9 +108,10 @@ def get_best_routes(
         to_address,
     )
 
-    log.warn(
-        'No routes available from %s to %s' % (pex(from_address), pex(to_address))
-    )
+    if not neighbors_heap:
+        log.warning(
+            'No routes available from %s to %s' % (pex(from_address), pex(to_address))
+        )
 
     while neighbors_heap:
         _, partner_address = heappop(neighbors_heap)
