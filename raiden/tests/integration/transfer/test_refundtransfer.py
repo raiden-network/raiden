@@ -15,7 +15,6 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import lockstate_from_lock
 
 
-@pytest.mark.skip('issue #1429')
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('settle_timeout', [50])
@@ -70,7 +69,6 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     )
 
 
-@pytest.mark.skip('issue #1429')
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
