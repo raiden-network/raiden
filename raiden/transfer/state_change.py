@@ -3,7 +3,9 @@
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import (
     BalanceProofSignedState,
+    NettingChannelState,
     PaymentNetworkState,
+    TransactionExecutionStatus,
     TokenNetworkState,
 )
 from raiden.utils import pex, sha3
@@ -16,7 +18,7 @@ class Block(StateChange):
         block_number: The current block_number.
     """
 
-    def __init__(self, block_number: typing.BlockNumber):
+    def __init__(self, block_number: typing.BlockNumber) -> None:
         if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be of type block_number')
 
@@ -41,7 +43,7 @@ class ActionCancelPayment(StateChange):
     state of the transfer.
     """
 
-    def __init__(self, payment_identifier):
+    def __init__(self, payment_identifier: typing.PaymentID) -> None:
         self.payment_identifier = payment_identifier
 
     def __repr__(self):
@@ -62,7 +64,12 @@ class ActionCancelPayment(StateChange):
 class ActionChannelClose(StateChange):
     """ User is closing an existing channel. """
 
-    def __init__(self, payment_network_identifier, token_address, channel_identifier):
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+    ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_identifier = channel_identifier
@@ -91,18 +98,18 @@ class ActionCancelTransfer(StateChange):
     state of the transfer.
     """
 
-    def __init__(self, identifier):
-        self.identifier = identifier
+    def __init__(self, transfer_identifier: typing.TransferID) -> None:
+        self.transfer_identifier = transfer_identifier
 
     def __repr__(self):
         return '<ActionCancelTransfer identifier:{}>'.format(
-            self.identifier,
+            self.transfer_identifier,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ActionCancelTransfer) and
-            self.identifier == other.identifier
+            self.transfer_identifier == other.transfer_identifier
         )
 
     def __ne__(self, other):
@@ -112,12 +119,12 @@ class ActionCancelTransfer(StateChange):
 class ActionTransferDirect(StateChange):
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenNetworkID,
             receiver_address: typing.T_Address,
-            payment_identifier,
-            amount: int,
-    ):
+            payment_identifier: typing.PaymentID,
+            amount: typing.PaymentAmount,
+    ) -> None:
         if not isinstance(receiver_address, typing.T_Address):
             raise ValueError('receiver_address must be address')
 
@@ -154,7 +161,12 @@ class ActionTransferDirect(StateChange):
 class ContractReceiveChannelNew(StateChange):
     """ A new channel was created and this node IS a participant. """
 
-    def __init__(self, payment_network_identifier, token_address, channel_state):
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_state: NettingChannelState,
+    ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_state = channel_state
@@ -183,11 +195,12 @@ class ContractReceiveChannelClosed(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenNetworkID,
+            channel_identifier: typing.ChannelID,
             closing_address: typing.Address,
-            closed_block_number: typing.BlockNumber):
+            closed_block_number: typing.BlockNumber,
+    ) -> None:
 
         if not isinstance(closing_address, typing.T_Address):
             raise ValueError('closing_address must be of type address')
@@ -229,7 +242,11 @@ class ContractReceiveChannelClosed(StateChange):
 
 
 class ActionInitNode(StateChange):
-    def __init__(self, pseudo_random_generator, block_number: int):
+    def __init__(
+            self,
+            pseudo_random_generator,
+            block_number: typing.BlockNumber,
+    ) -> None:
         if not isinstance(block_number, int):
             raise ValueError('block_number must be int')
 
@@ -255,7 +272,11 @@ class ActionNewTokenNetwork(StateChange):
     A token network corresponds to a channel manager smart contract.
     """
 
-    def __init__(self, payment_network_identifier, token_network: TokenNetworkState):
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network: TokenNetworkState,
+    ) -> None:
         if not isinstance(token_network, TokenNetworkState):
             raise ValueError('token_network must be a TokenNetworkState instance.')
 
@@ -283,11 +304,11 @@ class ContractReceiveChannelNewBalance(StateChange):
     """ A channel to which this node IS a participant had a deposit. """
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
-            deposit_transaction,
-    ):
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+            deposit_transaction: TransactionExecutionStatus,
+    ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_identifier = channel_identifier
@@ -322,11 +343,11 @@ class ContractReceiveChannelSettled(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
-            settle_block_number: int,
-    ):
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+            settle_block_number: typing.BlockNumber,
+    ) -> None:
         if not isinstance(settle_block_number, int):
             raise ValueError('settle_block_number must be of type int')
 
@@ -376,7 +397,11 @@ class ActionLeaveAllNetworks(StateChange):
 class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
-    def __init__(self, node_address: typing.Address, network_state):
+    def __init__(
+            self,
+            node_address: typing.Address,
+            network_state,
+    ) -> None:
         if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')
 
@@ -429,7 +454,11 @@ class ContractReceiveNewPaymentNetwork(StateChange):
 class ContractReceiveNewTokenNetwork(StateChange):
     """ A new token was registered with the payment network. """
 
-    def __init__(self, payment_network_identifier, token_network):
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network: TokenNetworkState,
+    ) -> None:
         if not isinstance(token_network, TokenNetworkState):
             raise ValueError('token_network must be a TokenNetworkState instance')
 
@@ -467,11 +496,12 @@ class ContractReceiveChannelWithdraw(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
-            channel_identifier,
-            secret,
-            receiver: typing.Address):
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+            secret: typing.Secret,
+            receiver: typing.Address,
+    ) -> None:
 
         if not isinstance(receiver, typing.T_Address):
             raise ValueError('receiver must be of type address')
@@ -510,7 +540,7 @@ class ContractReceiveChannelWithdraw(StateChange):
 class ContractReceiveNewRoute(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
-    def __init__(self, participant1: typing.Address, participant2: typing.Address):
+    def __init__(self, participant1: typing.Address, participant2: typing.Address) -> None:
         if not isinstance(participant1, typing.T_Address):
             raise ValueError('participant1 must be of type address')
 
@@ -542,11 +572,11 @@ class ContractReceiveRouteNew(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
             participant1: typing.Address,
             participant2: typing.Address,
-    ):
+    ) -> None:
 
         if not isinstance(participant1, typing.T_Address):
             raise ValueError('participant1 must be of type address')
@@ -583,12 +613,12 @@ class ContractReceiveRouteNew(StateChange):
 class ReceiveTransferDirect(StateChange):
     def __init__(
             self,
-            payment_network_identifier,
-            token_address,
-            message_identifier,
-            payment_identifier,
-            balance_proof,
-    ):
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
+            balance_proof: BalanceProofSignedState,
+    ) -> None:
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
@@ -631,7 +661,7 @@ class ReceiveUnlock(StateChange):
             message_identifier: typing.MessageID,
             secret: typing.Secret,
             balance_proof: BalanceProofSignedState,
-    ):
+    ) -> None:
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
@@ -663,10 +693,10 @@ class ReceiveUnlock(StateChange):
 
 
 class ReceiveDelivered(StateChange):
-    def __init__(self, message_identifier):
+    def __init__(self, message_identifier: typing.MessageID) -> None:
         self.message_identifier = message_identifier
 
 
 class ReceiveProcessed(StateChange):
-    def __init__(self, message_identifier):
+    def __init__(self, message_identifier: typing.MessageID) -> None:
         self.message_identifier = message_identifier
