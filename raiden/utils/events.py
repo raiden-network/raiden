@@ -2,13 +2,12 @@
 """
 from typing import List, Dict, Union
 
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_checksum_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.utils import address_encoder, data_decoder, topic_decoder
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies.netting_channel import NettingChannel
 from raiden.network.rpc.smartcontract_proxy import ContractProxy

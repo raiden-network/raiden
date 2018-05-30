@@ -10,8 +10,7 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix
-from sha3 import keccak_256
+from eth_utils import remove_0x_prefix, keccak
 
 import raiden
 from raiden.utils import typing
