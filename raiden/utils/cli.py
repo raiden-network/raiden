@@ -1,3 +1,4 @@
+import re
 from ipaddress import IPv4Address, AddressValueError
 from itertools import groupby
 from typing import Callable, List
@@ -201,6 +202,27 @@ class AddressType(click.ParamType):
             self.fail('Please specify a valid hex-encoded address.')
 
 
+class LogLevelConfigType(click.ParamType):
+    name = 'log-config'
+    _validate_re = re.compile(
+        r'^(?:'
+        r'(?P<logger_name>[a-zA-Z0-9._]+)?'
+        r':'
+        r'(?P<logger_level>(?:debug|info|warn(?:ing)?|error|critical|fatal))'
+        r',?)+$',
+        re.IGNORECASE
+    )
+
+    def convert(self, value, param, ctx):
+        if not self._validate_re.match(value):
+            self.fail('Invalid log config format')
+        level_config = dict()
+        for logger_config in value.split(','):
+            logger_name, logger_level = logger_config.split(':')
+            level_config[logger_name] = logger_level.upper()
+        return level_config
+
+
 class NATChoiceType(click.Choice):
     def convert(self, value, param, ctx):
         if value.startswith('ext:'):
@@ -228,3 +250,4 @@ class MatrixServerType(click.Choice):
 
 
 ADDRESS_TYPE = AddressType()
+LOG_LEVEL_CONFIG_TYPE = LogLevelConfigType()
