@@ -158,7 +158,7 @@ class AccountManager:
 class Account:
     """Represents an account.  """
 
-    def __init__(self, keystore: Dict, password: str = None, path: str = None):
+    def __init__(self, keystore: Dict, password: str = None, path: str = None) -> None:
         """
         Args:
             keystore: the key store as a dictionary (as decoded from json)

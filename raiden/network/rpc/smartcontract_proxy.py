@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Callable, Optional, Dict, List
+from typing import Callable, Dict, List
 
 from eth_utils import (
     to_canonical_address,
@@ -48,7 +48,8 @@ class ContractProxy:
             contract_address: Address,
             call_function: Callable,
             transact_function: Callable,
-            estimate_function: Optional[Callable] = None):
+            estimate_function: Callable = None
+    ) -> None:
 
         sender = to_canonical_address(sender)
         contract_address = to_canonical_address(contract_address)
