@@ -208,7 +208,7 @@ class LogLevelConfigType(click.ParamType):
         r'^(?:'
         r'(?P<logger_name>[a-zA-Z0-9._]+)?'
         r':'
-        r'(?P<logger_level>(?:debug|info|warn(?:ing)?|error|critical|fatal))'
+        r'(?P<logger_level>debug|info|warn(?:ing)?|error|critical|fatal)'
         r',?)+$',
         re.IGNORECASE
     )
