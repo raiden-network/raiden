@@ -158,7 +158,11 @@ def token_amount(number_of_nodes, deposit):
 @pytest.fixture
 def network_wait():
     """Time in seconds used to wait for network events."""
-    return 0.3
+    if 'TRAVIS' in os.environ:
+        # Setting it higher, due to Travis being slow and failing with timeout sometimes
+        return 0.8
+    else:
+        return 0.3
 
 
 @pytest.fixture
