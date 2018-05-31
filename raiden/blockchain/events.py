@@ -100,7 +100,7 @@ def get_all_channel_manager_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
         events,
         from_block,
@@ -119,7 +119,7 @@ def get_all_registry_events(
     """
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
         registry_address,
         events,
         from_block,
@@ -139,7 +139,7 @@ def get_all_netting_channel_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
         events,
         from_block,
@@ -304,7 +304,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
-            CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
             registry_proxy.tokenadded_filter,
         )
 
@@ -315,7 +315,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
-            CONTRACT_MANAGER.get_abi('channel_manager'),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
             channel_manager_proxy.channelnew_filter,
         )
 
@@ -326,7 +326,7 @@ class BlockchainEvents:
         self.add_event_listener(
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
-            CONTRACT_MANAGER.get_abi('netting_channel'),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
             netting_channel_proxy.all_events_filter,
         )
 

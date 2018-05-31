@@ -51,7 +51,7 @@ class Registry:
         check_address_has_code(jsonrpc_client, registry_address, 'Registry')
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
             address_encoder(registry_address),
         )
         CONTRACT_MANAGER.check_contract_version(

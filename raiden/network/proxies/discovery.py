@@ -40,7 +40,7 @@ class Discovery:
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             address_encoder(discovery_address),
         )
         CONTRACT_MANAGER.check_contract_version(

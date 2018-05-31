@@ -58,7 +58,7 @@ class ChannelManager:
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
             address_encoder(manager_address),
         )
 
