@@ -25,7 +25,7 @@ def _get_log_handler(formatter, log_file):
 
 
 def configure_logging(
-    logger_level_config: Dict[str, str] =None,
+    logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
     log_json: bool = False,
     log_file: str = None
