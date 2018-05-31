@@ -274,7 +274,7 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
-    def _gaslimit(self, location='pending') -> int:
+    def _gaslimit(self, location='latest') -> int:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 

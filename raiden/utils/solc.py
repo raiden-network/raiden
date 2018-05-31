@@ -77,10 +77,14 @@ def compile_files_cwd(*args, **kwargs):
     name conflicts"""
     # get root directory of the contracts
     compile_wd = os.path.commonprefix(args[0])
+    # edge case - compiling a single file
     if os.path.isfile(compile_wd):
         compile_wd = os.path.dirname(compile_wd)
+    # remove prefix from the files
+    if compile_wd[-1] is not '/':
+        compile_wd += '/'
     file_list = [
-        x.replace(compile_wd + '/', '')
+        x.replace(compile_wd, '')
         for x in args[0]
     ]
     cwd = os.getcwd()

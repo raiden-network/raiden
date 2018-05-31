@@ -81,17 +81,6 @@ def name_from_file(filename):
     return os.path.split(filename)[-1].partition('.')[0]
 
 
-def allcontracts(contract_files):
-    return {
-        "{}:{}".format(c, name_from_file(c)): compile_files_cwd(
-            get_contract_path(c),
-            name_from_file(c),
-            optimize=False
-        )
-        for c in contract_files
-    }
-
-
 def deploy_file(contract, compiled_contracts, client):
     libraries = dict()
     filename, _, name = contract.partition(":")
@@ -109,7 +98,11 @@ def deploy_file(contract, compiled_contracts, client):
 
 
 def deploy_all(client):
-    compiled_contracts = allcontracts(RAIDEN_CONTRACT_FILES)
+    contracts_expanded = [
+        get_contract_path(x)
+        for x in RAIDEN_CONTRACT_FILES
+    ]
+    compiled_contracts = compile_files_cwd(contracts_expanded)
     deployed = {}
     for contract in CONTRACTS_TO_DEPLOY:
         deployed.update(deploy_file(contract, compiled_contracts, client))
