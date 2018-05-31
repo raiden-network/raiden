@@ -75,7 +75,6 @@ a = Entrypoint(
     'raiden',
     hookspath=['tools/pyinstaller_hooks'],
     runtime_hooks=[
-        'tools/pyinstaller_hooks/runtime_pyeth.py',   # Important: Needs to be first!
         'tools/pyinstaller_hooks/runtime_encoding.py',
     ],
     hiddenimports=['scrypt'],
