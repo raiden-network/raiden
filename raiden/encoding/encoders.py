@@ -6,7 +6,7 @@ __all__ = ('integer',)
 class integer:  # pylint: disable=invalid-name
     ''' Defines the value as an integer and it's valid value range. '''
 
-    def __init__(self, minimum: int, maximum: int):
+    def __init__(self, minimum: int, maximum: int) -> None:
         self.minimum = minimum
         self.maximum = maximum
 

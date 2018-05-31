@@ -67,7 +67,7 @@ class MatrixTransport:
     _room_prefix = 'raiden'
     _room_sep = '_'
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         self._raiden_service: RaidenService = None
         self._server_url: str = self._select_server(config)
         self._server_name = urlparse(self._server_url).hostname

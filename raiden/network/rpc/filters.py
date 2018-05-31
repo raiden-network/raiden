@@ -88,7 +88,7 @@ def get_filter_events(
 
 
 class Filter:
-    def __init__(self, jsonrpc_client: JSONRPCClient, filter_id_raw: int):
+    def __init__(self, jsonrpc_client: JSONRPCClient, filter_id_raw: int) -> None:
         self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
 

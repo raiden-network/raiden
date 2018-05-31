@@ -178,7 +178,8 @@ class JSONRPCClient:
             privkey: bytes,
             gasprice: int = None,
             nonce_update_interval: float = 5.0,
-            nonce_offset: int = 0):
+            nonce_offset: int = 0
+    ) -> None:
 
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')

@@ -59,7 +59,8 @@ class ContractDiscovery(Discovery):
     def __init__(
             self,
             node_address: bytes,
-            discovery_proxy: proxies.Discovery):
+            discovery_proxy: proxies.Discovery
+    ) -> None:
 
         super().__init__()
 

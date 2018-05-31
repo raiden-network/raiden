@@ -23,7 +23,7 @@ class ActionInitInitiator(StateChange):
         secret: The secret that must be used with the transfer.
     """
 
-    def __init__(self, payment_network_identifier, transfer_description, routes):
+    def __init__(self, payment_network_identifier, transfer_description, routes) -> None:
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
 
@@ -63,7 +63,8 @@ class ActionInitMediator(StateChange):
             payment_network_identifier,
             routes: typing.List[RouteState],
             from_route: RouteState,
-            from_transfer: LockedTransferSignedState):
+            from_transfer: LockedTransferSignedState
+    ) -> None:
 
         if not isinstance(from_route, RouteState):
             raise ValueError('from_route must be a RouteState instance')
@@ -263,7 +264,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
-    def __init__(self, message_identifier, sender, transfer: LockedTransferSignedState):
+    def __init__(self, message_identifier, sender, transfer: LockedTransferSignedState) -> None:
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
