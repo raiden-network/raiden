@@ -215,5 +215,5 @@ def main():
 
 
 if __name__ == '__main__':
-    configure_logging('DEBUG')
+    configure_logging({'': 'DEBUG'})
     main()

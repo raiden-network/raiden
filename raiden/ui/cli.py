@@ -869,7 +869,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     )
 
     report_file = tempfile.mktemp(suffix='.log')
-    configure_logging('DEBUG', log_file=report_file)
+    configure_logging({'': 'DEBUG'}, log_file=report_file)
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:

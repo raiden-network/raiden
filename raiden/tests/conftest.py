@@ -93,7 +93,7 @@ def logging_level(request):
     if request.config.option.log_cli_level:
         level = request.config.option.log_cli_level
     configure_logging(
-        level,
+        {'': level},
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file
     )
