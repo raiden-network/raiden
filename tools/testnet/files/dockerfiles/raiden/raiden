@@ -46,7 +46,7 @@ class NotCrashingUDPLogstashHandler(UDPLogstashHandler):
 
 if __name__ == "__main__":
     if 'RAIDEN_LOGSTASH_HOST' in os.environ:
-        configure_logging('WARN', colorize=False)
+        configure_logging({'': 'WARN'}, colorize=False)
         logging.root.addHandler(
             NotCrashingUDPLogstashHandler(
                 os.environ.get('RAIDEN_LOGSTASH_HOST'),

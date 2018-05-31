@@ -129,7 +129,7 @@ def get_privatekey_hex(keystore_path):
 @click.option("--port", type=int, default=8545, show_default=True)
 @click.option("--keystore-path", type=click.Path(exists=True))
 def main(keystore_path, pretty, gas_price, port):
-    configure_logging('DEBUG', colorize=True)
+    configure_logging({'': 'DEBUG'}, colorize=True)
 
     privatekey_hex = get_privatekey_hex(keystore_path)
 
