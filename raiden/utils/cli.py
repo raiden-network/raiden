@@ -209,7 +209,7 @@ class LogLevelConfigType(click.ParamType):
         r'(?P<logger_name>[a-zA-Z0-9._]+)?'
         r':'
         r'(?P<logger_level>debug|info|warn(?:ing)?|error|critical|fatal)'
-        r',?)+$',
+        r',?)*$',
         re.IGNORECASE
     )
 
@@ -217,6 +217,9 @@ class LogLevelConfigType(click.ParamType):
         if not self._validate_re.match(value):
             self.fail('Invalid log config format')
         level_config = dict()
+        if value.strip(' ') == '':
+            return None  # default value
+
         for logger_config in value.split(','):
             logger_name, logger_level = logger_config.split(':')
             level_config[logger_name] = logger_level.upper()
