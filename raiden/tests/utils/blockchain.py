@@ -10,7 +10,7 @@ import termios
 import time
 import gevent
 
-from eth_utils import denoms
+from eth_utils import denoms, to_checksum_address
 import structlog
 from requests import ConnectionError
 
@@ -189,12 +189,18 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
     tries = 5
     while not jsonrpc_running and tries > 0:
         try:
-            block = deploy_client.rpccall_with_retry('eth_getBlockByNumber', '0x0', True)
+            # don't use web3 here as this will cause problem in the middleware
+            response = deploy_client.web3.providers[0].make_request(
+                'eth_getBlockByNumber',
+                ['0x0', False]
+            )
         except ConnectionError:
             gevent.sleep(0.5)
             tries -= 1
         else:
             jsonrpc_running = True
+
+            block = response['result']
             running_marker = block['extraData'][2:len(random_marker) + 2]
             if running_marker != random_marker:
                 raise RuntimeError(
@@ -206,16 +212,16 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
         raise ValueError('geth didnt start the jsonrpc interface')
 
     for key in sorted(set(privatekeys)):
-        address = address_encoder(privatekey_to_address(key))
+        address = to_checksum_address(privatekey_to_address(key))
 
         tries = 10
-        balance = '0x0'
-        while balance == '0x0' and tries > 0:
-            balance = deploy_client.rpccall_with_retry('eth_getBalance', address, 'latest')
+        balance = 0
+        while balance == 0 and tries > 0:
+            balance = deploy_client.web3.eth.getBalance(address, 'latest')
             gevent.sleep(1)
             tries -= 1
 
-        if balance == '0x0':
+        if balance == 0:
             raise ValueError('account is with a balance of 0')
 
 

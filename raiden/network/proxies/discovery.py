@@ -43,6 +43,10 @@ class Discovery:
             CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
             address_encoder(discovery_address),
         )
+        CONTRACT_MANAGER.check_contract_version(
+            proxy.call('contract_version').decode(),
+            CONTRACT_ENDPOINT_REGISTRY
+        )
 
         self.address = discovery_address
         self.proxy = proxy

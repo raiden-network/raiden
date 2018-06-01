@@ -5,12 +5,12 @@ from binascii import hexlify
 
 import click
 import structlog
-from ethereum.tools._solidity import compile_contract
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
 from raiden.utils import address_encoder, get_contract_path, decode_hex
 from raiden.log_config import configure_logging
+from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)
 
@@ -83,7 +83,7 @@ def name_from_file(filename):
 
 def allcontracts(contract_files):
     return {
-        "{}:{}".format(c, name_from_file(c)): compile_contract(
+        "{}:{}".format(c, name_from_file(c)): compile_files_cwd(
             get_contract_path(c),
             name_from_file(c),
             optimize=False

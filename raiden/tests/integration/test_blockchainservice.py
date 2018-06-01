@@ -4,8 +4,6 @@ import os
 import itertools
 
 import pytest
-from ethereum.tools import _solidity
-from ethereum.tools._solidity import compile_file
 from eth_utils import to_canonical_address
 
 from raiden import waiting
@@ -17,9 +15,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path
-
-
-solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
+from raiden.utils.solc import compile_files_cwd
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -224,7 +220,7 @@ def test_blockchain(
     )
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
-    humantoken_contracts = compile_file(humantoken_path, libraries=dict())
+    humantoken_contracts = compile_files_cwd([humantoken_path])
     token_proxy = jsonrpc_client.deploy_solidity_contract(
         'HumanStandardToken',
         humantoken_contracts,
@@ -235,7 +231,7 @@ def test_blockchain(
     )
 
     registry_path = get_contract_path('Registry.sol')
-    registry_contracts = compile_file(registry_path)
+    registry_contracts = compile_files_cwd([registry_path])
     registry_proxy = jsonrpc_client.deploy_solidity_contract(
         'Registry',
         registry_contracts,
@@ -245,10 +241,9 @@ def test_blockchain(
         timeout=poll_timeout,
     )
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },
@@ -265,10 +260,9 @@ def test_blockchain(
 
     assert len(registry_proxy.call('tokenAddresses')) == 1
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },
@@ -300,10 +294,9 @@ def test_blockchain(
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
-    log_list = jsonrpc_client.rpccall_with_retry(
-        'eth_getLogs',
+    log_list = jsonrpc_client.web3.eth.getLogs(
         {
-            'fromBlock': '0x0',
+            'fromBlock': 0,
             'toBlock': 'latest',
             'topics': [],
         },

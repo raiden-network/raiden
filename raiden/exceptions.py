@@ -118,6 +118,10 @@ class ChannelBusyError(RaidenError):
     conflicts with an ongoing operation."""
 
 
+class ContractVersionMismatch(RaidenError):
+    """Raised if deployed version of the contract differs."""
+
+
 class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""

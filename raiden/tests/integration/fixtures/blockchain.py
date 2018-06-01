@@ -3,7 +3,6 @@ from collections import namedtuple
 
 import pytest
 import structlog
-from ethereum.tools._solidity import compile_file
 
 from raiden.utils import (
     get_contract_path,
@@ -15,6 +14,7 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.blockchain import geth_create_blockchain
 from raiden.settings import GAS_PRICE
+from raiden.utils.solc import compile_files_cwd
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
@@ -257,7 +257,7 @@ def _jsonrpc_services(
     # deploy it directly with a JSONRPCClient
     if registry_address is None:
         registry_path = get_contract_path('Registry.sol')
-        registry_contracts = compile_file(registry_path, libraries=dict())
+        registry_contracts = compile_files_cwd([registry_path])
 
         log.info('Deploying registry contract')
         registry_proxy = deploy_client.deploy_solidity_contract(

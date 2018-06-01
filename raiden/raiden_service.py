@@ -152,13 +152,9 @@ def endpoint_registry_exception_handler(greenlet):
         )
 
         if rpc_unreachable:
-            log.fatal(
-                'Endpoint registry failed: %s. '
-                'Ethereum RPC API might be unreachable.',
-                repr(e),
-            )
+            log.exception('Endpoint registry failed. Ethereum RPC API might be unreachable.')
         else:
-            log.fatal('Endpoint registry failed: %s. ', repr(e))
+            log.exception('Endpoint registry failed.')
 
         sys.exit(1)
 

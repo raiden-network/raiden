@@ -10,8 +10,7 @@ import time
 import structlog
 from logging import StreamHandler, Formatter
 
-from ethereum.tools._solidity import compile_file
-from eth_utils import denoms
+from eth_utils import denoms, to_checksum_address
 import gevent
 from gevent.event import Event
 from gevent import Greenlet
@@ -20,6 +19,7 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import get_contract_path, safe_address_decode
+from raiden.utils.solc import compile_files_cwd
 
 ENTER_CONSOLE_TIMEOUT = 3
 GUI_GEVENT = 'gevent'
@@ -323,7 +323,7 @@ class ConsoleTools:
         # Deploy a new ERC20 token
         token_proxy = self._chain.client.deploy_solidity_contract(
             'HumanStandardToken',
-            compile_file(contract_path),
+            compile_files_cwd([contract_path]),
             dict(),
             (initial_alloc, name, decimals, symbol),
             contract_path=contract_path,
@@ -420,14 +420,18 @@ class ConsoleTools:
         """
         contract_address = safe_address_decode(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.eth_getCode(contract_address)
+        result = self._raiden.chain.client.web3.eth.getCode(
+            to_checksum_address(contract_address)
+        )
 
         current_time = time.time()
         while len(result) == 0:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.chain.client.eth_getCode(contract_address)
+            result = self._raiden.chain.client.web3.eth.getCode(
+                to_checksum_address(contract_address)
+            )
             gevent.sleep(0.5)
 
             current_time = time.time()

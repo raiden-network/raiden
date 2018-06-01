@@ -5,14 +5,19 @@ import hashlib
 import json
 import os
 import subprocess
+import re
 
 from threading import Lock
 
-from ethereum.tools import _solidity
-from ethereum.abi import event_id, normalize_name
+from solc import compile_files, get_solc_version
+from eth_utils import event_abi_to_log_topic, encode_hex
+from web3.utils.contracts import find_matching_event_abi
 
-from raiden.utils import get_contract_path
+
+from raiden.utils import get_contract_path, compare_versions
 from raiden.constants import MIN_REQUIRED_SOLC
+from raiden.exceptions import ContractVersionMismatch
+
 
 __all__ = (
     'CONTRACT_MANAGER',
@@ -44,31 +49,16 @@ EVENT_CHANNEL_SECRET_REVEALED = 'ChannelSecretRevealed'
 EVENT_CHANNEL_SETTLED = 'ChannelSettled'
 EVENT_TOKEN_ADDED = 'TokenAdded'
 
-
-def get_event(full_abi, event_name):
-    for description in full_abi:
-        name = description.get('name')
-
-        # skip constructors
-        if name is None:
-            continue
-
-        normalized_name = normalize_name(name)
-
-        if normalized_name == event_name:
-            return description
+CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$' # noqa
 
 
-def get_eventname_types(event_description):
-    if 'name' not in event_description:
-        raise ValueError('Not an event description, missing the name.')
-
-    name = normalize_name(event_description['name'])
-    encode_types = [
-        element['type']
-        for element in event_description['inputs']
-    ]
-    return name, encode_types
+def parse_contract_version(contract_file, version_re):
+    contract_file = get_contract_path(contract_file)
+    with open(contract_file, 'r') as original:
+        for line in original.readlines():
+            match = version_re.match(line)
+            if match:
+                return match.group(1)
 
 
 def get_static_or_compile(
@@ -107,8 +97,8 @@ def get_static_or_compile(
 
     validate_solc()
 
-    compiled = _solidity.compile_contract(
-        contract_path,
+    compiled = compile_files(
+        [contract_path],
         contract_name,
         **compiler_flags
     )
@@ -118,7 +108,12 @@ def get_static_or_compile(
         with open(precompiled_path, 'w') as f:
             json.dump(compiled, f)
         print("'{}' written".format(precompiled_path))
-    return compiled
+    compiled_abi = [
+        v for k, v in compiled.items()
+        if k.split(':')[1] == contract_name
+    ]
+    assert len(compiled_abi) == 1
+    return compiled_abi[0]
 
 
 def contract_checksum(contract_path):
@@ -128,17 +123,16 @@ def contract_checksum(contract_path):
 
 
 def validate_solc():
-    if _solidity.get_solidity() is None:
+    if get_solc_version() is None:
         raise RuntimeError(
             "Couldn't find the solc in the current $PATH.\n"
             "Make sure the solidity compiler is installed and available on your $PATH."
         )
 
     try:
-        _solidity.compile_contract(
-            get_contract_path('HumanStandardToken.sol'),
+        compile_files(
+            [get_contract_path('HumanStandardToken.sol')],
             'HumanStandardToken',
-            combined='abi',
             optimize=False,
         )
     except subprocess.CalledProcessError as e:
@@ -184,6 +178,7 @@ class ContractManager:
             'ChannelSettled': CONTRACT_NETTING_CHANNEL,
             'TokenAdded': CONTRACT_REGISTRY,
         }
+        self.contract_to_version = dict()
 
         self.human_standard_token_compiled = None
         self.channel_manager_compiled = None
@@ -199,51 +194,74 @@ class ContractManager:
             self.human_standard_token_compiled = get_static_or_compile(
                 get_contract_path('HumanStandardToken.sol'),
                 'HumanStandardToken',
-                combined='abi',
                 optimize=False,
             )
 
             self.channel_manager_compiled = get_static_or_compile(
                 get_contract_path('ChannelManagerContract.sol'),
                 'ChannelManagerContract',
-                combined='abi',
                 optimize=False,
             )
 
             self.endpoint_registry_compiled = get_static_or_compile(
                 get_contract_path('EndpointRegistry.sol'),
                 'EndpointRegistry',
-                combined='abi',
                 optimize=False,
             )
 
             self.netting_channel_compiled = get_static_or_compile(
                 get_contract_path('NettingChannelContract.sol'),
                 'NettingChannelContract',
-                combined='abi',
                 optimize=False,
             )
 
             self.registry_compiled = get_static_or_compile(
                 get_contract_path('Registry.sol'),
                 'Registry',
-                combined='abi',
                 optimize=False,
             )
 
             self.is_instantiated = True
+            self.init_contract_versions()
+
+    def init_contract_versions(self):
+        contracts = [
+            ('HumanStandardToken.sol', CONTRACT_HUMAN_STANDARD_TOKEN),
+            ('ChannelManagerContract.sol', CONTRACT_CHANNEL_MANAGER),
+            ('EndpointRegistry.sol', CONTRACT_ENDPOINT_REGISTRY),
+            ('NettingChannelContract.sol', CONTRACT_NETTING_CHANNEL),
+            ('Registry.sol', CONTRACT_REGISTRY)
+        ]
+        version_re = re.compile(CONTRACT_VERSION_RE)
+        for contract_file, contract_name in contracts:
+            self.contract_to_version[contract_name] = parse_contract_version(
+                contract_file,
+                version_re
+            )
+
+    def get_version(self, contract_name):
+        """Return version of the contract."""
+        return self.contract_to_version[contract_name]
 
     def get_abi(self, contract_name):
         self.instantiate()
         compiled = getattr(self, '{}_compiled'.format(contract_name))
         return compiled['abi']
 
-    def get_event_id(self, event_name):
+    def get_event_id(self, event_name: str) -> int:
         """ Not really generic, as it maps event names to events of specific contracts,
         but it is good enough for what we want to accomplish.
         """
-        event = get_event(self.get_abi(self.event_to_contract[event_name]), event_name)
-        return event_id(*get_eventname_types(event))
+        contract_abi = self.get_abi(self.event_to_contract[event_name])
+        event_abi = find_matching_event_abi(contract_abi, event_name)
+        log_id = event_abi_to_log_topic(event_abi)
+        return int(encode_hex(log_id), 16)
+
+    def check_contract_version(self, deployed_version, contract_name):
+        """Check if the deployed contract version matches used contract version."""
+        our_version = CONTRACT_MANAGER.get_version(contract_name)
+        if compare_versions(deployed_version, our_version) is False:
+            raise ContractVersionMismatch('Incompatible ABI for %s' % contract_name)
 
 
 CONTRACT_MANAGER = ContractManager()

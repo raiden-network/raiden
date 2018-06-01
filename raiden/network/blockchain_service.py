@@ -4,7 +4,6 @@ import os
 import gevent
 from cachetools.func import ttl_cache
 import structlog
-from ethereum.tools import _solidity
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -16,11 +15,11 @@ from raiden.network.proxies import (
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
-    block_tag_encoder,
     isaddress,
     privatekey_to_address,
     quantity_decoder,
 )
+from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -50,7 +49,7 @@ class BlockChainService:
         return self.client.block_number()
 
     def is_synced(self) -> bool:
-        result = self.client.rpccall_with_retry('eth_syncing')
+        result = self.client.web3.eth.syncing
 
         # the node is synchronized
         if result is False:
@@ -87,8 +86,7 @@ class BlockChainService:
         return delta / interval
 
     def get_block_header(self, block_number: int):
-        block_number = block_tag_encoder(block_number)
-        return self.client.rpccall_with_retry('eth_getBlockByNumber', block_number, False)
+        return self.client.web3.getBlock(block_number, False)
 
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1
@@ -167,10 +165,10 @@ class BlockChainService:
         return self.address_to_registry[registry_address]
 
     def uninstall_filter(self, filter_id_raw):
-        self.client.rpccall_with_retry('eth_uninstallFilter', filter_id_raw)
+        self.client.web3.eth.uninstallFilter(filter_id_raw)
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
-        contracts = _solidity.compile_file(contract_path, libraries=dict())
+        contracts = compile_files_cwd([contract_path])
 
         log.info(
             'Deploying contract: ',
@@ -206,4 +204,4 @@ class BlockChainService:
     @property
     @ttl_cache(ttl=10)
     def network_id(self) -> int:
-        return int(self.client.rpccall_with_retry('net_version'))
+        return int(self.client.web3.version.network)

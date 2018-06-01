@@ -27,7 +27,7 @@ from raiden.constants import (
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
 )
-from raiden.exceptions import EthNodeCommunicationError
+from raiden.exceptions import EthNodeCommunicationError, ContractVersionMismatch
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
@@ -112,7 +112,7 @@ def toggle_trace_profiler(raiden):
 
 def check_json_rpc(client):
     try:
-        client_version = client.rpccall_with_retry('web3_clientVersion')
+        client_version = client.web3.version.node
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
@@ -587,18 +587,29 @@ def app(
         )
     )
 
-    registry = blockchain_service.registry(
-        registry_contract_address
-    )
+    try:
+        registry = blockchain_service.registry(
+            registry_contract_address,
+        )
+    except ContractVersionMismatch:
+        print(
+            'Deployed registry contract version mismatch. '
+            'Please update your Raiden installation.'
+        )
+        sys.exit(1)
 
     discovery = None
     if transport == 'udp':
         check_discovery_registration_gas(blockchain_service, address)
-        discovery = ContractDiscovery(
-            blockchain_service.node_address,
-            blockchain_service.discovery(discovery_contract_address)
-        )
-
+        try:
+            discovery = ContractDiscovery(
+                blockchain_service.node_address,
+                blockchain_service.discovery(discovery_contract_address)
+            )
+        except ContractVersionMismatch:
+            print('Deployed discovery contract version mismatch. '
+                  'Please update your Raiden installation.')
+            sys.exit(1)
         throttle_policy = TokenBucket(
             config['protocol']['throttle_capacity'],
             config['protocol']['throttle_fill_rate']
@@ -721,7 +732,11 @@ def run(ctx, **kwargs):
     # not timeout.
 
     def _run_app():
-        app_ = ctx.invoke(app, **kwargs)
+        # this catches exceptions raised when waiting for the stalecheck to complete
+        try:
+            app_ = ctx.invoke(app, **kwargs)
+        except EthNodeCommunicationError as err:
+            sys.exit(1)
 
         domain_list = []
         if kwargs['rpccorsdomain']:

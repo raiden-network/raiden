@@ -10,8 +10,7 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix
-from sha3 import keccak_256
+from eth_utils import remove_0x_prefix, keccak
 
 import raiden
 from raiden.utils import typing
@@ -51,15 +50,7 @@ def encode_hex(b) -> str:
 
 
 def sha3(data: bytes) -> bytes:
-    """
-    Raises:
-        RuntimeError: If Keccak lib initialization failed, or if the function
-        failed to compute the hash.
-
-        TypeError: This function does not accept unicode objects, they must be
-        encoded prior to usage.
-    """
-    return keccak_256(data).digest()
+    return keccak(data)
 
 
 def eth_sign_sha3(data: bytes) -> bytes:
@@ -216,13 +207,21 @@ def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
+def get_relative_path(file_name) -> str:
+    prefix = os.path.commonprefix([
+        os.path.realpath('.'),
+        os.path.realpath(file_name)
+    ])
+    return file_name.replace(prefix + '/', '')
+
+
 def get_contract_path(contract_name: str) -> str:
     contract_path = os.path.join(
         get_project_root(),
         'smart_contracts',
         contract_name
     )
-    return os.path.realpath(contract_path)
+    return get_relative_path(contract_path)
 
 
 def safe_lstrip_hex(val):
@@ -358,3 +357,20 @@ class releasing:
 
     def __exit__(self, *exc_info):  # pylint: disable=unused-argument
         self.obj.release()
+
+
+def compare_versions(deployed_version, current_version):
+    """Compare version strings of a contract"""
+    assert isinstance(deployed_version, str)
+    assert isinstance(current_version, str)
+
+    deployed_version = deployed_version.replace('_', '0')
+    current_version = current_version.replace('_', '0')
+    deployed = [int(x) for x in deployed_version.split('.')]
+    current = [int(x) for x in current_version.split('.')]
+
+    if deployed[0] != current[0]:
+        return False
+    if deployed[1] != current[1]:
+        return False
+    return True

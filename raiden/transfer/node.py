@@ -105,6 +105,7 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
     block_number = node_state.block_number
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events = list()
+    sub_iteration = None
 
     if sub_task:
         pseudo_random_generator = node_state.pseudo_random_generator
@@ -170,6 +171,9 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     block_number,
                 )
                 events = sub_iteration.events
+
+        if sub_iteration and sub_iteration.new_state is None:
+            del node_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(node_state, events)
 
