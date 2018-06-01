@@ -105,7 +105,7 @@ class ContractDiscovery(Discovery):
 
     def get(self, node_address: bytes):
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
-        host_port = split_endpoint(endpoint.decode())
+        host_port = split_endpoint(endpoint)
         return host_port
 
     def nodeid_by_host_port(self, host_port: Tuple[str, int]):

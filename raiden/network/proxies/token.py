@@ -11,12 +11,13 @@ from raiden.exceptions import TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import address_encoder
+from eth_utils import to_checksum_address
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 
 class Token:
@@ -25,19 +26,18 @@ class Token:
             jsonrpc_client,
             token_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
+        contract = jsonrpc_client.new_contract(
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
+            address_encoder(token_address),
+        )
+        self.proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, token_address, 'Token')
 
-        proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
-            address_encoder(token_address),
-        )
-
         self.address = token_address
-        self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
 
@@ -46,12 +46,10 @@ class Token:
         # TODO: check that `contract_address` is a netting channel and that
         # `self.address` is one of the participants (maybe add this logic into
         # `NettingChannel` and keep this straight forward)
-
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'approve',
             contract_address,
-            allowance,
+            allowance
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
@@ -96,14 +94,15 @@ class Token:
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
-        return self.proxy.call('balanceOf', address)
+        return self.proxy.contract.functions.balanceOf(
+            to_checksum_address(address)
+        ).call()
 
     def transfer(self, to_address, amount):
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'transfer',
-            to_address,
-            amount,
+            to_checksum_address(to_address),
+            amount
         )
 
         self.client.poll(unhexlify(transaction_hash))

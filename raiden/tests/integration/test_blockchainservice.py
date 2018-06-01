@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
 import os
 import itertools
 
 import pytest
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, is_address, is_same_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -17,9 +16,10 @@ from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import decode_event
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.proxies import Token, Registry, ChannelManager
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address, get_contract_path, address_decoder
 from raiden.utils.solc import compile_files_cwd
 
 
@@ -234,6 +234,7 @@ def test_blockchain(
         contract_path=humantoken_path,
         timeout=poll_timeout,
     )
+    token_proxy = Token(jsonrpc_client, address_decoder(token_proxy.contract.address))
 
     registry_path = get_contract_path('Registry.sol')
     registry_contracts = compile_files_cwd([registry_path])
@@ -245,6 +246,7 @@ def test_blockchain(
         contract_path=registry_path,
         timeout=poll_timeout,
     )
+    registry_proxy = Registry(jsonrpc_client, address_decoder(registry_proxy.contract.address))
 
     log_list = jsonrpc_client.web3.eth.getLogs(
         {
@@ -255,15 +257,12 @@ def test_blockchain(
     )
     assert not log_list
 
-    assert token_proxy.call('balanceOf', address) == total_token
-    transaction_hash = registry_proxy.transact(
-        'addToken',
-        address,
-        token_proxy.contract_address,
+    assert token_proxy.balance_of(address) == total_token
+    manager_address = registry_proxy.add_token(
+        address_decoder(token_proxy.proxy.contract.address)
     )
-    jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
-
-    assert len(registry_proxy.call('tokenAddresses')) == 1
+    assert is_address(manager_address)
+    assert len(registry_proxy.token_addresses()) == 1
 
     log_list = jsonrpc_client.web3.eth.getLogs(
         {
@@ -274,9 +273,8 @@ def test_blockchain(
     )
     assert len(log_list) == 1
 
-    channel_manager_address_encoded = registry_proxy.call(
-        'channelManagerByToken',
-        token_proxy.contract_address,
+    channel_manager_address_encoded = registry_proxy.manager_address_by_token(
+        token_proxy.proxy.contract.address,
     )
     channel_manager_address = to_canonical_address(channel_manager_address_encoded)
 
@@ -285,19 +283,22 @@ def test_blockchain(
     event_args = event['args']
 
     assert channel_manager_address == to_canonical_address(event_args['channel_manager_address'])
-    assert token_proxy.contract_address == to_canonical_address(event_args['token_address'])
+    assert is_same_address(token_proxy.proxy.contract.address, event_args['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
     )
-
-    transaction_hash = channel_manager_proxy.transact(
-        'newChannel',
-        addresses[1],
-        10,
+    channel_manager_proxy = ChannelManager(
+        jsonrpc_client,
+        address_decoder(channel_manager_proxy.contract.address)
     )
-    jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
+
+    channel_address = channel_manager_proxy.new_netting_channel(
+        addresses[1],
+        10
+    )
+    assert is_address(channel_address)
 
     log_list = jsonrpc_client.web3.eth.getLogs(
         {
@@ -334,11 +335,7 @@ def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
 
     assert 'The other peer must not have the same address as the client.' in str(excinfo.value)
 
-    transaction_hash = graph0.proxy.transact(
-        'newChannel',
-        app0.raiden.address,
-        settle_timeout,
-    )
+    transaction_hash = graph0.proxy.transact('newChannel', app0.raiden.address, settle_timeout)
 
     # wait to make sure we get the receipt
     wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)

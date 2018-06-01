@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Callable, Optional, Dict, List
+from typing import Dict, List
 
 from eth_utils import (
     to_canonical_address,
@@ -7,13 +7,10 @@ from eth_utils import (
     to_checksum_address,
     event_abi_to_log_topic
 )
-from eth_abi import decode_abi, encode_abi
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
-from web3.utils.abi import get_abi_input_types, get_abi_output_types, filter_by_type
+from web3.utils.abi import get_abi_input_types, filter_by_type
 from web3.utils.events import get_event_data
-
-from raiden.exceptions import InvalidFunctionName
-from raiden.utils.typing import Address
+from web3.contract import Contract
 
 
 def decode_event(abi: Dict, log: Dict):
@@ -32,53 +29,24 @@ def decode_event(abi: Dict, log: Dict):
     return get_event_data(event_abi, log)
 
 
-def encode_function_call(abi: Dict, function: str, args: List = None):
-    args = args or list()
-    fn_abi = find_matching_fn_abi(abi, function, args)
-    fn_types = get_abi_input_types(fn_abi)
-    return encode_abi(fn_types, args)
-
-
 class ContractProxy:
-    """ Proxy to interact with a smart contract through the rpc interface. """
-
     def __init__(
-            self,
-            sender: Address,
-            abi: Dict,
-            contract_address: Address,
-            call_function: Callable,
-            transact_function: Callable,
-            estimate_function: Optional[Callable] = None):
-
-        sender = to_canonical_address(sender)
-        contract_address = to_canonical_address(contract_address)
-
-        self.abi = abi
-        self.call_function = call_function
-        self.contract_address = contract_address
-        self.estimate_function = estimate_function
-        self.sender = sender
-        self.transaction_function = transact_function
-        self.valid_kargs = {'gasprice', 'startgas', 'value'}
-
-    def _check_function_name_and_kargs(self, function_name: str, kargs):
-        functions = [x['name'] for x in self.abi if x['type'] == 'function']
-        if function_name not in functions:
-            raise InvalidFunctionName('Unknown function {}'.format(function_name))
-
-        invalid_args = set(kargs.keys()).difference(self.valid_kargs)
-        if invalid_args:
-            raise TypeError('got an unexpected keyword argument: {}'.format(
-                ', '.join(invalid_args),
-            ))
+        self,
+        jsonrpc_client,
+        contract: Contract
+    ):
+        if contract is None:
+            raise ValueError('Contract must not be None')
+        if jsonrpc_client is None:
+            raise ValueError('JSONRPCClient must not be None')
+        self.jsonrpc_client = jsonrpc_client
+        self.contract = contract
 
     def transact(self, function_name: str, *args, **kargs):
-        self._check_function_name_and_kargs(function_name, kargs)
-        data = self.get_transaction_data(self.abi, function_name, args)
+        data = ContractProxy.get_transaction_data(self.contract.abi, function_name, args)
 
-        txhash = self.transaction_function(
-            to=self.contract_address,
+        txhash = self.jsonrpc_client.send_transaction(
+            to=self.contract.address,
             value=kargs.pop('value', 0),
             data=decode_hex(data),
             **kargs
@@ -86,56 +54,8 @@ class ContractProxy:
 
         return txhash
 
-    def call(self, function_name: str, *args, **kargs):
-        self._check_function_name_and_kargs(function_name, kargs)
-        data = self.get_transaction_data(self.abi, function_name, args)
-
-        res = self.call_function(
-            sender=self.sender,
-            to=self.contract_address,
-            value=kargs.pop('value', 0),
-            data=decode_hex(data),
-            **kargs
-        )
-
-        if res:
-            fn_abi = find_matching_fn_abi(self.abi, function_name, args)
-            output_types = get_abi_output_types(fn_abi)
-            res = decode_abi(output_types, res)
-            if len(res) == 1:
-                res = res[0]
-
-        return res
-
-    def estimate_gas(self, function_name: str, *args, **kargs):
-        """ Returns the estimated gas for the function or None if the function
-        will throw.
-
-        Raises:
-            EthNodeCommunicationError: If the ethereum node's reply can't be parsed.
-        """
-        if not self.estimate_function:
-            raise RuntimeError('estimate_function was not supplied.')
-
-        self._check_function_name_and_kargs(function_name, kargs)
-        data = self.get_transaction_data(self.abi, function_name, args)
-
-        res = self.estimate_function(
-            sender=self.sender,
-            to=self.contract_address,
-            value=kargs.pop('value', 0),
-            data=decode_hex(data),
-            **kargs
-        )
-
-        return res
-
-    def encode_function_call(self, function: str, args: List = None):
-        args = args or None
-        return self.get_transaction_data(self.abi, function, args)
-
     @staticmethod
-    def sanitize_args(abi: dict, args: List):
+    def sanitize_args(abi: Dict, args: List):
         """Prepare inputs to match the ABI"""
         inputs = get_abi_input_types(abi)
         output = []
@@ -160,8 +80,33 @@ class ContractProxy:
         )
         args = ContractProxy.sanitize_args(fn_abi, args)
         return encode_transaction_data(
-            abi,
             None,
             function_name,
-            args
+            contract_abi=abi,
+            fn_abi=fn_abi,
+            args=args
         )
+
+    def decode_event(self, log: Dict):
+        return decode_event(self.proxy.contract.abi, log)
+
+    def encode_function_call(self, function: str, args: List=list()):
+        return self.get_transaction_data(self.contract.abi, function, args)
+
+    def estimate_gas(self, function: str, *args):
+        fn = getattr(self.contract.functions, function)
+        try:
+            return fn(*args).estimateGas({'from': to_checksum_address(self.jsonrpc_client.sender)})
+        except ValueError as err:
+            tx_would_fail = (
+                '-32015' in str(err) or
+                '-32000' in str(err)
+            )
+            if tx_would_fail:  # -32015 is parity and -32000 is geth
+                return None
+            else:
+                raise err
+
+    @property
+    def contract_address(self):
+        return to_canonical_address(self.contract.address)

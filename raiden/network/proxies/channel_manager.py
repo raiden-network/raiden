@@ -2,7 +2,7 @@
 from binascii import unhexlify
 from gevent.event import AsyncResult
 from typing import List, Union, Tuple
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_checksum_address
 
 import structlog
 
@@ -19,10 +19,10 @@ from raiden.network.rpc.filters import (
     new_filter,
     Filter,
 )
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 from raiden.exceptions import (
     DuplicatedChannelError,
@@ -51,31 +51,32 @@ class ChannelManager:
             manager_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
+        contract = jsonrpc_client.new_contract(
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
+            address_encoder(manager_address),
+        )
+
+        self.proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(manager_address):
             raise ValueError('manager_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
 
-        proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-            address_encoder(manager_address),
-        )
-
         CONTRACT_MANAGER.check_contract_version(
-            proxy.call('contract_version').decode(),
+            self.version(),
             CONTRACT_CHANNEL_MANAGER
         )
 
         self.address = manager_address
-        self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
         self.open_channel_transactions = dict()
 
     def token_address(self) -> Address:
         """ Return the token of this manager. """
-        return address_decoder(self.proxy.call('tokenAddress'))
+        token_address = self.proxy.contract.functions.tokenAddress().call()
+        return address_decoder(token_address)
 
     def new_netting_channel(self, other_peer: Address, settle_timeout: int) -> Address:
         """ Creates and deploys a new netting channel contract.
@@ -122,10 +123,9 @@ class ChannelManager:
             # All other concurrent threads should block on the result of opening this channel
             transaction_hash = self.open_channel_transactions[other_peer].get()
 
-        netting_channel_results_encoded = self.proxy.call(
-            'getChannelWith',
-            other_peer,
-        )
+        netting_channel_results_encoded = self.proxy.contract.functions.getChannelWith(
+            to_checksum_address(other_peer)
+        ).call({'from': to_checksum_address(self.client.sender)})
 
         # address is at index 0
         netting_channel_address_encoded = netting_channel_results_encoded
@@ -153,8 +153,7 @@ class ChannelManager:
         if self.channel_exists(other_peer):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'newChannel',
             other_peer,
             settle_timeout,
@@ -173,9 +172,7 @@ class ChannelManager:
     def channels_addresses(self) -> List[Tuple[Address, Address]]:
         # for simplicity the smart contract return a shallow list where every
         # second item forms a tuple
-        channel_flat_encoded = self.proxy.call(
-            'getChannelsParticipants',
-        )
+        channel_flat_encoded = self.proxy.contract.functions.getChannelsParticipants().call()
 
         channel_flat = [
             address_decoder(channel)
@@ -188,10 +185,9 @@ class ChannelManager:
 
     def channels_by_participant(self, participant_address: Address) -> List[Address]:
         """ Return a list of channel address that `participant_address` is a participant. """
-        address_list = self.proxy.call(
-            'nettingContractsByAddress',
-            participant_address,
-        )
+        address_list = self.proxy.contract.functions.nettingContractsByAddress(
+            to_checksum_address(participant_address),
+        ).call({'from': to_checksum_address(self.client.sender)})
 
         return [
             address_decoder(address)
@@ -199,18 +195,16 @@ class ChannelManager:
         ]
 
     def channel_exists(self, participant_address: Address) -> bool:
-        existing_channel = self.proxy.call(
-            'getChannelWith',
-            participant_address,
-        )
+        existing_channel = self.proxy.contract.functions.getChannelWith(
+            to_checksum_address(participant_address),
+        ).call({'from': to_checksum_address(self.client.sender)})
 
         exists = False
 
         if existing_channel != NULL_ADDRESS:
-            exists = self.proxy.call(
-                'contractExists',
-                existing_channel
-            )
+            exists = self.proxy.contract.functions.contractExists(
+                to_checksum_address(existing_channel)
+            ).call({'from': to_checksum_address(self.client.sender)})
 
         return exists
 
@@ -238,3 +232,6 @@ class ChannelManager:
             from_block=from_block,
             to_block=to_block
         )
+
+    def version(self):
+        return self.proxy.contract.functions.contract_version().call()

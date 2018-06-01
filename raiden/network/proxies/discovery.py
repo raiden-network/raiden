@@ -19,6 +19,7 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.constants import NULL_ADDRESS
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import (
     address_encoder,
     pex,
@@ -36,23 +37,23 @@ class Discovery:
             jsonrpc_client,
             discovery_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
+        contract = jsonrpc_client.new_contract(
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
+            address_encoder(discovery_address),
+        )
+        self.proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
-        proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
-            address_encoder(discovery_address),
-        )
         CONTRACT_MANAGER.check_contract_version(
-            proxy.call('contract_version').decode(),
+            self.version(),
             CONTRACT_ENDPOINT_REGISTRY
         )
 
         self.address = discovery_address
-        self.proxy = proxy
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
         self.not_found_address = NULL_ADDRESS
@@ -77,15 +78,17 @@ class Discovery:
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = to_checksum_address(node_address_bin)
-        endpoint = self.proxy.call('findEndpointByAddress', node_address_hex)
+        endpoint = self.proxy.contract.functions.findEndpointByAddress(
+            node_address_hex
+        ).call()
 
-        if endpoint == b'':
+        if endpoint == '':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 
     def address_by_endpoint(self, endpoint):
-        address = self.proxy.call('findAddressByEndpoint', endpoint)
+        address = self.proxy.contract.functions.findAddressByEndpoint(endpoint).call()
 
         if address == self.not_found_address:  # the 0 address means nothing found
             return None
@@ -93,4 +96,4 @@ class Discovery:
         return to_canonical_address(address)
 
     def version(self):
-        return self.proxy.call('contract_version')
+        return self.proxy.contract.functions.contract_version().call()
