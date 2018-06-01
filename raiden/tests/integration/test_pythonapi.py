@@ -207,7 +207,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     direct_transfer(
         app0,
         app1,
-        token_address,
+        token_network_identifier,
         amount,
         identifier=1,
     )
