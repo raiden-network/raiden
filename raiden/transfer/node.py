@@ -226,6 +226,8 @@ def subdispatch_initiatortask(
                 iteration.new_state,
             )
             node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+        elif secrethash in node_state.payment_mapping.secrethashes_to_task:
+            del node_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(node_state, events)
 
@@ -278,6 +280,8 @@ def subdispatch_mediatortask(
                 iteration.new_state,
             )
             node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+        elif secrethash in node_state.payment_mapping.secrethashes_to_task:
+            del node_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(node_state, events)
 
@@ -336,6 +340,8 @@ def subdispatch_targettask(
                 iteration.new_state,
             )
             node_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+        elif secrethash in node_state.payment_mapping.secrethashes_to_task:
+            del node_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(node_state, events)
 
