@@ -105,7 +105,7 @@ def direct_transfer(
     gevent.sleep(timeout)
 
 
-def mediated_transfer(initiator_app, target_app, token, amount, identifier=None, timeout=5):
+def mediated_transfer(initiator_app, target_app, token_network_identifier, amount, identifier=None, timeout=5):
     """ Nice to read shortcut to make a LockedTransfer.
 
     The secret will be revealed and the apps will be synchronized."""
@@ -113,7 +113,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None,
 
     async_result = initiator_app.raiden.mediated_transfer_async(
         initiator_app.raiden.default_registry.address,
-        token,
+        token_network_identifier,
         amount,
         target_app.raiden.address,
         identifier,

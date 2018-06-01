@@ -32,10 +32,16 @@ def test_failsfast_directtransfer_exceeding_distributable(
 
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
+    node_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address
+    )
 
     async_result = alice_app.raiden.direct_transfer_async(
-        alice_app.raiden.default_registry.address,
-        token_address,
+        token_network_identifier,
         deposit * 2,
         bob_app.raiden.address,
         identifier=1,
@@ -48,7 +54,6 @@ def test_failsfast_directtransfer_exceeding_distributable(
 def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addresses):
 
     app0, app1 = raiden_network
-    registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
@@ -66,7 +71,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         nonce=1,
-        registry_address=registry,
+        token_network_address=token_network_identifier,
         token=invalid_token_address,
         channel=channel_identifier,
         transferred_amount=0,
@@ -83,7 +88,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -93,7 +98,6 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses):
     app0, app1 = raiden_network
-    registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
@@ -114,7 +118,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         nonce=1,
-        registry_address=registry,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel_identifier,
         transferred_amount=0,
@@ -131,7 +135,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, balance0, [],
         app1, balance1, []
     )
@@ -141,7 +145,6 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
-    registry = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     other_key, other_address = make_privkey_address()
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -158,7 +161,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1,
-        registry_address=registry,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel_identifier,
         transferred_amount=10,
@@ -175,7 +178,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, []
     )
@@ -221,6 +224,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
         message_identifier=message_identifier,
         payment_identifier=same_payment_identifier,
         nonce=1,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=invalid_transferred_amount,
@@ -237,7 +241,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit - transferred_amount, [],
         app1, deposit + transferred_amount, [],
     )
@@ -248,7 +252,6 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
 @pytest.mark.parametrize('settle_timeout', [30])
 def test_received_directtransfer_closedchannel(raiden_network, token_addresses, deposit):
     app0, app1 = raiden_network
-    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
@@ -274,7 +277,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1,
-        registry_address=registry_address,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=10,
@@ -292,7 +295,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
 
     # The local state must not change since the channel is already closed
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
