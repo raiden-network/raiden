@@ -1,20 +1,26 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from raiden.tests.utils.transfer import direct_transfer
+from raiden.tests.utils.events import must_contain_entry
+from raiden.transfer import views
 from raiden.transfer.state_change import (
     ActionTransferDirect,
     ReceiveTransferDirect,
 )
-from raiden.tests.utils.transfer import direct_transfer
-from raiden.tests.utils.events import must_contain_entry
 
 
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_log_directransfer(raiden_chain, token_network_identifiers, deposit):
+def test_log_directransfer(raiden_chain, token_addresses, deposit):
     """The action that starts a direct transfer must be logged in the WAL."""
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-    token_network_identifier = token_network_identifiers[0]
+    token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
 
     amount = int(deposit / 2.)
     payment_identifier = 13

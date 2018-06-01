@@ -6,6 +6,7 @@ from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
     mediated_transfer,
 )
+from raiden.transfer import views
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])

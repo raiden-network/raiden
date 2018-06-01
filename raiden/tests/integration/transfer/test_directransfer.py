@@ -58,7 +58,6 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
     amount = 10
     target = app1.raiden.address
     app0.raiden.direct_transfer_async(
-        app0.raiden.default_registry.address,
         token_network_identifier,
         amount,
         target,

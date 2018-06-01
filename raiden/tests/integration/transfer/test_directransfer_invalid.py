@@ -32,8 +32,8 @@ def test_failsfast_directtransfer_exceeding_distributable(
 
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
-    node_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    node_state = views.state_from_app(alice_app)
+    payment_network_id = alice_app.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         node_state,
         payment_network_id,
@@ -253,9 +253,10 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
 def test_received_directtransfer_closedchannel(raiden_network, token_addresses, deposit):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
+    registry_address = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
-        app0.raiden.default_registry.address,
+        registry_address,
         token_address,
     )
     channel0 = get_channelstate(app0, app1, token_network_identifier)

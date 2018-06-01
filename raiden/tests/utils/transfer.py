@@ -105,14 +105,20 @@ def direct_transfer(
     gevent.sleep(timeout)
 
 
-def mediated_transfer(initiator_app, target_app, token_network_identifier, amount, identifier=None, timeout=5):
+def mediated_transfer(
+        initiator_app,
+        target_app,
+        token_network_identifier,
+        amount,
+        identifier=None,
+        timeout=5,
+):
     """ Nice to read shortcut to make a LockedTransfer.
 
     The secret will be revealed and the apps will be synchronized."""
     # pylint: disable=too-many-arguments
 
     async_result = initiator_app.raiden.mediated_transfer_async(
-        initiator_app.raiden.default_registry.address,
         token_network_identifier,
         amount,
         target_app.raiden.address,
@@ -141,7 +147,7 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
     initiator_channel = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app_chain[0]),
         token_network_identifier,
-        app_chain[1],
+        app_chain[1].raiden.address,
     )
     address = initiator_channel.identifier
     nonce_int = channel.get_next_nonce(initiator_channel.our_state)
@@ -203,7 +209,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
             unlock_lock.message_identifier,
             unlock_lock.payment_identifier,
             unlock_lock.balance_proof.nonce,
-            partner_channel.token_network_address,
+            partner_channel.token_network_identifier,
             unlock_lock.balance_proof.channel_address,
             unlock_lock.balance_proof.transferred_amount,
             unlock_lock.balance_proof.locked_amount,
