@@ -141,6 +141,11 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        registry_address,
+        token_address,
+    )
 
     manager0 = app0.raiden.default_registry.manager_by_token(token_address)
 
@@ -221,7 +226,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert channelcount0 + 1 == channelcount1
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, 0, [],
         app1, 0, [],
     )

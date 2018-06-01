@@ -59,7 +59,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -74,16 +74,14 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     assert channel_state.settle_transaction.finished_block_number
 
     assert must_contain_entry(state_changes, ContractReceiveChannelClosed, {
-        'payment_network_identifier': registry_address,
-        'token_address': token_address,
+        'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
         'closing_address': app1.raiden.address,
         'closed_block_number': channel_state.close_transaction.finished_block_number,
     })
 
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
-        'payment_network_identifier': registry_address,
-        'token_address': token_address,
+        'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
         'settle_block_number': channel_state.settle_transaction.finished_block_number,
     })
@@ -128,7 +126,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     assert lock
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         alice_app, deposit, [lock],
         bob_app, deposit, [],
     )
@@ -245,10 +243,10 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         secret,
         lock,
     )
-    claim_lock(raiden_network, identifier, token_address, secret)
+    claim_lock(raiden_network, identifier, token_network_identifier, secret)
 
     # Make a new transfer
-    direct_transfer(app0, app1, token_address, amount, identifier=1)
+    direct_transfer(app0, app1, token_network_identifier, amount, identifier=1)
     RaidenAPI(app1.raiden).channel_close(
         registry_address,
         token_address,
@@ -438,7 +436,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     direct_transfer(
         app0,
         app1,
-        token_address,
+        token_network_identifier,
         amount0_1,
     )
 
@@ -446,7 +444,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     direct_transfer(
         app1,
         app0,
-        token_address,
+        token_network_identifier,
         amount1_1,
     )
 
@@ -454,7 +452,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     direct_transfer(
         app0,
         app1,
-        token_address,
+        token_network_identifier,
         amount0_2,
     )
 

@@ -200,12 +200,12 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     app0.raiden.sign(reveal_secret)
     reveal_secret_data = reveal_secret.encode()
 
-    token_network_address = channelstate_0_1.token_network_address
+    token_network_identifier = channelstate_0_1.token_network_identifier
     secret = Secret(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
-        token_network_address=token_network_address,
+        token_network_address=token_network_identifier,
         channel=channelstate_0_1.identifier,
         transferred_amount=lock_amount,
         locked_amount=0,
