@@ -53,7 +53,7 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
     assert result.get_nowait() is False
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -105,7 +105,7 @@ def test_receive_lockedtransfer_invalidnonce(
     mediated_transfer(
         app0,
         app2,
-        token_address,
+        token_network_identifier,
         amount,
         timeout=network_wait,
     )
@@ -118,7 +118,7 @@ def test_receive_lockedtransfer_invalidnonce(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=repeated_nonce,
-        registry_address=app0.raiden.default_registry.address,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=amount,
@@ -139,7 +139,7 @@ def test_receive_lockedtransfer_invalidnonce(
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
     )
@@ -170,7 +170,7 @@ def test_receive_lockedtransfer_invalidsender(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
         nonce=1,
-        registry_address=app0.raiden.default_registry.address,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
@@ -191,7 +191,7 @@ def test_receive_lockedtransfer_invalidsender(
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -223,7 +223,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=1,
-        registry_address=app0.raiden.default_registry.address,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
@@ -244,7 +244,7 @@ def test_receive_lockedtransfer_invalidrecipient(
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -289,7 +289,7 @@ def test_received_lockedtransfer_closedchannel(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=1,
-        registry_address=app0.raiden.default_registry.address,
+        token_network_address=token_network_identifier,
         token=token_address,
         channel=channel0.identifier,
         transferred_amount=0,
@@ -311,7 +311,7 @@ def test_received_lockedtransfer_closedchannel(
 
     # The local state must not change since the channel is already closed
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )

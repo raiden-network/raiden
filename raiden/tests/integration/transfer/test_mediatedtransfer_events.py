@@ -17,12 +17,19 @@ from raiden.transfer.mediated_transfer.events import (
 def test_mediated_transfer_events(raiden_network, deposit, token_addresses, network_wait):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
+    node_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address
+    )
 
     amount = 10
     mediated_transfer(
         app0,
         app2,
-        token_address,
+        token_network_identifier,
         amount,
         timeout=network_wait,
     )
