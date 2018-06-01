@@ -11,8 +11,6 @@ from web3.middleware import geth_poa_middleware
 from eth_utils import to_checksum_address, to_canonical_address, remove_0x_prefix
 import gevent
 import cachetools
-from eth_abi import encode_abi
-from web3.utils.abi import get_constructor_abi, get_abi_input_types
 from gevent.lock import Semaphore
 import structlog
 
@@ -400,14 +398,11 @@ class JSONRPCClient:
         if isinstance(contract['bin'], str):
             contract['bin'] = unhexlify(contract['bin'])
 
-        if constructor_parameters:
-            constructor_abi = get_constructor_abi(contract_interface)
-            constructor_types = get_abi_input_types(constructor_abi)
-            parameters = encode_abi(constructor_types, constructor_parameters)
-            bytecode = contract['bin'] + parameters
-        else:
-            bytecode = contract['bin']
+        if not constructor_parameters:
+            constructor_parameters = ()
 
+        contract = self.web3.eth.contract(abi=contract['abi'], bytecode=contract['bin'])
+        bytecode = contract.constructor(*constructor_parameters).buildTransaction()['data']
         transaction_hash_hex = self.send_transaction(
             to=Address(b''),
             data=bytecode,
