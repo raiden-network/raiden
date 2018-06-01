@@ -40,7 +40,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         token_address,
     )
 
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier)
+    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
@@ -109,7 +109,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     identifier = 1
     secret = pending_mediated_transfer(
         raiden_network,
-        token_address,
+        token_network_identifier,
         alice_to_bob_amount,
         identifier,
     )
@@ -231,7 +231,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     identifier = 1
     secret = pending_mediated_transfer(
         raiden_network,
-        token_address,
+        token_network_identifier,
         amount,
         identifier,
     )
@@ -295,7 +295,7 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     identifier = 1
     secret = pending_mediated_transfer(
         raiden_chain,
-        token_address,
+        token_network_identifier,
         amount,
         identifier,
     )
@@ -353,7 +353,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     identifier = 1
     secret = pending_mediated_transfer(
         raiden_chain,
-        token,
+        token_network_identifier,
         amount,
         identifier,
     )

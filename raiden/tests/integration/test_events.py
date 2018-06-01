@@ -99,7 +99,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, 0, [],
         app1, 0, [],
     )
@@ -114,7 +114,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, 0, [],
     )
@@ -129,7 +129,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     gevent.sleep(events_poll_timeout)
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -343,7 +343,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     identifier = 1
     secret = pending_mediated_transfer(
         raiden_chain,
-        token_address,
+        token_network_identifier,
         amount,
         identifier,
     )
