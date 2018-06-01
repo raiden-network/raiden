@@ -122,7 +122,7 @@ class Filter:
         return self._process_filter_results(changes)
 
     def getall(self) -> List[Dict]:
-        changes = self.client.web3.eth.getFilterChanges(self.filter_id_raw)
+        changes = self.client.web3.eth.getFilterLogs(self.filter_id_raw)
         return self._process_filter_results(changes)
 
     def uninstall(self):
