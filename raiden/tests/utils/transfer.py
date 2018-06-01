@@ -22,7 +22,6 @@ from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
-from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
@@ -461,12 +460,9 @@ def make_mediated_transfer(
     )
 
     if secret is not None:
-        random_sender = make_address()
+        secrethash = sha3(secret)
 
-        from_secretreveal = ReceiveSecretReveal(secret, random_sender)
-        channel.handle_receive_secretreveal(from_channel, from_secretreveal)
-
-        partner_secretreveal = ReceiveSecretReveal(secret, random_sender)
-        channel.handle_receive_secretreveal(partner_channel, partner_secretreveal)
+        channel.register_secret(from_channel, secret, secrethash)
+        channel.register_secret(partner_channel, secret, secrethash)
 
     return mediated_transfer_msg

@@ -5,7 +5,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
     PaymentNetworkState,
-    TransactionExecutionStatus,
+    TransactionChannelNewBalance,
     TokenNetworkState,
 )
 from raiden.utils import pex, sha3
@@ -302,12 +302,13 @@ class ActionNewTokenNetwork(StateChange):
 
 class ContractReceiveChannelNewBalance(StateChange):
     """ A channel to which this node IS a participant had a deposit. """
+
     def __init__(
             self,
             payment_network_identifier: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
             channel_identifier: typing.ChannelID,
-            deposit_transaction: TransactionExecutionStatus,
+            deposit_transaction: TransactionChannelNewBalance,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
@@ -506,7 +507,7 @@ class ContractReceiveChannelWithdraw(StateChange):
         if not isinstance(receiver, typing.T_Address):
             raise ValueError('receiver must be of type address')
 
-        secrethash = sha3(secret)
+        secrethash: typing.SecretHash = typing.SecretHash(sha3(secret))
 
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
@@ -665,7 +666,7 @@ class ReceiveUnlock(StateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
-        secrethash = sha3(secret)
+        secrethash: typing.SecretHash = typing.SecretHash(sha3(secret))
 
         self.message_identifier = message_identifier
         self.secret = secret

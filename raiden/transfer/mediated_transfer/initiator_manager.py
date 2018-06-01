@@ -161,7 +161,7 @@ def handle_cancelpayment(payment_state: InitiatorPaymentState) -> TransitionResu
     return TransitionResult(None, cancel_events)
 
 
-def handle_transferrefund(
+def handle_transferrefundcancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
         channelidentifiers_to_channels: initiator.ChannelMap,
@@ -204,7 +204,7 @@ def handle_transferrefund(
 
     events = list()
     if is_valid_lock and is_valid_refund:
-        is_valid, channel_events, _ = channel.handle_receive_refundtransfer(
+        is_valid, channel_events, _ = channel.handle_receive_refundtransfercancelroute(
             channel_state,
             refund_transfer,
         )
@@ -291,7 +291,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
-        iteration = handle_transferrefund(
+        iteration = handle_transferrefundcancelroute(
             payment_state,
             state_change,
             channelidentifiers_to_channels,

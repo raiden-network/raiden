@@ -11,6 +11,9 @@ from raiden.transfer.architecture import State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.utils import lpex, pex, sha3, typing
 
+SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
+SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
+
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'
 CHANNEL_STATE_OPENED = 'opened'
@@ -582,7 +585,7 @@ class HashTimeLockState(State):
         self.expiration = expiration
         self.secrethash = secrethash
         self.encoded = encoded
-        self.lockhash = sha3(encoded)
+        self.lockhash: typing.LockHash = typing.LockHash(sha3(encoded))
 
     def __repr__(self):
         return '<HashTimeLockState amount:{} expiration:{} secrethash:{}>'.format(
@@ -692,14 +695,22 @@ class TransactionExecutionStatus(State):
             self,
             started_block_number: typing.Optional[typing.BlockNumber],
             finished_block_number: typing.Optional[typing.BlockNumber],
-            result):
+            result,
+    ):
 
-        # started_block_number is set for the node that sent the transaction,
-        # None otherwise
-        if not (started_block_number is None or isinstance(started_block_number, int)):
+        is_valid_start = (
+            started_block_number is None or
+            isinstance(started_block_number, typing.T_BlockNumber)
+        )
+        is_valid_finish = (
+            finished_block_number is None or
+            isinstance(finished_block_number, typing.T_BlockNumber)
+        )
+
+        if not is_valid_start:
             raise ValueError('started_block_number must be None or a block_number')
 
-        if not (finished_block_number is None or isinstance(finished_block_number, int)):
+        if not is_valid_finish:
             raise ValueError('finished_block_number must be None or a block_number')
 
         if result not in self.VALID_RESULT_VALUES:
@@ -707,8 +718,8 @@ class TransactionExecutionStatus(State):
                 ','.join(self.VALID_RESULT_VALUES),
             ))
 
-        self.started_block_number = started_block_number
-        self.finished_block_number = finished_block_number
+        self.started_block_number: typing.Optional[typing.BlockNumber] = started_block_number
+        self.finished_block_number: typing.Optional[typing.BlockNumber] = finished_block_number
         self.result = result
 
     def __repr__(self):
@@ -771,10 +782,10 @@ class NettingChannelEndState(State):
         self.address = address
         self.contract_balance = balance
 
-        self.secrethashes_to_lockedlocks = dict()
-        self.secrethashes_to_unlockedlocks = dict()
+        self.secrethashes_to_lockedlocks: SecretHashToLock = dict()
+        self.secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.merkletree = EMPTY_MERKLE_TREE
-        self.balance_proof = None
+        self.balance_proof: typing.Optional[BalanceProofSignedState] = None
 
     def __repr__(self):
         return '<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>'.format(
