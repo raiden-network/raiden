@@ -11,12 +11,12 @@ from threading import Lock
 
 from solc import compile_files, get_solc_version
 from eth_utils import event_abi_to_log_topic, encode_hex
-from web3.utils.contracts import find_matching_event_abi
-
 
 from raiden.utils import get_contract_path, compare_versions
 from raiden.constants import MIN_REQUIRED_SOLC
 from raiden.exceptions import ContractVersionMismatch
+
+from raiden_contracts.contract_manager import ContractManager
 
 
 __all__ = (
@@ -36,11 +36,11 @@ __all__ = (
     'EVENT_TOKEN_ADDED',
 )
 
-CONTRACT_CHANNEL_MANAGER = 'channel_manager'
-CONTRACT_ENDPOINT_REGISTRY = 'endpoint_registry'
-CONTRACT_HUMAN_STANDARD_TOKEN = 'human_standard_token'
-CONTRACT_NETTING_CHANNEL = 'netting_channel'
-CONTRACT_REGISTRY = 'registry'
+CONTRACT_CHANNEL_MANAGER = 'ChannelManagerContract'
+CONTRACT_ENDPOINT_REGISTRY = 'EndpointRegistry'
+CONTRACT_HUMAN_STANDARD_TOKEN = 'HumanStandardToken'
+CONTRACT_NETTING_CHANNEL = 'NettingChannelContract'
+CONTRACT_REGISTRY = 'Registry'
 
 EVENT_CHANNEL_NEW = 'ChannelNew'
 EVENT_CHANNEL_NEW_BALANCE = 'ChannelNewBalance'
@@ -166,8 +166,9 @@ def validate_solc():
         raise RuntimeError(msg)
 
 
-class ContractManager:
-    def __init__(self):
+class ContractManagerWrap(ContractManager):
+    def __init__(self, contracts_directory: str):
+        super().__init__(contracts_directory)
         self.is_instantiated = False
         self.lock = Lock()
         self.event_to_contract = {
@@ -179,50 +180,7 @@ class ContractManager:
             'TokenAdded': CONTRACT_REGISTRY,
         }
         self.contract_to_version = dict()
-
-        self.human_standard_token_compiled = None
-        self.channel_manager_compiled = None
-        self.endpoint_registry_compiled = None
-        self.netting_channel_compiled = None
-        self.registry_compiled = None
-
-    def instantiate(self):
-        with self.lock:
-            if self.is_instantiated:
-                return
-
-            self.human_standard_token_compiled = get_static_or_compile(
-                get_contract_path('HumanStandardToken.sol'),
-                'HumanStandardToken',
-                optimize=False,
-            )
-
-            self.channel_manager_compiled = get_static_or_compile(
-                get_contract_path('ChannelManagerContract.sol'),
-                'ChannelManagerContract',
-                optimize=False,
-            )
-
-            self.endpoint_registry_compiled = get_static_or_compile(
-                get_contract_path('EndpointRegistry.sol'),
-                'EndpointRegistry',
-                optimize=False,
-            )
-
-            self.netting_channel_compiled = get_static_or_compile(
-                get_contract_path('NettingChannelContract.sol'),
-                'NettingChannelContract',
-                optimize=False,
-            )
-
-            self.registry_compiled = get_static_or_compile(
-                get_contract_path('Registry.sol'),
-                'Registry',
-                optimize=False,
-            )
-
-            self.is_instantiated = True
-            self.init_contract_versions()
+        self.init_contract_versions()
 
     def init_contract_versions(self):
         contracts = [
@@ -239,21 +197,16 @@ class ContractManager:
                 version_re
             )
 
-    def get_version(self, contract_name):
+    def get_version(self, contract_name: str) -> str:
         """Return version of the contract."""
         return self.contract_to_version[contract_name]
-
-    def get_abi(self, contract_name):
-        self.instantiate()
-        compiled = getattr(self, '{}_compiled'.format(contract_name))
-        return compiled['abi']
 
     def get_event_id(self, event_name: str) -> int:
         """ Not really generic, as it maps event names to events of specific contracts,
         but it is good enough for what we want to accomplish.
         """
-        contract_abi = self.get_abi(self.event_to_contract[event_name])
-        event_abi = find_matching_event_abi(contract_abi, event_name)
+        contract_name = self.event_to_contract[event_name]
+        event_abi = self.get_event_abi(contract_name, event_name)
         log_id = event_abi_to_log_topic(event_abi)
         return int(encode_hex(log_id), 16)
 
@@ -264,4 +217,4 @@ class ContractManager:
             raise ContractVersionMismatch('Incompatible ABI for %s' % contract_name)
 
 
-CONTRACT_MANAGER = ContractManager()
+CONTRACT_MANAGER = ContractManagerWrap('raiden/smart_contracts/')

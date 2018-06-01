@@ -9,7 +9,7 @@ from raiden.utils import get_contract_path
 from raiden.utils.solc import compile_files_cwd
 from raiden.exceptions import ContractVersionMismatch
 
-from raiden.blockchain.abi import CONTRACT_VERSION_RE, CONTRACT_MANAGER
+from raiden.blockchain.abi import CONTRACT_VERSION_RE, CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 
 
 def replace_contract_version(file_path, new_version):
@@ -49,7 +49,7 @@ def test_deploy_contract(raiden_network, deploy_client, tmpdir):
     temp_dir = TempSolidityDir(os.path.dirname(contract_path), tmpdir)
     replaced_registry_path = os.path.join(temp_dir.name, 'Registry.sol')
 
-    CONTRACT_MANAGER.get_abi('channel_manager')
+    CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER)
 
     replace_contract_version(replaced_registry_path, '0.0.31415')
     contracts = compile_files_cwd([replaced_registry_path])

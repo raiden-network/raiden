@@ -54,7 +54,7 @@ class NettingChannel:
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
         self.proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
         )
         CONTRACT_MANAGER.check_contract_version(

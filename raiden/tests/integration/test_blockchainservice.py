@@ -283,7 +283,7 @@ def test_blockchain(
     assert token_proxy.contract_address == to_canonical_address(event_args['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
     )
 

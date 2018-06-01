@@ -33,7 +33,7 @@ class Token:
         check_address_has_code(jsonrpc_client, token_address, 'Token')
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             address_encoder(token_address),
         )
 
