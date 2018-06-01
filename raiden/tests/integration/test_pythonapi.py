@@ -8,6 +8,7 @@ from raiden.exceptions import (
     InvalidAddress,
     InsufficientFunds,
 )
+from raiden.blockchain.abi import EVENT_CHANNEL_NEW_BALANCE
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
@@ -203,7 +204,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     channel_0_1 = get_channelstate(app0, app1, token_address)
     app0_events = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
 
-    assert must_have_event(app0_events, {'event': 'ChannelNewBalance'})
+    assert must_have_event(app0_events, {'event': EVENT_CHANNEL_NEW_BALANCE})
 
     # This event was temporarily removed. Confirmation from the protocol layer
     # as a state change is necessary to properly fire this event.
@@ -219,7 +220,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     assert not results
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events(channel_0_1.identifier, 0)
-    assert must_have_event(app1_events, {'event': 'ChannelNewBalance'})
+    assert must_have_event(app1_events, {'event': EVENT_CHANNEL_NEW_BALANCE})
     assert must_have_event(app1_events, {'event': 'EventTransferReceivedSuccess'})
 
 

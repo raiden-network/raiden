@@ -2,7 +2,7 @@
 import gevent
 import structlog
 
-from raiden.blockchain.events import get_channel_proxies
+from raiden.blockchain.events import get_channel_proxies, decode_event_to_internal
 from raiden.blockchain.state import (
     get_channel_state,
     get_token_network_state_from_proxies,
@@ -19,6 +19,21 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
+)
+from raiden.blockchain.abi import (
+    EVENT_TOKEN_ADDED,
+    EVENT_TOKEN_ADDED2,
+    EVENT_CHANNEL_NEW,
+    EVENT_CHANNEL_NEW2,
+    EVENT_CHANNEL_NEW_BALANCE,
+    EVENT_CHANNEL_NEW_BALANCE2,
+    EVENT_CHANNEL_WITHDRAW,
+    EVENT_CHANNEL_UNLOCK,
+    EVENT_TRANSFER_UPDATED,
+    EVENT_CHANNEL_CLOSED,
+    EVENT_CHANNEL_SETTLED,
+    EVENT_CHANNEL_SECRET_REVEALED,
+    EVENT_CHANNEL_SECRET_REVEALED2,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -226,38 +241,90 @@ def on_blockchain_event(raiden, event):
 
     data = event.event_data
 
-    if data['event'] == 'TokenAdded':
+    if data['event'] == EVENT_TOKEN_ADDED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
         handle_tokennetwork_new(raiden, event)
 
-    elif data['event'] == 'ChannelNew':
+    elif data['event'] == EVENT_CHANNEL_NEW:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['participant1'] = address_decoder(data['args']['participant1'])
         data['participant2'] = address_decoder(data['args']['participant2'])
         handle_channel_new(raiden, event)
 
-    elif data['event'] == 'ChannelNewBalance':
+    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['token_address'] = address_decoder(data['args']['token_address'])
         data['participant'] = address_decoder(data['args']['participant'])
         data['balance'] = data['args']['balance']
         handle_channel_new_balance(raiden, event)
 
-    elif data['event'] == 'ChannelClosed':
+    elif data['event'] == EVENT_CHANNEL_CLOSED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['closing_address'] = address_decoder(data['args']['closing_address'])
         handle_channel_closed(raiden, event)
 
-    elif data['event'] == 'ChannelSettled':
+    elif data['event'] == EVENT_CHANNEL_SETTLED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         handle_channel_settled(raiden, event)
 
-    elif data['event'] == 'ChannelSecretRevealed':
+    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['receiver_address'] = address_decoder(data['args']['receiver_address'])
         data['secret'] = data['args']['secret']
         handle_channel_withdraw(raiden, event)
+
+    else:
+        log.error('Unknown event type', raiden_event=event)
+
+
+def on_blockchain_event2(raiden, event):
+    log.debug('EVENT', node=pex(raiden.address), chain_event=event)
+
+    event = decode_event_to_internal(event)
+    data = event.event_data
+
+    if data['args'].get('channel_identifier'):
+        data['channel_identifier'] = data['args'].get('channel_identifier')
+
+    if data['event'] == EVENT_TOKEN_ADDED2:
+        handle_tokennetwork_new(raiden, event)
+
+    elif data['event'] == EVENT_CHANNEL_NEW2:
+        data['settle_timeout'] = data['args']['settle_timeout']
+        handle_channel_new(raiden, event)
+
+    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE2:
+        data['deposit'] = data['args']['deposit']
+        handle_channel_new_balance(raiden, event)
+
+    elif data['event'] == EVENT_CHANNEL_WITHDRAW:
+        data['withdrawn_amount'] = data['args']['withdrawn_amount']
+        # handle_channel_withdraw(raiden, event)
+        raise NotImplementedError('handle_channel_withdraw not implemented yet')
+
+    elif data['event'] == EVENT_CHANNEL_UNLOCK:
+        data['unlocked_amount'] = data['args']['unlocked_amount']
+        data['returned_tokens'] = data['args']['returned_tokens']
+        # handle_channel_unlock(raiden, event)
+        raise NotImplementedError('handle_channel_unlock not implemented yet')
+
+    elif data['event'] == EVENT_TRANSFER_UPDATED:
+        # handle_channel_updated(raiden, event)
+        raise NotImplementedError('handle_channel_updated not implemented yet')
+
+    elif data['event'] == EVENT_CHANNEL_CLOSED:
+        handle_channel_closed(raiden, event)
+
+    elif data['event'] == EVENT_CHANNEL_SETTLED:
+        data['participant1_amount'] = data['args']['participant1_amount']
+        data['participant2_amount'] = data['args']['participant2_amount']
+        handle_channel_settled(raiden, event)
+
+    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED2:
+        data['secrethash'] = data['args']['secrethash']
+        # handle_secret_reveal(raiden, event)
+        raise NotImplementedError('handle_secret_reveal not implemented yet')
 
     else:
         log.error('Unknown event type', raiden_event=event)

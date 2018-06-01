@@ -30,10 +30,14 @@ __all__ = (
 
     'EVENT_CHANNEL_NEW',
     'EVENT_CHANNEL_NEW_BALANCE',
+    'EVENT_CHANNEL_WITHDRAW',
+    'EVENT_CHANNEL_UNLOCK',
+    'EVENT_TRANSFER_UPDATED',
     'EVENT_CHANNEL_CLOSED',
     'EVENT_CHANNEL_SECRET_REVEALED',
     'EVENT_CHANNEL_SETTLED',
     'EVENT_TOKEN_ADDED',
+    'EVENT_ADDRESS_REGISTERED',
 )
 
 CONTRACT_CHANNEL_MANAGER = 'ChannelManagerContract'
@@ -43,11 +47,19 @@ CONTRACT_NETTING_CHANNEL = 'NettingChannelContract'
 CONTRACT_REGISTRY = 'Registry'
 
 EVENT_CHANNEL_NEW = 'ChannelNew'
+EVENT_CHANNEL_NEW2 = 'ChannelOpened'
 EVENT_CHANNEL_NEW_BALANCE = 'ChannelNewBalance'
+EVENT_CHANNEL_NEW_BALANCE2 = 'ChannelNewDeposit'
+EVENT_CHANNEL_WITHDRAW = 'ChannelWithdraw'
+EVENT_CHANNEL_UNLOCK = 'ChannelUnlocked'
+EVENT_TRANSFER_UPDATED = 'NonClosingBalanceProofUpdated'
 EVENT_CHANNEL_CLOSED = 'ChannelClosed'
 EVENT_CHANNEL_SECRET_REVEALED = 'ChannelSecretRevealed'
+EVENT_CHANNEL_SECRET_REVEALED2 = 'SecretRevealed'
 EVENT_CHANNEL_SETTLED = 'ChannelSettled'
 EVENT_TOKEN_ADDED = 'TokenAdded'
+EVENT_TOKEN_ADDED2 = 'TokenNetworkCreated'
+EVENT_ADDRESS_REGISTERED = 'AddressRegistered'
 
 CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$' # noqa
 
@@ -172,12 +184,12 @@ class ContractManagerWrap(ContractManager):
         self.is_instantiated = False
         self.lock = Lock()
         self.event_to_contract = {
-            'ChannelNew': CONTRACT_CHANNEL_MANAGER,
-            'ChannelNewBalance': CONTRACT_NETTING_CHANNEL,
-            'ChannelClosed': CONTRACT_NETTING_CHANNEL,
-            'ChannelSecretRevealed': CONTRACT_NETTING_CHANNEL,
-            'ChannelSettled': CONTRACT_NETTING_CHANNEL,
-            'TokenAdded': CONTRACT_REGISTRY,
+            EVENT_CHANNEL_NEW: CONTRACT_CHANNEL_MANAGER,
+            EVENT_CHANNEL_NEW_BALANCE: CONTRACT_NETTING_CHANNEL,
+            EVENT_CHANNEL_CLOSED: CONTRACT_NETTING_CHANNEL,
+            EVENT_CHANNEL_SECRET_REVEALED: CONTRACT_NETTING_CHANNEL,
+            EVENT_CHANNEL_SETTLED: CONTRACT_NETTING_CHANNEL,
+            EVENT_TOKEN_ADDED: CONTRACT_REGISTRY,
         }
         self.contract_to_version = dict()
         self.init_contract_versions()

@@ -5,6 +5,8 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
+    EVENT_TOKEN_ADDED,
+    EVENT_CHANNEL_NEW,
     EVENT_CHANNEL_CLOSED,
     EVENT_CHANNEL_NEW_BALANCE,
     EVENT_CHANNEL_SETTLED,
@@ -152,7 +154,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
 
     assert len(events) == 1
-    assert events[0]['event'] == 'TokenAdded'
+    assert events[0]['event'] == EVENT_TOKEN_ADDED
     assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': address_encoder(registry_address),
         'channel_manager_address': address_encoder(manager0.address),
@@ -186,7 +188,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     )
 
     assert len(events) == 1
-    assert events[0]['event'] == 'ChannelNew'
+    assert events[0]['event'] == EVENT_CHANNEL_NEW
     assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': address_encoder(registry_address),
         'settle_timeout': settle_timeout,
@@ -244,7 +246,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 1
     assert len(events) == 1
 
-    assert events[0]['event'] == 'ChannelNewBalance'
+    assert events[0]['event'] == EVENT_CHANNEL_NEW_BALANCE
     new_balance_event = {
         'registry_address': address_encoder(registry_address),
         'token_address': address_encoder(token_address),
@@ -280,7 +282,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 2
     assert len(events) == 1
 
-    assert events[0]['event'] == 'ChannelClosed'
+    assert events[0]['event'] == EVENT_CHANNEL_CLOSED
     closed_event = {
         'registry_address': address_encoder(registry_address),
         'closing_address': address_encoder(app0.raiden.address),
@@ -309,7 +311,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(all_netting_channel_events) == 3
     assert len(events) == 1
 
-    assert events[0]['event'] == 'ChannelSettled'
+    assert events[0]['event'] == EVENT_CHANNEL_SETTLED
     settled_event = {
         'registry_address': address_encoder(registry_address),
         'block_number': 'ignore',
