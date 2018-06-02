@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import binascii
 import json
-import logging
 import re
 from enum import Enum
 from operator import itemgetter
@@ -364,7 +363,7 @@ class MatrixTransport:
             )
         elif isinstance(message, SignedMessage):
             self._receive_message(message)
-        elif log.isEnabledFor(logging.ERROR):
+        else:
             log.error(
                 'Invalid message',
                 message=data,
@@ -383,32 +382,27 @@ class MatrixTransport:
 
         if async_result is not None:
             async_result.set(True)
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'DELIVERED MESSAGE RECEIVED',
-                    node=pex(self._raiden_service.address),
-                    receiver=pex(delivered.sender),
-                    message_identifier=delivered.delivered_message_identifier,
-                )
+            log.debug(
+                'DELIVERED MESSAGE RECEIVED',
+                node=pex(self._raiden_service.address),
+                receiver=pex(delivered.sender),
+                message_identifier=delivered.delivered_message_identifier,
+            )
 
         else:
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'DELIVERED MESSAGE UNKNOWN',
-                    node=pex(self._raiden_service.address),
-                    message_identifier=delivered.delivered_message_identifier,
-                )
+            log.debug(
+                'DELIVERED MESSAGE UNKNOWN',
+                node=pex(self._raiden_service.address),
+                message_identifier=delivered.delivered_message_identifier,
+            )
 
     def _receive_message(self, message):
-        is_debug_log_enabled = log.isEnabledFor(logging.DEBUG)
-
-        if is_debug_log_enabled:
-            log.info(
-                'MESSAGE RECEIVED',
-                node=pex(self._raiden_service.address),
-                message=message,
-                message_sender=pex(message.sender)
-            )
+        log.info(
+            'MESSAGE RECEIVED',
+            node=pex(self._raiden_service.address),
+            message=message,
+            message_sender=pex(message.sender)
+        )
 
         try:
             if on_udp_message(self._raiden_service, message):
@@ -422,15 +416,14 @@ class MatrixTransport:
                 self._send_immediate(message.sender, json.dumps(delivered_message.to_dict()))
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
-            if is_debug_log_enabled:
-                log.warn('Exception while processing message', exc_info=True)
-        if is_debug_log_enabled:
-            log.debug(
-                'DELIVERED',
-                node=pex(self._raiden_service.address),
-                to=pex(message.sender),
-                message_identifier=message.message_identifier
-            )
+            log.warn('Exception while processing message', exc_info=True)
+
+        log.debug(
+            'DELIVERED',
+            node=pex(self._raiden_service.address),
+            to=pex(message.sender),
+            message_identifier=message.message_identifier
+        )
 
     def _send_queued_messages(
         self,
