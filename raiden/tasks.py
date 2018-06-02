@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import time
-
 import structlog
 
 import gevent
@@ -19,7 +18,6 @@ class AlarmTask(gevent.Greenlet):
 
     def __init__(self, chain):
         super().__init__()
-
         self.callbacks = list()
         self.stop_event = AsyncResult()
         self.chain = chain
@@ -97,8 +95,6 @@ class AlarmTask(gevent.Greenlet):
                     result = callback(current_block)
                 except RaidenShuttingDown:
                     break
-                except:  # NOQA pylint: disable=bare-except
-                    log.exception('unexpected exception on alarm')
                 else:
                     if result is REMOVE_CALLBACK:
                         remove.append(callback)

@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import os
 import filelock
 import sys
+import structlog
+import traceback
 from binascii import unhexlify
 
+from raiden_libs.gevent_error_handler import register_error_handler
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -22,6 +26,26 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     address_encoder)
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def greenlet_error_handler(context, exc_info):
+    log.fatal("Unhandled greenlet exception. Raiden is terminating ...")
+    etype = exc_info[0]
+    evalue = exc_info[1]
+    etb = exc_info[2]
+    traceback.print_exception(
+        etype=etype,
+        value=evalue,
+        tb=etb,
+    )
+    if 'TRAVIS' in os.environ:
+        if evalue.__traceback__ is not etb:
+            raise evalue.with_traceback(etb)
+        raise evalue
+    else:
+        sys.exit(1)
 
 
 class App:  # pylint: disable=too-few-public-methods
@@ -63,6 +87,7 @@ class App:  # pylint: disable=too-few-public-methods
     }
 
     def __init__(self, config, chain, default_registry, transport, discovery=None):
+        register_error_handler(greenlet_error_handler)
         self.config = config
         self.discovery = discovery
 
