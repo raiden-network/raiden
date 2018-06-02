@@ -25,19 +25,19 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     #   App0 <---> App1 <---> App2
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = token_addresses[0]
-
-    # Exhaust the channel App1 <-> App2 (to force the refund transfer)
-    exhaust_amount = deposit
-    direct_transfer(app1, app2, token_address, exhaust_amount, identifier=1)
-
-    refund_amount = deposit // 2
-    identifier = 1
     payment_network_identifier = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token_address,
     )
+
+    # Exhaust the channel App1 <-> App2 (to force the refund transfer)
+    exhaust_amount = deposit
+    direct_transfer(app1, app2, token_network_identifier, exhaust_amount, identifier=1)
+
+    refund_amount = deposit // 2
+    identifier = 1
     async_result = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         refund_amount,
@@ -62,14 +62,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     )
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit, [send_lockedtransfer.transfer.lock],
         app1, deposit, [send_refundtransfer.lock],
     )
 
     # This channel was exhausted to force the refund transfer
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app1, 0, [],
         app2, deposit * 2, [],
     )
@@ -91,6 +91,12 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     #
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
+        token_address,
+    )
 
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = 1
@@ -98,7 +104,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     mediated_transfer(
         app0,
         app2,
-        token_address,
+        token_network_identifier,
         amount_path,
         identifier_path,
         timeout=network_wait,
@@ -110,7 +116,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     direct_transfer(
         app1,
         app2,
-        token_address,
+        token_network_identifier,
         amount_drain,
         identifier_drain,
         timeout=network_wait,
@@ -120,12 +126,12 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     gevent.sleep(0.2)
 
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
@@ -134,12 +140,6 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        payment_network_identifier,
-        token_address,
-    )
     async_result = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount_refund,
@@ -174,12 +174,12 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
 
     # Both channels have the amount locked because of the refund message
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app0, deposit - amount_path, [lockstate_from_lock(lock)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
     )
     assert_synched_channel_state(
-        token_address,
+        token_network_identifier,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
