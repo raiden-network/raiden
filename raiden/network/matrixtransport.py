@@ -348,7 +348,7 @@ class MatrixTransport:
             message = message_from_bytes(data_decoder(data))
         else:
             message_dict = json.loads(data)
-            log.trace('MESSAGE_DATA', data=message_dict)
+            log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
 
         if isinstance(message, SignedMessage) and not message.sender:
@@ -510,7 +510,7 @@ class MatrixTransport:
             try:
                 # Try join first to avoid races
                 room_name_full = f'#{room_name}:{self._server_name}'
-                log.trace('Trying to join', room_name=room_name_full)
+                log.debug('Trying to join', room_name=room_name_full)
                 room = self._client.join_room(room_name_full)
                 for user in peers:
                     room.invite_user(user.user_id)
@@ -549,7 +549,7 @@ class MatrixTransport:
         if new_state == self._userid_to_presence.get(user_id):
             return
 
-        log.trace(
+        log.debug(
             'Changing user presence state',
             user_id=user_id,
             prev_state=self._userid_to_presence.get(user_id),
@@ -607,7 +607,7 @@ class MatrixTransport:
 
         state = event['content']['membership']
         user_id = event['state_key']
-        log.trace('discovery member change', state=state, user_id=user_id)
+        log.debug('discovery member change', state=state, user_id=user_id)
         if state != 'join':
             return
         self._maybe_invite_user(self._client.get_user(user_id))
@@ -636,7 +636,7 @@ class MatrixTransport:
         # Refresh members
         room.get_joined_members()
         if user.user_id not in room._members.keys():
-            log.trace('INVITE', user=user, room=room)
+            log.debug('INVITE', user=user, room=room)
             room.invite_user(user.user_id)
 
     @staticmethod
