@@ -17,7 +17,6 @@ from raiden.raiden_service import (
 )
 
 from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
