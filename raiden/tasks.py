@@ -91,13 +91,9 @@ class AlarmTask(gevent.Greenlet):
             self.last_block_number = current_block
             remove = list()
             for callback in self.callbacks:
-                try:
-                    result = callback(current_block)
-                except RaidenShuttingDown:
-                    break
-                else:
-                    if result is REMOVE_CALLBACK:
-                        remove.append(callback)
+                result = callback(current_block)
+                if result is REMOVE_CALLBACK:
+                    remove.append(callback)
 
             for callback in remove:
                 self.callbacks.remove(callback)
