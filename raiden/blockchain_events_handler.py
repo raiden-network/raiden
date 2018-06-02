@@ -260,4 +260,4 @@ def on_blockchain_event(raiden, event):
         handle_channel_withdraw(raiden, event)
 
     else:
-        log.error('Unknown event type', event=event)
+        log.error('Unknown event type', raiden_event=event)
