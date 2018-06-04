@@ -146,9 +146,7 @@ def get_token_network_identifier_by_token_address(
         token_address,
     )
 
-    token_network_id = None
-    if token_network is not None:
-        token_network_id = token_network.address
+    token_network_id = getattr(token_network, 'address', None)
 
     return token_network_id
 
