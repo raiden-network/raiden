@@ -35,6 +35,9 @@ MessageID = NewType('MessageID', T_MessageID)
 T_Nonce = int
 Nonce = NewType('Nonce', T_Nonce)
 
+T_NetworkTimeout = float
+NetworkTimeout = NewType('NetworkTimeout', T_NetworkTimeout)
+
 T_PaymentID = bytes
 PaymentID = NewType('PaymentID', T_PaymentID)
 
