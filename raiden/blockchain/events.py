@@ -9,6 +9,18 @@ from raiden.blockchain.abi import (
     CONTRACT_CHANNEL_MANAGER,
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
+    EVENT_TOKEN_ADDED,
+    EVENT_TOKEN_ADDED2,
+    EVENT_CHANNEL_NEW,
+    EVENT_CHANNEL_NEW2,
+    EVENT_CHANNEL_NEW_BALANCE,
+    EVENT_CHANNEL_NEW_BALANCE2,
+    EVENT_CHANNEL_WITHDRAW,
+    EVENT_CHANNEL_UNLOCK,
+    EVENT_TRANSFER_UPDATED,
+    EVENT_CHANNEL_CLOSED,
+    EVENT_CHANNEL_SETTLED,
+    EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -25,6 +37,10 @@ EventListener = namedtuple(
 Proxies = namedtuple(
     'Proxies',
     ('registry', 'channel_managers', 'channelmanager_nettingchannels'),
+)
+Proxies2 = namedtuple(
+    'Proxies',
+    ('token_registry', 'token_networks'),
 )
 
 # `new_filter` uses None to signal the absence of topics filters
@@ -189,32 +205,63 @@ def decode_event_to_internal(event):
     data = event.event_data
 
     # Note: All addresses inside the event_data must be decoded.
-    if data['event'] == 'TokenAdded':
+    if data['event'] == EVENT_TOKEN_ADDED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
         data['token_address'] = address_decoder(data['args']['token_address'])
 
-    elif data['event'] == 'ChannelNew':
+    elif data['event'] == EVENT_CHANNEL_NEW:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['participant1'] = address_decoder(data['args']['participant1'])
         data['participant2'] = address_decoder(data['args']['participant2'])
         data['netting_channel'] = address_decoder(data['args']['netting_channel'])
 
-    elif data['event'] == 'ChannelNewBalance':
+    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['token_address'] = address_decoder(data['args']['token_address'])
         data['participant'] = address_decoder(data['args']['participant'])
 
-    elif data['event'] == 'ChannelClosed':
+    elif data['event'] == EVENT_CHANNEL_CLOSED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['closing_address'] = address_decoder(data['args']['closing_address'])
 
-    elif data['event'] == 'ChannelSecretRevealed':
+    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
         data['receiver_address'] = address_decoder(data['args']['receiver_address'])
 
-    elif data['event'] == 'ChannelSettled':
+    elif data['event'] == EVENT_CHANNEL_SETTLED:
         data['registry_address'] = address_decoder(data['args']['registry_address'])
+
+    return event
+
+
+def decode_event_to_internal2(event):
+    """ Enforce the binary encoding of address for internal usage. """
+    data = event.event_data
+
+    # Note: All addresses inside the event_data must be decoded.
+    if data['event'] == EVENT_TOKEN_ADDED2:
+        data['token_network_address'] = address_decoder(data['args']['token_network_address'])
+        data['token_address'] = address_decoder(data['args']['token_address'])
+
+    elif data['event'] == EVENT_CHANNEL_NEW2:
+        data['participant1'] = address_decoder(data['args']['participant1'])
+        data['participant2'] = address_decoder(data['args']['participant2'])
+
+    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE2:
+        data['participant'] = address_decoder(data['args']['participant'])
+
+    elif data['event'] == EVENT_CHANNEL_WITHDRAW:
+        data['participant'] = address_decoder(data['args']['participant'])
+
+    elif data['event'] == EVENT_CHANNEL_UNLOCK:
+        data['participant'] = address_decoder(data['args']['participant'])
+
+    elif data['event'] == EVENT_TRANSFER_UPDATED:
+        data['closing_participant'] = address_decoder(data['args']['closing_participant'])
+
+    elif data['event'] == EVENT_CHANNEL_CLOSED:
+        data['closing_participant'] = address_decoder(data['args']['closing_participant'])
 
     return event
 
