@@ -4,6 +4,7 @@ from http import HTTPStatus
 import json
 import sys
 import logging
+import structlog
 
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
@@ -12,8 +13,7 @@ from flask_cors import CORS
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from gevent.pywsgi import WSGIServer
-
-import structlog
+from eth_utils import is_address, to_checksum_address
 
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -62,7 +62,7 @@ from raiden.raiden_service import (
     create_default_identifier,
 )
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
-from raiden.utils import address_encoder, channelstate_to_api_dict, split_endpoint, is_frozen
+from raiden.utils import channelstate_to_api_dict, split_endpoint, is_frozen, address_encoder_and_checksum
 
 log = structlog.get_logger(__name__)
 
@@ -90,6 +90,26 @@ URLS_V1 = [
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
 ]
+
+
+def checksummed_response_dict(data):
+    new_data = data.copy()
+    for k, v in data.items():
+        if is_address(v):
+            new_data[k] = to_checksum_address(v)
+        else:
+            new_data[k] = v
+    return new_data
+
+
+def checksummed_response_list(data):
+    new_data = data.copy()
+    for v in data:
+        if is_address(v):
+            new_data.append(to_checksum_address(v))
+        else:
+            new_data.append(v)
+    return new_data
 
 
 def api_response(result, status_code=HTTPStatus.OK):
@@ -138,9 +158,9 @@ def normalize_events_list(old_list):
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
         if new_event['event'] == 'EventTransferReceivedSuccess':
-            new_event['initiator'] = address_encoder(new_event['initiator'])[2:]
+            new_event['initiator'] = address_encoder_and_checksum(new_event['initiator'])[2:]
         if new_event['event'] == 'EventTransferSentSuccess':
-            new_event['target'] = address_encoder(new_event['target'])[2:]
+            new_event['target'] = address_encoder_and_checksum(new_event['target'])[2:]
         new_list.append(new_event)
     return new_list
 
@@ -286,7 +306,7 @@ class RestAPI:
         self.transfer_schema = TransferSchema()
 
     def get_our_address(self):
-        return api_response(result=dict(our_address=address_encoder(self.raiden_api.address)))
+        return api_response(result=dict(our_address=address_encoder_and_checksum(self.raiden_api.address)))
 
     def register_token(self, registry_address, token_address):
         try:
@@ -301,7 +321,7 @@ class RestAPI:
             )
 
         return api_response(
-            result=dict(channel_manager_address=address_encoder(manager_address)),
+            result=dict(channel_manager_address=address_encoder_and_checksum(manager_address)),
             status_code=HTTPStatus.CREATED,
         )
 
@@ -360,7 +380,7 @@ class RestAPI:
         result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
 
         return api_response(
-            result=result.data,
+            result=checksummed_response_dict(result.data),
             status_code=HTTPStatus.CREATED,
         )
 
@@ -389,8 +409,7 @@ class RestAPI:
             )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
-
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def close(self, registry_address, token_address, partner_address):
         try:
@@ -406,7 +425,7 @@ class RestAPI:
             )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def connect(
             self,
@@ -450,7 +469,7 @@ class RestAPI:
         closed_channels = [channel_state.identifier for channel_state in closed_channels]
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def get_channel_list(self, registry_address, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(
@@ -462,14 +481,16 @@ class RestAPI:
 
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dump(channel_list)
-        return api_response(result=result.data)
+        import pdb
+        pdb.set_trace()
+        return api_response(result=checksummed_response_list(result.data))
 
     def get_tokens_list(self, registry_address):
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
         assert isinstance(raiden_service_result, list)
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_list(result.data))
 
     def get_network_events(self, registry_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_network_events(
@@ -499,7 +520,7 @@ class RestAPI:
     def get_channel(self, registry_address, channel_address):
         channel_state = self.raiden_api.get_channel(registry_address, channel_address)
         result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def get_partners_by_token(self, registry_address, token_address):
         return_list = []
@@ -519,7 +540,7 @@ class RestAPI:
 
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dump(schema_list)
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_list(result.data))
 
     def initiate_transfer(
             self,
@@ -568,7 +589,7 @@ class RestAPI:
             'identifier': identifier,
         }
         result = self.transfer_schema.dump(transfer)
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def _deposit(self, registry_address, channel_state, balance):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
@@ -601,7 +622,7 @@ class RestAPI:
         )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def _close(self, registry_address, channel_state):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
@@ -629,7 +650,7 @@ class RestAPI:
 
         result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))
 
-        return api_response(result=result.data)
+        return api_response(result=checksummed_response_dict(result.data))
 
     def patch_channel(self, registry_address, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
@@ -652,7 +673,7 @@ class RestAPI:
 
         except ChannelNotFound:
             return api_error(
-                errors='Requested channel {} not found'.format(address_encoder(channel_address)),
+                errors='Requested channel {} not found'.format(address_encoder_and_checksum(channel_address)),
                 status_code=HTTPStatus.CONFLICT,
             )
 

@@ -15,6 +15,8 @@ from werkzeug.routing import (
     BaseConverter,
     ValidationError,
 )
+from eth_utils import is_checksum_address
+
 
 from raiden.api.objects import (
     Address,
@@ -48,6 +50,9 @@ class HexAddressConverter(BaseConverter):
         if value[:2] != '0x':
             raise ValidationError()
 
+        if not is_checksum_address(value):
+            raise ValidationError()
+
         try:
             value = unhexlify(value[2:])
         except TypeError:
@@ -65,6 +70,7 @@ class HexAddressConverter(BaseConverter):
 class AddressField(fields.Field):
     default_error_messages = {
         'missing_prefix': 'Not a valid hex encoded address, must be 0x prefixed.',
+        'invalid_checksum': 'Not a valid EIP55 encoded address',
         'invalid_data': 'Not a valid hex encoded address, contains invalid characters.',
         'invalid_size': 'Not a valid hex encoded address, decoded address is not 20 bytes long.',
     }
@@ -75,6 +81,9 @@ class AddressField(fields.Field):
     def _deserialize(self, value, attr, data):
         if value[:2] != '0x':
             self.fail('missing_prefix')
+
+        if not is_checksum_address(value):
+            self.fail('invalid_checksum')
 
         try:
             value = unhexlify(value[2:])

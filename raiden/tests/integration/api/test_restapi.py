@@ -10,7 +10,7 @@ from raiden.api.v1.encoding import (
     HexAddressConverter,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-from raiden.utils import address_encoder, address_decoder
+from raiden.utils import address_encoder_and_checksum, address_decoder
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -78,7 +78,7 @@ def test_hex_converter():
         converter.to_python('414d72a6f6e28f4950117696081450d63d56c354')
 
     address = b'AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T'
-    assert converter.to_python('0x414d72a6f6e28f4950117696081450d63d56c354') == address
+    assert converter.to_python('0x414D72a6f6E28F4950117696081450d63D56C354') == address
 
 
 def test_address_field():
@@ -100,7 +100,7 @@ def test_address_field():
         field._deserialize('414d72a6f6e28f4950117696081450d63d56c354', attr, data)
 
     address = b'AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T'
-    assert field._deserialize('0x414d72a6f6e28f4950117696081450d63d56c354', attr, data) == address
+    assert field._deserialize('0x414D72a6f6E28F4950117696081450d63D56C354', attr, data) == address
 
 
 def test_url_with_invalid_address(rest_api_port_number, api_backend):
@@ -125,7 +125,7 @@ def test_payload_with_address_without_prefix(api_backend):
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
     channel_data_obj = {
         'partner_address': invalid_address,
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
         'settle_timeout': 10,
     }
     request = grequests.put(
@@ -144,7 +144,7 @@ def test_payload_with_address_invalid_chars(api_backend):
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
     channel_data_obj = {
         'partner_address': invalid_address,
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
         'settle_timeout': 10,
     }
     request = grequests.put(
@@ -163,8 +163,27 @@ def test_payload_with_address_invalid_length(api_backend):
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
     channel_data_obj = {
         'partner_address': invalid_address,
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
         'settle_timeout': 10,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+def test_payload_with_address_not_eip55(api_backend):
+    """ Provided addresses must be EIP55 encoded. """
+    invalid_address = '0xf696209d2ca35e6c88e5b99b7cda3abf316bed69'
+    channel_data_obj = {
+        'partner_address': invalid_address,
+        'token_address': '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
+        'settle_timeout': 90,
     }
     request = grequests.put(
         api_url_for(
@@ -186,7 +205,7 @@ def test_api_query_our_address(api_backend):
 
     api_server, _ = api_backend
     our_address = api_server.rest_api.raiden_api.address
-    assert response.json() == {'our_address': address_encoder(our_address)}
+    assert response.json() == {'our_address': address_encoder_and_checksum(our_address)}
 
 
 def test_api_open_and_deposit_channel(
@@ -195,12 +214,12 @@ def test_api_open_and_deposit_channel(
         reveal_timeout,
 ):
     # let's create a new channel
-    first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
     settle_timeout = 1650
     channel_data_obj = {
         'partner_address': first_partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
     }
@@ -212,7 +231,6 @@ def test_api_open_and_deposit_channel(
         ),
         json=channel_data_obj,
     )
-
     response = request.send().response
 
     assert_proper_response(response, HTTPStatus.CREATED)
@@ -227,11 +245,11 @@ def test_api_open_and_deposit_channel(
     assert response == expected_response
 
     # now let's open a channel and make a deposit too
-    second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
+    second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
     balance = 100
     channel_data_obj = {
         'partner_address': second_partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'balance': balance,
@@ -271,7 +289,7 @@ def test_api_open_and_deposit_channel(
     expected_response = {
         'channel_address': first_channel_address,
         'partner_address': first_partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
@@ -294,7 +312,7 @@ def test_api_open_and_deposit_channel(
     expected_response = {
         'channel_address': second_channel_address,
         'partner_address': second_partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
@@ -309,12 +327,12 @@ def test_api_open_close_and_settle_channel(
         reveal_timeout,
 ):
     # let's create a new channel
-    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
     settle_timeout = 1650
     channel_data_obj = {
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
     }
     request = grequests.put(
@@ -353,7 +371,7 @@ def test_api_open_close_and_settle_channel(
     expected_response = {
         'channel_address': channel_address,
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_CLOSED,
@@ -367,12 +385,12 @@ def test_api_open_channel_invalid_input(
         token_addresses,
         reveal_timeout,
 ):
-    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
     settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
     channel_data_obj = {
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
     }
@@ -403,12 +421,12 @@ def test_api_channel_state_change_errors(
         token_addresses,
         reveal_timeout,
 ):
-    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
     settle_timeout = 1650
     channel_data_obj = {
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
     }
@@ -484,14 +502,14 @@ def test_api_channel_state_change_errors(
 
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_api_tokens(api_backend, blockchain_services, token_addresses):
-    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address1 = token_addresses[0]
     token_address2 = token_addresses[1]
     settle_timeout = 1650
 
     channel_data_obj = {
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address1),
+        'token_address': address_encoder_and_checksum(token_address1),
         'settle_timeout': settle_timeout,
     }
     request = grequests.put(
@@ -504,11 +522,11 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
 
-    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     settle_timeout = 1650
     channel_data_obj = {
         'partner_address': partner_address,
-        'token_address': address_encoder(token_address2),
+        'token_address': address_encoder_and_checksum(token_address2),
         'settle_timeout': settle_timeout,
     }
     request = grequests.put(
@@ -532,20 +550,20 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     assert_proper_response(response)
     response = response.json()
     expected_response = [
-        address_encoder(token_address1),
-        address_encoder(token_address2),
+        address_encoder_and_checksum(token_address1),
+        address_encoder_and_checksum(token_address2),
     ]
     assert set(response) == set(expected_response)
 
 
 def test_query_partners_by_token(api_backend, blockchain_services, token_addresses):
-    first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
+    first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+    second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
     token_address = token_addresses[0]
     settle_timeout = 1650
     channel_data_obj = {
         'partner_address': first_partner_address,
-        'token_address': address_encoder(token_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'settle_timeout': settle_timeout,
     }
     request = grequests.put(
@@ -575,7 +593,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
 
     # and a channel for another token
     channel_data_obj['partner_address'] = '0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E'
-    channel_data_obj['token_address'] = address_encoder(token_address)
+    channel_data_obj['token_address'] = address_encoder_and_checksum(token_address)
     request = grequests.put(
         api_url_for(
             api_backend,
@@ -591,7 +609,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
         api_url_for(
             api_backend,
             'partnersresourcebytokenaddress',
-            token_address=address_encoder(token_address),
+            token_address=address_encoder_and_checksum(token_address),
         )
     )
     response = request.send().response
@@ -625,9 +643,9 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
     our_address = api_server.rest_api.raiden_api.address
 
     transfer = {
-        'initiator_address': address_encoder(our_address),
-        'target_address': address_encoder(target_address),
-        'token_address': address_encoder(token_address),
+        'initiator_address': address_encoder_and_checksum(our_address),
+        'target_address': address_encoder_and_checksum(target_address),
+        'token_address': address_encoder_and_checksum(token_address),
         'amount': amount,
         'identifier': identifier,
     }
@@ -636,8 +654,8 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
         api_url_for(
             api_backend,
             'transfertotargetresource',
-            token_address=address_encoder(token_address),
-            target_address=address_encoder(target_address),
+            token_address=address_encoder_and_checksum(token_address),
+            target_address=address_encoder_and_checksum(target_address),
         ),
         json={'amount': amount, 'identifier': identifier},
     )
@@ -661,7 +679,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     register_request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        token_address=address_encoder(new_token_address),
+        token_address=address_encoder_and_checksum(new_token_address),
     ))
     register_response = register_request.send().response
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
@@ -671,7 +689,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     conflict_request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        token_address=address_encoder(new_token_address),
+        token_address=address_encoder_and_checksum(new_token_address),
     ))
     conflict_response = conflict_request.send().response
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
@@ -689,7 +707,7 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
     assert token_addresses == dict()
 
     funds = 100
-    token_address1 = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    token_address1 = '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8'
     connect_data_obj = {
         'funds': funds,
     }
@@ -716,7 +734,7 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
     assert set(token_addresses[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
 
     funds = 100
-    token_address2 = '0x3edf0f56aa9716b898ec8ea674fdde714fd979de'
+    token_address2 = '0x3EdF0f56AA9716B898ec8eA674fDdE714fD979dE'
     connect_data_obj = {
         'funds': funds,
     }
@@ -749,7 +767,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
         api_url_for(
             api_backend,
             'tokeneventsresource',
-            token_address='0x61c808d82a3ac53231750dadc13c777b59310bd9',
+            token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             from_block=5,
             to_block=20,
         )
