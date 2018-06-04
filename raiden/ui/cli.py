@@ -62,12 +62,11 @@ from raiden.utils.cli import (
     group,
     MatrixServerType,
     NATChoiceType,
+    NetworkChoiceType,
     option,
     option_group,
     LOG_LEVEL_CONFIG_TYPE
 )
-
-
 from raiden.log_config import configure_logging
 
 
@@ -325,6 +324,21 @@ def options(func):
             default='udp',
             show_default=True
         ),
+        option(
+            '--network-id',
+            help=(
+                'Specify the network name/id of the Ethereum network to run Raiden on.\n'
+                'Available networks:\n'
+                '"mainnet" - network id: 1\n'
+                '"ropsten" - network id: 3\n'
+                '"rinkeby" - network id: 4\n'
+                '"kovan" - network id: 42\n'
+                '"<NETWORK_ID>": use the given network id directly\n'
+            ),
+            type=NetworkChoiceType(['mainnet', 'ropsten', 'rinkeby', 'kovan', '<NETWORK_ID>']),
+            default='ropsten',
+            show_default=True,
+        ),
         option_group(
             'Ethereum Node Options',
             option(
@@ -510,7 +524,8 @@ def app(
         eth_client_communication,
         nat,
         transport,
-        matrix_server
+        matrix_server,
+        network_id,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -584,10 +599,23 @@ def app(
     # this assumes the eth node is already online
     check_json_rpc(rpc_client)
 
+    net_id = blockchain_service.network_id
+    if net_id != network_id:
+        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
+            print((
+                "The chosen ethereum network '{}' differs from the ethereum client '{}'. "
+                'Please update your settings.'
+            ).format(ID_TO_NETWORKNAME[network_id], ID_TO_NETWORKNAME[net_id]))
+        else:
+            print((
+                "The chosen ethereum network id '{}' differs from the ethereum client '{}'. "
+                'Please update your settings.'
+            ).format(network_id, net_id))
+        sys.exit(1)
+
     if sync_check:
         check_synced(blockchain_service)
 
-    net_id = blockchain_service.network_id
     database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
     config['database_path'] = database_path
     print(
@@ -902,6 +930,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(ethereum_config['rpc']),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
+        network_id='627',
     )
     for option_ in app.params:
         if option_.name in args.keys():

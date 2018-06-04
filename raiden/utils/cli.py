@@ -8,6 +8,7 @@ from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 
 from raiden.utils import address_decoder
+from raiden.constants import NETWORKNAME_TO_ID
 
 
 class HelpFormatter(click.HelpFormatter):
@@ -243,6 +244,18 @@ class NATChoiceType(click.Choice):
                 port = None
             return ip, port
         return super().convert(value, param, ctx)
+
+
+class NetworkChoiceType(click.Choice):
+    def convert(self, value, param, ctx):
+        if isinstance(value, str) and value.isnumeric():
+            try:
+                return int(value)
+            except ValueError:
+                self.fail(f'invalid numeric network id: {value}', param, ctx)
+        else:
+            network_name = super().convert(value, param, ctx)
+            return NETWORKNAME_TO_ID[network_name]
 
 
 class MatrixServerType(click.Choice):
