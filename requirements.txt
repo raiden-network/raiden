@@ -26,3 +26,4 @@ structlog
 colorama
 py-solc
 web3==4.2.1
+pysha3==1.0.2

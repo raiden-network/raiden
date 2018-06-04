@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from eth_utils import big_endian_to_int
+from eth_utils import big_endian_to_int, encode_hex
 import structlog
+
+import raiden_libs.messages
+from raiden_libs.utils import sign_data
 
 from raiden.constants import (
     UINT256_MAX,
@@ -284,6 +287,26 @@ class EnvelopeMessage(SignedMessage):
 
         self.sender = node_address
         self.signature = signature
+
+    def sign2(self, private_key, node_address, chain_id):
+        """ Creates the signature to the balance proof. Will be used in the SC refactoring. """
+        balance_proof = raiden_libs.messages.BalanceProof(
+            channel_identifier=self.channel,
+            token_network_address=self.token_network_address,
+            balance_hash=None,
+            nonce=self.nonce,
+            additional_hash=self.message_hash.decode(),
+            chain_id=chain_id,
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
+        balance_proof.signature = encode_hex(
+            sign_data(self.privkey, balance_proof.serialize_bin())
+        )
+
+        self.sender = node_address
+        self.signature = balance_proof.signature
 
     @classmethod
     def decode(cls, data):
