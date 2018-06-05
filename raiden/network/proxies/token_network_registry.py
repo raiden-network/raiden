@@ -65,11 +65,11 @@ class TokenNetworkRegistry:
         self.poll_timeout = poll_timeout
         self.node_address = privatekey_to_address(self.client.privkey)
 
-        self.address_to_channelmanager = dict()
-        self.token_to_channelmanager = dict()
+        self.address_to_tokennetwork = dict()
+        self.token_to_tokennetwork = dict()
 
-    def manager_address_by_token(self, token_address: typing.TokenAddress):
-        """ Return the channel manager address for the given token or None if
+    def token_to_tokennetwork(self, token_address: typing.TokenAddress):
+        """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
         address = self.proxy.call(
@@ -78,7 +78,6 @@ class TokenNetworkRegistry:
         )
 
         if address == b'':
-            check_address_has_code(self.client, self.address)
             return None
 
         return address_decoder(address)
@@ -111,9 +110,9 @@ class TokenNetworkRegistry:
             )
             raise TransactionThrew('createERC20TokenNetwork', receipt_or_none)
 
-        manager_address = self.manager_address_by_token(token_address)
+        token_network_address = self.token_to_tokennetwork(token_address)
 
-        if manager_address is None:
+        if token_network_address is None:
             log.info(
                 'add_token failed and check_transaction_threw didnt detect it',
                 node=pex(self.node_address),
@@ -128,10 +127,10 @@ class TokenNetworkRegistry:
             node=pex(self.node_address),
             token_address=pex(token_address),
             registry_address=pex(self.address),
-            manager_address=pex(manager_address),
+            token_network_address=pex(token_network_address),
         )
 
-        return manager_address
+        return token_network_address
 
     def tokenadded_filter(self, from_block=None, to_block=None):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED2)]
@@ -150,51 +149,51 @@ class TokenNetworkRegistry:
             filter_id_raw,
         )
 
-    def manager(self, manager_address: typing.TokenNetworkAddress):
+    def token_network(self, token_network_address: typing.TokenNetworkAddress):
         """ Return a proxy to interact with a TokenNetwork. """
-        if not isaddress(manager_address):
+        if not isaddress(token_network_address):
             raise InvalidAddress('Expected binary address format for token network')
 
-        if manager_address not in self.address_to_channelmanager:
-            manager = TokenNetwork(
+        if token_network_address not in self.address_to_tokennetwork:
+            token_network = TokenNetwork(
                 self.client,
-                manager_address,
+                token_network_address,
                 self.poll_timeout,
             )
 
-            token_address = manager.token_address()
+            token_address = token_network.token_address()
 
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
+            self.token_to_tokennetwork[token_address] = token_network
+            self.address_to_tokennetwork[token_network_address] = token_network
 
-        return self.address_to_channelmanager[manager_address]
+        return self.address_to_tokennetwork[token_network_address]
 
-    def manager_by_token(self, token_address: typing.TokenAddress):
-        """ Find the channel manager for `token_address` and return a proxy to
+    def tokennetwork_by_token(self, token_address: typing.TokenAddress):
+        """ Find the token network for `token_address` and return a proxy to
         interact with it.
 
         If the token is not already registered it raises `EthNodeCommunicationError`,
-        since we try to instantiate a Channel manager with an empty address.
+        since we try to instantiate a Token Network with an empty address.
         """
         if not isaddress(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
-        if token_address not in self.token_to_channelmanager:
+        if token_address not in self.token_to_tokennetwork:
             check_address_has_code(self.client, token_address)  # check that the token exists
-            manager_address = self.manager_address_by_token(token_address)
+            token_network_address = self.token_to_tokennetwork(token_address)
 
-            if manager_address is None:
+            if token_network_address is None:
                 raise NoTokenManager(
-                    'Manager for token 0x{} does not exist'.format(hexlify(token_address))
+                    'TokenNetwork for token 0x{} does not exist'.format(hexlify(token_address))
                 )
 
-            manager = TokenNetwork(
+            token_network = TokenNetwork(
                 self.client,
-                manager_address,
+                token_network_address,
                 self.poll_timeout,
             )
 
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
+            self.token_to_tokennetwork[token_address] = token_network
+            self.address_to_tokennetwork[token_network_address] = token_network
 
-        return self.token_to_channelmanager[token_address]
+        return self.token_to_tokennetwork[token_address]

@@ -241,13 +241,13 @@ class TokenNetwork:
         partner_data = self.detail_participant(partner, self.node_address)
         return {
             'our_address': self.node_address,
-            'our_balance': our_data['deposit'],
+            'our_deposit': our_data['deposit'],
             'our_withdrawn': our_data['withdrawn'],
             'our_is_closer': our_data['is_closer'],
             'our_balance_hash': our_data['balance_hash'],
             'our_nonce': our_data['nonce'],
             'partner_address': partner,
-            'partner_balance': partner_data['deposit'],
+            'partner_deposit': partner_data['deposit'],
             'partner_withdrawn': partner_data['withdrawn'],
             'partner_is_closer': partner_data['is_closer'],
             'partner_balance_hash': partner_data['balance_hash'],
