@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 
+from eth_utils import is_binary_address
+
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -14,10 +16,7 @@ from raiden.network.rpc.transactions import (
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
-from raiden.utils import (
-    address_encoder,
-    isaddress,
-)
+from raiden.utils import address_encoder
 
 
 class Token:
@@ -27,7 +26,7 @@ class Token:
             token_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, token_address, 'Token')

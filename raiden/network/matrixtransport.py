@@ -7,6 +7,7 @@ from operator import itemgetter
 from random import Random
 from typing import Dict, Set, Tuple, List
 from urllib.parse import urlparse
+from eth_utils import is_binary_address
 
 import gevent
 import structlog
@@ -46,7 +47,6 @@ from raiden.utils import (
     data_decoder,
     data_encoder,
     eth_sign_sha3,
-    isaddress,
     pex,
     typing
 )
@@ -153,7 +153,7 @@ class MatrixTransport:
         receiver_address: typing.Address,
         message: Message
     ) -> AsyncResult:
-        if not isaddress(receiver_address):
+        if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
         # These are not protocol messages, but transport specific messages

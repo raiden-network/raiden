@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import (
+    to_canonical_address,
+    to_checksum_address,
+    is_binary_address,
+)
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -17,7 +21,6 @@ from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.constants import NULL_ADDRESS
 from raiden.utils import (
     address_encoder,
-    isaddress,
     pex,
 )
 
@@ -34,7 +37,7 @@ class Discovery:
             discovery_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
-        if not isaddress(discovery_address):
+        if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')

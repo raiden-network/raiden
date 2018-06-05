@@ -67,10 +67,6 @@ def ishash(data: bytes) -> bool:
     return isinstance(data, bytes) and len(data) == 32
 
 
-def isaddress(data: bytes) -> bool:
-    return isinstance(data, bytes) and len(data) == 20
-
-
 def is_minified_address(addr):
     return re.compile('(0x)?[a-f0-9]{6,8}').match(addr)
 

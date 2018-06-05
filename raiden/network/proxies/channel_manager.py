@@ -2,6 +2,7 @@
 from binascii import unhexlify
 from gevent.event import AsyncResult
 from typing import List, Union, Tuple
+from eth_utils import is_binary_address
 
 import structlog
 
@@ -34,7 +35,6 @@ from raiden.settings import (
 from raiden.utils import (
     address_decoder,
     address_encoder,
-    isaddress,
     pex,
     privatekey_to_address,
 )
@@ -52,7 +52,7 @@ class ChannelManager:
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
-        if not isaddress(manager_address):
+        if not is_binary_address(manager_address):
             raise ValueError('manager_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
@@ -87,7 +87,7 @@ class ChannelManager:
         Returns:
             The address of the new netting channel.
         """
-        if not isaddress(other_peer):
+        if not is_binary_address(other_peer):
             raise ValueError('The other_peer must be a valid address')
 
         invalid_timeout = (
