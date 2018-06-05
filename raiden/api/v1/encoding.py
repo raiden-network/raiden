@@ -39,7 +39,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
 )
 from raiden.utils import (
-    address_encoder,
+    address_encoder_and_checksum,
     data_encoder,
     data_decoder,
 )
@@ -64,7 +64,7 @@ class HexAddressConverter(BaseConverter):
         return value
 
     def to_url(self, value):
-        return address_encoder(value)
+        return address_encoder_and_checksum(value)
 
 
 class AddressField(fields.Field):
@@ -76,7 +76,7 @@ class AddressField(fields.Field):
     }
 
     def _serialize(self, value, attr, obj):
-        return address_encoder(value)
+        return address_encoder_and_checksum(value)
 
     def _deserialize(self, value, attr, data):
         if value[:2] != '0x':
@@ -217,7 +217,7 @@ class ChannelStateSchema(BaseSchema):
     state = fields.Method('get_state')
 
     def get_partner_address(self, channel_state):  # pylint: disable=no-self-use
-        return address_encoder(channel_state.partner_state.address)
+        return address_encoder_and_checksum(channel_state.partner_state.address)
 
     def get_balance(self, channel_state):  # pylint: disable=no-self-use
         return channel.get_balance(
