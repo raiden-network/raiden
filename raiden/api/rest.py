@@ -62,7 +62,11 @@ from raiden.raiden_service import (
     create_default_identifier,
 )
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
-from raiden.utils import channelstate_to_api_dict, split_endpoint, is_frozen, address_encoder_and_checksum
+from raiden.utils import (
+    channelstate_to_api_dict,
+    split_endpoint, is_frozen,
+    address_encoder_and_checksum,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -306,7 +310,9 @@ class RestAPI:
         self.transfer_schema = TransferSchema()
 
     def get_our_address(self):
-        return api_response(result=dict(our_address=address_encoder_and_checksum(self.raiden_api.address)))
+        return api_response(
+            result=dict(our_address=address_encoder_and_checksum(self.raiden_api.address))
+        )
 
     def register_token(self, registry_address, token_address):
         try:
@@ -673,7 +679,9 @@ class RestAPI:
 
         except ChannelNotFound:
             return api_error(
-                errors='Requested channel {} not found'.format(address_encoder_and_checksum(channel_address)),
+                errors='Requested channel {} not found'.format(
+                    address_encoder_and_checksum(channel_address)
+                ),
                 status_code=HTTPStatus.CONFLICT,
             )
 
