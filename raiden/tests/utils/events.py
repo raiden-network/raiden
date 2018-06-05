@@ -23,9 +23,9 @@ def must_contain_entry(item_list, type_, data):
     order / quantity of the events.
 
     The number of state changes is non-deterministic since it depends on the
-    number of retries from the protocol layer.
+    number of retries from the transport layer.
 
-    This is completely non-deterministic since the protocol retries depend on
+    This is completely non-deterministic since the transport retries depend on
     timeouts and the cooperative scheduling of the running greenlets.
     Additionally the order / quantity of greenlet switches will change as the
     code evolves.

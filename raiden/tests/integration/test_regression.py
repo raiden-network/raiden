@@ -133,7 +133,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
     app2.raiden.sign(reveal_secret)
 
     reveal_data = reveal_secret.encode()
-    app1.raiden.protocol.receive(reveal_data)
+    app1.raiden.transport.receive(reveal_data)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -196,7 +196,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     app0.raiden.sign(mediated_transfer)
 
     message_data = mediated_transfer.encode()
-    app1.raiden.protocol.receive(message_data)
+    app1.raiden.transport.receive(message_data)
 
     reveal_secret = RevealSecret(
         random.randint(0, UINT64_MAX),
@@ -228,7 +228,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     wait = [
         gevent.spawn_later(
             .1,
-            app1.raiden.protocol.receive,
+            app1.raiden.transport.receive,
             data,
         )
         for data in messages

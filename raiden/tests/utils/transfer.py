@@ -37,7 +37,7 @@ from raiden.udp_message_handler import on_udp_message
 
 
 def sign_and_inject(message, key, address, app):
-    """Sign the message with key and inject it directly in the app protocol layer."""
+    """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(key, address)
     on_udp_message(app.raiden, message)
 

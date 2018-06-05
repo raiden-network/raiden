@@ -70,7 +70,7 @@ def timeout_two_stage(
 
 
 def retry(
-        protocol: 'UDPTransport',
+        transport: 'UDPTransport',
         messagedata: bytes,
         message_id: int,
         recipient: typing.Address,
@@ -89,7 +89,7 @@ def retry(
         bool: True if the message was acknowledged, False otherwise.
     """
 
-    async_result = protocol.maybe_sendraw_with_result(
+    async_result = transport.maybe_sendraw_with_result(
         recipient,
         messagedata,
         message_id,
@@ -105,7 +105,7 @@ def retry(
         if event_quit.wait(timeout=timeout) is True:
             break
 
-        protocol.maybe_sendraw_with_result(
+        transport.maybe_sendraw_with_result(
             recipient,
             messagedata,
             message_id,
@@ -129,7 +129,7 @@ def wait_recovery(event_stop: Event, event_healthy: Event):
 
 
 def retry_with_recovery(
-        protocol: 'UDPTransport',
+        transport: 'UDPTransport',
         messagedata: bytes,
         message_id: int,
         recipient: typing.Address,
@@ -172,7 +172,7 @@ def retry_with_recovery(
                 return acknowledged
 
         acknowledged = retry(
-            protocol,
+            transport,
             messagedata,
             message_id,
             recipient,

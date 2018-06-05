@@ -143,5 +143,5 @@ def on_udp_message(raiden: 'RaidenService', message: Message):
         log.error('Unknown message cmdid {}'.format(message.cmdid))
         return False
 
-    # Inform the protocol that it's okay to send a Delivered message
+    # Inform the transport that it's okay to send a Delivered message
     return True

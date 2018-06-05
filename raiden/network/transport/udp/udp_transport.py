@@ -47,7 +47,7 @@ Queue_T = typing.List[QueueItem_T]
 
 # GOALS:
 # - Each netting channel must have the messages processed in-order, the
-# protocol must detect unacknowledged messages and retry them.
+# transport must detect unacknowledged messages and retry them.
 # - A queue must not stall because of synchronization problems in other queues.
 # - Assuming a queue can stall, the unhealthiness of a node must not be
 # inferred from the lack of acknowledgement from a single queue, but healthiness
@@ -57,7 +57,7 @@ Queue_T = typing.List[QueueItem_T]
 
 
 def single_queue_send(
-        protocol: 'UDPTransport',
+        transport: 'UDPTransport',
         recipient: typing.Address,
         queue: Queue_T,
         event_stop: Event,
@@ -67,7 +67,6 @@ def single_queue_send(
         message_retry_timeout: int,
         message_retry_max_timeout: int,
 ):
-
     """ Handles a single message queue for `recipient`.
 
     Notes:
@@ -117,7 +116,7 @@ def single_queue_send(
 
         try:
             acknowledged = retry_with_recovery(
-                protocol,
+                transport,
                 messagedata,
                 message_id,
                 recipient,
@@ -501,7 +500,7 @@ class UDPTransport:
         self.raiden.handle_state_change(processed)
 
         message_id = delivered.delivered_message_identifier
-        async_result = self.raiden.protocol.messageids_to_asyncresults.get(message_id)
+        async_result = self.raiden.transport.messageids_to_asyncresults.get(message_id)
 
         # clear the async result, otherwise we have a memory leak
         if async_result is not None:

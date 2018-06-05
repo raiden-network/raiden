@@ -217,7 +217,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
     assert must_have_event(app0_events, {'event': EVENT_CHANNEL_NEW_BALANCE})
 
-    # This event was temporarily removed. Confirmation from the protocol layer
+    # This event was temporarily removed. Confirmation from the transport layer
     # as a state change is necessary to properly fire this event.
     # assert must_have_event(results, {'event': 'EventTransferSentSuccess'})
 

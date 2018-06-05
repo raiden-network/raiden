@@ -216,7 +216,6 @@ def create_apps(
         use_matrix=False,
         local_matrix_url=None,
 ):
-
     """ Create the apps."""
     # pylint: disable=too-many-locals
     services = zip(blockchain_services, endpoint_discovery_services)
@@ -240,7 +239,7 @@ def create_apps(
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
-            'protocol': {
+            'transport': {
                 'retry_interval': retry_interval,
                 'retries_before_backoff': retries_before_backoff,
                 'throttle_capacity': throttle_capacity,
@@ -276,15 +275,15 @@ def create_apps(
             transport = MatrixTransport(config['matrix'])
         else:
             throttle_policy = TokenBucket(
-                config['protocol']['throttle_capacity'],
-                config['protocol']['throttle_fill_rate']
+                config['transport']['throttle_capacity'],
+                config['transport']['throttle_fill_rate']
             )
 
             transport = UDPTransport(
                 discovery,
                 server._udp_socket((host, port)),  # pylint: disable=protected-access
                 throttle_policy,
-                config['protocol'],
+                config['transport'],
             )
 
         app = App(

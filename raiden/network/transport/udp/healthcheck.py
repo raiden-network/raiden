@@ -28,7 +28,7 @@ HealthEvents = namedtuple('HealthEvents', (
 
 
 def healthcheck(
-        protocol: 'UDPTransport',
+        transport: 'UDPTransport',
         recipient: typing.Address,
         event_stop: Event,
         event_healthy: Event,
@@ -38,20 +38,19 @@ def healthcheck(
         nat_invitation_timeout: int,
         ping_nonce: int,
 ):
-
     """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches
 
     log.debug(
         'starting healthcheck for',
-        node=pex(protocol.raiden.address),
+        node=pex(transport.raiden.address),
         to=pex(recipient),
     )
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
     last_state = NODE_NETWORK_UNKNOWN
-    protocol.set_node_network_state(
+    transport.set_node_network_state(
         recipient,
         last_state,
     )
@@ -61,11 +60,11 @@ def healthcheck(
 
     # Wait for the end-point registration or for the node to quit
     try:
-        protocol.get_host_port(recipient)
+        transport.get_host_port(recipient)
     except UnknownAddress:
         log.debug(
             'waiting for endpoint registration',
-            node=pex(protocol.raiden.address),
+            node=pex(transport.raiden.address),
             to=pex(recipient),
         )
 
@@ -81,7 +80,7 @@ def healthcheck(
 
         while not event_stop.wait(sleep):
             try:
-                protocol.get_host_port(recipient)
+                transport.get_host_port(recipient)
             except UnknownAddress:
                 sleep = next(backoff)
             else:
@@ -97,13 +96,13 @@ def healthcheck(
         sleep = nat_keepalive_timeout
 
         ping_nonce['nonce'] += 1
-        messagedata = protocol.get_ping(ping_nonce['nonce'])
+        messagedata = transport.get_ping(ping_nonce['nonce'])
         message_id = ('ping', ping_nonce['nonce'], recipient)
 
         # Send Ping a few times before setting the node as unreachable
         try:
             acknowledged = udp_utils.retry(
-                protocol,
+                transport,
                 messagedata,
                 message_id,
                 recipient,
@@ -119,7 +118,7 @@ def healthcheck(
         if not acknowledged:
             log.debug(
                 'node is unresponsive',
-                node=pex(protocol.raiden.address),
+                node=pex(transport.raiden.address),
                 to=pex(recipient),
                 current_state=last_state,
                 new_state=NODE_NETWORK_UNREACHABLE,
@@ -130,7 +129,7 @@ def healthcheck(
             # The node is not healthy, clear the event to stop all queue
             # tasks
             last_state = NODE_NETWORK_UNREACHABLE
-            protocol.set_node_network_state(
+            transport.set_node_network_state(
                 recipient,
                 last_state,
             )
@@ -142,7 +141,7 @@ def healthcheck(
             # - Nat punching.
             try:
                 acknowledged = udp_utils.retry(
-                    protocol,
+                    transport,
                     messagedata,
                     message_id,
                     recipient,
@@ -154,12 +153,12 @@ def healthcheck(
 
         if acknowledged:
             current_state = views.get_node_network_status(
-                views.state_from_raiden(protocol.raiden),
+                views.state_from_raiden(transport.raiden),
                 recipient,
             )
             log.debug(
                 'node answered',
-                node=pex(protocol.raiden.address),
+                node=pex(transport.raiden.address),
                 to=pex(recipient),
                 current_state=current_state,
                 new_state=NODE_NETWORK_REACHABLE,
@@ -167,7 +166,7 @@ def healthcheck(
 
             if last_state != NODE_NETWORK_REACHABLE:
                 last_state = NODE_NETWORK_REACHABLE
-                protocol.set_node_network_state(
+                transport.set_node_network_state(
                     recipient,
                     last_state,
                 )
