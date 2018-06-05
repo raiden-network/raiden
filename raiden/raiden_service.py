@@ -268,12 +268,15 @@ class RaidenService:
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        # The alarm task must be started after the snapshot is loaded or the
-        # state is primed, otherwise the state changes won't have effect.
+        # When the alarm task is started or the callbacks are installed doesn't
+        # really matter.
         #
-        # When the `poll_blockchain_events` is registered doesn't matter. But
-        # it is of paramount importance that the filters use the correct value
-        # for the starting block.
+        # But it is of paramount importance to:
+        # - Install the filters which will be polled by poll_blockchain_events
+        #   after the state has been primed, otherwise the state changes won't
+        #   have effect.
+        # - Install the filters using the correct from_block value, otherwise
+        #   blockchain logs can be lost.
         self.alarm.register_callback(self.poll_blockchain_events)
         self.alarm.start()
 
