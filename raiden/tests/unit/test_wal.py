@@ -23,6 +23,11 @@ def state_transition_noop(state, state_change):  # pylint: disable=unused-argume
     return TransitionResult(state, list())
 
 
+class AccState(State):
+    def __init__(self):
+        self.state_changes = list()
+
+
 def state_transtion_acc(state, state_change):
     state = state or AccState()
     state.state_changes.append(state_change)
@@ -152,8 +157,3 @@ def test_restore_without_snapshot():
 
     aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [Block(5), Block(7), Block(8)]
-
-
-class AccState(State):
-    def __init__(self):
-        self.state_changes = list()
