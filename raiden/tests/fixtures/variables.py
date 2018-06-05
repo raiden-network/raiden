@@ -11,8 +11,8 @@ from raiden.utils import privatekey_to_address
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,
-    DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
-    DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
+    DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
+    DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
@@ -118,12 +118,12 @@ def retries_before_backoff():
 
 @pytest.fixture
 def throttle_capacity():
-    return DEFAULT_PROTOCOL_THROTTLE_CAPACITY
+    return DEFAULT_TRANSPORT_THROTTLE_CAPACITY
 
 
 @pytest.fixture
 def throttle_fill_rate():
-    return DEFAULT_PROTOCOL_THROTTLE_FILL_RATE
+    return DEFAULT_TRANSPORT_THROTTLE_FILL_RATE
 
 
 @pytest.fixture
@@ -250,7 +250,7 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
 @pytest.fixture
 def raiden_udp_ports(number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the raiden apps for the udp
-    protocol.
+    transport.
     """
     return [
         next(port_generator)

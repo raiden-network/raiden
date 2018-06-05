@@ -194,7 +194,7 @@ class RaidenService:
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
-        self.protocol = transport
+        self.transport = transport
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
@@ -223,7 +223,7 @@ class RaidenService:
 
         if config['transport_type'] == 'udp':
             # If the endpoint registration fails the node will quit, this must
-            # finish before starting the protocol
+            # finish before starting the transport
             endpoint_registration_event.join()
 
         # Lock used to serialize calls to `poll_blockchain_events`, this is
@@ -277,14 +277,14 @@ class RaidenService:
         # read the latest state from the network
         self.register_payment_network(self.default_registry.address, last_log_block_number)
 
-        # Start the protocol after the registry is queried to avoid warning
+        # Start the transport after the registry is queried to avoid warning
         # about unknown channels.
         queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
 
-        # TODO: remove the cyclic dependency between the protocol and this instance
-        self.protocol.start(self, queueids_to_queues)
+        # TODO: remove the cyclic dependency between the transport and this instance
+        self.transport.start(self, queueids_to_queues)
 
-        # Health check needs the protocol layer
+        # Health check needs the transport layer
         self.start_neighbours_healthcheck()
 
         for event in unapplied_events:
@@ -301,11 +301,11 @@ class RaidenService:
         """ Stop the node. """
         # Needs to come before any greenlets joining
         self.stop_event.set()
-        self.protocol.stop_and_wait()
+        self.transport.stop_and_wait()
         self.alarm.stop_async()
 
         wait_for = [self.alarm]
-        wait_for.extend(getattr(self.protocol, 'greenlets', []))
+        wait_for.extend(getattr(self.transport, 'greenlets', []))
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         gevent.wait(wait_for, timeout=self.shutdown_timeout)
@@ -356,7 +356,7 @@ class RaidenService:
         self.wal.log_and_dispatch(state_change, self.get_block_number())
 
     def start_health_check_for(self, node_address):
-        self.protocol.start_health_check(node_address)
+        self.transport.start_health_check(node_address)
 
     def poll_blockchain_events(self, block_number=None):  # pylint: disable=unused-argument
         with self.event_poll_lock:
@@ -485,7 +485,7 @@ class RaidenService:
         whereas the mediated transfer requires 6 messages.
         """
 
-        self.protocol.start_health_check(target)
+        self.transport.start_health_check(target)
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -507,7 +507,7 @@ class RaidenService:
             identifier,
     ):
 
-        self.protocol.start_health_check(target)
+        self.transport.start_health_check(target)
 
         if identifier is None:
             identifier = create_default_identifier()

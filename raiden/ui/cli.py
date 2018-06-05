@@ -563,9 +563,9 @@ def app(
         config['external_port'] = mapped_socket.external_port
     config['transport_type'] = transport
     config['matrix']['server'] = matrix_server
-    config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
+    config['transport']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
-    config['protocol']['nat_keepalive_timeout'] = timeout
+    config['transport']['nat_keepalive_timeout'] = timeout
 
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
@@ -652,15 +652,15 @@ def app(
                   'Please update your Raiden installation.')
             sys.exit(1)
         throttle_policy = TokenBucket(
-            config['protocol']['throttle_capacity'],
-            config['protocol']['throttle_fill_rate']
+            config['transport']['throttle_capacity'],
+            config['transport']['throttle_fill_rate']
         )
 
         transport = UDPTransport(
             discovery,
             mapped_socket.socket,
             throttle_policy,
-            config['protocol'],
+            config['transport'],
         )
     elif transport == 'matrix':
         transport = MatrixTransport(config['matrix'])

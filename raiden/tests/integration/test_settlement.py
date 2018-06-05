@@ -299,7 +299,7 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     )
 
     # Stop app0 to avoid sending the unlock
-    app0.raiden.protocol.stop_and_wait()
+    app0.raiden.transport.stop_and_wait()
 
     reveal_secret = RevealSecret(
         random.randint(0, UINT64_MAX),

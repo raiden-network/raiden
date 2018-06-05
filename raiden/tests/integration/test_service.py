@@ -15,7 +15,7 @@ def test_udp_ping_pong(raiden_network):
     ping_encoded = ping_message.encode()
 
     messageid = ('ping', ping_message.nonce, app1.raiden.address)
-    async_result = app0.raiden.protocol.maybe_sendraw_with_result(
+    async_result = app0.raiden.transport.maybe_sendraw_with_result(
         app1.raiden.address,
         ping_encoded,
         messageid,
@@ -33,22 +33,22 @@ def test_udp_ping_pong(raiden_network):
 def test_udp_ping_pong_unreachable_node(raiden_network):
     app0, app1 = raiden_network
 
-    app1.raiden.protocol.stop_and_wait()
+    app1.raiden.transport.stop_and_wait()
 
     ping_message = Ping(nonce=0)
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
     messageid = ('ping', ping_message.nonce, app1.raiden.address)
-    async_result = app0.raiden.protocol.maybe_sendraw_with_result(
+    async_result = app0.raiden.transport.maybe_sendraw_with_result(
         app1.raiden.address,
         ping_encoded,
         messageid,
     )
 
     nat_keepalive_fail = (
-        app0.config['protocol']['nat_keepalive_timeout'] *
-        app0.config['protocol']['nat_keepalive_retries'] *
+        app0.config['transport']['nat_keepalive_timeout'] *
+        app0.config['transport']['nat_keepalive_retries'] *
         2  # wait a bit longer to avoid races
     )
     msg = "The message was dropped, it can't be acknowledged"

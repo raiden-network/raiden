@@ -445,9 +445,9 @@ class MatrixTransport:
     ):
         def retry():
             timeout_generator = udp_utils.timeout_exponential_backoff(
-                self._raiden_service.config['protocol']['retries_before_backoff'],
-                self._raiden_service.config['protocol']['retry_interval'],
-                self._raiden_service.config['protocol']['retry_interval'] * 10
+                self._raiden_service.config['transport']['retries_before_backoff'],
+                self._raiden_service.config['transport']['retry_interval'],
+                self._raiden_service.config['transport']['retry_interval'] * 10
             )
             while async_result.value is None:
                 self._send_immediate(receiver_address, data)
