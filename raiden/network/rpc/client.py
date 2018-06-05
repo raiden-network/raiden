@@ -440,14 +440,6 @@ class JSONRPCClient:
         locally sign the transaction. This requires an extended server
         implementation that accepts the variables v, r, and s.
         """
-
-        if to == b'' and data.isalnum():
-            warnings.warn(
-                'Verify that the data parameter is _not_ hex encoded, if this is the case '
-                'the data will be double encoded and result in unexpected '
-                'behavior.'
-            )
-
         if to == to_canonical_address(NULL_ADDRESS):
             warnings.warn('For contract creation the empty string must be used.')
 
