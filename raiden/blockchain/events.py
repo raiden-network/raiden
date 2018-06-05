@@ -17,7 +17,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW_BALANCE2,
     EVENT_CHANNEL_WITHDRAW,
     EVENT_CHANNEL_UNLOCK,
-    EVENT_TRANSFER_UPDATED,
+    EVENT_BALANCE_PROOF_UPDATED,
     EVENT_CHANNEL_CLOSED,
     EVENT_CHANNEL_SETTLED,
     EVENT_CHANNEL_SECRET_REVEALED,
@@ -257,7 +257,7 @@ def decode_event_to_internal2(event):
     elif data['event'] == EVENT_CHANNEL_UNLOCK:
         data['participant'] = address_decoder(data['args']['participant'])
 
-    elif data['event'] == EVENT_TRANSFER_UPDATED:
+    elif data['event'] == EVENT_BALANCE_PROOF_UPDATED:
         data['closing_participant'] = address_decoder(data['args']['closing_participant'])
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:

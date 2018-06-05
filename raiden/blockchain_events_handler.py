@@ -29,6 +29,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW_BALANCE2,
     EVENT_CHANNEL_WITHDRAW,
     EVENT_CHANNEL_UNLOCK,
+    EVENT_BALANCE_PROOF_UPDATED,
     EVENT_TRANSFER_UPDATED,
     EVENT_CHANNEL_CLOSED,
     EVENT_CHANNEL_SETTLED,
@@ -285,8 +286,14 @@ def on_blockchain_event(raiden, event):
         data['secret'] = data['args']['secret']
         handle_channel_withdraw(raiden, event)
 
+    # fix for https://github.com/raiden-network/raiden/issues/1508
+    # balance proof updates are handled in the linked code, so no action is needed here
+    # https://github.com/raiden-network/raiden/blob/da54ef4b20fb006c126fcb091b18269314c2003b/raiden/transfer/channel.py#L1337-L1344  # noqa
+    elif data['event'] == EVENT_TRANSFER_UPDATED:
+        pass
+
     else:
-        log.error('Unknown event type', raiden_event=event)
+        log.error('Unknown event type', event_name=data['event'], raiden_event=event)
 
 
 def on_blockchain_event2(raiden, event):
@@ -320,9 +327,10 @@ def on_blockchain_event2(raiden, event):
         # handle_channel_unlock(raiden, event)
         raise NotImplementedError('handle_channel_unlock not implemented yet')
 
-    elif data['event'] == EVENT_TRANSFER_UPDATED:
-        # handle_channel_updated(raiden, event)
-        raise NotImplementedError('handle_channel_updated not implemented yet')
+    elif data['event'] == EVENT_BALANCE_PROOF_UPDATED:
+        # balance proof updates are handled in the linked code, so no action is needed here
+        # https://github.com/raiden-network/raiden/blob/da54ef4b20fb006c126fcb091b18269314c2003b/raiden/transfer/channel.py#L1337-L1344  # noqa
+        pass
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
         handle_channel_closed(raiden, event)
@@ -338,4 +346,4 @@ def on_blockchain_event2(raiden, event):
         raise NotImplementedError('handle_secret_reveal not implemented yet')
 
     else:
-        log.error('Unknown event type', raiden_event=event)
+        log.error('Unknown event type', event_name=data['event'], raiden_event=event)
