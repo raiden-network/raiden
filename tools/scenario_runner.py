@@ -138,7 +138,7 @@ def run(
         listen_port,
     )
 
-    app.raiden.register_payment_network(app.raiden.default_registry.address)
+    app.raiden.install_payment_network_filters(app.raiden.default_registry.address)
 
     if scenario:
         script = json.load(scenario)
@@ -156,7 +156,7 @@ def run(
         token_address = None
         peer = None
         our_node = hexlify(app.raiden.address)
-        log.warning("our address is {}".format(our_node))
+        log.warning('our address is {}'.format(our_node))
         for token in tokens:
             # skip tokens that we're not part of
             nodes = token['channels']
@@ -185,7 +185,7 @@ def run(
             # NOTE: leaving unidirectional for now because it most
             #       probably will get to higher throughput
 
-            log.warning("Waiting for all nodes to come online")
+            log.warning('Waiting for all nodes to come online')
 
             api = RaidenAPI(app.raiden)
 
@@ -203,7 +203,7 @@ def run(
 
                 gevent.sleep(5)
 
-            log.warning("All nodes are online")
+            log.warning('All nodes are online')
 
             if our_node != nodes[-1]:
                 our_index = nodes.index(our_node)
@@ -217,21 +217,21 @@ def run(
                         app.discovery.get(peer.decode('hex'))
                         break
                     except KeyError:
-                        log.warning("Error: peer {} not found in discovery".format(peer))
+                        log.warning('Error: peer {} not found in discovery'.format(peer))
                         time.sleep(random.randrange(30))
 
                 while True:
                     try:
-                        log.warning("Opening channel with {} for {}".format(peer, token_address))
+                        log.warning('Opening channel with {} for {}'.format(peer, token_address))
                         api.channel_open(app.raiden.default_registry.address, token_address, peer)
                         break
                     except KeyError:
-                        log.warning("Error: could not open channel with {}".format(peer))
+                        log.warning('Error: could not open channel with {}'.format(peer))
                         time.sleep(random.randrange(30))
 
                 while True:
                     try:
-                        log.warning("Funding channel with {} for {}".format(peer, token_address))
+                        log.warning('Funding channel with {} for {}'.format(peer, token_address))
                         api.channel_deposit(
                             app.raiden.default_registry.address,
                             token_address,
@@ -240,7 +240,7 @@ def run(
                         )
                         break
                     except Exception:
-                        log.warning("Error: could not deposit {} for {}".format(amount, peer))
+                        log.warning('Error: could not deposit {} for {}'.format(amount, peer))
                         time.sleep(random.randrange(30))
 
                 if our_index == 0:
@@ -251,7 +251,7 @@ def run(
 
         if stage_prefix is not None:
             open('{}.stage1'.format(stage_prefix), 'a').close()
-            log.warning("Done with initialization, waiting to continue...")
+            log.warning('Done with initialization, waiting to continue...')
             event = gevent.event.Event()
             gevent.signal(signal.SIGUSR2, event.set)
             event.wait()
@@ -260,7 +260,7 @@ def run(
 
         def transfer(token_address, amount_per_transfer, total_transfers, peer, is_async):
             def transfer_():
-                log.warning("Making {} transfers to {}".format(total_transfers, peer))
+                log.warning('Making {} transfers to {}'.format(total_transfers, peer))
                 initial_time = time.time()
                 times = [0] * total_transfers
                 for index in range(total_transfers):
@@ -275,9 +275,9 @@ def run(
                 transfer_results['total_time'] = time.time() - initial_time
                 transfer_results['timestamps'] = times
 
-                log.warning("Making {} transfers took {}".format(
+                log.warning('Making {} transfers took {}'.format(
                     total_transfers, transfer_results['total_time']))
-                log.warning("Times: {}".format(times))
+                log.warning('Times: {}'.format(times))
 
             if is_async:
                 return gevent.spawn(transfer_)
@@ -299,10 +299,10 @@ def run(
             for peer_, amount in transfers_by_peer.items():
                 transfer(token_address, 1, amount, peer_, False)
 
-        log.warning("Waiting for termination")
+        log.warning('Waiting for termination')
 
         open('{}.stage2'.format(stage_prefix), 'a').close()
-        log.warning("Waiting for transfers to finish, will write results...")
+        log.warning('Waiting for transfers to finish, will write results...')
         event = gevent.event.Event()
         gevent.signal(signal.SIGUSR2, event.set)
         event.wait()
@@ -315,7 +315,7 @@ def run(
         event.wait()
 
     else:
-        log.warning("No scenario file supplied, doing nothing!")
+        log.warning('No scenario file supplied, doing nothing!')
 
         open('{}.stage2'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()
