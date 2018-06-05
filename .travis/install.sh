@@ -15,3 +15,5 @@ pip install ${INSTALL_OPT} readme_renderer
 pip install ${INSTALL_OPT} pyinstaller
 pip install ${INSTALL_OPT} -r requirements-dev.txt
 pip install ${INSTALL_OPT} -e .
+
+pip list --outdated
