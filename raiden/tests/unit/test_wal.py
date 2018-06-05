@@ -3,10 +3,13 @@ import sqlite3
 
 import pytest
 
-from raiden.transfer.architecture import StateManager
+from raiden.transfer.architecture import State, StateManager
 from raiden.storage.serialize import PickleSerializer
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.storage.wal import WriteAheadLog
+from raiden.storage.wal import (
+    restore_from_latest_snapshot,
+    WriteAheadLog,
+)
 from raiden.tests.utils import factories
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed
@@ -17,6 +20,12 @@ from raiden.transfer.state_change import (
 
 
 def state_transition_noop(state, state_change):  # pylint: disable=unused-argument
+    return TransitionResult(state, list())
+
+
+def state_transtion_acc(state, state_change):
+    state = state or AccState()
+    state.state_changes.append(state_change)
     return TransitionResult(state, list())
 
 
@@ -125,3 +134,26 @@ def test_write_read_events():
     latest_event = new_events[-1]
     assert latest_event[0] == block_number
     assert isinstance(latest_event[1], EventTransferSentFailed)
+
+
+def test_restore_without_snapshot():
+    wal = new_wal()
+
+    wal.log_and_dispatch(Block(5), 5)
+    wal.log_and_dispatch(Block(7), 7)
+    wal.log_and_dispatch(Block(8), 8)
+
+    newwal, events = restore_from_latest_snapshot(
+        state_transtion_acc,
+        wal.storage,
+    )
+
+    assert not events
+
+    aggregate = newwal.state_manager.current_state
+    assert aggregate.state_changes == [Block(5), Block(7), Block(8)]
+
+
+class AccState(State):
+    def __init__(self):
+        self.state_changes = list()

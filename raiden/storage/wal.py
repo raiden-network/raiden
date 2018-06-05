@@ -21,7 +21,10 @@ def restore_from_latest_snapshot(transition_function, storage):
         )
     else:
         state = None
-        unapplied_state_changes = list()
+        unapplied_state_changes = storage.get_statechanges_by_identifier(
+            from_identifier=0,
+            to_identifier='latest',
+        )
 
     state_manager = StateManager(transition_function, state)
     wal = WriteAheadLog(state_manager, storage)
