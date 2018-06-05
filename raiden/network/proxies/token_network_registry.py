@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
-
 import structlog
-
+from binascii import hexlify, unhexlify
+from raiden.utils import typing
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -11,6 +10,7 @@ from raiden.blockchain.abi import (
 from raiden.exceptions import (
     NoTokenManager,
     TransactionThrew,
+    InvalidAddress,
 )
 from raiden.utils import (
     address_decoder,
@@ -36,16 +36,17 @@ from raiden.network.rpc.filters import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class TokenNetworksRegistry:
+class TokenNetworkRegistry:
     def __init__(
             self,
             jsonrpc_client,
             registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         # pylint: disable=too-many-arguments
 
         if not isaddress(registry_address):
-            raise ValueError('registry_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for token network registry')
 
         check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
 
@@ -67,7 +68,7 @@ class TokenNetworksRegistry:
         self.address_to_channelmanager = dict()
         self.token_to_channelmanager = dict()
 
-    def manager_address_by_token(self, token_address):
+    def manager_address_by_token(self, token_address: typing.TokenAddress):
         """ Return the channel manager address for the given token or None if
         there is no correspoding address.
         """
@@ -82,9 +83,9 @@ class TokenNetworksRegistry:
 
         return address_decoder(address)
 
-    def add_token(self, token_address):
+    def add_token(self, token_address: typing.TokenAddress):
         if not isaddress(token_address):
-            raise ValueError('token_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for token')
 
         log.info(
             'add_token called',
@@ -149,10 +150,10 @@ class TokenNetworksRegistry:
             filter_id_raw,
         )
 
-    def manager(self, manager_address):
+    def manager(self, manager_address: typing.TokenNetworkAddress):
         """ Return a proxy to interact with a TokenNetwork. """
         if not isaddress(manager_address):
-            raise ValueError('manager_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for token network')
 
         if manager_address not in self.address_to_channelmanager:
             manager = TokenNetwork(
@@ -168,7 +169,7 @@ class TokenNetworksRegistry:
 
         return self.address_to_channelmanager[manager_address]
 
-    def manager_by_token(self, token_address):
+    def manager_by_token(self, token_address: typing.TokenAddress):
         """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
 
@@ -176,7 +177,7 @@ class TokenNetworksRegistry:
         since we try to instantiate a Channel manager with an empty address.
         """
         if not isaddress(token_address):
-            raise ValueError('token_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for token')
 
         if token_address not in self.token_to_channelmanager:
             check_address_has_code(self.client, token_address)  # check that the token exists

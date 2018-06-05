@@ -6,7 +6,7 @@ from raiden.blockchain.abi import (
     CONTRACT_SECRET_REGISTRY,
     EVENT_CHANNEL_SECRET_REVEALED,
 )
-from raiden.exceptions import TransactionThrew
+from raiden.exceptions import TransactionThrew, InvalidAddress
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
@@ -34,11 +34,12 @@ class SecretRegistry:
             self,
             jsonrpc_client,
             secret_registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         # pylint: disable=too-many-arguments
 
         if not isaddress(secret_registry_address):
-            raise ValueError('secret_registry_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for secret registry')
 
         check_address_has_code(jsonrpc_client, secret_registry_address, 'Registry')
 

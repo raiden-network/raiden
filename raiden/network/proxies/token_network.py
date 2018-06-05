@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
+from gevent.lock import RLock
 from gevent.event import AsyncResult
 from typing import List, Union, Optional
 from raiden.utils import typing
@@ -31,10 +32,12 @@ from raiden.network.rpc.transactions import (
 )
 from raiden.exceptions import (
     DuplicatedChannelError,
+    ChannelIncorrectStateError,
     InvalidSettleTimeout,
     SamePeerAddress,
     ChannelBusyError,
     TransactionThrew,
+    InvalidAddress,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -57,11 +60,12 @@ class TokenNetwork:
             self,
             jsonrpc_client,
             manager_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         # pylint: disable=too-many-arguments
 
         if not isaddress(manager_address):
-            raise ValueError('manager_address must be a valid address')
+            raise InvalidAddress('Expected binary address format for token nework')
 
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
 
@@ -80,21 +84,29 @@ class TokenNetwork:
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
         self.poll_timeout = poll_timeout
+        # Prevents concurrent deposit, withdraw, close, or settle operations on the same channel
+        self.channel_operations_lock = dict()
         self.open_channel_transactions = dict()
 
     def _call_and_check_result(self, function_name: str, *args):
         call_result = self.proxy.call(function_name, *args)
 
         if call_result == b'':
-            self._check_exists()
             raise RuntimeError(
                 "Call to '{}' returned nothing".format(function_name)
             )
 
-        if not isinstance(call_result[0], typing.T_ChannelID):
-            raise ValueError('first call value must be of type channel identifier')
-
         return call_result
+
+    def _check_channel_lock(self, partner: typing.Address):
+        if partner not in self.channel_operations_lock:
+            self.channel_operations_lock[partner] = RLock()
+
+        if not self.channel_operations_lock[partner].acquire(blocking=False):
+            raise ChannelBusyError(
+                f'Channel between {self.node_address} and {partner} is '
+                f'busy with another ongoing operation.'
+            )
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
@@ -102,20 +114,20 @@ class TokenNetwork:
 
     def new_netting_channel(
             self,
-            other_peer: typing.ChannelID,
+            partner: typing.Address,
             settle_timeout: int,
     ) -> typing.ChannelID:
         """ Creates a new channel in the TokenNetwork contract.
 
         Args:
-            other_peer: The peer to open the channel with.
+            partner: The peer to open the channel with.
             settle_timeout: The settle timout to use for this channel.
 
         Returns:
             The address of the new netting channel.
         """
-        if not isaddress(other_peer):
-            raise ValueError('The other_peer must be a valid address')
+        if not isaddress(partner):
+            raise InvalidAddress('Expected binary address format for channel partner')
 
         invalid_timeout = (
             settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
@@ -126,65 +138,57 @@ class TokenNetwork:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
-        if self.node_address == other_peer:
+        if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
-        if other_peer not in self.open_channel_transactions:
+        if partner not in self.open_channel_transactions:
             new_open_channel_transaction = AsyncResult()
-            self.open_channel_transactions[other_peer] = new_open_channel_transaction
+            self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:
-                transaction_hash = self._new_netting_channel(other_peer, settle_timeout)
+                transaction_hash = self._new_netting_channel(partner, settle_timeout)
             except Exception as e:
                 new_open_channel_transaction.set_exception(e)
                 raise
             else:
                 new_open_channel_transaction.set(transaction_hash)
             finally:
-                self.open_channel_transactions.pop(other_peer, None)
+                self.open_channel_transactions.pop(partner, None)
         else:
             # All other concurrent threads should block on the result of opening this channel
-            transaction_hash = self.open_channel_transactions[other_peer].get()
+            transaction_hash = self.open_channel_transactions[partner].get()
 
-        netting_channel_results_encoded = self.proxy.call(
-            'getChannelInfo',
-            self.node_address,
-            other_peer,
-        )
-
-        # channel identifier is at index 0
-        channel_identifier = netting_channel_results_encoded[0]
-
-        log.debug('channel_identifier {}'.format(channel_identifier))
-
-        if not channel_identifier:
+        channel_created = self.channel_exists(partner)
+        if channel_created is False:
             log.error(
-                'channel_identifier failed',
+                'creating new channel failed',
                 peer1=pex(self.node_address),
-                peer2=pex(other_peer)
+                peer2=pex(partner)
             )
-            raise RuntimeError('channel_identifier failed')
+            raise RuntimeError('creating new channel failed')
+
+        channel_identifier = self.detail_channel(partner)['channel_identifier']
 
         log.info(
             'new_netting_channel called',
             peer1=pex(self.node_address),
-            peer2=pex(other_peer),
+            peer2=pex(partner),
             channel_identifier=channel_identifier,
         )
 
         return channel_identifier
 
-    def _new_netting_channel(self, other_peer, settle_timeout):
-        if self.channel_exists(other_peer):
+    def _new_netting_channel(self, partner: typing.Address, settle_timeout: int):
+        if self.channel_exists(partner):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
         transaction_hash = estimate_and_transact(
             self.proxy,
             'openChannel',
             self.node_address,
-            other_peer,
+            partner,
             settle_timeout,
         )
 
@@ -204,11 +208,11 @@ class TokenNetwork:
         if not isinstance(channel_data['state'], typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        log.debug('existing_channel {}'.format(channel_data))
+        log.debug('channel data {}'.format(channel_data))
 
         return channel_data['state'] > CHANNEL_STATE_NONEXISTENT
 
-    def _detail_participant(self, participant: typing.Address, partner: typing.Address):
+    def detail_participant(self, participant: typing.Address, partner: typing.Address):
         """ Returns a dictionary with the channel participant information. """
         data = self._call_and_check_result('getChannelParticipantInfo', participant, partner)
         return {
@@ -222,6 +226,9 @@ class TokenNetwork:
     def detail_channel(self, partner: typing.Address):
         """ Returns a dictionary with the channel specific information. """
         channel_data = self._call_and_check_result('getChannelInfo', self.node_address, partner)
+
+        assert isinstance(channel_data[0], typing.T_ChannelID)
+
         return {
             'channel_identifier': channel_data[0],
             'settle_block_number': channel_data[1],
@@ -230,8 +237,8 @@ class TokenNetwork:
 
     def detail_participants(self, partner: typing.Address):
         """ Returns a dictionary with the participants' channel information. """
-        our_data = self._detail_participant(self.node_address, partner)
-        partner_data = self._detail_participant(partner, self.node_address)
+        our_data = self.detail_participant(self.node_address, partner)
+        partner_data = self.detail_participant(partner, self.node_address)
         return {
             'our_address': self.node_address,
             'our_balance': our_data['deposit'],
@@ -264,8 +271,7 @@ class TokenNetwork:
             partner: typing.Address,
             locksroot: typing.Locksroot,
     ) -> int:
-        """ Returns the locked amount for a specific participant's locksroot.
-        """
+        """ Returns the locked amount for a specific participant's locksroot. """
         data = self._call_and_check_result(
             'getParticipantLockedAmount',
             participant,
@@ -279,8 +285,8 @@ class TokenNetwork:
         channel_data = self.detail_channel(partner)
         return channel_data.get('settle_block_number')
 
-    def channel_is_opened(self, partner: typing.Address):
-        """ Returns true if the channel is in a closed state, false otherwise. """
+    def channel_is_opened(self, partner: typing.Address) -> bool:
+        """ Returns true if the channel is in an open state, false otherwise. """
         channel_data = self.detail_channel(partner)
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
@@ -288,7 +294,7 @@ class TokenNetwork:
 
         return channel_data.get('state') == CHANNEL_STATE_OPENED
 
-    def channel_is_closed(self, partner: typing.Address):
+    def channel_is_closed(self, partner: typing.Address) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
         channel_data = self.detail_channel(partner)
 
@@ -297,8 +303,8 @@ class TokenNetwork:
 
         return channel_data.get('state') == CHANNEL_STATE_CLOSED
 
-    def channel_is_settled(self, partner: typing.Address):
-        """ Returns true if the channel is in a closed state, false otherwise. """
+    def channel_is_settled(self, partner: typing.Address) -> bool:
+        """ Returns true if the channel is in a settled state, false otherwise. """
         channel_data = self.detail_channel(partner)
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
@@ -324,14 +330,14 @@ class TokenNetwork:
 
         Note: Having a deposit does not imply having a balance for off-chain
         transfers. """
-        closed = self.channel_is_closed(partner)
+        opened = self.channel_is_opened(partner)
 
-        if closed is True:
+        if opened is False:
             return False
 
-        return self._detail_participant(self.node_address, partner)['deposit'] > 0
+        return self.detail_participant(self.node_address, partner)['deposit'] > 0
 
-    def deposit(self, total_deposit, partner: typing.Address):
+    def deposit(self, total_deposit: int, partner: typing.Address):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
@@ -349,7 +355,7 @@ class TokenNetwork:
             self.poll_timeout,
         )
         current_balance = token.balance_of(self.node_address)
-        current_deposit = self._detail_participant(self.node_address, partner)['deposit']
+        current_deposit = self.detail_participant(self.node_address, partner)['deposit']
         amount_to_deposit = total_deposit - current_deposit
 
         if amount_to_deposit <= 0:
@@ -358,10 +364,11 @@ class TokenNetwork:
             ))
 
         if current_balance < amount_to_deposit:
-            raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(
-                amount_to_deposit,
-                current_balance,
-            ))
+            raise ValueError(
+                f'deposit {amount_to_deposit} cant be larger than the '
+                f'available balance {current_balance}, '
+                f'for token at address {pex(token_address)}'
+            )
 
         log.info(
             'deposit called',
@@ -372,13 +379,9 @@ class TokenNetwork:
             amount_to_deposit=amount_to_deposit,
         )
 
-        if not self.channel_operations_lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel with address {self.address} is '
-                f'busy with another ongoing operation.'
-            )
+        self._check_channel_lock(partner)
 
-        with releasing(self.channel_operations_lock):
+        with releasing(self.channel_operations_lock[partner]):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'setTotalDeposit',
@@ -402,7 +405,11 @@ class TokenNetwork:
                     total_deposit=total_deposit,
                 )
 
-                self._check_exists()
+                channel_opened = self.channel_is_opened(partner)
+                if channel_opened is False:
+                    raise ChannelIncorrectStateError(
+                        'Channel is not in an opened state. A deposit cannot be made'
+                    )
                 raise TransactionThrew('Deposit', receipt_or_none)
 
             log.info(
@@ -419,7 +426,7 @@ class TokenNetwork:
             nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
             additional_hash: typing.AdditionalHash,
-            signature: typing.Signature
+            signature: typing.Signature,
     ):
         """ Close the channel using the provided balance proof.
 
@@ -438,13 +445,9 @@ class TokenNetwork:
             signature=encode_hex(signature),
         )
 
-        if not self.channel_operations_lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel with address {self.address} is '
-                f'busy with another ongoing operation.'
-            )
+        self._check_channel_lock(partner)
 
-        with releasing(self.channel_operations_lock):
+        with releasing(self.channel_operations_lock[partner]):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'closeChannel',
@@ -468,7 +471,11 @@ class TokenNetwork:
                     additional_hash=encode_hex(additional_hash),
                     signature=encode_hex(signature),
                 )
-                self._check_exists()
+                channel_opened = self.channel_is_opened(partner)
+                if channel_opened is False:
+                    raise ChannelIncorrectStateError(
+                        'Channel is not in an opened state. It cannot be closed.'
+                    )
                 raise TransactionThrew('Close', receipt_or_none)
 
             log.info(
@@ -489,10 +496,10 @@ class TokenNetwork:
             balance_hash: typing.BalanceHash,
             additional_hash: typing.AdditionalHash,
             partner_signature: typing.Signature,
-            signature: typing.Signature
+            signature: typing.Signature,
     ):
         log.info(
-            'updateTransfer called',
+            'updateNonClosingBalanceProof called',
             token_network=pex(self.address),
             node=pex(self.node_address),
             partner=pex(partner),
@@ -523,7 +530,7 @@ class TokenNetwork:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.critical(
-                'updateTransfer failed',
+                'updateNonClosingBalanceProof failed',
                 token_network=pex(self.address),
                 node=pex(self.node_address),
                 partner=pex(partner),
@@ -533,11 +540,13 @@ class TokenNetwork:
                 partner_signature=encode_hex(partner_signature),
                 signature=encode_hex(signature),
             )
-            self._check_exists()
+            channel_closed = self.channel_is_closed(partner)
+            if channel_closed is False:
+                raise ChannelIncorrectStateError('Channel is not in a closed state')
             raise TransactionThrew('Update NonClosing balance proof', receipt_or_none)
 
         log.info(
-            'updateTransfer successful',
+            'updateNonClosingBalanceProof successful',
             token_network=pex(self.address),
             node=pex(self.node_address),
             partner=pex(partner),
@@ -553,7 +562,7 @@ class TokenNetwork:
             partner: typing.Address,
             total_withdraw: int,
             partner_signature: typing.Address,
-            signature: typing.Signature
+            signature: typing.Signature,
     ):
         log.info(
             'withdraw called',
@@ -562,13 +571,10 @@ class TokenNetwork:
             partner=pex(partner),
             total_withdraw=total_withdraw,
         )
-        if not self.channel_operations_lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel with address {self.address} is '
-                f'busy with another ongoing operation.'
-            )
 
-        with releasing(self.channel_operations_lock):
+        self._check_channel_lock(partner)
+
+        with releasing(self.channel_operations_lock[partner]):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'setTotalWithdraw',
@@ -591,7 +597,11 @@ class TokenNetwork:
                     partner_signature=encode_hex(partner_signature),
                     signature=encode_hex(signature),
                 )
-                self._check_exists()
+                channel_opened = self.channel_is_opened(partner)
+                if channel_opened is False:
+                    raise ChannelIncorrectStateError(
+                        'Channel is not in an opened state. A withdraw cannot be made'
+                    )
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
             log.info(
@@ -632,7 +642,11 @@ class TokenNetwork:
                 node=pex(self.node_address),
                 partner=pex(partner),
             )
-            self._check_exists()
+            channel_settled = self.channel_is_settled(partner)
+            if channel_settled is False:
+                raise ChannelIncorrectStateError(
+                    'Channel is not in a settled state. An unlock cannot be made'
+                )
             raise TransactionThrew('Unlock', receipt_or_none)
 
         log.info(
@@ -650,7 +664,7 @@ class TokenNetwork:
             partner: typing.Address,
             partner_transferred_amount: int,
             partner_locked_amount: int,
-            partner_locksroot: typing.Locksroot
+            partner_locksroot: typing.Locksroot,
     ):
         """ Settle the channel.
 
@@ -670,13 +684,9 @@ class TokenNetwork:
             partner_locksroot=encode_hex(partner_locksroot),
         )
 
-        if not self.channel_operations_lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel with address {self.address} is '
-                f'busy with another ongoing operation'
-            )
+        self._check_channel_lock(partner)
 
-        with releasing(self.channel_operations_lock):
+        with releasing(self.channel_operations_lock[partner]):
             transaction_hash = estimate_and_transact(
                 self.proxy,
                 'settleChannel',
@@ -705,7 +715,11 @@ class TokenNetwork:
                     partner_locked_amount=partner_locked_amount,
                     partner_locksroot=encode_hex(partner_locksroot),
                 )
-                self._check_exists()
+                channel_closed = self.channel_is_closed(partner)
+                if channel_closed is False:
+                    raise ChannelIncorrectStateError(
+                        'Channel is not in a closed state. It cannot be settled'
+                    )
                 raise TransactionThrew('Settle', receipt_or_none)
 
             log.info(
@@ -725,7 +739,7 @@ class TokenNetwork:
             self,
             topics: Optional[List],
             from_block: Optional[int] = None,
-            to_block: Optional[int] = None
+            to_block: Optional[int] = None,
     ) -> Filter:
         """ Install a new filter for an array of topics emitted by the contract.
         Args:
@@ -749,7 +763,7 @@ class TokenNetwork:
     def channelnew_filter(
             self,
             from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest'
+            to_block: Union[str, int] = 'latest',
     ) -> Filter:
         """ Install a new filter for ChannelNew events.
 
@@ -761,11 +775,10 @@ class TokenNetwork:
             The filter instance.
         """
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW2)]
-
         return self.events_filter(topics, from_block, to_block)
 
     def all_events_filter(self, from_block=None, to_block=None):
-        """ Install a new filter for all the events emitted by the current netting channel contract
+        """ Install a new filter for all the events emitted by the current token network contract
 
         Return:
             Filter: The filter instance.
