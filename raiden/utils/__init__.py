@@ -10,10 +10,11 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, to_checksum_address
+from eth_utils import remove_0x_prefix, keccak, to_checksum_address, is_checksum_address
 
 import raiden
 from raiden.utils import typing
+from raiden.exceptions import InvalidAddress
 
 
 LETTERS = string.printable
@@ -93,6 +94,23 @@ def address_decoder(addr: str) -> typing.Address:
         addr = addr[2:]
 
     addr = unhexlify(addr)
+    assert len(addr) in (20, 0)
+    return addr
+
+
+def address_checksum_and_decode(addr: str) -> typing.Address:
+    """ Accepts a string address and turns it into binary.
+
+        Makes sure that the string address provided starts is 0x prefixed and
+        checksummed according to EIP55 specification
+    """
+    if addr[:2] != '0x':
+        raise InvalidAddress('All provided addresses must be 0x prefixed')
+
+    if not is_checksum_address(addr):
+        raise InvalidAddress('Provided addresses must be EIP55 checksummed')
+
+    addr = unhexlify(addr[2:])
     assert len(addr) in (20, 0)
     return addr
 

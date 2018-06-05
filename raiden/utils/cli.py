@@ -7,8 +7,9 @@ import click
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 
-from raiden.utils import address_decoder
+from raiden.utils import address_checksum_and_decode
 from raiden.constants import NETWORKNAME_TO_ID
+from raiden.exceptions import InvalidAddress
 
 
 class HelpFormatter(click.HelpFormatter):
@@ -198,9 +199,9 @@ class AddressType(click.ParamType):
 
     def convert(self, value, param, ctx):
         try:
-            return address_decoder(value)
-        except TypeError:
-            self.fail('Please specify a valid hex-encoded address.')
+            return address_checksum_and_decode(value)
+        except InvalidAddress as e:
+            self.fail(str(e))
 
 
 class LogLevelConfigType(click.ParamType):
