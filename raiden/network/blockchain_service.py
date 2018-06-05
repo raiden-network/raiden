@@ -4,6 +4,7 @@ import os
 import gevent
 from cachetools.func import ttl_cache
 import structlog
+from eth_utils import is_binary_address
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -15,7 +16,6 @@ from raiden.network.proxies import (
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
-    isaddress,
     privatekey_to_address,
     quantity_decoder,
 )
@@ -100,7 +100,7 @@ class BlockChainService:
 
     def token(self, token_address: bytes) -> Token:
         """ Return a proxy to interact with a token. """
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
         if token_address not in self.address_to_token:
@@ -124,7 +124,7 @@ class BlockChainService:
 
     def discovery(self, discovery_address: bytes) -> Discovery:
         """ Return a proxy to interact with the discovery. """
-        if not isaddress(discovery_address):
+        if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
         if discovery_address not in self.address_to_discovery:
@@ -138,7 +138,7 @@ class BlockChainService:
 
     def netting_channel(self, netting_channel_address: bytes) -> NettingChannel:
         """ Return a proxy to interact with a NettingChannelContract. """
-        if not isaddress(netting_channel_address):
+        if not is_binary_address(netting_channel_address):
             raise ValueError('netting_channel_address must be a valid address')
 
         if netting_channel_address not in self.address_to_nettingchannel:
@@ -152,7 +152,7 @@ class BlockChainService:
         return self.address_to_nettingchannel[netting_channel_address]
 
     def registry(self, registry_address: bytes) -> Registry:
-        if not isaddress(registry_address):
+        if not is_binary_address(registry_address):
             raise ValueError('registry_address must be a valid address')
 
         if registry_address not in self.address_to_registry:

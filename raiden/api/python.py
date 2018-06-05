@@ -2,6 +2,7 @@
 import gevent
 from contextlib import ExitStack
 import structlog
+from eth_utils import is_binary_address
 
 from raiden import waiting
 from raiden.blockchain.events import (
@@ -32,7 +33,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    isaddress,
     pex,
     releasing,
 )
@@ -58,7 +58,7 @@ class RaidenAPI:
 
     # XXX: This interface will break once the channel identifiers are not addresses
     def get_channel(self, registry_address, channel_address):
-        if not isaddress(channel_address):
+        if not is_binary_address(channel_address):
             raise InvalidAddress('Expected binary address format for channel in get_channel')
 
         channel_list = self.get_channel_list(registry_address)
@@ -79,10 +79,10 @@ class RaidenAPI:
                 gas or this register call raced with another transaction and lost.
         """
 
-        if not isaddress(registry_address):
+        if not is_binary_address(registry_address):
             raise InvalidAddress('registry_address must be a valid address in binary')
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
         if token_address in self.get_tokens_list(registry_address):
@@ -117,7 +117,7 @@ class RaidenAPI:
             joinable_funds_target (float): fraction of the funds that will be used to join
                 channels opened by other participants.
         """
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
         connection_manager = self.raiden.connection_manager_for_token(
@@ -133,7 +133,7 @@ class RaidenAPI:
 
     def token_network_leave(self, registry_address, token_address, only_receiving=True):
         """Close all channels and wait for settlement."""
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
         if token_address not in self.get_tokens_list(registry_address):
@@ -170,13 +170,13 @@ class RaidenAPI:
                 'reveal_timeout can not be larger-or-equal to settle_timeout'
             )
 
-        if not isaddress(registry_address):
+        if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for registry in channel open')
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token in channel open')
 
-        if not isaddress(partner_address):
+        if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
         registry = self.raiden.chain.registry(registry_address)
@@ -238,10 +238,10 @@ class RaidenAPI:
             partner_address,
         )
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token in channel deposit')
 
-        if not isaddress(partner_address):
+        if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
         if token_address not in token_networks:
@@ -330,10 +330,10 @@ class RaidenAPI:
         Race condition, this can fail if channel was closed externally.
         """
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token in channel close')
 
-        if not all(map(isaddress, partner_addresses)):
+        if not all(map(is_binary_address, partner_addresses)):
             raise InvalidAddress('Expected binary address format for partner in channel close')
 
         valid_tokens = views.get_token_network_addresses_for(
@@ -413,10 +413,10 @@ class RaidenAPI:
             KeyError: An error occurred when the token address is unknown to the node.
         """
 
-        if token_address and not isaddress(token_address):
+        if token_address and not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token in get_channel_list')
 
-        if partner_address and not isaddress(partner_address):
+        if partner_address and not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
 
         result = list()
@@ -507,10 +507,10 @@ class RaidenAPI:
         if amount <= 0:
             raise InvalidAmount('Amount negative')
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('token address is not valid.')
 
-        if not isaddress(target):
+        if not is_binary_address(target):
             raise InvalidAddress('target address is not valid.')
 
         valid_tokens = views.get_token_network_addresses_for(
@@ -553,7 +553,7 @@ class RaidenAPI:
         )
 
     def get_channel_events(self, channel_address, from_block, to_block='latest'):
-        if not isaddress(channel_address):
+        if not is_binary_address(channel_address):
             raise InvalidAddress(
                 'Expected binary address format for channel in get_channel_events'
             )
@@ -582,7 +582,7 @@ class RaidenAPI:
 
     def get_token_network_events(self, token_address, from_block, to_block='latest'):
 
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events'
             )

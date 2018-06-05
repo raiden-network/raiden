@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import socket
 from typing import Tuple
+from eth_utils import is_binary_address
 
 import structlog
 
@@ -8,7 +9,6 @@ from raiden.exceptions import UnknownAddress
 from raiden.network import proxies
 from raiden.utils import (
     host_port_to_endpoint,
-    isaddress,
     pex,
     split_endpoint,
 )
@@ -24,7 +24,7 @@ class Discovery:
         self.nodeid_to_hostport = dict()
 
     def register(self, node_address: bytes, host: str, port: int):
-        if not isaddress(node_address):
+        if not is_binary_address(node_address):
             raise ValueError('node_address must be a valid address')
 
         try:
@@ -70,7 +70,7 @@ class ContractDiscovery(Discovery):
         if node_address != self.node_address:
             raise ValueError('You can only register your own endpoint.')
 
-        if not isaddress(node_address):
+        if not is_binary_address(node_address):
             raise ValueError('node_address must be a valid address')
 
         try:

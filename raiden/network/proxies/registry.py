@@ -2,6 +2,7 @@
 from binascii import hexlify, unhexlify
 
 import structlog
+from eth_utils import is_binary_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -16,7 +17,6 @@ from raiden.exceptions import (
 from raiden.utils import (
     address_decoder,
     address_encoder,
-    isaddress,
     pex,
     privatekey_to_address,
 )
@@ -45,7 +45,7 @@ class Registry:
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
-        if not isaddress(registry_address):
+        if not is_binary_address(registry_address):
             raise ValueError('registry_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, registry_address, 'Registry')
@@ -84,7 +84,7 @@ class Registry:
         return address_decoder(address)
 
     def add_token(self, token_address):
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
         log.info(
@@ -165,7 +165,7 @@ class Registry:
 
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
-        if not isaddress(manager_address):
+        if not is_binary_address(manager_address):
             raise ValueError('manager_address must be a valid address')
 
         if manager_address not in self.address_to_channelmanager:
@@ -189,7 +189,7 @@ class Registry:
         If the token is not already registered it raises `EthNodeCommunicationError`,
         since we try to instantiate a Channel manager with an empty address.
         """
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
         if token_address not in self.token_to_channelmanager:

@@ -4,6 +4,7 @@ from heapq import heappush, heappop
 
 import networkx
 import structlog
+from eth_utils import is_binary_address
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -11,7 +12,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
-from raiden.utils import isaddress, pex, typing
+from raiden.utils import pex, typing
 from raiden.transfer.state import RouteState
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -35,7 +36,7 @@ def make_graph(
 
         origin, destination = edge
 
-        if not isaddress(origin) or not isaddress(destination):
+        if not is_binary_address(origin) or not is_binary_address(destination):
             raise ValueError('All values in edge_list must be valid addresses')
 
     graph = networkx.Graph()  # undirected graph, for bidirectional channels

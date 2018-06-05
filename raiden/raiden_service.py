@@ -10,6 +10,7 @@ import gevent
 from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
 import structlog
+from eth_utils import is_binary_address
 
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
@@ -51,7 +52,6 @@ from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import (LockedTransfer, SignedMessage)
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
-    isaddress,
     pex,
     privatekey_to_address,
     random_secret,
@@ -397,7 +397,7 @@ class RaidenService:
         self.handle_state_change(state_change)
 
     def connection_manager_for_token(self, registry_address, token_address):
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('token address is not valid.')
 
         known_token_networks = views.get_token_network_addresses_for(

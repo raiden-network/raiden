@@ -10,6 +10,7 @@ from gevent.event import (
 )
 from gevent.server import DatagramServer
 import structlog
+from eth_utils import is_binary_address
 
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.exceptions import (
@@ -27,7 +28,7 @@ from raiden.messages import (
     Pong,
 )
 from raiden.settings import CACHE_TTL
-from raiden.utils import isaddress, pex, typing
+from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.udp_message_handler import on_udp_message
 from raiden.transfer.state_change import ReceiveDelivered
@@ -339,7 +340,7 @@ class UDPTransport:
         Messages that use the same `queue_name` are ordered.
         """
 
-        if not isaddress(recipient):
+        if not is_binary_address(recipient):
             raise ValueError('Invalid address {}'.format(pex(recipient)))
 
         # These are not protocol messages, but transport specific messages
@@ -373,7 +374,7 @@ class UDPTransport:
     def maybe_send(self, recipient: typing.Address, message: Message):
         """ Send message to recipient if the transport is running. """
 
-        if not isaddress(recipient):
+        if not is_binary_address(recipient):
             raise InvalidAddress('Invalid address {}'.format(pex(recipient)))
 
         messagedata = message.encode()
