@@ -205,7 +205,6 @@ class RaidenService:
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
-        self._block_number = None
         self.stop_event = Event()
         self.start_event = Event()
         self.chain.client.inject_stop_event(self.stop_event)
@@ -274,7 +273,6 @@ class RaidenService:
         self.alarm.start()
         self.alarm.register_callback(self.poll_blockchain_events)
         self.alarm.register_callback(self.set_block_number)
-        self._block_number = self.chain.block_number()
 
         # Registry registration must start *after* the alarm task. This
         # avoids corner cases where the registry is queried in block A, a new
@@ -341,9 +339,8 @@ class RaidenService:
         state_change = Block(block_number)
         self.handle_state_change(state_change, block_number)
 
-        # To avoid races, only update the internal cache after all the state
-        # tasks have been updated.
-        self._block_number = block_number
+    def get_block_number(self):
+        return views.block_number(self.wal.state_manager.current_state)
 
     def handle_state_change(self, state_change, block_number=None):
         log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
@@ -366,9 +363,6 @@ class RaidenService:
 
     def start_health_check_for(self, node_address):
         self.protocol.start_health_check(node_address)
-
-    def get_block_number(self):
-        return views.block_number(self.wal.state_manager.current_state)
 
     def poll_blockchain_events(self, current_block=None):  # pylint: disable=unused-argument
         with self.event_poll_lock:
