@@ -32,7 +32,8 @@ def decode_event(abi: Dict, log: Dict):
     return get_event_data(event_abi, log)
 
 
-def encode_function_call(abi: Dict, function: str, args: List = list()):
+def encode_function_call(abi: Dict, function: str, args: List = None):
+    args = args or list()
     fn_abi = find_matching_fn_abi(abi, function, args)
     fn_types = get_abi_input_types(fn_abi)
     return encode_abi(fn_types, args)
@@ -129,10 +130,8 @@ class ContractProxy:
 
         return res
 
-    def decode_event(self, log):
-        return decode_event(self.abi, log)
-
-    def encode_function_call(self, function: str, args: List = list()):
+    def encode_function_call(self, function: str, args: List = None):
+        args = args or None
         return self.get_transaction_data(self.abi, function, args)
 
     @staticmethod
@@ -151,8 +150,9 @@ class ContractProxy:
         return output
 
     @staticmethod
-    def get_transaction_data(abi: Dict, function_name: str, args: List = list()):
+    def get_transaction_data(abi: Dict, function_name: str, args: List = None):
         """Get encoded transaction data"""
+        args = args or list()
         fn_abi = find_matching_fn_abi(
             abi,
             function_name,

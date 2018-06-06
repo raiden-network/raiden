@@ -22,10 +22,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SETTLED,
     EVENT_CHANNEL_SECRET_REVEALED,
 )
-from raiden.exceptions import (
-    AddressWithoutCode,
-    EthNodeCommunicationError,
-)
+from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.filters import get_filter_events
 from raiden.utils import address_decoder, pex
 from raiden.network.rpc.smartcontract_proxy import decode_event
@@ -46,26 +43,6 @@ Proxies2 = namedtuple(
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
-def poll_event_listener(eth_filter, abi):
-    result = list()
-
-    for log_event in eth_filter.changes():
-        decoded_event = dict(decode_event(
-            abi,
-            log_event['event_data']
-        ))
-
-        if decoded_event is not None:
-            decoded_event['block_number'] = log_event.get('block_number')
-            event = Event(
-                log_event['address'],
-                decoded_event,
-            )
-            result.append(event)
-
-    return result
 
 
 def get_contract_events(
@@ -284,48 +261,21 @@ class BlockchainEvents:
     def __init__(self):
         self.event_listeners = list()
 
-    def poll_all_event_listeners(self, from_block=None):
-        result = list()
-        reinstalled_filters = False
+    def poll_blockchain_events(self):
+        for event_listener in self.event_listeners:
+            for log_event in event_listener.filter.changes():
+                decoded_event = dict(decode_event(
+                    event_listener.abi,
+                    log_event['event_data'],
+                ))
 
-        while True:
-            try:
-                for event_listener in self.event_listeners:
-                    decoded_events = poll_event_listener(
-                        event_listener.filter,
-                        event_listener.abi,
+                if decoded_event is not None:
+                    decoded_event['block_number'] = log_event.get('block_number')
+                    event = Event(
+                        log_event['address'],
+                        decoded_event,
                     )
-                    result.extend(decoded_events)
-                break
-            except EthNodeCommunicationError as e:
-                # If the eth client has restarted and we reconnected to it then
-                # filters will no longer exist there. In that case we will need
-                # to recreate all the filters.
-                if not reinstalled_filters and str(e) == 'filter not found':
-                    log.debug('reinstalling eth filters')
-
-                    result = list()
-                    reinstalled_filters = True
-                    updated_event_listerners = list()
-
-                    for event_listener in self.event_listeners:
-                        new_listener = EventListener(
-                            event_listener.event_name,
-                            event_listener.filter_creation_function(from_block=from_block),
-                            event_listener.abi,
-                            event_listener.filter_creation_function,
-                        )
-                        updated_event_listerners.append(new_listener)
-
-                    self.event_listeners = updated_event_listerners
-                else:
-                    raise e
-
-        return result
-
-    def poll_blockchain_events(self, from_block=None):
-        for event in self.poll_all_event_listeners(from_block):
-            yield decode_event_to_internal(event)
+                    yield decode_event_to_internal(event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
@@ -341,8 +291,6 @@ class BlockchainEvents:
             filter_creation_function,
         )
         self.event_listeners.append(event)
-
-        return poll_event_listener(eth_filter, abi)
 
     def add_registry_listener(self, registry_proxy, from_block=None):
         tokenadded = registry_proxy.tokenadded_filter(from_block)
