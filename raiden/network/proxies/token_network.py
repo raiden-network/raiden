@@ -750,15 +750,13 @@ class TokenNetwork:
         Return:
             Filter: The filter instance.
         """
-        filter_id_raw = new_filter(
+        return new_filter(
             self.client,
             self.address,
             topics=topics,
             from_block=from_block,
             to_block=to_block
         )
-
-        return Filter(self.client, filter_id_raw)
 
     def channelnew_filter(
             self,

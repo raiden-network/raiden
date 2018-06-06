@@ -146,21 +146,16 @@ class Registry:
             for address in self.proxy.call('channelManagerAddresses')
         ]
 
-    def tokenadded_filter(self, from_block=None, to_block=None):
+    def tokenadded_filter(self, from_block=None, to_block=None) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
         registry_address_bin = self.proxy.contract_address
-        filter_id_raw = new_filter(
+        return new_filter(
             self.client,
             registry_address_bin,
             topics,
             from_block=from_block,
             to_block=to_block,
-        )
-
-        return Filter(
-            self.client,
-            filter_id_raw,
         )
 
     def manager(self, manager_address):

@@ -217,7 +217,8 @@ class ChannelManager:
     def channelnew_filter(
             self,
             from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest') -> Filter:
+            to_block: Union[str, int] = 'latest'
+    ) -> Filter:
         """ Install a new filter for ChannelNew events.
 
         Args:
@@ -230,15 +231,10 @@ class ChannelManager:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
 
         channel_manager_address_bin = self.proxy.contract_address
-        filter_id_raw = new_filter(
+        return new_filter(
             self.client,
             channel_manager_address_bin,
             topics,
             from_block=from_block,
             to_block=to_block
-        )
-
-        return Filter(
-            self.client,
-            filter_id_raw,
         )

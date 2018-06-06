@@ -56,11 +56,6 @@ def get_contract_events(
     `contract_address` that match the filters `topics`, `from_block`, and
     `to_block`.
     """
-    # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
-    # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
-    # one using `eth_getLogs`. It will require changes in all testing frameworks
-    # to be implemented though.
-
     events = get_filter_events(
         chain.client,
         contract_address,
