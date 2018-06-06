@@ -10,7 +10,7 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, to_checksum_address, is_checksum_address
+from eth_utils import remove_0x_prefix, keccak, is_checksum_address
 
 import raiden
 from raiden.utils import typing
@@ -118,10 +118,6 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
 def address_encoder(address: typing.Address) -> str:
     assert len(address) in (20, 0)
     return '0x' + hexlify(address).decode()
-
-
-def address_encoder_and_checksum(address: typing.Address) -> str:
-    return to_checksum_address(address_encoder(address))
 
 
 def block_tag_encoder(val):

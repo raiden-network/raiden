@@ -64,8 +64,8 @@ from raiden.raiden_service import (
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
 from raiden.utils import (
     channelstate_to_api_dict,
-    split_endpoint, is_frozen,
-    address_encoder_and_checksum,
+    split_endpoint,
+    is_frozen,
 )
 
 log = structlog.get_logger(__name__)
@@ -101,19 +101,15 @@ def checksummed_response_dict(data):
     for k, v in data.items():
         if is_address(v):
             new_data[k] = to_checksum_address(v)
-        else:
-            new_data[k] = v
+
     return new_data
 
 
 def checksummed_response_list(data):
-    new_data = data.copy()
-    for v in data:
-        if is_address(v):
-            new_data.append(to_checksum_address(v))
-        else:
-            new_data.append(v)
-    return new_data
+    return [
+        to_checksum_address(v) if is_address(v) else v
+        for v in data
+    ]
 
 
 def api_response(result, status_code=HTTPStatus.OK):
@@ -162,9 +158,9 @@ def normalize_events_list(old_list):
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
         if new_event['event'] == 'EventTransferReceivedSuccess':
-            new_event['initiator'] = address_encoder_and_checksum(new_event['initiator'])[2:]
+            new_event['initiator'] = to_checksum_address(new_event['initiator'])[2:]
         if new_event['event'] == 'EventTransferSentSuccess':
-            new_event['target'] = address_encoder_and_checksum(new_event['target'])[2:]
+            new_event['target'] = to_checksum_address(new_event['target'])[2:]
         new_list.append(new_event)
     return new_list
 
@@ -311,7 +307,7 @@ class RestAPI:
 
     def get_our_address(self):
         return api_response(
-            result=dict(our_address=address_encoder_and_checksum(self.raiden_api.address))
+            result=dict(our_address=to_checksum_address(self.raiden_api.address))
         )
 
     def register_token(self, registry_address, token_address):
@@ -327,7 +323,7 @@ class RestAPI:
             )
 
         return api_response(
-            result=dict(channel_manager_address=address_encoder_and_checksum(manager_address)),
+            result=dict(channel_manager_address=to_checksum_address(manager_address)),
             status_code=HTTPStatus.CREATED,
         )
 
@@ -678,7 +674,7 @@ class RestAPI:
         except ChannelNotFound:
             return api_error(
                 errors='Requested channel {} not found'.format(
-                    address_encoder_and_checksum(channel_address)
+                    to_checksum_address(channel_address)
                 ),
                 status_code=HTTPStatus.CONFLICT,
             )

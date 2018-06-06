@@ -15,7 +15,7 @@ from werkzeug.routing import (
     BaseConverter,
     ValidationError,
 )
-from eth_utils import is_checksum_address
+from eth_utils import is_checksum_address, to_checksum_address
 
 
 from raiden.api.objects import (
@@ -38,11 +38,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import (
-    address_encoder_and_checksum,
-    data_encoder,
-    data_decoder,
-)
+from raiden.utils import data_encoder, data_decoder
 
 
 class HexAddressConverter(BaseConverter):
@@ -64,7 +60,7 @@ class HexAddressConverter(BaseConverter):
         return value
 
     def to_url(self, value):
-        return address_encoder_and_checksum(value)
+        return to_checksum_address(value)
 
 
 class AddressField(fields.Field):
@@ -76,7 +72,7 @@ class AddressField(fields.Field):
     }
 
     def _serialize(self, value, attr, obj):
-        return address_encoder_and_checksum(value)
+        return to_checksum_address(value)
 
     def _deserialize(self, value, attr, data):
         if value[:2] != '0x':
@@ -217,7 +213,7 @@ class ChannelStateSchema(BaseSchema):
     state = fields.Method('get_state')
 
     def get_partner_address(self, channel_state):  # pylint: disable=no-self-use
-        return address_encoder_and_checksum(channel_state.partner_state.address)
+        return to_checksum_address(channel_state.partner_state.address)
 
     def get_balance(self, channel_state):  # pylint: disable=no-self-use
         return channel.get_balance(
