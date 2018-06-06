@@ -5,10 +5,10 @@ from raiden.tests.utils import get_random_bytes
 def test_secret_registry(secret_registry_proxy):
     #  register secret
     secret = get_random_bytes(32)
+    event_filter = secret_registry_proxy.secret_registered_filter()
     secret_registry_proxy.register_secret(secret)
 
     # check if event is raised
-    event_filter = secret_registry_proxy.secret_registered_filter()
     logs = event_filter.get_all_entries()
     assert len(logs) == 1
     decoded_event = secret_registry_proxy.proxy.decode_event(logs[0])

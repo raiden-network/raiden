@@ -34,6 +34,17 @@ def _raiden_cleanup(request, raiden_apps):
     request.addfinalizer(_cleanup)
 
 
+def wait_for_alarm_start(raiden_apps):
+    """Wait until all Alarm tasks start & set up the last_block"""
+    while True:
+        if len([
+            True for app in raiden_apps
+            if app.raiden.alarm.last_block_number is None
+        ]) == 0:
+            return
+        gevent.sleep(0.5)
+
+
 def wait_for_usable_channel(
         app0,
         app1,
@@ -266,6 +277,9 @@ def raiden_network(
     _raiden_cleanup(request, raiden_apps)
 
     # Force blocknumber update
+    exception = RuntimeError('Alarm failed to start and set up start_block correctly')
+    with gevent.Timeout(seconds=5, exception=exception):
+        wait_for_alarm_start(raiden_apps)
     for app in raiden_apps:
         app.raiden.alarm.poll_for_new_block()
 

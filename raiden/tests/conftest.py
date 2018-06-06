@@ -5,6 +5,7 @@ import re
 import gevent
 import py
 import sys
+from typing import Dict
 from gevent import monkey
 monkey.patch_all()
 
@@ -15,14 +16,18 @@ from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
 
+gevent.get_hub().SYSTEM_ERROR = BaseException
+gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
+
+
 CATCH_LOG_HANDLER_NAME = 'catch_log_handler'
 
 
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=['geth'],
-        default='geth',
+        choices=['geth', 'tester'],
+        default='tester',
     )
 
     parser.addoption(
@@ -81,6 +86,40 @@ def pytest_addoption(parser):
         default=8008,
         help='Port of local matrix server if used, default: 8008',
     )
+
+
+def load_fixtures(module_name: str) -> Dict:
+    """Load all fixture functions from a module"""
+    import importlib
+    module = importlib.import_module(module_name)
+    return {
+        k: v for k, v in module.__dict__.items()
+        if hasattr(v, '_pytestfixturefunction')
+    }
+
+
+def load_fixtures_list(module_list: str) -> Dict:
+    fixtures_all = {}
+    for module in module_list:
+        fixtures_all.update(load_fixtures(module))
+    return fixtures_all
+
+
+@pytest.hookspec()
+def pytest_configure(config):
+    """Imports backend-specific fixtures on startup and puts them to globals(). Pytest
+    will later use them to build fixture dependencies."""
+    imports = {
+        'tester': [
+            'raiden.tests.integration.fixtures.backend_tester',
+        ],
+        'geth': [
+            'raiden.tests.integration.fixtures.backend_geth',
+        ],
+    }
+    fixtures_all = load_fixtures_list(imports[config.option.blockchain_type])
+    for k, v in fixtures_all.items():
+        globals()[k] = v
 
 
 @pytest.fixture(autouse=True)

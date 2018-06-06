@@ -34,7 +34,6 @@ class TempSolidityDir:
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_deploy_contract(raiden_network, deploy_client, tmpdir):
     """Test deploying contract with different version than the one we have set in Registry.sol.
     This test makes sense only for geth backend, tester uses mocked Registry class.

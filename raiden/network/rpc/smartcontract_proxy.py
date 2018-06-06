@@ -11,6 +11,10 @@ from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 from web3.utils.abi import get_abi_input_types, filter_by_type
 from web3.utils.events import get_event_data
 from web3.contract import Contract
+try:
+    from eth_tester.exceptions import TransactionFailed
+except ModuleNotFoundError:
+    TransactionFailed = Exception()
 
 
 def decode_event(abi: Dict, log: Dict):
@@ -106,6 +110,8 @@ class ContractProxy:
                 return None
             else:
                 raise err
+        except TransactionFailed:
+            return None
 
     @property
     def contract_address(self):

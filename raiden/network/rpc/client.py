@@ -44,6 +44,12 @@ from raiden.utils.solc import (
 )
 from raiden.constants import NULL_ADDRESS
 
+try:
+    from eth_tester.exceptions import BlockNotFound
+except ModuleNotFoundError:
+    BlockNotFound = Exception()
+
+
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
@@ -186,6 +192,7 @@ class JSONRPCClient:
             gasprice: int = None,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0,
+            web3: Web3 = None,
     ):
 
         if privkey is None or len(privkey) != 32:
@@ -221,13 +228,20 @@ class JSONRPCClient:
         self.gasprice = cache_wrapper(self._gasprice)
 
         # web3
-        self.web3: Web3 = Web3(HTTPProvider(endpoint))
-        # we use a PoA chain for smoketest, use this middleware to fix this
-        self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+        if web3 is None:
+            self.web3: Web3 = Web3(HTTPProvider(endpoint))
+        else:
+            self.web3 = web3
+        try:
+            # we use a PoA chain for smoketest, use this middleware to fix this
+            self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+        except ValueError:
+            pass
 
-        # create the connection test middleware
-        connection_test = make_connection_test_middleware(self)
-        self.web3.middleware_stack.inject(connection_test, layer=0)
+        # create the connection test middleware (but only for non-tester chain)
+        if not hasattr(web3, 'testing'):
+            connection_test = make_connection_test_middleware(self)
+            self.web3.middleware_stack.inject(connection_test, layer=0)
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
@@ -580,9 +594,12 @@ class JSONRPCClient:
             to_block: typing.BlockSpecification = 'latest',
     ) -> List[Dict]:
         """ Get events for the given query. """
-        return self.web3.eth.getLogs({
-            'fromBlock': from_block,
-            'toBlock': to_block,
-            'address': to_normalized_address(contract_address),
-            'topics': topics,
-        })
+        try:
+            return self.web3.eth.getLogs({
+                'fromBlock': from_block,
+                'toBlock': to_block,
+                'address': to_normalized_address(contract_address),
+                'topics': topics,
+            })
+        except BlockNotFound:
+            return []

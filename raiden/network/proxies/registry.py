@@ -37,6 +37,11 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
+try:
+    from eth_tester.exceptions import TransactionFailed
+except ModuleNotFoundError:
+    TransactionFailed = Exception()
+
 
 class Registry:
     def __init__(
@@ -78,7 +83,7 @@ class Registry:
             address = self.proxy.contract.functions.channelManagerByToken(
                 to_checksum_address(token_address),
             ).call()
-        except BadFunctionCallOutput:
+        except (BadFunctionCallOutput, TransactionFailed) as e:
             check_address_has_code(self.client, self.address)
             return None
 

@@ -38,6 +38,7 @@ def wait_until_block(chain, block):
     curr_block = chain.block_number()
     while curr_block < block:
         curr_block = chain.next_block()
+        gevent.sleep(0)
 
 
 def clique_extradata(extra_vanity, extra_seal):
@@ -185,7 +186,7 @@ def geth_init_datadir(datadir, genesis_path):
         raise ValueError(msg)
 
 
-def geth_wait_and_check(deploy_client, privatekeys, random_marker):
+def geth_wait_and_check(web3, privatekeys, random_marker):
     """ Wait until the geth cluster is ready. """
     jsonrpc_running = False
 
@@ -193,7 +194,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
     while not jsonrpc_running and tries > 0:
         try:
             # don't use web3 here as this will cause problem in the middleware
-            response = deploy_client.web3.providers[0].make_request(
+            response = web3.providers[0].make_request(
                 'eth_getBlockByNumber',
                 ['0x0', False],
             )
@@ -220,7 +221,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
         tries = 10
         balance = 0
         while balance == 0 and tries > 0:
-            balance = deploy_client.web3.eth.getBalance(address, 'latest')
+            balance = web3.eth.getBalance(address, 'latest')
             gevent.sleep(1)
             tries -= 1
 
@@ -230,7 +231,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
 
 def geth_create_blockchain(
         deploy_key,
-        deploy_client,
+        web3,
         private_keys,
         blockchain_private_keys,
         rpc_ports,
@@ -239,7 +240,8 @@ def geth_create_blockchain(
         verbosity,
         random_marker,
         genesis_path=None,
-        logdirectory=None):
+        logdirectory=None,
+):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
@@ -338,7 +340,7 @@ def geth_create_blockchain(
         processes_list.append(process)
 
     try:
-        geth_wait_and_check(deploy_client, private_keys, random_marker)
+        geth_wait_and_check(web3, private_keys, random_marker)
 
         for process in processes_list:
             process.poll()
