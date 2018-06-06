@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
-from gevent.event import AsyncResult
 from typing import List, Union, Tuple
 from eth_utils import is_binary_address, to_checksum_address
 
 import structlog
+from gevent.event import AsyncResult
+from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -14,10 +15,6 @@ from raiden.blockchain.abi import (
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.client import check_address_has_code
@@ -225,10 +222,9 @@ class ChannelManager:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
 
         channel_manager_address_bin = self.proxy.contract_address
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             channel_manager_address_bin,
-            topics,
+            topics=topics,
             from_block=from_block,
             to_block=to_block
         )

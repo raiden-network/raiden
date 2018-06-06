@@ -151,22 +151,6 @@ def quantity_encoder(i: int) -> str:
     return hex(i).rstrip('L')
 
 
-def topic_decoder(topic: str) -> int:
-    return int(topic[2:], 16)
-
-
-def topic_encoder(topic: int) -> str:
-    assert isinstance(topic, int)
-
-    if topic == 0:
-        return '0x'
-
-    topic = hex(topic).rstrip('L')
-    if len(topic) % 2:
-        topic = '0x0' + topic[2:]
-    return topic
-
-
 def pex(data: bytes) -> str:
     return hexlify(data).decode()[:8]
 

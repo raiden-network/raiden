@@ -3,12 +3,18 @@ import warnings
 import time
 import os
 from binascii import unhexlify
-from typing import Dict
+from typing import Union, List, Dict
 from json.decoder import JSONDecodeError
 
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
-from eth_utils import to_checksum_address, to_canonical_address, remove_0x_prefix
+from web3.utils.filters import Filter
+from eth_utils import (
+    to_checksum_address,
+    to_canonical_address,
+    remove_0x_prefix,
+    to_normalized_address,
+)
 import gevent
 import cachetools
 from gevent.lock import Semaphore
@@ -539,3 +545,33 @@ class JSONRPCClient:
         finally:
             if deadline:
                 deadline.cancel()
+
+    def new_filter(
+            self,
+            contract_address: Address,
+            topics: List[str] = None,
+            from_block: Union[str, int] = 0,
+            to_block: Union[str, int] = 'latest'
+    ) -> Filter:
+        """ Create a filter in the ethereum node. """
+        return self.web3.eth.filter({
+            'fromBlock': from_block,
+            'toBlock': to_block,
+            'address': to_normalized_address(contract_address),
+            'topics': topics,
+        })
+
+    def get_filter_events(
+            self,
+            contract_address: Address,
+            topics: List[str] = None,
+            from_block: Union[str, int] = 0,
+            to_block: Union[str, int] = 'latest'
+    ) -> List[Dict]:
+        """ Get events for the given query. """
+        return self.web3.eth.getLogs({
+            'fromBlock': from_block,
+            'toBlock': to_block,
+            'address': to_normalized_address(contract_address),
+            'topics': topics,
+        })

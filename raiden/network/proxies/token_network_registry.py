@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-import structlog
 from binascii import hexlify, unhexlify
+
+import structlog
+from web3.utils.filters import Filter
+
 from raiden.utils import typing
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -27,10 +30,6 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
     estimate_and_transact,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -136,10 +135,9 @@ class TokenNetworkRegistry:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED2)]
 
         registry_address_bin = self.proxy.contract_address
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             registry_address_bin,
-            topics,
+            topics=topics,
             from_block=from_block,
             to_block=to_block,
         )

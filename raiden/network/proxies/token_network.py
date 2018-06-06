@@ -6,6 +6,7 @@ from typing import List, Union, Optional
 from raiden.utils import typing
 
 import structlog
+from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -19,10 +20,6 @@ from raiden.blockchain.abi import (
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.proxies.token import Token
@@ -750,8 +747,7 @@ class TokenNetwork:
         Return:
             Filter: The filter instance.
         """
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             self.address,
             topics=topics,
             from_block=from_block,

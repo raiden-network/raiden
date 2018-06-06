@@ -3,6 +3,7 @@ from binascii import hexlify, unhexlify
 
 import structlog
 from eth_utils import is_binary_address, to_checksum_address
+from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -27,10 +28,6 @@ from raiden.network.proxies.channel_manager import ChannelManager
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
@@ -150,10 +147,9 @@ class Registry:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
         registry_address_bin = self.proxy.contract_address
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             registry_address_bin,
-            topics,
+            topics=topics,
             from_block=from_block,
             to_block=to_block,
         )

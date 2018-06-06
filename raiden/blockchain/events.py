@@ -3,6 +3,7 @@ import itertools
 from collections import namedtuple, defaultdict
 
 import structlog
+from eth_utils import to_canonical_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -23,7 +24,6 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.exceptions import AddressWithoutCode
-from raiden.network.rpc.filters import get_filter_events
 from raiden.utils import address_decoder, pex
 from raiden.network.rpc.smartcontract_proxy import decode_event
 
@@ -56,8 +56,7 @@ def get_contract_events(
     `contract_address` that match the filters `topics`, `from_block`, and
     `to_block`.
     """
-    events = get_filter_events(
-        chain.client,
+    events = chain.client.get_filter_events(
         contract_address,
         topics=topics,
         from_block=from_block,
@@ -66,9 +65,9 @@ def get_contract_events(
 
     result = []
     for event in events:
-        decoded_event = dict(decode_event(abi, event['event_data']))
-        if event.get('block_number'):
-            decoded_event['block_number'] = event['block_number']
+        decoded_event = dict(decode_event(abi, event))
+        if event.get('blockNumber'):
+            decoded_event['block_number'] = event['blockNumber']
         result.append(decoded_event)
     return result
 
@@ -258,23 +257,23 @@ class BlockchainEvents:
 
     def poll_blockchain_events(self):
         for event_listener in self.event_listeners:
-            for log_event in event_listener.filter.changes():
+            for log_event in event_listener.filter.get_new_entries():
                 decoded_event = dict(decode_event(
                     event_listener.abi,
-                    log_event['event_data'],
+                    log_event,
                 ))
 
                 if decoded_event is not None:
-                    decoded_event['block_number'] = log_event.get('block_number')
+                    decoded_event['block_number'] = log_event.get('blockNumber', 0)
                     event = Event(
-                        log_event['address'],
+                        to_canonical_address(log_event['address']),
                         decoded_event,
                     )
                     yield decode_event_to_internal(event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
-            listener.filter.uninstall()
+            listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
 
         self.event_listeners = list()
 

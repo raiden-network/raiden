@@ -1,5 +1,8 @@
 import structlog
 from binascii import unhexlify
+
+from web3.utils.filters import Filter
+
 from raiden.utils import typing
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -20,10 +23,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -96,10 +95,9 @@ class SecretRegistry:
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_SECRET_REVEALED)]
 
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             self.address,
-            topics,
+            topics=topics,
             from_block=from_block,
             to_block=to_block,
         )
