@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 from gevent.lock import RLock
-from typing import Optional, List
+from typing import List
 
 import structlog
 from web3.exceptions import BadFunctionCallOutput
+from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -21,10 +22,6 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-)
-from raiden.network.rpc.filters import (
-    new_filter,
-    Filter,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -448,9 +445,9 @@ class NettingChannel:
 
     def events_filter(
             self,
-            topics: Optional[List],
-            from_block: Optional[int] = None,
-            to_block: Optional[int] = None
+            topics: List[str] = None,
+            from_block: int = None,
+            to_block: int = None
     ) -> Filter:
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
@@ -462,8 +459,7 @@ class NettingChannel:
             Filter: The filter instance.
         """
         netting_channel_address_bin = self.proxy.contract_address
-        return new_filter(
-            self.client,
+        return self.client.new_filter(
             netting_channel_address_bin,
             topics=topics,
             from_block=from_block,

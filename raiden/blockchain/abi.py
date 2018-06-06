@@ -229,14 +229,14 @@ class ContractManagerWrap(ContractManager):
         """Return version of the contract."""
         return self.contract_to_version[contract_name]
 
-    def get_event_id(self, event_name: str) -> int:
+    def get_event_id(self, event_name: str) -> str:
         """ Not really generic, as it maps event names to events of specific contracts,
         but it is good enough for what we want to accomplish.
         """
         contract_name = self.event_to_contract[event_name]
         event_abi = self.get_event_abi(contract_name, event_name)
         log_id = event_abi_to_log_topic(event_abi)
-        return int(encode_hex(log_id), 16)
+        return encode_hex(log_id)
 
     def check_contract_version(self, deployed_version, contract_name):
         """Check if the deployed contract version matches used contract version."""

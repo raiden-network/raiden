@@ -5,7 +5,6 @@ import os
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
-from raiden.network.rpc.filters import get_filter_events
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils.solc import compile_files_cwd
@@ -32,10 +31,10 @@ def deploy_rpc_test_contract(deploy_client):
 def get_list_of_block_numbers(item):
     """ Creates a list of block numbers of the given list/single event"""
     if isinstance(item, list):
-        return [element['block_number'] for element in item]
+        return [element['blockNumber'] for element in item]
 
     if isinstance(item, dict):
-        block_number = item['block_number']
+        block_number = item['blockNumber']
         return [block_number]
 
     return list()
@@ -181,25 +180,21 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_2))
 
-    result_1 = get_filter_events(deploy_client, contract_proxy.contract_address, None)
+    result_1 = deploy_client.get_filter_events(contract_proxy.contract_address)
     block_number_events = get_list_of_block_numbers(result_1)
     block_number_event_1 = block_number_events[0]
     block_number_event_2 = block_number_events[1]
 
     # inclusive from_block should return both events
-    result_2 = get_filter_events(
-        deploy_client,
+    result_2 = deploy_client.get_filter_events(
         contract_proxy.contract_address,
-        None,
         from_block=block_number_event_1,
     )
     assert get_list_of_block_numbers(result_2) == block_number_events
 
     # a higher from_block must not contain the first event
-    result_3 = get_filter_events(
-        deploy_client,
+    result_3 = deploy_client.get_filter_events(
         contract_proxy.contract_address,
-        None,
         from_block=block_number_event_1 + 1,
     )
     assert get_list_of_block_numbers(result_3) == [block_number_event_2]
@@ -217,25 +212,21 @@ def test_filter_end_block_inclusive(deploy_client, blockchain_backend):
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_2))
 
-    result_1 = get_filter_events(deploy_client, contract_proxy.contract_address, None)
+    result_1 = deploy_client.get_filter_events(contract_proxy.contract_address)
     block_number_events = get_list_of_block_numbers(result_1)
     block_number_event_1 = block_number_events[0]
     block_number_event_2 = block_number_events[1]
 
     # inclusive to_block should return first event
-    result_2 = get_filter_events(
-        deploy_client,
+    result_2 = deploy_client.get_filter_events(
         contract_proxy.contract_address,
-        None,
         to_block=block_number_event_1,
     )
     assert get_list_of_block_numbers(result_2) == [block_number_event_1]
 
     # this should include the second event
-    result_3 = get_filter_events(
-        deploy_client,
+    result_3 = deploy_client.get_filter_events(
         contract_proxy.contract_address,
-        None,
         to_block=block_number_event_2,
     )
     assert get_list_of_block_numbers(result_3) == block_number_events
