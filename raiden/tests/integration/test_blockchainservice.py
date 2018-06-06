@@ -5,6 +5,7 @@ import itertools
 import pytest
 from eth_utils import to_canonical_address, is_address, is_same_address
 
+
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.blockchain.abi import (
@@ -143,6 +144,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail()['our_balance'] == 70
     assert netting_channel_02.detail()['partner_balance'] == 130
 
+    wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 2)
     RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
 
     waiting.wait_for_settle(
@@ -202,7 +204,8 @@ def test_channelmanager_graph_building(
 )
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
-        blockchain_backend,  # required to start the geth backend pylint: disable=unused-argument
+        init_blockchain,
+        web3,
         blockchain_rpc_ports,
         private_keys,
         poll_timeout):
@@ -222,6 +225,7 @@ def test_blockchain(
         host,
         blockchain_rpc_ports[0],
         privatekey,
+        web3=web3,
     )
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')

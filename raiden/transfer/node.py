@@ -294,8 +294,7 @@ def subdispatch_targettask(
 
     elif sub_task and isinstance(sub_task, PaymentMappingState.TargetTask):
         is_valid_subtask = (
-            token_network_identifier == sub_task.token_network_identifier and
-            token_address == sub_task.token_address
+            token_network_identifier == sub_task.token_network_identifier
         )
         target_state = sub_task.target_state
     else:

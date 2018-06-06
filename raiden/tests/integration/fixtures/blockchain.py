@@ -9,11 +9,9 @@ from raiden.utils import (
     get_contract_path,
     privatekey_to_address,
 )
-from raiden.tests.utils.tests import cleanup_tasks
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.blockchain import geth_create_blockchain
 from raiden.settings import GAS_PRICE
 from raiden.utils.solc import compile_files_cwd
 
@@ -125,36 +123,6 @@ def token_addresses(
 
 
 @pytest.fixture
-def blockchain_services(
-        request,
-        deploy_key,
-        deploy_client,
-        private_keys,
-        poll_timeout,
-        blockchain_backend,  # This fixture is required because it will start
-                             # the geth subprocesses
-        blockchain_rpc_ports,
-        blockchain_type,
-        deploy_new_contracts,
-):
-
-    registry_address = None
-
-    if blockchain_type == 'geth':
-        return _jsonrpc_services(
-            deploy_key,
-            deploy_client,
-            private_keys,
-            request.config.option.verbose,
-            poll_timeout,
-            deploy_new_contracts,
-            registry_address,  # _jsonrpc_services will handle the None value
-        )
-
-    raise ValueError('unknown cluster type {}'.format(blockchain_type))
-
-
-@pytest.fixture
 def endpoint_discovery_services(blockchain_services):
     discovery_address = blockchain_services.deploy_service.deploy_contract(
         'EndpointRegistry',
@@ -165,45 +133,6 @@ def endpoint_discovery_services(blockchain_services):
         ContractDiscovery(chain.node_address, chain.discovery(discovery_address))
         for chain in blockchain_services.blockchain_services
     ]
-
-
-@pytest.fixture
-def deploy_new_contracts():
-    return False
-
-
-@pytest.fixture
-def blockchain_backend(
-        request,
-        deploy_key,
-        deploy_client,
-        private_keys,
-        blockchain_private_keys,
-        blockchain_p2p_ports,
-        blockchain_rpc_ports,
-        tmpdir,
-        random_marker,
-        blockchain_type,
-):
-
-    genesis_path = None
-
-    if blockchain_type == 'geth':
-        return _geth_blockchain(
-            request,
-            deploy_key,
-            deploy_client,
-            private_keys,
-            blockchain_private_keys,
-            blockchain_p2p_ports,
-            blockchain_rpc_ports,
-            tmpdir,
-            random_marker,
-            genesis_path,
-        )
-
-    # check pytest_addoption
-    raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
 
 @pytest.fixture
@@ -237,57 +166,16 @@ def deploy_contract_web3(
 
 
 @pytest.fixture
-def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
-    if blockchain_type == 'geth':
-        host = '0.0.0.0'
-        rpc_port = blockchain_rpc_ports[0]
+def deploy_client(init_blockchain, blockchain_rpc_ports, deploy_key, web3):
+    host = '0.0.0.0'
+    rpc_port = blockchain_rpc_ports[0]
 
-        deploy_client = JSONRPCClient(
-            host,
-            rpc_port,
-            deploy_key,
-        )
-
-        return deploy_client
-
-    raise ValueError('unknow cluster type {}'.format(blockchain_type))
-
-
-def _geth_blockchain(
-        request,
+    return JSONRPCClient(
+        host,
+        rpc_port,
         deploy_key,
-        deploy_client,
-        private_keys,
-        blockchain_private_keys,
-        blockchain_p2p_ports,
-        blockchain_rpc_ports,
-        tmpdir,
-        random_marker,
-        genesis_path,
-):
-
-    """ Helper to do proper cleanup. """
-    geth_processes = geth_create_blockchain(
-        deploy_key,
-        deploy_client,
-        private_keys,
-        blockchain_private_keys,
-        blockchain_rpc_ports,
-        blockchain_p2p_ports,
-        str(tmpdir),
-        request.config.option.verbose,
-        random_marker,
-        genesis_path,
+        web3=web3,
     )
-
-    def _cleanup():
-        for process in geth_processes:
-            process.terminate()
-
-        cleanup_tasks()
-
-    request.addfinalizer(_cleanup)
-    return geth_processes
 
 
 def _jsonrpc_services(
@@ -298,6 +186,7 @@ def _jsonrpc_services(
         poll_timeout,
         deploy_new_contracts,
         registry_address=None,
+        web3=None,
 ):
     deploy_blockchain = BlockChainService(
         deploy_key,
@@ -352,6 +241,7 @@ def _jsonrpc_services(
             host,
             deploy_client.port,
             privkey,
+            web3=web3,
         )
 
         blockchain = BlockChainService(
@@ -365,4 +255,24 @@ def _jsonrpc_services(
         deploy_registry,
         deploy_blockchain,
         blockchain_services,
+    )
+
+
+@pytest.fixture
+def blockchain_services(
+        request,
+        deploy_key,
+        deploy_client,
+        private_keys,
+        poll_timeout,
+        web3,
+):
+    return _jsonrpc_services(
+        deploy_key,
+        deploy_client,
+        private_keys,
+        request.config.option.verbose,
+        poll_timeout,
+        None,  # _jsonrpc_services will handle the None value
+        web3=web3,
     )
