@@ -487,8 +487,6 @@ class RestAPI:
 
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dump(channel_list)
-        import pdb
-        pdb.set_trace()
         return api_response(result=checksummed_response_list(result.data))
 
     def get_tokens_list(self, registry_address):
