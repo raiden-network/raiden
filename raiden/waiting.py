@@ -13,6 +13,21 @@ from raiden.utils import typing
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def wait_for_block(
+        raiden: 'RaidenService',
+        block_number: typing.BlockNumber,
+        poll_timeout: typing.NetworkTimeout,
+) -> None:
+    current_block_number = views.block_number(
+        views.state_from_raiden(raiden),
+    )
+    while current_block_number < block_number:
+        gevent.sleep(poll_timeout)
+        current_block_number = views.block_number(
+            views.state_from_raiden(raiden),
+        )
+
+
 def wait_for_newchannel(
         raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
