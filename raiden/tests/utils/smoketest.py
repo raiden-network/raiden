@@ -15,6 +15,8 @@ import tempfile
 import time
 import traceback
 
+from eth_utils import to_checksum_address
+
 from raiden.utils import (
     get_project_root,
     address_decoder,
@@ -223,7 +225,7 @@ def start_ethereum(smoketest_genesis):
     ethereum_config = dict(
         rpc=os.environ['RST_RPC_PORT'],
         keystore=keystore,
-        address=TEST_ACCOUNT['address'],
+        address=to_checksum_address(TEST_ACCOUNT['address']),
         init_log_out=init_out,
         init_log_err=init_err,
     )
