@@ -110,7 +110,6 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     )
 
     api1.channel_close(registry_address, token_address, api2.address)
-    node1.raiden.poll_blockchain_events()
 
     # Load the new state with the channel closed
     channel12 = get_channelstate(node1, node2, token_network_identifier)
@@ -146,5 +145,4 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     # Load the new state with the channel settled
     channel12 = get_channelstate(node1, node2, token_network_identifier)
 
-    node1.raiden.poll_blockchain_events()
     assert channel.get_status(channel12) == CHANNEL_STATE_SETTLED

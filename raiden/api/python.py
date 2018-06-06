@@ -68,7 +68,12 @@ class RaidenAPI:
 
         raise ChannelNotFound()
 
-    def token_network_register(self, registry_address, token_address):
+    def token_network_register(
+            self,
+            registry_address,
+            token_address,
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         """Register the `token_address` in the blockchain.
 
         Raises:
@@ -96,9 +101,11 @@ class RaidenAPI:
             # registered with the smart contract and this node has not yet
             # polled for the event (otherwise the check above would have
             # failed).
-            # To provide a consistent view to the user, force an event poll to
-            # register the token network.
-            self.raiden.poll_blockchain_events()
+            #
+            # To provide a consistent view to the user, wait one block, this
+            # will guarantee that the events have been processed.
+            next_block = self.raiden.get_block_number() + 1
+            waiting.wait_for_block(self.raiden, next_block, poll_timeout)
 
     def token_network_connect(
             self,
@@ -155,7 +162,6 @@ class RaidenAPI:
             reveal_timeout=None,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-
         """ Open a channel with the peer at `partner_address`
         with the given `token_address`.
         """

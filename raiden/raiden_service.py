@@ -227,8 +227,6 @@ class RaidenService:
             # finish before starting the transport
             endpoint_registration_event.join()
 
-        # Lock used to serialize calls to `poll_blockchain_events`, this is
-        # important to give a consistent view of the node state.
         self.event_poll_lock = gevent.lock.Semaphore()
 
         self.start()
@@ -277,7 +275,7 @@ class RaidenService:
         #   have effect.
         # - Install the filters using the correct from_block value, otherwise
         #   blockchain logs can be lost.
-        self.alarm.register_callback(self.poll_blockchain_events)
+        self.alarm.register_callback(self._callback_new_block)
         self.alarm.start()
 
         self.install_payment_network_filters(
@@ -360,10 +358,35 @@ class RaidenService:
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
-    def poll_blockchain_events(self, block_number=None):  # pylint: disable=unused-argument
+    def _callback_new_block(self, current_block_number):
+        """Called once a new block is detected by the alarm task.
+
+        Note:
+            This should be called only once per block, otherwise there will be
+            duplicated `Block` state changes in the log.
+
+            Therefor this method should be called only once a new block is
+            mined with the appropriate block_number argument from the
+            AlarmTask.
+        """
+        # Raiden relies on blockchain events to update its off-chain state,
+        # therefor some APIs /used/ to forcefully poll for events.
+        #
+        # This was done for APIs which have on-chain side-effects, e.g.
+        # openning a channel, where polling the event is required to update
+        # off-chain state to providing a consistent view to the caller, e.g.
+        # the channel exists after the API call returns.
+        #
+        # That pattern introduced a race, because the events are returned only
+        # once per filter, and this method would be called concurrently by the
+        # API and the AlarmTask. The following lock is necessary, to ensure the
+        # expected side-effects are properly applied (introduced by the commit
+        # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
             for event in self.blockchain_events.poll_blockchain_events():
-                on_blockchain_event(self, event)
+                # These state changes will be procesed with a block_number
+                # which is /larger/ than the NodeState's block_number.
+                on_blockchain_event(self, event, current_block_number)
 
             # On restart the Raiden node will re-create the filters with the
             # ethereum node, these filters will have the from_block set to the
@@ -375,8 +398,8 @@ class RaidenService:
             # twice, this will happen if the node crashed and some events have
             # been processed but the Block state change has not been
             # dispatched.
-            state_change = Block(current_block)
-            self.handle_state_change(state_change, current_block)
+            state_change = Block(current_block_number)
+            self.handle_state_change(state_change, current_block_number)
 
     def sign(self, message):
         """ Sign message inplace. """
