@@ -118,6 +118,11 @@ class ChannelBusyError(RaidenError):
     conflicts with an ongoing operation."""
 
 
+class ChannelIncorrectStateError(RaidenError):
+    """Raised if someone tries to perform an operation on a channel that
+    is in an incompatible state."""
+
+
 class ContractVersionMismatch(RaidenError):
     """Raised if deployed version of the contract differs."""
 
