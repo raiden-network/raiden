@@ -5,7 +5,7 @@ import os
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
-from raiden.network.rpc.filters import new_filter, get_filter_events
+from raiden.network.rpc.filters import get_filter_events
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils.solc import compile_files_cwd
@@ -176,9 +176,6 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_2))
 
-    # create a new filter in the node
-    new_filter(deploy_client, contract_proxy.contract_address, None)
-
     result_1 = get_filter_events(deploy_client, contract_proxy.contract_address, None)
     block_number_events = get_list_of_block_numbers(result_1)
     block_number_event_1 = block_number_events[0]
@@ -214,9 +211,6 @@ def test_filter_end_block_inclusive(deploy_client, blockchain_backend):
     deploy_client.poll(unhexlify(transaction_hex_1))
     transaction_hex_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
     deploy_client.poll(unhexlify(transaction_hex_2))
-
-    # create a new filter in the node
-    new_filter(deploy_client, contract_proxy.contract_address, None)
 
     result_1 = get_filter_events(deploy_client, contract_proxy.contract_address, None)
     block_number_events = get_list_of_block_numbers(result_1)

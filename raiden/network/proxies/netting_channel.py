@@ -448,7 +448,8 @@ class NettingChannel:
             self,
             topics: Optional[List],
             from_block: Optional[int] = None,
-            to_block: Optional[int] = None) -> Filter:
+            to_block: Optional[int] = None
+    ) -> Filter:
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
             topics: A list of event ids to filter for. Can also be None,
@@ -459,17 +460,12 @@ class NettingChannel:
             Filter: The filter instance.
         """
         netting_channel_address_bin = self.proxy.contract_address
-        filter_id_raw = new_filter(
+        return new_filter(
             self.client,
             netting_channel_address_bin,
             topics=topics,
             from_block=from_block,
             to_block=to_block
-        )
-
-        return Filter(
-            self.client,
-            filter_id_raw,
         )
 
     def all_events_filter(self, from_block=None, to_block=None):

@@ -93,15 +93,13 @@ class SecretRegistry:
     def register_block_by_secrethash(self, secrethash: typing.Keccak256):
         return self.proxy.call('getSecretRevealBlockHeight', secrethash)
 
-    def secret_registered_filter(self, from_block=None, to_block=None):
+    def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_SECRET_REVEALED)]
 
-        filter_id_raw = new_filter(
+        return new_filter(
             self.client,
             self.address,
             topics,
             from_block=from_block,
             to_block=to_block,
         )
-
-        return Filter(self.client, filter_id_raw)
