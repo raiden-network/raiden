@@ -8,9 +8,14 @@ from eth_utils import to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
+from raiden.blockchain.abi import (
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_MANAGER,
+    CONTRACT_REGISTRY,
+)
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.smartcontract_proxy import decode_event
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
@@ -276,7 +281,7 @@ def test_blockchain(
     channel_manager_address = to_canonical_address(channel_manager_address_encoded)
 
     log = log_list[0]
-    event = registry_proxy.decode_event(log)
+    event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY), log)
     event_args = event['args']
 
     assert channel_manager_address == to_canonical_address(event_args['channel_manager_address'])

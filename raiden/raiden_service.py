@@ -358,7 +358,7 @@ class RaidenService:
     def start_health_check_for(self, node_address):
         self.protocol.start_health_check(node_address)
 
-    def poll_blockchain_events(self, current_block=None):  # pylint: disable=unused-argument
+    def poll_blockchain_events(self, block_number=None):  # pylint: disable=unused-argument
         with self.event_poll_lock:
             for event in self.blockchain_events.poll_blockchain_events():
                 on_blockchain_event(self, event)
