@@ -29,7 +29,6 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -54,8 +53,8 @@ class TokenNetworkRegistry:
             address_encoder(registry_address),
         )
         CONTRACT_MANAGER.check_contract_version(
-            proxy.call('contract_version').decode(),
-            CONTRACT_TOKEN_NETWORK_REGISTRY,
+            proxy.functions.contract_version().call(),
+            CONTRACT_TOKEN_NETWORK_REGISTRY
         )
 
         self.address = registry_address
@@ -71,10 +70,9 @@ class TokenNetworkRegistry:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
-        address = self.proxy.call(
-            'token_to_token_networks',
-            token_address,
-        )
+        address = self.proxy.contract.functions.token_to_token_networks(
+            token_address
+        ).call()
 
         if address == b'':
             return None
@@ -92,8 +90,7 @@ class TokenNetworkRegistry:
             registry_address=pex(self.address),
         )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'createERC20TokenNetwork',
             token_address
         )
