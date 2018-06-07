@@ -2,6 +2,7 @@
 from binascii import unhexlify
 from gevent.lock import RLock
 from typing import List
+from eth_utils import to_normalized_address
 
 import structlog
 from web3.exceptions import BadFunctionCallOutput
@@ -28,7 +29,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     pex,
     privatekey_to_address,
     releasing,
@@ -48,7 +48,7 @@ class NettingChannel:
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-            address_encoder(channel_address),
+            to_normalized_address(channel_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
 

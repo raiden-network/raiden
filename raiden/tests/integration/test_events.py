@@ -2,6 +2,8 @@
 import gevent
 import pytest
 
+from eth_utils import to_normalized_address
+
 from raiden.api.python import RaidenAPI
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -25,7 +27,7 @@ from raiden.tests.utils.transfer import (
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.transfer import views, channel
-from raiden.utils import address_encoder, sha3
+from raiden.utils import sha3
 
 
 def event_dicts_are_equal(dict1, dict2):
@@ -166,9 +168,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(events) == 1
     assert events[0]['event'] == EVENT_TOKEN_ADDED
     assert event_dicts_are_equal(events[0]['args'], {
-        'registry_address': address_encoder(registry_address),
-        'channel_manager_address': address_encoder(manager0.address),
-        'token_address': address_encoder(token_address),
+        'registry_address': to_normalized_address(registry_address),
+        'channel_manager_address': to_normalized_address(manager0.address),
+        'token_address': to_normalized_address(token_address),
         'block_number': 'ignore',
     })
 
@@ -200,11 +202,11 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
     assert len(events) == 1
     assert events[0]['event'] == EVENT_CHANNEL_NEW
     assert event_dicts_are_equal(events[0]['args'], {
-        'registry_address': address_encoder(registry_address),
+        'registry_address': to_normalized_address(registry_address),
         'settle_timeout': settle_timeout,
-        'netting_channel': address_encoder(channel_address),
-        'participant1': address_encoder(app0.raiden.address),
-        'participant2': address_encoder(app1.raiden.address),
+        'netting_channel': to_normalized_address(channel_address),
+        'participant1': to_normalized_address(app0.raiden.address),
+        'participant2': to_normalized_address(app1.raiden.address),
         'block_number': 'ignore',
     })
 
@@ -258,9 +260,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     assert events[0]['event'] == EVENT_CHANNEL_NEW_BALANCE
     new_balance_event = {
-        'registry_address': address_encoder(registry_address),
-        'token_address': address_encoder(token_address),
-        'participant': address_encoder(app0.raiden.address),
+        'registry_address': to_normalized_address(registry_address),
+        'token_address': to_normalized_address(token_address),
+        'participant': to_normalized_address(app0.raiden.address),
         'balance': deposit,
         'block_number': 'ignore',
     }
@@ -294,8 +296,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     assert events[0]['event'] == EVENT_CHANNEL_CLOSED
     closed_event = {
-        'registry_address': address_encoder(registry_address),
-        'closing_address': address_encoder(app0.raiden.address),
+        'registry_address': to_normalized_address(registry_address),
+        'closing_address': to_normalized_address(app0.raiden.address),
         'block_number': 'ignore',
     }
 
@@ -323,7 +325,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
 
     assert events[0]['event'] == EVENT_CHANNEL_SETTLED
     settled_event = {
-        'registry_address': address_encoder(registry_address),
+        'registry_address': to_normalized_address(registry_address),
         'block_number': 'ignore',
     }
 

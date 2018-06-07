@@ -115,11 +115,6 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
     return addr
 
 
-def address_encoder(address: typing.Address) -> str:
-    assert len(address) in (20, 0)
-    return '0x' + hexlify(address).decode()
-
-
 def block_tag_encoder(val):
     if isinstance(val, int):
         return hex(val).rstrip('L')

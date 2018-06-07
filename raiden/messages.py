@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-from eth_utils import big_endian_to_int, encode_hex
+from eth_utils import (
+    big_endian_to_int,
+    encode_hex,
+    to_normalized_address,
+)
 import structlog
 
 import raiden_libs.messages
@@ -16,7 +20,6 @@ from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     data_decoder,
     data_encoder,
     ishash,
@@ -385,7 +388,7 @@ class Processed(SignedMessage):
     def to_dict(self):
         return {
             'type': self.__class__.__name__,
-            'sender': address_encoder(self.sender),
+            'sender': to_normalized_address(self.sender),
             'message_identifier': self.message_identifier,
             'signature': data_encoder(self.signature)
         }
@@ -682,8 +685,8 @@ class Secret(EnvelopeMessage):
             'payment_identifier': self.payment_identifier,
             'secret': data_encoder(self.secret),
             'nonce': self.nonce,
-            'token_network_address': address_encoder(self.token_network_address),
-            'channel': address_encoder(self.channel),
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'channel': to_normalized_address(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
             'locksroot': data_encoder(self.locksroot),
@@ -913,12 +916,12 @@ class DirectTransfer(EnvelopeMessage):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'token_network_address': address_encoder(self.token_network_address),
-            'token': address_encoder(self.token),
-            'channel': address_encoder(self.channel),
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'token': to_normalized_address(self.token),
+            'channel': to_normalized_address(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
-            'recipient': address_encoder(self.recipient),
+            'recipient': to_normalized_address(self.recipient),
             'locksroot': data_encoder(self.locksroot),
             'signature': data_encoder(self.signature),
         }
@@ -1309,16 +1312,16 @@ class LockedTransfer(LockedTransferBase):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'token_network_address': address_encoder(self.token_network_address),
-            'token': address_encoder(self.token),
-            'channel': address_encoder(self.channel),
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'token': to_normalized_address(self.token),
+            'channel': to_normalized_address(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
-            'recipient': address_encoder(self.recipient),
+            'recipient': to_normalized_address(self.recipient),
             'locksroot': data_encoder(self.locksroot),
             'lock': self.lock.to_dict(),
-            'target': address_encoder(self.target),
-            'initiator': address_encoder(self.initiator),
+            'target': to_normalized_address(self.target),
+            'initiator': to_normalized_address(self.initiator),
             'fee': self.fee,
             'signature': data_encoder(self.signature),
         }
@@ -1412,16 +1415,16 @@ class RefundTransfer(LockedTransfer):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'nonce': self.nonce,
-            'token_network_address': address_encoder(self.token_network_address),
-            'token': address_encoder(self.token),
-            'channel': address_encoder(self.channel),
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'token': to_normalized_address(self.token),
+            'channel': to_normalized_address(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
-            'recipient': address_encoder(self.recipient),
+            'recipient': to_normalized_address(self.recipient),
             'locksroot': data_encoder(self.locksroot),
             'lock': self.lock.to_dict(),
-            'target': address_encoder(self.target),
-            'initiator': address_encoder(self.initiator),
+            'target': to_normalized_address(self.target),
+            'initiator': to_normalized_address(self.initiator),
             'fee': self.fee,
             'signature': data_encoder(self.signature),
         }

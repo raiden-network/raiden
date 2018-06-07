@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 from typing import List, Tuple
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import (
+    is_binary_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 
 import structlog
 from gevent.event import AsyncResult
@@ -31,7 +35,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     pex,
     privatekey_to_address,
 )
@@ -51,7 +54,7 @@ class ChannelManager:
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-            address_encoder(manager_address),
+            to_normalized_address(manager_address),
         )
 
         self.proxy = ContractProxy(jsonrpc_client, contract)

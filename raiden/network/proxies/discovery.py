@@ -5,6 +5,7 @@ from eth_utils import (
     to_canonical_address,
     to_checksum_address,
     is_binary_address,
+    to_normalized_address,
 )
 
 from raiden.blockchain.abi import (
@@ -20,10 +21,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.constants import NULL_ADDRESS
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import (
-    address_encoder,
-    pex,
-)
+from raiden.utils import pex
 
 
 class Discovery:
@@ -40,7 +38,7 @@ class Discovery:
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
-            address_encoder(discovery_address),
+            to_normalized_address(discovery_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
 

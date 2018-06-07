@@ -7,7 +7,7 @@ from operator import itemgetter
 from random import Random
 from typing import Dict, Set, Tuple, List
 from urllib.parse import urlparse
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_normalized_address
 
 import gevent
 import structlog
@@ -43,7 +43,6 @@ from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDe
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     data_decoder,
     data_encoder,
     eth_sign_sha3,
@@ -129,7 +128,7 @@ class MatrixTransport:
 
     def start_health_check(self, node_address):
         log.debug('HEALTHCHECK', peer_address=pex(node_address))
-        node_address_hex = address_encoder(node_address)
+        node_address_hex = to_normalized_address(node_address)
         users = [
             user
             for user
@@ -200,7 +199,7 @@ class MatrixTransport:
         rand.seed(seed)
         # try login and register on first 5 possible accounts
         for i in range(5):
-            base_username = address_encoder(self._raiden_service.address)
+            base_username = to_normalized_address(self._raiden_service.address)
             username = base_username
             if i:
                 username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
@@ -332,7 +331,7 @@ class MatrixTransport:
             except AssertionError:
                 log.warning('INVALID MESSAGE', sender_id=sender_id)
                 return
-            node_address_hex = address_encoder(peer_address)
+            node_address_hex = to_normalized_address(peer_address)
             if node_address_hex.lower() not in sender_id:
                 log.warning(
                     'INVALID SIGNATURE',
@@ -480,7 +479,7 @@ class MatrixTransport:
         # of communication.
         # e.g.: raiden_ropsten_0xaaaa_0xbbbb
         address_pair = sorted([
-            address_encoder(address).lower()
+            to_normalized_address(address).lower()
             for address in [receiver_address, self._raiden_service.address]
         ])
         room_name = self._make_room_alias(*address_pair)
@@ -490,7 +489,7 @@ class MatrixTransport:
             room = room_candidates[0]
         else:
             # no room with expected name => create one and invite peer
-            address = address_encoder(receiver_address)
+            address = to_normalized_address(receiver_address)
             candidates = self._client.search_user_directory(address)
             if not candidates and not allow_missing_peers:
                 raise ValueError('No candidates found for given address: {}'.format(address))
@@ -521,7 +520,7 @@ class MatrixTransport:
                 log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
 
         room.add_listener(self._handle_message, 'm.room.message')
-        log.info('CHANNEL ROOM', peer_address=address_encoder(receiver_address), room=room)
+        log.info('CHANNEL ROOM', peer_address=to_normalized_address(receiver_address), room=room)
         self._address_to_roomid[receiver_address] = room.room_id
         return room
 
@@ -579,7 +578,7 @@ class MatrixTransport:
 
         log.debug(
             'Changing address presence state',
-            address=address_encoder(address),
+            address=to_normalized_address(address),
             user_id=user_id,
             prev_state=self._address_to_presence.get(address),
             state=new_state
@@ -687,7 +686,7 @@ def _validate_userid_signature(user: User) -> bool:
         signature=data_decoder(user.get_display_name()),
         hasher=eth_sign_sha3
     )
-    return address_encoder(recovered).lower() in user.user_id
+    return to_normalized_address(recovered).lower() in user.user_id
 
 
 def _event_to_message(event, node_address):

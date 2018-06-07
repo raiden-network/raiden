@@ -2,7 +2,11 @@
 from binascii import hexlify, unhexlify
 
 import structlog
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import (
+    is_binary_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
@@ -17,7 +21,6 @@ from raiden.exceptions import (
 )
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     pex,
     privatekey_to_address,
 )
@@ -44,7 +47,7 @@ class Registry:
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
-            address_encoder(registry_address),
+            to_normalized_address(registry_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
 

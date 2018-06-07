@@ -15,8 +15,7 @@ from raiden.network.rpc.transactions import (
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
-from raiden.utils import address_encoder
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_normalized_address
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 
@@ -29,7 +28,7 @@ class Token:
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
-            address_encoder(token_address),
+            to_normalized_address(token_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
 
