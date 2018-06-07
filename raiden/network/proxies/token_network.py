@@ -25,7 +25,6 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 from raiden.exceptions import (
     DuplicatedChannelError,
@@ -72,7 +71,7 @@ class TokenNetwork:
         )
 
         CONTRACT_MANAGER.check_contract_version(
-            proxy.call('contract_version').decode(),
+            proxy.functions.contract_version().call(),
             CONTRACT_TOKEN_NETWORK
         )
 
@@ -86,7 +85,8 @@ class TokenNetwork:
         self.open_channel_transactions = dict()
 
     def _call_and_check_result(self, function_name: str, *args):
-        call_result = self.proxy.call(function_name, *args)
+        fn = getattr(self.proxy.functions, function_name)
+        call_result = fn(*args).call()
 
         if call_result == b'':
             raise RuntimeError(
@@ -107,7 +107,7 @@ class TokenNetwork:
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
-        return address_decoder(self.proxy.call('token'))
+        return address_decoder(self.proxy.functions.token().call())
 
     def new_netting_channel(
             self,
@@ -181,8 +181,7 @@ class TokenNetwork:
         if self.channel_exists(partner):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'openChannel',
             self.node_address,
             partner,
@@ -379,8 +378,7 @@ class TokenNetwork:
         self._check_channel_lock(partner)
 
         with releasing(self.channel_operations_lock[partner]):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
                 self.node_address,
                 total_deposit,
@@ -445,8 +443,7 @@ class TokenNetwork:
         self._check_channel_lock(partner)
 
         with releasing(self.channel_operations_lock[partner]):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'closeChannel',
                 partner,
                 balance_hash,
@@ -507,8 +504,7 @@ class TokenNetwork:
             signature=encode_hex(signature),
         )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
             partner,
             self.node_address,
@@ -572,8 +568,7 @@ class TokenNetwork:
         self._check_channel_lock(partner)
 
         with releasing(self.channel_operations_lock[partner]):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
                 self.node_address,
                 partner,
@@ -621,8 +616,7 @@ class TokenNetwork:
 
         # TODO see if we need to do any checks for the unlock_proof
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'unlock',
             self.node_address,
             partner,
@@ -684,8 +678,7 @@ class TokenNetwork:
         self._check_channel_lock(partner)
 
         with releasing(self.channel_operations_lock[partner]):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'settleChannel',
                 self.node_address,
                 transferred_amount,

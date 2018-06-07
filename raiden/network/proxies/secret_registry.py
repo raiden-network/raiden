@@ -13,7 +13,6 @@ from raiden.exceptions import TransactionThrew, InvalidAddress
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -47,7 +46,7 @@ class SecretRegistry:
             address_encoder(secret_registry_address),
         )
         CONTRACT_MANAGER.check_contract_version(
-            proxy.call('contract_version').decode(),
+            proxy.functions.contract_version().call(),
             CONTRACT_SECRET_REGISTRY
         )
 
@@ -64,8 +63,7 @@ class SecretRegistry:
             contract=pex(self.address),
         )
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'registerSecret',
             secret,
         )
@@ -90,7 +88,7 @@ class SecretRegistry:
         )
 
     def register_block_by_secrethash(self, secrethash: typing.Keccak256):
-        return self.proxy.call('getSecretRevealBlockHeight', secrethash)
+        return self.proxy.functions.getSecretRevealBlockHeight(secrethash).call()
 
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_SECRET_REVEALED)]
