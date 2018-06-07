@@ -46,7 +46,8 @@ class ChannelManager:
             self,
             jsonrpc_client,
             manager_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
@@ -208,7 +209,7 @@ class ChannelManager:
     def channelnew_filter(
             self,
             from_block: BlockSpecification = 0,
-            to_block: BlockSpecification = 'latest'
+            to_block: BlockSpecification = 'latest',
     ) -> Filter:
         """ Install a new filter for ChannelNew events.
 
@@ -226,7 +227,7 @@ class ChannelManager:
             channel_manager_address_bin,
             topics=topics,
             from_block=from_block,
-            to_block=to_block
+            to_block=to_block,
         )
 
     def version(self):

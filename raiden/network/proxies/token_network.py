@@ -2,7 +2,7 @@
 from binascii import unhexlify
 from gevent.lock import RLock
 from gevent.event import AsyncResult
-from typing import List, Optional
+from typing import List
 from raiden.utils import typing
 
 import structlog
@@ -773,8 +773,8 @@ class TokenNetwork:
 
     def all_events_filter(
             self,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         """ Install a new filter for all the events emitted by the current token network contract
 

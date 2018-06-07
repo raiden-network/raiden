@@ -44,7 +44,8 @@ class NettingChannel:
             self,
             jsonrpc_client,
             channel_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
@@ -60,7 +61,8 @@ class NettingChannel:
         self.node_address = privatekey_to_address(self.client.privkey)
         CONTRACT_MANAGER.check_contract_version(
             self.proxy.contract.functions.contract_version().call(),
-            CONTRACT_NETTING_CHANNEL)
+            CONTRACT_NETTING_CHANNEL,
+        )
 
         # check we are a participant of the given channel
         self.detail()
@@ -448,7 +450,7 @@ class NettingChannel:
             self,
             topics: List[str] = None,
             from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None
+            to_block: typing.BlockSpecification = None,
     ) -> Filter:
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
@@ -464,13 +466,13 @@ class NettingChannel:
             netting_channel_address_bin,
             topics=topics,
             from_block=from_block,
-            to_block=to_block
+            to_block=to_block,
         )
 
     def all_events_filter(
             self,
             from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None
+            to_block: typing.BlockSpecification = None,
     ):
         """ Install a new filter for all the events emitted by the current netting channel contract
 

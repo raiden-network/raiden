@@ -25,7 +25,8 @@ class Token:
             self,
             jsonrpc_client,
             token_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             address_encoder(token_address),

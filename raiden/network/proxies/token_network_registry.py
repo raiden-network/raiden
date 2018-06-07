@@ -55,7 +55,7 @@ class TokenNetworkRegistry:
         )
         CONTRACT_MANAGER.check_contract_version(
             proxy.call('contract_version').decode(),
-            CONTRACT_TOKEN_NETWORK_REGISTRY
+            CONTRACT_TOKEN_NETWORK_REGISTRY,
         )
 
         self.address = registry_address

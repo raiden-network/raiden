@@ -36,7 +36,8 @@ class Discovery:
             self,
             jsonrpc_client,
             discovery_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             address_encoder(discovery_address),

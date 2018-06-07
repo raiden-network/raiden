@@ -39,7 +39,8 @@ class Registry:
             self,
             jsonrpc_client,
             registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
+            poll_timeout=DEFAULT_POLL_TIMEOUT,
+    ):
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
