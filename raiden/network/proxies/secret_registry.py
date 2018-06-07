@@ -1,6 +1,7 @@
 import structlog
 from binascii import unhexlify
 
+from eth_utils import is_binary_address
 from web3.utils.filters import Filter
 
 from raiden.utils import typing
@@ -19,7 +20,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     address_encoder,
-    isaddress,
     pex,
     privatekey_to_address,
 )
@@ -36,7 +36,7 @@ class SecretRegistry:
     ):
         # pylint: disable=too-many-arguments
 
-        if not isaddress(secret_registry_address):
+        if not is_binary_address(secret_registry_address):
             raise InvalidAddress('Expected binary address format for secret registry')
 
         check_address_has_code(jsonrpc_client, secret_registry_address, 'Registry')

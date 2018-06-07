@@ -2,6 +2,7 @@
 from binascii import hexlify, unhexlify
 
 import structlog
+from eth_utils import is_binary_address
 from web3.utils.filters import Filter
 
 from raiden.utils import typing
@@ -18,7 +19,6 @@ from raiden.exceptions import (
 from raiden.utils import (
     address_decoder,
     address_encoder,
-    isaddress,
     pex,
     privatekey_to_address,
 )
@@ -43,7 +43,7 @@ class TokenNetworkRegistry:
     ):
         # pylint: disable=too-many-arguments
 
-        if not isaddress(registry_address):
+        if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
 
         check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
@@ -80,7 +80,7 @@ class TokenNetworkRegistry:
         return address_decoder(address)
 
     def add_token(self, token_address: typing.TokenAddress):
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
         log.info(
@@ -141,7 +141,7 @@ class TokenNetworkRegistry:
 
     def token_network(self, token_network_address: typing.TokenNetworkAddress):
         """ Return a proxy to interact with a TokenNetwork. """
-        if not isaddress(token_network_address):
+        if not is_binary_address(token_network_address):
             raise InvalidAddress('Expected binary address format for token network')
 
         if token_network_address not in self.address_to_tokennetwork:
@@ -165,7 +165,7 @@ class TokenNetworkRegistry:
         If the token is not already registered it raises `EthNodeCommunicationError`,
         since we try to instantiate a Token Network with an empty address.
         """
-        if not isaddress(token_address):
+        if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
         if token_address not in self.token_to_tokennetwork:

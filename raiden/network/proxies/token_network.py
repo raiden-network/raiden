@@ -6,6 +6,7 @@ from typing import List
 from raiden.utils import typing
 
 import structlog
+from eth_utils import is_binary_address
 from web3.utils.filters import Filter
 
 from raiden.blockchain.abi import (
@@ -42,7 +43,6 @@ from raiden.utils import (
     address_decoder,
     address_encoder,
     encode_hex,
-    isaddress,
     pex,
     privatekey_to_address,
     releasing,
@@ -60,7 +60,7 @@ class TokenNetwork:
     ):
         # pylint: disable=too-many-arguments
 
-        if not isaddress(manager_address):
+        if not is_binary_address(manager_address):
             raise InvalidAddress('Expected binary address format for token nework')
 
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
@@ -123,7 +123,7 @@ class TokenNetwork:
         Returns:
             The address of the new netting channel.
         """
-        if not isaddress(partner):
+        if not is_binary_address(partner):
             raise InvalidAddress('Expected binary address format for channel partner')
 
         invalid_timeout = (
