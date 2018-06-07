@@ -13,6 +13,9 @@ from raiden.network.proxies import (
     NettingChannel,
     Registry,
     Token,
+    TokenNetworkRegistry,
+    TokenNetwork,
+    SecretRegistry,
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import (
@@ -20,6 +23,7 @@ from raiden.utils import (
     quantity_decoder,
 )
 from raiden.utils.solc import compile_files_cwd
+from raiden.utils.typing import Address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -39,6 +43,10 @@ class BlockChainService:
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
         self.address_to_manager = dict()
+
+        self.address_to_token_network_registry = dict()
+        self.address_to_token_network = dict()
+        self.address_to_secret_registry = dict()
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
@@ -98,7 +106,7 @@ class BlockChainService:
 
         return current_block
 
-    def token(self, token_address: bytes) -> Token:
+    def token(self, token_address: Address) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
@@ -112,7 +120,7 @@ class BlockChainService:
 
         return self.address_to_token[token_address]
 
-    def channel_manager(self, channel_manager_address):
+    def channel_manager(self, channel_manager_address: Address) -> ChannelManager:
         if channel_manager_address not in self.address_to_manager:
             self.address_to_manager[channel_manager_address] = ChannelManager(
                 self.client,
@@ -122,7 +130,7 @@ class BlockChainService:
 
         return self.address_to_manager[channel_manager_address]
 
-    def discovery(self, discovery_address: bytes) -> Discovery:
+    def discovery(self, discovery_address: Address) -> Discovery:
         """ Return a proxy to interact with the discovery. """
         if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
@@ -136,7 +144,7 @@ class BlockChainService:
 
         return self.address_to_discovery[discovery_address]
 
-    def netting_channel(self, netting_channel_address: bytes) -> NettingChannel:
+    def netting_channel(self, netting_channel_address: Address) -> NettingChannel:
         """ Return a proxy to interact with a NettingChannelContract. """
         if not is_binary_address(netting_channel_address):
             raise ValueError('netting_channel_address must be a valid address')
@@ -151,7 +159,7 @@ class BlockChainService:
 
         return self.address_to_nettingchannel[netting_channel_address]
 
-    def registry(self, registry_address: bytes) -> Registry:
+    def registry(self, registry_address: Address) -> Registry:
         if not is_binary_address(registry_address):
             raise ValueError('registry_address must be a valid address')
 
@@ -164,16 +172,49 @@ class BlockChainService:
 
         return self.address_to_registry[registry_address]
 
-    def uninstall_filter(self, filter_id_raw):
-        self.client.web3.eth.uninstallFilter(filter_id_raw)
+    def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
+        if not is_binary_address(address):
+            raise ValueError('address must be a valid address')
+
+        if address not in self.address_to_token_network_registry:
+            self.address_to_token_network_registry[address] = TokenNetworkRegistry(
+                self.client,
+                address,
+                self.poll_timeout,
+            )
+
+        return self.address_to_token_network_registry[address]
+
+    def token_network(self, address: Address) -> TokenNetwork:
+        if not is_binary_address(address):
+            raise ValueError('address must be a valid address')
+
+        if address not in self.address_to_token_network:
+            self.address_to_token_network[address] = TokenNetwork(
+                self.client,
+                address,
+                self.poll_timeout,
+            )
+
+        return self.address_to_token_network[address]
+
+    def secret_registry(self, address: Address) -> SecretRegistry:
+        if not is_binary_address(address):
+            raise ValueError('address must be a valid address')
+
+        if address not in self.address_to_secret_registry:
+            self.address_to_secret_registry[address] = SecretRegistry(
+                self.client,
+                address,
+                self.poll_timeout,
+            )
+
+        return self.address_to_secret_registry[address]
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         contracts = compile_files_cwd([contract_path])
 
-        log.info(
-            'Deploying contract: ',
-            path=os.path.basename(contract_path)
-        )
+        log.info('Deploying contract', path=os.path.basename(contract_path))
 
         proxy = self.client.deploy_solidity_contract(
             contract_name,
