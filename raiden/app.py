@@ -31,7 +31,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def greenlet_error_handler(context, exc_info):
-    log.fatal("Unhandled greenlet exception. Raiden is terminating ...")
+    log.critical('Unhandled greenlet exception. Raiden is terminating ...')
     etype = exc_info[0]
     evalue = exc_info[1]
     etb = exc_info[2]
