@@ -34,6 +34,7 @@ from raiden.utils import (
     releasing,
     encode_hex,
 )
+from raiden.utils import typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -446,8 +447,8 @@ class NettingChannel:
     def events_filter(
             self,
             topics: List[str] = None,
-            from_block: int = None,
-            to_block: int = None
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None
     ) -> Filter:
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
@@ -466,7 +467,11 @@ class NettingChannel:
             to_block=to_block
         )
 
-    def all_events_filter(self, from_block=None, to_block=None):
+    def all_events_filter(
+            self,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None
+    ):
         """ Install a new filter for all the events emitted by the current netting channel contract
 
         Return:

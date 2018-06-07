@@ -2,7 +2,7 @@
 from binascii import unhexlify
 from gevent.lock import RLock
 from gevent.event import AsyncResult
-from typing import List, Union, Optional
+from typing import List, Optional
 from raiden.utils import typing
 
 import structlog
@@ -734,9 +734,9 @@ class TokenNetwork:
 
     def events_filter(
             self,
-            topics: Optional[List],
-            from_block: Optional[int] = None,
-            to_block: Optional[int] = None,
+            topics: List[str] = None,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None,
     ) -> Filter:
         """ Install a new filter for an array of topics emitted by the contract.
         Args:
@@ -756,14 +756,14 @@ class TokenNetwork:
 
     def channelnew_filter(
             self,
-            from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest',
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         """ Install a new filter for ChannelNew events.
 
         Args:
-            start_block:Create filter starting from this block number (default: 0).
-            end_block: Create filter stopping at this block number (default: 'latest').
+            from_block: Create filter starting from this block number (default: 0).
+            to_block: Create filter stopping at this block number (default: 'latest').
 
         Return:
             The filter instance.
@@ -771,10 +771,18 @@ class TokenNetwork:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW2)]
         return self.events_filter(topics, from_block, to_block)
 
-    def all_events_filter(self, from_block=None, to_block=None):
+    def all_events_filter(
+            self,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None
+    ) -> Filter:
         """ Install a new filter for all the events emitted by the current token network contract
 
+        Args:
+            from_block: Create filter starting from this block number (default: 0).
+            to_block: Create filter stopping at this block number (default: 'latest').
+
         Return:
-            Filter: The filter instance.
+            The filter instance.
         """
         return self.events_filter(None, from_block, to_block)

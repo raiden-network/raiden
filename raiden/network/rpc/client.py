@@ -3,7 +3,7 @@ import warnings
 import time
 import os
 from binascii import unhexlify
-from typing import Union, List, Dict
+from typing import List, Dict
 from json.decoder import JSONDecodeError
 
 from web3 import Web3, HTTPProvider
@@ -20,6 +20,7 @@ import cachetools
 from gevent.lock import Semaphore
 import structlog
 
+from raiden.utils import typing
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
@@ -550,8 +551,8 @@ class JSONRPCClient:
             self,
             contract_address: Address,
             topics: List[str] = None,
-            from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest'
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest'
     ) -> Filter:
         """ Create a filter in the ethereum node. """
         return self.web3.eth.filter({
@@ -565,8 +566,8 @@ class JSONRPCClient:
             self,
             contract_address: Address,
             topics: List[str] = None,
-            from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest'
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest'
     ) -> List[Dict]:
         """ Get events for the given query. """
         return self.web3.eth.getLogs({
