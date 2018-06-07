@@ -14,9 +14,6 @@ from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
 
-gevent.get_hub().SYSTEM_ERROR = BaseException
-gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
-
 CATCH_LOG_HANDLER_NAME = 'catch_log_handler'
 
 
@@ -111,6 +108,16 @@ def validate_solidity_compiler():
     """ Check the solc prior to running any test. """
     from raiden.blockchain.abi import validate_solc
     validate_solc()
+
+
+@pytest.fixture(scope='session', autouse=True)
+def dont_exit_pytest():
+    """ Raiden will quit on any unhandled exception.
+
+    This allows the test suite to finish in case an exception is unhandled.
+    """
+    gevent.get_hub().SYSTEM_ERROR = BaseException
+    gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
 
 
 if sys.platform == 'darwin':
