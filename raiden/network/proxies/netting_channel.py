@@ -4,6 +4,7 @@ from gevent.lock import RLock
 from typing import Optional, List
 
 import structlog
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -16,9 +17,10 @@ from raiden.exceptions import (
 from raiden import messages
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.proxies.token import Token
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
-    estimate_and_transact,
 )
 from raiden.network.rpc.filters import (
     new_filter,
@@ -45,6 +47,11 @@ class NettingChannel:
             jsonrpc_client,
             channel_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
+        contract = jsonrpc_client.new_contract(
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
+            address_encoder(channel_address),
+        )
+        self.proxy = ContractProxy(jsonrpc_client, contract)
 
         self.address = channel_address
         self.client = jsonrpc_client
@@ -53,12 +60,8 @@ class NettingChannel:
         self.channel_operations_lock = RLock()
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
-        self.proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-            address_encoder(channel_address),
-        )
         CONTRACT_MANAGER.check_contract_version(
-            self.proxy.call('contract_version').decode(),
+            self.proxy.contract.functions.contract_version().call(),
             CONTRACT_NETTING_CHANNEL)
 
         # check we are a participant of the given channel
@@ -69,7 +72,11 @@ class NettingChannel:
         check_address_has_code(self.client, self.address, 'Netting Channel')
 
     def _call_and_check_result(self, function_name: str):
-        call_result = self.proxy.call(function_name)
+        fn = getattr(self.proxy.contract.functions, function_name)
+        try:
+            call_result = fn().call()
+        except BadFunctionCallOutput as e:
+            raise AddressWithoutCode(str(e))
 
         if call_result == b'':
             self._check_exists()
@@ -154,7 +161,7 @@ class NettingChannel:
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        closer = self.proxy.call('closingAddress')
+        closer = self.proxy.contract.functions.closingAddress().call()
 
         if closer:
             return address_decoder(closer)
@@ -218,8 +225,7 @@ class NettingChannel:
             )
 
         with releasing(self.channel_operations_lock):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'deposit',
                 amount,
             )
@@ -273,8 +279,7 @@ class NettingChannel:
             )
 
         with releasing(self.channel_operations_lock):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'close',
                 nonce,
                 transferred_amount,
@@ -323,8 +328,7 @@ class NettingChannel:
                 signature=encode_hex(signature),
             )
 
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'updateTransfer',
                 nonce,
                 transferred_amount,
@@ -376,8 +380,7 @@ class NettingChannel:
 
         merkleproof_encoded = b''.join(unlock_proof.merkle_proof)
 
-        transaction_hash = estimate_and_transact(
-            self.proxy,
+        transaction_hash = self.proxy.transact(
             'withdraw',
             unlock_proof.lock_encoded,
             merkleproof_encoded,
@@ -422,8 +425,7 @@ class NettingChannel:
             )
 
         with releasing(self.channel_operations_lock):
-            transaction_hash = estimate_and_transact(
-                self.proxy,
+            transaction_hash = self.proxy.transact(
                 'settle',
             )
 

@@ -25,5 +25,5 @@ eth_utils==1.0.3
 structlog
 colorama
 py-solc
-web3==4.2.1
+web3==4.3.0
 pysha3==1.0.2

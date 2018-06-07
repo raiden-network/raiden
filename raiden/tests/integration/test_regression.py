@@ -3,6 +3,7 @@ import random
 
 import gevent
 import pytest
+import os
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import (
@@ -28,6 +29,10 @@ from raiden.utils import sha3
 @pytest.mark.parametrize('number_of_nodes', [5])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [32])  # default settlement is too low for 3 hops
+@pytest.mark.skipif(
+    'TRAVIS' in os.environ,
+    reason='Missing events cause stuck test & exit due to test timeout on Travis. Issue #1502'
+)
 def test_regression_unfiltered_routes(
         raiden_network,
         token_addresses,

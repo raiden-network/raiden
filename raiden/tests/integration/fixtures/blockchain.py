@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import pytest
 import structlog
+from eth_utils import decode_hex
 
 from raiden.utils import (
     get_contract_path,
@@ -268,7 +269,7 @@ def _jsonrpc_services(
             contract_path=registry_path,
             timeout=poll_timeout,
         )
-        registry_address = registry_proxy.contract_address
+        registry_address = decode_hex(registry_proxy.contract.address)
 
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine

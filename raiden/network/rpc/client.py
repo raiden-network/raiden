@@ -3,7 +3,7 @@ import warnings
 import time
 import os
 from binascii import unhexlify
-from typing import Optional, Union
+from typing import Dict
 from json.decoder import JSONDecodeError
 
 from web3 import Web3, HTTPProvider
@@ -19,7 +19,6 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenShuttingDown,
 )
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
     address_encoder,
@@ -30,6 +29,7 @@ from raiden.utils import (
     encode_hex,
 )
 from raiden.utils.typing import Address
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.solc import (
     solidity_unresolved_symbols,
     solidity_library_symbol,
@@ -297,12 +297,14 @@ class JSONRPCClient:
             address: The contract's address.
         """
         return ContractProxy(
-            self.sender,
-            contract_interface,
-            contract_address,
-            self.eth_call,
-            self.send_transaction,
-            self.eth_estimateGas,
+            self,
+            contract=self.new_contract(contract_interface, contract_address)
+        )
+
+    def new_contract(self, contract_interface: Dict, contract_address: Address):
+        return self.web3.eth.contract(
+            abi=contract_interface,
+            address=to_checksum_address(contract_address)
         )
 
     def deploy_solidity_contract(
@@ -460,86 +462,6 @@ class JSONRPCClient:
         result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
         encoded_result = encode_hex(result)
         return remove_0x_prefix(encoded_result)
-
-    def eth_call(
-            self,
-            sender: Address = b'',
-            to: Address = b'',
-            value: int = 0,
-            data: bytes = b'',
-            startgas: int = None,
-            block_number: Union[str, int] = 'latest'
-    ) -> bytes:
-        """ Executes a new message call immediately without creating a
-        transaction on the blockchain.
-
-        Args:
-            sender: The address the transaction is sent from.
-            to: The address the transaction is directed to.
-            gas: Gas provided for the transaction execution. eth_call
-                consumes zero gas, but this parameter may be needed by some
-                executions.
-            gasPrice: gasPrice used for unit of gas paid.
-            value: Integer of the value sent with this transaction.
-            data: Hash of the method signature and encoded parameters.
-                For details see Ethereum Contract ABI.
-            block_number: Determines the state of ethereum used in the
-                call.
-        """
-        startgas = self.check_startgas(startgas)
-        json_data = format_data_for_rpccall(
-            sender,
-            to,
-            value,
-            data,
-            startgas,
-            self.gasprice(),
-        )
-        return self.web3.eth.call(json_data, block_number)
-
-    def eth_estimateGas(
-            self,
-            sender: Address = b'',
-            to: Address = b'',
-            value: int = 0,
-            data: bytes = b'',
-            startgas: int = None
-    ) -> Optional[int]:
-        """ Makes a call or transaction, which won't be added to the blockchain
-        and returns the used gas, which can be used for estimating the used
-        gas.
-
-        Args:
-            sender: The address the transaction is sent from.
-            to: The address the transaction is directed to.
-            gas: Gas provided for the transaction execution. eth_call
-                consumes zero gas, but this parameter may be needed by some
-                executions.
-            value: Integer of the value sent with this transaction.
-            data: Hash of the method signature and encoded parameters.
-                For details see Ethereum Contract ABI.
-            block_number: Determines the state of ethereum used in the
-                call.
-        """
-        startgas = self.check_startgas(startgas)
-        json_data = format_data_for_rpccall(
-            sender,
-            to,
-            value,
-            data,
-            startgas
-        )
-        try:
-            return self.web3.eth.estimateGas(json_data)
-        except ValueError as err:
-            tx_would_fail = (
-                '-32015' in str(err) or
-                '-32000' in str(err)
-            )
-            if tx_would_fail:  # -32015 is parity and -32000 is geth
-                return None
-            else:
-                raise err
 
     def poll(
             self,

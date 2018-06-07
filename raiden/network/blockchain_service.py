@@ -4,7 +4,7 @@ import os
 import gevent
 from cachetools.func import ttl_cache
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, decode_hex
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -183,7 +183,7 @@ class BlockChainService:
             contract_path=contract_path,
             timeout=self.poll_timeout,
         )
-        return proxy.contract_address
+        return decode_hex(proxy.contract.address)
 
     def deploy_and_register_token(
             self,

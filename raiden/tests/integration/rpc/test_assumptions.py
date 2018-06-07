@@ -41,15 +41,6 @@ def get_list_of_block_numbers(item):
     return list()
 
 
-def test_call_inexisting_address(deploy_client, blockchain_backend):
-    """ A JSON RPC call to an inexisting address returns the empty string. """
-
-    inexisting_address = b'\x01\x02\x03\x04\x05' * 4
-
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(inexisting_address))) == 0
-    assert deploy_client.eth_call(sender=deploy_client.sender, to=inexisting_address) == b''
-
-
 def test_call_invalid_selector(deploy_client, blockchain_backend):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
@@ -61,12 +52,27 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     selector = decode_hex(contract_proxy.encode_function_call('ret', args=[]))
     next_byte = chr(selector[0] + 1).encode()
     wrong_selector = next_byte + selector[1:]
-    result = deploy_client.eth_call(
-        sender=deploy_client.sender,
-        to=address,
-        data=wrong_selector,
-    )
+    result = deploy_client.web3.eth.call({
+        'from': to_checksum_address(deploy_client.sender),
+        'to': to_checksum_address(address),
+        'data': wrong_selector,
+    })
     assert result == b''
+
+
+def test_call_inexisting_address(deploy_client, blockchain_backend):
+    """ A JSON RPC call to an inexisting address returns the empty string. """
+
+    inexisting_address = b'\x01\x02\x03\x04\x05' * 4
+
+    assert len(deploy_client.web3.eth.getCode(to_checksum_address(inexisting_address))) == 0
+    transaction = {
+        'from': to_checksum_address(deploy_client.sender),
+        'to': to_checksum_address(inexisting_address),
+        'data': b'',
+        'value': 0
+    }
+    assert deploy_client.web3.eth.call(transaction) == b''
 
 
 def test_call_throws(deploy_client, blockchain_backend):
@@ -75,8 +81,7 @@ def test_call_throws(deploy_client, blockchain_backend):
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
-
-    assert contract_proxy.call('fail') == b''
+    assert contract_proxy.contract.functions.fail().call() == []
 
 
 def test_estimate_gas_fail(deploy_client, blockchain_backend):
@@ -104,7 +109,7 @@ def test_duplicated_transaction_raises(deploy_client, blockchain_backend):
     )
 
     second_proxy = second_client.new_contract_proxy(
-        contract_proxy.abi,
+        contract_proxy.contract.abi,
         contract_proxy.contract_address,
     )
 
