@@ -10,6 +10,7 @@ monkey.patch_all()
 
 import pytest
 
+from raiden.utils.cli import LogLevelConfigType
 from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
@@ -33,14 +34,16 @@ def pytest_addoption(parser):
 
     parser.addoption(
         '--log-config',
+        action='store',
         default=None,
+        help='Configure tests log output',
     )
 
     parser.addoption(
         '--plain-log',
         action='store_true',
         default=False,
-        help='Do not colorize console log output'
+        help='Do not colorize console log output',
     )
     parser.addoption(
         '--profiler',
@@ -81,16 +84,27 @@ def logging_level(request):
 
     For integration tests this also sets the geth verbosity.
     """
-    if request.config.option.verbose > 3:
+    if request.config.option.log_cli_level:
+        level = request.config.option.log_cli_level
+    elif request.config.option.verbose > 3:
         level = 'DEBUG'
     elif request.config.option.verbose > 1:
         level = 'INFO'
     else:
         level = 'WARNING'
-    if request.config.option.log_cli_level:
-        level = request.config.option.log_cli_level
+
+    if request.config.option.log_config:
+        config_converter = LogLevelConfigType()
+        logging_levels = config_converter.convert(
+            value=request.config.option.log_config,
+            param=None,
+            ctx=None,
+        )
+    else:
+        logging_levels = {'': level}
+
     configure_logging(
-        {'': level},
+        logging_levels,
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file
     )
