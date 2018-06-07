@@ -6,8 +6,8 @@ from typing import List
 from raiden.utils import typing
 
 import structlog
-from eth_utils import is_binary_address
 from web3.utils.filters import Filter
+from eth_utils import is_binary_address, to_normalized_address
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -41,7 +41,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     encode_hex,
     pex,
     privatekey_to_address,
@@ -67,7 +66,7 @@ class TokenNetwork:
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_TOKEN_NETWORK),
-            address_encoder(manager_address),
+            to_normalized_address(manager_address),
         )
 
         CONTRACT_MANAGER.check_contract_version(

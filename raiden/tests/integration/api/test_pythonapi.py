@@ -17,8 +17,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW_BALANCE,
     EVENT_CHANNEL_CLOSED
 )
-from raiden.utils import address_encoder
-from eth_utils import is_same_address
+from eth_utils import is_same_address, to_normalized_address
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -100,11 +99,11 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
             event['event'] == EVENT_CHANNEL_NEW_BALANCE and
             is_same_address(
                 event['args']['registry_address'],
-                address_encoder(registry_address)
+                to_normalized_address(registry_address)
             ) and
             is_same_address(
                 event['args']['participant'],
-                address_encoder(api1.address)
+                to_normalized_address(api1.address)
             )
         )
         for event in event_list2
@@ -126,11 +125,11 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
             event['event'] == EVENT_CHANNEL_CLOSED and
             is_same_address(
                 event['args']['registry_address'],
-                address_encoder(registry_address)
+                to_normalized_address(registry_address)
             ) and
             is_same_address(
                 event['args']['closing_address'],
-                address_encoder(api1.address)
+                to_normalized_address(api1.address)
             )
         )
         for event in event_list3

@@ -10,12 +10,15 @@ import termios
 import time
 import gevent
 
-from eth_utils import denoms, to_checksum_address
+from eth_utils import (
+    denoms,
+    to_checksum_address,
+    to_normalized_address,
+)
 import structlog
 from requests import ConnectionError
 
 from raiden.utils import (
-    address_encoder,
     privatekey_to_address,
     privtopub,
     encode_hex,
@@ -140,7 +143,7 @@ def geth_bare_genesis(genesis_path, private_keys, random_marker):
     ]
 
     alloc = {
-        address_encoder(address): {
+        to_normalized_address(address): {
             'balance': DEFAULT_BALANCE_BIN,
         }
         for address in account_addresses
@@ -152,7 +155,7 @@ def geth_bare_genesis(genesis_path, private_keys, random_marker):
 
     genesis['extraData'] = clique_extradata(
         random_marker,
-        address_encoder(account_addresses[0])[2:],
+        to_normalized_address(account_addresses[0])[2:],
     )
 
     with open(genesis_path, 'w') as handler:

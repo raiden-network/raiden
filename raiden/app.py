@@ -3,6 +3,7 @@ import filelock
 import sys
 import structlog
 from binascii import unhexlify
+from eth_utils import to_normalized_address
 
 import gevent
 
@@ -23,7 +24,7 @@ from raiden.settings import (
 from raiden.utils import (
     pex,
     privatekey_to_address,
-    address_encoder)
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -84,7 +85,7 @@ class App:  # pylint: disable=too-few-public-methods
                 discovery,
             )
         except filelock.Timeout:
-            pubkey = address_encoder(
+            pubkey = to_normalized_address(
                 privatekey_to_address(unhexlify(self.config['privatekey_hex']))
             )
             print(

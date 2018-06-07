@@ -16,7 +16,11 @@ import gevent
 import gevent.monkey
 gevent.monkey.patch_all()
 import requests
-from eth_utils import denoms, to_checksum_address
+from eth_utils import (
+    denoms,
+    to_checksum_address,
+    to_normalized_address,
+)
 import structlog
 from requests.exceptions import RequestException
 
@@ -43,7 +47,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     address_decoder,
-    address_encoder,
     get_system_spec,
     is_minified_address,
     is_supported_client,
@@ -535,7 +538,7 @@ def app(
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
 
-    address_hex = address_encoder(address) if address else None
+    address_hex = to_normalized_address(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
     address = address_decoder(address_hex)
 
@@ -1023,7 +1026,7 @@ def removedb(ctx):
 
     datadir = ctx.obj['datadir']
     address = ctx.obj['address']
-    address_hex = address_encoder(address) if address else None
+    address_hex = to_normalized_address(address) if address else None
 
     result = False
     for f in os.listdir(datadir):

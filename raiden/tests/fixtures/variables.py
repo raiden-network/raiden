@@ -4,9 +4,10 @@ import os
 import random
 
 import pytest
+from eth_utils import to_normalized_address
 from raiden.network.utils import get_free_port
 
-from raiden.utils import address_encoder, privatekey_to_address
+from raiden.utils import privatekey_to_address
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,
@@ -285,7 +286,10 @@ def database_paths(tmpdir, private_keys, in_memory_database):
 
     database_paths = list()
     for idx, pkey in enumerate(private_keys):
-        app_dir = os.path.join(tmpdir.strpath, address_encoder(privatekey_to_address(pkey))[2:8])
+        app_dir = os.path.join(
+            tmpdir.strpath,
+            to_normalized_address(privatekey_to_address(pkey))[2:8]
+        )
         if not os.path.exists(app_dir):
             os.makedirs(app_dir)
         database_paths.append(os.path.join(app_dir, 'log.db'))

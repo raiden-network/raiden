@@ -28,7 +28,6 @@ from raiden.exceptions import (
 )
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
-    address_encoder,
     data_encoder,
     privatekey_to_address,
     quantity_decoder,
@@ -87,7 +86,7 @@ def check_address_has_code(
 
         raise AddressWithoutCode('{}Address {} does not contain code'.format(
             formated_contract_name,
-            address_encoder(address),
+            to_normalized_address(address),
         ))
 
 

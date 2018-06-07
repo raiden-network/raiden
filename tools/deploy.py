@@ -2,13 +2,14 @@
 import json
 import os
 from binascii import hexlify
+from eth_utils import is_normalized_address
 
 import click
 import structlog
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
-from raiden.utils import address_encoder, get_contract_path, decode_hex
+from raiden.utils import get_contract_path, decode_hex
 from raiden.log_config import configure_logging
 from raiden.utils.solc import compile_files_cwd
 
@@ -92,8 +93,8 @@ def deploy_file(contract, compiled_contracts, client):
         '',
         contract_path=filename,
     )
-    log.info(f"Deployed {name} @ {address_encoder(proxy.contract_address)}")
-    libraries[contract] = address_encoder(proxy.contract_address)[2:]
+    log.info(f"Deployed {name} @ {is_normalized_address(proxy.contract_address)}")
+    libraries[contract] = is_normalized_address(proxy.contract_address)[2:]
     return libraries
 
 

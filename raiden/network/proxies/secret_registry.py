@@ -1,8 +1,8 @@
 import structlog
 from binascii import unhexlify
 
-from eth_utils import is_binary_address
 from web3.utils.filters import Filter
+from eth_utils import is_binary_address, to_normalized_address
 
 from raiden.utils import typing
 from raiden.blockchain.abi import (
@@ -19,7 +19,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    address_encoder,
     pex,
     privatekey_to_address,
 )
@@ -43,7 +42,7 @@ class SecretRegistry:
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-            address_encoder(secret_registry_address),
+            to_normalized_address(secret_registry_address),
         )
         CONTRACT_MANAGER.check_contract_version(
             proxy.functions.contract_version().call(),
