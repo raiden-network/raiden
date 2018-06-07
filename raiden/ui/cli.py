@@ -16,7 +16,7 @@ import gevent
 import gevent.monkey
 gevent.monkey.patch_all()
 import requests
-from eth_utils import denoms
+from eth_utils import denoms, to_checksum_address
 import structlog
 from requests.exceptions import RequestException
 
@@ -689,7 +689,7 @@ def prompt_account(address_hex, keystore_path, password_file):
 
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = [
-            '[{:3d}] - 0x{}'.format(idx, addr)
+            '[{:3d}] - {}'.format(idx, to_checksum_address(addr))
             for idx, addr in enumerate(addresses)
         ]
 
