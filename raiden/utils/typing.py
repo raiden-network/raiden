@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import NewType, Tuple, Optional
+from typing import NewType, Tuple, Optional, Union
 
 T_Address = bytes
 Address = NewType('Address', T_Address)
@@ -91,3 +91,5 @@ TokenNetworkIdentifier = NewType('TokenNetworkIdentifier', bytes)
 
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
+
+BlockSpecification = Union[str, T_BlockNumber]

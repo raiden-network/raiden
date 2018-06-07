@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
-from typing import List, Union, Tuple
+from typing import List, Tuple
 from eth_utils import is_binary_address, to_checksum_address
 
 import structlog
@@ -35,7 +35,7 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
 )
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, BlockSpecification
 from raiden.constants import NULL_ADDRESS
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -207,14 +207,14 @@ class ChannelManager:
 
     def channelnew_filter(
             self,
-            from_block: Union[str, int] = 0,
-            to_block: Union[str, int] = 'latest'
+            from_block: BlockSpecification = 0,
+            to_block: BlockSpecification = 'latest'
     ) -> Filter:
         """ Install a new filter for ChannelNew events.
 
         Args:
-            start_block:Create filter starting from this block number (default: 0).
-            end_block: Create filter stopping at this block number (default: 'latest').
+            from_block: Create filter starting from this block number (default: 0).
+            to_block: Create filter stopping at this block number (default: 'latest').
 
         Return:
             The filter instance.
