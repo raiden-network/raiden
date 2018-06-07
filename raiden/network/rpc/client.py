@@ -74,7 +74,8 @@ def make_connection_test_middleware(client):
 def check_address_has_code(
         client: 'JSONRPCClient',
         address: Address,
-        contract_name: str = ''):
+        contract_name: str = '',
+):
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), 'latest')
 
@@ -151,7 +152,8 @@ def format_data_for_rpccall(
         value: int = 0,
         data: bytes = b'',
         startgas: int = GAS_LIMIT,
-        gasprice: int = GAS_PRICE):
+        gasprice: int = GAS_PRICE,
+):
     """ Helper to format the transaction data. """
 
     return {
@@ -183,7 +185,8 @@ class JSONRPCClient:
             privkey: bytes,
             gasprice: int = None,
             nonce_update_interval: float = 5.0,
-            nonce_offset: int = 0):
+            nonce_offset: int = 0,
+    ):
 
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
@@ -321,7 +324,8 @@ class JSONRPCClient:
             libraries,
             constructor_parameters,
             contract_path=None,
-            timeout=None):
+            timeout=None,
+    ):
         """
         Deploy a solidity contract.
         Args:
@@ -474,7 +478,8 @@ class JSONRPCClient:
             self,
             transaction_hash: bytes,
             confirmations: int = None,
-            timeout: float = None):
+            timeout: float = None,
+    ):
         """ Wait until the `transaction_hash` is applied or rejected.
         If timeout is None, this could wait indefinitely!
 
@@ -552,7 +557,7 @@ class JSONRPCClient:
             contract_address: Address,
             topics: List[str] = None,
             from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest'
+            to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         """ Create a filter in the ethereum node. """
         return self.web3.eth.filter({
@@ -567,7 +572,7 @@ class JSONRPCClient:
             contract_address: Address,
             topics: List[str] = None,
             from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest'
+            to_block: typing.BlockSpecification = 'latest',
     ) -> List[Dict]:
         """ Get events for the given query. """
         return self.web3.eth.getLogs({
