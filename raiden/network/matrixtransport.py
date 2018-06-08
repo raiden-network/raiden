@@ -147,7 +147,13 @@ class MatrixTransport:
         if user_ids:
             self.log.debug('Add to presence list', added_users=user_ids)
             self._client.modify_presence_list(add_user_ids=list(user_ids))
+        # FIXME: Figure out a better place to do this
         self._address_to_userids.setdefault(node_address, set()).update(user_ids_to_add)
+
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        self._update_address_presence(node_address)
+
         # Ensure there is a room for the peer node
         # We use spawn_later to avoid races if the peer is already expecting us and sent an invite
         gevent.spawn_later(1, self._get_room_for_address, node_address, allow_missing_peers=True)
@@ -447,9 +453,9 @@ class MatrixTransport:
                 self._send_immediate(message.sender, json.dumps(delivered_message.to_dict()))
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
-            log.warn('Exception while processing message', exc_info=True)
-
-        log.debug(
+            self.log.warn('Exception while processing message', exc_info=True)
+            return
+        self.log.debug(
             'DELIVERED',
             node=pex(self._raiden_service.address),
             to=pex(message.sender),
@@ -526,12 +532,14 @@ class MatrixTransport:
             address = to_normalized_address(receiver_address)
             candidates = self._client.search_user_directory(address)
             if not candidates and not allow_missing_peers:
-                raise ValueError('No candidates found for given address: {}'.format(address))
+                self.log.error('No peer candidates', peer_address=address)
+                return
 
             # filter candidates
             peers = [user for user in candidates if _validate_userid_signature(user)]
             if not peers and not allow_missing_peers:
-                raise ValueError('No valid peer found for given address: {}'.format(address))
+                self.log.error('No valid peer found', peer_address=address)
+                return
 
             room = self._get_unlisted_room(room_name, invitees=[user.user_id for user in peers])
 
@@ -620,6 +628,12 @@ class MatrixTransport:
             self.log.debug('Malformed address, probably not a raiden node', user_id=user_id)
             return
 
+        self._update_address_presence(address)
+
+    def _update_address_presence(self, address):
+        """ Update synthesized address presence state from user presence state """
+        self.log.debug('Address to userids', address_to_userids=self._address_to_userids)
+
         composite_presence = {
             self._userid_to_presence.get(uid)
             for uid
@@ -635,22 +649,22 @@ class MatrixTransport:
 
         if new_state == self._address_to_presence.get(address):
             return
-
-        log.debug(
+        self.log.debug(
             'Changing address presence state',
             address=to_normalized_address(address),
-            user_id=user_id,
             prev_state=self._address_to_presence.get(address),
             state=new_state
         )
         self._address_to_presence[address] = new_state
+        if new_state is None:
+            return
 
-        state_change = ActionChangeNodeNetworkState(
-            address,
-            NODE_NETWORK_UNREACHABLE
-            if new_state is UserPresence.OFFLINE
-            else NODE_NETWORK_REACHABLE
-        )
+        if new_state is UserPresence.OFFLINE:
+            reachability = NODE_NETWORK_UNREACHABLE
+        else:
+            reachability = NODE_NETWORK_REACHABLE
+
+        state_change = ActionChangeNodeNetworkState(address, reachability)
         self._raiden_service.handle_state_change(state_change)
 
     def _handle_discovery_membership_event(self, room, event):
