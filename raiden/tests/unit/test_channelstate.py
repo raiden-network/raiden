@@ -190,7 +190,7 @@ def make_receive_transfer_direct(
         channel_state.partner_state.address,
         locksroot,
     )
-    mediated_transfer_msg.sign(privkey, address)
+    mediated_transfer_msg.sign(privkey)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
@@ -253,7 +253,7 @@ def make_receive_transfer_mediated(
         transfer_target,
         transfer_initiator,
     )
-    mediated_transfer_msg.sign(privkey, address)
+    mediated_transfer_msg.sign(privkey)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
@@ -662,7 +662,7 @@ def test_channelstate_receive_lockedtransfer():
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    secret_message.sign(privkey2, channel_state.partner_state.address)
+    secret_message.sign(privkey2)
 
     balance_proof = balanceproof_from_envelope(secret_message)
     unlock_state_change = ReceiveUnlock(
@@ -1035,7 +1035,7 @@ def test_interwoven_transfers():
                 locksroot=locksroot,
                 secret=lock_secret,
             )
-            secret_message.sign(privkey2, channel_state.partner_state.address)
+            secret_message.sign(privkey2)
 
             balance_proof = balanceproof_from_envelope(secret_message)
             unlock_state_change = ReceiveUnlock(
