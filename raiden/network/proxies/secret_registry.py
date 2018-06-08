@@ -3,10 +3,10 @@ from binascii import unhexlify
 
 from web3.utils.filters import Filter
 from eth_utils import is_binary_address, to_normalized_address
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.utils import typing
 from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
     CONTRACT_SECRET_REGISTRY,
     EVENT_CHANNEL_SECRET_REVEALED,
 )
@@ -44,10 +44,12 @@ class SecretRegistry:
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_SECRET_REGISTRY),
             to_normalized_address(secret_registry_address),
         )
-        CONTRACT_MANAGER.check_contract_version(
-            proxy.functions.contract_version().call(),
-            CONTRACT_SECRET_REGISTRY
-        )
+
+        # TODO: add this back
+        # CONTRACT_MANAGER.check_contract_version(
+        #     proxy.functions.contract_version().call(),
+        #     CONTRACT_SECRET_REGISTRY
+        # )
 
         self.address = secret_registry_address
         self.proxy = proxy

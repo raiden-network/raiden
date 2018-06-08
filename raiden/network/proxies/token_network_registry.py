@@ -4,10 +4,10 @@ from binascii import hexlify, unhexlify
 import structlog
 from web3.utils.filters import Filter
 from eth_utils import is_binary_address, to_normalized_address
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.utils import typing
 from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_ADDED2,
 )
@@ -48,13 +48,15 @@ class TokenNetworkRegistry:
         check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
             to_normalized_address(registry_address),
         )
-        CONTRACT_MANAGER.check_contract_version(
-            proxy.functions.contract_version().call(),
-            CONTRACT_TOKEN_NETWORK_REGISTRY
-        )
+
+        # TODO: add this back
+        # CONTRACT_MANAGER.check_contract_version(
+        #     proxy.functions.contract_version().call(),
+        #     CONTRACT_TOKEN_NETWORK_REGISTRY
+        # )
 
         self.address = registry_address
         self.proxy = proxy
