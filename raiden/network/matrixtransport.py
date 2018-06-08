@@ -11,6 +11,8 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
+    encode_hex,
+    decode_hex
 )
 
 import gevent
@@ -46,10 +48,8 @@ from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNREACHAB
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
-    data_decoder,
-    data_encoder,
     eth_sign_sha3,
-    pex,
+    pex
 )
 from raiden.utils.typing import Dict, Set, Tuple, List, Optional, Address
 from raiden_libs.network.matrix import GMatrixClient, Room
@@ -228,7 +228,7 @@ class MatrixTransport:
 
     def _login_or_register(self):
         # password is signed server address
-        password = data_encoder(self._sign(self._server_url.encode()))
+        password = encode_hex(self._sign(self._server_url.encode()))
         seed = int.from_bytes(self._sign(b'seed')[-32:], 'big')
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
@@ -271,7 +271,7 @@ class MatrixTransport:
         else:
             raise ValueError('Could not register or login!')
         # TODO: persist access_token, to avoid generating a new login every time
-        name = data_encoder(self._sign(self._client.user_id.encode()))
+        name = encode_hex(self._sign(self._client.user_id.encode()))
         self._client.get_user(self._client.user_id).set_display_name(name)
 
     def _join_discovery_room(self):
@@ -374,7 +374,7 @@ class MatrixTransport:
 
         data = event['content']['body']
         if data.startswith('0x'):
-            message = message_from_bytes(data_decoder(data))
+            message = message_from_bytes(decode_hex(data))
         else:
             try:
                 message_dict = json.loads(data)
@@ -771,8 +771,7 @@ class MatrixTransport:
         if match:
             addresses = {
                 to_canonical_address(address)
-                for address
-                in (match.group('peer1', 'peer2'))
+                for address in (match.group('peer1', 'peer2'))
             }
             addresses = addresses - {self._raiden_service.address}
             if len(addresses) == 1:
@@ -790,7 +789,7 @@ class MatrixTransport:
         address: Address = to_canonical_address(encoded_address)
         recovered = self._recover(
             user.user_id.encode(),
-            data_decoder(user.get_display_name()),
+            decode_hex(user.get_display_name()),
         )
         if not address or recovered != address:
             return

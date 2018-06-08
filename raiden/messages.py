@@ -1,8 +1,9 @@
 from eth_utils import (
     big_endian_to_int,
-    encode_hex,
     to_normalized_address,
     to_canonical_address,
+    encode_hex,
+    decode_hex
 )
 import structlog
 from cachetools import LRUCache, cached
@@ -20,8 +21,6 @@ from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data, hash_balance_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
-    data_decoder,
-    data_encoder,
     ishash,
     pex,
     sha3,
@@ -358,7 +357,7 @@ class Processed(SignedMessage):
         return {
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
-            'signature': data_encoder(self.signature),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -367,7 +366,7 @@ class Processed(SignedMessage):
         processed = cls(
             message_identifier=data['message_identifier'],
         )
-        processed.signature = data_decoder(data['signature'])
+        processed.signature = decode_hex(data['signature'])
         return processed
 
 
@@ -403,7 +402,7 @@ class Delivered(SignedMessage):
         return {
             'type': self.__class__.__name__,
             'delivered_message_identifier': self.delivered_message_identifier,
-            'signature': data_encoder(self.signature),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -412,7 +411,7 @@ class Delivered(SignedMessage):
         delivered = cls(
             delivered_message_identifier=data['delivered_message_identifier'],
         )
-        delivered.signature = data_decoder(data['signature'])
+        delivered.signature = decode_hex(data['signature'])
         return delivered
 
 
@@ -507,9 +506,9 @@ class SecretRequest(SignedMessage):
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
-            'secrethash': data_encoder(self.secrethash),
+            'secrethash': encode_hex(self.secrethash),
             'amount': self.amount,
-            'signature': data_encoder(self.signature),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -518,10 +517,10 @@ class SecretRequest(SignedMessage):
         secret_request = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
-            secrethash=data_decoder(data['secrethash']),
+            secrethash=decode_hex(data['secrethash']),
             amount=data['amount'],
         )
-        secret_request.signature = data_decoder(data['signature'])
+        secret_request.signature = decode_hex(data['signature'])
         return secret_request
 
 
@@ -648,14 +647,14 @@ class Secret(EnvelopeMessage):
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
-            'secret': data_encoder(self.secret),
+            'secret': encode_hex(self.secret),
             'nonce': self.nonce,
             'token_network_address': to_normalized_address(self.token_network_address),
             'channel': to_normalized_address(self.channel),
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
-            'locksroot': data_encoder(self.locksroot),
-            'signature': data_encoder(self.signature),
+            'locksroot': encode_hex(self.locksroot),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -664,15 +663,15 @@ class Secret(EnvelopeMessage):
         message = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
-            secret=data_decoder(data['secret']),
+            secret=decode_hex(data['secret']),
             nonce=data['nonce'],
             token_network_address=to_canonical_address(data['token_network_address']),
             channel=to_canonical_address(data['channel']),
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            locksroot=data_decoder(data['locksroot']),
+            locksroot=decode_hex(data['locksroot']),
         )
-        message.signature = data_decoder(data['signature'])
+        message.signature = decode_hex(data['signature'])
         return message
 
 
@@ -730,8 +729,8 @@ class RevealSecret(SignedMessage):
         return {
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
-            'secret': data_encoder(self.secret),
-            'signature': data_encoder(self.signature),
+            'secret': encode_hex(self.secret),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -739,7 +738,7 @@ class RevealSecret(SignedMessage):
         assert data['type'] == cls.__name__
         return cls(
             message_identifier=data['message_identifier'],
-            secret=data_decoder(data['secret']),
+            secret=decode_hex(data['secret']),
         )
 
 
@@ -886,8 +885,8 @@ class DirectTransfer(EnvelopeMessage):
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
             'recipient': to_normalized_address(self.recipient),
-            'locksroot': data_encoder(self.locksroot),
-            'signature': data_encoder(self.signature),
+            'locksroot': encode_hex(self.locksroot),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -903,9 +902,9 @@ class DirectTransfer(EnvelopeMessage):
             transferred_amount=data['transferred_amount'],
             recipient=to_canonical_address(data['recipient']),
             locked_amount=data['locked_amount'],
-            locksroot=data_decoder(data['locksroot']),
+            locksroot=decode_hex(data['locksroot']),
         )
-        message.signature = data_decoder(data['signature'])
+        message.signature = decode_hex(data['signature'])
         return message
 
 
@@ -990,7 +989,7 @@ class Lock:
             'type': self.__class__.__name__,
             'amount': self.amount,
             'expiration': self.expiration,
-            'secrethash': data_encoder(self.secrethash),
+            'secrethash': encode_hex(self.secrethash),
         }
 
     @classmethod
@@ -999,7 +998,7 @@ class Lock:
         return cls(
             amount=data['amount'],
             expiration=data['expiration'],
-            secrethash=data_decoder(data['secrethash']),
+            secrethash=decode_hex(data['secrethash']),
         )
 
 
@@ -1280,12 +1279,12 @@ class LockedTransfer(LockedTransferBase):
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
             'recipient': to_normalized_address(self.recipient),
-            'locksroot': data_encoder(self.locksroot),
+            'locksroot': encode_hex(self.locksroot),
             'lock': self.lock.to_dict(),
             'target': to_normalized_address(self.target),
             'initiator': to_normalized_address(self.initiator),
             'fee': self.fee,
-            'signature': data_encoder(self.signature),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -1300,13 +1299,13 @@ class LockedTransfer(LockedTransferBase):
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
             recipient=to_canonical_address(data['recipient']),
-            locksroot=data_decoder(data['locksroot']),
+            locksroot=decode_hex(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
             target=to_canonical_address(data['target']),
             initiator=to_canonical_address(data['initiator']),
             fee=data['fee'],
         )
-        message.signature = data_decoder(data['signature'])
+        message.signature = decode_hex(data['signature'])
         return message
 
 
@@ -1383,12 +1382,12 @@ class RefundTransfer(LockedTransfer):
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
             'recipient': to_normalized_address(self.recipient),
-            'locksroot': data_encoder(self.locksroot),
+            'locksroot': encode_hex(self.locksroot),
             'lock': self.lock.to_dict(),
             'target': to_normalized_address(self.target),
             'initiator': to_normalized_address(self.initiator),
             'fee': self.fee,
-            'signature': data_encoder(self.signature),
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
@@ -1403,13 +1402,13 @@ class RefundTransfer(LockedTransfer):
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
             recipient=to_canonical_address(data['recipient']),
-            locksroot=data_decoder(data['locksroot']),
+            locksroot=decode_hex(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
             target=to_canonical_address(data['target']),
             initiator=to_canonical_address(data['initiator']),
             fee=data['fee'],
         )
-        message.signature = data_decoder(data['signature'])
+        message.signature = decode_hex(data['signature'])
         return message
 
 
