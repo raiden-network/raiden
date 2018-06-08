@@ -4,7 +4,11 @@ import os
 import gevent
 from cachetools.func import ttl_cache
 import structlog
-from eth_utils import is_binary_address, decode_hex
+from eth_utils import (
+    to_int,
+    is_binary_address,
+    decode_hex,
+)
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -18,10 +22,7 @@ from raiden.network.proxies import (
     SecretRegistry,
 )
 from raiden.settings import DEFAULT_POLL_TIMEOUT
-from raiden.utils import (
-    privatekey_to_address,
-    quantity_decoder,
-)
+from raiden.utils import privatekey_to_address
 from raiden.utils.solc import compile_files_cwd
 from raiden.utils.typing import Address
 
@@ -64,7 +65,7 @@ class BlockChainService:
             return True
 
         current_block = self.block_number()
-        highest_block = quantity_decoder(result['highestBlock'])
+        highest_block = to_int(hexstr=result['highestBlock'])
 
         if highest_block - current_block > 2:
             return False

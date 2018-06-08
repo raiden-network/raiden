@@ -10,6 +10,7 @@ from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
 from eth_utils import (
+    to_int,
     to_checksum_address,
     to_canonical_address,
     remove_0x_prefix,
@@ -30,7 +31,6 @@ from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
     data_encoder,
     privatekey_to_address,
-    quantity_decoder,
     quantity_encoder,
     encode_hex,
 )
@@ -535,7 +535,7 @@ class JSONRPCClient:
 
             if confirmations:
                 # this will wait for both APPLIED and REVERTED transactions
-                transaction_block = quantity_decoder(transaction['blockNumber'])
+                transaction_block = to_int(hexstr=transaction['blockNumber'])
                 confirmation_block = transaction_block + confirmations
 
                 block_number = self.block_number()
