@@ -52,6 +52,7 @@ from raiden.api.v1.resources import (
     ChannelEventsResource,
     TransferToTargetResource,
     ConnectionsResource,
+    ConnectionsInfoResource,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -93,6 +94,7 @@ URLS_V1 = [
         TransferToTargetResource,
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
+    ('/connections', ConnectionsInfoResource),
 ]
 
 
@@ -472,6 +474,38 @@ class RestAPI:
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
         return api_response(result=checksummed_response_dict(result.data))
+
+    def get_connection_managers_info(self, registry_address):
+        """Get a dict whose keys are token addresses and whose values are
+        open channels, funds of last request, sum of deposits and number of channels"""
+        connection_managers = dict()
+
+        for token in self.raiden_api.get_tokens_list(registry_address):
+            try:
+                connection_manager = self.raiden_api.raiden.connection_manager_for_token(
+                    registry_address,
+                    token,
+                )
+            except InvalidAddress:
+                connection_manager = None
+
+            open_channels = views.get_channelstate_open(
+                views.state_from_raiden(self.raiden_api.raiden),
+                registry_address,
+                token,
+            )
+            if connection_manager is not None and open_channels:
+                connection_managers[to_checksum_address(connection_manager.token_address)] = {
+                    'funds': connection_manager.funds,
+                    'sum_deposits': views.get_our_capacity_for_token_network(
+                        views.state_from_raiden(self.raiden_api.raiden),
+                        registry_address,
+                        token,
+                    ),
+                    'channels': len(open_channels),
+                }
+
+        return connection_managers
 
     def get_channel_list(self, registry_address, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(

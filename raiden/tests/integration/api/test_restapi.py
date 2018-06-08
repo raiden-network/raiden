@@ -695,19 +695,19 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
 
-@pytest.mark.skip
-def test_get_connection_managers_info(api_backend, blockchain_services):
-    # check that no connection managers exists yet
-
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_tokens', [2])
+def test_get_connection_managers_info(raiden_network, api_backend, token_addresses):
+    # check that there are no registered tokens
     request = grequests.get(
-        api_url_for(api_backend, 'connectionmanagersresource'),
+        api_url_for(api_backend, 'connectionsinforesource')
     )
     response = request.send().response
-    token_addresses = response.json()
-    assert token_addresses == dict()
+    result = response.json()
+    assert len(result) == 0
 
     funds = 100
-    token_address1 = '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8'
+    token_address1 = to_checksum_address(token_addresses[0])
     connect_data_obj = {
         'funds': funds,
     }
@@ -724,17 +724,17 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
 
     # check that there now is one registered channel manager
     request = grequests.get(
-        api_url_for(api_backend, 'connectionmanagersresource')
+        api_url_for(api_backend, 'connectionsinforesource')
     )
     response = request.send().response
-    token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 1
-    assert token_address1 in token_addresses
-    assert isinstance(token_addresses[token_address1], dict)
-    assert set(token_addresses[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
+    result = response.json()
+    assert isinstance(result, dict) and len(result.keys()) == 1
+    assert token_address1 in result
+    assert isinstance(result[token_address1], dict)
+    assert set(result[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
 
     funds = 100
-    token_address2 = '0x3EdF0f56AA9716B898ec8eA674fDdE714fD979dE'
+    token_address2 = to_checksum_address(token_addresses[1])
     connect_data_obj = {
         'funds': funds,
     }
@@ -751,14 +751,14 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
 
     # check that there now are two registered channel managers
     request = grequests.get(
-        api_url_for(api_backend, 'connectionmanagersresource')
+        api_url_for(api_backend, 'connectionsinforesource')
     )
     response = request.send().response
-    token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 2
-    assert token_address2 in token_addresses
-    assert isinstance(token_addresses[token_address2], dict)
-    assert set(token_addresses[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
+    result = response.json()
+    assert isinstance(result, dict) and len(result.keys()) == 2
+    assert token_address2 in result
+    assert isinstance(result[token_address2], dict)
+    assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
 
 
 def test_token_events_errors_for_unregistered_token(api_backend):
