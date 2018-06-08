@@ -133,7 +133,7 @@ def raiden_chain(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         use_matrix,
-        local_matrix_server
+        local_matrix_server,
 ):
 
     if len(token_addresses) != 1:
@@ -184,7 +184,7 @@ def raiden_chain(
             ))
     gevent.wait(greenlets)
 
-    exception = RuntimeError('fixture setup failed, nodes are unreachable')
+    exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_channels(
             app_channels,
@@ -258,7 +258,7 @@ def raiden_network(
             ))
     gevent.wait(greenlets)
 
-    exception = RuntimeError('fixture setup failed, nodes are unreachable')
+    exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_channels(
             app_channels,
