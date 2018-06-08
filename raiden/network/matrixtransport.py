@@ -6,7 +6,7 @@ from enum import Enum
 from json import JSONDecodeError
 from operator import itemgetter
 from random import Random
-from typing import Dict, Set, Tuple, List
+from typing import Dict, Set, Tuple, List, Optional
 from urllib.parse import urlparse
 from eth_utils import (
     is_binary_address,
@@ -92,6 +92,8 @@ class MatrixTransport:
         self._discovery_room_alias_full = None
         self._room_alias_re = None
 
+        self._bound_logger = None
+
     def start(
         self,
         raiden_service: RaidenService,
@@ -128,10 +130,10 @@ class MatrixTransport:
 
         gevent.spawn_later(2, self._ensure_room_peers)
         gevent.spawn_later(5, self._send_queued_messages, queueids_to_queues)
-        log.info('TRANSPORT STARTED')
+        self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
-        log.debug('HEALTHCHECK', peer_address=pex(node_address))
+        self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
         users = [
             user
@@ -143,7 +145,7 @@ class MatrixTransport:
         user_ids_to_add = {u.user_id for u in users}
         user_ids = user_ids_to_add - existing
         if user_ids:
-            log.debug('Add to presence list', added_users=user_ids)
+            self.log.debug('Add to presence list', added_users=user_ids)
             self._client.modify_presence_list(add_user_ids=list(user_ids))
         self._address_to_userids.setdefault(node_address, set()).update(user_ids_to_add)
         # Ensure there is a room for the peer node
@@ -156,6 +158,12 @@ class MatrixTransport:
         receiver_address: typing.Address,
         message: Message
     ) -> AsyncResult:
+        self.log.debug(
+            'SEND ASYNC',
+            receiver_address=address_decoder(receiver_address),
+            message=message,
+            queue_name=queue_name
+        )
         if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
@@ -189,6 +197,15 @@ class MatrixTransport:
         gevent.wait(self.greenlets)
 
     @property
+    def log(self):
+        if self._bound_logger:
+            return self._bound_logger
+        if not getattr(self._client, 'user_id', None):
+            return log
+        self._bound_logger = log.bind(current_user=self._client.user_id)
+        return self._bound_logger
+
+    @property
     def _network_name(self) -> str:
         return ID_TO_NETWORKNAME.get(
             self._raiden_service.chain.network_id,
@@ -210,7 +227,7 @@ class MatrixTransport:
 
             try:
                 self._client.login_with_password(username, password)
-                log.info(
+                self.log.info(
                     'LOGIN',
                     homeserver=self._server_url,
                     username=username
@@ -219,14 +236,14 @@ class MatrixTransport:
             except MatrixRequestError as ex:
                 if ex.code != 403:
                     raise
-                log.debug(
+                self.log.debug(
                     'Could not login. Trying register',
                     homeserver=self._server_url,
                     username=username,
                 )
                 try:
                     self._client.register_with_password(username, password)
-                    log.info(
+                    self.log.info(
                         'REGISTER',
                         homeserver=self._server_url,
                         username=username,
@@ -235,7 +252,7 @@ class MatrixTransport:
                 except MatrixRequestError as ex:
                     if ex.code != 400:
                         raise
-                    log.debug('Username taken. Continuing')
+                    self.log.debug('Username taken. Continuing')
                     continue
         else:
             raise ValueError('Could not register or login!')
@@ -274,14 +291,14 @@ class MatrixTransport:
             if should_listen:
                 peer_address = self._get_peer_address_from_room(room.canonical_alias)
                 if not peer_address:
-                    log.warning(
+                    self.log.warning(
                         "Member of a room we're not supposed to be a member of - ignoring",
                         room=room
                     )
                     return
                 self._address_to_roomid[peer_address] = room.room_id
                 room.add_listener(self._handle_message)
-            log.debug(
+            self.log.debug(
                 'ROOM',
                 room_id=room_id,
                 aliases=room.aliases,
@@ -292,18 +309,18 @@ class MatrixTransport:
         """ Join all invited rooms """
         room = self._client.join_room(room_id)
         if not room.canonical_alias:
-            log.warning('Got invited to a room without canonical alias - ignoring', room=room)
+            self.log.warning('Got invited to a room without canonical alias - ignoring', room=room)
             return
         peer_address = self._get_peer_address_from_room(room.canonical_alias)
         if not peer_address:
-            log.warning(
+            self.log.warning(
                 'Got invited to a room we\'re not supposed to be a member of - ignoring',
                 room=room
             )
             return
         self._address_to_roomid[peer_address] = room.room_id
         room.add_listener(self._handle_message, 'm.room.message')
-        log.debug(
+        self.log.debug(
             'Invited to a room',
             room_id=room_id,
             aliases=room.aliases
@@ -333,11 +350,11 @@ class MatrixTransport:
                     hasher=eth_sign_sha3
                 )
             except AssertionError:
-                log.warning('INVALID MESSAGE', sender_id=sender_id)
+                self.log.warning('INVALID MESSAGE', sender_id=sender_id)
                 return
             node_address_hex = to_normalized_address(peer_address)
             if node_address_hex.lower() not in sender_id:
-                log.warning(
+                self.log.warning(
                     'INVALID SIGNATURE',
                     peer_address=node_address_hex,
                     sender_id=sender_id
@@ -352,14 +369,16 @@ class MatrixTransport:
             try:
                 message_dict = json.loads(data)
             except (UnicodeDecodeError, JSONDecodeError) as ex:
-                log.warning(
+                self.log.warning(
                     "Can't parse message data JSON",
                     message_data=data,
                     peer_address=pex(peer_address),
                     exception=ex
                 )
                 return
-            log.debug('MESSAGE_DATA', data=message_dict)
+            self.log.debug('MESSAGE_DATA', data=message_dict)
+            message_dict = json.loads(data)
+            self.log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
 
         if isinstance(message, SignedMessage) and not message.sender:
@@ -369,14 +388,14 @@ class MatrixTransport:
         if isinstance(message, Delivered):
             self._receive_delivered(message)
         elif isinstance(message, Ping):
-            log.warning(
+            self.log.warning(
                 'Not required Ping received',
                 message=data,
             )
         elif isinstance(message, SignedMessage):
             self._receive_message(message)
         else:
-            log.error(
+            self.log.error(
                 'Invalid message',
                 message=data,
             )
@@ -394,7 +413,7 @@ class MatrixTransport:
 
         if async_result is not None:
             async_result.set(True)
-            log.debug(
+            self.log.debug(
                 'DELIVERED MESSAGE RECEIVED',
                 node=pex(self._raiden_service.address),
                 receiver=pex(delivered.sender),
@@ -402,14 +421,14 @@ class MatrixTransport:
             )
 
         else:
-            log.debug(
+            self.log.debug(
                 'DELIVERED MESSAGE UNKNOWN',
                 node=pex(self._raiden_service.address),
                 message_identifier=delivered.delivered_message_identifier,
             )
 
     def _receive_message(self, message):
-        log.info(
+        self.log.info(
             'MESSAGE RECEIVED',
             node=pex(self._raiden_service.address),
             message=message,
@@ -471,14 +490,16 @@ class MatrixTransport:
     def _send_immediate(self, receiver_address, data):
         # FIXME: Send message to all matching rooms
         room = self._get_room_for_address(receiver_address)
-        log.debug('SEND: %r => %r', room, data)
+        if not room:
+            return
+        self.log.debug('SEND', room=room, data=data)
         room.send_text(data)
 
     def _get_room_for_address(
         self,
         receiver_address: typing.Address,
         allow_missing_peers=False
-    ) -> Room:
+    ) -> Optional[Room]:
         room_id = self._address_to_roomid.get(receiver_address)
         if room_id:
             room = self._client.rooms.get(room_id)
@@ -519,10 +540,10 @@ class MatrixTransport:
                 if self._userid_to_presence.get(user.user_id) is UserPresence.OFFLINE
             ]
             if offline_peers:
-                log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
+                self.log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
 
         room.add_listener(self._handle_message, 'm.room.message')
-        log.info('CHANNEL ROOM', peer_address=to_normalized_address(receiver_address), room=room)
+        self.log.info('CHANNEL ROOM', peer_address=to_normalized_address(receiver_address), room=room)
         self._address_to_roomid[receiver_address] = room.room_id
         return room
 
@@ -540,22 +561,24 @@ class MatrixTransport:
                         message = 'seems to have been created by peer meanwhile.'
                     else:
                         message = f'{error.code} {error.content}'
-                    log.info(f'Error creating room {room_name}: {message}. Retrying to join...')
+                    self.log.info(f'Error creating room {room_name}: {message}. '
+                                  f'Retrying to join...')
                     room_not_found = False
                 else:
-                    log.info(f'Room {room_name} created successfully.')
+                    self.log.info(f'Room {room_name} created successfully.')
                     return room
             else:
                 try:
                     room = self._client.join_room(room_name_full)
                 except MatrixRequestError as error:
                     if error.code == 404:
-                        log.info(f'Room {room_name} not found, trying to create it.')
+                        self.log.info(f'Room {room_name} not found, trying to create it.')
                         room_not_found = True
                     else:
-                        log.info(f'Error joining room {room_name}: {error.content} {error.code}')
+                        self.log.info(f'Error joining room {room_name}: '
+                                      f'{error.content} {error.code}')
                 else:
-                    log.info(f'Room {room_name} joined successfully.')
+                    self.log.info(f'Room {room_name} joined successfully.')
                     return room
             gevent.sleep(.5)
 
@@ -578,7 +601,7 @@ class MatrixTransport:
         if new_state == self._userid_to_presence.get(user_id):
             return
 
-        log.debug(
+        self.log.debug(
             'Changing user presence state',
             user_id=user_id,
             prev_state=self._userid_to_presence.get(user_id),
@@ -594,7 +617,7 @@ class MatrixTransport:
             address = self._address_from_user_id(user_id)
         except (binascii.Error, AssertionError):
             # Malformed address - skip
-            log.debug('Malformed address, probably not a raiden node', user_id=user_id)
+            self.log.debug('Malformed address, probably not a raiden node', user_id=user_id)
             return
 
         composite_presence = {
@@ -636,7 +659,7 @@ class MatrixTransport:
 
         state = event['content']['membership']
         user_id = event['state_key']
-        log.debug('discovery member change', state=state, user_id=user_id)
+        self.log.debug('discovery member change', state=state, user_id=user_id)
         if state != 'join':
             return
         self._maybe_invite_user(self._client.get_user(user_id))
@@ -665,15 +688,14 @@ class MatrixTransport:
         # Refresh members
         room.get_joined_members()
         if user.user_id not in room._members.keys():
-            log.debug('INVITE', user=user, room=room)
+            self.log.debug('INVITE', user=user, room=room)
             room.invite_user(user.user_id)
 
     @staticmethod
     def _address_from_user_id(user_id):
         return to_canonical_address(user_id.partition(':')[0].replace('@', '').partition('.')[0])
 
-    @staticmethod
-    def _select_server(config):
+    def _select_server(self, config):
         server = config['server']
         if server.startswith('http'):
             return server
@@ -690,9 +712,9 @@ class MatrixTransport:
         ]
         gevent.joinall(get_rtt_jobs)
         sorted_servers = sorted((job.value for job in get_rtt_jobs), key=itemgetter(1))
-        log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
+        self.log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
         best_server, rtt = sorted_servers[0]
-        log.info(
+        self.log.info(
             'Automatically selecting matrix homeserver based on RTT',
             homeserver=best_server,
             rtt=rtt
