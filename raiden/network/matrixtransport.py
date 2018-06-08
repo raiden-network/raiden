@@ -551,7 +551,11 @@ class MatrixTransport:
                 self.log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
 
         room.add_listener(self._handle_message, 'm.room.message')
-        self.log.info('CHANNEL ROOM', peer_address=to_normalized_address(receiver_address), room=room)
+        self.log.info(
+            'CHANNEL ROOM',
+            peer_address=to_normalized_address(receiver_address),
+            room=room
+        )
         self._address_to_roomid[receiver_address] = room.room_id
         return room
 
