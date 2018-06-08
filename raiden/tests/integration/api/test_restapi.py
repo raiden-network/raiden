@@ -761,7 +761,6 @@ def test_get_connection_managers_info(api_backend, blockchain_services):
     assert set(token_addresses[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
 
 
-@pytest.mark.skip
 def test_token_events_errors_for_unregistered_token(api_backend):
     request = grequests.get(
         api_url_for(

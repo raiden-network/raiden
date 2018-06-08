@@ -9,6 +9,7 @@ from eth_utils import (
     to_canonical_address,
 )
 from web3.utils.filters import Filter
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -73,11 +74,11 @@ class Registry:
         """ Return the channel manager address for the given token or None if
         there is no correspoding address.
         """
-        address = self.proxy.contract.functions.channelManagerByToken(
-            to_checksum_address(token_address),
-        ).call()
-
-        if address == b'':
+        try:
+            address = self.proxy.contract.functions.channelManagerByToken(
+                to_checksum_address(token_address),
+            ).call()
+        except BadFunctionCallOutput as e:
             check_address_has_code(self.client, self.address)
             return None
 

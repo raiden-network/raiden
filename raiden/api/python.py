@@ -589,6 +589,9 @@ class RaidenAPI:
         channel_manager_address = self.raiden.default_registry.manager_address_by_token(
             token_address
         )
+        if channel_manager_address is None:
+            raise UnknownTokenAddress('Token address is not known.')
+
         returned_events = get_all_channel_manager_events(
             self.raiden.chain,
             channel_manager_address,
