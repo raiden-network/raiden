@@ -135,12 +135,6 @@ def data_decoder(data: str) -> bytes:
     return data
 
 
-def quantity_decoder(data: str) -> int:
-    assert data[:2] == '0x'
-    data = data[2:]  # remove 0x
-    return int(data, 16)
-
-
 def quantity_encoder(i: int) -> str:
     """Encode integer quantity `data`."""
     return hex(i).rstrip('L')

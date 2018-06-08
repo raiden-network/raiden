@@ -17,6 +17,7 @@ import gevent.monkey
 gevent.monkey.patch_all()
 import requests
 from eth_utils import (
+    to_int,
     denoms,
     to_checksum_address,
     to_normalized_address,
@@ -50,7 +51,6 @@ from raiden.utils import (
     get_system_spec,
     is_minified_address,
     is_supported_client,
-    quantity_decoder,
     split_endpoint,
 )
 from raiden.tests.utils.smoketest import (
@@ -184,13 +184,13 @@ def check_discovery_registration_gas(blockchain_service, account_address):
 def etherscan_query_with_retries(url, sleep, retries=3):
     for _ in range(retries - 1):
         try:
-            etherscan_block = quantity_decoder(requests.get(url).json()['result'])
+            etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
         except (RequestException, ValueError, KeyError):
             gevent.sleep(sleep)
         else:
             return etherscan_block
 
-    etherscan_block = quantity_decoder(requests.get(url).json()['result'])
+    etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
     return etherscan_block
 
 
