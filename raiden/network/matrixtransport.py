@@ -160,13 +160,13 @@ class MatrixTransport:
 
     def send_async(
         self,
-        queue_name: str,
         receiver_address: typing.Address,
-        message: Message
+        queue_name: bytes,
+        message: Message,
     ) -> AsyncResult:
         self.log.debug(
             'SEND ASYNC',
-            receiver_address=address_decoder(receiver_address),
+            receiver_address=to_normalized_address(receiver_address),
             message=message,
             queue_name=queue_name
         )
