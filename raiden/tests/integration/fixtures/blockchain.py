@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import pytest
 import structlog
-from eth_utils import decode_hex
+from eth_utils import decode_hex, to_checksum_address, to_canonical_address
 
 from raiden.utils import (
     get_contract_path,
@@ -16,6 +16,12 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.blockchain import geth_create_blockchain
 from raiden.settings import GAS_PRICE
 from raiden.utils.solc import compile_files_cwd
+
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import (
+    CONTRACT_SECRET_REGISTRY_NAME,
+    CONTRACT_TOKEN_NETWORK_REGISTRY
+)
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
@@ -129,6 +135,7 @@ def blockchain_services(
                              # the geth subprocesses
         blockchain_rpc_ports,
         blockchain_type,
+        deploy_new_contracts,
 ):
 
     registry_address = None
@@ -140,6 +147,7 @@ def blockchain_services(
             private_keys,
             request.config.option.verbose,
             poll_timeout,
+            deploy_new_contracts,
             registry_address,  # _jsonrpc_services will handle the None value
         )
 
@@ -157,6 +165,11 @@ def endpoint_discovery_services(blockchain_services):
         ContractDiscovery(chain.node_address, chain.discovery(discovery_address))
         for chain in blockchain_services.blockchain_services
     ]
+
+
+@pytest.fixture
+def deploy_new_contracts():
+    return False
 
 
 @pytest.fixture
@@ -193,6 +206,31 @@ def blockchain_backend(
     raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
 
+def deploy_contract_web3(
+    contract_name: str,
+    poll_timeout,
+    deploy_client,
+    *args
+):
+    web3 = deploy_client.web3
+
+    contract_interface = CONTRACT_MANAGER.abi[contract_name]
+    contract = web3.eth.contract(
+        abi=contract_interface['abi'],
+        bytecode=contract_interface['bin']
+    )
+    # Submit the transaction that deploys the contract
+    tx_hash = contract.constructor(*args).transact(
+        {'from': to_checksum_address(deploy_client.sender)}
+    )
+
+    deploy_client.poll(tx_hash, timeout=poll_timeout)
+    receipt = web3.eth.getTransactionReceipt(tx_hash)
+
+    contract_address = receipt['contractAddress']
+    return to_canonical_address(contract_address)
+
+
 @pytest.fixture
 def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
     if blockchain_type == 'geth':
@@ -220,7 +258,8 @@ def _geth_blockchain(
         blockchain_rpc_ports,
         tmpdir,
         random_marker,
-        genesis_path):
+        genesis_path,
+):
 
     """ Helper to do proper cleanup. """
     geth_processes = geth_create_blockchain(
@@ -252,8 +291,33 @@ def _jsonrpc_services(
         private_keys,
         verbose,
         poll_timeout,
-        registry_address=None
+        deploy_new_contracts,
+        registry_address=None,
 ):
+    deploy_blockchain = BlockChainService(
+        deploy_key,
+        deploy_client,
+        GAS_PRICE,
+    )
+
+    if deploy_new_contracts:
+        # secret registry
+        secret_registry_address = deploy_contract_web3(
+            CONTRACT_SECRET_REGISTRY_NAME,
+            poll_timeout,
+            deploy_client,
+        )
+        secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
+
+        network_registry_address = deploy_contract_web3(
+            CONTRACT_TOKEN_NETWORK_REGISTRY,
+            poll_timeout,
+            deploy_client,
+            to_checksum_address(secret_registry_address),
+            deploy_blockchain.network_id,
+        )
+        network_registry = deploy_blockchain.token_network_registry(network_registry_address)  # noqa
+
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
     if registry_address is None:
@@ -274,11 +338,6 @@ def _jsonrpc_services(
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine
 
-    deploy_blockchain = BlockChainService(
-        deploy_key,
-        deploy_client,
-        GAS_PRICE,
-    )
     deploy_registry = deploy_blockchain.registry(registry_address)
 
     host = '0.0.0.0'
