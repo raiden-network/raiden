@@ -191,3 +191,11 @@ class ConnectionsResource(BaseResource):
             token_address=token_address,
             only_receiving=only_receiving_channels
         )
+
+
+class ConnectionsInfoResource(BaseResource):
+
+    def get(self):
+        return self.rest_api.get_connection_managers_info(
+            self.rest_api.raiden_api.raiden.default_registry.address
+        )
