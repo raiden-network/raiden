@@ -8,9 +8,9 @@ from raiden.utils import typing
 import structlog
 from web3.utils.filters import Filter
 from eth_utils import is_binary_address, to_normalized_address
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
     CONTRACT_TOKEN_NETWORK,
     EVENT_CHANNEL_NEW2,
     CHANNEL_STATE_NONEXISTENT,
@@ -65,14 +65,15 @@ class TokenNetwork:
         check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_abi(CONTRACT_TOKEN_NETWORK),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             to_normalized_address(manager_address),
         )
 
-        CONTRACT_MANAGER.check_contract_version(
-            proxy.functions.contract_version().call(),
-            CONTRACT_TOKEN_NETWORK
-        )
+        # TODO: add this back
+        # CONTRACT_MANAGER.check_contract_version(
+        #     proxy.functions.contract_version().call(),
+        #     CONTRACT_TOKEN_NETWORK
+        # )
 
         self.address = manager_address
         self.proxy = proxy
