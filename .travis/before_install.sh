@@ -8,6 +8,6 @@ set -x
 .travis/download_solc.sh
 .travis/download_geth.sh
 
-if [ "$SYNAPSE_COMMAND" ]; then
+if [ "$RUN_SYNAPSE" ]; then
     .travis/download_synapse.sh
 fi

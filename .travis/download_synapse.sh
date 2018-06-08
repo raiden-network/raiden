@@ -49,20 +49,27 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
     sudo apt-get install -y sqlite3
 fi
 
+if [ -z "${TRAVIS}" ]; then
+    BASEDIR=.
+else
+    BASEDIR=${HOME}/build/raiden-network/raiden
+fi
 
-mkdir -p .synapse
 
-virtualenv -p $(which python2) .synapse/venv
-.synapse/venv/bin/pip install $SYNAPSE_URL
 
-cp raiden/tests/test_files/synapse-config.yaml .synapse/config.yml
-.synapse/venv/bin/python -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
+mkdir -p ${BASEDIR}/.synapse
+
+virtualenv -p $(which python2) ${BASEDIR}/.synapse/venv
+${BASEDIR}/.synapse/venv/bin/pip install $SYNAPSE_URL
+
+cp ${BASEDIR}/raiden/tests/test_files/synapse-config.yaml ${BASEDIR}/.synapse/config.yml
+${BASEDIR}/.synapse/venv/bin/python -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
 	--config-path=.synapse/config.yml --generate-keys
 
 echo """
 #!/usr/bin/env bash
-cd .synapse
+cd ${BASEDIR}/.synapse
 venv/bin/python -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
   --config-path=config.yml
-""" > .synapse/run.sh
-chmod 775 .synapse/run.sh
+""" > ${BASEDIR}/.synapse/run.sh
+chmod 775 ${BASEDIR}/.synapse/run.sh
