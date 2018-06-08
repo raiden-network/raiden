@@ -12,6 +12,7 @@ from coincurve import PrivateKey
 import structlog
 from eth_utils import is_binary_address
 
+from raiden.network.blockchain_service import BlockChainService
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.constants import (
@@ -155,7 +156,7 @@ class RaidenService:
 
     def __init__(
             self,
-            chain,
+            chain: BlockChainService,
             default_registry,
             private_key_bin,
             transport,
@@ -177,7 +178,7 @@ class RaidenService:
         self.tokens_to_connectionmanagers = dict()
         self.identifier_to_results = defaultdict(list)
 
-        self.chain = chain
+        self.chain: BlockChainService = chain
         self.default_registry = default_registry
         self.config = config
         self.privkey = private_key_bin

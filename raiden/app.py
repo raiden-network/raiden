@@ -4,9 +4,11 @@ import sys
 import structlog
 from binascii import unhexlify
 from eth_utils import to_normalized_address
+from typing import Dict
 
 import gevent
 
+from raiden.network.blockchain_service import BlockChainService
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -71,7 +73,14 @@ class App:  # pylint: disable=too-few-public-methods
         }
     }
 
-    def __init__(self, config, chain, default_registry, transport, discovery=None):
+    def __init__(
+            self,
+            config: Dict,
+            chain: BlockChainService,
+            default_registry,
+            transport,
+            discovery=None,
+    ):
         self.config = config
         self.discovery = discovery
 
