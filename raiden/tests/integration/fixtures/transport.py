@@ -6,9 +6,13 @@ from collections import namedtuple
 from mirakuru import TCPExecutor
 
 
-TransportProtocol = Enum('TransportType', 'UDP MATRIX')
 TransportConfig = namedtuple('TransportConfig', 'protocol parameters')
 MatrixTransportConfig = namedtuple('MatrixTransportConfig', 'command host port')
+
+
+class TransportProtocol(Enum):
+    UDP = 'udp'
+    MATRIX = 'matrix'
 
 
 @pytest.fixture
