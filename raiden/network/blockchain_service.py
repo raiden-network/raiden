@@ -37,8 +37,8 @@ class BlockChainService:
             self,
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
-            poll_timeout: int = DEFAULT_POLL_TIMEOUT):
-
+            poll_timeout: int = DEFAULT_POLL_TIMEOUT,
+    ):
         self.address_to_token = dict()
         self.address_to_discovery = dict()
         self.address_to_nettingchannel = dict()
