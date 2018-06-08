@@ -20,7 +20,7 @@ from raiden.utils.solc import compile_files_cwd
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY_NAME,
-    CONTRACT_TOKEN_NETWORK_REGISTRY
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
 
 BlockchainServices = namedtuple(
@@ -42,7 +42,7 @@ def _token_addresses(
         deploy_service,
         registry,
         participants,
-        register
+        register,
 ):
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
     distributed among `blockchain_services`. Optionally the instances will be registered with
@@ -207,10 +207,10 @@ def blockchain_backend(
 
 
 def deploy_contract_web3(
-    contract_name: str,
-    poll_timeout,
-    deploy_client,
-    *args
+        contract_name: str,
+        poll_timeout,
+        deploy_client,
+        *args,
 ):
     web3 = deploy_client.web3
 
