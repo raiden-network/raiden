@@ -45,10 +45,44 @@ def pytest_addoption(parser):
         default=False,
         help='Do not colorize console log output',
     )
+
     parser.addoption(
         '--profiler',
         default=None,
         choices=['cpu', 'sample'],
+    )
+
+    parser.addoption(
+        '--transport',
+        choices=('none', 'udp', 'matrix', 'all'),
+        default='udp',
+        help='Run integration tests with udp, with matrix, with both or not at all.'
+    )
+
+    parser.addoption(
+        '--local-matrix',
+        dest='local_matrix',
+        default=None,
+        help=(
+            'Command to run the local matrix server. Must be given if '
+            '--transport=matrix or --transport=all is specified.'
+        )
+    )
+
+    parser.addoption(
+        '--matrix-host',
+        action='store',
+        dest='matrix_host',
+        default='localhost',
+        help="Host name of local matrix server if used, default: 'localhost'"
+    )
+
+    parser.addoption(
+        '--matrix-port',
+        action='store',
+        dest='matrix_port',
+        default=8008,
+        help='Port of local matrix server if used, default: 8008'
     )
 
 

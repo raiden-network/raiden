@@ -1,46 +1,37 @@
 # -*- coding: utf-8 -*-
 from raiden.tests.integration.fixtures.blockchain import *  # noqa: F401,F403
-from raiden.tests.integration.fixtures.matrix import *  # noqa: F401,F403
 from raiden.tests.integration.fixtures.raiden_network import *  # noqa: F401,F403
+from raiden.tests.integration.fixtures.transport import *  # noqa: F401,F403
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        '--local-matrix',
-        action='store',
-        dest='local_matrix',
-        default=None,
-        help=(
-            'Path to script/command that starts a local matrix server. If given, '
-            'the integration tests will run using matrix instead of udp.'
-        )
-    )
-
-    parser.addoption(
-        '--matrix-host',
-        action='store',
-        dest='matrix_host',
-        default='localhost',
-        help="Host name of local matrix server if used, default: 'localhost'"
-    )
-
-    parser.addoption(
-        '--matrix-port',
-        action='store',
-        dest='matrix_port',
-        default=8008,
-        help='Port of local matrix server if used, default: 8008'
-    )
+from raiden.tests.integration.fixtures.transport import (
+    MatrixTransportConfig,
+    TransportConfig,
+    TransportProtocol
+)
 
 
 def pytest_generate_tests(metafunc):
-    local_matrix = metafunc.config.getoption('local_matrix')
 
-    if local_matrix is not None and 'local_matrix' in metafunc.fixturenames:
+    if 'transport_config' in metafunc.fixturenames:
+        transport = metafunc.config.getoption('transport')
+        transport_config = list()
 
-        metafunc.parametrize('local_matrix', (local_matrix,))
-        metafunc.parametrize('use_matrix', (True,))
-        metafunc.parametrize('use_local_matrix_server', (True,))
+        if transport in ('udp', 'all'):
+            transport_config.append(
+                TransportConfig(protocol=TransportProtocol.UDP, parameters=None)
+            )
 
-        metafunc.parametrize('matrix_host', (metafunc.config.getoption('matrix_host'),))
-        metafunc.parametrize('matrix_port', (metafunc.config.getoption('matrix_port'),))
+        if transport in ('matrix', 'all'):
+            transport_config.append(
+                TransportConfig(
+                    protocol=TransportProtocol.MATRIX,
+                    parameters=MatrixTransportConfig(
+                        command=metafunc.config.getoption('local_matrix'),
+                        host=metafunc.config.getoption('matrix_host'),
+                        port=metafunc.config.getoption('matrix_port')
+                    )
+                )
+            )
+
+        metafunc.parametrize('transport_config', transport_config)

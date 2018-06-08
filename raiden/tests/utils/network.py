@@ -10,7 +10,6 @@ from raiden.app import App
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.network.throttle import TokenBucket
-from raiden.tests.utils.matrix import MockMatrixClient
 from raiden.utils import privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -213,7 +212,6 @@ def create_apps(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        use_matrix=False,
         local_matrix_url=None,
 ):
     """ Create the apps."""
@@ -252,9 +250,11 @@ def create_apps(
             'console': False,
         }
 
+        use_matrix = local_matrix_url is not None
         if use_matrix:
-            if local_matrix_url is not None:
-                matrix_config = {
+            config.update({
+                'transport_type': 'matrix',
+                'matrix': {
                     'server': local_matrix_url,
                     'server_name': 'matrix.local.raiden',
                     'discovery_room': {
@@ -262,14 +262,6 @@ def create_apps(
                         'server': 'matrix.local.raiden'
                     }
                 }
-            else:
-                matrix_config = {
-                    'client_class': MockMatrixClient,
-                    'server': 'http://matrix.mock',
-                }
-            config.update({
-                'transport_type': 'matrix',
-                'matrix': matrix_config
             })
 
         config_copy = App.DEFAULT_CONFIG.copy()
