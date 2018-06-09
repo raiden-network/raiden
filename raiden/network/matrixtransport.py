@@ -93,6 +93,7 @@ class MatrixTransport:
         self._room_alias_re = None
 
         self._bound_logger = None
+        self._running = False
 
     def start(
         self,
@@ -113,6 +114,7 @@ class MatrixTransport:
         )
 
         self._login_or_register()
+        self._running = True
         self._inventory_rooms()
 
         self._client.add_invite_listener(self._handle_invite)
@@ -192,15 +194,17 @@ class MatrixTransport:
         return self._messageids_to_asyncresult[message_id]
 
     def stop_and_wait(self):
-        self._client.set_presence_state(UserPresence.OFFLINE.value)
-        self._client.stop_listener_thread()
-        self._client.logout()
+        if self._running:
+            self._running = False
+            self._client.set_presence_state(UserPresence.OFFLINE.value)
+            self._client.stop_listener_thread()
+            self._client.logout()
 
-        # Set all the pending results to False, this will also cause pending retries to be aborted
-        for async_result in self._messageids_to_asyncresult.values():
-            async_result.set(False)
+            # Set all the pending results to False, this will also cause pending retries to be aborted
+            for async_result in self._messageids_to_asyncresult.values():
+                async_result.set(False)
 
-        gevent.wait(self.greenlets)
+            gevent.wait(self.greenlets)
 
     @property
     def log(self):
@@ -667,6 +671,8 @@ class MatrixTransport:
             reachability = NODE_NETWORK_UNREACHABLE
         else:
             reachability = NODE_NETWORK_REACHABLE
+            # The Matrix presence status 'unavailable' just means that the user has been inactive
+            # for a while. So a user with UserPresence.UNAVAILABLE is still 'reachable' to us.
 
         state_change = ActionChangeNodeNetworkState(address, reachability)
         self._raiden_service.handle_state_change(state_change)
