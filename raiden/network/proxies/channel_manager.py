@@ -5,6 +5,7 @@ from eth_utils import (
     is_binary_address,
     to_checksum_address,
     to_normalized_address,
+    to_canonical_address,
 )
 
 import structlog
@@ -34,7 +35,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    address_decoder,
     pex,
     privatekey_to_address,
 )
@@ -77,7 +77,7 @@ class ChannelManager:
     def token_address(self) -> Address:
         """ Return the token of this manager. """
         token_address = self.proxy.contract.functions.tokenAddress().call()
-        return address_decoder(token_address)
+        return to_canonical_address(token_address)
 
     def new_netting_channel(self, other_peer: Address, settle_timeout: int) -> Address:
         """ Creates and deploys a new netting channel contract.
@@ -139,7 +139,7 @@ class ChannelManager:
             )
             raise RuntimeError('netting_channel_address failed')
 
-        netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
+        netting_channel_address_bin = to_canonical_address(netting_channel_address_encoded)
 
         log.info(
             'new_netting_channel called',
@@ -176,7 +176,7 @@ class ChannelManager:
         channel_flat_encoded = self.proxy.contract.functions.getChannelsParticipants().call()
 
         channel_flat = [
-            address_decoder(channel)
+            to_canonical_address(channel)
             for channel in channel_flat_encoded
         ]
 
@@ -191,7 +191,7 @@ class ChannelManager:
         ).call({'from': to_checksum_address(self.client.sender)})
 
         return [
-            address_decoder(address)
+            to_canonical_address(address)
             for address in address_list
         ]
 

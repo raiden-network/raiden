@@ -2,7 +2,7 @@
 from binascii import unhexlify
 from gevent.lock import RLock
 from typing import List
-from eth_utils import to_normalized_address
+from eth_utils import to_normalized_address, to_canonical_address
 
 import structlog
 from web3.exceptions import BadFunctionCallOutput
@@ -28,7 +28,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    address_decoder,
     pex,
     privatekey_to_address,
     releasing,
@@ -93,7 +92,7 @@ class NettingChannel:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
         address = self._call_and_check_result('tokenAddress')
-        return address_decoder(address)
+        return to_canonical_address(address)
 
     def detail(self):
         """ Returns a dictionary with the details of the netting channel.
@@ -106,20 +105,20 @@ class NettingChannel:
         settle_timeout = self.settle_timeout()
         our_address = privatekey_to_address(self.client.privkey)
 
-        if address_decoder(data[0]) == our_address:
+        if to_canonical_address(data[0]) == our_address:
             return {
-                'our_address': address_decoder(data[0]),
+                'our_address': to_canonical_address(data[0]),
                 'our_balance': data[1],
-                'partner_address': address_decoder(data[2]),
+                'partner_address': to_canonical_address(data[2]),
                 'partner_balance': data[3],
                 'settle_timeout': settle_timeout,
             }
 
-        if address_decoder(data[2]) == our_address:
+        if to_canonical_address(data[2]) == our_address:
             return {
-                'our_address': address_decoder(data[2]),
+                'our_address': to_canonical_address(data[2]),
                 'our_balance': data[3],
-                'partner_address': address_decoder(data[0]),
+                'partner_address': to_canonical_address(data[0]),
                 'partner_balance': data[1],
                 'settle_timeout': settle_timeout,
             }
@@ -164,7 +163,7 @@ class NettingChannel:
         closer = self.proxy.contract.functions.closingAddress().call()
 
         if closer:
-            return address_decoder(closer)
+            return to_canonical_address(closer)
 
         return None
 

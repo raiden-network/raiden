@@ -21,6 +21,7 @@ from eth_utils import (
     denoms,
     to_checksum_address,
     to_normalized_address,
+    to_canonical_address,
 )
 import structlog
 from requests.exceptions import RequestException
@@ -47,7 +48,6 @@ from raiden.settings import (
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
 from raiden.utils import (
-    address_decoder,
     get_system_spec,
     is_minified_address,
     is_supported_client,
@@ -540,7 +540,7 @@ def app(
 
     address_hex = to_normalized_address(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
-    address = address_decoder(address_hex)
+    address = to_canonical_address(address_hex)
 
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)

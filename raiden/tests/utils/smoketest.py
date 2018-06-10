@@ -15,12 +15,9 @@ import tempfile
 import time
 import traceback
 
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_canonical_address
 
-from raiden.utils import (
-    get_project_root,
-    address_decoder,
-)
+from raiden.utils import get_project_root
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.network.utils import get_free_port
@@ -118,16 +115,16 @@ def run_smoketests(raiden_service, test_config, debug=False):
         chain = raiden_service.chain
         assert (
             raiden_service.default_registry.address ==
-            address_decoder(test_config['contracts']['registry_address'])
+            to_canonical_address(test_config['contracts']['registry_address'])
         )
         assert (
             raiden_service.default_registry.token_addresses() ==
-            [address_decoder(test_config['contracts']['token_address'])]
+            [to_canonical_address(test_config['contracts']['token_address'])]
         )
         assert len(chain.address_to_discovery.keys()) == 1
         assert (
             list(chain.address_to_discovery.keys())[0] ==
-            address_decoder(test_config['contracts']['discovery_address'])
+            to_canonical_address(test_config['contracts']['discovery_address'])
         )
         discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT

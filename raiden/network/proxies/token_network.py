@@ -7,7 +7,11 @@ from raiden.utils import typing
 
 import structlog
 from web3.utils.filters import Filter
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import (
+    is_binary_address,
+    to_normalized_address,
+    to_canonical_address,
+)
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.blockchain.abi import (
@@ -40,7 +44,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    address_decoder,
     encode_hex,
     pex,
     privatekey_to_address,
@@ -107,7 +110,7 @@ class TokenNetwork:
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
-        return address_decoder(self.proxy.functions.token().call())
+        return to_canonical_address(self.proxy.functions.token().call())
 
     def new_netting_channel(
             self,

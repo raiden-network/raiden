@@ -3,7 +3,11 @@ from binascii import hexlify, unhexlify
 
 import structlog
 from web3.utils.filters import Filter
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import (
+    is_binary_address,
+    to_normalized_address,
+    to_canonical_address,
+)
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.utils import typing
@@ -17,7 +21,6 @@ from raiden.exceptions import (
     InvalidAddress,
 )
 from raiden.utils import (
-    address_decoder,
     pex,
     privatekey_to_address,
 )
@@ -78,7 +81,7 @@ class TokenNetworkRegistry:
         if address == b'':
             return None
 
-        return address_decoder(address)
+        return to_canonical_address(address)
 
     def add_token(self, token_address: typing.TokenAddress):
         if not is_binary_address(token_address):

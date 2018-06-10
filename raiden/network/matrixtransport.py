@@ -7,7 +7,11 @@ from operator import itemgetter
 from random import Random
 from typing import Dict, Set, Tuple, List
 from urllib.parse import urlparse
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import (
+    is_binary_address,
+    to_normalized_address,
+    to_canonical_address,
+)
 
 import gevent
 import structlog
@@ -42,7 +46,6 @@ from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNREACHAB
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
-    address_decoder,
     data_decoder,
     data_encoder,
     eth_sign_sha3,
@@ -633,7 +636,7 @@ class MatrixTransport:
 
     @staticmethod
     def _address_from_user_id(user_id):
-        return address_decoder(user_id.partition(':')[0].replace('@', '').partition('.')[0])
+        return to_canonical_address(user_id.partition(':')[0].replace('@', '').partition('.')[0])
 
     @staticmethod
     def _select_server(config):
@@ -673,7 +676,11 @@ class MatrixTransport:
     def _get_peer_address_from_room(self, room_alias):
         match = self._room_alias_re.match(room_alias)
         if match:
-            addresses = {address_decoder(address) for address in (match.group('peer1', 'peer2'))}
+            addresses = {
+                to_canonical_address(address)
+                for address
+                in (match.group('peer1', 'peer2'))
+            }
             addresses = addresses - {self._raiden_service.address}
             if len(addresses) == 1:
                 return addresses.pop()

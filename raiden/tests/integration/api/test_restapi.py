@@ -4,14 +4,13 @@ from http import HTTPStatus
 import pytest
 import grequests
 from flask import url_for
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_canonical_address
 
 from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-from raiden.utils import address_decoder
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -58,7 +57,7 @@ def api_url_for(api_backend, endpoint, **kwargs):
     # url_for() expects binary address so we have to convert here
     for key, val in kwargs.items():
         if isinstance(val, str) and val.startswith('0x'):
-            kwargs[key] = address_decoder(val)
+            kwargs[key] = to_canonical_address(val)
     with api_server.flask_app.app_context():
         return url_for('v1_resources.{}'.format(endpoint), **kwargs)
 

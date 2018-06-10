@@ -6,6 +6,7 @@ from eth_utils import (
     is_binary_address,
     to_checksum_address,
     to_normalized_address,
+    to_canonical_address,
 )
 from web3.utils.filters import Filter
 
@@ -20,7 +21,6 @@ from raiden.exceptions import (
     TransactionThrew,
 )
 from raiden.utils import (
-    address_decoder,
     pex,
     privatekey_to_address,
 )
@@ -81,7 +81,7 @@ class Registry:
             check_address_has_code(self.client, self.address)
             return None
 
-        return address_decoder(address)
+        return to_canonical_address(address)
 
     def add_token(self, token_address):
         if not is_binary_address(token_address):
@@ -136,14 +136,14 @@ class Registry:
     def token_addresses(self):
         addresses = self.proxy.contract.functions.tokenAddresses().call()
         return [
-            address_decoder(address)
+            to_canonical_address(address)
             for address in addresses
         ]
 
     def manager_addresses(self):
         addresses = self.proxy.contract.functions.channelManagerAddresses().call()
         return [
-            address_decoder(address)
+            to_canonical_address(address)
             for address in addresses
         ]
 

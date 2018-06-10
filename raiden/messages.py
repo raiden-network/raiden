@@ -3,6 +3,7 @@ from eth_utils import (
     big_endian_to_int,
     encode_hex,
     to_normalized_address,
+    to_canonical_address,
 )
 import structlog
 
@@ -19,7 +20,6 @@ from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
-    address_decoder,
     data_decoder,
     data_encoder,
     ishash,
@@ -397,7 +397,7 @@ class Processed(SignedMessage):
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
         processed = cls(
-            sender=address_decoder(data['sender']),
+            sender=to_canonical_address(data['sender']),
             message_identifier=data['message_identifier'],
         )
         processed.signature = data_decoder(data['signature'])
@@ -701,8 +701,8 @@ class Secret(EnvelopeMessage):
             payment_identifier=data['payment_identifier'],
             secret=data_decoder(data['secret']),
             nonce=data['nonce'],
-            token_network_address=address_decoder(data['token_network_address']),
-            channel=address_decoder(data['channel']),
+            token_network_address=to_canonical_address(data['token_network_address']),
+            channel=to_canonical_address(data['channel']),
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
             locksroot=data_decoder(data['locksroot']),
@@ -933,11 +933,11 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=address_decoder(data['token_network_address']),
-            token=address_decoder(data['token']),
-            channel=address_decoder(data['channel']),
+            token_network_address=to_canonical_address(data['token_network_address']),
+            token=to_canonical_address(data['token']),
+            channel=to_canonical_address(data['channel']),
             transferred_amount=data['transferred_amount'],
-            recipient=address_decoder(data['recipient']),
+            recipient=to_canonical_address(data['recipient']),
             locked_amount=data['locked_amount'],
             locksroot=data_decoder(data['locksroot']),
         )
@@ -1332,16 +1332,16 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=address_decoder(data['token_network_address']),
-            token=address_decoder(data['token']),
-            channel=address_decoder(data['channel']),
+            token_network_address=to_canonical_address(data['token_network_address']),
+            token=to_canonical_address(data['token']),
+            channel=to_canonical_address(data['channel']),
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            recipient=address_decoder(data['recipient']),
+            recipient=to_canonical_address(data['recipient']),
             locksroot=data_decoder(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
-            target=address_decoder(data['target']),
-            initiator=address_decoder(data['initiator']),
+            target=to_canonical_address(data['target']),
+            initiator=to_canonical_address(data['initiator']),
             fee=data['fee'],
         )
         message.signature = data_decoder(data['signature'])
@@ -1435,16 +1435,16 @@ class RefundTransfer(LockedTransfer):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=address_decoder(data['token_network_address']),
-            token=address_decoder(data['token']),
-            channel=address_decoder(data['channel']),
+            token_network_address=to_canonical_address(data['token_network_address']),
+            token=to_canonical_address(data['token']),
+            channel=to_canonical_address(data['channel']),
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            recipient=address_decoder(data['recipient']),
+            recipient=to_canonical_address(data['recipient']),
             locksroot=data_decoder(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
-            target=address_decoder(data['target']),
-            initiator=address_decoder(data['initiator']),
+            target=to_canonical_address(data['target']),
+            initiator=to_canonical_address(data['initiator']),
             fee=data['fee'],
         )
         message.signature = data_decoder(data['signature'])
