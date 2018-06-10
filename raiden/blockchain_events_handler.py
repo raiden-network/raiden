@@ -2,6 +2,8 @@
 import gevent
 import structlog
 
+from eth_utils import to_canonical_address
+
 from raiden.blockchain.events import get_channel_proxies, decode_event_to_internal
 from raiden.blockchain.state import (
     get_channel_state,
@@ -9,7 +11,7 @@ from raiden.blockchain.state import (
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
-from raiden.utils import address_decoder, pex
+from raiden.utils import pex
 from raiden.transfer.state import TransactionChannelNewBalance
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -254,35 +256,37 @@ def on_blockchain_event(raiden, event):
     data = event.event_data
 
     if data['event'] == EVENT_TOKEN_ADDED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['channel_manager_address'] = to_canonical_address(
+            data['args']['channel_manager_address']
+        )
         handle_tokennetwork_new(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_NEW:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['participant1'] = address_decoder(data['args']['participant1'])
-        data['participant2'] = address_decoder(data['args']['participant2'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['participant1'] = to_canonical_address(data['args']['participant1'])
+        data['participant2'] = to_canonical_address(data['args']['participant2'])
         handle_channel_new(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['token_address'] = address_decoder(data['args']['token_address'])
-        data['participant'] = address_decoder(data['args']['participant'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['token_address'] = to_canonical_address(data['args']['token_address'])
+        data['participant'] = to_canonical_address(data['args']['participant'])
         data['balance'] = data['args']['balance']
         handle_channel_new_balance(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['closing_address'] = address_decoder(data['args']['closing_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['closing_address'] = to_canonical_address(data['args']['closing_address'])
         handle_channel_closed(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_SETTLED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
         handle_channel_settled(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['receiver_address'] = address_decoder(data['args']['receiver_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['receiver_address'] = to_canonical_address(data['args']['receiver_address'])
         data['secret'] = data['args']['secret']
         handle_channel_withdraw(raiden, event)
 

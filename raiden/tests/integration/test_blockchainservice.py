@@ -19,7 +19,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.proxies import Token, Registry, ChannelManager
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
-from raiden.utils import privatekey_to_address, get_contract_path, address_decoder
+from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.utils.solc import compile_files_cwd
 
 
@@ -234,7 +234,7 @@ def test_blockchain(
         contract_path=humantoken_path,
         timeout=poll_timeout,
     )
-    token_proxy = Token(jsonrpc_client, address_decoder(token_proxy.contract.address))
+    token_proxy = Token(jsonrpc_client, to_canonical_address(token_proxy.contract.address))
 
     registry_path = get_contract_path('Registry.sol')
     registry_contracts = compile_files_cwd([registry_path])
@@ -246,7 +246,10 @@ def test_blockchain(
         contract_path=registry_path,
         timeout=poll_timeout,
     )
-    registry_proxy = Registry(jsonrpc_client, address_decoder(registry_proxy.contract.address))
+    registry_proxy = Registry(
+        jsonrpc_client,
+        to_canonical_address(registry_proxy.contract.address)
+    )
 
     log_list = jsonrpc_client.web3.eth.getLogs(
         {
@@ -259,7 +262,7 @@ def test_blockchain(
 
     assert token_proxy.balance_of(address) == total_token
     manager_address = registry_proxy.add_token(
-        address_decoder(token_proxy.proxy.contract.address)
+        to_canonical_address(token_proxy.proxy.contract.address)
     )
     assert is_address(manager_address)
     assert len(registry_proxy.token_addresses()) == 1
@@ -291,7 +294,7 @@ def test_blockchain(
     )
     channel_manager_proxy = ChannelManager(
         jsonrpc_client,
-        address_decoder(channel_manager_proxy.contract.address)
+        to_canonical_address(channel_manager_proxy.contract.address)
     )
 
     channel_address = channel_manager_proxy.new_netting_channel(

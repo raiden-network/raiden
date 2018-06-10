@@ -24,7 +24,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.exceptions import AddressWithoutCode
-from raiden.utils import address_decoder, pex
+from raiden.utils import pex
 from raiden.network.rpc.smartcontract_proxy import decode_event
 
 EventListener = namedtuple(
@@ -177,31 +177,33 @@ def decode_event_to_internal(event):
 
     # Note: All addresses inside the event_data must be decoded.
     if data['event'] == EVENT_TOKEN_ADDED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['channel_manager_address'] = address_decoder(data['args']['channel_manager_address'])
-        data['token_address'] = address_decoder(data['args']['token_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['channel_manager_address'] = to_canonical_address(
+            data['args']['channel_manager_address']
+        )
+        data['token_address'] = to_canonical_address(data['args']['token_address'])
 
     elif data['event'] == EVENT_CHANNEL_NEW:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['participant1'] = address_decoder(data['args']['participant1'])
-        data['participant2'] = address_decoder(data['args']['participant2'])
-        data['netting_channel'] = address_decoder(data['args']['netting_channel'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['participant1'] = to_canonical_address(data['args']['participant1'])
+        data['participant2'] = to_canonical_address(data['args']['participant2'])
+        data['netting_channel'] = to_canonical_address(data['args']['netting_channel'])
 
     elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['token_address'] = address_decoder(data['args']['token_address'])
-        data['participant'] = address_decoder(data['args']['participant'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['token_address'] = to_canonical_address(data['args']['token_address'])
+        data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['closing_address'] = address_decoder(data['args']['closing_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['closing_address'] = to_canonical_address(data['args']['closing_address'])
 
     elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
-        data['receiver_address'] = address_decoder(data['args']['receiver_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
+        data['receiver_address'] = to_canonical_address(data['args']['receiver_address'])
 
     elif data['event'] == EVENT_CHANNEL_SETTLED:
-        data['registry_address'] = address_decoder(data['args']['registry_address'])
+        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
 
     return event
 
@@ -212,27 +214,27 @@ def decode_event_to_internal2(event):
 
     # Note: All addresses inside the event_data must be decoded.
     if data['event'] == EVENT_TOKEN_ADDED2:
-        data['token_network_address'] = address_decoder(data['args']['token_network_address'])
-        data['token_address'] = address_decoder(data['args']['token_address'])
+        data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
+        data['token_address'] = to_canonical_address(data['args']['token_address'])
 
     elif data['event'] == EVENT_CHANNEL_NEW2:
-        data['participant1'] = address_decoder(data['args']['participant1'])
-        data['participant2'] = address_decoder(data['args']['participant2'])
+        data['participant1'] = to_canonical_address(data['args']['participant1'])
+        data['participant2'] = to_canonical_address(data['args']['participant2'])
 
     elif data['event'] == EVENT_CHANNEL_NEW_BALANCE2:
-        data['participant'] = address_decoder(data['args']['participant'])
+        data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_WITHDRAW:
-        data['participant'] = address_decoder(data['args']['participant'])
+        data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_UNLOCK:
-        data['participant'] = address_decoder(data['args']['participant'])
+        data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_BALANCE_PROOF_UPDATED:
-        data['closing_participant'] = address_decoder(data['args']['closing_participant'])
+        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
-        data['closing_participant'] = address_decoder(data['args']['closing_participant'])
+        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
     return event
 

@@ -89,15 +89,6 @@ def is_supported_client(client_version):
     return False
 
 
-def address_decoder(addr: str) -> typing.Address:
-    if addr[:2] == '0x':
-        addr = addr[2:]
-
-    addr = unhexlify(addr)
-    assert len(addr) in (20, 0)
-    return addr
-
-
 def address_checksum_and_decode(addr: str) -> typing.Address:
     """ Accepts a string address and turns it into binary.
 
