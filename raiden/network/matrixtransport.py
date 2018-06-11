@@ -3,6 +3,7 @@ import binascii
 import json
 import re
 from enum import Enum
+from json import JSONDecodeError
 from operator import itemgetter
 from random import Random
 from typing import Dict, Set, Tuple, List
@@ -348,7 +349,16 @@ class MatrixTransport:
         if data.startswith('0x'):
             message = message_from_bytes(data_decoder(data))
         else:
-            message_dict = json.loads(data)
+            try:
+                message_dict = json.loads(data)
+            except (UnicodeDecodeError, JSONDecodeError) as ex:
+                log.warning(
+                    "Can't parse message data JSON",
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    exception=ex
+                )
+                return
             log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
 
