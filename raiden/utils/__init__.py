@@ -106,14 +106,6 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
     return addr
 
 
-def block_tag_encoder(val):
-    if isinstance(val, int):
-        return hex(val).rstrip('L')
-
-    assert val in ('latest', 'pending')
-    return '0x' + hexlify(val).decode()
-
-
 def data_encoder(data: bytes, length: int = 0) -> str:
     data = hexlify(data)
     return '0x' + data.rjust(length * 2, b'0').decode()
