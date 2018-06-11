@@ -904,7 +904,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:
-            handler.write(f'{f" {subject.upper} ":=^80}{os.linesep}')
+            handler.write(f'{f" {subject.upper()} ":=^80}{os.linesep}')
             if data is not None:
                 if isinstance(data, bytes):
                     data = data.decode()
