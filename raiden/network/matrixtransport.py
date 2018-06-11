@@ -787,11 +787,14 @@ class MatrixTransport:
             return
         encoded_address: str = match.group(1)
         address: Address = to_canonical_address(encoded_address)
-        recovered = self._recover(
-            user.user_id.encode(),
-            decode_hex(user.get_display_name()),
-        )
-        if not address or recovered != address:
+        try:
+            recovered = self._recover(
+                user.user_id.encode(),
+                decode_hex(user.get_display_name()),
+            )
+            if not address or not recovered or recovered != address:
+                return
+        except Exception:  # usually, codecs raise a generic Error if no hexstr
             return
         self._userids_to_address[user.user_id] = address
         self._address_to_userids[address].add(user.user_id)
