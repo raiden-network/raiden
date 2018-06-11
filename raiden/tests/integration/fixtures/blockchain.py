@@ -19,7 +19,7 @@ from raiden.utils.solc import compile_files_cwd
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import (
-    CONTRACT_SECRET_REGISTRY_NAME,
+    CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
 
@@ -303,7 +303,7 @@ def _jsonrpc_services(
     if deploy_new_contracts:
         # secret registry
         secret_registry_address = deploy_contract_web3(
-            CONTRACT_SECRET_REGISTRY_NAME,
+            CONTRACT_SECRET_REGISTRY,
             poll_timeout,
             deploy_client,
         )
