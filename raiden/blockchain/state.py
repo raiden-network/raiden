@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import networkx
+
 from raiden.routing import make_graph
 from raiden.transfer.state import (
     NettingChannelEndState,
@@ -102,3 +104,22 @@ def get_token_network_state_from_proxies(raiden, manager_proxy, netting_channel_
     )
 
     return network
+
+
+def create_new_token_network_state(raiden, token_network_proxy):
+    token_network_address = token_network_proxy.address
+    token_address = token_network_proxy.token_address()
+
+    # initialze with an empty graph, will be filled from events later
+    graph = networkx.Graph()
+    network_graph = TokenNetworkGraphState(graph)
+    partner_channels = list()
+
+    network_state = TokenNetworkState(
+        token_network_address,
+        token_address,
+        network_graph,
+        partner_channels,
+    )
+
+    return network_state

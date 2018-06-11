@@ -10,6 +10,7 @@ from raiden.blockchain.abi import (
     CONTRACT_CHANNEL_MANAGER,
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
+    CONTRACT_TOKEN_NETWORK,
     EVENT_TOKEN_ADDED,
     EVENT_TOKEN_ADDED2,
     EVENT_CHANNEL_NEW,
@@ -308,6 +309,17 @@ class BlockchainEvents:
             channelnew,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
             channel_manager_proxy.channelnew_filter,
+        )
+
+    def add_token_network_listener(self, token_network_proxy, from_block=None):
+        channel_new_filter = token_network_proxy.channelnew_filter(from_block=from_block)
+        token_network_address = token_network_proxy.address
+
+        self.add_event_listener(
+            'TokenNetwork {}'.format(pex(token_network_address)),
+            channel_new_filter,
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            token_network_proxy.channelnew_filter,
         )
 
     def add_netting_channel_listener(self, netting_channel_proxy, from_block=None):
