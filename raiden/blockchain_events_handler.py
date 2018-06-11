@@ -8,6 +8,7 @@ from raiden.blockchain.events import get_channel_proxies, decode_event_to_intern
 from raiden.blockchain.state import (
     get_channel_state,
     get_token_network_state_from_proxies,
+    create_new_token_network_state,
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
@@ -69,6 +70,30 @@ def handle_tokennetwork_new(raiden, event):
         token_network_state,
     )
     raiden.handle_state_change(new_payment_network)
+
+
+def handle_tokennetwork_new2(raiden, event):
+    """ Handles a `TokenNetworkCreated` event. """
+    data = event.event_data
+    token_network_address = data['token_network_address']
+
+    token_network_registry_address = event.originating_contract
+    token_network_registry_proxy = raiden.chain.token_network_registry(
+        token_network_registry_address
+    )
+    token_network_proxy = token_network_registry_proxy.token_network(token_network_address)
+
+    raiden.blockchain_events.add_token_network_listener(token_network_proxy)
+    token_network_state = create_new_token_network_state(
+        raiden,
+        token_network_proxy,
+    )
+
+    new_token_network = ContractReceiveNewTokenNetwork(
+        event.originating_contract,
+        token_network_state,
+    )
+    raiden.handle_state_change(new_token_network)
 
 
 def handle_channel_new(raiden, event):
@@ -310,7 +335,7 @@ def on_blockchain_event2(raiden, event):
         data['channel_identifier'] = data['args'].get('channel_identifier')
 
     if data['event'] == EVENT_TOKEN_ADDED2:
-        handle_tokennetwork_new(raiden, event)
+        handle_tokennetwork_new2(raiden, event)
 
     elif data['event'] == EVENT_CHANNEL_NEW2:
         data['settle_timeout'] = data['args']['settle_timeout']

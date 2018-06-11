@@ -4,6 +4,8 @@ import random
 from binascii import hexlify
 from collections import namedtuple
 
+import networkx
+
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
@@ -233,7 +235,7 @@ class TokenNetworkGraphState(State):
         'network',
     )
 
-    def __init__(self, network):
+    def __init__(self, network: networkx.Graph):
         self.network = network
 
     def __repr__(self):
