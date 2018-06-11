@@ -60,10 +60,10 @@ class SendRevealSecret(SendMessageEvent):
     performed on the recipient:
 
         - For receivers in the payee role, it informs the node that the lock has
-            been released and the token can be withdrawn, either on-chain or
+            been released and the token can be claimed, either on-chain or
             off-chain.
         - For receivers in the payer role, it tells the payer that the payee
-            knows the secret and wants to withdraw the lock off-chain, so the payer
+            knows the secret and wants to claim the lock off-chain, so the payer
             may unlock the lock and send an up-to-date balance proof to the payee,
             avoiding on-chain payments which would require the channel to be
             closed.
@@ -118,7 +118,7 @@ class SendRevealSecret(SendMessageEvent):
 
 class SendBalanceProof(SendMessageEvent):
     """ Event to send a balance-proof to the counter-party, used after a lock
-    is unlocked locally allowing the counter-party to withdraw.
+    is unlocked locally allowing the counter-party to claim it.
 
     Used by payers: The initiator and mediator nodes.
 
@@ -337,21 +337,21 @@ class EventUnlockFailed(Event):
         return not self.__eq__(other)
 
 
-class EventWithdrawSuccess(Event):
-    """ Event emitted when a lock withdraw succeded. """
+class EventUnlockClaimSuccess(Event):
+    """ Event emitted when a lock claim succeded. """
     def __init__(self, identifier, secrethash):
         self.identifier = identifier
         self.secrethash = secrethash
 
     def __repr__(self):
-        return '<EventWithdrawSuccess id:{} secrethash:{}>'.format(
+        return '<EventUnlockClaimSuccess id:{} secrethash:{}>'.format(
             self.identifier,
             pex(self.secrethash),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, EventWithdrawSuccess) and
+            isinstance(other, EventUnlockClaimSuccess) and
             self.identifier == other.identifier and
             self.secrethash == other.secrethash
         )
@@ -360,15 +360,15 @@ class EventWithdrawSuccess(Event):
         return not self.__eq__(other)
 
 
-class EventWithdrawFailed(Event):
-    """ Event emitted when a lock withdraw failed. """
+class EventUnlockClaimFailed(Event):
+    """ Event emitted when a lock claim failed. """
     def __init__(self, identifier, secrethash, reason):
         self.identifier = identifier
         self.secrethash = secrethash
         self.reason = reason
 
     def __repr__(self):
-        return '<EventWithdrawFailed id:{} secrethash:{} reason:{}>'.format(
+        return '<EventUnlockClaimFailed id:{} secrethash:{} reason:{}>'.format(
             self.identifier,
             pex(self.secrethash),
             self.reason,
@@ -376,7 +376,7 @@ class EventWithdrawFailed(Event):
 
     def __eq__(self, other):
         return (
-            isinstance(other, EventWithdrawFailed) and
+            isinstance(other, EventUnlockClaimFailed) and
             self.identifier == other.identifier and
             self.secrethash == other.secrethash
         )

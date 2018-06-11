@@ -10,7 +10,7 @@ from raiden.utils import pex
 
 class ContractSendChannelClose(Event):
     """ Event emitted to close the netting channel.
-    This event is used when a node needs to prepare the channel to withdraw
+    This event is used when a node needs to prepare the channel to unlock
     on-chain.
     """
 
@@ -83,22 +83,22 @@ class ContractSendChannelUpdateTransfer(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelWithdraw(Event):
-    """ Event emitted when the lock must be withdrawn on-chain. """
+class ContractSendChannelUnlock(Event):
+    """ Event emitted when the lock must be claimed on-chain. """
 
     def __init__(self, channel_identifier, unlock_proofs):
         self.channel_identifier = channel_identifier
         self.unlock_proofs = unlock_proofs
 
     def __repr__(self):
-        return '<ContractSendChannelWithdraw channel:{} unlock_proofs:{}>'.format(
+        return '<ContractSendChannelUnlock channel:{} unlock_proofs:{}>'.format(
             pex(self.channel_identifier),
             self.unlock_proofs,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, ContractSendChannelWithdraw) and
+            isinstance(other, ContractSendChannelUnlock) and
             self.channel_identifier == other.channel_identifier and
             self.unlock_proofs == other.unlock_proofs
         )
@@ -112,7 +112,7 @@ class EventTransferSentSuccess(Event):
 
     A transfer is considered sucessful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
-    also learned the secret and unlock/withdraw its token.
+    also learned the secret and unlocked its token off-chain or on-chain.
 
     This definition of sucessful is used to avoid the following corner case:
 
@@ -126,7 +126,7 @@ class EventTransferSentSuccess(Event):
       EventTransferSentSuccess.
 
     Note:
-        Mediators cannot use this event, since an unlock may be locally
+        Mediators cannot use this event, since an off-chain unlock may be locally
         sucessful but there is no knowledge about the global transfer.
     """
 
@@ -187,7 +187,7 @@ class EventTransferReceivedSuccess(Event):
     """ Event emitted when a payee has received a payment.
 
     Note:
-        A payee knows if a lock withdraw has failed, but this is not sufficient
+        A payee knows if a lock claim has failed, but this is not sufficient
         information to deduce when a transfer has failed, because the initiator may
         try again at a different time and/or with different routes, for this reason
         there is no correspoding `EventTransferReceivedFailed`.

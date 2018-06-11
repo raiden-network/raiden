@@ -12,7 +12,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelWithdraw,
+    ContractSendChannelUnlock,
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
@@ -67,7 +67,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -91,7 +91,7 @@ def is_lock_pending(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
 ) -> bool:
-    """True if the `secrethash` corresponds to a lock that is pending withdraw
+    """True if the `secrethash` corresponds to a lock that is pending to be claimed
     and didn't expire.
     """
     return (
@@ -441,7 +441,7 @@ def is_valid_unlock(
 
     # TODO: Accept unlock messages if the node has not yet sent a transaction
     # with the balance proof to the blockchain, this will save one call to
-    # withdraw on-chain for the non-closing party.
+    # unlock on-chain for the non-closing party.
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
         msg = 'Invalid Unlock message for {}. The channel is already closed.'.format(
             hexlify(unlock.secrethash).decode(),
@@ -1345,11 +1345,11 @@ def handle_channel_closed(
 
         unlock_proofs = get_known_unlocks(channel_state.partner_state)
         if unlock_proofs:
-            withdraw = ContractSendChannelWithdraw(
+            onchain_unlock = ContractSendChannelUnlock(
                 channel_state.identifier,
                 unlock_proofs,
             )
-            events.append(withdraw)
+            events.append(onchain_unlock)
 
     return TransitionResult(channel_state, events)
 
@@ -1407,14 +1407,14 @@ def apply_channel_newbalance(
         channel_state.partner_state.contract_balance = new_balance
 
 
-def handle_channel_withdraw(
+def handle_channel_unlock(
         channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelWithdraw,
+        state_change: ContractReceiveChannelUnlock,
 ) -> TransitionResult:
     events = list()
 
-    # Withdraw is allowed by the smart contract only on a closed channel.
-    # Ignore the withdraw if the channel was not closed yet.
+    # Unlock is allowed by the smart contract only on a closed channel.
+    # Ignore the unlock if the channel was not closed yet.
     if get_status(channel_state) == CHANNEL_STATE_CLOSED:
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state
@@ -1422,27 +1422,27 @@ def handle_channel_withdraw(
         secrethash = state_change.secrethash
         secret = state_change.secret
 
-        our_withdraw = (
+        our_unlock = (
             state_change.receiver == our_state.address and
             is_lock_pending(partner_state, secrethash)
         )
-        if our_withdraw:
+        if our_unlock:
             _del_lock(partner_state, secrethash)
 
-        partner_withdraw = (
+        partner_unlock = (
             state_change.receiver == partner_state.address and
             is_lock_pending(our_state, secrethash)
         )
-        if partner_withdraw:
+        if partner_unlock:
             _del_lock(our_state, secrethash)
 
-        # Withdraw is required if there was a refund in this channel, and the
-        # secret is learned from the withdraw event.
+        # Unlock is required if there was a refund in this channel, and the
+        # secret is learned from the unlock event.
         if is_lock_pending(our_state, secrethash):
             lock = get_lock(our_state, secrethash)
             proof = compute_proof_for_lock(our_state, secret, lock)
-            withdraw = ContractSendChannelWithdraw(channel_state.identifier, [proof])
-            events.append(withdraw)
+            unlock = ContractSendChannelUnlock(channel_state.identifier, [proof])
+            events.append(unlock)
 
         register_secret(channel_state, secret, secrethash)
 
@@ -1482,8 +1482,8 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelNewBalance:
         iteration = handle_channel_newbalance(channel_state, state_change, block_number)
 
-    elif type(state_change) == ContractReceiveChannelWithdraw:
-        iteration = handle_channel_withdraw(channel_state, state_change)
+    elif type(state_change) == ContractReceiveChannelUnlock:
+        iteration = handle_channel_unlock(channel_state, state_change)
 
     elif type(state_change) == ReceiveTransferDirect:
         iteration = handle_receive_directtransfer(channel_state, state_change)

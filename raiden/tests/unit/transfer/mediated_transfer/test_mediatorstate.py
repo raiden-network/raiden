@@ -209,8 +209,8 @@ def test_is_channel_close_needed_unpaid():
     channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
 
     # even if the secret is known by the payee, the transfer is paid only if a
-    # withdraw on-chain happened or if the mediator has sent a balance proof
-    for unpaid_state in ('payee_pending', 'payee_secret_revealed', 'payee_refund_withdraw'):
+    # unlock on-chain happened or if the mediator has sent a balance proof
+    for unpaid_state in ('payee_pending', 'payee_secret_revealed', 'payee_refund_unlock'):
         unpaid_pair = make_transfer_pair(
             payee=HOP2,
             initiator=HOP3,
@@ -235,7 +235,7 @@ def test_is_channel_close_needed_paid():
     unsafe_block = expiration - reveal_timeout
     channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
 
-    for paid_state in ('payee_contract_withdraw', 'payee_balance_proof'):
+    for paid_state in ('payee_contract_unlock', 'payee_balance_proof'):
         paid_pair = make_transfer_pair(
             payee=HOP2,
             initiator=HOP3,
@@ -834,8 +834,8 @@ def test_events_for_revealsecret_all_states():
     """
     payee_secret_known = (
         'payee_secret_revealed',
-        'payee_refund_withdraw',
-        'payee_contract_withdraw',
+        'payee_refund_unlock',
+        'payee_contract_unlock',
         'payee_balance_proof',
     )
     pseudo_random_generator = random.Random()
@@ -938,7 +938,7 @@ def test_events_for_balanceproof_middle_secret():
     the Balance Proof is nevertheless sent.
 
     This can be done safely because the secret is known to the mediator and
-    there is `reveal_timeout` blocks to withdraw the lock on-chain with the payer.
+    there is `reveal_timeout` blocks to unlock the lock on-chain with the payer.
     """
     amount = 10
     pseudo_random_generator = random.Random()
@@ -1024,7 +1024,7 @@ def test_events_for_balanceproof_lock_expired():
     # balance proof to the middle node to avoid unnecessarily closing the
     # middle channel. This state should not be reached under normal operation.
     # The last hop needs to choose a proper reveal_timeout and must go on-chain
-    # to withdraw the token before the lock expires.
+    # to unlock the token before the lock expires.
     events = mediator.events_for_balanceproof(
         channelmap,
         transfers_pair,
@@ -1046,7 +1046,7 @@ def test_events_for_close():
     """ The node must close to unlock on-chain if the payee was paid. """
     amount = 10
 
-    for payee_state in ('payee_balance_proof', 'payee_contract_withdraw'):
+    for payee_state in ('payee_balance_proof', 'payee_contract_unlock'):
         channelmap, transfers_pair = make_transfers_pair(
             [HOP2_KEY, HOP3_KEY],
             amount,
@@ -1488,7 +1488,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     assert send_mediated.transfer.lock.expiration < low_settlement_expiration, msg
 
 
-def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
+def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # For a path A1-B-C-A2, an attacker controlling A1 and A2 should not be
     # able to force B-C to close the channel by burning token.
     #
@@ -1634,8 +1634,8 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     # mediator node will respond with a balance-proof to the payee since the
     # lock is valid and the mediator can safely get the token from the payer.
     # The secret is known and if there are no additional blocks the mediator
-    # will be at risk of not being able to withdraw on-chain, so the channel
-    # will be closed to safely withdraw.
+    # will be at risk of not being able to unlock and claim on-chain, so the channel
+    # will be closed to safely unlock.
     #
     # T2.expiration cannot be equal to T1.expiration - reveal_timeout:
     #
@@ -1649,7 +1649,7 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #  2> balance-proof is sent to payee (payee transfer is paid)
     #  3! New block is mined and Raiden learns about it
     #  4> Now the secret is known, the payee is paid, and the current block is
-    #     equal to the payer.expiration - reveal-timeout -> withdraw on chain
+    #     equal to the payer.expiration - reveal-timeout -> unlock on chain
     #
     # The race is depending on the handling of 3 before 4.
     #

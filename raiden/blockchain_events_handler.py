@@ -18,7 +18,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
 )
@@ -227,7 +227,7 @@ def handle_channel_settled(raiden, event):
         raiden.handle_state_change(channel_settled)
 
 
-def handle_channel_withdraw(raiden, event):
+def handle_channel_unlock(raiden, event):
     channel_identifier = event.originating_contract
     data = event.event_data
     registry_address = data['registry_address']
@@ -239,7 +239,7 @@ def handle_channel_withdraw(raiden, event):
     )
 
     if channel_state:
-        withdrawn_state_change = ContractReceiveChannelWithdraw(
+        unlock_state_change = ContractReceiveChannelUnlock(
             registry_address,
             channel_state.token_address,
             channel_identifier,
@@ -247,7 +247,7 @@ def handle_channel_withdraw(raiden, event):
             data['receiver_address'],
         )
 
-        raiden.handle_state_change(withdrawn_state_change)
+        raiden.handle_state_change(unlock_state_change)
 
 
 def on_blockchain_event(raiden, event):
@@ -288,7 +288,7 @@ def on_blockchain_event(raiden, event):
         data['registry_address'] = to_canonical_address(data['args']['registry_address'])
         data['receiver_address'] = to_canonical_address(data['args']['receiver_address'])
         data['secret'] = data['args']['secret']
-        handle_channel_withdraw(raiden, event)
+        handle_channel_unlock(raiden, event)
 
     # fix for https://github.com/raiden-network/raiden/issues/1508
     # balance proof updates are handled in the linked code, so no action is needed here

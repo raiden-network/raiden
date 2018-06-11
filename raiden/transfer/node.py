@@ -30,7 +30,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
@@ -503,7 +503,7 @@ def handle_tokenadded(node_state, state_change):
     return TransitionResult(node_state, events)
 
 
-def handle_channel_withdraw(node_state, state_change):
+def handle_channel_unlock(node_state, state_change):
     token_address = state_change.token_address
     payment_network_state, token_network_state = get_networks(
         node_state,
@@ -511,7 +511,7 @@ def handle_channel_withdraw(node_state, state_change):
         state_change.token_address,
     )
 
-    # first dispatch the withdraw to update the channel
+    # first dispatch the unlock claim to update the channel
     events = []
     if token_network_state:
         pseudo_random_generator = node_state.pseudo_random_generator
@@ -696,8 +696,8 @@ def state_transition(node_state, state_change):
             node_state,
             state_change,
         )
-    elif type(state_change) == ContractReceiveChannelWithdraw:
-        iteration = handle_channel_withdraw(
+    elif type(state_change) == ContractReceiveChannelUnlock:
+        iteration = handle_channel_unlock(
             node_state,
             state_change,
         )

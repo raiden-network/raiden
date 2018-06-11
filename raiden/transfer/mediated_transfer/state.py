@@ -424,15 +424,15 @@ class MediationPairState(State):
     # payee_secret_revealed:
     #   The payee is following the raiden protocol and has sent a SecretReveal.
     #
-    # payee_refund_withdraw:
-    #   The corresponding refund transfer was withdrawn on-chain, the payee has
-    #   /not/ withdrawn the lock yet, it only learned the secret through the
+    # payee_refund_unlock:
+    #   The corresponding refund transfer was claimed on-chain, the payee has
+    #   /not/ claimed the lock yet, it only learned the secret through the
     #   blockchain.
     #   Note: This state is reachable only if there is a refund transfer, that
     #   is represented by a different MediationPairState, and the refund
-    #   transfer is at 'payer_contract_withdraw'.
+    #   transfer is at 'payer_contract_unlock'.
     #
-    # payee_contract_withdraw:
+    # payee_contract_unlock:
     #   The payee received the token on-chain. A transition to this state is
     #   valid from all but the `payee_expired` state.
     #
@@ -445,8 +445,8 @@ class MediationPairState(State):
     valid_payee_states = (
         'payee_pending',
         'payee_secret_revealed',
-        'payee_refund_withdraw',
-        'payee_contract_withdraw',
+        'payee_refund_unlock',
+        'payee_contract_unlock',
         'payee_balance_proof',
         'payee_expired',
     )
@@ -455,8 +455,8 @@ class MediationPairState(State):
         'payer_pending',
         'payer_secret_revealed',    # SendRevealSecret was sent
         'payer_waiting_close',      # ContractSendChannelClose was sent
-        'payer_waiting_withdraw',   # ContractSendWithdraw was sent
-        'payer_contract_withdraw',  # ContractChannelReceiveWithdraw for the above send received
+        'payer_waiting_unlock',   # ContractSendChannelUnlock was sent
+        'payer_contract_unlock',  # ContractReceiveChannelUnlock for the above send received
         'payer_balance_proof',      # ReceiveUnlock was received
         'payer_expired',            # None of the above happened and the lock expired
     )

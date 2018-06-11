@@ -245,7 +245,7 @@ def handle_secretreveal(
 
     if is_valid_secret_reveal and is_channel_open:
         # next hop learned the secret, unlock the token locally and send the
-        # withdraw message to next hop
+        # lock claim message to next hop
         transfer_description = initiator_state.transfer_description
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -257,7 +257,7 @@ def handle_secretreveal(
             state_change.secrethash,
         )
 
-        # TODO: Emit these events after on-chain withdraw
+        # TODO: Emit these events after on-chain unlock
         transfer_success = EventTransferSentSuccess(
             transfer_description.payment_identifier,
             transfer_description.amount,

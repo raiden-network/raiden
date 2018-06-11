@@ -6,14 +6,14 @@ from typing import List, Dict
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
-    ContractSendChannelWithdraw,
+    ContractSendChannelUnlock,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
-    EventWithdrawFailed,
-    EventWithdrawSuccess,
+    EventUnlockClaimFailed,
+    EventUnlockClaimSuccess,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -34,7 +34,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     Block,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
     ReceiveUnlock,
 )
 from raiden.utils import sha3
@@ -51,30 +51,30 @@ TRANSIT_BLOCKS = 2  # TODO: make this a configuration variable
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
-    'payee_refund_withdraw',
-    'payee_contract_withdraw',
+    'payee_refund_unlock',
+    'payee_contract_unlock',
     'payee_balance_proof',
 
     'payer_secret_revealed',
     'payer_waiting_close',
-    'payer_waiting_withdraw',
-    'payer_contract_withdraw',
+    'payer_waiting_unlock',
+    'payer_contract_unlock',
     'payer_balance_proof',
 )
 STATE_TRANSFER_PAID = (
-    'payee_contract_withdraw',
+    'payee_contract_unlock',
     'payee_balance_proof',
 
-    'payer_contract_withdraw',
+    'payer_contract_unlock',
     'payer_balance_proof',
 )
 # TODO: fix expired state, it is not final
 STATE_TRANSFER_FINAL = (
-    'payee_contract_withdraw',
+    'payee_contract_unlock',
     'payee_balance_proof',
     'payee_expired',
 
-    'payer_contract_withdraw',
+    'payer_contract_unlock',
     'payer_balance_proof',
     'payer_expired',
 )
@@ -131,8 +131,8 @@ def is_valid_refund(
 
 
 def is_channel_close_needed(payer_channel, transfer_pair, block_number):
-    """ True if this node needs to close the channel to withdraw on-chain.
-    Only close the channel to withdraw on chain if the corresponding payee node
+    """ True if this node needs to close the channel to unlock on-chain.
+    Only close the channel to unlock on chain if the corresponding payee node
     has received, this prevents attacks were the payee node burns it's payment
     to force a close with the payer channel.
     """
@@ -466,7 +466,7 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         # TODO: Append an event for byzantine behavior.
         # XXX: This can happen if a mediator in the middle of the chain of hops
         # learns the secret faster than its subsequent nodes. Should a byzantine
-        # behavior notification be added or should we fix the events_for_withdraw function?
+        # behavior notification be added or should we fix the events_for_unlock function?
         return list()
 
     return list()
@@ -506,12 +506,12 @@ def set_expired_pairs(transfers_pair, block_number):
             # assert pair.payee_state == 'payee_expired'
 
             pair.payer_state = 'payer_expired'
-            withdraw_failed = EventWithdrawFailed(
+            unlock_failed = EventUnlockClaimFailed(
                 pair.payer_transfer.payment_identifier,
                 pair.payer_transfer.lock.secrethash,
                 'lock expired',
             )
-            events.append(withdraw_failed)
+            events.append(unlock_failed)
 
         elif has_payee_transfer_expired:
             pair.payee_state = 'payee_expired'
@@ -642,7 +642,7 @@ def events_for_balanceproof(
         payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
         payee_channel_open = channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
 
-        # XXX: All nodes must close the channel and withdraw on-chain if the
+        # XXX: All nodes must close the channel and unlock on-chain if the
         # lock is nearing it's expiration block, what should be the strategy
         # for sending a balance proof to a node that knowns the secret but has
         # not gone on-chain while near the expiration? (The problem is how to
@@ -673,7 +673,7 @@ def events_for_balanceproof(
 
 def events_for_close(channelidentifiers_to_channels, transfers_pair, block_number):
     """ Close the channels that are in the unsafe region prior to an on-chain
-    withdraw.
+    unlock.
     """
     events = list()
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
@@ -689,12 +689,12 @@ def events_for_close(channelidentifiers_to_channels, transfers_pair, block_numbe
     return events
 
 
-def events_for_withdraw_if_closed(
+def events_for_unlock_if_closed(
         channelidentifiers_to_channels,
         transfers_pair,
         secret,
         secrethash):
-    """ Withdraw on chain if the payer channel is closed and the secret is known.
+    """ Unlock on chain if the payer channel is closed and the secret is known.
     If a channel is closed because of another task a balance proof will not be
     received, so there is no reason to wait for the unsafe region before
     calling close.
@@ -703,7 +703,7 @@ def events_for_withdraw_if_closed(
         B learned the secret from D and has revealed to C.
         C has not confirmed yet.
         channel(A, B).closed is True.
-        B will withdraw on channel(A, B) before C's confirmation.
+        B will unlock on channel(A, B) before C's confirmation.
         A may learn the secret faster than other nodes.
     """
     events = list()
@@ -714,9 +714,9 @@ def events_for_withdraw_if_closed(
 
         payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
 
-        # The withdraw is done by the channel
+        # The unlock is done by the channel
         if not payer_channel_open:
-            pair.payer_state = 'payer_waiting_withdraw'
+            pair.payer_state = 'payer_waiting_unlock'
 
             partner_state = payer_channel.partner_state
             lock = channel.get_lock(partner_state, secrethash)
@@ -725,11 +725,11 @@ def events_for_withdraw_if_closed(
                 secret,
                 lock,
             )
-            withdraw = ContractSendChannelWithdraw(
+            unlock = ContractSendChannelUnlock(
                 payer_channel.identifier,
                 [unlock_proof],
             )
-            events.append(withdraw)
+            events.append(unlock)
 
     return events
 
@@ -746,7 +746,7 @@ def secret_learned(
 ):
     """ Set the state of the `payee_address` transfer, check the secret is
     being revealed backwards, and if necessary send out RevealSecret,
-    SendBalanceProof, and Withdraws.
+    SendBalanceProof, and Unlocks.
     """
     assert new_payee_state in STATE_SECRET_KNOWN
     assert payee_address in (pair.payee_address for pair in state.transfers_pair)
@@ -762,17 +762,17 @@ def secret_learned(
             secrethash,
         )
 
-        # This task only needs to withdraw if the channel is closed when the
+        # This task only needs to unlock if the channel is closed when the
         # secret is learned, otherwise the channel task will do it
         # automatically
-        withdraw = events_for_withdraw_if_closed(
+        unlock = events_for_unlock_if_closed(
             channelidentifiers_to_channels,
             state.transfers_pair,
             secret,
             secrethash,
         )
     else:
-        withdraw = []
+        unlock = []
 
     wrong_order = set_payee_state_and_check_reveal_order(
         state.transfers_pair,
@@ -797,7 +797,7 @@ def secret_learned(
 
     iteration = TransitionResult(
         state,
-        wrong_order + secret_reveal + balance_proof + withdraw,
+        wrong_order + secret_reveal + balance_proof + unlock,
     )
 
     return iteration
@@ -938,8 +938,8 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
         block_number,
     )
 
-    # Withdraw is handled by the channel once the close transaction is mined
-    # withdraw_events = events_for_withdraw(
+    # unlock is handled by the channel once the close transaction is mined
+    # unlock_events = events_for_unlock(
     #     channelidentifiers_to_channels,
     #     state.transfers_pair,
     # )
@@ -1053,7 +1053,7 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_contractwithdraw(
+def handle_contractunlock(
         state,
         state_change,
         channelidentifiers_to_channels,
@@ -1066,7 +1066,7 @@ def handle_contractwithdraw(
     # For all but the last pair in transfer pair a refund transfer ocurred,
     # meaning the same channel was used twice, once when this node sent the
     # mediated transfer and once when the refund transfer was received. A
-    # ContractReceiveChannelWithdraw state change may be used for each.
+    # ContractReceiveChannelUnlock state change may be used for each.
 
     events = list()
 
@@ -1075,15 +1075,15 @@ def handle_contractwithdraw(
         for previous_pos, pair in enumerate(state.transfers_pair, -1):
             payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
             if payer_channel.identifier == state_change.channel_identifier:
-                # always set the contract_withdraw regardless of the previous
+                # always set the contract_unlock regardless of the previous
                 # state (even expired)
-                pair.payer_state = 'payer_contract_withdraw'
+                pair.payer_state = 'payer_contract_unlock'
 
-                withdraw = EventWithdrawSuccess(
+                unlock = EventUnlockClaimSuccess(
                     pair.payer_transfer.payment_identifier,
                     pair.payer_transfer.lock.secrethash,
                 )
-                events.append(withdraw)
+                events.append(unlock)
 
                 # if the current pair is backed by a refund set the sent
                 # mediated transfer to a 'secret known' state
@@ -1091,7 +1091,7 @@ def handle_contractwithdraw(
                     previous_pair = state.transfers_pair[previous_pos]
 
                     if previous_pair.payee_state not in STATE_TRANSFER_FINAL:
-                        previous_pair.payee_state = 'payee_refund_withdraw'
+                        previous_pair.payee_state = 'payee_refund_unlock'
 
     # A partner withdrew the mediated transfer
     else:
@@ -1104,7 +1104,7 @@ def handle_contractwithdraw(
                 )
                 events.append(unlock)
 
-                pair.payee_state = 'payee_contract_withdraw'
+                pair.payee_state = 'payee_contract_unlock'
 
     iteration = secret_learned(
         state,
@@ -1114,7 +1114,7 @@ def handle_contractwithdraw(
         state_change.secret,
         state_change.secrethash,
         state_change.receiver,
-        'payee_contract_withdraw',
+        'payee_contract_unlock',
     )
 
     iteration.events.extend(events)
@@ -1140,11 +1140,11 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
                 events.extend(channel_events)
 
                 if is_valid:
-                    withdraw = EventWithdrawSuccess(
+                    unlock = EventUnlockClaimSuccess(
                         pair.payee_transfer.payment_identifier,
                         pair.payee_transfer.lock.secrethash,
                     )
-                    events.append(withdraw)
+                    events.append(unlock)
 
                     send_processed = SendProcessed(
                         balance_proof_sender,
@@ -1211,8 +1211,8 @@ def state_transition(
             block_number,
         )
 
-    elif isinstance(state_change, ContractReceiveChannelWithdraw):
-        iteration = handle_contractwithdraw(
+    elif isinstance(state_change, ContractReceiveChannelUnlock):
+        iteration = handle_contractunlock(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,

@@ -23,7 +23,7 @@ from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
 )
 from raiden.utils import sha3
 
@@ -88,8 +88,8 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_withdraw(raiden_network, token_addresses, deposit):
-    """Withdraw can be called on a closed channel."""
+def test_unlock(raiden_network, token_addresses, deposit):
+    """Unlock can be called on a closed channel."""
     alice_app, bob_app = raiden_network
     registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -161,7 +161,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     nettingchannel_proxy = bob_app.raiden.chain.netting_channel(
         bob_alice_channel.identifier,
     )
-    nettingchannel_proxy.withdraw(unlock_proof)
+    nettingchannel_proxy.unlock(unlock_proof)
 
     waiting.wait_for_settle(
         alice_app.raiden,
@@ -189,7 +189,7 @@ def test_withdraw(raiden_network, token_addresses, deposit):
     alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
     bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
-    assert must_contain_entry(state_changes, ContractReceiveChannelWithdraw, {
+    assert must_contain_entry(state_changes, ContractReceiveChannelUnlock, {
         'payment_network_identifier': registry_address,
         'token_address': token_address,
         'channel_identifier': alice_bob_channel.identifier,
@@ -254,10 +254,10 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     )
 
     # The direct transfer locksroot must not contain the unlocked lock, the
-    # withdraw must fail.
+    # unlock must fail.
     netting_channel = app1.raiden.chain.netting_channel(channelstate_0_1.identifier)
     with pytest.raises(Exception):
-        netting_channel.withdraw(UnlockProofState(unlock_proof, lock.encoded, secret))
+        netting_channel.unlock(UnlockProofState(unlock_proof, lock.encoded, secret))
 
     waiting.wait_for_settle(
         app1.raiden,
@@ -379,7 +379,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     wait_until_block(app2.raiden.chain, attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
-    attack_channel.netting_channel.withdraw(
+    attack_channel.netting_channel.unlock(
         UnlockProofState(unlock_proof, attack_transfer.lock, secret)
     )
     # XXX: verify that the secret was publicized
