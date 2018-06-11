@@ -14,7 +14,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
-    EventWithdrawFailed,
+    EventUnlockClaimFailed,
     SendRevealSecret,
     SendSecretRequest,
 )
@@ -225,7 +225,7 @@ def test_handle_inittarget_bad_expiration():
         pseudo_random_generator,
         block_number,
     )
-    assert must_contain_entry(iteration.events, EventWithdrawFailed, {})
+    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {})
 
 
 def test_handle_secretreveal():

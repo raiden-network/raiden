@@ -24,7 +24,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     the previous hop (payer).
 
     When this happens, an assertion must not be hit, because it means the
-    transfer must be withdrawn on-chain.
+    transfer must be unlocked on-chain.
 
     Issue: https://github.com/raiden-network/raiden/issues/1013
     """

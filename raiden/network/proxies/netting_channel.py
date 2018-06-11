@@ -367,9 +367,9 @@ class NettingChannel:
                 signature=encode_hex(signature),
             )
 
-    def withdraw(self, unlock_proof):
+    def unlock(self, unlock_proof):
         log.info(
-            'withdraw called',
+            'unlock called',
             node=pex(self.node_address),
             contract=pex(self.address),
         )
@@ -380,7 +380,7 @@ class NettingChannel:
         merkleproof_encoded = b''.join(unlock_proof.merkle_proof)
 
         transaction_hash = self.proxy.transact(
-            'withdraw',
+            'unlock',
             unlock_proof.lock_encoded,
             merkleproof_encoded,
             unlock_proof.secret,
@@ -391,16 +391,16 @@ class NettingChannel:
 
         if receipt_or_none:
             log.critical(
-                'withdraw failed',
+                'unlock failed',
                 node=pex(self.node_address),
                 contract=pex(self.address),
                 lock=unlock_proof,
             )
             self._check_exists()
-            raise TransactionThrew('Withdraw', receipt_or_none)
+            raise TransactionThrew('unlock', receipt_or_none)
 
         log.info(
-            'withdraw successful',
+            'unlock successful',
             node=pex(self.node_address),
             contract=pex(self.address),
             lock=unlock_proof,

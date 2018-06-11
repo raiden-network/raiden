@@ -7,7 +7,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
-    EventWithdrawSuccess,
+    EventUnlockClaimSuccess,
     SendRevealSecret,
     SendSecretRequest,
 )
@@ -49,7 +49,7 @@ def test_mediated_transfer_events(raiden_network, token_addresses, network_wait)
     )
     mediator_events = [blocknumber_event[1] for blocknumber_event in mediator_blockevents]
     assert must_contain_entry(mediator_events, EventUnlockSuccess, {})
-    assert must_contain_entry(mediator_events, EventWithdrawSuccess, {})
+    assert must_contain_entry(mediator_events, EventUnlockClaimSuccess, {})
 
     target_blockevents = app2.raiden.wal.storage.get_events_by_identifier(
         from_identifier=0,
@@ -58,4 +58,4 @@ def test_mediated_transfer_events(raiden_network, token_addresses, network_wait)
     target_events = [blocknumber_event[1] for blocknumber_event in target_blockevents]
     assert must_contain_entry(target_events, SendSecretRequest, {})
     assert must_contain_entry(target_events, SendRevealSecret, {})
-    assert must_contain_entry(target_events, EventWithdrawSuccess, {})
+    assert must_contain_entry(target_events, EventUnlockClaimSuccess, {})

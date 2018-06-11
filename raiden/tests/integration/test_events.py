@@ -378,7 +378,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     # Reveal the secret through the blockchain (this needs to emit the
     # SecretRevealed event)
     for unlock_proof in channel.get_known_unlocks(channel_state2_1.partner_state):
-        netting_channel_proxy.withdraw(unlock_proof)
+        netting_channel_proxy.unlock(unlock_proof)
 
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout
     wait_until_block(app0.raiden.chain, settle_expiration)

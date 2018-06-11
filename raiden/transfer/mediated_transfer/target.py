@@ -6,8 +6,8 @@ from raiden.transfer.events import (
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
-    EventWithdrawFailed,
-    EventWithdrawSuccess,
+    EventUnlockClaimFailed,
+    EventUnlockClaimSuccess,
     SendRevealSecret,
     SendSecretRequest,
 )
@@ -74,7 +74,7 @@ def handle_inittarget(
         block_number,
     )
 
-    # if there is not enough time to safely withdraw the token on-chain
+    # if there is not enough time to safely unlock the token on-chain
     # silently let the transfer expire.
     if is_valid and safe_to_wait:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -96,12 +96,12 @@ def handle_inittarget(
         elif not safe_to_wait:
             failure_reason = 'lock expiration is not safe'
 
-        withdraw_failed = EventWithdrawFailed(
+        unlock_failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
             reason=failure_reason,
         )
-        iteration = TransitionResult(target_state, [withdraw_failed])
+        iteration = TransitionResult(target_state, [unlock_failed])
 
     return iteration
 
@@ -163,7 +163,7 @@ def handle_unlock(target_state, state_change, channel_state):
                 transfer.initiator,
             )
 
-            unlock_success = EventWithdrawSuccess(
+            unlock_success = EventUnlockClaimSuccess(
                 transfer.payment_identifier,
                 transfer.lock.secrethash,
             )
@@ -192,7 +192,7 @@ def handle_block(target_state, channel_state, block_number):
 
     if not secret_known and block_number > transfer.lock.expiration:
         # XXX: emit the event only once
-        failed = EventWithdrawFailed(
+        failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
             reason='lock expired',

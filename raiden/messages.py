@@ -563,7 +563,7 @@ class Secret(EnvelopeMessage):
 
     Locksroot changes need to be synchronized among both participants, the
     protocol is for only the side unlocking to send the Secret message allowing
-    the other party to withdraw.
+    the other party to claim the unlocked lock.
     """
     cmdid = messages.SECRET
 

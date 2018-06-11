@@ -459,9 +459,9 @@ class ContractReceiveNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelWithdraw(StateChange):
-    """ A lock was withdrawn via the blockchain.
-    Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
+class ContractReceiveChannelUnlock(StateChange):
+    """ A lock was claimed via the blockchain.
+    Used when a hash time lock was unlocked and a log ChannelSecretRevealed is
     emitted by the netting channel.
     Note:
         For this state change the contract caller is not important but only the
@@ -493,7 +493,7 @@ class ContractReceiveChannelWithdraw(StateChange):
         self.receiver = receiver
 
     def __repr__(self):
-        return '<ContractReceiveChannelWithdraw channel:{} receive:{} secrethash:{}>'.format(
+        return '<ContractReceiveChannelUnlock channel:{} receive:{} secrethash:{}>'.format(
             pex(self.channel_identifier),
             pex(self.receiver),
             pex(self.secrethash),
@@ -501,7 +501,7 @@ class ContractReceiveChannelWithdraw(StateChange):
 
     def __eq__(self, other):
         return (
-            isinstance(other, ContractReceiveChannelWithdraw) and
+            isinstance(other, ContractReceiveChannelUnlock) and
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_address == other.token_address and
             self.channel_identifier == other.channel_identifier and

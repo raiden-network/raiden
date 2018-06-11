@@ -9,7 +9,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelWithdraw,
+    ContractSendChannelUnlock,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
     EventTransferSentSuccess,
@@ -19,8 +19,8 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
-    EventWithdrawFailed,
-    EventWithdrawSuccess,
+    EventUnlockClaimFailed,
+    EventUnlockClaimSuccess,
     SendBalanceProof,
     SendLockedTransfer,
     SendRefundTransfer,
@@ -33,8 +33,8 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
     EventTransferReceivedSuccess,
     EventUnlockSuccess,
-    EventWithdrawFailed,
-    EventWithdrawSuccess,
+    EventUnlockClaimFailed,
+    EventUnlockClaimSuccess,
 )
 
 
@@ -208,20 +208,20 @@ def handle_contract_channelupdate(
         )
 
 
-def handle_contract_channelwithdraw(
+def handle_contract_channelunlock(
         raiden: 'RaidenService',
-        channel_withdraw_event: ContractSendChannelWithdraw
+        channel_unlock_event: ContractSendChannelUnlock
 ):
-    channel = raiden.chain.netting_channel(channel_withdraw_event.channel_identifier)
+    channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
     block_number = raiden.get_block_number()
 
-    for unlock_proof in channel_withdraw_event.unlock_proofs:
+    for unlock_proof in channel_unlock_event.unlock_proofs:
         lock = Lock.from_bytes(unlock_proof.lock_encoded)
 
         if lock.expiration < block_number:
             log.error('Lock has expired!', lock=lock)
         else:
-            channel.withdraw(unlock_proof)
+            channel.unlock(unlock_proof)
 
 
 def handle_contract_channelsettle(
@@ -259,8 +259,8 @@ def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
         handle_contract_channelclose(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:
         handle_contract_channelupdate(raiden, event)
-    elif type(event) == ContractSendChannelWithdraw:
-        handle_contract_channelwithdraw(raiden, event)
+    elif type(event) == ContractSendChannelUnlock:
+        handle_contract_channelunlock(raiden, event)
     elif type(event) == ContractSendChannelSettle:
         handle_contract_channelsettle(raiden, event)
     elif type(event) in UNEVENTFUL_EVENTS:

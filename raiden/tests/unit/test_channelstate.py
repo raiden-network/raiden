@@ -18,7 +18,7 @@ from raiden.messages import (
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.transfer import channel
 from raiden.transfer.events import (
-    ContractSendChannelWithdraw,
+    ContractSendChannelUnlock,
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
 )
@@ -43,7 +43,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
-    ContractReceiveChannelWithdraw,
+    ContractReceiveChannelUnlock,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -1176,7 +1176,7 @@ def test_receive_directdtransfer_before_deposit():
     assert must_contain_entry(iteration.events, EventTransferReceivedSuccess, {})
 
 
-def test_channelstate_withdraw_without_locks():
+def test_channelstate_unlock_without_locks():
     """Event close must be properly handled if there are no locks to unlock"""
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -1193,7 +1193,7 @@ def test_channelstate_withdraw_without_locks():
     assert not iteration.events
 
 
-def test_channelstate_withdraw():
+def test_channelstate_unlock():
     """Event close must be properly handled if there are no locks to unlock"""
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
@@ -1227,7 +1227,7 @@ def test_channelstate_withdraw():
 
     channel.register_secret(channel_state, lock_secret, lock_secrethash)
 
-    # If the channel is closed, withdraw must be done even if the lock is not
+    # If the channel is closed, unlock must be done even if the lock is not
     # at risk of expiring
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     state_change = ContractReceiveChannelClosed(
@@ -1237,10 +1237,10 @@ def test_channelstate_withdraw():
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
-    assert must_contain_entry(iteration.events, ContractSendChannelWithdraw, {})
+    assert must_contain_entry(iteration.events, ContractSendChannelUnlock, {})
 
 
-def test_channel_withdraw_must_not_change_merkletree():
+def test_channel_unlock_must_not_change_merkletree():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
@@ -1285,14 +1285,14 @@ def test_channel_withdraw_must_not_change_merkletree():
     iteration = channel.handle_channel_closed(channel_state, state_change)
 
     new_channel = iteration.new_state
-    withdraw = ContractReceiveChannelWithdraw(
+    unlock = ContractReceiveChannelUnlock(
         payment_network_identifier,
         channel_state.token_address,
         channel_state.identifier,
         lock_secret,
         channel_state.our_state.address,
     )
-    iteration = channel.handle_channel_withdraw(new_channel, withdraw)
+    iteration = channel.handle_channel_unlock(new_channel, unlock)
 
     new_channel = iteration.new_state
     assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash
