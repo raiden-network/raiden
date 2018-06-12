@@ -2,6 +2,7 @@ import pytest
 from raiden.network.proxies import (
     SecretRegistry,
     TokenNetworkRegistry,
+    Token,
 )
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
@@ -11,6 +12,7 @@ from raiden.utils.solc import compile_files_cwd
 
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_TOKEN_NETWORK,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_HUMAN_STANDARD_TOKEN,
 )
@@ -59,6 +61,44 @@ def token_network_registry_proxy(deploy_client, token_network_registry_contract)
     return TokenNetworkRegistry(
         deploy_client,
         to_canonical_address(token_network_registry_contract.contract.address),
+    )
+
+
+@pytest.fixture
+def token_network_contract(
+    chain_id,
+    deploy_contract,
+    secret_registry_contract,
+    token_contract,
+):
+    return deploy_contract(
+        CONTRACT_TOKEN_NETWORK,
+        [
+            token_contract.contract.address,
+            secret_registry_contract.contract.address,
+            chain_id,
+        ],
+    )
+
+
+@pytest.fixture
+def token_network_proxy(deploy_client, token_network_contract):
+    return TokenNetworkRegistry(
+        deploy_client,
+        to_canonical_address(token_network_contract.contract.address),
+    )
+
+
+@pytest.fixture
+def token_contract(deploy_token):
+    return deploy_token(10000, 0, 'TKN', 'TKN')
+
+
+@pytest.fixture
+def token_proxy(deploy_client, token_contract):
+    return Token(
+        deploy_client,
+        to_canonical_address(token_contract.contract.address),
     )
 
 
