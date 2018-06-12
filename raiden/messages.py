@@ -3,7 +3,7 @@ from eth_utils import (
     to_normalized_address,
     to_canonical_address,
     encode_hex,
-    decode_hex
+    decode_hex,
 )
 import structlog
 from cachetools import LRUCache, cached
@@ -57,7 +57,7 @@ __all__ = (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 _senders_cache = LRUCache(maxsize=128)
 _hashes_cache = LRUCache(maxsize=128)
-_bytes_cache = LRUCache(maxsize=128)
+_lock_bytes_cache = LRUCache(maxsize=128)
 
 
 def assert_envelope_values(nonce, channel, transferred_amount, locked_amount, locksroot):
@@ -205,7 +205,7 @@ class SignedMessage(Message):
         self.signature = b''
 
     def data_to_sign(self) -> bytes:
-        """Return the binary data to be/which was signed"""
+        """ Return the binary data to be/which was signed """
         packed = self.packed()
 
         field = type(packed).fields_spec[-1]
@@ -231,15 +231,6 @@ class SignedMessage(Message):
         if address is None:
             return None
         return address
-
-    @sender.setter
-    def sender(self, value):
-        """Logs and ignores setting this value, it should be derived from signature"""
-        log.warning(
-            'Don\'t set sender, it\'s calculated from signature',
-            sender=self.sender,
-            msg=self
-        )
 
     @classmethod
     def decode(cls, data):
@@ -276,7 +267,7 @@ class EnvelopeMessage(SignedMessage):
         return message_hash
 
     def data_to_sign(self):
-        """Returns an encoded subset of the fields to sign"""
+        """ Returns an encoded subset of the fields to sign """
         packed = self.packed()
         klass = type(packed)
 
@@ -941,7 +932,7 @@ class Lock:
         self.secrethash = secrethash
 
     @property
-    @cached(_bytes_cache, key=attrgetter('amount', 'expiration', 'secrethash'))
+    @cached(_lock_bytes_cache, key=attrgetter('amount', 'expiration', 'secrethash'))
     def as_bytes(self):
         packed = messages.Lock(buffer_for(messages.Lock))
         packed.amount = self.amount
