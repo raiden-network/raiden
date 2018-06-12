@@ -275,6 +275,13 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--config-file',
+            help='TOML configuration file',
+            default=None,
+            type=click.File(lazy=True),
+            show_default=True,
+        ),
+        option(
             '--keystore-path',
             help=(
                 'If you have a non-standard path for the ethereum keystore directory'
@@ -529,6 +536,7 @@ def app(
         transport,
         matrix_server,
         network_id,
+        config_file,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -762,6 +770,19 @@ def run(ctx, **kwargs):
     print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
     from raiden.ui.console import Console
     from raiden.api.python import RaidenAPI
+    from raiden.utils import address_checksum_and_decode
+    import toml
+
+    if kwargs['config_file']:
+        d = toml.load(kwargs['config_file'])
+        for key, value in d.items():
+            if key in {'address', 'registry_contract_address', 'discovery_contract_address'}:
+                value = address_checksum_and_decode(value)
+
+            if kwargs[key] and kwargs[key] != value:
+                print('CLI option {} is over-ridden by the value {}'.format(key, value))
+
+            kwargs[key] = value
 
     configure_logging(
         kwargs['log_config'],

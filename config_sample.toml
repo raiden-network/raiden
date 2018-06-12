@@ -1,0 +1,49 @@
+keystore_path = "/home/dilate/.ethereum/testnet/keystore"
+datadir = "/home/dilate/.raiden"
+
+# address =  
+# password_file = 
+
+registry_contract_address = '0x66eea3159A01d134DD64Bfe36fde4bE9ED9c1695'
+discovery_contract_address = '0x1E3941d8c05ffFA7466216480209240cc26ea577'
+console = false
+
+# Transport system to use 'udp' or 'matrix'
+transport = "udp"
+
+# Available networks:
+# mainnet: 1
+# ropsten: 3
+# rinkeby: 4
+# kovan: 42
+network_id = 3
+sync_check = true
+# gas_price = 
+eth_rpc_endpoint = "127.0.0.1:8545"
+eth_client_communication = false
+listen_address = "0.0.0.0:38647"
+max_unresponsive_time = 30
+send_ping_time = 60
+
+# Available nat methods:
+# auto - Try UPnP, then STUN, fallback to none
+# upnp - Try UPnP, fallback to none
+# stun - Try STUN, fallback to none
+# none - Use the local interface address
+nat = "auto"
+
+# Valid values:
+# auto - automatically select a suitable homeserver
+# A URL pointing to a Raiden matrix homeserver
+matrix_server = "auto"
+
+# log_file = 
+log_json = false
+
+rpc = true
+rpccorsdomain = "http://localhost:*/*"
+api_address = "127.0.0.1:5001"
+web_ui = true
+
+[log_config]
+"" = "INFO"
