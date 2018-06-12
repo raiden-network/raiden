@@ -2,7 +2,7 @@
 from binascii import unhexlify
 from gevent.lock import RLock
 from gevent.event import AsyncResult
-from typing import List
+from typing import List, Dict, Optional
 from raiden.utils import typing
 
 import structlog
@@ -211,7 +211,7 @@ class TokenNetwork:
 
         return channel_data['state'] > CHANNEL_STATE_NONEXISTENT
 
-    def detail_participant(self, participant: typing.Address, partner: typing.Address):
+    def detail_participant(self, participant: typing.Address, partner: typing.Address) -> Dict:
         """ Returns a dictionary with the channel participant information. """
         data = self._call_and_check_result('getChannelParticipantInfo', participant, partner)
         return {
@@ -222,7 +222,7 @@ class TokenNetwork:
             'nonce': data[4],
         }
 
-    def detail_channel(self, partner: typing.Address):
+    def detail_channel(self, partner: typing.Address) -> Dict:
         """ Returns a dictionary with the channel specific information. """
         channel_data = self._call_and_check_result('getChannelInfo', self.node_address, partner)
 
@@ -234,7 +234,7 @@ class TokenNetwork:
             'state': channel_data[2],
         }
 
-    def detail_participants(self, partner: typing.Address):
+    def detail_participants(self, partner: typing.Address) -> Dict:
         """ Returns a dictionary with the participants' channel information. """
         our_data = self.detail_participant(self.node_address, partner)
         partner_data = self.detail_participant(partner, self.node_address)
@@ -253,7 +253,7 @@ class TokenNetwork:
             'partner_nonce': partner_data['nonce'],
         }
 
-    def detail(self, partner: typing.Address):
+    def detail(self, partner: typing.Address) -> Dict:
         """ Returns a dictionary with all the details of the channel and the channel participants.
         """
         channel_data = self.detail_channel(partner)
@@ -279,7 +279,7 @@ class TokenNetwork:
         )
         return data
 
-    def settle_block_number(self, partner: typing.Address):
+    def settle_block_number(self, partner: typing.Address) -> typing.BlockNumber:
         """ Returns the channel settle_block_number. """
         channel_data = self.detail_channel(partner)
         return channel_data.get('settle_block_number')
@@ -311,7 +311,7 @@ class TokenNetwork:
 
         return channel_data.get('state') == CHANNEL_STATE_SETTLED
 
-    def closing_address(self, partner: typing.Address):
+    def closing_address(self, partner: typing.Address) -> Optional[typing.Address]:
         """ Returns the address of the closer, if the channel is closed, None
         otherwise. """
         participants_data = self.detail_participants(partner)
@@ -323,7 +323,7 @@ class TokenNetwork:
 
         return None
 
-    def can_transfer(self, partner: typing.Address):
+    def can_transfer(self, partner: typing.Address) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
         it.
 
@@ -336,7 +336,7 @@ class TokenNetwork:
 
         return self.detail_participant(self.node_address, partner)['deposit'] > 0
 
-    def deposit(self, total_deposit: int, partner: typing.Address):
+    def deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
