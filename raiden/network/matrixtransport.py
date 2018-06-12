@@ -1,9 +1,9 @@
-import binascii
 import json
 import re
 from collections import defaultdict
 from enum import Enum
 from json import JSONDecodeError
+from binascii import Error as DecodeError
 from operator import itemgetter
 from random import Random
 from urllib.parse import urlparse
@@ -12,7 +12,7 @@ from eth_utils import (
     to_normalized_address,
     to_canonical_address,
     encode_hex,
-    decode_hex
+    decode_hex,
 )
 
 import gevent
@@ -49,7 +49,7 @@ from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDe
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
     eth_sign_sha3,
-    pex
+    pex,
 )
 from raiden.utils.typing import Dict, Set, Tuple, List, Optional, Address
 from raiden_libs.network.matrix import GMatrixClient, Room
@@ -359,18 +359,13 @@ class MatrixTransport:
             return
 
         user = self._client.get_user(sender_id)
-        peer_address = self._userids_to_address.get(sender_id)
+        peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            try:
-                # recover displayname signature
-                peer_address = self._validate_userid_signature(user)
-                assert peer_address
-            except AssertionError:
-                self.log.debug(
-                    'INVALID SIGNATURE',
-                    sender_id=sender_id,
-                )
-                return
+            self.log.debug(
+                'INVALID SIGNATURE',
+                sender_id=pex(sender_id),
+            )
+            return
 
         data = event['content']['body']
         if data.startswith('0x'):
@@ -634,11 +629,9 @@ class MatrixTransport:
         # User should be re-validated after presence change
         self._userids_to_address.pop(user_id, None)
 
-        try:
-            user = self._client.get_user(user_id)
-            address = self._validate_userid_signature(user)
-            assert address
-        except (binascii.Error, AssertionError):
+        user = self._client.get_user(user_id)
+        address = self._validate_userid_signature(user)
+        if not address:
             # Malformed address - skip
             self.log.debug('Malformed address, probably not a raiden node', user_id=user_id)
             return
@@ -701,10 +694,8 @@ class MatrixTransport:
             self._maybe_invite_user(member)
 
     def _maybe_invite_user(self, user):
-        try:
-            address = self._validate_userid_signature(user)
-            assert address
-        except (binascii.Error, AssertionError):
+        address = self._validate_userid_signature(user)
+        if not address:
             return
 
         room_id = self._address_to_roomid.get(address)
@@ -750,7 +741,7 @@ class MatrixTransport:
         return best_server
 
     def _sign(self, data: bytes) -> bytes:
-        """Use eth_sign compatible hasher to sign matrix data"""
+        """ Use eth_sign compatible hasher to sign matrix data """
         return signing.sign(
             data,
             self._raiden_service.private_key,
@@ -759,7 +750,7 @@ class MatrixTransport:
 
     @staticmethod
     def _recover(data: bytes, signature: bytes) -> Address:
-        """Use eth_sign compatible hasher to recover address from signed data"""
+        """ Use eth_sign compatible hasher to recover address from signed data """
         return signing.recover_address(
             data,
             signature=signature,
@@ -767,6 +758,7 @@ class MatrixTransport:
         )
 
     def _get_peer_address_from_room(self, room_alias) -> Optional[Address]:
+        """ Given a room name/alias which contains our address on it, return the other address """
         match = self._room_alias_re.match(room_alias)
         if match:
             addresses = {
@@ -778,6 +770,7 @@ class MatrixTransport:
                 return addresses.pop()
 
     def _validate_userid_signature(self, user: User) -> Optional[Address]:
+        """ Validate a userId format and signature on displayName, and return its address"""
         # display_name should be an address in the self._userid_re format
         address = self._userids_to_address.get(user.user_id)
         if address:
@@ -794,7 +787,7 @@ class MatrixTransport:
             )
             if not address or not recovered or recovered != address:
                 return
-        except Exception:  # usually, codecs raise a generic Error if no hexstr
+        except (DecodeError, TypeError):
             return
         self._userids_to_address[user.user_id] = address
         self._address_to_userids[address].add(user.user_id)
