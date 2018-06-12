@@ -1,22 +1,13 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.transfer import views
 from raiden.transfer import state
 from raiden.messages import Ping
 
 
-# We need to use this helper function since `pytest.skipif()` conditions can't access fixtures
-def skip_if_not_udp(transport_protocol: TransportProtocol):
-    if transport_protocol is not TransportProtocol.UDP:
-        pytest.skip(f"Test doesn't apply to {transport_protocol.value} protocol")
-
-
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_ping_pong(raiden_network, transport_config):
-    skip_if_not_udp(transport_config.protocol)
-
+def test_udp_ping_pong(raiden_network, skip_if_not_udp):
     app0, app1 = raiden_network
 
     ping_message = Ping(nonce=0)
@@ -39,9 +30,7 @@ def test_udp_ping_pong(raiden_network, transport_config):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_ping_pong_unreachable_node(raiden_network, transport_config):
-    skip_if_not_udp(transport_config.protocol)
-
+def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
     app0, app1 = raiden_network
 
     app1.raiden.transport.stop_and_wait()

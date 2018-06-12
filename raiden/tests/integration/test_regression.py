@@ -135,9 +135,9 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
 
     if transport_config.protocol is TransportProtocol.UDP:
         reveal_data = reveal_secret.encode()
-        app1.raiden.protocol.receive(reveal_data)
+        app1.raiden.transport.receive(reveal_data)
     elif transport_config.protocol is TransportProtocol.MATRIX:
-        app1.raiden.protocol._receive_message(reveal_secret)
+        app1.raiden.transport._receive_message(reveal_secret)
     else:
         raise TypeError('Unknown TransportProtocol')
 
@@ -203,9 +203,9 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
 
     if transport_config.protocol is TransportProtocol.UDP:
         message_data = mediated_transfer.encode()
-        app1.raiden.protocol.receive(message_data)
+        app1.raiden.transport.receive(message_data)
     elif transport_config.protocol is TransportProtocol.MATRIX:
-        app1.raiden.protocol._receive_message(mediated_transfer)
+        app1.raiden.transport._receive_message(mediated_transfer)
     else:
         raise TypeError('Unknown TransportProtocol')
 
@@ -234,13 +234,13 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
             secret.encode(),
             reveal_secret.encode(),
         ]
-        receive_method = app1.raiden.protocol.receive
+        receive_method = app1.raiden.transport.receive
     elif transport_config.protocol is TransportProtocol.MATRIX:
         messages = [
             secret,
             reveal_secret
         ]
-        receive_method = app1.raiden.protocol._receive_message
+        receive_method = app1.raiden.transport._receive_message
     else:
         raise TypeError('Unknown TransportProtocol')
 

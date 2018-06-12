@@ -63,10 +63,7 @@ def pytest_addoption(parser):
         '--local-matrix',
         dest='local_matrix',
         default=None,
-        help=(
-            'Command to run the local matrix server. Must be given if '
-            '--transport=matrix or --transport=all is specified.'
-        )
+        help='Command to run the local matrix server. Defaults to .synapse/run.sh'
     )
 
     parser.addoption(

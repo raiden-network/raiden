@@ -91,6 +91,7 @@ class MatrixTransport:
         self._discovery_room_alias = None
         self._discovery_room_alias_full = None
         self._room_alias_re = None
+        self._login_retry_wait = config.get('login_retry_wait', 0.5)
 
         self._bound_logger = None
         self._running = False
@@ -198,12 +199,13 @@ class MatrixTransport:
             self._running = False
             self._client.set_presence_state(UserPresence.OFFLINE.value)
             self._client.stop_listener_thread()
-            self._client.logout()
 
-            # Set all the pending results to False, this will also cause pending retries to be aborted
+            # Set all the pending results to False, this will also
+            # cause pending retries to be aborted
             for async_result in self._messageids_to_asyncresult.values():
                 async_result.set(False)
 
+            self._client.logout()
             gevent.wait(self.greenlets)
 
     @property
@@ -596,7 +598,7 @@ class MatrixTransport:
                 else:
                     self.log.info(f'Room {room_name} joined successfully.')
                     return room
-            gevent.sleep(.5)
+            gevent.sleep(self._login_retry_wait)
 
         raise RuntimeError(f'Could not join or create room {room_name}.')
 

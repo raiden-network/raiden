@@ -9,5 +9,5 @@ set -x
 .travis/download_geth.sh
 
 if [ "$RUN_SYNAPSE" ]; then
-    .travis/download_synapse.sh
+    tools/install_synapse.sh
 fi

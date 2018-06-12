@@ -2,6 +2,7 @@
 """ Utilities to set-up a Raiden network. """
 
 from binascii import hexlify
+from os import environ
 
 from gevent import server
 import structlog
@@ -263,6 +264,8 @@ def create_apps(
                     }
                 }
             })
+            if 'TRAVIS' in environ:
+                config.update({'login_retry_wait': 1.5})
 
         config_copy = App.DEFAULT_CONFIG.copy()
         config_copy.update(config)

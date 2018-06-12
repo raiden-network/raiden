@@ -22,6 +22,12 @@ def transport_config():
 
 
 @pytest.fixture
+def skip_if_not_udp():
+    """Dummy fixture. Request it to run a test with udp only."""
+    return None
+
+
+@pytest.fixture
 def local_matrix_server(transport_config):
 
     if not transport_config.protocol == TransportProtocol.MATRIX:
