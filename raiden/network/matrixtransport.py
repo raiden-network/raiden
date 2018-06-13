@@ -205,8 +205,8 @@ class MatrixTransport:
             for async_result in self._messageids_to_asyncresult.values():
                 async_result.set(False)
 
-            self._client.logout()
             gevent.wait(self.greenlets)
+            self._client.logout()
 
     @property
     def log(self):
