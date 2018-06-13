@@ -16,7 +16,9 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
 )
-from raiden.network.transport.udp import udp_utils, UDPTransport
+from raiden.network.transport.udp import udp_utils
+# type alias to avoid both circular dependencies and flake8 errors
+UDPTransport = 'UDPTransport'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

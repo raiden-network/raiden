@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import structlog
 
-from raiden.service import RaidenService
 from raiden.messages import (
     message_from_sendevent,
     Lock,
@@ -30,6 +29,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.utils import pex
+# type alias to avoid both circular dependencies and flake8 errors
+RaidenService = 'RaidenService'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (

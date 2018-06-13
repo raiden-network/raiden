@@ -16,7 +16,6 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.constants import (
-    UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
@@ -56,6 +55,7 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     random_secret,
+    create_default_identifier,
 )
 from raiden.storage import wal, serialize, sqlite
 
@@ -128,11 +128,6 @@ def target_init(transfer: LockedTransfer):
         from_transfer,
     )
     return init_target_statechange
-
-
-def create_default_identifier():
-    """ Generates a random identifier. """
-    return random.randint(0, UINT64_MAX)
 
 
 def endpoint_registry_exception_handler(greenlet):

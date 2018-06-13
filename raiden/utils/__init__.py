@@ -5,6 +5,7 @@ import re
 import string
 import sys
 import time
+import random
 from typing import Tuple, Union, List, Iterable
 from itertools import zip_longest
 
@@ -15,6 +16,7 @@ from eth_utils import remove_0x_prefix, keccak, is_checksum_address
 import raiden
 from raiden.utils import typing
 from raiden.exceptions import InvalidAddress
+from raiden.constants import UINT64_MAX
 
 
 LETTERS = string.printable
@@ -345,3 +347,8 @@ def compare_versions(deployed_version, current_version):
     if deployed[1] != current[1]:
         return False
     return True
+
+
+def create_default_identifier():
+    """ Generates a random identifier. """
+    return random.randint(0, UINT64_MAX)

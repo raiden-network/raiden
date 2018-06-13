@@ -39,7 +39,7 @@ from raiden.network.transport.udp.udp_utils import (
     timeout_exponential_backoff,
     retry_with_recovery,
 )
-from raiden.service import RaidenService
+from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
