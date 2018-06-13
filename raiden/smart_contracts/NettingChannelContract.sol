@@ -53,17 +53,17 @@ contract NettingChannelContract {
         data.opened = block.number;
     }
 
-    /// @notice Caller makes a deposit into their channel balance.
-    /// @param amount The amount caller wants to deposit.
+    /// @notice Caller sets total deposit in their channel
+    /// @param total_deposit The total_deposit to set
     /// @return True if deposit is successful.
-    function deposit(uint256 amount)
+    function setTotalDeposit(uint256 total_deposit)
         public
         returns (bool)
     {
         bool success;
         uint256 balance;
 
-        (success, balance) = data.deposit(amount);
+        (success, balance) = data.setTotalDeposit(total_deposit);
 
         if (success == true) {
             emit ChannelNewBalance(data.registry_address, data.token, msg.sender, balance);
