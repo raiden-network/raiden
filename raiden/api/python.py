@@ -74,7 +74,9 @@ class RaidenAPI:
             token_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-        """Register the `token_address` in the blockchain.
+        """Register the `token_address` in the blockchain. If the address is already
+           registered but the event has not been processed this function will block
+           until the next block to make sure the event is processed.
 
         Raises:
             InvalidAddress: If the registry_address or token_address is not a valid address.

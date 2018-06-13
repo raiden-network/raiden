@@ -59,7 +59,7 @@ def test_register_token(raiden_network, token_amount):
 def test_token_registered_race(raiden_chain, token_amount, events_poll_timeout):
     """If a token is registered it must appear on the token list.
 
-    If two nodes register the same token one of the transactions will fail, the
+    If two nodes register the same token one of the transactions will fail. The
     node that receives an error for "already registered token" must see the
     token in the token list. Issue: #784
     """
