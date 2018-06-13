@@ -261,12 +261,12 @@ class RaidenService:
             # channels
             last_log_block_number = None
         else:
-            # The `Block` state change is dispatch only after all the events
+            # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        # When the alarm task is started or the callbacks are installed doesn't
+        # The time the alarm task is started or the callbacks are installed doesn't
         # really matter.
         #
         # But it is of paramount importance to:
@@ -365,12 +365,12 @@ class RaidenService:
             This should be called only once per block, otherwise there will be
             duplicated `Block` state changes in the log.
 
-            Therefor this method should be called only once a new block is
+            Therefore this method should be called only once a new block is
             mined with the appropriate block_number argument from the
             AlarmTask.
         """
         # Raiden relies on blockchain events to update its off-chain state,
-        # therefor some APIs /used/ to forcefully poll for events.
+        # therefore some APIs /used/ to forcefully poll for events.
         #
         # This was done for APIs which have on-chain side-effects, e.g.
         # openning a channel, where polling the event is required to update
@@ -389,7 +389,7 @@ class RaidenService:
                 on_blockchain_event(self, event, current_block_number)
 
             # On restart the Raiden node will re-create the filters with the
-            # ethereum node, these filters will have the from_block set to the
+            # ethereum node. These filters will have the from_block set to the
             # value of the latest Block state change. To avoid missing events
             # the Block state change is dispatched only after all of the events
             # have been processed.
