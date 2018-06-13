@@ -90,7 +90,7 @@ class ContractProxy:
     def decode_event(self, log: Dict):
         return decode_event(self.contract.abi, log)
 
-    def encode_function_call(self, function: str, args: List=list()):
+    def encode_function_call(self, function: str, args: List = None):
         return self.get_transaction_data(self.contract.abi, function, args)
 
     def estimate_gas(self, function: str, *args):
