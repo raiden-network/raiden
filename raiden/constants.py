@@ -25,6 +25,7 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
 # TODO: add this as an attribute of the transport class
 UDP_MAX_MESSAGE_SIZE = 1200
 
+
 MAINNET = 'mainnet'
 ROPSTEN = 'ropsten'
 RINKEBY = 'rinkeby'
@@ -46,3 +47,4 @@ NETWORKNAME_TO_ID = {
 
 MIN_REQUIRED_SOLC = 'v0.4.23'
 NULL_ADDRESS = '0x' + '0' * 40
+NULL_ADDRESS_BYTES = b'\x00' * 20

@@ -2,6 +2,7 @@
 import warnings
 import time
 import os
+import copy
 from binascii import unhexlify
 from typing import List, Dict
 from json.decoder import JSONDecodeError
@@ -320,8 +321,8 @@ class JSONRPCClient:
             self,  # pylint: disable=too-many-locals
             contract_name,
             all_contracts,
-            libraries,
-            constructor_parameters,
+            libraries=None,
+            constructor_parameters=None,
             contract_path=None,
             timeout=None,
     ):
@@ -338,6 +339,11 @@ class JSONRPCClient:
                                  the contract data from the `all_contracts` dict.
             timeout (int): Amount of time to poll the chain to confirm deployment
         """
+        if libraries is None:
+            libraries = dict()
+        if constructor_parameters is None:
+            constructor_parameters = []
+        all_contracts = copy.deepcopy(all_contracts)
         if contract_name in all_contracts:
             contract_key = contract_name
 

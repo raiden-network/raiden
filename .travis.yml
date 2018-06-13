@@ -14,9 +14,9 @@ env:
   - SOLC_VERSION='v0.4.23'
   matrix:
   - TEST='./raiden/tests/unit'
-  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api'
+  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api --ignore=./raiden/tests/integration/contracts'
   - TEST='./raiden/tests/integration/transfer'
-  - TEST='./raiden/tests/integration/long_running'
+  - TEST='./raiden/tests/integration/long_running ./raiden/tests/integration/contracts'
   - TEST='./raiden/tests/integration/api'
 cache:
   pip: true
