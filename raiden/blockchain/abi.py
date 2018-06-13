@@ -19,6 +19,8 @@ from raiden.exceptions import ContractVersionMismatch
 from raiden_contracts.contract_manager import ContractManager
 
 
+from distutils.version import LooseVersion
+
 __all__ = (
     'CONTRACT_MANAGER',
 
@@ -155,6 +157,13 @@ def validate_solc():
         raise RuntimeError(
             "Couldn't find the solc in the current $PATH.\n"
             "Make sure the solidity compiler is installed and available on your $PATH."
+        )
+
+    elif LooseVersion(_solidity.compiler_version()) < LooseVersion(MIN_REQUIRED_SOLC[1:]):
+        raise RuntimeError(
+            'You are currently using the solidity compiler version {}.\n'
+            'Please upgrade to the minimum compatible version {}.'.format(
+                _solidity.compiler_version(), MIN_REQUIRED_SOLC)
         )
 
     try:
