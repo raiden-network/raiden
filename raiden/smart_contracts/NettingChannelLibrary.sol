@@ -59,13 +59,13 @@ library NettingChannelLibrary {
         _;
     }
 
-    /// @notice Deposit amount to channel.
-    /// @dev Deposit an amount to the channel. At least one of the participants
-    /// must deposit before the channel is opened.
-    /// @param amount The amount to be deposited to the address
+    /// @notice Set total deposit for the channel
+    /// @dev Set total deposit for the channel. At least one participant must
+    /// do this before the channel is opened.
+    /// @param total_deposit The total_deposit to be set for the address
     /// @return Success if the transfer was successful
     /// @return The new balance of the invoker
-    function deposit(Data storage self, uint256 amount)
+    function setTotalDeposit(Data storage self, uint256 total_deposit)
         public
         returns (bool success, uint256 balance)
     {
@@ -73,10 +73,12 @@ library NettingChannelLibrary {
 
         require(self.opened > 0);
         require(self.closed == 0);
-        require(self.token.balanceOf(msg.sender) >= amount);
-
         index = index_or_throw(self, msg.sender);
         Participant storage participant = self.participants[index];
+        require(total_deposit > participant.balance);
+
+        uint256 amount = total_deposit - participant.balance;
+        require(self.token.balanceOf(msg.sender) >= amount);
 
         success = self.token.transferFrom(msg.sender, this, amount);
         if (success == true) {
