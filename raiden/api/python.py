@@ -390,7 +390,7 @@ class RaidenAPI:
 
                 self.raiden.handle_state_change(channel_close)
 
-            msg = 'After {} seconds the deposit was not properly processed.'.format(
+            msg = 'After {} seconds the closing transactions were not properly processed.'.format(
                 poll_timeout
             )
 
