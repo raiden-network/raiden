@@ -884,7 +884,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 )
 @click.pass_context
 def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
-    """ Test, that the raiden installation is sane."""
+    """ Test, that the raiden installation is sane. """
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.utils import get_contract_path
@@ -934,6 +934,8 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
         network_id='627',
+        transport=ctx.parent.params['transport'],
+        matrix_server='http://127.0.0.1:8008'  # TODO: ensure default local matrix server here
     )
     for option_ in app.params:
         if option_.name in args.keys():
@@ -951,9 +953,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     args['api_address'] = 'localhost:' + str(port)
     args['sync_check'] = False
 
-    with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
-        args['mapped_socket'] = mapped_socket
-
+    def _run_smoketest():
         # invoke the raiden app
         app_ = ctx.invoke(app, **args)
 
@@ -985,7 +985,22 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
             print('[5/5] smoketest successful, report was written to {}'.format(report_file))
         else:
             print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
-            sys.exit(1)
+        return success
+
+    if args['transport'] == 'udp':
+        with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
+            args['mapped_socket'] = mapped_socket
+            success = _run_smoketest()
+    elif args['transport'] == 'matrix':
+        print('WARNING: The Matrix transport is experimental')
+        args['mapped_socket'] = None
+        success = _run_smoketest()
+    else:
+        # Shouldn't happen
+        raise RuntimeError(f"Invalid transport type '{args['transport']}'")
+
+    if not success:
+        sys.exit(1)
 
 
 def _removedb(netdir, address_hex):
