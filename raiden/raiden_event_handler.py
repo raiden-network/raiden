@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import structlog
 
+from raiden.service import RaidenService
 from raiden.messages import (
     message_from_sendevent,
     Lock,
 )
+from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
@@ -39,7 +41,7 @@ UNEVENTFUL_EVENTS = (
 
 
 def handle_send_lockedtransfer(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         send_locked_transfer: SendLockedTransfer,
 ):
     mediated_transfer_message = message_from_sendevent(send_locked_transfer, raiden.address)
@@ -52,7 +54,7 @@ def handle_send_lockedtransfer(
 
 
 def handle_send_directtransfer(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         send_direct_transfer: SendDirectTransfer,
 ):
     direct_transfer_message = message_from_sendevent(send_direct_transfer, raiden.address)
@@ -65,7 +67,7 @@ def handle_send_directtransfer(
 
 
 def handle_send_revealsecret(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         reveal_secret_event: SendRevealSecret,
 ):
     reveal_secret_message = message_from_sendevent(reveal_secret_event, raiden.address)
@@ -78,7 +80,7 @@ def handle_send_revealsecret(
 
 
 def handle_send_balanceproof(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         balance_proof_event: SendBalanceProof,
 ):
     secret_message = message_from_sendevent(balance_proof_event, raiden.address)
@@ -91,7 +93,7 @@ def handle_send_balanceproof(
 
 
 def handle_send_secretrequest(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         secret_request_event: SendSecretRequest,
 ):
     secret_request_message = message_from_sendevent(secret_request_event, raiden.address)
@@ -104,7 +106,7 @@ def handle_send_secretrequest(
 
 
 def handle_send_refundtransfer(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         refund_transfer_event: SendRefundTransfer,
 ):
     refund_transfer_message = message_from_sendevent(refund_transfer_event, raiden.address)
@@ -117,7 +119,7 @@ def handle_send_refundtransfer(
 
 
 def handle_send_processed(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         processed_event: SendProcessed,
 ):
     processed_message = message_from_sendevent(processed_event, raiden.address)
@@ -130,7 +132,7 @@ def handle_send_processed(
 
 
 def handle_transfersentsuccess(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         transfer_sent_success_event: EventTransferSentSuccess
 ):
     for result in raiden.identifier_to_results[transfer_sent_success_event.identifier]:
@@ -140,7 +142,7 @@ def handle_transfersentsuccess(
 
 
 def handle_transfersentfailed(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         transfer_sent_failed_event: EventTransferSentFailed
 ):
     for result in raiden.identifier_to_results[transfer_sent_failed_event.identifier]:
@@ -149,7 +151,7 @@ def handle_transfersentfailed(
 
 
 def handle_unlockfailed(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         unlock_failed_event: EventUnlockFailed
 ):
     # pylint: disable=unused-argument
@@ -161,7 +163,7 @@ def handle_unlockfailed(
 
 
 def handle_contract_channelclose(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         channel_close_event: ContractSendChannelClose
 ):
     balance_proof = channel_close_event.balance_proof
@@ -192,7 +194,7 @@ def handle_contract_channelclose(
 
 
 def handle_contract_channelupdate(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         channel_update_event: ContractSendChannelUpdateTransfer
 ):
     balance_proof = channel_update_event.balance_proof
@@ -209,7 +211,7 @@ def handle_contract_channelupdate(
 
 
 def handle_contract_channelunlock(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         channel_unlock_event: ContractSendChannelUnlock
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
@@ -225,14 +227,14 @@ def handle_contract_channelunlock(
 
 
 def handle_contract_channelsettle(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         channel_settle_event: ContractSendChannelSettle
 ):
     channel = raiden.chain.netting_channel(channel_settle_event.channel_identifier)
     channel.settle()
 
 
-def on_raiden_event(raiden: 'RaidenService', event: 'Event'):
+def on_raiden_event(raiden: RaidenService, event: Event):
     # pylint: disable=too-many-branches
 
     if type(event) == SendLockedTransfer:

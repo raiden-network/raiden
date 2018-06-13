@@ -26,6 +26,7 @@ from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
     MerkleTreeState,
     balanceproof_from_envelope,
+    NettingChannelState,
 )
 from raiden.transfer.state_change import (
     ActionTransferDirect,
@@ -46,7 +47,7 @@ def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
 
 
-def get_channelstate(app0, app1, token_network_identifier) -> 'NettingChannelState':
+def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0),
         token_network_identifier,

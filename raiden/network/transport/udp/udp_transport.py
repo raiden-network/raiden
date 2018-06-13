@@ -39,6 +39,7 @@ from raiden.network.transport.udp.udp_utils import (
     timeout_exponential_backoff,
     retry_with_recovery,
 )
+from raiden.service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -146,7 +147,7 @@ class UDPTransport:
     def __init__(self, discovery, udpsocket, throttle_policy, config):
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
-        self.raiden: 'RaidenService'
+        self.raiden: RaidenService
 
         self.discovery = discovery
         self.config = config
@@ -180,7 +181,7 @@ class UDPTransport:
 
     def start(
             self,
-            raiden: 'RaidenService',
+            raiden: RaidenService,
             queueids_to_queues: typing.List[SendMessageEvent],
     ):
         self.raiden = raiden

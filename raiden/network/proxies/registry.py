@@ -78,7 +78,7 @@ class Registry:
             address = self.proxy.contract.functions.channelManagerByToken(
                 to_checksum_address(token_address),
             ).call()
-        except BadFunctionCallOutput as e:
+        except BadFunctionCallOutput:
             check_address_has_code(self.client, self.address)
             return None
 

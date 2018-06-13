@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
+    NettingChannelState,
     message_identifier_from_prng,
     CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_OPENED,
@@ -308,7 +309,7 @@ def next_channel_from_routes(
         channelidentifiers_to_channels: Dict,
         transfer_amount: int,
         timeout_blocks: int
-) -> 'NettingChannelState':
+) -> NettingChannelState:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.

@@ -9,6 +9,7 @@ from gevent.event import (
 )
 
 from raiden.utils import typing
+from raiden.network.transport.udp import UDPTransport
 
 
 def event_first_of(*events: _AbstractLinkable) -> Event:
@@ -70,7 +71,7 @@ def timeout_two_stage(
 
 
 def retry(
-        transport: 'UDPTransport',
+        transport: UDPTransport,
         messagedata: bytes,
         message_id: int,
         recipient: typing.Address,
@@ -129,7 +130,7 @@ def wait_recovery(event_stop: Event, event_healthy: Event):
 
 
 def retry_with_recovery(
-        transport: 'UDPTransport',
+        transport: UDPTransport,
         messagedata: bytes,
         message_id: int,
         recipient: typing.Address,

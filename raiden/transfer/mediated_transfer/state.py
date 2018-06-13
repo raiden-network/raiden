@@ -8,6 +8,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
+    RouteState,
 )
 
 
@@ -173,7 +174,7 @@ class TargetTransferState(State):
         'expired',
     )
 
-    def __init__(self, route: 'RouteState', transfer: 'LockedTransferSignedState'):
+    def __init__(self, route: RouteState, transfer: 'LockedTransferSignedState'):
         self.route = route
         self.transfer = transfer
 
