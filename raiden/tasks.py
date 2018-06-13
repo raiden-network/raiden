@@ -48,6 +48,7 @@ class AlarmTask(gevent.Greenlet):
             self.callbacks.remove(callback)
 
     def _run(self):  # pylint: disable=method-hidden
+        self.last_block_number = self.chain.block_number()
         log.debug('starting block number', block_number=self.last_block_number)
 
         sleep_time = 0
@@ -97,14 +98,6 @@ class AlarmTask(gevent.Greenlet):
 
             for callback in remove:
                 self.callbacks.remove(callback)
-
-    def start(self):
-        self.last_block_number = self.chain.block_number()
-        super().start()
-
-    def stop_and_wait(self):
-        self.stop_event.set(True)
-        gevent.wait(self)
 
     def stop_async(self):
         self.stop_event.set(True)

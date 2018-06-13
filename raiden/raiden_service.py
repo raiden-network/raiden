@@ -227,8 +227,6 @@ class RaidenService:
             # finish before starting the transport
             endpoint_registration_event.join()
 
-        # Lock used to serialize calls to `poll_blockchain_events`, this is
-        # important to give a consistent view of the node state.
         self.event_poll_lock = gevent.lock.Semaphore()
 
         self.start()
@@ -249,8 +247,6 @@ class RaidenService:
             storage,
         )
 
-        last_log_block_number = None
-        # First run, initialize the basic state
         if self.wal.state_manager.current_state is None:
             block_number = self.chain.block_number()
 
@@ -259,30 +255,37 @@ class RaidenService:
                 block_number,
             )
             self.wal.log_and_dispatch(state_change, block_number)
+
+            # On first run Raiden needs to fetch all events for the payment
+            # network, to reconstruct all token network graphs and find opened
+            # channels
+            last_log_block_number = None
         else:
-            # Get the last known block number after reapplying all the state changes from the log
+            # The `Block` state change is dispatched only after all the events
+            # for that given block have been processed, filters can be safely
+            # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        # The alarm task must be started after the snapshot is loaded or the
-        # state is primed, the callbacks assume the node is initialized.
+        # The time the alarm task is started or the callbacks are installed doesn't
+        # really matter.
+        #
+        # But it is of paramount importance to:
+        # - Install the filters which will be polled by poll_blockchain_events
+        #   after the state has been primed, otherwise the state changes won't
+        #   have effect.
+        # - Install the filters using the correct from_block value, otherwise
+        #   blockchain logs can be lost.
+        self.alarm.register_callback(self._callback_new_block)
         self.alarm.start()
-        self.alarm.register_callback(self.poll_blockchain_events)
-        self.alarm.register_callback(self.set_block_number)
 
-        # Registry registration must start *after* the alarm task. This
-        # avoids corner cases where the registry is queried in block A, a new
-        # block B is mined, and the alarm starts polling at block C.
-
-        # If last_log_block_number is None, the wal.state_manager.current_state was
-        # None in the log, meaning we don't have any events we care about, so just
-        # read the latest state from the network
-        self.register_payment_network(self.default_registry.address, last_log_block_number)
+        self.install_payment_network_filters(
+            self.default_registry.address,
+            last_log_block_number,
+        )
 
         # Start the transport after the registry is queried to avoid warning
         # about unknown channels.
         queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
-
-        # TODO: remove the cyclic dependency between the transport and this instance
         self.transport.start(self, queueids_to_queues)
 
         # Health check needs the transport layer
@@ -330,10 +333,6 @@ class RaidenService:
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def set_block_number(self, block_number):
-        state_change = Block(block_number)
-        self.handle_state_change(state_change, block_number)
-
     def get_block_number(self):
         return views.block_number(self.wal.state_manager.current_state)
 
@@ -359,10 +358,48 @@ class RaidenService:
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
-    def poll_blockchain_events(self, block_number=None):  # pylint: disable=unused-argument
+    def _callback_new_block(self, current_block_number):
+        """Called once a new block is detected by the alarm task.
+
+        Note:
+            This should be called only once per block, otherwise there will be
+            duplicated `Block` state changes in the log.
+
+            Therefore this method should be called only once a new block is
+            mined with the appropriate block_number argument from the
+            AlarmTask.
+        """
+        # Raiden relies on blockchain events to update its off-chain state,
+        # therefore some APIs /used/ to forcefully poll for events.
+        #
+        # This was done for APIs which have on-chain side-effects, e.g.
+        # openning a channel, where polling the event is required to update
+        # off-chain state to providing a consistent view to the caller, e.g.
+        # the channel exists after the API call returns.
+        #
+        # That pattern introduced a race, because the events are returned only
+        # once per filter, and this method would be called concurrently by the
+        # API and the AlarmTask. The following lock is necessary, to ensure the
+        # expected side-effects are properly applied (introduced by the commit
+        # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
             for event in self.blockchain_events.poll_blockchain_events():
-                on_blockchain_event(self, event)
+                # These state changes will be procesed with a block_number
+                # which is /larger/ than the NodeState's block_number.
+                on_blockchain_event(self, event, current_block_number)
+
+            # On restart the Raiden node will re-create the filters with the
+            # ethereum node. These filters will have the from_block set to the
+            # value of the latest Block state change. To avoid missing events
+            # the Block state change is dispatched only after all of the events
+            # have been processed.
+            #
+            # This means on some corner cases a few events may be applied
+            # twice, this will happen if the node crashed and some events have
+            # been processed but the Block state change has not been
+            # dispatched.
+            state_change = Block(current_block_number)
+            self.handle_state_change(state_change, current_block_number)
 
     def sign(self, message):
         """ Sign message inplace. """
@@ -371,11 +408,11 @@ class RaidenService:
 
         message.sign(self.private_key, self.address)
 
-    def register_payment_network(self, registry_address, from_block=None):
+    def install_payment_network_filters(self, payment_network_id, from_block=None):
         proxies = get_relevant_proxies(
             self.chain,
             self.address,
-            registry_address,
+            payment_network_id,
         )
 
         # Install the filters first to avoid missing changes, as a consequence
@@ -390,7 +427,7 @@ class RaidenService:
             token_network_list.append(network)
 
         payment_network = PaymentNetworkState(
-            registry_address,
+            payment_network_id,
             token_network_list,
         )
 

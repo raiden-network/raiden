@@ -191,6 +191,7 @@ def get_contract_path(contract_name: str) -> str:
         'smart_contracts',
         contract_name
     )
+    assert os.path.isfile(contract_path)
     return get_relative_path(contract_path)
 
 

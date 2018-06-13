@@ -2,6 +2,7 @@
 import pytest
 import gevent
 
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -44,9 +45,6 @@ def test_register_token(raiden_network, token_amount):
     api1 = RaidenAPI(app1.raiden)
     assert token_address not in api1.get_tokens_list(registry_address)
 
-    app1.raiden.poll_blockchain_events()
-    assert token_address not in api1.get_tokens_list(registry_address)
-
     api1.token_network_register(registry_address, token_address)
     assert token_address in api1.get_tokens_list(registry_address)
 
@@ -58,9 +56,13 @@ def test_register_token(raiden_network, token_amount):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_token_registered_race(raiden_chain, token_amount):
-    """Test recreating the scenario described on issue:
-    https://github.com/raiden-network/raiden/issues/784"""
+def test_token_registered_race(raiden_chain, token_amount, events_poll_timeout):
+    """If a token is registered it must appear on the token list.
+
+    If two nodes register the same token one of the transactions will fail. The
+    node that receives an error for "already registered token" must see the
+    token in the token list. Issue: #784
+    """
     app0, app1 = raiden_chain
 
     api0 = RaidenAPI(app0.raiden)
@@ -68,7 +70,8 @@ def test_token_registered_race(raiden_chain, token_amount):
 
     # Recreate the race condition by making sure the non-registering app won't
     # register at all by watching for the TokenAdded blockchain event.
-    app1.raiden.alarm.remove_callback(app1.raiden.poll_blockchain_events)
+    event_listeners = app1.raiden.blockchain_events.event_listeners
+    app1.raiden.blockchain_events.event_listeners = list()
 
     token_address = app1.raiden.chain.deploy_contract(
         contract_name='HumanStandardToken',
@@ -90,7 +93,13 @@ def test_token_registered_race(raiden_chain, token_amount):
     assert token_address not in api1.get_tokens_list(registry_address)
 
     # The next time when the event is polled, the token is registered
-    app1.raiden.poll_blockchain_events()
+    app1.raiden.blockchain_events.event_listeners = event_listeners
+    waiting.wait_for_block(
+        app1.raiden,
+        app1.raiden.get_block_number() + 1,
+        events_poll_timeout,
+    )
+
     assert token_address in api1.get_tokens_list(registry_address)
 
 

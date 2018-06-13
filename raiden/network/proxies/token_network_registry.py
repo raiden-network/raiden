@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
+from typing import Optional
 
 import structlog
 from web3.utils.filters import Filter
@@ -7,14 +8,19 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
+    encode_hex,
+    event_abi_to_log_topic,
+    to_checksum_address,
+    is_same_address,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.utils import typing
-from raiden.blockchain.abi import (
+from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_TOKEN_ADDED2,
+    EVENT_TOKEN_NETWORK_CREATED,
 )
+from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
     NoTokenManager,
     TransactionThrew,
@@ -70,18 +76,19 @@ class TokenNetworkRegistry:
         self.address_to_tokennetwork = dict()
         self.token_to_tokennetwork = dict()
 
-    def token_to_tokennetwork(self, token_address: typing.TokenAddress):
+    def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
         address = self.proxy.contract.functions.token_to_token_networks(
-            token_address
+            to_checksum_address(token_address),
         ).call()
+        address = to_canonical_address(address)
 
-        if address == b'':
+        if is_same_address(address, NULL_ADDRESS):
             return None
 
-        return to_canonical_address(address)
+        return address
 
     def add_token(self, token_address: typing.TokenAddress):
         if not is_binary_address(token_address):
@@ -96,7 +103,7 @@ class TokenNetworkRegistry:
 
         transaction_hash = self.proxy.transact(
             'createERC20TokenNetwork',
-            token_address
+            token_address,
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
@@ -109,8 +116,7 @@ class TokenNetworkRegistry:
                 registry_address=pex(self.address),
             )
             raise TransactionThrew('createERC20TokenNetwork', receipt_or_none)
-
-        token_network_address = self.token_to_tokennetwork(token_address)
+        token_network_address = self.get_token_network(token_address)
 
         if token_network_address is None:
             log.info(
@@ -121,6 +127,11 @@ class TokenNetworkRegistry:
             )
 
             raise RuntimeError('token_to_token_networks failed')
+        self.token_to_tokennetwork[token_address] = TokenNetwork(
+            self.client,
+            token_network_address,
+            self.poll_timeout,
+        )
 
         log.info(
             'add_token sucessful',
@@ -133,7 +144,11 @@ class TokenNetworkRegistry:
         return token_network_address
 
     def tokenadded_filter(self, from_block=None, to_block=None) -> Filter:
-        topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED2)]
+        event_abi = CONTRACT_MANAGER.get_event_abi(
+            CONTRACT_TOKEN_NETWORK_REGISTRY,
+            EVENT_TOKEN_NETWORK_CREATED,
+        )
+        topics = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         registry_address_bin = self.proxy.contract_address
         return self.client.new_filter(
@@ -174,11 +189,11 @@ class TokenNetworkRegistry:
 
         if token_address not in self.token_to_tokennetwork:
             check_address_has_code(self.client, token_address)  # check that the token exists
-            token_network_address = self.token_to_tokennetwork(token_address)
+            token_network_address = self.get_token_network(token_address)
 
             if token_network_address is None:
                 raise NoTokenManager(
-                    'TokenNetwork for token 0x{} does not exist'.format(hexlify(token_address))
+                    'TokenNetwork for token 0x{} does not exist'.format(hexlify(token_address)),
                 )
 
             token_network = TokenNetwork(

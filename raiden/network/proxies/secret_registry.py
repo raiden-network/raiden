@@ -2,13 +2,18 @@ import structlog
 from binascii import unhexlify
 
 from web3.utils.filters import Filter
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import (
+    is_binary_address,
+    to_normalized_address,
+    event_abi_to_log_topic,
+    encode_hex,
+)
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.utils import typing
-from raiden.blockchain.abi import (
+from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
-    EVENT_CHANNEL_SECRET_REVEALED,
+    EVENT_SECRET_REVEALED,
 )
 from raiden.exceptions import TransactionThrew, InvalidAddress
 from raiden.network.rpc.client import check_address_has_code
@@ -89,10 +94,14 @@ class SecretRegistry:
         )
 
     def register_block_by_secrethash(self, secrethash: typing.Keccak256):
-        return self.proxy.functions.getSecretRevealBlockHeight(secrethash).call()
+        return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
 
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
-        topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_SECRET_REVEALED)]
+        event_abi = CONTRACT_MANAGER.get_event_abi(
+            CONTRACT_SECRET_REGISTRY,
+            EVENT_SECRET_REVEALED
+        )
+        topics = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
             self.address,

@@ -206,6 +206,11 @@ def blockchain_backend(
     raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
 
+@pytest.fixture
+def chain_id(blockchain_services, deploy_client):
+    return int(deploy_client.web3.version.network)
+
+
 def deploy_contract_web3(
         contract_name: str,
         poll_timeout,

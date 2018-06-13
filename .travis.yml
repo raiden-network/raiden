@@ -16,11 +16,11 @@ env:
   - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   matrix:
   - TEST='./raiden/tests/unit'
-  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=udp'
-  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/build/raiden-network/raiden/.synapse/run.sh' RUN_SYNAPSE=1
+  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api --ignore=.raiden/tests/integration/contracts' TRANSPORT_OPTIONS='--transport=udp'
+  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api --ignore=.raiden/tests/integration/contracts' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/build/raiden-network/raiden/.synapse/run.sh' RUN_SYNAPSE=1
   - TEST='./raiden/tests/integration/transfer' TRANSPORT_OPTIONS='--transport=udp'
   - TEST='./raiden/tests/integration/transfer' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/build/raiden-network/raiden/.synapse/run.sh' RUN_SYNAPSE=1
-  - TEST='./raiden/tests/integration/long_running'
+  - TEST='./raiden/tests/integration/long_running ./raiden/tests/integration/contracts'
   - TEST='./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=udp'
   - TEST='./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/build/raiden-network/raiden/.synapse/run.sh' RUN_SYNAPSE=1
 cache:
