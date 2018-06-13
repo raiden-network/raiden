@@ -92,6 +92,7 @@ contract NettingChannelContract {
     function close(
         uint64 nonce,
         uint256 transferred_amount,
+        uint256 locked_amount,
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
@@ -101,6 +102,7 @@ contract NettingChannelContract {
         data.close(
             nonce,
             transferred_amount,
+            locked_amount,
             locksroot,
             extra_hash,
             signature
@@ -113,6 +115,7 @@ contract NettingChannelContract {
     function updateTransfer(
         uint64 nonce,
         uint256 transferred_amount,
+        uint256 locked_amount,
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
@@ -122,6 +125,7 @@ contract NettingChannelContract {
         data.updateTransfer(
             nonce,
             transferred_amount,
+            locked_amount,
             locksroot,
             extra_hash,
             signature

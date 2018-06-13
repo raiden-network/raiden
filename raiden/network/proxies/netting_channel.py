@@ -252,7 +252,7 @@ class NettingChannel:
                 amount=amount,
             )
 
-    def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+    def close(self, nonce, transferred_amount, locked_amount, locksroot, extra_hash, signature):
         """ Close the channel using the provided balance proof.
 
         Raises:
@@ -266,6 +266,7 @@ class NettingChannel:
             contract=pex(self.address),
             nonce=nonce,
             transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
             locksroot=encode_hex(locksroot),
             extra_hash=encode_hex(extra_hash),
             signature=encode_hex(signature),
@@ -282,6 +283,7 @@ class NettingChannel:
                 'close',
                 nonce,
                 transferred_amount,
+                locked_amount,
                 locksroot,
                 extra_hash,
                 signature,
@@ -296,6 +298,7 @@ class NettingChannel:
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
+                    locked_amount=locked_amount,
                     locksroot=encode_hex(locksroot),
                     extra_hash=encode_hex(extra_hash),
                     signature=encode_hex(signature),
@@ -309,12 +312,21 @@ class NettingChannel:
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
                 locksroot=encode_hex(locksroot),
                 extra_hash=encode_hex(extra_hash),
                 signature=encode_hex(signature),
             )
 
-    def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+    def update_transfer(
+        self,
+        nonce,
+        transferred_amount,
+        locked_amount,
+        locksroot,
+        extra_hash,
+        signature,
+    ):
         if signature:
             log.info(
                 'updateTransfer called',
@@ -322,6 +334,7 @@ class NettingChannel:
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
                 locksroot=encode_hex(locksroot),
                 extra_hash=encode_hex(extra_hash),
                 signature=encode_hex(signature),
@@ -331,6 +344,7 @@ class NettingChannel:
                 'updateTransfer',
                 nonce,
                 transferred_amount,
+                locked_amount,
                 locksroot,
                 extra_hash,
                 signature,
@@ -349,6 +363,7 @@ class NettingChannel:
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
+                    locked_amount=locked_amount,
                     locksroot=encode_hex(locksroot),
                     extra_hash=encode_hex(extra_hash),
                     signature=encode_hex(signature),
@@ -362,6 +377,7 @@ class NettingChannel:
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
                 locksroot=encode_hex(locksroot),
                 extra_hash=encode_hex(extra_hash),
                 signature=encode_hex(signature),

@@ -2,12 +2,14 @@
 from raiden.encoding.messages import (
     nonce as nonce_field,
     transferred_amount as transferred_amount_field,
+    locked_amount as locked_amount_field,
 )
 
 
 def signing_data(
         nonce: int,
         transferred_amount: int,
+        locked_amount: int,
         channel_address: bytes,
         locksroot: bytes,
         extra_hash: bytes,
@@ -23,9 +25,16 @@ def signing_data(
     )
     transferred_amount_bytes_padded = transferred_amount_bytes.rjust(pad_size, b'\x00')
 
+    locked_amount_bytes = locked_amount_field.encoder.encode(
+        locked_amount,
+        locked_amount_field.size_bytes,
+    )
+    locked_amount_bytes_padded = locked_amount_bytes.rjust(pad_size, b'\x00')
+
     data_that_was_signed = (
         nonce_bytes_padded +
         transferred_amount_bytes_padded +
+        locked_amount_bytes_padded +
         locksroot +
         channel_address +
         extra_hash
@@ -37,6 +46,7 @@ def signing_data(
 def pack_signing_data(
         nonce: bytes,
         transferred_amount: bytes,
+        locked_amount: bytes,
         channel_address: bytes,
         locksroot: bytes,
         extra_hash: bytes,
@@ -45,6 +55,7 @@ def pack_signing_data(
     data_that_was_signed = (
         nonce +
         transferred_amount +
+        locked_amount +
         locksroot +
         channel_address +
         extra_hash

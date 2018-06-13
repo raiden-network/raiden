@@ -144,6 +144,7 @@ def is_valid_signature(
     data_that_was_signed = signing_data(
         balance_proof.nonce,
         balance_proof.transferred_amount,
+        balance_proof.locked_amount,
         balance_proof.channel_address,
         balance_proof.locksroot,
         balance_proof.message_hash,

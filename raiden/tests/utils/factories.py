@@ -270,6 +270,7 @@ def make_signed_balance_proof(
     data_to_sign = balance_proof.signing_data(
         nonce,
         transferred_amount,
+        locked_amount,
         channel_address,
         locksroot,
         extra_hash,

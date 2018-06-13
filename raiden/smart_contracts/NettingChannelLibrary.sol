@@ -95,6 +95,7 @@ library NettingChannelLibrary {
         Data storage self,
         uint64 nonce,
         uint256 transferred_amount,
+        uint256 locked_amount,
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
@@ -125,6 +126,7 @@ library NettingChannelLibrary {
             transfer_address = recoverAddressFromSignature(
                 nonce,
                 transferred_amount,
+                locked_amount,
                 locksroot,
                 extra_hash,
                 signature 
@@ -147,6 +149,7 @@ library NettingChannelLibrary {
         Data storage self,
         uint64 nonce,
         uint256 transferred_amount,
+        uint256 locked_amount,
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
@@ -173,6 +176,7 @@ library NettingChannelLibrary {
         transfer_address = recoverAddressFromSignature(
             nonce,
             transferred_amount,
+            locked_amount,
             locksroot,
             extra_hash,
             signature 
@@ -191,6 +195,7 @@ library NettingChannelLibrary {
     function recoverAddressFromSignature(
         uint64 nonce,
         uint256 transferred_amount,
+        uint256 locked_amount,
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
@@ -209,6 +214,7 @@ library NettingChannelLibrary {
         signed_hash = keccak256(
             nonce,
             transferred_amount,
+            locked_amount,
             locksroot,
             this,
             extra_hash

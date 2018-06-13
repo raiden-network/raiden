@@ -172,6 +172,7 @@ def handle_contract_channelclose(
     if balance_proof:
         nonce = balance_proof.nonce
         transferred_amount = balance_proof.transferred_amount
+        locked_amount = balance_proof.locked_amount
         locksroot = balance_proof.locksroot
         signature = balance_proof.signature
         message_hash = balance_proof.message_hash
@@ -179,6 +180,7 @@ def handle_contract_channelclose(
     else:
         nonce = 0
         transferred_amount = 0
+        locked_amount = 0
         locksroot = b''
         signature = b''
         message_hash = b''
@@ -188,6 +190,7 @@ def handle_contract_channelclose(
     channel.close(
         nonce,
         transferred_amount,
+        locked_amount,
         locksroot,
         message_hash,
         signature,
@@ -205,6 +208,7 @@ def handle_contract_channelupdate(
         channel.update_transfer(
             balance_proof.nonce,
             balance_proof.transferred_amount,
+            balance_proof.locked_amount,
             balance_proof.locksroot,
             balance_proof.message_hash,
             balance_proof.signature,
