@@ -9,12 +9,13 @@ from raiden.transfer.state import (
 )
 from raiden.transfer import channel, views
 from raiden.utils import typing
+from raiden.service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def wait_for_block(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         block_number: typing.BlockNumber,
         poll_timeout: typing.NetworkTimeout,
 ) -> None:
@@ -29,7 +30,7 @@ def wait_for_block(
 
 
 def wait_for_newchannel(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
@@ -58,7 +59,7 @@ def wait_for_newchannel(
 
 
 def wait_for_participant_newbalance(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
@@ -96,7 +97,7 @@ def wait_for_participant_newbalance(
 
 
 def wait_for_close(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.Address,
         channel_ids: typing.List[typing.ChannelID],
@@ -130,7 +131,7 @@ def wait_for_close(
 
 
 def wait_for_settle(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
@@ -167,7 +168,7 @@ def wait_for_settle(
 
 
 def wait_for_settle_all_channels(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         poll_timeout: typing.NetworkTimeout,
 ) -> None:
     """Wait until all channels are settled.
@@ -194,7 +195,7 @@ def wait_for_settle_all_channels(
 
 
 def wait_for_healthy(
-        raiden: 'RaidenService',
+        raiden: RaidenService,
         node_address: typing.Address,
         poll_timeout: typing.NetworkTimeout,
 ) -> None:

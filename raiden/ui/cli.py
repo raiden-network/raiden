@@ -777,7 +777,7 @@ def run(ctx, **kwargs):
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
             app_ = ctx.invoke(app, **kwargs)
-        except EthNodeCommunicationError as err:
+        except EthNodeCommunicationError:
             sys.exit(1)
 
         domain_list = []

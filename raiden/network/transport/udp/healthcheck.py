@@ -16,7 +16,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
 )
-from raiden.network.transport.udp import udp_utils
+from raiden.network.transport.udp import udp_utils, UDPTransport
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -28,7 +28,7 @@ HealthEvents = namedtuple('HealthEvents', (
 
 
 def healthcheck(
-        transport: 'UDPTransport',
+        transport: UDPTransport,
         recipient: typing.Address,
         event_stop: Event,
         event_healthy: Event,
