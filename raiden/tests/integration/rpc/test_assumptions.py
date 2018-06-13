@@ -48,7 +48,7 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    selector = decode_hex(contract_proxy.encode_function_call('ret', args=[]))
+    selector = decode_hex(contract_proxy.encode_function_call('ret', args=None))
     next_byte = chr(selector[0] + 1).encode()
     wrong_selector = next_byte + selector[1:]
     result = deploy_client.web3.eth.call({
