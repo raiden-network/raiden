@@ -59,9 +59,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
-from raiden.raiden_service import (
-    create_default_identifier,
-)
+from raiden.utils import create_default_identifier
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
 from raiden.utils import (
     channelstate_to_api_dict,

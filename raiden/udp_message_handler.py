@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import structlog
 
-from raiden.service import RaidenService
+from raiden.raiden_service import RaidenService
 from raiden.utils import random_secret
 from raiden.routing import get_best_routes
 from raiden.transfer import views

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 import random
 
 import gevent
@@ -9,7 +8,8 @@ from gevent.event import (
 )
 
 from raiden.utils import typing
-from raiden.network.transport.udp import UDPTransport
+# type alias to avoid both circular dependencies and flake8 errors
+UDPTransport = 'UDPTransport'
 
 
 def event_first_of(*events: _AbstractLinkable) -> Event:

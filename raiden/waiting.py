@@ -9,7 +9,8 @@ from raiden.transfer.state import (
 )
 from raiden.transfer import channel, views
 from raiden.utils import typing
-from raiden.service import RaidenService
+# type alias to avoid both circular dependencies and flake8 errors
+RaidenService = 'RaidenService'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
