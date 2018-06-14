@@ -20,7 +20,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def make_graph(
-        edge_list: List[Tuple[typing.Address, typing.Address]]
+        edge_list: List[Tuple[typing.Address, typing.Address]],
 ) -> networkx.Graph:
     """ Returns a graph that represents the connections among the netting
     contracts.
@@ -51,7 +51,7 @@ def make_graph(
 def get_ordered_partners(
         network_graph: networkx.Graph,
         from_address: typing.Address,
-        to_address: typing.Address
+        to_address: typing.Address,
 ) -> List:
     paths = list()
 
@@ -110,7 +110,7 @@ def get_best_routes(
 
     if not neighbors_heap:
         log.warning(
-            'No routes available from %s to %s' % (pex(from_address), pex(to_address))
+            'No routes available from %s to %s' % (pex(from_address), pex(to_address)),
         )
 
     while neighbors_heap:
@@ -129,7 +129,7 @@ def get_best_routes(
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
                 'channel %s - %s is not opened, ignoring' %
-                (pex(from_address), pex(partner_address))
+                (pex(from_address), pex(partner_address)),
             )
             continue
 
@@ -141,7 +141,7 @@ def get_best_routes(
         if amount > distributable:
             log.info(
                 'channel %s - %s doesnt have enough funds [%s], ignoring' %
-                (pex(from_address), pex(partner_address), amount)
+                (pex(from_address), pex(partner_address), amount),
             )
             continue
 
@@ -149,7 +149,7 @@ def get_best_routes(
         if network_state != NODE_NETWORK_REACHABLE:
             log.info(
                 'partner for channel %s - %s is not %s, ignoring' %
-                (pex(from_address), pex(partner_address), NODE_NETWORK_REACHABLE)
+                (pex(from_address), pex(partner_address), NODE_NETWORK_REACHABLE),
             )
             continue
 

@@ -105,7 +105,7 @@ class GroupableOption(click.Option):
             type=None,
             help=None,
             option_group=None,
-            **attrs
+            **attrs,
     ):
         super().__init__(
             param_decls,
@@ -120,7 +120,7 @@ class GroupableOption(click.Option):
             allow_from_autoenv,
             type,
             help,
-            **attrs
+            **attrs,
         )
         self.option_group = option_group
 
@@ -134,9 +134,9 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
         grouped_options = groupby(
             sorted(
                 self.get_params(ctx),
-                key=keyfunc
+                key=keyfunc,
             ),
-            key=keyfunc
+            key=keyfunc,
         )
 
         options = {}
@@ -148,7 +148,7 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
         if options:
             widths_a, widths_b = list(
-                zip(*[measure_table(group_options) for group_options in options.values()])
+                zip(*[measure_table(group_options) for group_options in options.values()]),
             )
             widths = (max(widths_a), max(widths_b))
 
@@ -212,7 +212,7 @@ class LogLevelConfigType(click.ParamType):
         r':'
         r'(?P<logger_level>debug|info|warn(?:ing)?|error|critical|fatal)'
         r',?)*$',
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     def convert(self, value, param, ctx):

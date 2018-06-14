@@ -59,7 +59,7 @@ class Registry:
 
         CONTRACT_MANAGER.check_contract_version(
             self.proxy.contract.functions.contract_version().call(),
-            CONTRACT_REGISTRY
+            CONTRACT_REGISTRY,
         )
 
         self.address = registry_address
@@ -194,7 +194,7 @@ class Registry:
 
             if manager_address is None:
                 raise NoTokenManager(
-                    'Manager for token 0x{} does not exist'.format(hexlify(token_address))
+                    'Manager for token 0x{} does not exist'.format(hexlify(token_address)),
                 )
 
             manager = ChannelManager(

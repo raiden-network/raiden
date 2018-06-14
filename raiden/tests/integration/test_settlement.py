@@ -380,7 +380,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.unlock(
-        UnlockProofState(unlock_proof, attack_transfer.lock, secret)
+        UnlockProofState(unlock_proof, attack_transfer.lock, secret),
     )
     # XXX: verify that the secret was publicized
 

@@ -350,7 +350,7 @@ class UDPTransport:
         messagedata = message.encode()
         if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
             raise ValueError(
-                'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE)
+                'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE),
             )
 
         # message identifiers must be unique

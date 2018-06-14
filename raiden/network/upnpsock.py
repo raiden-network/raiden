@@ -100,7 +100,7 @@ def open_port(upnp, internal_port, external_start_port=None):
                     'keeping pre-existing portmapping',
                     internal=internal,
                     external=external,
-                    lanaddr=lanaddr
+                    lanaddr=lanaddr,
                 )
                 return True
             elif lanaddr != upnp.lanaddr:
@@ -110,7 +110,7 @@ def open_port(upnp, internal_port, external_start_port=None):
                     internal=internal,
                     external=external,
                     other_ip=lanaddr,
-                    our_ip=upnp.lanaddr
+                    our_ip=upnp.lanaddr,
                 )
                 return False
             elif (
@@ -119,7 +119,7 @@ def open_port(upnp, internal_port, external_start_port=None):
             ):
                 log.debug(
                     'ignoring existing mapping for other program',
-                    name=name
+                    name=name,
                 )
                 # some other program uses our port
                 return False
@@ -181,6 +181,6 @@ def release_port(upnp, external_port):
         return True
 
     log.warning(
-        'could not release port mapping, check your router for stale mappings'
+        'could not release port mapping, check your router for stale mappings',
     )
     return False

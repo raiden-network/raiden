@@ -102,7 +102,7 @@ def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
 
 def is_valid_refund(
         original_transfer: LockedTransferUnsignedState,
-        refund_transfer: LockedTransferSignedState
+        refund_transfer: LockedTransferSignedState,
 ):
     """ True if the refund transfer matches the original transfer. """
     refund_transfer_sender = refund_transfer.balance_proof.sender
@@ -161,7 +161,7 @@ def is_channel_close_needed(payer_channel, transfer_pair, block_number):
 
 def is_send_transfer_almost_equal(
         send: LockedTransferUnsignedState,
-        received: LockedTransferSignedState
+        received: LockedTransferSignedState,
 ):
     """ True if both transfers are for the same mediated transfer. """
     # the only value that may change for each hop is the expiration
@@ -308,7 +308,7 @@ def next_channel_from_routes(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         transfer_amount: int,
-        timeout_blocks: int
+        timeout_blocks: int,
 ) -> NettingChannelState:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
@@ -356,7 +356,7 @@ def next_transfer_pair(
         channelidentifiers_to_channels: Dict,
         pseudo_random_generator: random.Random,
         timeout_blocks: int,
-        block_number: int
+        block_number: int,
 ):
     """ Given a payer transfer tries a new route to proceed with the mediation.
     Args:
@@ -396,7 +396,7 @@ def next_transfer_pair(
             message_identifier,
             payer_transfer.payment_identifier,
             lock_expiration,
-            payer_transfer.lock.secrethash
+            payer_transfer.lock.secrethash,
         )
         assert lockedtransfer_event
 
@@ -444,7 +444,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
 def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         transfers_pair,
         payee_address,
-        new_payee_state
+        new_payee_state,
 ):
     """ Set the state of a transfer *sent* to a payee and check the secret is
     being revealed backwards.

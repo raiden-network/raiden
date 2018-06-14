@@ -107,7 +107,7 @@ def memory_objcount(output, data_list, topn=10):
         # spikes
         topn_classes = sorted(
             ((count, klass) for klass, count in sample_highcount.items()),
-            reverse=True
+            reverse=True,
         )[:topn]
 
         # this creates the valley in the graph, we assume that there is a

@@ -193,7 +193,7 @@ def tps_run(
 
     throttle_policy = TokenBucket(
         config['protocol']['throttle_capacity'],
-        config['protocol']['throttle_fill_rate']
+        config['protocol']['throttle_fill_rate'],
     )
 
     transport = UDPTransport(
@@ -233,7 +233,7 @@ def main():
     # generate the same network.
     if 'PYTHONHASHSEED' not in os.environ:
         raise Exception(
-            'Please set up the PYTHONHASHSEED variable to ensure a reproducible execution'
+            'Please set up the PYTHONHASHSEED variable to ensure a reproducible execution',
         )
 
     parser = argparse.ArgumentParser()

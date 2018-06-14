@@ -10,7 +10,7 @@ import click
 @click.option(
     '--results-dir',
     required=True,
-    help='Directory with output json files from orchestration run.'
+    help='Directory with output json files from orchestration run.',
 )
 @click.option('--plot-filename', default='', help='Plot historic data to file.')
 def process_results(results_dir, plot_filename):

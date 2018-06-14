@@ -24,7 +24,7 @@ class PortMappedSocket:
             self.socket.__repr__(),
             self.external_ip,
             self.external_port,
-            self.method
+            self.method,
         )
 
 
@@ -86,7 +86,7 @@ class SocketFactory:
 
         if method == 'ext':
             method = 'ext:{}'.format(
-                ':'.join(str(s) for s in self.strategy_args)
+                ':'.join(str(s) for s in self.strategy_args),
             )
         log.info(
             'Network port opened',
@@ -126,7 +126,7 @@ class SocketFactory:
                 self.socket,
                 self.source_ip,
                 self.source_port,
-                **self.kwargs
+                **self.kwargs,
             )
             if external_port is not None:
                 return PortMappedSocket(self.socket, 'STUN', external_ip, external_port, **nat)
@@ -160,7 +160,7 @@ class SocketFactory:
     def _open_socket(self):
         sock = socket.socket(
             socket.AF_INET,  # Internet
-            socket.SOCK_DGRAM  # UDP
+            socket.SOCK_DGRAM,  # UDP
         )
 
         sock.bind((self.source_ip, self.source_port))

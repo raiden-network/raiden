@@ -79,7 +79,7 @@ def handle_tokennetwork_new2(raiden, event, current_block_number):
 
     token_network_registry_address = event.originating_contract
     token_network_registry_proxy = raiden.chain.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address,
     )
     token_network_proxy = token_network_registry_proxy.token_network(token_network_address)
 
@@ -122,7 +122,7 @@ def handle_channel_new(raiden, event, current_block_number):
 
         partner_address = channel_state.partner_state.address
         connection_manager = raiden.connection_manager_for_token(
-            registry_address, token_address
+            registry_address, token_address,
         )
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
@@ -188,7 +188,7 @@ def handle_channel_new_balance(raiden, event, current_block_number):
 
         if balance_was_zero:
             connection_manager = raiden.connection_manager_for_token(
-                registry_address, token_address
+                registry_address, token_address,
             )
 
             gevent.spawn(
@@ -288,7 +288,7 @@ def on_blockchain_event(raiden, event, current_block_number):
     if data['event'] == EVENT_TOKEN_ADDED:
         data['registry_address'] = to_canonical_address(data['args']['registry_address'])
         data['channel_manager_address'] = to_canonical_address(
-            data['args']['channel_manager_address']
+            data['args']['channel_manager_address'],
         )
         handle_tokennetwork_new(raiden, event, current_block_number)
 

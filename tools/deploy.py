@@ -21,14 +21,14 @@ RAIDEN_CONTRACT_FILES = [
     'NettingChannelLibrary.sol',
     'ChannelManagerLibrary.sol',
     'Registry.sol',
-    'EndpointRegistry.sol'
+    'EndpointRegistry.sol',
 ]
 
 # Top level contracts to be deployed. Dependencies are handled automatically
 # in `JSONRPCClient.deploy_solidity_contract()`
 CONTRACTS_TO_DEPLOY = [
     'Registry.sol:Registry',
-    'EndpointRegistry.sol:EndpointRegistry'
+    'EndpointRegistry.sol:EndpointRegistry',
 ]
 
 

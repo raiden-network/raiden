@@ -9,7 +9,7 @@ from raiden.blockchain.events import (
     ALL_EVENTS,
     get_all_registry_events,
     get_all_netting_channel_events,
-    get_all_channel_manager_events
+    get_all_channel_manager_events,
 )
 from raiden.transfer import views
 from raiden.transfer.events import (
@@ -175,7 +175,7 @@ class RaidenAPI:
 
         if settle_timeout <= reveal_timeout:
             raise InvalidSettleTimeout(
-                'reveal_timeout can not be larger-or-equal to settle_timeout'
+                'reveal_timeout can not be larger-or-equal to settle_timeout',
             )
 
         if not is_binary_address(registry_address):
@@ -195,7 +195,7 @@ class RaidenAPI:
         )
 
         msg = 'After {} seconds the channel was not properly created.'.format(
-            poll_timeout
+            poll_timeout,
         )
 
         with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
@@ -279,7 +279,7 @@ class RaidenAPI:
         if not channel_proxy.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with id {channel_state.identifier} is '
-                f'busy with another ongoing operation'
+                f'busy with another ongoing operation',
             )
 
         with releasing(channel_proxy.channel_operations_lock):
@@ -290,7 +290,7 @@ class RaidenAPI:
             target_balance = old_balance + amount
 
             msg = 'After {} seconds the deposit was not properly processed.'.format(
-                poll_timeout
+                poll_timeout,
             )
 
             # Wait until the `ChannelNewBalance` event is processed.
@@ -377,7 +377,7 @@ class RaidenAPI:
                 if not channel.channel_operations_lock.acquire(blocking=False):
                     raise ChannelBusyError(
                         f'Channel with id {channel_state.identifier} is '
-                        f'busy with another ongoing operation.'
+                        f'busy with another ongoing operation.',
                     )
 
                 stack.push(channel.channel_operations_lock)
@@ -391,7 +391,7 @@ class RaidenAPI:
                 self.raiden.handle_state_change(channel_close)
 
             msg = 'After {} seconds the closing transactions were not properly processed.'.format(
-                poll_timeout
+                poll_timeout,
             )
 
             channel_ids = [channel_state.identifier for channel_state in channels_to_close]
@@ -563,7 +563,7 @@ class RaidenAPI:
     def get_channel_events(self, channel_address, from_block, to_block='latest'):
         if not is_binary_address(channel_address):
             raise InvalidAddress(
-                'Expected binary address format for channel in get_channel_events'
+                'Expected binary address format for channel in get_channel_events',
             )
         returned_events = get_all_netting_channel_events(
             self.raiden.chain,
@@ -592,10 +592,10 @@ class RaidenAPI:
 
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events'
+                'Expected binary address format for token in get_token_network_events',
             )
         channel_manager_address = self.raiden.default_registry.manager_address_by_token(
-            token_address
+            token_address,
         )
         if channel_manager_address is None:
             raise UnknownTokenAddress('Token address is not known.')

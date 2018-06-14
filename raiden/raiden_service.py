@@ -167,7 +167,7 @@ class RaidenService:
         )
         if invalid_timeout:
             raise ValueError('settle_timeout must be in range [{}, {}]'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
             ))
 
         self.tokens_to_connectionmanagers = dict()

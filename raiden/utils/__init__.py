@@ -182,7 +182,7 @@ def get_project_root() -> str:
 def get_relative_path(file_name) -> str:
     prefix = os.path.commonprefix([
         os.path.realpath('.'),
-        os.path.realpath(file_name)
+        os.path.realpath(file_name),
     ])
     return file_name.replace(prefix + '/', '')
 
@@ -191,7 +191,7 @@ def get_contract_path(contract_name: str) -> str:
     contract_path = os.path.join(
         get_project_root(),
         'smart_contracts',
-        contract_name
+        contract_name,
     )
     assert os.path.isfile(contract_path)
     return get_relative_path(contract_path)
@@ -208,7 +208,7 @@ def get_encoded_transfers(their_transfer, our_transfer):
     if not their_transfer and our_transfer:
         raise ValueError(
             'There is no reason to provide our_transfer when their_transfer'
-            ' is not provided'
+            ' is not provided',
         )
     their_encoded = their_transfer.encode() if their_transfer else ''
     our_encoded = our_transfer.encode() if our_transfer else ''
@@ -254,21 +254,21 @@ def get_system_spec():
     if sys.platform == 'darwin':
         system_info = 'macOS {} {}'.format(
             platform.mac_ver()[0],
-            platform.architecture()[0]
+            platform.architecture()[0],
         )
     else:
         system_info = '{} {} {} {}'.format(
             platform.system(),
             '_'.join(platform.architecture()),
             platform.release(),
-            platform.machine()
+            platform.machine(),
         )
 
     system_spec = dict(
         raiden=pkg_resources.require(raiden.__name__)[0].version,
         python_implementation=platform.python_implementation(),
         python_version=platform.python_version(),
-        system=system_info
+        system=system_info,
     )
     return system_spec
 

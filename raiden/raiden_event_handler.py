@@ -134,7 +134,7 @@ def handle_send_processed(
 
 def handle_transfersentsuccess(
         raiden: RaidenService,
-        transfer_sent_success_event: EventTransferSentSuccess
+        transfer_sent_success_event: EventTransferSentSuccess,
 ):
     for result in raiden.identifier_to_results[transfer_sent_success_event.identifier]:
         result.set(True)
@@ -144,7 +144,7 @@ def handle_transfersentsuccess(
 
 def handle_transfersentfailed(
         raiden: RaidenService,
-        transfer_sent_failed_event: EventTransferSentFailed
+        transfer_sent_failed_event: EventTransferSentFailed,
 ):
     for result in raiden.identifier_to_results[transfer_sent_failed_event.identifier]:
         result.set(False)
@@ -153,19 +153,19 @@ def handle_transfersentfailed(
 
 def handle_unlockfailed(
         raiden: RaidenService,
-        unlock_failed_event: EventUnlockFailed
+        unlock_failed_event: EventUnlockFailed,
 ):
     # pylint: disable=unused-argument
     log.error(
         'UnlockFailed!',
         secrethash=pex(unlock_failed_event.secrethash),
-        reason=unlock_failed_event.reason
+        reason=unlock_failed_event.reason,
     )
 
 
 def handle_contract_channelclose(
         raiden: RaidenService,
-        channel_close_event: ContractSendChannelClose
+        channel_close_event: ContractSendChannelClose,
 ):
     balance_proof = channel_close_event.balance_proof
 
@@ -199,7 +199,7 @@ def handle_contract_channelclose(
 
 def handle_contract_channelupdate(
         raiden: RaidenService,
-        channel_update_event: ContractSendChannelUpdateTransfer
+        channel_update_event: ContractSendChannelUpdateTransfer,
 ):
     balance_proof = channel_update_event.balance_proof
 
@@ -217,7 +217,7 @@ def handle_contract_channelupdate(
 
 def handle_contract_channelunlock(
         raiden: RaidenService,
-        channel_unlock_event: ContractSendChannelUnlock
+        channel_unlock_event: ContractSendChannelUnlock,
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
     block_number = raiden.get_block_number()
@@ -233,7 +233,7 @@ def handle_contract_channelunlock(
 
 def handle_contract_channelsettle(
         raiden: RaidenService,
-        channel_settle_event: ContractSendChannelSettle
+        channel_settle_event: ContractSendChannelSettle,
 ):
     channel = raiden.chain.netting_channel(channel_settle_event.channel_identifier)
     channel.settle()

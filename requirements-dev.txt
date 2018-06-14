@@ -8,6 +8,7 @@ pytest-cov==2.5.1
 flaky==3.4.0
 grequests==0.3.0
 flake8==3.5.0
+flake8-commas==2.0.0
 mirakuru==0.9.0
 
 # Debugging

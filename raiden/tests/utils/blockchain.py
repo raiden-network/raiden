@@ -72,7 +72,7 @@ def geth_to_cmd(node, datadir, verbosity):
         'rpcport',
         'bootnodes',
         'minerthreads',
-        'unlock'
+        'unlock',
     ]
 
     cmd = ['geth']
@@ -118,7 +118,7 @@ def geth_create_account(datadir, privkey):
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
         stdin=subprocess.PIPE,
-        universal_newlines=True
+        universal_newlines=True,
     )
 
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
@@ -195,7 +195,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
             # don't use web3 here as this will cause problem in the middleware
             response = deploy_client.web3.providers[0].make_request(
                 'eth_getBlockByNumber',
-                ['0x0', False]
+                ['0x0', False],
             )
         except ConnectionError:
             gevent.sleep(0.5)
@@ -208,7 +208,7 @@ def geth_wait_and_check(deploy_client, privatekeys, random_marker):
             if running_marker != random_marker:
                 raise RuntimeError(
                     'the test marker does not match, maybe two tests are running in '
-                    'parallel with the same port?'
+                    'parallel with the same port?',
                 )
 
     if jsonrpc_running is False:

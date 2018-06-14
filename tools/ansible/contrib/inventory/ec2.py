@@ -238,7 +238,7 @@ class Ec2Inventory(object):
             if self.eucalyptus_host:
                 self.regions.append(
                     boto.connect_euca(host=self.eucalyptus_host).region.name,
-                    **self.credentials
+                    **self.credentials,
                 )
             else:
                 for regionInfo in ec2.regions():
@@ -301,7 +301,7 @@ class Ec2Inventory(object):
             'shutting-down',
             'terminated',
             'stopping',
-            'stopped'
+            'stopped',
         ]
         self.ec2_instance_states = []
         if self.all_instances:
@@ -366,7 +366,7 @@ class Ec2Inventory(object):
             if aws_access_key_id:
                 self.credentials = {
                     'aws_access_key_id': aws_access_key_id,
-                    'aws_secret_access_key': aws_secret_access_key
+                    'aws_secret_access_key': aws_secret_access_key,
                 }
                 if aws_security_token:
                     self.credentials['security_token'] = aws_security_token
@@ -546,7 +546,7 @@ class Ec2Inventory(object):
         if conn is None:
             self.fail_with_error(
                 "region name: %s likely not supported, or AWS is down. "
-                "connection to region failed." % region
+                "connection to region failed." % region,
             )
         return conn
 
@@ -560,7 +560,7 @@ class Ec2Inventory(object):
             if self.ec2_instance_filters:
                 for filter_key, filter_values in self.ec2_instance_filters.items():
                     reservations.extend(conn.get_all_instances(
-                        filters={filter_key: filter_values}
+                        filters={filter_key: filter_values},
                     ))
             else:
                 reservations = conn.get_all_instances()
@@ -770,12 +770,12 @@ class Ec2Inventory(object):
         if None in [os.environ.get('AWS_ACCESS_KEY_ID'), os.environ.get('AWS_SECRET_ACCESS_KEY')]:
             errors.append(
                 ' - No AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment '
-                'vars found'
+                'vars found',
             )
         else:
             errors.append(
                 ' - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment '
-                'vars found but may not be correct'
+                'vars found but may not be correct',
             )
 
         boto_paths = ['/etc/boto.cfg', '~/.boto', '~/.aws/credentials']
@@ -787,7 +787,7 @@ class Ec2Inventory(object):
         else:
             errors.append(
                 " - No Boto config found at any expected location '%s'"
-                % ', '.join(boto_paths)
+                % ', '.join(boto_paths),
             )
 
         return '\n'.join(errors)
@@ -819,7 +819,7 @@ class Ec2Inventory(object):
         # Select the best destination address
         if self.destination_format and self.destination_format_tags:
             dest = self.destination_format.format(
-                *[getattr(instance, 'tags').get(tag, '') for tag in self.destination_format_tags]
+                *[getattr(instance, 'tags').get(tag, '') for tag in self.destination_format_tags],
             )
         elif instance.subnet_id:
             dest = getattr(instance, self.vpc_destination_variable, None)
@@ -917,7 +917,7 @@ class Ec2Inventory(object):
                         self.push_group(self.inventory, 'security_groups', key)
             except AttributeError:
                 self.fail_with_error('\n'.join(
-                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.']
+                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.'],
                 ))
 
         # Inventory: Group by tag keys
@@ -1038,7 +1038,7 @@ class Ec2Inventory(object):
 
             except AttributeError:
                 self.fail_with_error('\n'.join(
-                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.']
+                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.'],
                 ))
 
         # Inventory: Group by engine
@@ -1054,7 +1054,7 @@ class Ec2Inventory(object):
         # Inventory: Group by parameter group
         if self.group_by_rds_parameter_group:
             rds_param_group_name = self.to_safe(
-                'rds_parameter_group_' + instance.parameter_group.name
+                'rds_parameter_group_' + instance.parameter_group.name,
             )
             self.push(self.inventory, rds_param_group_name, hostname)
             if self.nested_groups:
@@ -1491,7 +1491,7 @@ class Ec2Inventory(object):
             # Target: All Cache Clusters
             elif key == 'ec2_cache_parameter_group':
                 host_info["ec2_cache_node_ids_to_reboot"] = ','.join(
-                    [str(i) for i in value['CacheNodeIdsToReboot']]
+                    [str(i) for i in value['CacheNodeIdsToReboot']],
                 )
                 host_info['ec2_cache_parameter_group_name'] = value['CacheParameterGroupName']
                 host_info['ec2_cache_parameter_apply_status'] = value['ParameterApplyStatus']

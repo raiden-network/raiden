@@ -56,14 +56,14 @@ def pytest_addoption(parser):
         '--transport',
         choices=('none', 'udp', 'matrix', 'all'),
         default='udp',
-        help='Run integration tests with udp, with matrix, with both or not at all.'
+        help='Run integration tests with udp, with matrix, with both or not at all.',
     )
 
     parser.addoption(
         '--local-matrix',
         dest='local_matrix',
         default=None,
-        help='Command to run the local matrix server. Defaults to .synapse/run.sh'
+        help='Command to run the local matrix server. Defaults to .synapse/run.sh',
     )
 
     parser.addoption(
@@ -71,7 +71,7 @@ def pytest_addoption(parser):
         action='store',
         dest='matrix_host',
         default='localhost',
-        help="Host name of local matrix server if used, default: 'localhost'"
+        help="Host name of local matrix server if used, default: 'localhost'",
     )
 
     parser.addoption(
@@ -79,7 +79,7 @@ def pytest_addoption(parser):
         action='store',
         dest='matrix_port',
         default=8008,
-        help='Port of local matrix server if used, default: 8008'
+        help='Port of local matrix server if used, default: 8008',
     )
 
 
@@ -137,7 +137,7 @@ def logging_level(request):
     configure_logging(
         logging_levels,
         colorize=not request.config.option.plain_log,
-        log_file=request.config.option.log_file
+        log_file=request.config.option.log_file,
     )
 
 

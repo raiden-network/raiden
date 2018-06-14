@@ -211,7 +211,7 @@ class ContractReceiveChannelClosed(StateChange):
             pex(self.token_network_identifier),
             pex(self.channel_identifier),
             pex(self.closing_address),
-            self.closed_block_number
+            self.closed_block_number,
         )
 
     def __eq__(self, other):

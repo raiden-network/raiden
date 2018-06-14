@@ -46,7 +46,7 @@ def test_direct_transfer_out_of_bounds_values():
     [
         make_lock,
         make_mediated_transfer,
-    ]
+    ],
 )
 def test_amount_out_of_bounds(amount, make):
     with pytest.raises(ValueError):

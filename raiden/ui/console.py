@@ -133,7 +133,7 @@ class SigINTHandler:
                 OKGREEN,
                 BOLD,
                 ENTER_CONSOLE_TIMEOUT - (time.time() - start),
-                ENDC
+                ENDC,
             )
 
             sys.stdout.write(prompt)
@@ -334,7 +334,7 @@ class ConsoleTools:
             self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(
             'and registered ' if auto_register else ' ',
-            name
+            name,
         ))
         return token_address_hex
 
@@ -421,7 +421,7 @@ class ConsoleTools:
         contract_address = safe_address_decode(contract_address_hex)
         start_time = time.time()
         result = self._raiden.chain.client.web3.eth.getCode(
-            to_checksum_address(contract_address)
+            to_checksum_address(contract_address),
         )
 
         current_time = time.time()
@@ -430,7 +430,7 @@ class ConsoleTools:
                 return False
 
             result = self._raiden.chain.client.web3.eth.getCode(
-                to_checksum_address(contract_address)
+                to_checksum_address(contract_address),
             )
             gevent.sleep(0.5)
 

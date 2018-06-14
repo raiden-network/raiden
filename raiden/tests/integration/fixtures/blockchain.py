@@ -29,7 +29,7 @@ BlockchainServices = namedtuple(
         'deploy_registry',
         'deploy_service',
         'blockchain_services',
-    )
+    ),
 )
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -95,7 +95,7 @@ def token_addresses(
         token_amount,
         number_of_tokens,
         blockchain_services,
-        register_tokens
+        register_tokens,
 ):
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `blockchain_services` and
@@ -118,7 +118,7 @@ def token_addresses(
         blockchain_services.deploy_service,
         blockchain_services.deploy_registry,
         participants,
-        register_tokens
+        register_tokens,
     )
 
     return token_addresses
@@ -222,11 +222,11 @@ def deploy_contract_web3(
     contract_interface = CONTRACT_MANAGER.abi[contract_name]
     contract = web3.eth.contract(
         abi=contract_interface['abi'],
-        bytecode=contract_interface['bin']
+        bytecode=contract_interface['bin'],
     )
     # Submit the transaction that deploys the contract
     tx_hash = contract.constructor(*args).transact(
-        {'from': to_checksum_address(deploy_client.sender)}
+        {'from': to_checksum_address(deploy_client.sender)},
     )
 
     deploy_client.poll(tx_hash, timeout=poll_timeout)

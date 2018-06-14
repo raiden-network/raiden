@@ -30,7 +30,7 @@ def main(private_key, eth_amount, targets_file, port, host):
             len(targets),
             eth_amount,
             balance_needed,
-            balance / WEI_TO_ETH
+            balance / WEI_TO_ETH,
         ))
 
     print("Sending {} eth to:".format(eth_amount))

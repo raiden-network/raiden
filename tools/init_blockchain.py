@@ -36,10 +36,10 @@ def create_and_distribute_token(
             len(receivers) * amount_per_receiver,
             name,
             2,  # decimals
-            name[:4].upper()  # symbol
+            name[:4].upper(),  # symbol
         ),
         contract_path=contract_path,
-        timeout=timeout
+        timeout=timeout,
     )
     for receiver in receivers:
         token_proxy.transact('transfer', receiver, amount_per_receiver)

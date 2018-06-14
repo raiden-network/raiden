@@ -292,7 +292,7 @@ class PaymentMappingState(State):
 
     def __repr__(self):
         return '<PaymentMappingState qtd_transfers:{}>'.format(
-            len(self.secrethashes_to_task)
+            len(self.secrethashes_to_task),
         )
 
     def __eq__(self, other):
@@ -867,7 +867,7 @@ class NettingChannelState(State):
 
         if open_transaction.result != TransactionExecutionStatus.SUCCESS:
             raise ValueError(
-                'Cannot create a NettingChannelState with a non sucessfull open_transaction'
+                'Cannot create a NettingChannelState with a non sucessfull open_transaction',
             )
 
         valid_close_transaction = (
@@ -883,7 +883,7 @@ class NettingChannelState(State):
         )
         if not valid_settle_transaction:
             raise ValueError(
-                'settle_transaction must be a TransactionExecutionStatus instance or None'
+                'settle_transaction must be a TransactionExecutionStatus instance or None',
             )
 
         self.identifier = identifier

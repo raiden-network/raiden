@@ -61,7 +61,7 @@ def get_contract_events(
         contract_address,
         topics=topics,
         from_block=from_block,
-        to_block=to_block
+        to_block=to_block,
     )
 
     result = []
@@ -145,7 +145,7 @@ def get_channel_proxies(chain, node_address, channel_manager):
         except AddressWithoutCode:
             log.debug(
                 'Settled channel found when starting raiden. Safely ignored',
-                channel_identifier=pex(channel_identifier)
+                channel_identifier=pex(channel_identifier),
             )
     return netting_channels
 
@@ -180,7 +180,7 @@ def decode_event_to_internal(event):
     if data['event'] == EVENT_TOKEN_ADDED:
         data['registry_address'] = to_canonical_address(data['args']['registry_address'])
         data['channel_manager_address'] = to_canonical_address(
-            data['args']['channel_manager_address']
+            data['args']['channel_manager_address'],
         )
         data['token_address'] = to_canonical_address(data['args']['token_address'])
 
@@ -340,7 +340,7 @@ class BlockchainEvents:
             self.add_channel_manager_listener(manager, from_block)
 
         all_netting_channels = itertools.chain(
-            *proxies.channelmanager_nettingchannels.values()
+            *proxies.channelmanager_nettingchannels.values(),
         )
 
         for channel in all_netting_channels:

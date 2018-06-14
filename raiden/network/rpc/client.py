@@ -40,7 +40,7 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.solc import (
     solidity_unresolved_symbols,
     solidity_library_symbol,
-    solidity_resolve_symbols
+    solidity_resolve_symbols,
 )
 from raiden.constants import NULL_ADDRESS
 
@@ -162,7 +162,7 @@ def format_data_for_rpccall(
         'value': quantity_encoder(value),
         'gasPrice': quantity_encoder(gasprice),
         'gas': quantity_encoder(startgas),
-        'data': data_encoder(data)
+        'data': data_encoder(data),
     }
 
 
@@ -256,7 +256,7 @@ class JSONRPCClient:
         # Wait until all tx are registered as pending
         while nonce < nonce_available_value:
             pending_transactions = self.web3.eth.getTransactionCount(
-                to_checksum_address(self.sender)
+                to_checksum_address(self.sender),
             )
             nonce = pending_transactions + self.nonce_offset
 
@@ -308,13 +308,13 @@ class JSONRPCClient:
         """
         return ContractProxy(
             self,
-            contract=self.new_contract(contract_interface, contract_address)
+            contract=self.new_contract(contract_interface, contract_address),
         )
 
     def new_contract(self, contract_interface: Dict, contract_address: Address):
         return self.web3.eth.contract(
             abi=contract_interface,
-            address=to_checksum_address(contract_address)
+            address=to_checksum_address(contract_address),
         )
 
     def deploy_solidity_contract(
@@ -354,7 +354,7 @@ class JSONRPCClient:
                 raise ValueError('Unknown contract {}'.format(contract_name))
         else:
             raise ValueError(
-                'Unknown contract {} and no contract_path given'.format(contract_name)
+                'Unknown contract {} and no contract_path given'.format(contract_name),
             )
 
         libraries = dict(libraries)
@@ -437,7 +437,7 @@ class JSONRPCClient:
             raise RuntimeError(
                 'Deployment of {} failed. Contract address has no code, check gas usage.'.format(
                     contract_name,
-                )
+                ),
             )
 
         return self.new_contract_proxy(
@@ -497,12 +497,12 @@ class JSONRPCClient:
         if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
-                ' result in unexpected behavior'
+                ' result in unexpected behavior',
             )
 
         if len(transaction_hash) != 32:
             raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encoded)'
+                'transaction_hash length must be 32 (it might be hex encoded)',
             )
 
         transaction_hash = data_encoder(transaction_hash)

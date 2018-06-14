@@ -15,7 +15,7 @@ def generate_accounts(seeds):
     return {
         seed: dict(
             privatekey=encode_hex(sha3(seed)),
-            address=encode_hex(privatekey_to_address(sha3(seed)))
+            address=encode_hex(privatekey_to_address(sha3(seed))),
         ) for seed in seeds}
 
 
@@ -31,7 +31,7 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     genesis['extraData'] = '0x' + hexlify(CLUSTER_NAME)
     genesis['alloc'].update({
         account: {
-            'balance': str(initial_alloc)
+            'balance': str(initial_alloc),
         }
         for account in accounts
     })

@@ -233,7 +233,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     def __repr__(self):
         return '<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>'.format(
             pex(self.sender),
-            self.transfer
+            self.transfer,
         )
 
     def __eq__(self, other):
