@@ -655,7 +655,16 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
 
 
 def get_distributable(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> int:
-    return get_balance(sender, receiver) - get_amount_locked(sender)
+    _, _, transferred_amount, locked_amount = get_current_balanceproof(sender)
+
+    distributable = get_balance(sender, receiver) - get_amount_locked(sender)
+
+    overflow_limit = max(
+        UINT256_MAX - transferred_amount - locked_amount,
+        0,
+    )
+
+    return min(overflow_limit, distributable)
 
 
 def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockProofState]:
