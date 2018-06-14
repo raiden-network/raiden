@@ -68,7 +68,7 @@ def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         assert previous_balance >= deposit
 
         token.approve(netcontract_address, deposit)
-        netting_channel.deposit(deposit)
+        netting_channel.set_total_deposit(deposit)
 
         # Balance must decrease by at least but not exactly `deposit` amount,
         # because channels can be openned in parallel

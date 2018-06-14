@@ -5,6 +5,7 @@ from flask_restful import Resource
 from flask import Blueprint
 from raiden.api.v1.encoding import (
     ChannelRequestSchema,
+    ChannelPatchSchema,
     EventRequestSchema,
     TransferSchema,
     ConnectionsConnectSchema,
@@ -59,9 +60,7 @@ class ChannelsResource(BaseResource):
 
 class ChannelsResourceByChannelAddress(BaseResource):
 
-    patch_schema = ChannelRequestSchema(
-        only=('balance', 'state'),
-    )
+    patch_schema = ChannelPatchSchema
 
     @use_kwargs(patch_schema, locations=('json',))
     def patch(self, **kwargs):
