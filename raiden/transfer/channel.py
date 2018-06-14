@@ -149,6 +149,26 @@ def is_transaction_confirmed(
     return blockchain_block_number > confirmation_block
 
 
+def is_valid_amount(
+        end_state: NettingChannelEndState,
+        amount: typing.TokenAmount,
+) -> bool:
+    (
+        _,
+        _,
+        current_transferred_amount,
+        current_locked_amount,
+    ) = get_current_balanceproof(end_state)
+
+    transferred_amount_after_unlock = (
+        current_transferred_amount +
+        current_locked_amount +
+        amount
+    )
+
+    return transferred_amount_after_unlock <= UINT256_MAX
+
+
 def is_valid_signature(
         balance_proof: BalanceProofSignedState,
         sender_address: typing.Address,
@@ -275,7 +295,7 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
-    elif transferred_amount_after_unlock > UINT256_MAX:
+    elif is_valid_amount(sender_state, amount):
         # Some serialization formats allow values to be larger than the maximum
         msg = (
             "Invalid DirectTransfer message. "
@@ -403,7 +423,7 @@ def is_valid_lockedtransfer(
 
             result = (False, msg, None)
 
-        elif transferred_amount_after_unlock > UINT256_MAX:
+        elif is_valid_amount(sender_state, lock.amount):
             # We can validate that the Unlock message will have a transferred
             # amount, accepting a lock that cannot be unlocked is useless
             msg = (
@@ -1209,13 +1229,23 @@ def handle_send_directtransfer(
     payment_identifier = state_change.payment_identifier
     distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
 
-    _, _, transferred_amount, locked_amount = get_current_balanceproof(channel_state.our_state)
-    new_transferred_amount = transferred_amount + amount + locked_amount
+    (
+        _,
+        _,
+        current_transferred_amount,
+        current_locked_amount,
+    ) = get_current_balanceproof(channel_state.our_state)
+
+    transferred_amount_after_unlock = (
+        current_transferred_amount +
+        amount +
+        current_locked_amount
+    )
 
     is_open = get_status(channel_state) == CHANNEL_STATE_OPENED
     is_valid = (
         amount > 0 and
-        new_transferred_amount < UINT256_MAX
+        transferred_amount_after_unlock < UINT256_MAX
     )
     can_pay = amount <= distributable_amount
 

@@ -75,7 +75,8 @@ def next_channel_from_routes(
         if transfer_amount > distributable:
             continue
 
-        return channel_state
+        if channel.is_valid_amount(channel_state.our_state, transfer_amount):
+            return channel_state
 
     return None
 

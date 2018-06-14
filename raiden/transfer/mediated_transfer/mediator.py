@@ -347,7 +347,10 @@ def next_channel_from_routes(
         if lock_timeout <= 0:
             continue
 
-        return channel_state
+        if channel.is_valid_amount(channel_state.our_state, transfer_amount):
+            return channel_state
+
+    return None
 
 
 def next_transfer_pair(
@@ -557,7 +560,13 @@ def events_for_refund_transfer(
         refund_channel.partner_state,
     )
 
-    if new_lock_timeout > 0 and refund_transfer.lock.amount <= distributable:
+    is_valid = (
+        new_lock_timeout > 0 and
+        refund_transfer.lock.amount <= distributable and
+        channel.is_valid_amount(refund_channel.our_state, refund_transfer.lock.amount),
+    )
+
+    if is_valid:
         new_lock_expiration = new_lock_timeout + block_number
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
