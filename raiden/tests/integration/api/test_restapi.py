@@ -282,7 +282,7 @@ def test_api_open_and_deposit_channel(
             'channelsresourcebychanneladdress',
             channel_address=first_channel_address,
         ),
-        json={'balance': balance},
+        json={'total_deposit': balance},
     )
     response = request.send().response
     assert_proper_response(response)
@@ -461,11 +461,11 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address,
         ),
-        json=dict(state=CHANNEL_STATE_CLOSED, balance=200),
+        json=dict(state=CHANNEL_STATE_CLOSED, total_deposit=200),
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
-    # let's try to path with no arguments
+    # let's try to patch with no arguments
     request = grequests.patch(
         api_url_for(
             api_backend,
@@ -495,7 +495,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address,
         ),
-        json=dict(balance=500),
+        json=dict(total_deposit=500),
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)

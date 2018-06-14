@@ -290,7 +290,7 @@ class RaidenAPI:
 
         with releasing(channel_proxy.channel_operations_lock):
             token.approve(netcontract_address, addendum)
-            channel_proxy.deposit(total_deposit)
+            channel_proxy.set_total_deposit(total_deposit)
 
             msg = 'After {} seconds the deposit was not properly processed.'.format(
                 poll_timeout,
