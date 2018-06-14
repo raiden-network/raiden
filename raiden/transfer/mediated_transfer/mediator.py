@@ -563,7 +563,7 @@ def events_for_refund_transfer(
     is_valid = (
         new_lock_timeout > 0 and
         refund_transfer.lock.amount <= distributable and
-        channel.is_valid_amount(refund_channel.our_state, refund_transfer.lock.amount),
+        channel.is_valid_amount(refund_channel.our_state, refund_transfer.lock.amount)
     )
 
     if is_valid:
