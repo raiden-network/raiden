@@ -4,7 +4,7 @@ from raiden.transfer.architecture import (
     Event,
     SendMessageEvent,
 )
-from raiden.utils import pex
+from raiden.utils import pex, typing, sha3
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
@@ -101,6 +101,29 @@ class ContractSendChannelUnlock(Event):
             isinstance(other, ContractSendChannelUnlock) and
             self.channel_identifier == other.channel_identifier and
             self.unlock_proofs == other.unlock_proofs
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ContractSendSecretReveal(Event):
+    """ Event emitted when the lock must be claimed on-chain. """
+
+    def __init__(self, secret: typing.Secret):
+        if not isinstance(secret, typing.T_Secret):
+            raise ValueError('secret must be a Secret instance')
+
+        self.secret = secret
+
+    def __repr__(self):
+        secrethash: typing.SecretHash = typing.SecretHash(sha3(self.secret))
+        return '<ContractSendSecretReveal secrethash:{}>'.format(secrethash)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendSecretReveal) and
+            self.secret == other.secret
         )
 
     def __ne__(self, other):

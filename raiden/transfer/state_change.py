@@ -514,6 +514,43 @@ class ContractReceiveChannelUnlock(StateChange):
         return not self.__eq__(other)
 
 
+class ContractReceiveChannelUnlock2(StateChange):
+    """ All the locks were claimed via the blockchain.
+
+    Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted
+    by the token network contract.
+    Note:
+        For this state change the contract caller is not important but only the
+        receiving address. `participant` is the address to which the `unlocked_amount`
+        was transferred. `returned_tokens` was transferred to the channel partner.
+    """
+
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+            unlocked_locks_packed: typing.UnlockedLocksPacked,
+            participant: typing.Address,
+            unlocked_amount: typing.TokenAmount,
+            returned_tokens: typing.TokenAmount,
+    ):
+
+        if not isinstance(payment_network_identifier, typing.T_PaymentNetworkID):
+            raise ValueError('payment_network_identifier must be of type PaymentNetworkID')
+
+        if not isinstance(participant, typing.T_Address):
+            raise ValueError('participant must be of type address')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_address = token_address
+        self.channel_identifier = channel_identifier
+        self.unlocked_locks_packed = unlocked_locks_packed
+        self.participant = participant
+        self.unlocked_amount = unlocked_amount
+        self.returned_tokens = returned_tokens
+
+
 class ContractReceiveNewRoute(StateChange):
     """ New channel was created and this node is NOT a participant. """
 

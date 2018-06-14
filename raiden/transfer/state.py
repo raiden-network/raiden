@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attribute
 import random
 from binascii import hexlify
 from collections import namedtuple
@@ -684,7 +684,8 @@ class UnlockProofState(State):
             self,
             merkle_proof: typing.List[typing.Keccak256],
             lock_encoded,
-            secret: typing.Secret):
+            secret: typing.Secret
+    ):
 
         if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')
@@ -703,6 +704,36 @@ class UnlockProofState(State):
             self.merkle_proof == other.merkle_proof and
             self.lock_encoded == other.lock_encoded and
             self.secret == other.secret
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class UnlockProofState2(State):
+    """ An unlock proof for all the pending locks. """
+
+    __slots__ = (
+        'unlocked_locks_packed',
+    )
+
+    def __init__(
+            self,
+            unlocked_locks_packed: typing.UnlockedLocksPacked
+    ):
+
+        if not isinstance(unlocked_locks_packed, typing.T_UnlockedLocksPacked):
+            raise ValueError('unlocked_locks_packed must be a UnlockedLocksPacked instance')
+
+        self.unlocked_locks_packed = unlocked_locks_packed
+
+    def __repr__(self):
+        return f'<UnlockProofState2 proof:{hexlify(self.unlocked_locks_packed)}>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, UnlockProofState2) and
+            self.unlocked_locks_packed == other.unlocked_locks_packed
         )
 
     def __ne__(self, other):

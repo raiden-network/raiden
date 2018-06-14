@@ -233,6 +233,15 @@ Lock = namedbuffer(
     ],
 )
 
+UnlockedLock = namedbuffer(
+    'unlockedlock',
+    [
+        expiration,
+        amount,
+        secret,
+    ]
+)
+
 
 CMDID_MESSAGE = {
     PROCESSED: Processed,

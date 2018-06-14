@@ -35,6 +35,9 @@ Locksroot = NewType('Locksroot', T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType('LockHash', T_LockHash)
 
+T_UnlockedLocksPacked = bytes
+UnlockedLocksPacked = NewType('UnlockedLocksPacked', T_UnlockedLocksPacked)
+
 T_MessageID = int
 MessageID = NewType('MessageID', T_MessageID)
 
