@@ -17,7 +17,7 @@ from raiden.constants import (
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
-from raiden.transfer.balance_proof import pack_signing_data
+from raiden.transfer.balance_proof import pack_signing_data, hash_balance_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     data_decoder,
@@ -292,10 +292,15 @@ class EnvelopeMessage(SignedMessage):
 
     def sign2(self, private_key, node_address, chain_id):
         """ Creates the signature to the balance proof. Will be used in the SC refactoring. """
+        balance_hash = hash_balance_data(
+            self.transferred_amount,
+            self.locked_amount,
+            self.locksroot,
+        )
         balance_proof = raiden_libs.messages.BalanceProof(
             channel_identifier=self.channel,
             token_network_address=self.token_network_address,
-            balance_hash=None,
+            balance_hash=balance_hash,
             nonce=self.nonce,
             additional_hash=self.message_hash.decode(),
             chain_id=chain_id,
