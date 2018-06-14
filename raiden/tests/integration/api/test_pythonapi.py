@@ -79,7 +79,14 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
 
     registry_address = api1.raiden.default_registry.address
     # Load the new state with the deposit
-    api1.channel_deposit(
+    api1.set_total_channel_deposit(
+        registry_address,
+        token_address,
+        api2.address,
+        deposit,
+    )
+    # let's make sure it's idempotent
+    api1.set_total_channel_deposit(
         registry_address,
         token_address,
         api2.address,

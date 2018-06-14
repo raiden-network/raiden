@@ -355,7 +355,7 @@ class RestAPI:
         if balance:
             # make initial deposit
             try:
-                self.raiden_api.channel_deposit(
+                self.raiden_api.set_total_channel_deposit(
                     registry_address,
                     token_address,
                     partner_address,
@@ -388,7 +388,7 @@ class RestAPI:
 
     def deposit(self, registry_address, token_address, partner_address, amount):
         try:
-            raiden_service_result = self.raiden_api.channel_deposit(
+            raiden_service_result = self.raiden_api.set_total_channel_deposit(
                 registry_address,
                 token_address,
                 partner_address,
@@ -631,7 +631,7 @@ class RestAPI:
             )
 
         try:
-            self.raiden_api.channel_deposit(
+            self.raiden_api.set_total_channel_deposit(
                 registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
