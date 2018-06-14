@@ -38,7 +38,7 @@ clean-test:
 	rm -fr htmlcov/
 
 lint:
-	flake8 raiden tests
+	flake8 raiden/ tests/ tools/
 
 test:
 	python setup.py test
