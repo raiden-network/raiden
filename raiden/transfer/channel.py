@@ -295,7 +295,7 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
-    elif is_valid_amount(sender_state, amount):
+    elif not is_valid_amount(sender_state, amount):
         # Some serialization formats allow values to be larger than the maximum
         msg = (
             "Invalid DirectTransfer message. "
@@ -423,7 +423,7 @@ def is_valid_lockedtransfer(
 
             result = (False, msg, None)
 
-        elif is_valid_amount(sender_state, lock.amount):
+        elif not is_valid_amount(sender_state, lock.amount):
             # We can validate that the Unlock message will have a transferred
             # amount, accepting a lock that cannot be unlocked is useless
             msg = (
@@ -434,7 +434,7 @@ def is_valid_lockedtransfer(
                 transferred_amount_after_unlock,
             )
 
-            result = (False, msg)
+            result = (False, msg, None)
 
         elif received_balance_proof.locked_amount != expected_locked_amount:
             # Mediated transfers must increase the locked_amount by lock.amount
@@ -654,7 +654,17 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
     return (locksroot, nonce, transferred_amount, locked_amount)
 
 
-def get_distributable(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> int:
+def get_distributable(
+        sender: NettingChannelEndState,
+        receiver: NettingChannelEndState,
+) -> typing.TokenAmount:
+    """Return the amount of tokens that can be used by the `sender`.
+
+    The returned value is limted to a UINT256, since that is the representation
+    used in the smart contracts and we cannot use a larger value. The limit is
+    enforced on transferred_amount + locked_amount to avoid overflows. This is
+    an additional security check.
+    """
     _, _, transferred_amount, locked_amount = get_current_balanceproof(sender)
 
     distributable = get_balance(sender, receiver) - get_amount_locked(sender)
