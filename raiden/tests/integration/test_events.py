@@ -106,7 +106,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI(app0.raiden).channel_deposit(
+    RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address,
         token_address,
         app1.raiden.address,
@@ -121,7 +121,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         app1, 0, [],
     )
 
-    RaidenAPI(app1.raiden).channel_deposit(
+    RaidenAPI(app1.raiden).set_total_channel_deposit(
         registry_address,
         token_address,
         app0.raiden.address,
@@ -233,7 +233,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         app1, 0, [],
     )
 
-    RaidenAPI(app0.raiden).channel_deposit(
+    RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address,
         token_address,
         app1.raiden.address,
