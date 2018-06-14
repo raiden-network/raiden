@@ -3,6 +3,7 @@ from raiden.network.proxies import (
     SecretRegistry,
     TokenNetworkRegistry,
     Token,
+    TokenNetwork,
 )
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
@@ -14,7 +15,7 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_SECRET_REGISTRY,
-    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_HUMAN_STANDARD_TOKEN
 )
 
 
@@ -25,7 +26,7 @@ def deploy_contract(blockchain_services, deploy_client):
         if args is None:
             args = []
         compiled = {
-            contract_name: CONTRACT_MANAGER.get_contract(contract_name),
+            contract_name: CONTRACT_MANAGER.get_contract(contract_name)
         }
         return deploy_client.deploy_solidity_contract(
             contract_name,
@@ -44,7 +45,7 @@ def secret_registry_contract(deploy_contract):
 def secret_registry_proxy(deploy_client, secret_registry_contract):
     return SecretRegistry(
         deploy_client,
-        to_canonical_address(secret_registry_contract.contract.address),
+        to_canonical_address(secret_registry_contract.contract.address)
     )
 
 
@@ -52,7 +53,7 @@ def secret_registry_proxy(deploy_client, secret_registry_contract):
 def token_network_registry_contract(chain_id, deploy_contract, secret_registry_contract):
     return deploy_contract(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
-        [secret_registry_contract.contract.address, chain_id],
+        [secret_registry_contract.contract.address, chain_id]
     )
 
 
@@ -60,14 +61,14 @@ def token_network_registry_contract(chain_id, deploy_contract, secret_registry_c
 def token_network_registry_proxy(deploy_client, token_network_registry_contract):
     return TokenNetworkRegistry(
         deploy_client,
-        to_canonical_address(token_network_registry_contract.contract.address),
+        to_canonical_address(token_network_registry_contract.contract.address)
     )
 
 
 @pytest.fixture
 def token_network_contract(
-    chain_id,
     deploy_contract,
+    chain_id,
     secret_registry_contract,
     token_contract,
 ):
@@ -76,16 +77,16 @@ def token_network_contract(
         [
             token_contract.contract.address,
             secret_registry_contract.contract.address,
-            chain_id,
-        ],
+            chain_id
+        ]
     )
 
 
 @pytest.fixture
 def token_network_proxy(deploy_client, token_network_contract):
-    return TokenNetworkRegistry(
+    return TokenNetwork(
         deploy_client,
-        to_canonical_address(token_network_contract.contract.address),
+        to_canonical_address(token_network_contract.contract.address)
     )
 
 
@@ -95,15 +96,15 @@ def token_contract(deploy_token):
 
 
 @pytest.fixture
-def token_proxy(deploy_client, token_contract):
+def token_proxy(token_contract, deploy_client):
     return Token(
         deploy_client,
-        to_canonical_address(token_contract.contract.address),
+        to_canonical_address(token_contract.contract.address)
     )
 
 
 @pytest.fixture
-def deploy_token(deploy_client):
+def deploy_token(blockchain_services, deploy_client):
     def f(initial_amount, decimals, token_name, token_symbol):
         args = [initial_amount, token_name, decimals, token_symbol]
         contract_path = get_contract_path('HumanStandardToken.sol')
