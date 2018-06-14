@@ -82,3 +82,4 @@ raiden/raidenwebui/node_modules/
 # editors
 .idea
 .vscode
+.synapse

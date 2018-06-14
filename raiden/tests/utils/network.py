@@ -2,6 +2,7 @@
 """ Utilities to set-up a Raiden network. """
 
 from binascii import hexlify
+from os import environ
 
 from gevent import server
 import structlog
@@ -10,7 +11,6 @@ from raiden.app import App
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.network.throttle import TokenBucket
-from raiden.tests.utils.matrix import MockMatrixClient
 from raiden.utils import privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -213,7 +213,6 @@ def create_apps(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        use_matrix=False,
         local_matrix_url=None,
 ):
     """ Create the apps."""
@@ -251,23 +250,25 @@ def create_apps(
             'rpc': True,
             'console': False,
         }
-        config_copy = App.DEFAULT_CONFIG.copy()
-        config_copy.update(config)
 
+        use_matrix = local_matrix_url is not None
         if use_matrix:
-            if local_matrix_url is not None:
-                matrix_config = {
-                    'server': local_matrix_url,
-                }
-            else:
-                matrix_config = {
-                    'client_class': MockMatrixClient,
-                    'server': 'http://matrix.mock',
-                }
             config.update({
                 'transport_type': 'matrix',
-                'matrix': matrix_config
+                'matrix': {
+                    'server': local_matrix_url,
+                    'server_name': 'matrix.local.raiden',
+                    'discovery_room': {
+                        'alias_fragment': 'discovery',
+                        'server': 'matrix.local.raiden'
+                    }
+                }
             })
+            if 'TRAVIS' in environ:
+                config.update({'login_retry_wait': 1.5})
+
+        config_copy = App.DEFAULT_CONFIG.copy()
+        config_copy.update(config)
 
         registry = blockchain.registry(registry_address)
 

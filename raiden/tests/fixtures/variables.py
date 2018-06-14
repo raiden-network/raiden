@@ -14,6 +14,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
+from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 
@@ -157,13 +158,20 @@ def token_amount(number_of_nodes, deposit):
 
 
 @pytest.fixture
-def network_wait():
+def network_wait(transport_config):
     """Time in seconds used to wait for network events."""
+    # Has to be set higher for Travis builds and for the Matrix versions of the
+    # tests, due to Travis and the local Synapse server being slow sometimes
     if 'TRAVIS' in os.environ:
-        # Setting it higher, due to Travis being slow and failing with timeout sometimes
-        return 0.8
+        if transport_config.protocol == TransportProtocol.MATRIX:
+            return 3.5
+        else:
+            return 0.8
     else:
-        return 0.3
+        if transport_config.protocol == TransportProtocol.MATRIX:
+            return 1.3
+        else:
+            return 0.3
 
 
 @pytest.fixture
@@ -295,9 +303,3 @@ def database_paths(tmpdir, private_keys, in_memory_database):
         database_paths.append(os.path.join(app_dir, 'log.db'))
 
     return database_paths
-
-
-@pytest.fixture
-def use_matrix():
-    """Parametrize this to switch transport layer (udp/matrix)"""
-    return False

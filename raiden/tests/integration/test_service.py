@@ -7,7 +7,7 @@ from raiden.messages import Ping
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_ping_pong(raiden_network):
+def test_udp_ping_pong(raiden_network, skip_if_not_udp):
     app0, app1 = raiden_network
 
     ping_message = Ping(nonce=0)
@@ -30,7 +30,7 @@ def test_udp_ping_pong(raiden_network):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_ping_pong_unreachable_node(raiden_network):
+def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
     app0, app1 = raiden_network
 
     app1.raiden.transport.stop_and_wait()

@@ -1,0 +1,66 @@
+no_tls: True
+tls_fingerprints: []
+server_name: "matrix.local.raiden"
+web_client: False
+
+soft_file_limit: 0
+
+listeners:
+  - port: 8008
+    tls: false
+    bind_addresses: ['::', '0.0.0.0']
+    type: http
+
+    x_forwarded: false
+
+    resources:
+      - names: [client]  # changed
+        compress: true
+      - names: [federation]
+        compress: false
+
+database:
+  name: "sqlite3"
+  args:
+    database: ":memory:"  # changed
+
+event_cache_size: "10K"
+
+rc_messages_per_second: 10.0  # changed
+rc_message_burst_count: 20.0  # changed
+
+federation_rc_window_size: 1000
+federation_rc_sleep_limit: 10
+federation_rc_sleep_delay: 500
+federation_rc_reject_limit: 50
+federation_rc_concurrent: 3
+
+max_upload_size: "0M"  # changed
+max_image_pixels: "0M"  # changed
+url_preview_enabled: False
+
+enable_registration: True  # changed
+bcrypt_rounds: 12
+allow_guest_access: False
+enable_metrics: False
+report_stats: False
+
+# A list of event types that will be included in the room_invite_state
+room_invite_state_types:
+    - "m.room.join_rules"
+    - "m.room.canonical_alias"
+    - "m.room.avatar"
+    - "m.room.name"
+
+# A list of application service config file to use
+app_service_config_files: []
+
+expire_access_token: False
+old_signing_keys: {}
+key_refresh_interval: "1d" # 1 Day.
+
+password_config:
+   enabled: true
+
+# Whether to allow non server admins to create groups on this server
+enable_group_creation: false
