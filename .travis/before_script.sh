@@ -3,6 +3,6 @@
 set -e
 set -x
 
-flake8 raiden/ tools/
+make lint
 python setup.py check --restructuredtext --strict
 raiden smoketest
