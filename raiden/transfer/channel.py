@@ -190,12 +190,20 @@ def is_valid_directtransfer(
         receiver_state: NettingChannelEndState,
 ) -> typing.SuccessOrError:
     received_balance_proof = direct_transfer.balance_proof
-    current_balance_proof = get_current_balanceproof(sender_state)
 
-    current_locksroot, _, current_transferred_amount = current_balance_proof
+    (
+        current_locksroot,
+        _,
+        current_transferred_amount,
+        current_locked_amount,
+    ) = get_current_balanceproof(sender_state)
+
     distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
-    expected_locked_amount = get_amount_locked(sender_state)
+    transferred_amount_after_unlock = (
+        received_balance_proof.transferred_amount +
+        received_balance_proof.locked_amount
+    )
 
     amount = received_balance_proof.transferred_amount - current_transferred_amount
 
@@ -241,18 +249,6 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
-    elif received_balance_proof.transferred_amount > UINT256_MAX:
-        # Some serialization formats allow values to be larger than the maximum
-        msg = (
-            "Invalid DirectTransfer message. "
-            "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
-        ).format(
-            UINT256_MAX,
-            received_balance_proof.transferred_amount,
-        )
-
-        result = (False, msg)
-
     elif received_balance_proof.transferred_amount <= current_transferred_amount:
         # Direct transfers must increase the transferred_amount, otherwise the
         # sender is trying to play the protocol and steal token.
@@ -266,15 +262,28 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
-    elif received_balance_proof.locked_amount != expected_locked_amount:
+    elif received_balance_proof.locked_amount != current_locked_amount:
         # Direct transfers must not change the locked_amount. Otherwise the
         # sender is trying to play the protocol and steal token.
         msg = (
             'Invalid DirectTransfer message. '
             "Balance proof's locked_amount is invalid, expected: {} got: {}."
         ).format(
-            expected_locked_amount,
+            current_locked_amount,
             received_balance_proof.locked_amount,
+        )
+
+        result = (False, msg)
+
+    elif transferred_amount_after_unlock > UINT256_MAX:
+        # Some serialization formats allow values to be larger than the maximum
+        msg = (
+            "Invalid DirectTransfer message. "
+            "Balance proof's transferred_amount + locked_amount is larger than the maximum value. "
+            "max: {} got: {}"
+        ).format(
+            UINT256_MAX,
+            transferred_amount_after_unlock,
         )
 
         result = (False, msg)
@@ -325,10 +334,10 @@ def is_valid_lockedtransfer(
     lock = mediated_transfer.lock
     merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
 
-    _, _, current_transferred_amount = current_balance_proof
+    _, _, current_transferred_amount, current_locked_amount = current_balance_proof
     distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
-    expected_locked_amount = get_amount_locked(sender_state) + lock.amount
+    expected_locked_amount = current_locked_amount + lock.amount
     transferred_amount_after_unlock = (
         received_balance_proof.transferred_amount +
         expected_locked_amount
@@ -393,19 +402,6 @@ def is_valid_lockedtransfer(
             )
 
             result = (False, msg, None)
-
-        elif received_balance_proof.transferred_amount > UINT256_MAX:
-            # Some serialization formats allow values to be larger than the maximum
-            msg = (
-                "Invalid LockedTransfer message. "
-                "Balance proof's transferred_amount is larger than the maximum value."
-                " max: {} got: {}"
-            ).format(
-                UINT256_MAX,
-                received_balance_proof.transferred_amount,
-            )
-
-            result = (False, msg)
 
         elif transferred_amount_after_unlock > UINT256_MAX:
             # We can validate that the Unlock message will have a transferred
@@ -479,15 +475,13 @@ def is_valid_unlock(
         merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
         locksroot_without_lock = merkleroot(merkletree)
 
-        _, _, current_transferred_amount = current_balance_proof
+        _, _, current_transferred_amount, _ = current_balance_proof
         expected_nonce = get_next_nonce(sender_state)
 
         expected_transferred_amount = (
             current_transferred_amount +
             typing.TokenAmount(lock.amount)
         )
-
-        expected_locked_amount = get_amount_locked(sender_state) - lock.amount
 
         is_valid, signature_msg = is_valid_signature(
             received_balance_proof,
@@ -550,9 +544,9 @@ def is_valid_unlock(
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
             "Invalid Secret message. "
-            "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
+            "Balance proof's wrong transferred_amount, expected: {} got: {}."
         ).format(
-            UINT256_MAX,
+            expected_transferred_amount,
             received_balance_proof.transferred_amount,
         )
 
@@ -562,23 +556,10 @@ def is_valid_unlock(
         # Some serialization formats allow values to be larger than the maximum
         msg = (
             "Invalid Secret message. "
-            "Balance proof's wrong transferred_amount, expected: {} got: {}."
+            "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
         ).format(
-            expected_transferred_amount,
+            UINT256_MAX,
             received_balance_proof.transferred_amount,
-        )
-
-        result = (False, msg, None)
-
-    elif received_balance_proof.transferred_amount != expected_transferred_amount:
-        # Secret messages must decrease the locked_amount by lock amount.
-        # Otherwise the sender is trying to play the protocol and steal token.
-        msg = (
-            'Invalid Secret message. '
-            "Balance proof's wrong locked_amount, expected: {} got: {}."
-        ).format(
-            expected_locked_amount,
-            received_balance_proof.locked_amount,
         )
 
         result = (False, msg, None)
@@ -643,12 +624,14 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         locksroot = balance_proof.locksroot
         nonce = balance_proof.nonce
         transferred_amount = balance_proof.transferred_amount
+        locked_amount = get_amount_locked(end_state)
     else:
         locksroot = EMPTY_MERKLE_ROOT
         nonce = 0
         transferred_amount = 0
+        locked_amount = 0
 
-    return (locksroot, nonce, transferred_amount)
+    return (locksroot, nonce, transferred_amount, locked_amount)
 
 
 def get_distributable(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> int:
@@ -888,6 +871,9 @@ def create_senddirecttransfer(
         transferred_amount = amount
         locksroot = EMPTY_MERKLE_ROOT
 
+    msg = 'caller must make sure the result wont overflow'
+    assert transferred_amount <= UINT256_MAX, msg
+
     nonce = get_next_nonce(our_state)
     token = channel_state.token_address
     recipient = partner_state.address
@@ -954,6 +940,9 @@ def create_sendlockedtransfer(
         transferred_amount = our_balance_proof.transferred_amount
     else:
         transferred_amount = 0
+
+    msg = 'caller must make sure the result wont overflow'
+    assert transferred_amount + amount <= UINT256_MAX, msg
 
     token = channel_state.token_address
     nonce = get_next_nonce(channel_state.our_state)
@@ -1220,8 +1209,14 @@ def handle_send_directtransfer(
     payment_identifier = state_change.payment_identifier
     distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
 
+    _, _, transferred_amount, locked_amount = get_current_balanceproof(channel_state.our_state)
+    new_transferred_amount = transferred_amount + amount + locked_amount
+
     is_open = get_status(channel_state) == CHANNEL_STATE_OPENED
-    is_valid = amount > 0
+    is_valid = (
+        amount > 0 and
+        new_transferred_amount < UINT256_MAX
+    )
     can_pay = amount <= distributable_amount
 
     if is_open and is_valid and can_pay:
@@ -1282,7 +1277,13 @@ def handle_receive_directtransfer(
     )
 
     if is_valid:
-        _, _, previous_transferred_amount = get_current_balanceproof(channel_state.partner_state)
+        (
+            _,
+            _,
+            previous_transferred_amount,
+            _,
+        ) = get_current_balanceproof(channel_state.partner_state)
+
         new_transferred_amount = direct_transfer.balance_proof.transferred_amount
         transfer_amount = new_transferred_amount - previous_transferred_amount
 
