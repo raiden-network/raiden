@@ -4,6 +4,7 @@ import heapq
 from binascii import hexlify
 from collections import namedtuple
 
+from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
@@ -240,6 +241,18 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
+    elif received_balance_proof.transferred_amount > UINT256_MAX:
+        # Some serialization formats allow values to be larger than the maximum
+        msg = (
+            "Invalid DirectTransfer message. "
+            "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
+        ).format(
+            UINT256_MAX,
+            received_balance_proof.transferred_amount,
+        )
+
+        result = (False, msg)
+
     elif received_balance_proof.transferred_amount <= current_transferred_amount:
         # Direct transfers must increase the transferred_amount, otherwise the
         # sender is trying to play the protocol and steal token.
@@ -316,6 +329,10 @@ def is_valid_lockedtransfer(
     distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
     expected_locked_amount = get_amount_locked(sender_state) + lock.amount
+    transferred_amount_after_unlock = (
+        received_balance_proof.transferred_amount +
+        expected_locked_amount
+    )
 
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
         msg = 'Invalid direct message. The channel is already closed.'
@@ -376,6 +393,32 @@ def is_valid_lockedtransfer(
             )
 
             result = (False, msg, None)
+
+        elif received_balance_proof.transferred_amount > UINT256_MAX:
+            # Some serialization formats allow values to be larger than the maximum
+            msg = (
+                "Invalid LockedTransfer message. "
+                "Balance proof's transferred_amount is larger than the maximum value."
+                " max: {} got: {}"
+            ).format(
+                UINT256_MAX,
+                received_balance_proof.transferred_amount,
+            )
+
+            result = (False, msg)
+
+        elif transferred_amount_after_unlock > UINT256_MAX:
+            # We can validate that the Unlock message will have a transferred
+            # amount, accepting a lock that cannot be unlocked is useless
+            msg = (
+                "Invalid LockedTransfer message. "
+                "Unlocking the lock would result in an overflow. max: {} result would be: {}"
+            ).format(
+                UINT256_MAX,
+                transferred_amount_after_unlock,
+            )
+
+            result = (False, msg)
 
         elif received_balance_proof.locked_amount != expected_locked_amount:
             # Mediated transfers must increase the locked_amount by lock.amount
@@ -506,7 +549,19 @@ def is_valid_unlock(
         # Secret messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
-            'Invalid Secret message. '
+            "Invalid Secret message. "
+            "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
+        ).format(
+            UINT256_MAX,
+            received_balance_proof.transferred_amount,
+        )
+
+        result = (False, msg, None)
+
+    elif received_balance_proof.transferred_amount > UINT256_MAX:
+        # Some serialization formats allow values to be larger than the maximum
+        msg = (
+            "Invalid Secret message. "
             "Balance proof's wrong transferred_amount, expected: {} got: {}."
         ).format(
             expected_transferred_amount,
