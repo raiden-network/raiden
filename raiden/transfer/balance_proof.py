@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+from web3 import Web3
+
 from raiden.encoding.messages import (
     nonce as nonce_field,
     transferred_amount as transferred_amount_field,
     locked_amount as locked_amount_field,
 )
+from raiden.utils import typing
 
 
 def signing_data(
@@ -62,3 +65,14 @@ def pack_signing_data(
     )
 
     return data_that_was_signed
+
+
+def hash_balance_data(
+        transferred_amount: typing.TokenAmount,
+        locked_amount: typing.TokenAmount,
+        locksroot: typing.Locksroot,
+) -> str:
+    return Web3.soliditySha3(
+        ['uint256', 'uint256', 'bytes32'],
+        [transferred_amount, locked_amount, locksroot],
+    )

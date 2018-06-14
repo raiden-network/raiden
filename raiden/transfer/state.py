@@ -11,6 +11,7 @@ from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State
 from raiden.transfer.merkle_tree import merkleroot
+from raiden.transfer.balance_proof import hash_balance_data
 from raiden.utils import lpex, pex, sha3, typing
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
@@ -359,11 +360,10 @@ class BalanceProofUnsignedState(State):
             nonce: int,
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
-            locksroot: typing.Keccak256,
+            locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
             channel_address: typing.Address,
     ):
-
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -433,6 +433,14 @@ class BalanceProofUnsignedState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def balance_hash(self):
+        return hash_balance_data(
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
+
 
 class BalanceProofSignedState(State):
     """ Proof of a channel balance that can be used on-chain to resolve
@@ -456,14 +464,13 @@ class BalanceProofSignedState(State):
             nonce: int,
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
-            locksroot: typing.Keccak256,
+            locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
             channel_address: typing.Address,
             message_hash: typing.Keccak256,
             signature: typing.Signature,
             sender: typing.Address,
     ):
-
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -560,6 +567,14 @@ class BalanceProofSignedState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @property
+    def balance_hash(self):
+        return hash_balance_data(
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
 
 
 class HashTimeLockState(State):
