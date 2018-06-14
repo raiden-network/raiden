@@ -54,7 +54,7 @@ def test_write_read_log():
         factories.make_address(),
         factories.ADDR,
         factories.UNIT_SECRET,
-        factories.HOP1
+        factories.HOP1,
     )
 
     state_changes1 = wal.storage.get_statechanges_by_identifier(

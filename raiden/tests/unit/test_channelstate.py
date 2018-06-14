@@ -49,7 +49,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
-    UNIT_REGISTRY_IDENTIFIER
+    UNIT_REGISTRY_IDENTIFIER,
 )
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (

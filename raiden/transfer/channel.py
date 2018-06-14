@@ -83,7 +83,7 @@ SendUnlockAndMerkleTree = typing.Tuple[SendBalanceProof, MerkleTreeState]
 
 TransactionOrder = namedtuple(
     'TransactionOrder',
-    ('block_number', 'transaction')
+    ('block_number', 'transaction'),
 )
 
 
@@ -720,7 +720,7 @@ def update_contract_balance(
 def compute_proof_for_lock(
         end_state: NettingChannelEndState,
         secret: typing.Secret,
-        lock: HashTimeLockState
+        lock: HashTimeLockState,
 ) -> UnlockProofState:
     # forcing bytes because ethereum.abi doesn't work with bytearray
     merkle_proof = compute_merkleproof_for(end_state.merkletree, lock.lockhash)
@@ -1068,7 +1068,7 @@ def events_for_close(
         channel_state.close_transaction = TransactionExecutionStatus(
             block_number,
             None,
-            None
+            None,
         )
 
         close_event = ContractSendChannelClose(

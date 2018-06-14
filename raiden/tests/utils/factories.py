@@ -115,7 +115,7 @@ def make_channel(
         token_network_identifier=None,
         channel_address=None,
         reveal_timeout=10,
-        settle_timeout=50
+        settle_timeout=50,
 ):
 
     our_address = our_address or make_address()
@@ -165,7 +165,7 @@ def make_transfer(
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         locksroot=None,
-        token=UNIT_TOKEN_ADDRESS
+        token=UNIT_TOKEN_ADDRESS,
 ):
 
     secrethash = sha3(secret)
@@ -217,7 +217,7 @@ def make_signed_transfer(
         channel_identifier=UNIT_CHANNEL_ADDRESS,
         token=UNIT_TOKEN_ADDRESS,
         pkey=UNIT_TRANSFER_PKEY,
-        sender=UNIT_TRANSFER_SENDER
+        sender=UNIT_TRANSFER_SENDER,
 ):
 
     if message_identifier is None:
@@ -303,7 +303,7 @@ def make_signed_transfer_for(
         nonce=1,
         transferred_amount=0,
         pkey=UNIT_TRANSFER_PKEY,
-        sender=UNIT_TRANSFER_SENDER
+        sender=UNIT_TRANSFER_SENDER,
 ):
 
     pubkey = pkey.public_key.format(compressed=False)

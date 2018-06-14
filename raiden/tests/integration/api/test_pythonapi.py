@@ -17,7 +17,7 @@ from raiden.transfer.state import (
 from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW,
     EVENT_CHANNEL_NEW_BALANCE,
-    EVENT_CHANNEL_CLOSED
+    EVENT_CHANNEL_CLOSED,
 )
 from eth_utils import is_same_address, to_normalized_address
 
@@ -106,11 +106,11 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
             event['event'] == EVENT_CHANNEL_NEW_BALANCE and
             is_same_address(
                 event['args']['registry_address'],
-                to_normalized_address(registry_address)
+                to_normalized_address(registry_address),
             ) and
             is_same_address(
                 event['args']['participant'],
-                to_normalized_address(api1.address)
+                to_normalized_address(api1.address),
             )
         )
         for event in event_list2
@@ -131,11 +131,11 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
             event['event'] == EVENT_CHANNEL_CLOSED and
             is_same_address(
                 event['args']['registry_address'],
-                to_normalized_address(registry_address)
+                to_normalized_address(registry_address),
             ) and
             is_same_address(
                 event['args']['closing_address'],
-                to_normalized_address(api1.address)
+                to_normalized_address(api1.address),
             )
         )
         for event in event_list3

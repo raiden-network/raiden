@@ -57,13 +57,13 @@ def test_participant_selection(raiden_network, token_addresses):
         for app in raiden_network:
             wait_until_block(
                 app.raiden.chain,
-                app.raiden.chain.block_number() + 1
+                app.raiden.chain.block_number() + 1,
             )
 
     connection_managers = [
         app.raiden.connection_manager_for_token(
             registry_address,
-            token_address
+            token_address,
         ) for app in raiden_network
     ]
 
@@ -95,7 +95,7 @@ def test_participant_selection(raiden_network, token_addresses):
         assert all(
             connection_manager.channelgraph.has_path(
                 connection_manager.raiden.address,
-                address
+                address,
             )
             for address in addresses
         )
@@ -126,7 +126,7 @@ def test_participant_selection(raiden_network, token_addresses):
     receiver_channel = RaidenAPI(receiver).get_channel_list(
         registry_address=registry_address,
         token_address=token_address,
-        partner_address=sender.address
+        partner_address=sender.address,
     )
     assert len(receiver_channel) == 1
     receiver_channel = receiver_channel[0]
@@ -137,7 +137,7 @@ def test_participant_selection(raiden_network, token_addresses):
     sender_channel = RaidenAPI(sender).get_channel_list(
         registry_address=registry_address,
         token_address=token_address,
-        partner_address=receiver.address
+        partner_address=receiver.address,
     )
     assert len(sender_channel) == 1
     sender_channel = sender_channel[0]
@@ -148,7 +148,7 @@ def test_participant_selection(raiden_network, token_addresses):
         registry_address,
         token_address,
         1,
-        receiver.address
+        receiver.address,
     )
 
     # now receiver has a transfer
@@ -178,12 +178,12 @@ def test_participant_selection(raiden_network, token_addresses):
     wait_blocks = connection_manager.min_settle_blocks + 10
     wait_until_block(
         connection_manager.raiden.chain,
-        before_block + wait_blocks
+        before_block + wait_blocks,
     )
     assert connection_manager.raiden.chain.block_number >= before_block + wait_blocks
     wait_until_block(
         receiver.chain,
-        before_block + wait_blocks
+        before_block + wait_blocks,
     )
     while receiver_channel.state != CHANNEL_STATE_SETTLED:
         gevent.sleep(receiver.alarm.wait_time)

@@ -24,7 +24,7 @@ from raiden.utils import (
     data_encoder,
     ishash,
     pex,
-    sha3
+    sha3,
 )
 from raiden.transfer.events import (
     SendDirectTransfer,
@@ -110,7 +110,7 @@ def from_dict(data):
         klass = CLASSNAME_TO_CLASS[data['type']]
     except KeyError:
         raise InvalidProtocolMessage(
-            'Invalid message type (data["type"] = {})'.format(data['type'])
+            'Invalid message type (data["type"] = {})'.format(data['type']),
         ) from None
     return klass.from_dict(data)
 
@@ -304,7 +304,7 @@ class EnvelopeMessage(SignedMessage):
             locksroot=self.locksroot,
         )
         balance_proof.signature = encode_hex(
-            sign_data(self.privkey, balance_proof.serialize_bin())
+            sign_data(self.privkey, balance_proof.serialize_bin()),
         )
 
         self.sender = node_address
@@ -388,7 +388,7 @@ class Processed(SignedMessage):
             'type': self.__class__.__name__,
             'sender': to_normalized_address(self.sender),
             'message_identifier': self.message_identifier,
-            'signature': data_encoder(self.signature)
+            'signature': data_encoder(self.signature),
         }
 
     @classmethod
@@ -434,7 +434,7 @@ class Delivered(SignedMessage):
         return {
             'type': self.__class__.__name__,
             'delivered_message_identifier': self.delivered_message_identifier,
-            'signature': data_encoder(self.signature)
+            'signature': data_encoder(self.signature),
         }
 
     @classmethod
@@ -540,7 +540,7 @@ class SecretRequest(SignedMessage):
             'payment_identifier': self.payment_identifier,
             'secrethash': data_encoder(self.secrethash),
             'amount': self.amount,
-            'signature': data_encoder(self.signature)
+            'signature': data_encoder(self.signature),
         }
 
     @classmethod
@@ -765,7 +765,7 @@ class RevealSecret(SignedMessage):
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
             'secret': data_encoder(self.secret),
-            'signature': data_encoder(self.signature)
+            'signature': data_encoder(self.signature),
         }
 
     @classmethod
@@ -1035,7 +1035,7 @@ class Lock:
         return cls(
             amount=data['amount'],
             expiration=data['expiration'],
-            secrethash=data_decoder(data['secrethash'])
+            secrethash=data_decoder(data['secrethash']),
         )
 
 

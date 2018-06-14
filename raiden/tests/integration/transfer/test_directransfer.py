@@ -20,7 +20,7 @@ def test_direct_transfer(raiden_network, token_addresses, deposit, network_wait)
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         node_state,
         payment_network_id,
-        token_address
+        token_address,
     )
     direct_transfer(
         app0,
@@ -48,7 +48,7 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         node_state,
         payment_network_id,
-        token_address
+        token_address,
     )
 
     # Wait until the initialization of the node is complete and then stop it

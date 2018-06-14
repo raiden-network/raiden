@@ -32,7 +32,7 @@ from raiden.utils import sha3
 @pytest.mark.parametrize('settle_timeout', [32])  # default settlement is too low for 3 hops
 @pytest.mark.skipif(
     'TRAVIS' in os.environ,
-    reason='Missing events cause stuck test & exit due to test timeout on Travis. Issue #1502'
+    reason='Missing events cause stuck test & exit due to test timeout on Travis. Issue #1502',
 )
 def test_regression_unfiltered_routes(
         raiden_network,
@@ -238,7 +238,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     elif transport_config.protocol is TransportProtocol.MATRIX:
         messages = [
             secret,
-            reveal_secret
+            reveal_secret,
         ]
         receive_method = app1.raiden.transport._receive_message
     else:

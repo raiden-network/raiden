@@ -20,7 +20,7 @@ class SQLiteStorage:
                 'CREATE TABLE IF NOT EXISTS state_changes ('
                 '    identifier INTEGER PRIMARY KEY AUTOINCREMENT, '
                 '    data BINARY'
-                ')'
+                ')',
             )
             cursor.execute(
                 'CREATE TABLE IF NOT EXISTS state_snapshot ('
@@ -28,7 +28,7 @@ class SQLiteStorage:
                 '    statechange_id INTEGER, '
                 '    data BINARY, '
                 '    FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)'
-                ')'
+                ')',
             )
             cursor.execute(
                 'CREATE TABLE IF NOT EXISTS state_events ('
@@ -37,7 +37,7 @@ class SQLiteStorage:
                 '    block_number INTEGER NOT NULL, '
                 '    data BINARY, '
                 '    FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)'
-                ')'
+                ')',
             )
 
         # When writting to a table where the primary key is the identifier and we want
@@ -62,7 +62,7 @@ class SQLiteStorage:
         with self.write_lock, self.conn:
             cursor = self.conn.execute(
                 'INSERT INTO state_changes(identifier, data) VALUES(null, ?)',
-                (serialized_data,)
+                (serialized_data,),
             )
             last_id = cursor.lastrowid
 
@@ -81,7 +81,7 @@ class SQLiteStorage:
                 'INSERT OR REPLACE INTO state_snapshot('
                 '    identifier, statechange_id, data'
                 ') VALUES(?, ?, ?)',
-                (1, statechange_id, serialized_data)
+                (1, statechange_id, serialized_data),
             )
             last_id = cursor.lastrowid
 
@@ -142,12 +142,12 @@ class SQLiteStorage:
         if to_identifier == 'latest':
             cursor.execute(
                 'SELECT data FROM state_changes WHERE identifier >= ?',
-                (from_identifier,)
+                (from_identifier,),
             )
         else:
             cursor.execute(
                 'SELECT data FROM state_changes WHERE identifier '
-                'BETWEEN ? AND ?', (from_identifier, to_identifier)
+                'BETWEEN ? AND ?', (from_identifier, to_identifier),
             )
 
         result = [
@@ -176,12 +176,12 @@ class SQLiteStorage:
         if to_identifier == 'latest':
             cursor.execute(
                 'SELECT block_number, data FROM state_events WHERE identifier >= ?',
-                (from_identifier,)
+                (from_identifier,),
             )
         else:
             cursor.execute(
                 'SELECT block_number, data FROM state_events WHERE identifier '
-                'BETWEEN ? AND ?', (from_identifier, to_identifier)
+                'BETWEEN ? AND ?', (from_identifier, to_identifier),
             )
 
         result = [
@@ -206,19 +206,19 @@ class SQLiteStorage:
             assert to_block is None
 
             cursor.execute(
-                'SELECT block_number FROM state_events ORDER BY block_number DESC LIMIT 1'
+                'SELECT block_number FROM state_events ORDER BY block_number DESC LIMIT 1',
             )
             from_block = cursor.fetchone()
 
         if to_block == 'latest':
             cursor.execute(
                 'SELECT block_number, data FROM state_events WHERE block_number >= ?',
-                (from_block, )
+                (from_block, ),
             )
         else:
             cursor.execute(
                 'SELECT block_number, data FROM state_events WHERE block_number '
-                'BETWEEN ? AND ?', (from_block, to_block)
+                'BETWEEN ? AND ?', (from_block, to_block),
             )
 
         result = [

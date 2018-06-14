@@ -128,7 +128,7 @@ def get_static_or_compile(
     compiled = compile_files(
         [contract_path],
         contract_name,
-        **compiler_flags
+        **compiler_flags,
     )
 
     if store_updated:
@@ -154,7 +154,7 @@ def validate_solc():
     if get_solc_version() is None:
         raise RuntimeError(
             "Couldn't find the solc in the current $PATH.\n"
-            "Make sure the solidity compiler is installed and available on your $PATH."
+            "Make sure the solidity compiler is installed and available on your $PATH.",
         )
 
     try:
@@ -216,13 +216,13 @@ class ContractManagerWrap(ContractManager):
             ('ChannelManagerContract.sol', CONTRACT_CHANNEL_MANAGER),
             ('EndpointRegistry.sol', CONTRACT_ENDPOINT_REGISTRY),
             ('NettingChannelContract.sol', CONTRACT_NETTING_CHANNEL),
-            ('Registry.sol', CONTRACT_REGISTRY)
+            ('Registry.sol', CONTRACT_REGISTRY),
         ]
         version_re = re.compile(CONTRACT_VERSION_RE)
         for contract_file, contract_name in contracts:
             self.contract_to_version[contract_name] = parse_contract_version(
                 contract_file,
-                version_re
+                version_re,
             )
 
     def get_version(self, contract_name: str) -> str:

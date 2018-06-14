@@ -14,7 +14,7 @@ from raiden.blockchain.abi import (
 )
 from raiden.exceptions import (
     ChannelBusyError,
-    TransactionThrew
+    TransactionThrew,
 )
 from raiden import messages
 from raiden.network.rpc.client import check_address_has_code
@@ -80,7 +80,7 @@ class NettingChannel:
         if call_result == b'':
             self._check_exists()
             raise RuntimeError(
-                "Call to '{}' returned nothing".format(function_name)
+                "Call to '{}' returned nothing".format(function_name),
             )
 
         return call_result
@@ -220,7 +220,7 @@ class NettingChannel:
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
-                f'busy with another ongoing operation.'
+                f'busy with another ongoing operation.',
             )
 
         with releasing(self.channel_operations_lock):
@@ -275,7 +275,7 @@ class NettingChannel:
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
-                f'busy with another ongoing operation.'
+                f'busy with another ongoing operation.',
             )
 
         with releasing(self.channel_operations_lock):
@@ -436,7 +436,7 @@ class NettingChannel:
         if not self.channel_operations_lock.acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel with address {self.address} is '
-                f'busy with another ongoing operation'
+                f'busy with another ongoing operation',
             )
 
         with releasing(self.channel_operations_lock):

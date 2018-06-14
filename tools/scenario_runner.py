@@ -52,19 +52,19 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 @click.option(  # noqa
     '--logfile',
     default=None,
-    type=str
+    type=str,
 )
 @click.option(  # noqa
     '--scenario',
-    type=click.File()
+    type=click.File(),
 )
 @click.option(  # noqa
     '--stage-prefix',
-    type=str
+    type=str,
 )
 @click.option(  # noqa
     '--results-filename',
-    type=str
+    type=str,
 )
 @click.command()
 def run(
@@ -75,7 +75,7 @@ def run(
         structlog,
         logfile,
         scenario,
-        stage_prefix
+        stage_prefix,
 ):  # pylint: disable=unused-argument
 
     # TODO: only enabled structlog on "initiators"
@@ -104,16 +104,16 @@ def run(
 
     discovery = ContractDiscovery(
         blockchain_service,
-        decode_hex(discovery_contract_address)
+        decode_hex(discovery_contract_address),
     )
 
     registry = blockchain_service.registry(
-        registry_contract_address
+        registry_contract_address,
     )
 
     throttle_policy = TokenBucket(
         config['protocol']['throttle_capacity'],
-        config['protocol']['throttle_fill_rate']
+        config['protocol']['throttle_fill_rate'],
     )
 
     transport = UDPTransport(

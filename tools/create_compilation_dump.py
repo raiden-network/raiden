@@ -75,14 +75,14 @@ def deploy_all(token_groups=None):
         deploy_with_dependencies(
             TARGETS['registry'],
             state,
-            libraries=libraries
-        )
+            libraries=libraries,
+        ),
     )
     deployed.update(
         deploy_with_dependencies(
             TARGETS['discovery'],
-            state
-        )
+            state,
+        ),
     )
 
     genesis_alloc = dict()
@@ -119,8 +119,8 @@ def create_and_distribute_token(
             len(receivers) * amount_per_receiver,
             name,
             2,
-            name[:4].upper()
-        )
+            name[:4].upper(),
+        ),
     )
     for receiver in receivers:
         proxy.transfer(receiver, amount_per_receiver)

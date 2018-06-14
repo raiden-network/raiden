@@ -135,7 +135,7 @@ def network_with_minimum_channels(apps, channels_per_node):
         while channel_count[curr_app.raiden.address] < channels_per_node:
             least_connect = sorted(
                 available_apps,
-                key=lambda app: channel_count[app.raiden.address]
+                key=lambda app: channel_count[app.raiden.address],
             )[0]
 
             channel_count[curr_app.raiden.address] += 1
@@ -260,9 +260,9 @@ def create_apps(
                     'server_name': 'matrix.local.raiden',
                     'discovery_room': {
                         'alias_fragment': 'discovery',
-                        'server': 'matrix.local.raiden'
-                    }
-                }
+                        'server': 'matrix.local.raiden',
+                    },
+                },
             })
             if 'TRAVIS' in environ:
                 config.update({'login_retry_wait': 1.5})
@@ -277,7 +277,7 @@ def create_apps(
         else:
             throttle_policy = TokenBucket(
                 config['transport']['throttle_capacity'],
-                config['transport']['throttle_fill_rate']
+                config['transport']['throttle_fill_rate'],
             )
 
             transport = UDPTransport(

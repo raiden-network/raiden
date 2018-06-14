@@ -49,7 +49,7 @@ class Discovery:
 
         CONTRACT_MANAGER.check_contract_version(
             self.version(),
-            CONTRACT_ENDPOINT_REGISTRY
+            CONTRACT_ENDPOINT_REGISTRY,
         )
 
         self.address = discovery_address
@@ -78,7 +78,7 @@ class Discovery:
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = to_checksum_address(node_address_bin)
         endpoint = self.proxy.contract.functions.findEndpointByAddress(
-            node_address_hex
+            node_address_hex,
         ).call()
 
         if endpoint == '':

@@ -34,12 +34,12 @@ def test_get_accounts(test_keystore):
     expected_accounts = {
         '0d5a0e4fece4b84365b9b8dba6e6d41348c73645': os.path.join(
             test_keystore,
-            'UTC--2016-10-26T16-55-53.551024336Z--0d5a0e4fece4b84365b9b8dba6e6d41348c73645'
+            'UTC--2016-10-26T16-55-53.551024336Z--0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
         ),
         '3593403033d18b82f7b4a0f18e1ed24623d23b20': os.path.join(
             test_keystore,
-            'valid_keystorefile_with_unexpected_name'
-        )
+            'valid_keystorefile_with_unexpected_name',
+        ),
     }
     assert expected_accounts == account_manager.accounts
 
@@ -57,16 +57,16 @@ def test_get_account_in_keystore(test_keystore):
 def test_get_privkey(test_keystore):
     account_manager = AccountManager(test_keystore)
     assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
-        account_manager.get_privkey('0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123')
+        account_manager.get_privkey('0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123'),
     )
     assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
-        account_manager.get_privkey('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123')
+        account_manager.get_privkey('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123'),
     )
     assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
-        account_manager.get_privkey('3593403033d18b82f7b4a0f18e1ed24623d23b20', '123')
+        account_manager.get_privkey('3593403033d18b82f7b4a0f18e1ed24623d23b20', '123'),
     )
     assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
-        account_manager.get_privkey('0x3593403033d18b82f7b4a0f18e1ed24623d23b20', '123')
+        account_manager.get_privkey('0x3593403033d18b82f7b4a0f18e1ed24623d23b20', '123'),
     )
 
     # failures
@@ -86,7 +86,7 @@ def test_account_manager_invalid_files(test_keystore, caplog):
         ('The account file is not valid JSON format',
          KEYFILE_INVALID,
          'Expecting value: line 1 column 1 (char 0)'),
-        ('Can not read account file (errno=13)', KEYFILE_INACCESSIBLE, 'Permission denied')
+        ('Can not read account file (errno=13)', KEYFILE_INACCESSIBLE, 'Permission denied'),
     ]:
         for record in caplog.records:
             message = record.getMessage()
@@ -102,7 +102,7 @@ def test_account_manager_invalid_directory(caplog):
         AccountManager('/some/path')
 
     for msg, path, reason in [
-        ('Unable to list the specified directory', '/some/path', '')
+        ('Unable to list the specified directory', '/some/path', ''),
     ]:
         for record in caplog.records:
             message = record.getMessage()

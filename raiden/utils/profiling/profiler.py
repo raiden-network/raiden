@@ -458,7 +458,7 @@ def merge_threadstates(*threadstates):
         return (module and function) or runtime_id
 
     tree = [
-        (1, {}, [state.calltree for state in threadstates])
+        (1, {}, [state.calltree for state in threadstates]),
     ]
 
     while tree:

@@ -132,7 +132,7 @@ def raiden_chain(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        local_matrix_server
+        local_matrix_server,
 ):
 
     if len(token_addresses) != 1:
@@ -215,7 +215,7 @@ def raiden_network(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        local_matrix_server
+        local_matrix_server,
 ):
 
     raiden_apps = create_apps(

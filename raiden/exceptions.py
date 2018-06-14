@@ -132,7 +132,7 @@ class TransactionThrew(RaidenError):
     the receipt has a 0x0 status field"""
     def __init__(self, txname, receipt):
         super().__init__(
-            '{} transaction threw. Receipt={}'.format(txname, receipt)
+            '{} transaction threw. Receipt={}'.format(txname, receipt),
         )
 
 

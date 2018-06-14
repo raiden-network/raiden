@@ -39,7 +39,7 @@ NODE_CONFIG = [
     'rpcport',
     'bootnodes',
     'minerthreads',
-    'unlock'
+    'unlock',
 ]
 
 # a list of `num_raiden_accounts` account addresses with a predictable privkey:
@@ -111,7 +111,7 @@ def create_keystore_account(datadir, privkey=encode_hex(sha3(b'localhost:627')))
     create = Popen(
         shlex.split('geth --datadir {} account import {}'.format(
             datadir, os.path.join(datadir, 'keyfile'))),
-        stdin=PIPE, universal_newlines=True
+        stdin=PIPE, universal_newlines=True,
     )
     create.stdin.write(DEFAULT_PW + os.linesep)
     time.sleep(.1)
@@ -127,7 +127,7 @@ def init_datadir(datadir, accounts=DEFAULTACCOUNTS):
         json.dump(mk_genesis(accounts), f)
 
     Popen(shlex.split(
-        'geth --datadir {} init {}'.format(datadir, genesis_path)
+        'geth --datadir {} init {}'.format(datadir, genesis_path),
     ))
 
 
@@ -152,7 +152,7 @@ def create_node_configurations(num_nodes,
             miner=miner and i == 0,
             port=start_port + i,
             rpcport=start_rpcport + i,
-            node_key_seed=i
+            node_key_seed=i,
         )
         nodes.append(node)
     return nodes

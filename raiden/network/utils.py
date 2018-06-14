@@ -51,7 +51,7 @@ def get_http_rtt(url: str, samples: int = 3, method: str = 'head', timeout: int 
     for _ in range(samples):
         try:
             durations.append(
-                requests.request(method, url, timeout=timeout).elapsed.total_seconds()
+                requests.request(method, url, timeout=timeout).elapsed.total_seconds(),
             )
         except RequestException:
             return math.inf

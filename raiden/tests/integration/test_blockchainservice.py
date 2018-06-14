@@ -198,7 +198,7 @@ def test_channelmanager_graph_building(
 
 @pytest.mark.skipif(
     'TRAVIS' in os.environ,
-    reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
+    reason='Flaky test due to mark.timeout not being scheduled. Issue #319',
 )
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
@@ -248,7 +248,7 @@ def test_blockchain(
     )
     registry_proxy = Registry(
         jsonrpc_client,
-        to_canonical_address(registry_proxy.contract.address)
+        to_canonical_address(registry_proxy.contract.address),
     )
 
     log_list = jsonrpc_client.web3.eth.getLogs(
@@ -262,7 +262,7 @@ def test_blockchain(
 
     assert token_proxy.balance_of(address) == total_token
     manager_address = registry_proxy.add_token(
-        to_canonical_address(token_proxy.proxy.contract.address)
+        to_canonical_address(token_proxy.proxy.contract.address),
     )
     assert is_address(manager_address)
     assert len(registry_proxy.token_addresses()) == 1
@@ -294,12 +294,12 @@ def test_blockchain(
     )
     channel_manager_proxy = ChannelManager(
         jsonrpc_client,
-        to_canonical_address(channel_manager_proxy.contract.address)
+        to_canonical_address(channel_manager_proxy.contract.address),
     )
 
     channel_address = channel_manager_proxy.new_netting_channel(
         addresses[1],
-        10
+        10,
     )
     assert is_address(channel_address)
 

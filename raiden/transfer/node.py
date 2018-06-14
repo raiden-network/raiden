@@ -53,12 +53,12 @@ from raiden.transfer.mediated_transfer.state_change import (
 def get_networks(node_state, payment_network_identifier, token_address):
     token_network_state = None
     payment_network_state = node_state.identifiers_to_paymentnetworks.get(
-        payment_network_identifier
+        payment_network_identifier,
     )
 
     if payment_network_state:
         token_network_state = payment_network_state.tokenaddresses_to_tokennetworks.get(
-            token_address
+            token_address,
         )
 
     return payment_network_state, token_network_state
@@ -542,7 +542,7 @@ def handle_secret_reveal(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.secrethash
+        state_change.secrethash,
     )
 
 
@@ -592,7 +592,7 @@ def handle_receive_transfer_refund(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.transfer.lock.secrethash
+        state_change.transfer.lock.secrethash,
     )
 
 
@@ -600,7 +600,7 @@ def handle_receive_transfer_refund_cancel_route(node_state, state_change):
     return subdispatch_to_paymenttask(
         node_state,
         state_change,
-        state_change.transfer.lock.secrethash
+        state_change.transfer.lock.secrethash,
     )
 
 

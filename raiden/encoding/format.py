@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import namedtuple, Counter
 
-__all__ = ('Field', 'namedbuffer', 'buffer_for',)
+__all__ = ('Field', 'namedbuffer', 'buffer_for')
 
 
 Field = namedtuple(

@@ -46,17 +46,17 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
     assert must_contain_entry(
         events,
         EventTransferReceivedSuccess,
-        {'amount': 1, 'initiator': app0.raiden.address}
+        {'amount': 1, 'initiator': app0.raiden.address},
     )
     assert must_contain_entry(
         events,
         EventTransferReceivedSuccess,
-        {'amount': 2, 'initiator': app1.raiden.address}
+        {'amount': 2, 'initiator': app1.raiden.address},
     )
     assert must_contain_entry(
         events,
         EventTransferReceivedSuccess,
-        {'amount': 3, 'initiator': app2.raiden.address}
+        {'amount': 3, 'initiator': app2.raiden.address},
     )
 
 
@@ -87,7 +87,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
             token_address,
             amount,
             echo_app.raiden.address,
-            10 ** (num + 1)
+            10 ** (num + 1),
         )
         transfer_event.wait(timeout=20)
         expected.append(amount)
@@ -102,7 +102,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
             app.raiden.default_registry.address,
             app,
             token_address,
-            0
+            0,
         )
         received = {}
 
@@ -147,7 +147,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
             token_address,
             amount,
             echo_app.raiden.address,
-            10 ** (num + 1)
+            10 ** (num + 1),
         )
         transfer_event.wait(timeout=20)
         expected.append(amount)
@@ -158,7 +158,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         token_address,
         amount,  # same amount as before
         echo_app.raiden.address,
-        10 ** 6  # app5 used this identifier before
+        10 ** 6,  # app5 used this identifier before
     ).wait(timeout=20)
 
     # test pool size querying
@@ -168,7 +168,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         token_address,
         amount,
         echo_app.raiden.address,
-        pool_query_identifier
+        pool_query_identifier,
     ).wait(timeout=20)
     expected.append(amount)
 
@@ -178,7 +178,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
         token_address,
         amount,
         echo_app.raiden.address,
-        10 ** 7
+        10 ** 7,
     ).wait(timeout=20)
     expected.append(amount)
 

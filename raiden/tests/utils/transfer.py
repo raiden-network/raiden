@@ -73,7 +73,7 @@ def transfer(initiator_app, target_app, token, amount, identifier):
         token_network_identifier,
         amount,
         target_app.raiden.address,
-        identifier
+        identifier,
     )
     assert async_result.wait()
 
@@ -239,7 +239,7 @@ def assert_synched_channel_state(
         pending_locks0,
         app1,
         balance1,
-        pending_locks1
+        pending_locks1,
 ):
     """ Assert the values of two synched channels.
 
@@ -443,7 +443,7 @@ def make_mediated_transfer(
         target,
         lock,
         pkey,
-        secret=None
+        secret=None,
 ):
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`."""

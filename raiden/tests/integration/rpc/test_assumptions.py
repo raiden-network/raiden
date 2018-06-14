@@ -69,7 +69,7 @@ def test_call_inexisting_address(deploy_client, blockchain_backend):
         'from': to_checksum_address(deploy_client.sender),
         'to': to_checksum_address(inexisting_address),
         'data': b'',
-        'value': 0
+        'value': 0,
     }
     assert deploy_client.web3.eth.call(transaction) == b''
 

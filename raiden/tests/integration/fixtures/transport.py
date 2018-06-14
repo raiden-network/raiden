@@ -43,7 +43,7 @@ def local_matrix_server(transport_config):
         port=transport_config.parameters.port,
         timeout=120,
         sleep=0.1,
-        shell=True
+        shell=True,
     )
 
     server.start()

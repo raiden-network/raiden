@@ -30,7 +30,7 @@ from raiden.transfer import views
 def test_failsfast_lockedtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
-        deposit
+        deposit,
 ):
 
     app0, app1 = raiden_network
@@ -89,7 +89,7 @@ def test_receive_lockedtransfer_invalidnonce(
         deposit,
         token_addresses,
         reveal_timeout,
-        network_wait
+        network_wait,
 ):
 
     app0, app1, app2 = raiden_network
@@ -151,7 +151,7 @@ def test_receive_lockedtransfer_invalidsender(
         raiden_network,
         token_addresses,
         deposit,
-        reveal_timeout
+        reveal_timeout,
 ):
 
     app0, app1 = raiden_network
@@ -180,7 +180,7 @@ def test_receive_lockedtransfer_invalidsender(
         lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app0.raiden.address,
         initiator=other_address,
-        fee=0
+        fee=0,
     )
 
     sign_and_inject(
@@ -203,7 +203,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         raiden_network,
         token_addresses,
         reveal_timeout,
-        deposit
+        deposit,
 ):
 
     app0, app1 = raiden_network
@@ -233,7 +233,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0
+        fee=0,
     )
 
     sign_and_inject(
@@ -257,7 +257,7 @@ def test_received_lockedtransfer_closedchannel(
         raiden_network,
         reveal_timeout,
         token_addresses,
-        deposit
+        deposit,
 ):
 
     app0, app1 = raiden_network
@@ -299,7 +299,7 @@ def test_received_lockedtransfer_closedchannel(
         lock=Lock(lock_amount, expiration, UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0
+        fee=0,
     )
 
     sign_and_inject(

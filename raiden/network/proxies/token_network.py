@@ -93,7 +93,7 @@ class TokenNetwork:
 
         if call_result == b'':
             raise RuntimeError(
-                "Call to '{}' returned nothing".format(function_name)
+                "Call to '{}' returned nothing".format(function_name),
             )
 
         return call_result
@@ -105,7 +105,7 @@ class TokenNetwork:
         if not self.channel_operations_lock[partner].acquire(blocking=False):
             raise ChannelBusyError(
                 f'Channel between {self.node_address} and {partner} is '
-                f'busy with another ongoing operation.'
+                f'busy with another ongoing operation.',
             )
 
     def token_address(self) -> typing.Address:
@@ -135,7 +135,7 @@ class TokenNetwork:
         )
         if invalid_timeout:
             raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}]'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
             ))
 
         if self.node_address == partner:
@@ -165,7 +165,7 @@ class TokenNetwork:
             log.error(
                 'creating new channel failed',
                 peer1=pex(self.node_address),
-                peer2=pex(partner)
+                peer2=pex(partner),
             )
             raise RuntimeError('creating new channel failed')
 
@@ -275,7 +275,7 @@ class TokenNetwork:
             'getParticipantLockedAmount',
             participant,
             partner,
-            locksroot
+            locksroot,
         )
         return data
 
@@ -366,7 +366,7 @@ class TokenNetwork:
             raise ValueError(
                 f'deposit {amount_to_deposit} cant be larger than the '
                 f'available balance {current_balance}, '
-                f'for token at address {pex(token_address)}'
+                f'for token at address {pex(token_address)}',
             )
 
         log.info(
@@ -406,7 +406,7 @@ class TokenNetwork:
                 channel_opened = self.channel_is_opened(partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
-                        'Channel is not in an opened state. A deposit cannot be made'
+                        'Channel is not in an opened state. A deposit cannot be made',
                     )
                 raise TransactionThrew('Deposit', receipt_or_none)
 
@@ -471,7 +471,7 @@ class TokenNetwork:
                 channel_opened = self.channel_is_opened(partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
-                        'Channel is not in an opened state. It cannot be closed.'
+                        'Channel is not in an opened state. It cannot be closed.',
                     )
                 raise TransactionThrew('Close', receipt_or_none)
 
@@ -595,7 +595,7 @@ class TokenNetwork:
                 channel_opened = self.channel_is_opened(partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
-                        'Channel is not in an opened state. A withdraw cannot be made'
+                        'Channel is not in an opened state. A withdraw cannot be made',
                     )
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
@@ -639,7 +639,7 @@ class TokenNetwork:
             channel_settled = self.channel_is_settled(partner)
             if channel_settled is False:
                 raise ChannelIncorrectStateError(
-                    'Channel is not in a settled state. An unlock cannot be made'
+                    'Channel is not in a settled state. An unlock cannot be made',
                 )
             raise TransactionThrew('Unlock', receipt_or_none)
 
@@ -711,7 +711,7 @@ class TokenNetwork:
                 channel_closed = self.channel_is_closed(partner)
                 if channel_closed is False:
                     raise ChannelIncorrectStateError(
-                        'Channel is not in a closed state. It cannot be settled'
+                        'Channel is not in a closed state. It cannot be settled',
                     )
                 raise TransactionThrew('Settle', receipt_or_none)
 
@@ -747,7 +747,7 @@ class TokenNetwork:
             self.address,
             topics=topics,
             from_block=from_block,
-            to_block=to_block
+            to_block=to_block,
         )
 
     def channelnew_filter(

@@ -49,7 +49,7 @@ class Token:
         transaction_hash = self.proxy.transact(
             'approve',
             contract_address,
-            allowance
+            allowance,
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
@@ -95,14 +95,14 @@ class Token:
     def balance_of(self, address):
         """ Return the balance of `address`. """
         return self.proxy.contract.functions.balanceOf(
-            to_checksum_address(address)
+            to_checksum_address(address),
         ).call()
 
     def transfer(self, to_address, amount):
         transaction_hash = self.proxy.transact(
             'transfer',
             to_checksum_address(to_address),
-            amount
+            amount,
         )
 
         self.client.poll(unhexlify(transaction_hash))

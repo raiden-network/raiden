@@ -91,7 +91,7 @@ class ContractDiscovery(Discovery):
                 'endpoint already registered',
                 node_address=pex(node_address),
                 host=host,
-                port=port
+                port=port,
             )
         else:
             endpoint = host_port_to_endpoint(host, port)
@@ -100,7 +100,7 @@ class ContractDiscovery(Discovery):
                 'registered endpoint in discovery',
                 node_address=pex(node_address),
                 host=host,
-                port=port
+                port=port,
             )
 
     def get(self, node_address: bytes):

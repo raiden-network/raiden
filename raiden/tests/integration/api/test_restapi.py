@@ -304,7 +304,7 @@ def test_api_open_and_deposit_channel(
             api_backend,
             'channelsresourcebychanneladdress',
             channel_address=second_channel_address,
-        )
+        ),
     )
 
     response = request.send().response
@@ -459,7 +459,7 @@ def test_api_channel_state_change_errors(
         api_url_for(
             api_backend,
             'channelsresourcebychanneladdress',
-            channel_address=channel_address
+            channel_address=channel_address,
         ),
         json=dict(state=CHANNEL_STATE_CLOSED, balance=200),
     )
@@ -503,7 +503,7 @@ def test_api_channel_state_change_errors(
 
 @pytest.mark.skipif(
     'TRAVIS' in os.environ,
-    reason='Flaky test on Travis. See issue #1552'
+    reason='Flaky test on Travis. See issue #1552',
 )
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_api_tokens(api_backend, blockchain_services, token_addresses):
@@ -539,7 +539,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
             api_backend,
             'channelsresource',
         ),
-        json=channel_data_obj
+        json=channel_data_obj,
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
@@ -549,7 +549,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
         api_url_for(
             api_backend,
             'tokensresource',
-        )
+        ),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -615,7 +615,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
             api_backend,
             'partnersresourcebytokenaddress',
             token_address=to_checksum_address(token_address),
-        )
+        ),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -625,13 +625,13 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
             'partner_address': first_partner_address,
             'channel': '/api/1/channels/{}'.format(
                 first_channel_address,
-            )
+            ),
         }, {
             'partner_address': second_partner_address,
             'channel': '/api/1/channels/{}'.format(
                 second_channel_address,
-            )
-        }
+            ),
+        },
     ]
     assert all(r in response for r in expected_response)
 
@@ -705,7 +705,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
 def test_get_connection_managers_info(raiden_network, api_backend, token_addresses):
     # check that there are no registered tokens
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource')
+        api_url_for(api_backend, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -729,7 +729,7 @@ def test_get_connection_managers_info(raiden_network, api_backend, token_address
 
     # check that there now is one registered channel manager
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource')
+        api_url_for(api_backend, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -756,7 +756,7 @@ def test_get_connection_managers_info(raiden_network, api_backend, token_address
 
     # check that there now are two registered channel managers
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource')
+        api_url_for(api_backend, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -774,7 +774,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
             token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             from_block=5,
             to_block=20,
-        )
+        ),
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)

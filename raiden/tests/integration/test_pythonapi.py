@@ -144,7 +144,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
             token_address,
             10,
             target=non_existing_address,
-            timeout=10
+            timeout=10,
         )
 
 
@@ -259,5 +259,5 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
             token_address,
             deposit + 1,
             target=app1.raiden.address,
-            timeout=10
+            timeout=10,
         )

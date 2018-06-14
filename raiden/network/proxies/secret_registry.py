@@ -99,7 +99,7 @@ class SecretRegistry:
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_SECRET_REGISTRY,
-            EVENT_SECRET_REVEALED
+            EVENT_SECRET_REVEALED,
         )
         topics = [encode_hex(event_abi_to_log_topic(event_abi))]
 

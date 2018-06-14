@@ -37,7 +37,7 @@ def main(password, private_key_seed, date_string, key_label, output_dir):
 
     filename = "UTC--{date}--{label}".format(
         date=date_string,
-        label=key_label if key_label else key['address']
+        label=key_label if key_label else key['address'],
     )
     filepath = os.path.abspath(os.path.join(os.path.abspath(output_dir), filename))
 

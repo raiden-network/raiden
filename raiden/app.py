@@ -69,8 +69,8 @@ class App:  # pylint: disable=too-few-public-methods
             'discovery_room': {
                 'alias_fragment': 'discovery',
                 'server': 'transport01.raiden.network',
-            }
-        }
+            },
+        },
     }
 
     def __init__(
@@ -95,11 +95,11 @@ class App:  # pylint: disable=too-few-public-methods
             )
         except filelock.Timeout:
             pubkey = to_normalized_address(
-                privatekey_to_address(unhexlify(self.config['privatekey_hex']))
+                privatekey_to_address(unhexlify(self.config['privatekey_hex'])),
             )
             print(
                 f'FATAL: Another Raiden instance already running for account {pubkey} on '
-                f'network id {chain.network_id}'
+                f'network id {chain.network_id}',
             )
             sys.exit(1)
         self.start_console = self.config['console']

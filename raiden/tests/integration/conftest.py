@@ -10,7 +10,7 @@ from pathlib import Path
 from raiden.tests.integration.fixtures.transport import (
     MatrixTransportConfig,
     TransportConfig,
-    TransportProtocol
+    TransportProtocol,
 )
 
 
@@ -22,7 +22,7 @@ def pytest_generate_tests(metafunc):
 
         if transport in ('udp', 'all'):
             transport_config.append(
-                TransportConfig(protocol=TransportProtocol.UDP, parameters=None)
+                TransportConfig(protocol=TransportProtocol.UDP, parameters=None),
             )
 
         if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
@@ -36,9 +36,9 @@ def pytest_generate_tests(metafunc):
                     parameters=MatrixTransportConfig(
                         command=command,
                         host=metafunc.config.getoption('matrix_host'),
-                        port=metafunc.config.getoption('matrix_port')
-                    )
-                )
+                        port=metafunc.config.getoption('matrix_port'),
+                    ),
+                ),
             )
 
         metafunc.parametrize('transport_config', transport_config)

@@ -22,7 +22,7 @@ def build_node_list(hosts, nodes_per_host):
 @click.group()
 @click.option(
     '--pretty/--no-pretty',
-    default=False
+    default=False,
 )
 @click.pass_context
 def cli(ctx, pretty):
@@ -37,7 +37,7 @@ def cli(ctx, pretty):
 @click.argument(
     'nodes_per_host',
     default=1,
-    type=int
+    type=int,
 )
 @cli.command()
 @click.pass_context
@@ -57,7 +57,7 @@ def nodes(ctx, hosts, nodes_per_host):
 @click.argument(
     'nodes_per_host',
     default=1,
-    type=int
+    type=int,
 )
 @cli.command()
 @click.pass_context
@@ -81,7 +81,7 @@ def genesis(ctx, hosts, nodes_per_host):
 @click.argument(
     'nodes_per_host',
     default=1,
-    type=int
+    type=int,
 )
 @cli.command()
 @click.pass_context
@@ -121,12 +121,12 @@ def private_to_account(ctx, privatekey, password):
 @click.argument(
     'nodes_per_host',
     default=1,
-    type=int
+    type=int,
 )
 @click.argument(
     'nodes_per_transfer',
     default=2,
-    type=int
+    type=int,
 )
 @cli.command()
 @click.pass_context
@@ -160,7 +160,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
             "channels": addresses[index:index + nodes_per_transfer],
             "transfers_with_amount": {
                 addresses[index + nodes_per_transfer - 1]: 3000,
-            }
+            },
         }
         tokens.append(data_for_token)
         index += nodes_per_transfer
@@ -208,11 +208,11 @@ def geth_commands(ctx, geth_hosts, datadir):
 
 @click.argument(
     'genesis_json',
-    type=click.File()
+    type=click.File(),
 )
 @click.argument(
     'state_json',
-    type=click.File()
+    type=click.File(),
 )
 @cli.command()
 @click.pass_context
@@ -243,7 +243,7 @@ def merge(ctx, genesis_json, state_json):
 @click.argument(
     'nodes_per_host',
     default=1,
-    type=int
+    type=int,
 )
 @click.option(
     '--scenario',
@@ -253,7 +253,7 @@ def merge(ctx, genesis_json, state_json):
     ),
     default=None,
     help="(optional) update the tokens in scenario.json with predeployed token addresses. "
-         "This modifies the file in place!"
+         "This modifies the file in place!",
 )
 @cli.command()
 @click.pass_context

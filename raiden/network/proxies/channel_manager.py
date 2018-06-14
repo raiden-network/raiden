@@ -66,7 +66,7 @@ class ChannelManager:
 
         CONTRACT_MANAGER.check_contract_version(
             self.version(),
-            CONTRACT_CHANNEL_MANAGER
+            CONTRACT_CHANNEL_MANAGER,
         )
 
         self.address = manager_address
@@ -98,7 +98,7 @@ class ChannelManager:
         )
         if invalid_timeout:
             raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}]'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
             ))
 
         local_address = privatekey_to_address(self.client.privkey)
@@ -125,7 +125,7 @@ class ChannelManager:
             transaction_hash = self.open_channel_transactions[other_peer].get()
 
         netting_channel_results_encoded = self.proxy.contract.functions.getChannelWith(
-            to_checksum_address(other_peer)
+            to_checksum_address(other_peer),
         ).call({'from': to_checksum_address(self.client.sender)})
 
         # address is at index 0
@@ -135,7 +135,7 @@ class ChannelManager:
             log.error(
                 'netting_channel_address failed',
                 peer1=pex(local_address),
-                peer2=pex(other_peer)
+                peer2=pex(other_peer),
             )
             raise RuntimeError('netting_channel_address failed')
 
@@ -204,7 +204,7 @@ class ChannelManager:
 
         if existing_channel != NULL_ADDRESS:
             exists = self.proxy.contract.functions.contractExists(
-                to_checksum_address(existing_channel)
+                to_checksum_address(existing_channel),
             ).call({'from': to_checksum_address(self.client.sender)})
 
         return exists

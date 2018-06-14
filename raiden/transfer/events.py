@@ -46,7 +46,7 @@ class ContractSendChannelSettle(Event):
 
     def __repr__(self):
         return '<ContractSendChannelSettle channel:{}>'.format(
-            pex(self.channel_identifier)
+            pex(self.channel_identifier),
         )
 
     def __eq__(self, other):

@@ -170,7 +170,7 @@ def restapi_setup_urls(flask_api_context, rest_api, urls):
         flask_api_context.add_resource(
             resource_cls,
             route,
-            resource_class_kwargs={'rest_api_object': rest_api}
+            resource_class_kwargs={'rest_api_object': rest_api},
         )
 
 
@@ -203,7 +203,7 @@ class APIServer:
     def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
         if rest_api.version != 1:
             raise ValueError(
-                'Invalid api version: {}'.format(rest_api.version)
+                'Invalid api version: {}'.format(rest_api.version),
             )
 
         flask_app = Flask(__name__)
@@ -279,7 +279,7 @@ class APIServer:
             (host, port),
             self.flask_app,
             log=wsgi_log,
-            error_log=wsgi_log
+            error_log=wsgi_log,
         )
         self.wsgiserver.start()
 
@@ -307,7 +307,7 @@ class RestAPI:
 
     def get_our_address(self):
         return api_response(
-            result=dict(our_address=to_checksum_address(self.raiden_api.address))
+            result=dict(our_address=to_checksum_address(self.raiden_api.address)),
         )
 
     def register_token(self, registry_address, token_address):
@@ -545,7 +545,7 @@ class RestAPI:
 
     def get_channel_events(self, channel_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_events(
-            channel_address, from_block, to_block
+            channel_address, from_block, to_block,
         )
         return api_response(result=normalize_events_list(raiden_service_result))
 
@@ -706,7 +706,7 @@ class RestAPI:
         except ChannelNotFound:
             return api_error(
                 errors='Requested channel {} not found'.format(
-                    to_checksum_address(channel_address)
+                    to_checksum_address(channel_address),
                 ),
                 status_code=HTTPStatus.CONFLICT,
             )

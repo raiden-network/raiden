@@ -68,7 +68,7 @@ from raiden.utils.cli import (
     NetworkChoiceType,
     option,
     option_group,
-    LOG_LEVEL_CONFIG_TYPE
+    LOG_LEVEL_CONFIG_TYPE,
 )
 from raiden.log_config import configure_logging
 
@@ -124,7 +124,7 @@ def check_json_rpc(client):
             '\n'
             '    eth_*, net_*, web3_*\n'
             '\n'
-            'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n'
+            'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n',
         )
         sys.exit(1)
     else:
@@ -142,7 +142,7 @@ def check_synced(blockchain_service):
             'Could not determine the network the ethereum node is connected.\n'
             'Because of this there is no way to determine the latest\n'
             'block with an oracle, and the events from the ethereum\n'
-            'node cannot be trusted. Giving up.\n'
+            'node cannot be trusted. Giving up.\n',
         )
         sys.exit(1)
     except KeyError:
@@ -150,7 +150,7 @@ def check_synced(blockchain_service):
             'Your ethereum client is connected to a non-recognized private \n'
             'network with network-ID {}. Since we can not check if the client \n'
             'is synced please restart raiden with the --no-sync-check argument.'
-            '\n'.format(net_id)
+            '\n'.format(net_id),
         )
         sys.exit(1)
 
@@ -176,7 +176,7 @@ def check_discovery_registration_gas(blockchain_service, account_address):
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
             'Please deposit additional funds into this account.'
-            .format(discovery_tx_cost / denoms.ether, account_balance / denoms.ether)
+            .format(discovery_tx_cost / denoms.ether, account_balance / denoms.ether),
         )
         sys.exit(1)
 
@@ -318,14 +318,14 @@ def options(func):
         option(
             '--console',
             help='Start the interactive raiden console',
-            is_flag=True
+            is_flag=True,
         ),
         option(
             '--transport',
             help='Transport system to use. Matrix is experimental.',
             type=click.Choice(['udp', 'matrix']),
             default='udp',
-            show_default=True
+            show_default=True,
         ),
         option(
             '--network-id',
@@ -357,7 +357,7 @@ def options(func):
                     'the value of the RPC call eth_gasPrice is going to be used'
                 ),
                 default=None,
-                type=int
+                type=int,
             ),
             option(
                 '--eth-rpc-endpoint',
@@ -420,7 +420,7 @@ def options(func):
                 type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
                 default='auto',
                 show_default=True,
-                option_group='udp_transport'
+                option_group='udp_transport',
             ),
         ),
         option_group(
@@ -436,7 +436,7 @@ def options(func):
                 default='auto',
                 type=MatrixServerType(['auto', '<url>']),
                 show_default=True,
-            )
+            ),
         ),
         option_group(
             'Logging Options',
@@ -458,7 +458,7 @@ def options(func):
             option(
                 '--log-json',
                 help='Output log lines in JSON format',
-                is_flag=True
+                is_flag=True,
             ),
         ),
         option_group(
@@ -625,7 +625,7 @@ def app(
         'You are connected to the \'{}\' network and the DB path is: {}'.format(
             ID_TO_NETWORKNAME[net_id],
             database_path,
-        )
+        ),
     )
 
     try:
@@ -635,7 +635,7 @@ def app(
     except ContractVersionMismatch:
         print(
             'Deployed registry contract version mismatch. '
-            'Please update your Raiden installation.'
+            'Please update your Raiden installation.',
         )
         sys.exit(1)
 
@@ -645,7 +645,7 @@ def app(
         try:
             discovery = ContractDiscovery(
                 blockchain_service.node_address,
-                blockchain_service.discovery(discovery_contract_address)
+                blockchain_service.discovery(discovery_contract_address),
             )
         except ContractVersionMismatch:
             print('Deployed discovery contract version mismatch. '
@@ -653,7 +653,7 @@ def app(
             sys.exit(1)
         throttle_policy = TokenBucket(
             config['transport']['throttle_capacity'],
-            config['transport']['throttle_fill_rate']
+            config['transport']['throttle_fill_rate'],
         )
 
         transport = UDPTransport(
@@ -734,14 +734,14 @@ def prompt_account(address_hex, keystore_path, password_file):
                 if unlock_tries == 0:
                     print(
                         'Exhausted passphrase unlock attempts for {}. Aborting ...'
-                        .format(address_hex)
+                        .format(address_hex),
                     )
                     sys.exit(1)
 
                 print(
                     'Incorrect passphrase to unlock the private key. {} tries remaining. '
                     'Please try again or kill the process to quit. '
-                    'Usually Ctrl-c.'.format(unlock_tries)
+                    'Usually Ctrl-c.'.format(unlock_tries),
                 )
                 unlock_tries -= 1
 
@@ -766,7 +766,7 @@ def run(ctx, **kwargs):
     configure_logging(
         kwargs['log_config'],
         log_json=kwargs['log_json'],
-        log_file=kwargs['log_file']
+        log_file=kwargs['log_file'],
     )
 
     # TODO:
@@ -807,7 +807,7 @@ def run(ctx, **kwargs):
                 'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
                     api_host,
                     api_port,
-                )
+                ),
             )
 
         if ctx.params['console']:
@@ -845,7 +845,7 @@ def run(ctx, **kwargs):
                 print(
                     'ERROR: Address %s:%s is in use. '
                     'Use --listen-address <host:port> to specify port to listen on.' %
-                    (listen_host, listen_port)
+                    (listen_host, listen_port),
                 )
                 sys.exit(1)
             raise
@@ -863,7 +863,7 @@ def run(ctx, **kwargs):
 @option(
     '--short',
     is_flag=True,
-    help='Only display Raiden version'
+    help='Only display Raiden version',
 )
 def version(short, **kwargs):  # pylint: disable=unused-argument
     """Print version information and exit. """
@@ -872,7 +872,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
     else:
         print(json.dumps(
             get_system_spec(),
-            indent=2
+            indent=2,
         ))
 
 
@@ -880,7 +880,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @option(
     '--debug',
     is_flag=True,
-    help='Drop into pdb on errors.'
+    help='Drop into pdb on errors.',
 )
 @click.pass_context
 def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
@@ -918,7 +918,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     if not smoketest_config:
         append_report(
             'smoketest configuration',
-            'Could not load the smoketest genesis configuration file.'
+            'Could not load the smoketest genesis configuration file.',
         )
 
     print('[2/5] starting ethereum')

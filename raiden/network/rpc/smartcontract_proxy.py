@@ -5,7 +5,7 @@ from eth_utils import (
     to_canonical_address,
     decode_hex,
     to_checksum_address,
-    event_abi_to_log_topic
+    event_abi_to_log_topic,
 )
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 from web3.utils.abi import get_abi_input_types, filter_by_type
@@ -33,7 +33,7 @@ class ContractProxy:
     def __init__(
         self,
         jsonrpc_client,
-        contract: Contract
+        contract: Contract,
     ):
         if contract is None:
             raise ValueError('Contract must not be None')
@@ -49,7 +49,7 @@ class ContractProxy:
             to=self.contract.address,
             value=kargs.pop('value', 0),
             data=decode_hex(data),
-            **kargs
+            **kargs,
         )
 
         return txhash
@@ -76,7 +76,7 @@ class ContractProxy:
         fn_abi = find_matching_fn_abi(
             abi,
             function_name,
-            args
+            args,
         )
         args = ContractProxy.sanitize_args(fn_abi, args)
         return encode_transaction_data(
@@ -84,7 +84,7 @@ class ContractProxy:
             function_name,
             contract_abi=abi,
             fn_abi=fn_abi,
-            args=args
+            args=args,
         )
 
     def decode_event(self, log: Dict):

@@ -104,7 +104,7 @@ class AccountManager:
                         JSONDecodeError,
                         KeyError,
                         OSError,
-                        UnicodeDecodeError
+                        UnicodeDecodeError,
                     ) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
@@ -211,7 +211,7 @@ class Account:
         """
         d = {
             'crypto': self.keystore['crypto'],
-            'version': self.keystore['version']
+            'version': self.keystore['version'],
         }
         if include_address and self.address is not None:
             d['address'] = hexlify(self.address)

@@ -64,7 +64,7 @@ def ensure_executable(cmd):
     if not shutil.which(cmd):
         print(
             'Error: unable to locate %s binary.\n'
-            'Make sure it is installed and added to the PATH variable.' % cmd
+            'Make sure it is installed and added to the PATH variable.' % cmd,
         )
         sys.exit(1)
 
@@ -85,7 +85,7 @@ TEST_ACCOUNT = {
         },
         'mac': 'ec86b1e6188dc2e7e415fa4214153636387338dbffe2edf1b04fac6be23eead4',
         'cipher': 'aes-128-ctr',
-        'version': 1
+        'version': 1,
     },
     'address': '67a5e21e34a58ed8d47c719fe291ddd2ea825e12',
 }
@@ -176,7 +176,7 @@ def init_with_genesis(smoketest_genesis):
 
     cmd = '$RST_GETH_BINARY --datadir $RST_DATADIR init {}'.format(GENESIS_PATH)
     args = shlex.split(
-        Template(cmd).substitute(os.environ)
+        Template(cmd).substitute(os.environ),
     )
     init = subprocess.Popen(
         args,
@@ -194,7 +194,7 @@ def start_ethereum(smoketest_genesis):
     os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
     cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
     args = shlex.split(
-        Template(cmd).substitute(os.environ)
+        Template(cmd).substitute(os.environ),
     )
 
     keystore = os.path.join(os.environ['RST_DATADIR'], 'keystore')

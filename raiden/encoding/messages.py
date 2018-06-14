@@ -80,7 +80,7 @@ Processed = namedbuffer(
         sender,
         message_identifier,
         signature,
-    ]
+    ],
 )
 
 Delivered = namedbuffer(
@@ -90,7 +90,7 @@ Delivered = namedbuffer(
         pad(3),
         delivered_message_identifier,
         signature,
-    ]
+    ],
 )
 
 Ping = namedbuffer(
@@ -100,7 +100,7 @@ Ping = namedbuffer(
         pad(3),
         nonce,
         signature,
-    ]
+    ],
 )
 
 Pong = namedbuffer(
@@ -110,7 +110,7 @@ Pong = namedbuffer(
         pad(3),
         nonce,
         signature,
-    ]
+    ],
 )
 
 SecretRequest = namedbuffer(
@@ -123,7 +123,7 @@ SecretRequest = namedbuffer(
         secrethash,
         amount,
         signature,
-    ]
+    ],
 )
 
 Secret = namedbuffer(
@@ -141,7 +141,7 @@ Secret = namedbuffer(
         locked_amount,
         locksroot,
         signature,
-    ]
+    ],
 )
 
 RevealSecret = namedbuffer(
@@ -152,7 +152,7 @@ RevealSecret = namedbuffer(
         message_identifier,
         secret,
         signature,
-    ]
+    ],
 )
 
 DirectTransfer = namedbuffer(
@@ -171,7 +171,7 @@ DirectTransfer = namedbuffer(
         locked_amount,
         locksroot,
         signature,
-    ]
+    ],
 )
 
 LockedTransfer = namedbuffer(
@@ -196,7 +196,7 @@ LockedTransfer = namedbuffer(
         amount,
         fee,
         signature,
-    ]
+    ],
 )
 
 RefundTransfer = namedbuffer(
@@ -221,7 +221,7 @@ RefundTransfer = namedbuffer(
         amount,
         fee,
         signature,
-    ]
+    ],
 )
 
 Lock = namedbuffer(
@@ -230,7 +230,7 @@ Lock = namedbuffer(
         expiration,
         amount,
         secrethash,
-    ]
+    ],
 )
 
 

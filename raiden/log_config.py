@@ -20,7 +20,7 @@ def _get_log_handler(formatter, log_file):
             'default': {
                 'class': 'logging.StreamHandler',
                 'formatter': formatter,
-            }
+            },
         }
 
 
@@ -28,7 +28,7 @@ def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
     log_json: bool = False,
-    log_file: str = None
+    log_file: str = None,
 ):
     if logger_level_config is None:
         logger_level_config = {'': DEFAULT_LOG_LEVEL}
@@ -65,8 +65,8 @@ def configure_logging(
                     'level': logger_level_config.get('', DEFAULT_LOG_LEVEL),
                     'propagate': True,
                 },
-            }
-        }
+            },
+        },
     )
     structlog.configure(
         processors=[

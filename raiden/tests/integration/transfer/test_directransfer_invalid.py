@@ -27,7 +27,7 @@ from raiden.tests.utils.transfer import (
 def test_failsfast_directtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
-        deposit
+        deposit,
 ):
 
     alice_app, bob_app = raiden_network
@@ -37,7 +37,7 @@ def test_failsfast_directtransfer_exceeding_distributable(
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         node_state,
         payment_network_id,
-        token_address
+        token_address,
     )
 
     async_result = alice_app.raiden.direct_transfer_async(
@@ -137,7 +137,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     assert_synched_channel_state(
         token_network_identifier,
         app0, balance0, [],
-        app1, balance1, []
+        app1, balance1, [],
     )
 
 
@@ -180,7 +180,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
     assert_synched_channel_state(
         token_network_identifier,
         app0, deposit, [],
-        app1, deposit, []
+        app1, deposit, [],
     )
 
 

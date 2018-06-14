@@ -24,7 +24,7 @@ from raiden.api.objects import (
     Channel,
     ChannelList,
     PartnersPerToken,
-    PartnersPerTokenList
+    PartnersPerTokenList,
 )
 from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
@@ -243,7 +243,7 @@ class ChannelRequestSchema(BaseSchema):
             CHANNEL_STATE_CLOSED,
             CHANNEL_STATE_OPENED,
             CHANNEL_STATE_SETTLED,
-        ])
+        ]),
     )
 
     class Meta:

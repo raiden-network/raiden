@@ -107,7 +107,7 @@ class EchoNode:
                     for channel_state in channels:
                         channel_events = self.api.get_channel_events(
                             channel_state.identifier,
-                            self.last_poll_block
+                            self.last_poll_block,
                         )
                         received_transfers.extend([
                             event for event in channel_events
@@ -133,7 +133,7 @@ class EchoNode:
                             'restarting echo_worker_greenlet',
                             dead=self.echo_worker_greenlet.dead,
                             successful=self.echo_worker_greenlet.successful(),
-                            exception=self.echo_worker_greenlet.exception
+                            exception=self.echo_worker_greenlet.exception,
                         )
                         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         except Timeout:
@@ -154,7 +154,7 @@ class EchoNode:
                         'duplicate transfer ignored',
                         initiator=pex(transfer['initiator']),
                         amount=transfer['amount'],
-                        identifier=transfer['identifier']
+                        identifier=transfer['identifier'],
                     )
                 else:
                     self.seen_transfers.append(transfer)
@@ -182,7 +182,7 @@ class EchoNode:
                 'minus one transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
-                identifier=transfer['identifier']
+                identifier=transfer['identifier'],
             )
             echo_amount = transfer['amount'] - 1
 
@@ -231,7 +231,7 @@ class EchoNode:
                 'echo transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
-                identifier=transfer['identifier']
+                identifier=transfer['identifier'],
             )
             echo_amount = transfer['amount']
 
@@ -243,7 +243,7 @@ class EchoNode:
                 orig_identifier=transfer['identifier'],
                 echo_identifier=transfer['identifier'] + echo_amount,
                 token_address=pex(self.token_address),
-                num_handled_transfers=self.num_handled_transfers + 1
+                num_handled_transfers=self.num_handled_transfers + 1,
             )
 
             self.api.transfer_and_wait(
@@ -251,7 +251,7 @@ class EchoNode:
                 self.token_address,
                 echo_amount,
                 transfer['initiator'],
-                identifier=transfer['identifier'] + echo_amount
+                identifier=transfer['identifier'] + echo_amount,
             )
         self.num_handled_transfers += 1
 
@@ -273,7 +273,7 @@ def runner(ctx, **kwargs):
     structlog.configure(
         kwargs['structlog'],
         log_json=kwargs['log_json'],
-        log_file=kwargs['logfile']
+        log_file=kwargs['logfile'],
     )
     if kwargs['logfile']:
         # Disable stream structlog
@@ -316,7 +316,7 @@ def runner(ctx, **kwargs):
                 'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
                     api_host,
                     api_port,
-                )
+                ),
             )
 
         # This will install the EchoNode callback in the alarm task:

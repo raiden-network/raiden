@@ -85,7 +85,7 @@ class InitiatorTransferState(State):
 
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError(
-                'transfer_description must be an instance of TransferDescriptionWithSecretState'
+                'transfer_description must be an instance of TransferDescriptionWithSecretState',
             )
 
         # This is the users description of the transfer. It does not contain a

@@ -70,7 +70,7 @@ def get_networkstatuses(node_state: NodeState) -> typing.Dict:
 
 def get_node_network_status(
         node_state: NodeState,
-        node_address: typing.Address
+        node_address: typing.Address,
 ) -> str:
 
     return node_state.nodeaddresses_to_networkstates.get(
@@ -437,7 +437,7 @@ def list_all_channelstate(node_state: NodeState) -> typing.List[NettingChannelSt
         for token_network in payment_network.tokenaddresses_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(
-                token_network.partneraddresses_to_channels.values()
+                token_network.partneraddresses_to_channels.values(),
             )
 
     return result
@@ -484,7 +484,7 @@ def filter_channels_by_partneraddress(
         node_state: NodeState,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
-        partner_addresses: typing.List[typing.Address]
+        partner_addresses: typing.List[typing.Address],
 ) -> typing.List[NettingChannelState]:
 
     token_network = get_token_network_by_token_address(

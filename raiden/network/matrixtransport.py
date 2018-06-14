@@ -35,7 +35,7 @@ from raiden.messages import (
     Ping,
     SignedMessage,
     Pong,
-    Message
+    Message,
 )
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
@@ -51,7 +51,7 @@ from raiden.utils import (
     data_encoder,
     eth_sign_sha3,
     pex,
-    typing
+    typing,
 )
 from raiden_libs.network.matrix import GMatrixClient, Room
 
@@ -99,12 +99,12 @@ class MatrixTransport:
     def start(
         self,
         raiden_service: RaidenService,
-        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]]
+        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]],
     ):
         self._raiden_service = raiden_service
         room_alias_re = self._make_room_alias(
             '(?P<peer1>0x[a-zA-Z0-9]{40})',
-            '(?P<peer2>0x[a-zA-Z0-9]{40})'
+            '(?P<peer2>0x[a-zA-Z0-9]{40})',
         )
         self._room_alias_re = re.compile(f'^#{room_alias_re}:(?P<server_name>.*)$')
 
@@ -171,7 +171,7 @@ class MatrixTransport:
             'SEND ASYNC',
             receiver_address=to_normalized_address(receiver_address),
             message=message,
-            queue_name=queue_name
+            queue_name=queue_name,
         )
         if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
@@ -179,7 +179,7 @@ class MatrixTransport:
         # These are not protocol messages, but transport specific messages
         if isinstance(message, (Delivered, Ping, Pong)):
             raise ValueError(
-                'Do not use send_async for {} messages'.format(message.__class__.__name__)
+                'Do not use send_async for {} messages'.format(message.__class__.__name__),
             )
 
         if isinstance(message, SignedMessage) and not message.sender:
@@ -221,7 +221,7 @@ class MatrixTransport:
     def _network_name(self) -> str:
         return ID_TO_NETWORKNAME.get(
             self._raiden_service.chain.network_id,
-            str(self._raiden_service.chain.network_id)
+            str(self._raiden_service.chain.network_id),
         )
 
     def _login_or_register(self):
@@ -242,7 +242,7 @@ class MatrixTransport:
                 self.log.info(
                     'LOGIN',
                     homeserver=self._server_url,
-                    username=username
+                    username=username,
                 )
                 break
             except MatrixRequestError as ex:
@@ -283,7 +283,7 @@ class MatrixTransport:
             if discovery_cfg['server'] != self._server_name:
                 raise RuntimeError(
                     f"Discovery room {self._discovery_room_alias_full} not found and can't be "
-                    f"created on a federated homeserver."
+                    f"created on a federated homeserver.",
                 )
             discovery_room = self._client.create_room(self._discovery_room_alias, is_public=True)
         self._discovery_room = discovery_room
@@ -305,7 +305,7 @@ class MatrixTransport:
                 if not peer_address:
                     self.log.warning(
                         "Member of a room we're not supposed to be a member of - ignoring",
-                        room=room
+                        room=room,
                     )
                     return
                 self._address_to_roomid[peer_address] = room.room_id
@@ -314,7 +314,7 @@ class MatrixTransport:
                 'ROOM',
                 room_id=room_id,
                 aliases=room.aliases,
-                listening=should_listen
+                listening=should_listen,
             )
 
     def _handle_invite(self, room_id: str, state: dict):
@@ -327,7 +327,7 @@ class MatrixTransport:
         if not peer_address:
             self.log.warning(
                 'Got invited to a room we\'re not supposed to be a member of - ignoring',
-                room=room
+                room=room,
             )
             return
         self._address_to_roomid[peer_address] = room.room_id
@@ -335,7 +335,7 @@ class MatrixTransport:
         self.log.debug(
             'Invited to a room',
             room_id=room_id,
-            aliases=room.aliases
+            aliases=room.aliases,
         )
 
     def _handle_message(self, room, event):
@@ -359,7 +359,7 @@ class MatrixTransport:
                 peer_address = signing.recover_address(
                     sender_id.encode(),
                     signature=data_decoder(user.get_display_name()),
-                    hasher=eth_sign_sha3
+                    hasher=eth_sign_sha3,
                 )
             except AssertionError:
                 self.log.warning('INVALID MESSAGE', sender_id=sender_id)
@@ -369,7 +369,7 @@ class MatrixTransport:
                 self.log.warning(
                     'INVALID SIGNATURE',
                     peer_address=node_address_hex,
-                    sender_id=sender_id
+                    sender_id=sender_id,
                 )
                 return
             self._userids_to_address[sender_id] = peer_address
@@ -385,7 +385,7 @@ class MatrixTransport:
                     "Can't parse message data JSON",
                     message_data=data,
                     peer_address=pex(peer_address),
-                    exception=ex
+                    exception=ex,
                 )
                 return
             self.log.debug('MESSAGE_DATA', data=message_dict)
@@ -415,12 +415,12 @@ class MatrixTransport:
     def _receive_delivered(self, delivered: Delivered):
         # FIXME: The signature doesn't seem to be verified - check in UDPTransport as well
         self._raiden_service.handle_state_change(
-            ReceiveDelivered(delivered.delivered_message_identifier)
+            ReceiveDelivered(delivered.delivered_message_identifier),
         )
 
         async_result = self._messageids_to_asyncresult.pop(
             delivered.delivered_message_identifier,
-            None
+            None,
         )
 
         if async_result is not None:
@@ -444,7 +444,7 @@ class MatrixTransport:
             'MESSAGE RECEIVED',
             node=pex(self._raiden_service.address),
             message=message,
-            message_sender=pex(message.sender)
+            message_sender=pex(message.sender),
         )
 
         try:
@@ -465,12 +465,12 @@ class MatrixTransport:
             'DELIVERED',
             node=pex(self._raiden_service.address),
             to=pex(message.sender),
-            message_identifier=message.message_identifier
+            message_identifier=message.message_identifier,
         )
 
     def _send_queued_messages(
         self,
-        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]]
+        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]],
     ):
         def send_queue(address, events):
             node_address = self._raiden_service.address
@@ -485,13 +485,13 @@ class MatrixTransport:
         self,
         receiver_address: typing.Address,
         async_result: AsyncResult,
-        data: str
+        data: str,
     ):
         def retry():
             timeout_generator = udp_utils.timeout_exponential_backoff(
                 self._raiden_service.config['transport']['retries_before_backoff'],
                 self._raiden_service.config['transport']['retry_interval'],
-                self._raiden_service.config['transport']['retry_interval'] * 10
+                self._raiden_service.config['transport']['retry_interval'] * 10,
             )
             while async_result.value is None:
                 self._send_immediate(receiver_address, data)
@@ -510,7 +510,7 @@ class MatrixTransport:
     def _get_room_for_address(
         self,
         receiver_address: typing.Address,
-        allow_missing_peers=False
+        allow_missing_peers=False,
     ) -> Optional[Room]:
         room_id = self._address_to_roomid.get(receiver_address)
         if room_id:
@@ -560,7 +560,7 @@ class MatrixTransport:
         self.log.info(
             'CHANNEL ROOM',
             peer_address=to_normalized_address(receiver_address),
-            room=room
+            room=room,
         )
         self._address_to_roomid[receiver_address] = room.room_id
         return room
@@ -623,7 +623,7 @@ class MatrixTransport:
             'Changing user presence state',
             user_id=user_id,
             prev_state=self._userid_to_presence.get(user_id),
-            state=new_state
+            state=new_state,
         )
         self._userid_to_presence[user_id] = new_state
 
@@ -663,7 +663,7 @@ class MatrixTransport:
             'Changing address presence state',
             address=to_normalized_address(address),
             prev_state=self._address_to_presence.get(address),
-            state=new_state
+            state=new_state,
         )
         self._address_to_presence[address] = new_state
         if new_state is None:
@@ -743,7 +743,7 @@ class MatrixTransport:
         self.log.info(
             'Automatically selecting matrix homeserver based on RTT',
             homeserver=best_server,
-            rtt=rtt
+            rtt=rtt,
         )
         return best_server
 
@@ -752,7 +752,7 @@ class MatrixTransport:
         return signing.sign(
             data,
             self._raiden_service.private_key,
-            hasher=eth_sign_sha3
+            hasher=eth_sign_sha3,
         )
 
     def _get_peer_address_from_room(self, room_alias):
@@ -773,7 +773,7 @@ def _validate_userid_signature(user: User) -> bool:
     recovered = signing.recover_address(
         user.user_id.encode(),
         signature=data_decoder(user.get_display_name()),
-        hasher=eth_sign_sha3
+        hasher=eth_sign_sha3,
     )
     return to_normalized_address(recovered).lower() in user.user_id
 

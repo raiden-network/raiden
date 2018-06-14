@@ -54,5 +54,5 @@ def test_log_directransfer(raiden_chain, token_addresses, deposit):
         'balance_proof': {
             'transferred_amount': amount,
             'sender': app0.raiden.address,
-        }
+        },
     })

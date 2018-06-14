@@ -23,7 +23,7 @@ def test_mediated_transfer_events(raiden_network, token_addresses, network_wait)
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         node_state,
         payment_network_id,
-        token_address
+        token_address,
     )
 
     amount = 10
