@@ -18,7 +18,7 @@ if [ -z "${TRAVIS}" ]; then
         BASEDIR=$(dirname $(dirname $(readlink -m $0)))
     fi
 else
-    BASEDIR=${HOME}/build/raiden-network/raiden
+    BASEDIR=${TRAVIS_BUILD_DIR}
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
         sudo apt-get -qq update
         sudo apt-get install -y sqlite3
