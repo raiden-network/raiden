@@ -509,7 +509,7 @@ Possible Responses
 Deposit to a Channel
 ---------------------
 
-You can deposit more of a particular token to a channel by updating the ``balance``
+You can deposit more of a particular token to a channel by updating the ``total_deposit``
 field of the channel in the corresponding endpoint with a ``PATCH`` http request.
 
 ``PATCH /api/<version>/channels/<channel_address>``
@@ -521,7 +521,7 @@ Example Request
 
 with payload
 
-``{"balance": 100}``
+``{"total_deposit": 100}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
