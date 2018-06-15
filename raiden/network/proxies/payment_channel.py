@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Dict
 
+from web3.utils.filters import Filter
+from eth_utils import decode_hex
+
 from raiden.network.proxies import TokenNetwork
 from raiden.utils import typing
+from raiden.utils.filters import get_filter_args_for_channel_from_token_network
 
 
 class PaymentChannel:
@@ -26,11 +30,35 @@ class PaymentChannel:
         """ Returns the channel details. """
         return self.token_network.detail(self.partner_address)
 
-    def settle_block_number(self) -> typing.BlockNumber:
-        """ Returns the settle block of the channel"""
+    def settle_block_number(self) -> int:
+        """ Returns the channels settle block number.
+
+        This is relative while the channel is open and becomes absolute when the channel is closed
+        """
         return self.token_network.settle_block_number(self.partner_address)
 
-    def openend(self) -> bool:
+    def settle_timeout(self) -> int:
+        """ Returns the channels settle_timeout. """
+
+        # There is no way to get the settle timeout after the channel has been closed as
+        # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
+        filter = self.token_network.proxy.contract.events.ChannelOpened.createFilter(
+            fromBlock=0,
+            argument_filters={
+                'channel_identifier': decode_hex(self.channel_identifier()),
+            },
+        )
+
+        events = filter.get_all_entries()
+        # uninstall the filter, otherwise it leaks
+        self.token_network.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
+
+        assert len(events) > 0, 'No matching ChannelOpen event found.'
+
+        # we want the latest event here, there might have been multiple channels
+        return events[-1]['args']['settle_timeout']
+
+    def opened(self) -> bool:
         """ Returns if the channel is opened. """
         return self.token_network.channel_is_opened(self.partner_address)
 
@@ -114,8 +142,16 @@ class PaymentChannel:
             partner_locksroot=partner_locksroot,
         )
 
-    def events_filter(self):
-        raise NotImplementedError('PaymentChannel.events_filter not implemented')
+    def all_events_filter(
+            self,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None,
+    ) -> Filter:
+        args = get_filter_args_for_channel_from_token_network(
+            token_network_address=self.token_network.address,
+            channel_identifier=self.channel_identifier(),
+            from_block=from_block,
+            to_block=to_block,
+        )
 
-    def all_events_filter(self):
-        raise NotImplementedError('PaymentChannel.all_events_filter not implemented')
+        return self.token_network.client.new_filter(args)

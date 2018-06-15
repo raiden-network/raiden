@@ -471,7 +471,7 @@ class NettingChannel:
             self,
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
-    ):
+    ) -> Filter:
         """ Install a new filter for all the events emitted by the current netting channel contract
 
         Return:
