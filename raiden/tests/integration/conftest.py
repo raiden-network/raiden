@@ -29,7 +29,7 @@ def pytest_generate_tests(metafunc):
             command = metafunc.config.getoption('local_matrix')
             if command is None:
                 project_root = Path(__file__).absolute().parents[3]
-                command = project_root.joinpath('.synapse', 'run.sh').as_posix()
+                command = project_root.joinpath('.synapse', 'run_synapse.sh').as_posix()
             transport_config.append(
                 TransportConfig(
                     protocol=TransportProtocol.MATRIX,
