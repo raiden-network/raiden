@@ -280,7 +280,6 @@ def subdispatch_targettask(
         node_state,
         state_change,
         token_network_identifier,
-        token_address,
         channel_identifier,
         secrethash,
 ):
@@ -573,7 +572,6 @@ def handle_init_mediator(node_state, state_change):
 def handle_init_target(node_state, state_change):
     transfer = state_change.transfer
     secrethash = transfer.lock.secrethash
-    token_address = transfer.token
     channel_identifier = transfer.balance_proof.channel_address
     token_network_identifier = transfer.balance_proof.token_network_identifier
 
@@ -581,7 +579,6 @@ def handle_init_target(node_state, state_change):
         node_state,
         state_change,
         token_network_identifier,
-        token_address,
         channel_identifier,
         secrethash,
     )
