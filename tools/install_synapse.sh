@@ -1,44 +1,52 @@
 #!/usr/bin/env bash
 
-set -e
-set -x
+set -ex
 
+SYNAPSE_URL="${SYNAPSE_URL:-https://github.com/matrix-org/synapse/tarball/master#egg=matrix-synapse}"
+SYNAPSE_SERVER_NAME="${SYNAPSE_SERVER_NAME:-matrix.local.raiden}"
+BASEDIR=$(readlink -m "$(dirname $0)/..")
 
-if [ -z "${SYNAPSE_URL}" ]; then
-    SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=matrix-synapse'
-fi
-
-if [ -z "${SYNAPSE_SERVER_NAME}" ]; then
-    SYNAPSE_SERVER_NAME='matrix.local.raiden'
-fi
-
-
-if [ -z "${TRAVIS}" ]; then
-    if [ -z "${BASEDIR}" ]; then
-        BASEDIR=$(dirname $(dirname $(readlink -m $0)))
-    fi
-else
-    BASEDIR=${HOME}/build/raiden-network/raiden
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-        sudo apt-get -qq update
-        sudo apt-get install -y sqlite3
+if [ ! -d "${DESTDIR}" ]; then
+    if [ -n "${TRAVIS}" ]; then
+        DESTDIR="${HOME}/.bin"  # cached folder
+    else
+        DESTDIR="${BASEDIR}/.synapse"
+        mkdir -p "${DESTDIR}"
     fi
 fi
 
+SYNAPSE="${DESTDIR}/synapse"
+# build synapse single-file executable
+if [ ! -x "${SYNAPSE}" ]; then
+    if [ ! -d "${BUILDDIR}" ]; then
+        BUILDDIR="$( mktemp -d )"
+        RMBUILDDIR="1"
+    fi
+    pushd "${BUILDDIR}"
 
-mkdir -p ${BASEDIR}/.synapse
+    virtualenv -p "$(which python2)" venv
+    ./venv/bin/pip install "${SYNAPSE_URL}" pyinstaller
+    SYNDIR="$( find venv/lib -name synapse -type d | head -1 )"
+    ./venv/bin/pyinstaller -F -n synapse \
+        --hidden-import="sqlite3" \
+        --add-data="${SYNDIR}/storage/schema:synapse/storage/schema" \
+        "${SYNDIR}/app/homeserver.py"
+    cp -v dist/synapse "${SYNAPSE}"
 
-virtualenv -p $(which python2) ${BASEDIR}/.synapse/venv
-${BASEDIR}/.synapse/venv/bin/pip install $SYNAPSE_URL
+    popd
+    [ -n "${RMBUILDDIR}" ] && rm -r "${BUILDDIR}"
+fi
 
-cp ${BASEDIR}/raiden/tests/test_files/synapse-config.yaml ${BASEDIR}/.synapse/config.yml
-${BASEDIR}/.synapse/venv/bin/python -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
-	--config-path=${BASEDIR}/.synapse/config.yml --generate-keys
+cp ${BASEDIR}/raiden/tests/test_files/synapse-config.yaml ${DESTDIR}/synapse-config.yml
+"${SYNAPSE}" --server-name="${SYNAPSE_SERVER_NAME}" \
+           --config-path="${DESTDIR}/synapse-config.yml" \
+           --generate-keys
 
-echo """
-#!/usr/bin/env bash
-cd ${BASEDIR}/.synapse
-venv/bin/python -m synapse.app.homeserver --server-name=${SYNAPSE_SERVER_NAME} \
-  --config-path=${BASEDIR}/.synapse/config.yml
-""" > ${BASEDIR}/.synapse/run.sh
-chmod 775 ${BASEDIR}/.synapse/run.sh
+cat > "${DESTDIR}/run_synapse.sh" << EOF
+#!/bin/sh
+SYNAPSEDIR=\$( dirname "\$0" )
+exec "\${SYNAPSEDIR}/synapse" \
+  --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
+  --config-path="\${SYNAPSEDIR}/synapse-config.yml"
+EOF
+chmod 775 "${DESTDIR}/run_synapse.sh"
