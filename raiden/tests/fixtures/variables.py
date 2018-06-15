@@ -291,7 +291,7 @@ def database_paths(tmpdir, private_keys, in_memory_database):
         ]
 
     database_paths = list()
-    for idx, pkey in enumerate(private_keys):
+    for pkey in private_keys:
         app_dir = os.path.join(
             tmpdir.strpath,
             to_normalized_address(privatekey_to_address(pkey))[2:8],

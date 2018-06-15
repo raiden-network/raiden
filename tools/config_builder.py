@@ -141,7 +141,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
         nodes_per_transfer = 2
 
     addresses = []
-    for node, data in sorted(accounts.items()):
+    for _node, data in sorted(accounts.items()):
         for k, v in data.items():
             if k == 'address':
                 addresses.append(v)

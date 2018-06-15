@@ -88,7 +88,7 @@ def process_results(results_dir, plot_filename):
             plt.plot(dates, amount_per_time)
             plt.savefig(plot_filename)
         except ImportError as exc:
-            print("Error creating plot results: {}".format(exc.message))
+            print("Error creating plot results: {}".format(exc))
 
 
 if __name__ == '__main__':

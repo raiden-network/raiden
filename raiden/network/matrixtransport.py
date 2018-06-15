@@ -489,7 +489,7 @@ class MatrixTransport:
             for event in events:
                 self.send_async('', address, _event_to_message(event, node_address))
 
-        for (address, queue_name), events in queueids_to_queues.items():
+        for (address, _queue_name), events in queueids_to_queues.items():
             # TODO: Check if we need to separate this by queue_name
             gevent.spawn(send_queue, address, events)
 
@@ -588,7 +588,7 @@ class MatrixTransport:
         room_name_full = f'#{room_name}:{self._server_name}'
         room_not_found = False
 
-        for i in range(10):
+        for _ in range(10):
             if room_not_found:
                 try:
                     room = self._client.create_room(room_name, invitees=invitees)

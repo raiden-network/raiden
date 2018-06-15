@@ -7,7 +7,7 @@ def update_route(next_state, route_state_change):
 
     available_idx = None
     available_routes = list(next_state.routes.available_routes)
-    for available_idx, old_route in enumerate(available_routes):
+    for available_idx, old_route in enumerate(available_routes):  # noqa: B007
         if new_route.node_address == old_route.node_address:
             break
 

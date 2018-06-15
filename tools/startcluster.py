@@ -23,6 +23,8 @@ CLUSTER_NAME = 'raiden'
 RAIDEN_PORT = INITIAL_PORT
 DEFAULT_PW = 'notsosecret'
 
+PRIVKEY_LOCALHOST_627 = encode_hex(sha3(b'localhost:627'))
+
 
 # default args to pass to `geth` for all calls, e.g. verbosity, ...
 DEFAULT_ARGS = [
@@ -97,7 +99,7 @@ def to_cmd(node, datadir=None):
     return shlex.split(' '.join(cmd))
 
 
-def create_keystore_account(datadir, privkey=encode_hex(sha3(b'localhost:627'))):
+def create_keystore_account(datadir, privkey=PRIVKEY_LOCALHOST_627):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.

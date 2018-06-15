@@ -31,10 +31,10 @@ def recover_publickey_safe(messagedata, signature, hasher=sha3):
         log.error('invalid signature')
     except TypeError as e:
         # raised if the PublicKey instantiation failed
-        log.error('invalid key data: {}'.format(e.message))
+        log.error('invalid key data: {}'.format(e))
     except Exception as e:  # pylint: disable=broad-except
         # secp256k1 is using bare Exception classes: raised if the recovery failed
-        log.error('error while recovering pubkey: {}'.format(e.message))
+        log.error('error while recovering pubkey: {}'.format(e))
 
     return publickey
 

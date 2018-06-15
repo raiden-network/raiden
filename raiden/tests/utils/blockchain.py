@@ -351,7 +351,7 @@ def geth_create_blockchain(
     except (ValueError, RuntimeError) as e:
         # If geth_wait_and_check or the above loop throw an exception make sure
         # we don't end up with a rogue geth process running in the background
-        for proccess in processes_list:
+        for process in processes_list:
             process.terminate()
         raise e
 

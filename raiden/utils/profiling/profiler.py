@@ -534,7 +534,7 @@ def filter_fast(depth_info):
     acc_max, acc_min = 0, float('inf')
     inline_max, inline_min = 0, float('inf')
 
-    for depth, info in depth_info:
+    for _depth, info in depth_info:
         acc_max = max(info.get('accumulated', 0), acc_max)
         acc_min = min(info.get('accumulated', float('inf')), acc_min)
         inline_max = max(info.get('inline', 0), inline_max)
