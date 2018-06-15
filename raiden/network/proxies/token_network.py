@@ -11,6 +11,7 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
+    to_checksum_address,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
@@ -88,7 +89,7 @@ class TokenNetwork:
         self.open_channel_transactions = dict()
 
     def _call_and_check_result(self, function_name: str, *args):
-        fn = getattr(self.proxy.functions, function_name)
+        fn = getattr(self.proxy.contract.functions, function_name)
         call_result = fn(*args).call()
 
         if call_result == b'':
@@ -110,7 +111,7 @@ class TokenNetwork:
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
-        return to_canonical_address(self.proxy.functions.token().call())
+        return to_canonical_address(self.proxy.contract.functions.token().call())
 
     def new_netting_channel(
             self,
@@ -213,7 +214,11 @@ class TokenNetwork:
 
     def detail_participant(self, participant: typing.Address, partner: typing.Address) -> Dict:
         """ Returns a dictionary with the channel participant information. """
-        data = self._call_and_check_result('getChannelParticipantInfo', participant, partner)
+        data = self._call_and_check_result(
+            'getChannelParticipantInfo',
+            to_checksum_address(participant),
+            to_checksum_address(partner),
+        )
         return {
             'deposit': data[0],
             'withdrawn': data[1],
@@ -224,7 +229,11 @@ class TokenNetwork:
 
     def detail_channel(self, partner: typing.Address) -> Dict:
         """ Returns a dictionary with the channel specific information. """
-        channel_data = self._call_and_check_result('getChannelInfo', self.node_address, partner)
+        channel_data = self._call_and_check_result(
+            'getChannelInfo',
+            to_checksum_address(self.node_address),
+            to_checksum_address(partner),
+        )
 
         assert isinstance(channel_data[0], typing.T_ChannelID)
 
@@ -273,8 +282,8 @@ class TokenNetwork:
         """ Returns the locked amount for a specific participant's locksroot. """
         data = self._call_and_check_result(
             'getParticipantLockedAmount',
-            participant,
-            partner,
+            to_checksum_address(participant),
+            to_checksum_address(partner),
             locksroot,
         )
         return data
@@ -377,6 +386,7 @@ class TokenNetwork:
             total_deposit=total_deposit,
             amount_to_deposit=amount_to_deposit,
         )
+        token.approve(self.address, amount_to_deposit)
 
         self._check_channel_lock(partner)
 
@@ -492,8 +502,8 @@ class TokenNetwork:
             nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
             additional_hash: typing.AdditionalHash,
-            partner_signature: typing.Signature,
-            signature: typing.Signature,
+            closing_signature: typing.Signature,
+            non_closing_signature: typing.Signature,
     ):
         log.info(
             'updateNonClosingBalanceProof called',
@@ -503,8 +513,8 @@ class TokenNetwork:
             nonce=nonce,
             balance_hash=encode_hex(balance_hash),
             additional_hash=encode_hex(additional_hash),
-            partner_signature=encode_hex(partner_signature),
-            signature=encode_hex(signature),
+            closing_signature=encode_hex(closing_signature),
+            non_closing_signature=encode_hex(non_closing_signature),
         )
 
         transaction_hash = self.proxy.transact(
@@ -514,8 +524,8 @@ class TokenNetwork:
             balance_hash,
             nonce,
             additional_hash,
-            partner_signature,
-            signature,
+            closing_signature,
+            non_closing_signature,
         )
 
         self.client.poll(
@@ -533,8 +543,8 @@ class TokenNetwork:
                 nonce=nonce,
                 balance_hash=encode_hex(balance_hash),
                 additional_hash=encode_hex(additional_hash),
-                partner_signature=encode_hex(partner_signature),
-                signature=encode_hex(signature),
+                closing_signature=encode_hex(closing_signature),
+                non_closing_signature=encode_hex(non_closing_signature),
             )
             channel_closed = self.channel_is_closed(partner)
             if channel_closed is False:
@@ -549,8 +559,8 @@ class TokenNetwork:
             nonce=nonce,
             balance_hash=encode_hex(balance_hash),
             additional_hash=encode_hex(additional_hash),
-            partner_signature=encode_hex(partner_signature),
-            signature=encode_hex(signature),
+            closing_signature=encode_hex(closing_signature),
+            non_closing_signature=encode_hex(non_closing_signature),
         )
 
     def withdraw(
