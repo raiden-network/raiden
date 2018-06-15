@@ -10,6 +10,7 @@ import signal
 import shutil
 from copy import deepcopy
 from itertools import count
+from urllib.parse import urljoin
 
 import click
 import gevent
@@ -38,7 +39,6 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.sockfactory import SocketFactory
 from raiden.network.throttle import TokenBucket
 from raiden.network.utils import get_free_port
 from raiden.settings import (
@@ -52,6 +52,7 @@ from raiden.utils import (
     is_minified_address,
     is_supported_client,
     split_endpoint,
+    merge_dict,
 )
 from raiden.tests.utils.smoketest import (
     load_smoketest_config,
@@ -529,6 +530,7 @@ def app(
         transport,
         matrix_server,
         network_id,
+        extra_config=None,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -549,6 +551,8 @@ def app(
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
     config = deepcopy(App.DEFAULT_CONFIG)
+    if extra_config:
+        merge_dict(config, extra_config)
 
     config['host'] = listen_host
     config['port'] = listen_port
@@ -836,6 +840,7 @@ def run(ctx, **kwargs):
     if kwargs['transport'] == 'udp':
         (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
         try:
+            from raiden.network.sockfactory import SocketFactory
             with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
                 kwargs['mapped_socket'] = mapped_socket
                 app_ = _run_app()
@@ -882,8 +887,20 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
     is_flag=True,
     help='Drop into pdb on errors.',
 )
+@option(
+    '--local-matrix',
+    help='Command-line to be used to run a local matrix server (or "none")',
+    default=os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        '..',
+        '.synapse',
+        'run_synapse.sh',
+    )),
+    show_default=True,
+)
 @click.pass_context
-def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
+def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
@@ -935,8 +952,11 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         address=ethereum_config['address'],
         network_id='627',
         transport=ctx.parent.params['transport'],
-        matrix_server='http://127.0.0.1:8008'  # TODO: ensure default local matrix server here
+        matrix_server='http://localhost:8008'
+                      if ctx.parent.params['matrix_server'] == 'auto'
+                      else ctx.parent.params['matrix_server'],
     )
+    smoketest_config['transport'] = args['transport']
     for option_ in app.params:
         if option_.name in args.keys():
             args[option_.name] = option_.process_value(ctx, args[option_.name])
@@ -988,10 +1008,27 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         return success
 
     if args['transport'] == 'udp':
+        from raiden.network.sockfactory import SocketFactory
         with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
             args['mapped_socket'] = mapped_socket
             success = _run_smoketest()
-    elif args['transport'] == 'matrix':
+    elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
+        print('WARNING: The Matrix transport is experimental')
+        from mirakuru import HTTPExecutor
+        args['mapped_socket'] = None
+        with HTTPExecutor(
+                local_matrix,
+                status=r'^[24]\d\d$',
+                url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
+        ):
+            args['extra_config'] = {
+                'matrix': {
+                    'discovery_room': {'server': 'matrix.local.raiden'},
+                    'server_name': 'matrix.local.raiden',
+                },
+            }
+            success = _run_smoketest()
+    elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
         print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
         success = _run_smoketest()

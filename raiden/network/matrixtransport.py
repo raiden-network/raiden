@@ -287,7 +287,7 @@ class MatrixTransport:
             if discovery_cfg['server'] != self._server_name:
                 raise RuntimeError(
                     f"Discovery room {self._discovery_room_alias_full} not found and can't be "
-                    f"created on a federated homeserver.",
+                    f"created on a federated homeserver {self._server_name!r}.",
                 )
             discovery_room = self._client.create_room(self._discovery_room_alias, is_public=True)
         self._discovery_room = discovery_room
