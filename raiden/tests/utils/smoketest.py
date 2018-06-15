@@ -121,13 +121,14 @@ def run_smoketests(raiden_service, test_config, debug=False):
             raiden_service.default_registry.token_addresses() ==
             [to_canonical_address(test_config['contracts']['token_address'])]
         )
-        assert len(chain.address_to_discovery.keys()) == 1
-        assert (
-            list(chain.address_to_discovery.keys())[0] ==
-            to_canonical_address(test_config['contracts']['discovery_address'])
-        )
-        discovery = list(chain.address_to_discovery.values())[0]
-        assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
+        if test_config.get('transport') == 'udp':
+            assert len(chain.address_to_discovery.keys()) == 1, repr(chain.address_to_discovery)
+            assert (
+                list(chain.address_to_discovery.keys())[0] ==
+                to_canonical_address(test_config['contracts']['discovery_address'])
+            )
+            discovery = list(chain.address_to_discovery.values())[0]
+            assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
         token_networks = views.get_token_network_addresses_for(
             views.state_from_raiden(raiden_service),
