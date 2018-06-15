@@ -5,4 +5,8 @@ set -x
 
 make lint
 python setup.py check --restructuredtext --strict
-raiden smoketest
+if [ -z "$RUN_SYNAPSE" ]; then
+    raiden smoketest
+else
+    raiden --transport=matrix smoketest --local-matrix="${HOME}/.bin/run_synapse.sh"
+fi
