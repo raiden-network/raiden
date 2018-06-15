@@ -261,7 +261,7 @@ class ChannelPatchSchema(BaseSchema):
             CHANNEL_STATE_CLOSED,
             CHANNEL_STATE_OPENED,
             CHANNEL_STATE_SETTLED,
-        ])
+        ]),
     )
 
     class Meta:

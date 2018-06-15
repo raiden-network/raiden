@@ -18,7 +18,6 @@ from raiden.exceptions import (
 )
 from raiden import messages
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.proxies.token import Token
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.transactions import (
