@@ -26,6 +26,4 @@ releases==1.5.0
 # Release
 bumpversion==0.5.3
 
-# eth-tester
 eth-tester[py-evm]
-#py-evm==0.2.0a18

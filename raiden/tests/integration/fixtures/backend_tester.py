@@ -15,12 +15,14 @@ def fund_accounts(web3, blockchain_type, faucet_address, private_keys, ethereum_
         for key in private_keys
         if to_checksum_address(privatekey_to_address(key)) not in ethereum_tester.get_accounts()
     ]
-    [ethereum_tester.send_transaction({
-        'from': faucet_address,
-        'to': to_checksum_address(privatekey_to_address(key)),
-        'gas': 21000,
-        'value': 1 * denoms.ether,
-    }) for key in private_keys]
+    [
+        ethereum_tester.send_transaction({
+            'from': faucet_address,
+            'to': to_checksum_address(privatekey_to_address(key)),
+            'gas': 21000,
+            'value': 1 * denoms.ether,
+        }) for key in private_keys
+    ]
 
 
 @pytest.fixture

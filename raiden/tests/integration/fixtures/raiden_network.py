@@ -283,4 +283,5 @@ def raiden_network(
     for app in raiden_apps:
         app.raiden.alarm.poll_for_new_block()
 
-    return raiden_apps
+    yield raiden_apps
+    [app.stop() for app in raiden_apps]
