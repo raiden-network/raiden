@@ -38,7 +38,7 @@ def wait_until_block(chain, block):
     curr_block = chain.block_number()
     while curr_block < block:
         curr_block = chain.next_block()
-        gevent.sleep(0)
+        gevent.sleep(0.001)
 
 
 def clique_extradata(extra_vanity, extra_seal):

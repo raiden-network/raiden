@@ -77,7 +77,6 @@ class AlarmTask(gevent.Greenlet):
 
     def poll_for_new_block(self):
         current_block = self.chain.block_number()
-        log.info('block', block=current_block)
 
         if current_block > self.last_block_number + 1:
             difference = current_block - self.last_block_number - 1

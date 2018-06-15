@@ -236,6 +236,9 @@ class JSONRPCClient:
             # we use a PoA chain for smoketest, use this middleware to fix this
             self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
         except ValueError:
+            # `middleware_stack.inject()` raises a value error if the same middleware is
+            # injected twice. This happens with `eth-tester` setup where a single session
+            # scoped web3 instance is used for all clients
             pass
 
         # create the connection test middleware (but only for non-tester chain)
