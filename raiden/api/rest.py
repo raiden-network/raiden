@@ -386,35 +386,6 @@ class RestAPI:
             status_code=HTTPStatus.CREATED,
         )
 
-    def set_total_deposit(self, registry_address, token_address, partner_address, total_deposit):
-        import pdb
-        pdb.set_trace()
-        try:
-            raiden_service_result = self.raiden_api.set_total_channel_deposit(
-                registry_address,
-                token_address,
-                partner_address,
-                total_deposit,
-            )
-        except ChannelBusyError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
-        except EthNodeCommunicationError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.REQUEST_TIMEOUT,
-            )
-        except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
-
-        result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
-        return api_response(result=checksummed_response_dict(result.data))
-
     def close(self, registry_address, token_address, partner_address):
         try:
             raiden_service_result = self.raiden_api.channel_close(
