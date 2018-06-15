@@ -136,6 +136,8 @@ class MatrixTransport:
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
+        if not self._running:
+            return
         self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
         users = [
@@ -167,6 +169,8 @@ class MatrixTransport:
         queue_name: bytes,
         message: Message,
     ) -> AsyncResult:
+        if not self._running:
+            return
         self.log.debug(
             'SEND ASYNC',
             receiver_address=to_normalized_address(receiver_address),
@@ -319,6 +323,8 @@ class MatrixTransport:
 
     def _handle_invite(self, room_id: str, state: dict):
         """ Join all invited rooms """
+        if not self._running:
+            return
         room = self._client.join_room(room_id)
         if not room.canonical_alias:
             self.log.warning('Got invited to a room without canonical alias - ignoring', room=room)
@@ -340,7 +346,11 @@ class MatrixTransport:
 
     def _handle_message(self, room, event):
         """ Handle text messages sent to listening rooms """
-        if event['type'] != 'm.room.message' or event['content']['msgtype'] != 'm.text':
+        if (
+                event['type'] != 'm.room.message' or
+                event['content']['msgtype'] != 'm.text' or
+                not self._running
+        ):
             # Ignore non-messages and non-text messages
             return
 
@@ -473,6 +483,8 @@ class MatrixTransport:
         queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]],
     ):
         def send_queue(address, events):
+            if not self._running:
+                return
             node_address = self._raiden_service.address
             for event in events:
                 self.send_async('', address, _event_to_message(event, node_address))
@@ -488,6 +500,8 @@ class MatrixTransport:
         data: str,
     ):
         def retry():
+            if not self._running:
+                return
             timeout_generator = udp_utils.timeout_exponential_backoff(
                 self._raiden_service.config['transport']['retries_before_backoff'],
                 self._raiden_service.config['transport']['retry_interval'],
@@ -501,6 +515,8 @@ class MatrixTransport:
 
     def _send_immediate(self, receiver_address, data):
         # FIXME: Send message to all matching rooms
+        if not self._running:
+            return
         room = self._get_room_for_address(receiver_address)
         if not room:
             return
@@ -512,6 +528,8 @@ class MatrixTransport:
         receiver_address: typing.Address,
         allow_missing_peers=False,
     ) -> Optional[Room]:
+        if not self._running:
+            return
         room_id = self._address_to_roomid.get(receiver_address)
         if room_id:
             room = self._client.rooms.get(room_id)
@@ -612,6 +630,8 @@ class MatrixTransport:
         Due to the possibility of nodes using accounts on multiple homeservers a composite
         address state is synthesised from the cached individual user presence state.
         """
+        if not self._running:
+            return
         if event['type'] != 'm.presence':
             return
         user_id = event['sender']
@@ -680,7 +700,7 @@ class MatrixTransport:
         self._raiden_service.handle_state_change(state_change)
 
     def _handle_discovery_membership_event(self, room, event):
-        if event['type'] != 'm.room.member':
+        if event['type'] != 'm.room.member' or not self._running:
             return
 
         state = event['content']['membership']
