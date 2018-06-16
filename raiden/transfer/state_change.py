@@ -459,6 +459,39 @@ class ContractReceiveNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
+class ContractReceiveRegisteredSecret(StateChange):
+    """ A new secret was registered with the SecretRegistry contract. """
+
+    def __init__(
+        self,
+        secret_registry_address: typing.SecretRegistryAddress,
+        secrethash: typing.SecretHash,
+    ):
+        if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
+            raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
+        if not isinstance(secrethash, typing.T_SecretHash):
+            raise ValueError('secrethash must be of type SecretHash')
+
+        self.secret_registry_address = secret_registry_address
+        self.secrethash = secrethash
+
+    def __repr__(self):
+        return '<ContractReceiveRegisteredSecret secret registry:{} secrethash:{}>'.format(
+            pex(self.secret_registry_address),
+            pex(self.secrethash),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveRegisteredSecret) and
+            self.secret_registry_address == other.secret_registry_address and
+            self.secrethash == other.secrethash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelUnlock(StateChange):
     """ A lock was claimed via the blockchain.
     Used when a hash time lock was unlocked and a log ChannelSecretRevealed is

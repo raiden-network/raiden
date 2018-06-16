@@ -132,6 +132,15 @@ def is_secret_known(
     return secrethash in end_state.secrethashes_to_unlockedlocks
 
 
+def get_secret(
+        end_state: NettingChannelEndState,
+        secrethash: typing.SecretHash,
+) -> typing.Secret:
+    """Returns `secret` if the `secrethash` is for a lock with a known secret."""
+    if is_secret_known(end_state, secrethash):
+        return end_state.secrethashes_to_unlockedlocks[secrethash].secret
+
+
 def is_transaction_confirmed(
         transaction_block_number: typing.BlockNumber,
         blockchain_block_number: typing.BlockNumber,

@@ -29,7 +29,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.utils import pex
+from raiden.utils import pex, sha3
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 
@@ -168,7 +168,12 @@ def handle_contract_secretreveal(
         raiden: 'RaidenService',
         channel_close_event: ContractSendSecretReveal
 ):
-    raise NotImplementedError('handle_contract_secretreveal not implemented')
+    registry = raiden.chain.secret_registry()
+    secrethash = sha3(channel_close_event.secret)
+
+    registered = registry.check_registered(secrethash)
+    if not registered:
+        raiden.chain.secret_registry.register_secret(channel_close_event.secret)
 
 
 def handle_contract_channelclose(

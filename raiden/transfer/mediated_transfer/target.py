@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from raiden.transfer import channel
+from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
     EventTransferReceivedSuccess,
@@ -43,6 +43,36 @@ def events_for_close(target_state, channel_state, block_number):
     if not safe_to_wait and secret_known:
         target_state.state = 'waiting_close'
         return channel.events_for_close(channel_state, block_number)
+
+    return list()
+
+
+def events_for_onchain_secretregister(target_state, channel_state, block_number):
+    """ Emits the event for revealing the secret on-chain if the transfer cannot
+    to be settled off-chain.
+    """
+    transfer = target_state.transfer
+
+    safe_to_wait = is_safe_to_wait(
+        transfer.lock.expiration,
+        channel_state.reveal_timeout,
+        block_number,
+    )
+    secret_known = channel.is_secret_known(
+        channel_state.partner_state,
+        transfer.lock.secrethash,
+    )
+
+    if not safe_to_wait and secret_known:
+        secret = channel.get_secret(
+            channel_state.partner_state,
+            transfer.lock.secrethash,
+        )
+        return secret_registry.events_for_onchain_secretregister(
+            channel_state,
+            block_number,
+            secret
+        )
 
     return list()
 
@@ -201,7 +231,10 @@ def handle_block(target_state, channel_state, block_number):
         events = [failed]
 
     elif target_state.state != 'waiting_close':  # only emit the close event once
+        # TODO: to be removed
         events = events_for_close(target_state, channel_state, block_number)
+
+        events = events_for_onchain_secretregister(target_state, channel_state, block_number)
     else:
         events = list()
 

@@ -86,6 +86,9 @@ Secret = NewType('Secret', T_Secret)
 T_SecretHash = bytes
 SecretHash = NewType('SecretHash', T_SecretHash)
 
+T_SecretRegistryAddress = bytes
+SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress)
+
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
 

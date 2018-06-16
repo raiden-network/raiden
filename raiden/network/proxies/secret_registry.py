@@ -93,8 +93,11 @@ class SecretRegistry:
             secret=secret,
         )
 
-    def register_block_by_secrethash(self, secrethash: typing.Keccak256):
+    def register_block_by_secrethash(self, secrethash: typing.Keccak256) -> int:
         return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
+
+    def check_registered(self, secrethash: typing.Keccak256) -> bool:
+        return self.register_block_by_secrethash(secrethash) > 0
 
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
