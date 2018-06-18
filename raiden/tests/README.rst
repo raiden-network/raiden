@@ -8,7 +8,7 @@ The pytest option ``--transport=none|udp|matrix|all`` can be used to specify whi
 Installing Synapse for Matrix tests
 -----------------------------------
 
-Synapse requires Python 2.7 and SQLite. Please run ``tools/install_synapse.sh`` to generate a standalone binary for it, or follow its steps:
+Synapse requires Python 2.7 and SQLite. Please run ``tools/install_synapse.sh`` to generate a standalone binary for it, or follow these steps:
 
 - create a Python 2 virtualenv, install Synapse in it with pip, and
 - create a script that runs Synapse as a python module, using the configuration file in ``raiden/tests/test_files``.
