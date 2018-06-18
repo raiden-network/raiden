@@ -1,18 +1,22 @@
 import gevent
 import structlog
+import networkx
 
 from eth_utils import to_canonical_address
 
 from raiden.blockchain.events import get_channel_proxies, decode_event_to_internal
 from raiden.blockchain.state import (
     get_channel_state,
-    get_token_network_state_from_proxies,
     create_new_token_network_state,
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
 from raiden.utils import pex
-from raiden.transfer.state import TransactionChannelNewBalance
+from raiden.transfer.state import (
+    TransactionChannelNewBalance,
+    TokenNetworkGraphState,
+    TokenNetworkState,
+)
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
@@ -59,10 +63,13 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
     for channel_proxy in netting_channel_proxies:
         raiden.blockchain_events.add_netting_channel_listener(channel_proxy)
 
-    token_network_state = get_token_network_state_from_proxies(
-        raiden,
-        manager_proxy,
-        netting_channel_proxies,
+    network_graph = TokenNetworkGraphState(networkx.Graph())
+    token_address = event.event_data['args']['token_address']
+    token_network_state = TokenNetworkState(
+        manager_address,
+        token_address,
+        network_graph,
+        [],  # TODO: Do we need this argument to even exist with the events approach?
     )
 
     new_payment_network = ContractReceiveNewTokenNetwork(

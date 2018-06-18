@@ -22,7 +22,6 @@ from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
-from raiden.blockchain.state import get_token_network_state_from_proxies
 from raiden.blockchain.events import (
     get_relevant_proxies,
     BlockchainEvents,
@@ -30,10 +29,7 @@ from raiden.blockchain.events import (
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
-from raiden.transfer.state import (
-    RouteState,
-    PaymentNetworkState,
-)
+from raiden.transfer.state import RouteState, PaymentNetworkState
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfersigned_from_message,
     TransferDescriptionWithSecretState,
@@ -255,6 +251,12 @@ class RaidenService:
                 block_number,
             )
             self.wal.log_and_dispatch(state_change, block_number)
+            payment_network = PaymentNetworkState(
+                self.default_registry.address,
+                [],  # empty list of token network states as it's the node's startup
+            )
+            state_change = ContractReceiveNewPaymentNetwork(payment_network)
+            self.handle_state_change(state_change)
 
             # On first run Raiden needs to fetch all events for the payment
             # network, to reconstruct all token network graphs and find opened
@@ -266,10 +268,12 @@ class RaidenService:
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        # The time the alarm task is started or the callbacks are installed doesn't
-        # really matter.
-        #
-        # But it is of paramount importance to:
+        self.install_and_query_payment_network_filters(
+            self.default_registry.address,
+            last_log_block_number,
+        )
+
+        # Regarding the timing of starting the alarm task it is important to:
         # - Install the filters which will be polled by poll_blockchain_events
         #   after the state has been primed, otherwise the state changes won't
         #   have effect.
@@ -277,11 +281,6 @@ class RaidenService:
         #   blockchain logs can be lost.
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.start()
-
-        self.install_payment_network_filters(
-            self.default_registry.address,
-            last_log_block_number,
-        )
 
         # Start the transport after the registry is queried to avoid warning
         # about unknown channels.
@@ -408,31 +407,18 @@ class RaidenService:
 
         message.sign(self.private_key)
 
-    def install_payment_network_filters(self, payment_network_id, from_block=None):
+    def install_and_query_payment_network_filters(self, payment_network_id, from_block=None):
         proxies = get_relevant_proxies(
             self.chain,
             self.address,
             payment_network_id,
         )
 
-        # Install the filters first to avoid missing changes, as a consequence
-        # some events might be applied twice.
-        self.blockchain_events.add_proxies_listeners(proxies, from_block)
-
-        token_network_list = list()
-        for manager in proxies.channel_managers:
-            manager_address = manager.address
-            netting_channel_proxies = proxies.channelmanager_nettingchannels[manager_address]
-            network = get_token_network_state_from_proxies(self, manager, netting_channel_proxies)
-            token_network_list.append(network)
-
-        payment_network = PaymentNetworkState(
-            payment_network_id,
-            token_network_list,
-        )
-
-        state_change = ContractReceiveNewPaymentNetwork(payment_network)
-        self.handle_state_change(state_change)
+        # Install the filters and then poll them and dispatch the events to the WAL
+        with self.event_poll_lock:
+            self.blockchain_events.add_proxies_listeners(proxies, from_block)
+            for event in self.blockchain_events.poll_blockchain_events():
+                on_blockchain_event(self, event, event.event_data['block_number'])
 
     def connection_manager_for_token(self, registry_address, token_address):
         if not is_binary_address(token_address):
