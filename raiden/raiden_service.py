@@ -179,6 +179,7 @@ class RaidenService:
         self.config = config
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
+        self.discovery = discovery
 
         if config['transport_type'] == 'udp':
             endpoint_registration_event = gevent.spawn(
