@@ -570,7 +570,11 @@ class MatrixTransport:
         for _ in range(10):
             if room_not_found:
                 try:
-                    room = self._client.create_room(room_name, invitees=invitees)
+                    room = self._client.create_room(
+                        room_name,
+                        invitees=invitees,
+                        is_public=True,  # FIXME: debug only
+                    )
                 except MatrixRequestError as error:
                     if error.code == 409:
                         message = 'seems to have been created by peer meanwhile.'
