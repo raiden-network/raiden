@@ -75,11 +75,10 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     )
 
 
-# FIXME fix and unskip the matrix version of this test
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait, skip_if_not_udp):
+def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     """A failed transfer must send a refund back.
 
     TODO:
