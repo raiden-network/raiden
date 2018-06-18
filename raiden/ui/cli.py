@@ -1054,7 +1054,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         with HTTPExecutor(
                 local_matrix,
                 status=r'^[24]\d\d$',
-                url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
+                url=urljoin(args['matrix_server'], '/_matrix'),
         ):
             args['extra_config'] = {
                 'matrix': {

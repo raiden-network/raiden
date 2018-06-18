@@ -5,8 +5,6 @@ from raiden.tests.integration.fixtures.transport import *  # noqa: F401,F403
 
 import pytest
 
-from pathlib import Path
-
 from raiden.tests.integration.fixtures.transport import (
     MatrixTransportConfig,
     TransportConfig,
@@ -27,16 +25,12 @@ def pytest_generate_tests(metafunc):
 
         if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
             command = metafunc.config.getoption('local_matrix')
-            if command is None:
-                project_root = Path(__file__).absolute().parents[3]
-                command = project_root.joinpath('.synapse', 'run_synapse.sh').as_posix()
             transport_config.append(
                 TransportConfig(
                     protocol=TransportProtocol.MATRIX,
                     parameters=MatrixTransportConfig(
                         command=command,
-                        host=metafunc.config.getoption('matrix_host'),
-                        port=metafunc.config.getoption('matrix_port'),
+                        server=metafunc.config.getoption('matrix_server'),
                     ),
                 ),
             )
