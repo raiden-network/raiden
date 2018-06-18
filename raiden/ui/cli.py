@@ -5,7 +5,6 @@ import os
 import tempfile
 import json
 import socket
-import errno
 import signal
 import shutil
 from copy import deepcopy
@@ -35,7 +34,12 @@ from raiden.constants import (
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
 )
-from raiden.exceptions import EthNodeCommunicationError, ContractVersionMismatch
+from raiden.exceptions import (
+    EthNodeCommunicationError,
+    ContractVersionMismatch,
+    APIServerPortInUseError,
+    RaidenServicePortInUseError,
+)
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
@@ -800,7 +804,16 @@ def run(ctx, **kwargs):
                 eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
             )
             (api_host, api_port) = split_endpoint(kwargs['api_address'])
-            api_server.start(api_host, api_port)
+
+            try:
+                api_server.start(api_host, api_port)
+            except APIServerPortInUseError:
+                print(
+                    'ERROR: API Address %s:%s is in use. '
+                    'Use --api-address <host:port> to specify port to listen on.' %
+                    (api_host, api_port),
+                )
+                sys.exit(1)
 
             print(
                 'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
@@ -841,14 +854,14 @@ def run(ctx, **kwargs):
                 kwargs['mapped_socket'] = mapped_socket
                 app_ = _run_app()
 
-        except socket.error as v:
-            if v.args[0] == errno.EADDRINUSE:
-                print(
-                    'ERROR: Address %s:%s is in use. '
-                    'Use --listen-address <host:port> to specify port to listen on.' %
-                    (listen_host, listen_port),
-                )
-                sys.exit(1)
+        except RaidenServicePortInUseError:
+            print(
+                'ERROR: Address %s:%s is in use. '
+                'Use --listen-address <host:port> to specify port to listen on.' %
+                (listen_host, listen_port),
+            )
+            sys.exit(1)
+        except socket.error:
             raise
     elif kwargs['transport'] == 'matrix':
         print('WARNING: The Matrix transport is experimental')

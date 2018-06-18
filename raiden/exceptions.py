@@ -138,3 +138,11 @@ class TransactionThrew(RaidenError):
 
 class InvalidProtocolMessage(RaidenError):
     """Raised on an invalid or an unknown Raiden protocol message"""
+
+
+class APIServerPortInUseError(RaidenError):
+    """Raised when API server port is already in use"""
+
+
+class RaidenServicePortInUseError(RaidenError):
+    """Raised when Raiden service port is already in use"""

@@ -1,9 +1,9 @@
-import socket
-
-import structlog
+import errno
 import netifaces
+import socket
+import structlog
 
-from raiden.exceptions import STUNUnavailableException
+from raiden.exceptions import STUNUnavailableException, RaidenServicePortInUseError
 from raiden.network import upnpsock, stunsock
 
 log = structlog.get_logger(__name__)
@@ -106,7 +106,10 @@ class SocketFactory:
 
     def map_upnp(self):
         upnp = upnpsock.connect()
-        if upnp is not None:
+        if upnp is None:
+            return
+
+        try:
             router, location = upnp
             result = upnpsock.open_port(
                 router,
@@ -116,6 +119,9 @@ class SocketFactory:
                 self.storage['router'] = router
                 return PortMappedSocket(self.socket, 'UPnP', result[0], result[1],
                                         router_location=location)
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                raise RaidenServicePortInUseError()
 
     def unmap_upnp(self):
         upnpsock.release_port(self.storage['router'], self.source_port)
@@ -163,13 +169,17 @@ class SocketFactory:
             socket.SOCK_DGRAM,  # UDP
         )
 
-        sock.bind((self.source_ip, self.source_port))
-        log.debug(
-            'Socket opened',
-            ip=sock.getsockname()[0],
-            port=sock.getsockname()[1],
-        )
-        self.socket = sock
+        try:
+            sock.bind((self.source_ip, self.source_port))
+            log.debug(
+                'Socket opened',
+                ip=sock.getsockname()[0],
+                port=sock.getsockname()[1],
+            )
+            self.socket = sock
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                raise RaidenServicePortInUseError()
 
     @property
     def strategy_description(self):
