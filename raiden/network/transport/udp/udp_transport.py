@@ -257,7 +257,7 @@ class UDPTransport:
 
             self.addresses_events[recipient] = events
 
-            self.greenlets.append(gevent.spawn(
+            greenlet_healthcheck = gevent.spawn(
                 healthcheck.healthcheck,
                 self,
                 recipient,
@@ -268,7 +268,9 @@ class UDPTransport:
                 self.nat_keepalive_timeout,
                 self.nat_invitation_timeout,
                 ping_nonce,
-            ))
+            )
+            greenlet_healthcheck.name = f'Healtcheck for {pex(recipient)}'
+            self.greenlets.append(greenlet_healthcheck)
 
     def init_queue_for(
             self,
@@ -288,7 +290,7 @@ class UDPTransport:
 
         events = self.get_health_events(recipient)
 
-        self.greenlets.append(gevent.spawn(
+        greenlet_queue = gevent.spawn(
             single_queue_send,
             self,
             recipient,
@@ -299,7 +301,14 @@ class UDPTransport:
             self.retries_before_backoff,
             self.retry_interval,
             self.retry_interval * 10,
-        ))
+        )
+
+        if queue_name == b'global':
+            greenlet_queue.name = f'Queue for {pex(recipient)} - global'
+        else:
+            greenlet_queue.name = f'Queue for {pex(recipient)} - {pex(queue_name)}'
+
+        self.greenlets.append(greenlet_queue)
 
         log.debug(
             'new queue created for',
