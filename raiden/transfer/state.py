@@ -714,26 +714,26 @@ class UnlockProofState2(State):
     """ An unlock proof for all the pending locks. """
 
     __slots__ = (
-        'unlocked_locks_packed',
+        'merkle_tree_leaves',
     )
 
     def __init__(
             self,
-            unlocked_locks_packed: typing.UnlockedLocksPacked,
+            merkle_tree_leaves: typing.MerkleTreeLeaves,
     ):
 
-        if not isinstance(unlocked_locks_packed, typing.T_UnlockedLocksPacked):
-            raise ValueError('unlocked_locks_packed must be a UnlockedLocksPacked instance')
+        if not isinstance(merkle_tree_leaves, typing.T_MerkleTreeLeaves):
+            raise ValueError('merkle_tree_leaves must be a MerkleTreeLeaves instance')
 
-        self.unlocked_locks_packed = unlocked_locks_packed
+        self.merkle_tree_leaves = merkle_tree_leaves
 
     def __repr__(self):
-        return f'<UnlockProofState2 proof:{hexlify(self.unlocked_locks_packed)}>'
+        return f'<UnlockProofState2 proof:{hexlify(self.merkle_tree_leaves)}>'
 
     def __eq__(self, other):
         return (
             isinstance(other, UnlockProofState2) and
-            self.unlocked_locks_packed == other.unlocked_locks_packed
+            self.merkle_tree_leaves == other.merkle_tree_leaves
         )
 
     def __ne__(self, other):

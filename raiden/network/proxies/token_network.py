@@ -619,7 +619,7 @@ class TokenNetwork:
                 signature=encode_hex(signature),
             )
 
-    def unlock(self, partner: typing.Address, unlocked_locks_packed: typing.UnlockedLocksPacked):
+    def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
         log.info(
             'unlock called',
             token_network=pex(self.address),
@@ -633,7 +633,7 @@ class TokenNetwork:
             'unlock',
             self.node_address,
             partner,
-            unlocked_locks_packed,
+            merkle_tree_leaves,
         )
 
         self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)

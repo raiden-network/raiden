@@ -620,15 +620,22 @@ def get_known_unlocks2(end_state: NettingChannelEndState) -> UnlockProofState2:
     The unlock proof contains all the merkle tree data, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
-    unlocked_locks_packed = b''
+    all_locks_packed = b''
+    for lock in end_state.secrethashes_to_lockedlocks.values():
+        packed = messages.Lock(buffer_for(messages.Lock))
+        packed.amount = lock.amount
+        packed.expiration = lock.expiration
+        packed.secrethash = lock.secrethash
+        all_locks_packed += bytes(packed.data)
+
     for proof in end_state.secrethashes_to_unlockedlocks.values():
-        packed = messages.UnlockedLock(buffer_for(messages.UnlockedLock))
+        packed = messages.Lock(buffer_for(messages.Lock))
         packed.amount = proof.lock.amount
         packed.expiration = proof.lock.expiration
-        packed.secret = proof.secret
-        unlocked_locks_packed += bytes(packed.data)
+        packed.secrethash = proof.lock.secrethash
+        all_locks_packed += bytes(packed.data)
 
-    return UnlockProofState2(unlocked_locks_packed)
+    return UnlockProofState2(all_locks_packed)
 
 
 def get_lock(

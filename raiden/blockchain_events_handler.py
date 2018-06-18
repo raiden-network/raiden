@@ -21,7 +21,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveChannelUnlock,
     ContractReceiveNewTokenNetwork,
-    ContractReceiveRegisteredSecret,
+    ContractReceiveSecretReveal,
     ContractReceiveRouteNew,
 )
 from raiden.blockchain.abi import (
@@ -276,11 +276,11 @@ def handle_channel_unlock(raiden, event, current_block_number):
         raiden.handle_state_change(unlock_state_change, current_block_number)
 
 
-def handle_secret_registered(raiden, event, current_block_number):
+def handle_secret_revealed(raiden, event, current_block_number):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
-    registeredsecret_state_change = ContractReceiveRegisteredSecret(
+    registeredsecret_state_change = ContractReceiveSecretReveal(
         secret_registry_address,
         data['secrethash'],
     )
@@ -389,7 +389,7 @@ def on_blockchain_event2(raiden, event, current_block_number):
 
     elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED2:
         data['secrethash'] = data['args']['secrethash']
-        handle_secret_registered(raiden, event, current_block_number)
+        handle_secret_revealed(raiden, event, current_block_number)
 
     else:
         log.error('Unknown event type', event_name=data['event'], raiden_event=event)

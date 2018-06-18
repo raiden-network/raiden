@@ -459,7 +459,7 @@ class ContractReceiveNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveRegisteredSecret(StateChange):
+class ContractReceiveSecretReveal(StateChange):
     """ A new secret was registered with the SecretRegistry contract. """
 
     def __init__(
@@ -476,14 +476,14 @@ class ContractReceiveRegisteredSecret(StateChange):
         self.secrethash = secrethash
 
     def __repr__(self):
-        return '<ContractReceiveRegisteredSecret secret registry:{} secrethash:{}>'.format(
+        return '<ContractReceiveSecretReveal secret registry:{} secrethash:{}>'.format(
             pex(self.secret_registry_address),
             pex(self.secrethash),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, ContractReceiveRegisteredSecret) and
+            isinstance(other, ContractReceiveSecretReveal) and
             self.secret_registry_address == other.secret_registry_address and
             self.secrethash == other.secrethash
         )
@@ -563,7 +563,7 @@ class ContractReceiveChannelUnlock2(StateChange):
             payment_network_identifier: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
             channel_identifier: typing.ChannelID,
-            unlocked_locks_packed: typing.UnlockedLocksPacked,
+            merkle_tree_leaves: typing.MerkleTreeLeaves,
             participant: typing.Address,
             unlocked_amount: typing.TokenAmount,
             returned_tokens: typing.TokenAmount,
@@ -578,7 +578,7 @@ class ContractReceiveChannelUnlock2(StateChange):
         self.payment_network_identifier = payment_network_identifier
         self.token_address = token_address
         self.channel_identifier = channel_identifier
-        self.unlocked_locks_packed = unlocked_locks_packed
+        self.merkle_tree_leaves = merkle_tree_leaves
         self.participant = participant
         self.unlocked_amount = unlocked_amount
         self.returned_tokens = returned_tokens
