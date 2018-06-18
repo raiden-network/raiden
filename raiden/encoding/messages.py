@@ -239,7 +239,7 @@ UnlockedLock = namedbuffer(
         expiration,
         amount,
         secret,
-    ]
+    ],
 )
 
 

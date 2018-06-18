@@ -166,7 +166,7 @@ def handle_unlockfailed(
 
 def handle_contract_secretreveal(
         raiden: 'RaidenService',
-        channel_close_event: ContractSendSecretReveal
+        channel_close_event: ContractSendSecretReveal,
 ):
     registry = raiden.chain.secret_registry()
     secrethash = sha3(channel_close_event.secret)
@@ -246,7 +246,7 @@ def handle_contract_channelunlock(
 
 def handle_contract_channelunlock2(
         raiden: 'RaidenService',
-        channel_unlock_event: ContractSendChannelUnlock
+        channel_unlock_event: ContractSendChannelUnlock,
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
 

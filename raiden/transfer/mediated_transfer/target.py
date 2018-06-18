@@ -71,7 +71,7 @@ def events_for_onchain_secretregister(target_state, channel_state, block_number)
         return secret_registry.events_for_onchain_secretregister(
             channel_state,
             block_number,
-            secret
+            secret,
         )
 
     return list()

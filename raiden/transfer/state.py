@@ -684,7 +684,7 @@ class UnlockProofState(State):
             self,
             merkle_proof: typing.List[typing.Keccak256],
             lock_encoded,
-            secret: typing.Secret
+            secret: typing.Secret,
     ):
 
         if not isinstance(secret, typing.T_Secret):
@@ -719,7 +719,7 @@ class UnlockProofState2(State):
 
     def __init__(
             self,
-            unlocked_locks_packed: typing.UnlockedLocksPacked
+            unlocked_locks_packed: typing.UnlockedLocksPacked,
     ):
 
         if not isinstance(unlocked_locks_packed, typing.T_UnlockedLocksPacked):
