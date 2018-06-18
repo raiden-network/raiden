@@ -18,7 +18,7 @@ Joining a token network
 ==============================
 The first thing we need to do is to join a token network. In this case we want to join the Raiden token (`RDN <https://etherscan.io/token/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6>`_) network.
 
-*Note*: 1 RDN == 2**18 Rai. For the sake of readability and simplicity all token values in this tutorial are denominated in Rai and not RDN.
+*Note*: 1 RDN == 2**18 Rei. For the sake of readability and simplicity all token values in this tutorial are denominated in Rei and not RDN.
 
 In order to do so, we need the address of the token and the initial amount of tokens that we want to join the network with::
 
@@ -31,11 +31,11 @@ With the payload::
         "funds": 20000
     }
 
-This automatically connects our node to 5(TODO) other nodes in the network with 20000 / 5 RDN tokens in each channel.
+This automatically connects our node to 5(TODO) other nodes in the network with 20000 / 5 Rei tokens in each channel.
 
 We're now ready to start sending RDN tokens using the Raiden Network.
 
-In case we know of a specific node in the network that we will do frequent transfers with, we can open a channel directly yo this node by doing the following::
+In case we know of a specific node in the network that we will do frequent transfers with, we can open a channel directly to this node by doing the following::
 
     PUT /api/v2/channels
 
@@ -45,7 +45,7 @@ With the payload::
         "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
         "token_address": "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6",
         "balance": 2000,
-        "settle_timeout": 600
+        "settle_timeout": 60
     }
 TODO: Update to have correct values
 
@@ -71,22 +71,22 @@ Now that we have joined a token network, we can start making payments. For this,
 
     POST /api/v2/transfers/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61c808d82a3ac53231750dadc13c777b59310bd9
 
-In the payload we specify the amount of RDN tokens of the payment::
+In the payload we specify the amount of Rei of the payment::
 
     {
         "amount": 42
     }
-TODO: Check for correctness. What denomination are we using for amount?
+TODO: Check for correctness.
 
 In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. If we specify an address that we do not have a direct channel with, the Raiden Network finds a path to the target address and use mediated transfers to make a payment from our address to the target address.
 
-It's as simple as that to do payments using the Raiden Network.
+It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the transfer. The third call to open a direct channel is optional.
 
 Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A``, who is also part of the RDN token network. Even though we do not have a channel with this person it is as easy as above to send a payment. All we need is the address::
 
     POST /api/v2/transfers/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A
 
-With the payload of the amount of RDN tokens we want to pay::
+With the payload of the amount of Rei tokens we want to pay::
 
     {
         "amount": 73
@@ -110,7 +110,7 @@ with the payload::
     }
 TODO: Check for correctness
 
-Here it is important to note that the ``total_deposit`` value is idempotent. This means that we do not specify the amount to add to our initial deposit, but the total amount. In this specific case, since we initially deposited 2000 RDN tokens, and now provide a ``total_deposit`` of 4000, we are adding 2000 more RDN tokens to our channel.
+Notice that we need to specify the total deposit, not the amount we wish to top up: We initially deposited 2000 tokens and want to add 2000 more, so we give a ``total_deposit`` of 4000. This way the top-up request is idempotent - if it is sent repeatedly (by accident or as part of an attack) it will have no further effect.
 
 .. _get-channel-status:
 
