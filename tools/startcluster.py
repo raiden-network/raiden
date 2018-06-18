@@ -7,12 +7,13 @@ import tempfile
 import signal
 from subprocess import Popen, PIPE
 
+from eth_utils import encode_hex
+
 from genesis_builder import mk_genesis, generate_accounts
 from raiden.utils import (
     privtopub as privtopub_enode,
     privatekey_to_address,
     sha3,
-    encode_hex,
 )
 from raiden.settings import INITIAL_PORT
 

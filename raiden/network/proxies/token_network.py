@@ -8,6 +8,7 @@ from raiden.utils import typing
 import structlog
 from web3.utils.filters import Filter
 from eth_utils import (
+    encode_hex,
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
@@ -45,7 +46,6 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
 )
 from raiden.utils import (
-    encode_hex,
     pex,
     privatekey_to_address,
     releasing,

@@ -44,14 +44,6 @@ def decode_hex(s) -> bytes:
     raise TypeError('Value must be an instance of str or bytes')
 
 
-def encode_hex(b) -> str:
-    if isinstance(b, str):
-        b = bytes(b, 'utf-8')
-    if isinstance(b, (bytes, bytearray)):
-        return str(hexlify(b), 'utf-8')
-    raise TypeError('Value must be an instance of str or bytes')
-
-
 def sha3(data: bytes) -> bytes:
     return keccak(data)
 

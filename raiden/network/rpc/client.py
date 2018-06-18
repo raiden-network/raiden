@@ -12,6 +12,7 @@ from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
 from eth_utils import (
     to_int,
+    encode_hex,
     to_checksum_address,
     to_canonical_address,
     remove_0x_prefix,
@@ -33,7 +34,6 @@ from raiden.utils import (
     data_encoder,
     privatekey_to_address,
     quantity_encoder,
-    encode_hex,
 )
 from raiden.utils.typing import Address
 from raiden.network.rpc.smartcontract_proxy import ContractProxy

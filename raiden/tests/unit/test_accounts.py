@@ -6,7 +6,8 @@ from unittest.mock import patch
 import pytest
 
 from raiden.accounts import AccountManager
-from raiden.utils import get_project_root, encode_hex
+from raiden.utils import get_project_root
+from eth_utils import encode_hex
 
 KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
@@ -56,16 +57,16 @@ def test_get_account_in_keystore(test_keystore):
 
 def test_get_privkey(test_keystore):
     account_manager = AccountManager(test_keystore)
-    assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
+    assert '0xf696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
         account_manager.get_privkey('0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123'),
     )
-    assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
+    assert '0xf696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
         account_manager.get_privkey('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123'),
     )
-    assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
+    assert '0x36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
         account_manager.get_privkey('3593403033d18b82f7b4a0f18e1ed24623d23b20', '123'),
     )
-    assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
+    assert '0x36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
         account_manager.get_privkey('0x3593403033d18b82f7b4a0f18e1ed24623d23b20', '123'),
     )
 

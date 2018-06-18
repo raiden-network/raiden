@@ -130,16 +130,16 @@ def test_token_network_proxy_basics(
         c2_token_network_proxy.close(
             c1_client.sender,
             balance_proof.nonce,
-            balance_proof.balance_hash,
-            balance_proof.additional_hash,
+            decode_hex(balance_proof.balance_hash),
+            decode_hex(balance_proof.additional_hash),
             b'\x11' * 65,
         )
     # correct close
     c2_token_network_proxy.close(
         c1_client.sender,
         balance_proof.nonce,
-        balance_proof.balance_hash,
-        balance_proof.additional_hash,
+        decode_hex(balance_proof.balance_hash),
+        decode_hex(balance_proof.additional_hash),
         decode_hex(balance_proof.signature),
     )
     assert c1_token_network_proxy.channel_is_closed(c2_client.sender) is True
@@ -149,8 +149,8 @@ def test_token_network_proxy_basics(
         c2_token_network_proxy.close(
             c1_client.sender,
             balance_proof.nonce,
-            balance_proof.balance_hash,
-            balance_proof.additional_hash,
+            decode_hex(balance_proof.balance_hash),
+            decode_hex(balance_proof.additional_hash),
             decode_hex(balance_proof.signature),
         )
     # update transfer
@@ -247,8 +247,8 @@ def test_token_network_proxy_update_transfer(
     c1_token_network_proxy.close(
         c2_client.sender,
         balance_proof_c2.nonce,
-        balance_proof_c2.balance_hash,
-        balance_proof_c2.additional_hash,
+        decode_hex(balance_proof_c2.balance_hash),
+        decode_hex(balance_proof_c2.additional_hash),
         decode_hex(balance_proof_c2.signature),
     )
 

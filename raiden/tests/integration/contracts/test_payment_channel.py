@@ -112,8 +112,8 @@ def test_payment_channel_proxy_basics(
     c2_token_network_proxy.close(
         c1_client.sender,
         balance_proof.nonce,
-        balance_proof.balance_hash,
-        balance_proof.additional_hash,
+        decode_hex(balance_proof.balance_hash),
+        decode_hex(balance_proof.additional_hash),
         decode_hex(balance_proof.signature),
     )
     assert channel_proxy_1.closed() is True
