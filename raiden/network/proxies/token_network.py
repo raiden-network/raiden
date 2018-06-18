@@ -691,17 +691,33 @@ class TokenNetwork:
         self._check_channel_lock(partner)
 
         with releasing(self.channel_operations_lock[partner]):
-            transaction_hash = self.proxy.transact(
-                'settleChannel',
-                self.node_address,
-                transferred_amount,
-                locked_amount,
-                locksroot,
-                partner,
-                partner_transferred_amount,
-                partner_locked_amount,
-                partner_locksroot,
-            )
+            # the second participants transferred + locked amount have to be higher than the first
+            if (transferred_amount + locked_amount >
+                    partner_transferred_amount + partner_locked_amount):
+
+                transaction_hash = self.proxy.transact(
+                    'settleChannel',
+                    partner,
+                    partner_transferred_amount,
+                    partner_locked_amount,
+                    partner_locksroot,
+                    self.node_address,
+                    transferred_amount,
+                    locked_amount,
+                    locksroot,
+                )
+            else:
+                transaction_hash = self.proxy.transact(
+                    'settleChannel',
+                    self.node_address,
+                    transferred_amount,
+                    locked_amount,
+                    locksroot,
+                    partner,
+                    partner_transferred_amount,
+                    partner_locked_amount,
+                    partner_locksroot,
+                )
 
             self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
