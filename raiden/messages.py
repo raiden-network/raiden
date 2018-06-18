@@ -680,7 +680,6 @@ class RevealSecret(SignedMessage):
         super().__init__()
         self.message_identifier = message_identifier
         self.secret = secret
-        self._secrethash = None
 
     def __repr__(self):
         return '<{} [msgid:{} secrethash:{} hash:{}]>'.format(
@@ -727,10 +726,12 @@ class RevealSecret(SignedMessage):
     @classmethod
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
-        return cls(
+        reveal_secret = cls(
             message_identifier=data['message_identifier'],
             secret=decode_hex(data['secret']),
         )
+        reveal_secret.signature = decode_hex(data['signature'])
+        return reveal_secret
 
 
 class DirectTransfer(EnvelopeMessage):
@@ -883,7 +884,7 @@ class DirectTransfer(EnvelopeMessage):
     @classmethod
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
-        message = cls(
+        direct_transfer = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
@@ -895,8 +896,8 @@ class DirectTransfer(EnvelopeMessage):
             locked_amount=data['locked_amount'],
             locksroot=decode_hex(data['locksroot']),
         )
-        message.signature = decode_hex(data['signature'])
-        return message
+        direct_transfer.signature = decode_hex(data['signature'])
+        return direct_transfer
 
 
 class Lock:
