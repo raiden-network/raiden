@@ -26,8 +26,8 @@ database:
 
 event_cache_size: "10K"
 
-rc_messages_per_second: 10.0  # changed
-rc_message_burst_count: 20.0  # changed
+rc_messages_per_second: 200000  # changed
+rc_message_burst_count: 100000  # changed
 
 federation_rc_window_size: 1000
 federation_rc_sleep_limit: 10

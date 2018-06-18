@@ -26,6 +26,7 @@ from eth_utils import (
 )
 import structlog
 from requests.exceptions import RequestException
+from mirakuru import HTTPExecutor
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -54,6 +55,7 @@ from raiden.utils import (
     split_endpoint,
     merge_dict,
 )
+from raiden.network.sockfactory import SocketFactory
 from raiden.tests.utils.smoketest import (
     load_smoketest_config,
     start_ethereum,
@@ -840,7 +842,6 @@ def run(ctx, **kwargs):
     if kwargs['transport'] == 'udp':
         (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
         try:
-            from raiden.network.sockfactory import SocketFactory
             with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
                 kwargs['mapped_socket'] = mapped_socket
                 app_ = _run_app()
@@ -1008,13 +1009,11 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         return success
 
     if args['transport'] == 'udp':
-        from raiden.network.sockfactory import SocketFactory
         with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
             args['mapped_socket'] = mapped_socket
             success = _run_smoketest()
     elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
         print('WARNING: The Matrix transport is experimental')
-        from mirakuru import HTTPExecutor
         args['mapped_socket'] = None
         with HTTPExecutor(
                 local_matrix,
