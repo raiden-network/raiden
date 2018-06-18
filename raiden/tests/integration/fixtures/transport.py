@@ -2,12 +2,13 @@ import pytest
 
 from enum import Enum
 from collections import namedtuple
+from urllib.parse import urljoin
 
-from mirakuru import TCPExecutor
+from mirakuru import HTTPExecutor
 
 
 TransportConfig = namedtuple('TransportConfig', 'protocol parameters')
-MatrixTransportConfig = namedtuple('MatrixTransportConfig', 'command host port')
+MatrixTransportConfig = namedtuple('MatrixTransportConfig', 'command server')
 
 
 class TransportProtocol(Enum):
@@ -34,18 +35,23 @@ def local_matrix_server(transport_config):
         yield None
         return
 
-    assert transport_config.parameters.command is not None, \
-        'Missing --local-matrix setting. Cannot run Matrix version of integration test.'
+    server = transport_config.parameters.server
 
-    server = TCPExecutor(
+    # if command is none, assume server is already running
+    if transport_config.parameters.command in (None, 'none'):
+        yield server
+        return
+
+    # otherwise, run our own local server
+    matrix = HTTPExecutor(
         transport_config.parameters.command,
-        host=transport_config.parameters.host,
-        port=transport_config.parameters.port,
+        status=r'^[24]\d\d$',
+        url=urljoin(server, '/_matrix'),
         timeout=120,
         sleep=0.1,
         shell=True,
     )
 
-    server.start()
-    yield f'http://{transport_config.parameters.host}:{transport_config.parameters.port}'
-    server.stop()
+    matrix.start()
+    yield server
+    matrix.stop()
