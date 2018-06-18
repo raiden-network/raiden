@@ -13,10 +13,9 @@ from raiden.transfer.mediated_transfer.events import (
 )
 
 
-# FIXME fix and unskip the matrix version of this test
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_mediated_transfer_events(raiden_network, token_addresses, network_wait, skip_if_not_udp):
+def test_mediated_transfer_events(raiden_network, token_addresses, network_wait):
     network_wait *= 1.4
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]

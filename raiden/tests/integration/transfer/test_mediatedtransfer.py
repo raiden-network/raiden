@@ -49,7 +49,6 @@ def test_mediated_transfer(
     )
 
 
-# FIXME fix and unskip the matrix version of this test
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_with_entire_deposit(
@@ -57,7 +56,6 @@ def test_mediated_transfer_with_entire_deposit(
         token_addresses,
         deposit,
         network_wait,
-        skip_if_not_udp,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]

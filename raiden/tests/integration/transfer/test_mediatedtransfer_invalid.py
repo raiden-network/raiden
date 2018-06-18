@@ -82,7 +82,6 @@ def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     assert async_result.wait() is False
 
 
-# FIXME fix and unskip the matrix version of this test
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_lockedtransfer_invalidnonce(
@@ -91,7 +90,6 @@ def test_receive_lockedtransfer_invalidnonce(
         token_addresses,
         reveal_timeout,
         network_wait,
-        skip_if_not_udp,
 ):
 
     app0, app1, app2 = raiden_network
