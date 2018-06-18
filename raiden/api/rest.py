@@ -599,7 +599,7 @@ class RestAPI:
     def _deposit(self, registry_address, channel_state, total_deposit):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
-                errors="Can't deposit on a closed channel",
+                errors="Can't set total deposit on a closed channel",
                 status_code=HTTPStatus.CONFLICT,
             )
 
@@ -660,13 +660,13 @@ class RestAPI:
     def patch_channel(self, registry_address, channel_address, total_deposit=None, state=None):
         if total_deposit is not None and state is not None:
             return api_error(
-                errors='Can not update deposit and change channel state at the same time',
+                errors="Can not update a channel's total deposit and state at the same time",
                 status_code=HTTPStatus.CONFLICT,
             )
 
         if total_deposit is None and state is None:
             return api_error(
-                errors="Nothing to do. Should either provide 'balance' or 'state' argument",
+                errors="Nothing to do. Should either provide 'total_deposit' or 'state' argument",
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
