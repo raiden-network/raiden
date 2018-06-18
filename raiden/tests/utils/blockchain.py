@@ -12,6 +12,8 @@ import gevent
 
 from eth_utils import (
     denoms,
+    encode_hex,
+    remove_0x_prefix,
     to_checksum_address,
     to_normalized_address,
 )
@@ -21,7 +23,6 @@ from requests import ConnectionError
 from raiden.utils import (
     privatekey_to_address,
     privtopub,
-    encode_hex,
 )
 from raiden.tests.utils.genesis import GENESIS_STUB
 
@@ -256,8 +257,8 @@ def geth_create_blockchain(
             config['unlock'] = 0
 
         config['nodekey'] = key
-        config['nodekeyhex'] = encode_hex(key)
-        config['pub'] = encode_hex(privtopub(key))
+        config['nodekeyhex'] = remove_0x_prefix(encode_hex(key))
+        config['pub'] = remove_0x_prefix(encode_hex(privtopub(key)))
         config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port

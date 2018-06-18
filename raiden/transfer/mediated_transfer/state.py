@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from raiden.transfer.architecture import State
-from raiden.utils import pex, sha3, typing, encode_hex
+from raiden.utils import pex, sha3, typing
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,
@@ -10,6 +10,8 @@ from raiden.transfer.state import (
     HashTimeLockState,
     RouteState,
 )
+
+from eth_utils import encode_hex
 
 
 def lockedtransfersigned_from_message(message):

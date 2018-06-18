@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 from gevent.lock import RLock
-from eth_utils import to_normalized_address, to_canonical_address
+
+from eth_utils import (
+    encode_hex,
+    to_normalized_address,
+    to_canonical_address,
+)
 
 import structlog
 from web3.exceptions import BadFunctionCallOutput
@@ -29,7 +34,6 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     releasing,
-    encode_hex,
 )
 from raiden.utils import typing
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify
 
-from eth_utils import denoms
+from eth_utils import denoms, encode_hex
 
-from raiden.utils import privatekey_to_address, sha3, encode_hex
+from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.blockchain import GENESIS_STUB
 
 CLUSTER_NAME = 'raiden'
