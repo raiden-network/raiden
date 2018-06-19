@@ -291,6 +291,7 @@ def create_apps(
             config_copy,
             blockchain,
             registry,
+            None,  # the SecretRegistry, fix once used
             transport,
             discovery,
         )

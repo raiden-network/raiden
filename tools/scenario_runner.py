@@ -37,6 +37,10 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
     type=str,
 )
 @click.option(  # noqa
+    '--secret-registry-contract-address',
+    type=str,
+)
+@click.option(  # noqa
     '--discovery-contract-address',
     type=str,
 )
@@ -70,6 +74,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def run(
         privatekey,
         registry_contract_address,
+        secret_registry_contract_address,
         discovery_contract_address,
         listen_address,
         structlog,
@@ -111,6 +116,10 @@ def run(
         registry_contract_address,
     )
 
+    secret_registry = blockchain_service.secret_registry(
+        secret_registry_contract_address,
+    )
+
     throttle_policy = TokenBucket(
         config['protocol']['throttle_capacity'],
         config['protocol']['throttle_fill_rate'],
@@ -128,6 +137,7 @@ def run(
         config,
         blockchain_service,
         registry,
+        secret_registry,
         transport,
         discovery,
     )

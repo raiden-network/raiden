@@ -32,6 +32,7 @@ from raiden.constants import (
     ID_TO_NETWORKNAME,
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
+    ROPSTEN_SECRET_REGISTRY_ADDRESS,
 )
 from raiden.exceptions import (
     EthNodeCommunicationError,
@@ -310,6 +311,13 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--secret-registry-contract-address',
+            help='hex encoded address of the secret registry contract.',
+            default=ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
             '--discovery-contract-address',
             help='hex encoded address of the discovery contract.',
             default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
@@ -509,6 +517,7 @@ def app(
         gas_price,
         eth_rpc_endpoint,
         registry_contract_address,
+        secret_registry_contract_address,
         discovery_contract_address,
         listen_address,
         rpccorsdomain,
@@ -643,6 +652,17 @@ def app(
         )
         sys.exit(1)
 
+    try:
+        secret_registry = blockchain_service.secret_registry(
+            secret_registry_contract_address,
+        )
+    except ContractVersionMismatch:
+        print(
+            'Deployed registry contract version mismatch. '
+            'Please update your Raiden installation.',
+        )
+        sys.exit(1)
+
     discovery = None
     if transport == 'udp':
         check_discovery_registration_gas(blockchain_service, address)
@@ -675,6 +695,7 @@ def app(
         config,
         blockchain_service,
         registry,
+        secret_registry,
         transport,
         discovery,
     )
