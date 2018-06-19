@@ -42,11 +42,19 @@ cp ${BASEDIR}/raiden/tests/test_files/synapse-config.yaml ${DESTDIR}/synapse-con
            --config-path="${DESTDIR}/synapse-config.yml" \
            --generate-keys
 
+if [ -z ${TRAVIS} ]; then
+  LOG_FILE="${DESTDIR}/homeserver.log"
+  CLEAR_LOG="[ -f ${LOG_FILE} ] && rm ${LOG_FILE}"
+  LOGGING_OPTION="--log-file ${LOG_FILE}"
+fi
+
 cat > "${DESTDIR}/run_synapse.sh" << EOF
 #!/bin/sh
 SYNAPSEDIR=\$( dirname "\$0" )
+${CLEAR_LOG}
 exec "\${SYNAPSEDIR}/synapse" \
   --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
-  --config-path="\${SYNAPSEDIR}/synapse-config.yml"
+  --config-path="\${SYNAPSEDIR}/synapse-config.yml" \
+  ${LOGGING_OPTION}
 EOF
 chmod 775 "${DESTDIR}/run_synapse.sh"

@@ -78,7 +78,7 @@ class CompileWebUI(Command):
                 'raiden',
                 'ui',
                 'web',
-            )
+            ),
         )
 
         npm_version = subprocess.check_output([npm, '--version'])
@@ -111,6 +111,7 @@ install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
     (
         'git+https://github.com/raiden-network/raiden-libs.git'
+        '@2dbf285c07efb0a1f529d0e99ba2c6bccddd7224'
         '#egg=raiden-libs'
     ): 'raiden-libs',
     (
@@ -161,7 +162,7 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'console_scripts': [
-            'raiden = raiden.__main__:main'
-        ]
-    }
+            'raiden = raiden.__main__:main',
+        ],
+    },
 )

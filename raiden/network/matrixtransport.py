@@ -92,6 +92,7 @@ class MatrixTransport:
         self._discovery_room_alias_full = None
         self._room_alias_re = None
         self._login_retry_wait = config.get('login_retry_wait', 0.5)
+        self._logout_timeout = config.get('logout_timeout', 10)
 
         self._bound_logger = None
         self._running = False
@@ -209,8 +210,10 @@ class MatrixTransport:
             for async_result in self._messageids_to_asyncresult.values():
                 async_result.set(False)
 
-            gevent.wait(self.greenlets)
-            self._client.logout()
+            try:
+                self._client.join_and_logout(self.greenlets, timeout=self._logout_timeout)
+            except RuntimeError as error:
+                self.log.critical(str(error))
 
     @property
     def log(self):
