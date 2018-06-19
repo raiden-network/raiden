@@ -289,6 +289,7 @@ class APIServer:
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise APIServerPortInUseError()
+            raise
 
     def stop(self, timeout=5):
         if getattr(self, 'wsgiserver', None):

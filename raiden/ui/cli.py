@@ -4,7 +4,6 @@ import sys
 import os
 import tempfile
 import json
-import socket
 import signal
 import shutil
 from copy import deepcopy
@@ -861,8 +860,6 @@ def run(ctx, **kwargs):
                 (listen_host, listen_port),
             )
             sys.exit(1)
-        except socket.error:
-            raise
     elif kwargs['transport'] == 'matrix':
         print('WARNING: The Matrix transport is experimental')
         kwargs['mapped_socket'] = None

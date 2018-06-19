@@ -122,6 +122,7 @@ class SocketFactory:
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise RaidenServicePortInUseError()
+            raise
 
     def unmap_upnp(self):
         upnpsock.release_port(self.storage['router'], self.source_port)
@@ -180,6 +181,7 @@ class SocketFactory:
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise RaidenServicePortInUseError()
+            raise
 
     @property
     def strategy_description(self):
