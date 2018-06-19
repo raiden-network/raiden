@@ -142,7 +142,11 @@ class TokenNetworkRegistry:
 
         return token_network_address
 
-    def tokenadded_filter(self, from_block=None, to_block=None) -> Filter:
+    def tokenadded_filter(
+            self,
+            from_block: typing.blockSpecification = 0,
+            to_block: typing.blockSpecification = 'latest',
+    ) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_TOKEN_NETWORK_REGISTRY,
             EVENT_TOKEN_NETWORK_CREATED,
