@@ -285,7 +285,8 @@ def on_raiden_event(raiden: RaidenService, event: Event):
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
     elif type(event) == ContractSendSecretReveal:
-        handle_contract_secretreveal(raiden, event)
+        # handle_contract_secretreveal(raiden, event)
+        pass
     elif type(event) == ContractSendChannelClose:
         handle_contract_channelclose(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:
