@@ -1199,7 +1199,7 @@ def test_channelstate_unlock_without_locks():
 
 
 def test_channelstate_get_unlock_proof():
-    number_of_transfers = 2
+    number_of_transfers = 100
     lock_amounts = cycle([1, 3, 5, 7, 11])
     lock_secrets = [
         make_secret(i)
@@ -1213,7 +1213,7 @@ def test_channelstate_get_unlock_proof():
     locked_locks = {}
     unlocked_locks = {}
 
-    for _i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
+    for lock_amount, lock_secret in zip(lock_amounts, lock_secrets):
         block_number += 1
         locked_amount += lock_amount
 
@@ -1227,16 +1227,16 @@ def test_channelstate_get_unlock_proof():
 
         merkletree_leaves.append(lock.lockhash)
         if random.randint(0, 1) == 0:
-            locked_locks[lock.lockhash] = lock
+            locked_locks[lock_secrethash] = lock
         else:
-            unlocked_locks[lock.lockhash] = UnlockPartialProofState(lock, lock_secret)
+            unlocked_locks[lock_secrethash] = UnlockPartialProofState(lock, lock_secret)
 
     end_state = NettingChannelEndState(HOP1, 300)
     end_state.secrethashes_to_lockedlocks = locked_locks
     end_state.secrethashes_to_unlockedlocks = unlocked_locks
     end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
 
-    unlock_proof = channel.get_known_unlocks2(end_state)
+    unlock_proof = channel.get_batch_unlock(end_state)
     packed_leaves = unlock_proof.merkle_tree_leaves
     assert len(packed_leaves) == len(end_state.merkletree.layers[LEAVES]) * 72
 

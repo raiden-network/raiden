@@ -547,7 +547,7 @@ class ContractReceiveChannelUnlock(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelUnlock2(StateChange):
+class ContractReceiveChannelBatchUnlock(StateChange):
     """ All the locks were claimed via the blockchain.
 
     Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted

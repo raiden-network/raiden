@@ -133,10 +133,12 @@ def is_secret_known(
 def get_secret(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
-) -> typing.Secret:
+) -> typing.Optional[typing.Secret]:
     """Returns `secret` if the `secrethash` is for a lock with a known secret."""
     if is_secret_known(end_state, secrethash):
         return end_state.secrethashes_to_unlockedlocks[secrethash].secret
+
+    return None
 
 
 def is_transaction_confirmed(
@@ -612,22 +614,26 @@ def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockPr
     ]
 
 
-def get_known_unlocks2(end_state: NettingChannelEndState) -> UnlockProofState2:
+def get_batch_unlock(end_state: NettingChannelEndState) -> UnlockProofState2:
     """ Unlock proof for an entire merkle tree of pending locks
 
     The unlock proof contains all the merkle tree data, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
-    all_locks = end_state.secrethashes_to_lockedlocks.copy()
-    all_locks.update({
-        lockhash: end_state.secrethashes_to_unlockedlocks[lockhash].lock
-        for lockhash in end_state.secrethashes_to_unlockedlocks.keys()
+    lockhashes_to_locks = dict()
+    lockhashes_to_locks.update({
+        lock.lockhash: lock
+        for secrethash, lock in end_state.secrethashes_to_lockedlocks.items()
+    })
+    lockhashes_to_locks.update({
+        proof.lock.lockhash: proof.lock
+        for secrethash, proof in end_state.secrethashes_to_unlockedlocks.items()
     })
 
-    all_locks_packed = b''.join([
-        all_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
-    ])
+    all_locks_packed = b''.join(
+        lockhashes_to_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
+    )
 
     return UnlockProofState2(all_locks_packed)
 
@@ -1437,7 +1443,7 @@ def handle_channel_settled2(
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.settle_block_number)
 
-        unlock_proofs = get_known_unlocks2(channel_state.partner_state)
+        unlock_proofs = get_batch_unlock(channel_state.partner_state)
         if unlock_proofs:
             onchain_unlock = ContractSendChannelUnlock(
                 channel_state.identifier,

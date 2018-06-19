@@ -234,7 +234,7 @@ def handle_block(target_state, channel_state, block_number):
         # TODO: to be removed
         events = events_for_close(target_state, channel_state, block_number)
 
-        events = events_for_onchain_secretregister(target_state, channel_state, block_number)
+        events.extend(events_for_onchain_secretregister(target_state, channel_state, block_number))
     else:
         events = list()
 
