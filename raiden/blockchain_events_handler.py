@@ -11,7 +11,7 @@ from raiden.blockchain.state import (
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
-from raiden.utils import pex
+from raiden.utils import pex, data_decoder
 from raiden.transfer.state import (
     TransactionChannelNewBalance,
     TokenNetworkGraphState,
@@ -64,7 +64,8 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
         raiden.blockchain_events.add_netting_channel_listener(channel_proxy)
 
     network_graph = TokenNetworkGraphState(networkx.Graph())
-    token_address = event.event_data['args']['token_address']
+    token_address = data_decoder(event.event_data['args']['token_address'])
+
     token_network_state = TokenNetworkState(
         manager_address,
         token_address,

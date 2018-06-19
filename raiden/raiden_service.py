@@ -407,7 +407,7 @@ class RaidenService:
 
         message.sign(self.private_key)
 
-    def install_and_query_payment_network_filters(self, payment_network_id, from_block=None):
+    def install_and_query_payment_network_filters(self, payment_network_id, from_block=0):
         proxies = get_relevant_proxies(
             self.chain,
             self.address,
