@@ -27,6 +27,11 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
 )
+from raiden.network.proxies import (
+    Registry,
+    SecretRegistry,
+    Discovery,
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -77,9 +82,10 @@ class App:  # pylint: disable=too-few-public-methods
             self,
             config: Dict,
             chain: BlockChainService,
-            default_registry,
+            default_registry: Registry,
+            default_secret_registry: SecretRegistry,
             transport,
-            discovery=None,
+            discovery: Discovery=None,
     ):
         self.config = config
         self.discovery = discovery
@@ -88,6 +94,7 @@ class App:  # pylint: disable=too-few-public-methods
             self.raiden = RaidenService(
                 chain,
                 default_registry,
+                default_secret_registry,
                 unhexlify(config['privatekey_hex']),
                 transport,
                 config,

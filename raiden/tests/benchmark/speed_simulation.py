@@ -204,6 +204,7 @@ def tps_run(
     )
 
     # FIXME: This is missing the registry
+    # FIXME: This is missing the secret registry
     app = App(
         config,
         blockchain_service,

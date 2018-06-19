@@ -13,6 +13,10 @@ import structlog
 from eth_utils import is_binary_address
 
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies import (
+    Registry,
+    SecretRegistry,
+)
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.constants import (
@@ -152,7 +156,8 @@ class RaidenService:
     def __init__(
             self,
             chain: BlockChainService,
-            default_registry,
+            default_registry: Registry,
+            default_secret_registry: SecretRegistry,
             private_key_bin,
             transport,
             config,
@@ -175,6 +180,7 @@ class RaidenService:
 
         self.chain: BlockChainService = chain
         self.default_registry = default_registry
+        self.default_secret_registry = default_secret_registry
         self.config = config
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
