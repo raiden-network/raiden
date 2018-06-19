@@ -164,7 +164,7 @@ def handle_unlockfailed(
     )
 
 
-def handle_contract_secretreveal(
+def handle_contract_send_secretreveal(
         raiden: 'RaidenService',
         channel_close_event: ContractSendSecretReveal,
 ):
@@ -172,7 +172,7 @@ def handle_contract_secretreveal(
     secret_registry.register_secret(channel_close_event.secret)
 
 
-def handle_contract_channelclose(
+def handle_contract_send_channelclose(
         raiden: RaidenService,
         channel_close_event: ContractSendChannelClose,
 ):
@@ -206,7 +206,7 @@ def handle_contract_channelclose(
     )
 
 
-def handle_contract_channelupdate(
+def handle_contract_send_channelupdate(
         raiden: RaidenService,
         channel_update_event: ContractSendChannelUpdateTransfer,
 ):
@@ -224,9 +224,9 @@ def handle_contract_channelupdate(
         )
 
 
-def handle_contract_channelunlock(
+def handle_contract_send_channelunlock(
         raiden: RaidenService,
-        channel_unlock_event: ContractSendChannelUnlock,
+        channel_unlock_event: ContractSendChannelBatchUnlock,
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
     block_number = raiden.get_block_number()
@@ -240,16 +240,16 @@ def handle_contract_channelunlock(
             channel.unlock(unlock_proof)
 
 
-def handle_contract_channelunlock2(
+def handle_contract_send_channelunlock2(
         raiden: 'RaidenService',
-        channel_unlock_event: ContractSendChannelUnlock,
+        channel_unlock_event: ContractSendChannelBatchUnlock,
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
 
     channel.unlock(channel_unlock_event.unlock_proofs)
 
 
-def handle_contract_channelsettle(
+def handle_contract_send_channelsettle(
         raiden: RaidenService,
         channel_settle_event: ContractSendChannelSettle,
 ):
@@ -281,16 +281,16 @@ def on_raiden_event(raiden: RaidenService, event: Event):
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
     elif type(event) == ContractSendSecretReveal:
-        # handle_contract_secretreveal(raiden, event)
+        # handle_contract_send_secretreveal(raiden, event)
         pass
     elif type(event) == ContractSendChannelClose:
-        handle_contract_channelclose(raiden, event)
+        handle_contract_send_channelclose(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:
-        handle_contract_channelupdate(raiden, event)
-    elif type(event) == ContractSendChannelUnlock:
-        handle_contract_channelunlock(raiden, event)
+        handle_contract_send_channelupdate(raiden, event)
+    elif type(event) == ContractSendChannelBatchUnlock:
+        handle_contract_send_channelunlock(raiden, event)
     elif type(event) == ContractSendChannelSettle:
-        handle_contract_channelsettle(raiden, event)
+        handle_contract_send_channelsettle(raiden, event)
     elif type(event) in UNEVENTFUL_EVENTS:
         pass
     else:
