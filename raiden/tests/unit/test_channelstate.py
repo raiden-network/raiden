@@ -18,7 +18,7 @@ from raiden.messages import (
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.transfer import channel
 from raiden.transfer.events import (
-    ContractSendChannelUnlock,
+    ContractSendChannelBatchUnlock,
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
 )
@@ -1289,7 +1289,7 @@ def test_channelstate_unlock():
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
-    assert must_contain_entry(iteration.events, ContractSendChannelUnlock, {})
+    assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
 
 
 def test_channel_unlock_must_not_change_merkletree():

@@ -11,7 +11,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelUnlock,
+    ContractSendChannelBatchUnlock,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
     EventTransferSentSuccess,

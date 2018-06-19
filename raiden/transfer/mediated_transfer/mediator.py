@@ -6,7 +6,7 @@ from typing import List, Dict
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
-    ContractSendChannelUnlock,
+    ContractSendChannelBatchUnlock,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -726,7 +726,7 @@ def events_for_unlock_if_closed(
                 secret,
                 lock,
             )
-            unlock = ContractSendChannelUnlock(
+            unlock = ContractSendChannelBatchUnlock(
                 payer_channel.identifier,
                 [unlock_proof],
             )
