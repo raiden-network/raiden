@@ -710,36 +710,6 @@ class UnlockProofState(State):
         return not self.__eq__(other)
 
 
-class UnlockProofState2(State):
-    """ An unlock proof for all the pending locks. """
-
-    __slots__ = (
-        'merkle_tree_leaves',
-    )
-
-    def __init__(
-            self,
-            merkle_tree_leaves: typing.MerkleTreeLeaves,
-    ):
-
-        if not isinstance(merkle_tree_leaves, typing.T_MerkleTreeLeaves):
-            raise ValueError('merkle_tree_leaves must be a MerkleTreeLeaves instance')
-
-        self.merkle_tree_leaves = merkle_tree_leaves
-
-    def __repr__(self):
-        return f'<UnlockProofState2 proof:{hexlify(self.merkle_tree_leaves)}>'
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, UnlockProofState2) and
-            self.merkle_tree_leaves == other.merkle_tree_leaves
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class TransactionExecutionStatus(State):
     """ Represents the status of a transaction. """
     SUCCESS = 'success'

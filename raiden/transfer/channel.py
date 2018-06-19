@@ -59,7 +59,6 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     UnlockPartialProofState,
     UnlockProofState,
-    UnlockProofState2,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -614,12 +613,17 @@ def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockPr
     ]
 
 
-def get_batch_unlock(end_state: NettingChannelEndState) -> UnlockProofState2:
+def get_batch_unlock(
+        end_state: NettingChannelEndState,
+) -> typing.Optional[typing.MerkleTreeLeaves]:
     """ Unlock proof for an entire merkle tree of pending locks
 
     The unlock proof contains all the merkle tree data, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
+
+    if len(end_state.merkletree.layers[LEAVES]) == 0:
+        return None
 
     lockhashes_to_locks = dict()
     lockhashes_to_locks.update({
@@ -635,7 +639,7 @@ def get_batch_unlock(end_state: NettingChannelEndState) -> UnlockProofState2:
         lockhashes_to_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
     )
 
-    return UnlockProofState2(all_locks_packed)
+    return all_locks_packed
 
 
 def get_lock(

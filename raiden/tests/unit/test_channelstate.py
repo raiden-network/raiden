@@ -1237,11 +1237,10 @@ def test_channelstate_get_unlock_proof():
     end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
 
     unlock_proof = channel.get_batch_unlock(end_state)
-    packed_leaves = unlock_proof.merkle_tree_leaves
-    assert len(packed_leaves) == len(end_state.merkletree.layers[LEAVES]) * 72
+    assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES]) * 72
 
     computed_merkleroot = merkleroot(MerkleTreeState(compute_layers(
-        merkle_leaves_from_packed_data(packed_leaves),
+        merkle_leaves_from_packed_data(unlock_proof),
     )))
     assert merkleroot(end_state.merkletree) == computed_merkleroot
 
