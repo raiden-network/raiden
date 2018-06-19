@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from http import HTTPStatus
+import errno
 import json
-import sys
 import logging
+import socket
 import structlog
+import sys
 
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
@@ -18,6 +20,7 @@ from eth_utils import is_address, to_checksum_address
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
+    APIServerPortInUseError,
     ChannelBusyError,
     ChannelNotFound,
     DuplicatedChannelError,
@@ -273,15 +276,20 @@ class APIServer:
         self.flask_app.run(host=host, port=port, **kwargs)
 
     def start(self, host='127.0.0.1', port=5001):
-        # WSGI expects a stdlib logger, with structlog there's conflict of method names
-        wsgi_log = logging.getLogger(__name__ + '.pywsgi')
-        self.wsgiserver = WSGIServer(
-            (host, port),
-            self.flask_app,
-            log=wsgi_log,
-            error_log=wsgi_log,
-        )
-        self.wsgiserver.start()
+        try:
+            # WSGI expects a stdlib logger, with structlog there's conflict of method names
+            wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+            self.wsgiserver = WSGIServer(
+                (host, port),
+                self.flask_app,
+                log=wsgi_log,
+                error_log=wsgi_log,
+            )
+            self.wsgiserver.start()
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                raise APIServerPortInUseError()
+            raise
 
     def stop(self, timeout=5):
         if getattr(self, 'wsgiserver', None):
