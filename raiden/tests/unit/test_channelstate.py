@@ -28,12 +28,15 @@ from raiden.transfer.merkle_tree import (
     MERKLEROOT,
     compute_layers,
     merkleroot,
+    merkle_leaves_from_packed_data,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,
+    MerkleTreeState,
     HashTimeLockState,
+    UnlockPartialProofState,
     NettingChannelEndState,
     NettingChannelState,
     TransactionChannelNewBalance,
@@ -50,6 +53,7 @@ from raiden.transfer.state_change import (
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     UNIT_REGISTRY_IDENTIFIER,
+    HOP1,
 )
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
@@ -1191,6 +1195,54 @@ def test_channelstate_unlock_without_locks():
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
     assert not iteration.events
+
+
+def test_channelstate_get_unlock_proof():
+    number_of_transfers = 2
+    lock_amounts = cycle([1, 3, 5, 7, 11])
+    lock_secrets = [
+        format(i, '>032').encode()
+        for i in range(number_of_transfers)
+    ]
+
+    block_number = 1000
+    locked_amount = 0
+    settle_timeout = 8
+    merkletree_leaves = []
+    locked_locks = {}
+    unlocked_locks = {}
+
+    for _i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
+        block_number += 1
+        locked_amount += lock_amount
+
+        lock_expiration = block_number + settle_timeout
+        lock_secrethash = sha3(lock_secret)
+        lock = HashTimeLockState(
+            lock_amount,
+            lock_expiration,
+            lock_secrethash,
+        )
+
+        merkletree_leaves.append(lock.lockhash)
+        if random.randint(0, 1) == 0:
+            locked_locks[lock.lockhash] = lock
+        else:
+            unlocked_locks[lock.lockhash] = UnlockPartialProofState(lock, lock_secret)
+
+    end_state = NettingChannelEndState(HOP1, 300)
+    end_state.secrethashes_to_lockedlocks = locked_locks
+    end_state.secrethashes_to_unlockedlocks = unlocked_locks
+    end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+
+    unlock_proof = channel.get_known_unlocks2(end_state)
+    packed_leaves = unlock_proof.merkle_tree_leaves
+    assert len(packed_leaves) == len(end_state.merkletree.layers[LEAVES]) * 72
+
+    computed_merkleroot = merkleroot(MerkleTreeState(compute_layers(
+        merkle_leaves_from_packed_data(packed_leaves),
+    )))
+    assert merkleroot(end_state.merkletree) == computed_merkleroot
 
 
 def test_channelstate_unlock():

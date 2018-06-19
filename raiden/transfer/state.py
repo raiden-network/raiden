@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attribute
+# pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
 from binascii import hexlify
 from collections import namedtuple

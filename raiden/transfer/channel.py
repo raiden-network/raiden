@@ -6,8 +6,6 @@ from collections import namedtuple
 
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
-from raiden.encoding.format import buffer_for
-from raiden.encoding import messages
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.balance_proof import signing_data
 from raiden.transfer.events import (
@@ -620,20 +618,16 @@ def get_known_unlocks2(end_state: NettingChannelEndState) -> UnlockProofState2:
     The unlock proof contains all the merkle tree data, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
-    all_locks_packed = b''
-    for lock in end_state.secrethashes_to_lockedlocks.values():
-        packed = messages.Lock(buffer_for(messages.Lock))
-        packed.amount = lock.amount
-        packed.expiration = lock.expiration
-        packed.secrethash = lock.secrethash
-        all_locks_packed += bytes(packed.data)
 
-    for proof in end_state.secrethashes_to_unlockedlocks.values():
-        packed = messages.Lock(buffer_for(messages.Lock))
-        packed.amount = proof.lock.amount
-        packed.expiration = proof.lock.expiration
-        packed.secrethash = proof.lock.secrethash
-        all_locks_packed += bytes(packed.data)
+    all_locks = end_state.secrethashes_to_lockedlocks.copy()
+    all_locks.update({
+        lockhash: end_state.secrethashes_to_unlockedlocks[lockhash].lock
+        for lockhash in end_state.secrethashes_to_unlockedlocks.keys()
+    })
+
+    all_locks_packed = b''.join([
+        all_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
+    ])
 
     return UnlockProofState2(all_locks_packed)
 
