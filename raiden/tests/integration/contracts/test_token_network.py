@@ -105,7 +105,7 @@ def test_token_network_proxy_basics(
     initial_token_balance = 100
     token_proxy.transfer(c1_client.sender, initial_token_balance)
     initial_balance_c1 = token_proxy.balance_of(c1_client.sender)
-    assert initial_token_balance == initial_token_balance
+    assert initial_balance_c1 == initial_token_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
     assert initial_balance_c2 == 0
     # no negative deposit

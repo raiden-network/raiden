@@ -2,11 +2,10 @@
 from typing import Dict
 
 from web3.utils.filters import Filter
-from eth_utils import decode_hex
-
-from raiden.network.proxies import TokenNetwork
 from raiden.utils import typing
 from raiden.utils.filters import get_filter_args_for_channel_from_token_network
+
+from raiden.network.proxies import TokenNetwork
 
 
 class PaymentChannel:
@@ -45,7 +44,7 @@ class PaymentChannel:
         filter = self.token_network.proxy.contract.events.ChannelOpened.createFilter(
             fromBlock=0,
             argument_filters={
-                'channel_identifier': decode_hex(self.channel_identifier()),
+                'channel_identifier': self.channel_identifier(),
             },
         )
 
@@ -154,4 +153,9 @@ class PaymentChannel:
             to_block=to_block,
         )
 
-        return self.token_network.client.new_filter(args)
+        return self.token_network.client.new_filter(
+            contract_address=args['address'],
+            topics=args['topics'],
+            from_block=args['fromBlock'],
+            to_block=args['toBlock'],
+        )
