@@ -15,8 +15,8 @@ def test_secret_registry(secret_registry_proxy):
     data = keccak(secret)
     assert decoded_event['args']['secrethash'] == data
     # check if registration block matches
-    block = secret_registry_proxy.register_block_by_secrethash(data)
+    block = secret_registry_proxy.get_register_block_for_secrehash(data)
     assert logs[0]['blockNumber'] == block
 
     #  test non-existing secret
-    assert 0 == secret_registry_proxy.register_block_by_secrethash(b'\x11' * 32)
+    assert 0 == secret_registry_proxy.get_register_block_for_secrehash(b'\x11' * 32)

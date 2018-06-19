@@ -9,8 +9,6 @@ from eth_utils import (
     encode_hex,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-
-from raiden.utils import typing
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     EVENT_SECRET_REVEALED,
@@ -25,6 +23,8 @@ from raiden.settings import (
 )
 from raiden.utils import (
     pex,
+    typing,
+    sha3,
     privatekey_to_address,
 )
 
@@ -63,6 +63,16 @@ class SecretRegistry:
         self.node_address = privatekey_to_address(self.client.privkey)
 
     def register_secret(self, secret: typing.Secret):
+        secrethash = sha3(secret)
+        if self.check_registered(secrethash):
+            log.info(
+                'secret already registered',
+                node=pex(self.node_address),
+                contract=pex(self.address),
+                secrethash=encode_hex(secrethash),
+            )
+            return
+
         log.info(
             'registerSecret called',
             node=pex(self.node_address),
@@ -93,11 +103,11 @@ class SecretRegistry:
             secret=secret,
         )
 
-    def register_block_by_secrethash(self, secrethash: typing.Keccak256) -> int:
+    def get_register_block_for_secrehash(self, secrethash: typing.Keccak256) -> int:
         return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
 
     def check_registered(self, secrethash: typing.Keccak256) -> bool:
-        return self.register_block_by_secrethash(secrethash) > 0
+        return self.get_register_block_for_secrehash(secrethash) > 0
 
     def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
