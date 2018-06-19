@@ -199,7 +199,7 @@ class ConnectionManager:
             if joining_funds <= 0 or self._leaving_state:
                 return
 
-            self.api.channel_deposit(
+            self.api.set_total_channel_deposit(
                 registry_address,
                 self.token_address,
                 partner_address,
@@ -291,7 +291,7 @@ class ConnectionManager:
                 log.info('partner opened channel first')
 
             try:
-                self.api.channel_deposit(
+                self.api.set_total_channel_deposit(
                     registry_address,
                     self.token_address,
                     partner,

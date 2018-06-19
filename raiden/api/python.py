@@ -209,15 +209,15 @@ class RaidenAPI:
 
         return netcontract_address
 
-    def channel_deposit(
+    def set_total_channel_deposit(
             self,
             registry_address,
             token_address,
             partner_address,
-            amount,
+            total_deposit,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-        """ Deposit `amount` in the channel with the peer at `partner_address` and the
+        """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
         Raises:
@@ -261,14 +261,20 @@ class RaidenAPI:
         token = self.raiden.chain.token(token_address)
         balance = token.balance_of(self.raiden.address)
 
+        if total_deposit <= channel_state.our_state.contract_balance:
+            # no action required
+            return
+
+        addendum = total_deposit - channel_state.our_state.contract_balance
+
         # If this check succeeds it does not imply the the `deposit` will
         # succeed, since the `deposit` transaction may race with another
         # transaction.
-        if not balance >= amount:
-            msg = 'Not enough balance to deposit. {} Available={} Tried={}'.format(
+        if not balance >= addendum:
+            msg = 'Not enough balance to deposit. {} Available={} Needed={}'.format(
                 pex(token_address),
                 balance,
-                amount,
+                addendum,
             )
             raise InsufficientFunds(msg)
 
@@ -283,11 +289,8 @@ class RaidenAPI:
             )
 
         with releasing(channel_proxy.channel_operations_lock):
-            token.approve(netcontract_address, amount)
-            channel_proxy.deposit(amount)
-
-            old_balance = channel_state.our_state.contract_balance
-            target_balance = old_balance + amount
+            token.approve(netcontract_address, addendum)
+            channel_proxy.set_total_deposit(total_deposit)
 
             msg = 'After {} seconds the deposit was not properly processed.'.format(
                 poll_timeout,
@@ -302,7 +305,7 @@ class RaidenAPI:
                     token_address,
                     partner_address,
                     target_address,
-                    target_balance,
+                    total_deposit,
                     self.raiden.alarm.wait_time,
                 )
 

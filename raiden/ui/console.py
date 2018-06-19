@@ -367,16 +367,17 @@ class ConsoleTools:
             registry_address_hex,
             token_address_hex,
             peer_address_hex,
-            amount,
+            total_deposit,
             settle_timeout=None,
-            reveal_timeout=None):
+            reveal_timeout=None,
+    ):
         """ Convenience method to open a channel.
 
         Args:
             registry_address_hex (str): hex encoded address of the registry for the channel.
             token_address_hex (str): hex encoded address of the token for the channel.
             peer_address_hex (str): hex encoded address of the channel peer.
-            amount (int): amount of initial funding of the channel.
+            total_deposit (int): amount of total funding for the channel.
             settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
             reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
 
@@ -401,11 +402,11 @@ class ConsoleTools:
             reveal_timeout=reveal_timeout,
         )
 
-        return self._api.channel_deposit(
+        return self._api.set_total_channel_deposit(
             registry_address,
             token_address,
             peer_address,
-            amount,
+            total_deposit,
         )
 
     def wait_for_contract(self, contract_address_hex, timeout=None):

@@ -18,7 +18,6 @@ from raiden.exceptions import (
 )
 from raiden import messages
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.proxies.token import Token
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.transactions import (
@@ -184,37 +183,21 @@ class NettingChannel:
 
         return self.detail()['our_balance'] > 0
 
-    def deposit(self, amount):
-        """ Deposit amount token in the channel.
+    def set_total_deposit(self, total_deposit):
+        """ Set the total deposit of token in the channel.
 
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
             ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the netting channel token address is empty.
         """
-        if not isinstance(amount, int):
-            raise ValueError('amount needs to be an integral number.')
-
-        token_address = self.token_address()
-
-        token = Token(
-            self.client,
-            token_address,
-            self.poll_timeout,
-        )
-        current_balance = token.balance_of(self.node_address)
-
-        if current_balance < amount:
-            raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(
-                amount,
-                current_balance,
-            ))
-
+        if not isinstance(total_deposit, int):
+            raise ValueError('total_deposit needs to be an integral number.')
         log.info(
-            'deposit called',
+            'set_total_deposit called',
             node=pex(self.node_address),
             contract=pex(self.address),
-            amount=amount,
+            amount=total_deposit,
         )
 
         if not self.channel_operations_lock.acquire(blocking=False):
@@ -225,8 +208,8 @@ class NettingChannel:
 
         with releasing(self.channel_operations_lock):
             transaction_hash = self.proxy.transact(
-                'deposit',
-                amount,
+                'setTotalDeposit',
+                total_deposit,
             )
 
             self.client.poll(
@@ -237,7 +220,7 @@ class NettingChannel:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical(
-                    'deposit failed',
+                    'set_total_deposit failed',
                     node=pex(self.node_address),
                     contract=pex(self.address),
                 )
@@ -246,10 +229,10 @@ class NettingChannel:
                 raise TransactionThrew('Deposit', receipt_or_none)
 
             log.info(
-                'deposit successful',
+                'set_total_deposit successful',
                 node=pex(self.node_address),
                 contract=pex(self.address),
-                amount=amount,
+                amount=total_deposit,
             )
 
     def close(self, nonce, transferred_amount, locked_amount, locksroot, extra_hash, signature):

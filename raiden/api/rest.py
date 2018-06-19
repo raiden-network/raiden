@@ -355,7 +355,7 @@ class RestAPI:
         if balance:
             # make initial deposit
             try:
-                self.raiden_api.channel_deposit(
+                self.raiden_api.set_total_channel_deposit(
                     registry_address,
                     token_address,
                     partner_address,
@@ -385,33 +385,6 @@ class RestAPI:
             result=checksummed_response_dict(result.data),
             status_code=HTTPStatus.CREATED,
         )
-
-    def deposit(self, registry_address, token_address, partner_address, amount):
-        try:
-            raiden_service_result = self.raiden_api.channel_deposit(
-                registry_address,
-                token_address,
-                partner_address,
-                amount,
-            )
-        except ChannelBusyError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
-        except EthNodeCommunicationError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.REQUEST_TIMEOUT,
-            )
-        except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
-
-        result = self.channel_schema.dump(channelstate_to_api_dict(raiden_service_result))
-        return api_response(result=checksummed_response_dict(result.data))
 
     def close(self, registry_address, token_address, partner_address):
         try:
@@ -623,19 +596,19 @@ class RestAPI:
         result = self.transfer_schema.dump(transfer)
         return api_response(result=checksummed_response_dict(result.data))
 
-    def _deposit(self, registry_address, channel_state, balance):
+    def _deposit(self, registry_address, channel_state, total_deposit):
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
-                errors="Can't deposit on a closed channel",
+                errors="Can't set total deposit on a closed channel",
                 status_code=HTTPStatus.CONFLICT,
             )
 
         try:
-            self.raiden_api.channel_deposit(
+            self.raiden_api.set_total_channel_deposit(
                 registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
-                balance,
+                total_deposit,
             )
         except ChannelBusyError as e:
             return api_error(
@@ -684,16 +657,16 @@ class RestAPI:
 
         return api_response(result=checksummed_response_dict(result.data))
 
-    def patch_channel(self, registry_address, channel_address, balance=None, state=None):
-        if balance is not None and state is not None:
+    def patch_channel(self, registry_address, channel_address, total_deposit=None, state=None):
+        if total_deposit is not None and state is not None:
             return api_error(
-                errors='Can not update balance and change channel state at the same time',
+                errors="Can not update a channel's total deposit and state at the same time",
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        if balance is None and state is None:
+        if total_deposit is None and state is None:
             return api_error(
-                errors="Nothing to do. Should either provide 'balance' or 'state' argument",
+                errors="Nothing to do. Should either provide 'total_deposit' or 'state' argument",
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
@@ -711,8 +684,8 @@ class RestAPI:
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        if balance is not None:
-            result = self._deposit(registry_address, channel_state, balance)
+        if total_deposit is not None:
+            result = self._deposit(registry_address, channel_state, total_deposit)
 
         elif state == CHANNEL_STATE_CLOSED:
             result = self._close(registry_address, channel_state)
