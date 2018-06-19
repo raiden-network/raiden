@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from binascii import unhexlify
 from gevent.lock import RLock
-from typing import List
 from eth_utils import to_normalized_address, to_canonical_address
 
 import structlog
@@ -444,29 +443,6 @@ class NettingChannel:
                 contract=pex(self.address),
             )
 
-    def events_filter(
-            self,
-            topics: List[str] = None,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None,
-    ) -> Filter:
-        """ Install a new filter for an array of topics emitted by the netting contract.
-        Args:
-            topics: A list of event ids to filter for. Can also be None,
-                    in which case all events are queried.
-            from_block: The block number at which to start looking for events.
-            to_block: The block number at which to stop looking for events.
-        Return:
-            Filter: The filter instance.
-        """
-        netting_channel_address_bin = self.proxy.contract_address
-        return self.client.new_filter(
-            netting_channel_address_bin,
-            topics=topics,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
     def all_events_filter(
             self,
             from_block: typing.BlockSpecification = None,
@@ -477,4 +453,9 @@ class NettingChannel:
         Return:
             Filter: The filter instance.
         """
-        return self.events_filter(None, from_block, to_block)
+        return self.client.new_filter(
+            contract_address=self.proxy.contract_address,
+            topics=None,
+            from_block=from_block,
+            to_block=to_block,
+        )
