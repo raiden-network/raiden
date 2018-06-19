@@ -109,7 +109,11 @@ class SecretRegistry:
     def check_registered(self, secrethash: typing.Keccak256) -> bool:
         return self.get_register_block_for_secrehash(secrethash) > 0
 
-    def secret_registered_filter(self, from_block=None, to_block=None) -> Filter:
+    def secret_registered_filter(
+            self,
+            from_block: typing.blockSpecification = 0,
+            to_block: typing.blockSpecification = 'latest',
+    ) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_SECRET_REGISTRY,
             EVENT_SECRET_REVEALED,

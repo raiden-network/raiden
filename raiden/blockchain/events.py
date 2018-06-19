@@ -24,7 +24,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.exceptions import AddressWithoutCode
-from raiden.utils import pex
+from raiden.utils import pex, typing
 from raiden.network.rpc.smartcontract_proxy import decode_event
 
 EventListener = namedtuple(
@@ -288,7 +288,11 @@ class BlockchainEvents:
         )
         self.event_listeners.append(event)
 
-    def add_registry_listener(self, registry_proxy, from_block=None):
+    def add_registry_listener(
+            self,
+            registry_proxy,
+            from_block: typing.blockSpecification = 'latest',
+    ):
         tokenadded = registry_proxy.tokenadded_filter(from_block)
         registry_address = registry_proxy.address
 
@@ -299,7 +303,11 @@ class BlockchainEvents:
             registry_proxy.tokenadded_filter,
         )
 
-    def add_channel_manager_listener(self, channel_manager_proxy, from_block=None):
+    def add_channel_manager_listener(
+            self,
+            channel_manager_proxy,
+            from_block: typing.blockSpecification = 'latest',
+    ):
         channelnew = channel_manager_proxy.channelnew_filter(from_block)
         manager_address = channel_manager_proxy.address
 
@@ -310,7 +318,11 @@ class BlockchainEvents:
             channel_manager_proxy.channelnew_filter,
         )
 
-    def add_token_network_listener(self, token_network_proxy, from_block=None):
+    def add_token_network_listener(
+            self,
+            token_network_proxy,
+            from_block: typing.blockSpecification = 'latest',
+    ):
         channel_new_filter = token_network_proxy.channelnew_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
 
@@ -321,7 +333,11 @@ class BlockchainEvents:
             token_network_proxy.channelnew_filter,
         )
 
-    def add_netting_channel_listener(self, netting_channel_proxy, from_block=None):
+    def add_netting_channel_listener(
+            self,
+            netting_channel_proxy,
+            from_block: typing.blockSpecification = 'latest',
+    ):
         netting_channel_events = netting_channel_proxy.all_events_filter(from_block)
         channel_address = netting_channel_proxy.address
 
@@ -332,7 +348,7 @@ class BlockchainEvents:
             netting_channel_proxy.all_events_filter,
         )
 
-    def add_proxies_listeners(self, proxies, from_block=None):
+    def add_proxies_listeners(self, proxies, from_block: typing.blockSpecification = 'latest'):
         self.add_registry_listener(proxies.registry, from_block)
 
         for manager in proxies.channel_managers:

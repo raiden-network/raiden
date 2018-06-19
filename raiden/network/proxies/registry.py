@@ -33,6 +33,7 @@ from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.utils import typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -152,7 +153,11 @@ class Registry:
             for address in addresses
         ]
 
-    def tokenadded_filter(self, from_block=None, to_block=None) -> Filter:
+    def tokenadded_filter(
+            self,
+            from_block: typing.blockSpecification = 0,
+            to_block: typing.blockSpecification = 'latest',
+    ) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
         registry_address_bin = self.proxy.contract_address
