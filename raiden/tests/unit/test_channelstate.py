@@ -54,6 +54,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     UNIT_REGISTRY_IDENTIFIER,
     HOP1,
+    make_secret,
 )
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
@@ -924,7 +925,7 @@ def test_interwoven_transfers():
 
     lock_amounts = cycle([1, 3, 5, 7, 11])
     lock_secrets = [
-        format(i, '>032').encode()
+        make_secret(i)
         for i in range(number_of_transfers)
     ]
 
@@ -1201,7 +1202,7 @@ def test_channelstate_get_unlock_proof():
     number_of_transfers = 2
     lock_amounts = cycle([1, 3, 5, 7, 11])
     lock_secrets = [
-        format(i, '>032').encode()
+        make_secret(i)
         for i in range(number_of_transfers)
     ]
 
