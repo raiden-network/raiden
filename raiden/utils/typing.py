@@ -35,6 +35,9 @@ Locksroot = NewType('Locksroot', T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType('LockHash', T_LockHash)
 
+T_MerkleTreeLeaves = bytes
+MerkleTreeLeaves = NewType('MerkleTreeLeaves', T_MerkleTreeLeaves)
+
 T_MessageID = int
 MessageID = NewType('MessageID', T_MessageID)
 
@@ -82,6 +85,9 @@ Secret = NewType('Secret', T_Secret)
 
 T_SecretHash = bytes
 SecretHash = NewType('SecretHash', T_SecretHash)
+
+T_SecretRegistryAddress = bytes
+SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress)
 
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)

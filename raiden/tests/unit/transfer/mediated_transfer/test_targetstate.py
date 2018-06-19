@@ -6,7 +6,7 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.transfer import channel
-from raiden.transfer.events import ContractSendChannelClose
+from raiden.transfer.events import ContractSendChannelClose, ContractSendSecretReveal
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -102,6 +102,52 @@ def test_events_for_close():
     assert events
     assert isinstance(events[0], ContractSendChannelClose)
     assert events[0].channel_identifier == from_route.channel_identifier
+
+
+def test_events_for_onchain_secretregister():
+    """ Secret must be registered on-chain when the unsafe region is reached and
+    the secret is known.
+    """
+    amount = 3
+    block_number = 10
+    expiration = block_number + 30
+    initiator = HOP1
+    target_address = UNIT_TRANSFER_TARGET
+
+    from_channel = factories.make_channel(
+        our_address=target_address,
+        partner_address=UNIT_TRANSFER_SENDER,
+        partner_balance=amount,
+    )
+    from_route = factories.route_from_channel(from_channel)
+
+    from_transfer = factories.make_signed_transfer_for(
+        from_channel,
+        amount,
+        initiator,
+        target_address,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    channel.handle_receive_lockedtransfer(
+        from_channel,
+        from_transfer,
+    )
+
+    channel.register_secret(from_channel, UNIT_SECRET, UNIT_SECRETHASH)
+
+    safe_to_wait = expiration - from_channel.reveal_timeout - 1
+    unsafe_to_wait = expiration - from_channel.reveal_timeout
+
+    state = TargetTransferState(from_route, from_transfer)
+    events = target.events_for_onchain_secretregister(state, from_channel, safe_to_wait)
+    assert not events
+
+    events = target.events_for_onchain_secretregister(state, from_channel, unsafe_to_wait)
+    assert events
+    assert isinstance(events[0], ContractSendSecretReveal)
+    assert events[0].secret == UNIT_SECRET
 
 
 def test_events_for_close_secret_unknown():

@@ -619,7 +619,7 @@ class TokenNetwork:
                 signature=encode_hex(signature),
             )
 
-    def unlock(self, partner: typing.Address, merkle_tree_leaves: bytes):
+    def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
         log.info(
             'unlock called',
             token_network=pex(self.address),

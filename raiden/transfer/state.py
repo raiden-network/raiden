@@ -684,7 +684,8 @@ class UnlockProofState(State):
             self,
             merkle_proof: typing.List[typing.Keccak256],
             lock_encoded,
-            secret: typing.Secret):
+            secret: typing.Secret,
+    ):
 
         if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a secret instance')

@@ -7,6 +7,7 @@ from raiden.messages import (
 )
 from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
+    ContractSendSecretReveal,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
@@ -163,6 +164,14 @@ def handle_unlockfailed(
     )
 
 
+def handle_contract_secretreveal(
+        raiden: 'RaidenService',
+        channel_close_event: ContractSendSecretReveal,
+):
+    secret_registry = raiden.chain.secret_registry()
+    secret_registry.register_secret(channel_close_event.secret)
+
+
 def handle_contract_channelclose(
         raiden: RaidenService,
         channel_close_event: ContractSendChannelClose,
@@ -231,6 +240,15 @@ def handle_contract_channelunlock(
             channel.unlock(unlock_proof)
 
 
+def handle_contract_channelunlock2(
+        raiden: 'RaidenService',
+        channel_unlock_event: ContractSendChannelUnlock,
+):
+    channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
+
+    channel.unlock(channel_unlock_event.unlock_proofs)
+
+
 def handle_contract_channelsettle(
         raiden: RaidenService,
         channel_settle_event: ContractSendChannelSettle,
@@ -262,6 +280,9 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         handle_transfersentfailed(raiden, event)
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
+    elif type(event) == ContractSendSecretReveal:
+        # handle_contract_secretreveal(raiden, event)
+        pass
     elif type(event) == ContractSendChannelClose:
         handle_contract_channelclose(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:

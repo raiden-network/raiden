@@ -89,6 +89,10 @@ def make_privkey_address():
     return privkey, address
 
 
+def make_secret(i):
+    return format(i, '>032').encode()
+
+
 def route_from_channel(channel_state):
     route = RouteState(
         channel_state.partner_state.address,

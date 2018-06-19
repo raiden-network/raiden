@@ -459,6 +459,39 @@ class ContractReceiveNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
+class ContractReceiveSecretReveal(StateChange):
+    """ A new secret was registered with the SecretRegistry contract. """
+
+    def __init__(
+        self,
+        secret_registry_address: typing.SecretRegistryAddress,
+        secrethash: typing.SecretHash,
+    ):
+        if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
+            raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
+        if not isinstance(secrethash, typing.T_SecretHash):
+            raise ValueError('secrethash must be of type SecretHash')
+
+        self.secret_registry_address = secret_registry_address
+        self.secrethash = secrethash
+
+    def __repr__(self):
+        return '<ContractReceiveSecretReveal secret registry:{} secrethash:{}>'.format(
+            pex(self.secret_registry_address),
+            pex(self.secrethash),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveSecretReveal) and
+            self.secret_registry_address == other.secret_registry_address and
+            self.secrethash == other.secrethash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveChannelUnlock(StateChange):
     """ A lock was claimed via the blockchain.
     Used when a hash time lock was unlocked and a log ChannelSecretRevealed is
@@ -512,6 +545,43 @@ class ContractReceiveChannelUnlock(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class ContractReceiveChannelBatchUnlock(StateChange):
+    """ All the locks were claimed via the blockchain.
+
+    Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted
+    by the token network contract.
+    Note:
+        For this state change the contract caller is not important but only the
+        receiving address. `participant` is the address to which the `unlocked_amount`
+        was transferred. `returned_tokens` was transferred to the channel partner.
+    """
+
+    def __init__(
+            self,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            channel_identifier: typing.ChannelID,
+            merkle_tree_leaves: typing.MerkleTreeLeaves,
+            participant: typing.Address,
+            unlocked_amount: typing.TokenAmount,
+            returned_tokens: typing.TokenAmount,
+    ):
+
+        if not isinstance(payment_network_identifier, typing.T_PaymentNetworkID):
+            raise ValueError('payment_network_identifier must be of type PaymentNetworkID')
+
+        if not isinstance(participant, typing.T_Address):
+            raise ValueError('participant must be of type address')
+
+        self.payment_network_identifier = payment_network_identifier
+        self.token_address = token_address
+        self.channel_identifier = channel_identifier
+        self.merkle_tree_leaves = merkle_tree_leaves
+        self.participant = participant
+        self.unlocked_amount = unlocked_amount
+        self.returned_tokens = returned_tokens
 
 
 class ContractReceiveNewRoute(StateChange):
