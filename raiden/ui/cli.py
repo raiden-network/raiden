@@ -56,11 +56,6 @@ from raiden.utils import (
     merge_dict,
 )
 from raiden.network.sockfactory import SocketFactory
-from raiden.tests.utils.smoketest import (
-    load_smoketest_config,
-    start_ethereum,
-    run_smoketests,
-)
 
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -903,8 +898,17 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @click.pass_context
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
+    import binascii
+
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
+    from raiden.tests.utils.blockchain import geth_wait_and_check
+    from raiden.tests.integration.fixtures.backend_geth import web3
+    from raiden.tests.utils.smoketest import (
+        load_smoketest_config,
+        start_ethereum,
+        run_smoketests,
+    )
     from raiden.utils import get_contract_path
 
     # Check the solidity compiler early in the smoketest.
@@ -941,6 +945,12 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     print('[2/5] starting ethereum')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
+    port = ethereum_config['rpc']
+    web3_client = web3([port])
+
+    random_marker = binascii.hexlify(b'raiden').decode()
+    privatekeys = []
+    geth_wait_and_check(web3_client, privatekeys, random_marker)
 
     print('[3/5] starting raiden')
 
@@ -948,7 +958,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     args = dict(
         discovery_contract_address=smoketest_config['contracts']['discovery_address'],
         registry_contract_address=smoketest_config['contracts']['registry_address'],
-        eth_rpc_endpoint='http://127.0.0.1:{}'.format(ethereum_config['rpc']),
+        eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
         network_id='627',
