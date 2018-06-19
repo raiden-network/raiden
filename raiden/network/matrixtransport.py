@@ -95,6 +95,7 @@ class MatrixTransport:
 
         self._bound_logger = None
         self._running = False
+        self._health_semaphore = gevent.lock.Semaphore()
 
     def start(
         self,
@@ -140,18 +141,19 @@ class MatrixTransport:
             return
         self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
-        users = [
-            user
-            for user
-            in self._client.search_user_directory(node_address_hex)
-            if self._validate_userid_signature(user)
-        ]
-        existing = {presence['user_id'] for presence in self._client.get_presence_list()}
-        user_ids_to_add = {u.user_id for u in users}
-        user_ids = user_ids_to_add - existing
-        if user_ids:
-            self.log.debug('Add to presence list', added_users=user_ids)
-            self._client.modify_presence_list(add_user_ids=list(user_ids))
+        with self._health_semaphore:
+            users = [
+                user
+                for user
+                in self._client.search_user_directory(node_address_hex)
+                if self._validate_userid_signature(user)
+            ]
+            existing = {presence['user_id'] for presence in self._client.get_presence_list()}
+            user_ids_to_add = {u.user_id for u in users}
+            user_ids = user_ids_to_add - existing
+            if user_ids:
+                self.log.debug('Add to presence list', added_users=user_ids)
+                self._client.modify_presence_list(add_user_ids=list(user_ids))
         # FIXME: Figure out a better place to do this
         self._address_to_userids.setdefault(node_address, set()).update(user_ids_to_add)
 
@@ -530,6 +532,8 @@ class MatrixTransport:
         room_candidates = self._client.search_room_directory(room_name)
         if room_candidates:
             room = room_candidates[0]
+            if room.room_id not in self._client.get_rooms():
+                room = self._client.join_room(room.room_id)
         else:
             # no room with expected name => create one and invite peer
             address = to_normalized_address(receiver_address)
