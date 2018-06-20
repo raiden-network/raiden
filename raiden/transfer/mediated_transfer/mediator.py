@@ -3,7 +3,7 @@ import itertools
 import random
 from typing import List, Dict
 
-from raiden.transfer import channel
+from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -699,6 +699,46 @@ def events_for_close(channelidentifiers_to_channels, transfers_pair, block_numbe
     return events
 
 
+def events_for_onchain_secretreveal(
+        channelidentifiers_to_channels,
+        transfers_pair,
+        block_number,
+):
+    """ Reveal secrets for transfer locks that are in the unsafe region.
+    """
+    events = list()
+    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
+
+    for pair in reversed(pending_transfers_pairs):
+        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
+
+        safe_to_wait = is_safe_to_wait(
+            pair.payer_transfer.lock.expiration,
+            payer_channel.reveal_timeout,
+            block_number,
+        )
+
+        # We check if the secret is already known by receiving a  ReceiveSecretReveal state change
+        secret_known = channel.is_secret_known(
+            payer_channel.partner_state,
+            pair.payer_transfer.lock.secrethash,
+        )
+
+        if not safe_to_wait and secret_known:
+            secret = channel.get_secret(
+                payer_channel.partner_state,
+                pair.payer_transfer.lock.secrethash,
+            )
+            reveal_events = secret_registry.events_for_onchain_secretreveal(
+                payer_channel,
+                block_number,
+                secret,
+            )
+            events.extend(reveal_events)
+
+    return events
+
+
 def events_for_unlock_if_closed(
         channelidentifiers_to_channels,
         transfers_pair,
@@ -948,6 +988,12 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
         block_number,
     )
 
+    secret_reveal_events = events_for_onchain_secretreveal(
+        channelidentifiers_to_channels,
+        state.transfers_pair,
+        block_number,
+    )
+
     # unlock is handled by the channel once the close transaction is mined
     # unlock_events = events_for_unlock(
     #     channelidentifiers_to_channels,
@@ -961,7 +1007,7 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
 
     iteration = TransitionResult(
         state,
-        close_events + unlock_fail_events,
+        close_events + unlock_fail_events + secret_reveal_events,
     )
 
     return iteration
