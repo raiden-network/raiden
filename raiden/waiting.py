@@ -131,6 +131,26 @@ def wait_for_close(
             gevent.sleep(poll_timeout)
 
 
+def wait_for_payment_network(
+        raiden: RaidenService,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        poll_timeout: typing.NetworkTimeout,
+) -> None:
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(raiden),
+        payment_network_id,
+        token_address,
+    )
+    while token_network is None:
+        gevent.sleep(poll_timeout)
+        token_network = views.get_token_network_by_token_address(
+            views.state_from_raiden(raiden),
+            payment_network_id,
+            token_address,
+        )
+
+
 def wait_for_settle(
         raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
