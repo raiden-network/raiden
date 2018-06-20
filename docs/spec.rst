@@ -175,7 +175,7 @@ Raiden currently relies on hash time locks heavily. They are the essential ingre
 With this lock construct it is possible to:
 
 - Mediate token transfers, by relying on the same hashlock but different expiration times.
-- Perform token swaps. Two mediated transfers for different tokens are made with the same hashlock and once the secret is revealed we end up having an atomic swap of the tokens.
+- Perform token swaps. Two mediated transfers for different tokens are made with the same hashlock and once the secret is revealed we end up having an atomic swap of the tokens. (Token swaps are not part of the Red Eyes release.)
 
 .. topic:: Alternative Protocol Implementation
 

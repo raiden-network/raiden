@@ -56,8 +56,7 @@ The most interesting feature in the ``Actions`` menu  is the ``Tranfer`` action.
 
 The last point in the ``Actions`` menu is ``Watch Events``. This will simply open tab within the ``Tokens`` view and allow the user to see all channels created and deleted for the specific token.
 
-In this view it is also possible to ``Swap Tokens``. This is done by pressing the ``Swap Tokens`` button and then filling in the form. For more information on what a token swap is, please see :ref:`token swaps <token-swaps>`.
-
+In further releases it will also be possible to perform token swaps with the ``Swap Tokens`` button. This function is not part of the Red Eyes release.
 
 .. thumbnail:: images/raiden_webui_tokens_page_screenshot.png
     :alt: Raiden web app tokens page
