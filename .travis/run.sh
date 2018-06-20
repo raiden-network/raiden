@@ -5,7 +5,7 @@ set -ex
 if [[ ${TRAVIS_EVENT_TYPE} == "cron" ]]; then
     BLOCKCHAIN_TYPE="geth"
 else
-    BLOCKCHAIN_TYPE="eth-tester"
+    BLOCKCHAIN_TYPE="tester"
 fi
 
 coverage run \
