@@ -2,15 +2,15 @@
 import json
 import os
 from binascii import hexlify
-from eth_utils import is_normalized_address
 
 import click
 import structlog
+from eth_utils import to_checksum_address
 
+from raiden.log_config import configure_logging
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
-from raiden.utils import get_contract_path, decode_hex
-from raiden.log_config import configure_logging
+from raiden.utils import decode_hex, get_contract_path
 from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)
@@ -55,6 +55,7 @@ def patch_deploy_solidity_contract():
         def visit_Assign(self, node):  # pylint: disable=no-self-use
             is_libraries = (
                 len(node.targets) == 1 and
+                node.col_offset == 4 and
                 isinstance(node.targets[0], ast.Name) and
                 node.targets[0].id == 'libraries'
             )
@@ -93,8 +94,9 @@ def deploy_file(contract, compiled_contracts, client):
         '',
         contract_path=filename,
     )
-    log.info(f"Deployed {name} @ {is_normalized_address(proxy.contract_address)}")
-    libraries[contract] = is_normalized_address(proxy.contract_address)[2:]
+
+    log.info(f"Deployed {name} @ {to_checksum_address(proxy.contract_address)}")
+    libraries[contract] = proxy.contract_address
     return libraries
 
 
@@ -140,6 +142,14 @@ def main(keystore_path, pretty, gas_price, port):
     )
 
     deployed = deploy_all(client)
+
+    deployed['EndpointRegistry.sol:EndpointRegistry'] = to_checksum_address(
+        deployed['EndpointRegistry.sol:EndpointRegistry'],
+    )
+    deployed['Registry.sol:Registry'] = to_checksum_address(
+        deployed['Registry.sol:Registry'],
+    )
+
     print(json.dumps(deployed, indent=2 if pretty else None))
 
 
