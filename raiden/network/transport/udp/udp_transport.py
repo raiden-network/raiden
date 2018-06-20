@@ -269,7 +269,7 @@ class UDPTransport:
                 self.nat_invitation_timeout,
                 ping_nonce,
             )
-            greenlet_healthcheck.name = f'Healtcheck for {pex(recipient)}'
+            greenlet_healthcheck.name = f'Healthcheck for {pex(recipient)}'
             self.greenlets.append(greenlet_healthcheck)
 
     def init_queue_for(

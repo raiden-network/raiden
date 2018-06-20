@@ -36,7 +36,7 @@ def test_mediated_transfer(
         token_address,
     )
 
-    # make a ferw transfers from app0 to app2
+    # make a few transfers from app0 to app2
     amount = 1
     spent_amount = deposit - 2
     for _ in range(spent_amount):
