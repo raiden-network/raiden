@@ -2,7 +2,7 @@ Raiden Network |capitalized_version| Documentation
 **************************************************
 
 
-This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
+This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `Raiden Github Repository <https://github.com/raiden-network/raiden>`_.
 
 What is the Raiden Network?
 ---------------------------
@@ -21,7 +21,7 @@ Contents
   overview_and_guide
   api_walkthrough
   rest_api
-  what_is_the_dev_preview
+  what_is_the_red_eyes_release
   webui_tutorial
   spec
   smart_contracts
