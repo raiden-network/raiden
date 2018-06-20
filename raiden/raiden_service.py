@@ -208,7 +208,7 @@ class RaidenService:
             os.makedirs(database_dir, exist_ok=True)
 
             self.database_dir = database_dir
-            # Prevent concurrent acces to the same db
+            # Prevent concurrent access to the same db
             self.lock_file = os.path.join(self.database_dir, '.lock')
             self.db_lock = filelock.FileLock(self.lock_file)
         else:
@@ -270,7 +270,7 @@ class RaidenService:
 
         self.install_and_query_payment_network_filters(
             self.default_registry.address,
-            last_log_block_number,
+            0 if not last_log_block_number else last_log_block_number,
         )
 
         # Regarding the timing of starting the alarm task it is important to:

@@ -932,8 +932,19 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         load_smoketest_config,
         start_ethereum,
         run_smoketests,
+        patch_smoke_fns,
     )
     from raiden.utils import get_contract_path
+    from raiden.raiden_service import RaidenService
+
+    # TODO: Temporary until we also deploy contracts in smoketests
+    # This function call patches the initial query filtering to create some fake
+    # events. That is done to make up for the missing events that would have
+    # been generated and populated the state if the contracts were deployed
+    # and not precompiled in the smoketest genesis file
+    RaidenService.install_and_query_payment_network_filters = patch_smoke_fns(
+        RaidenService.install_and_query_payment_network_filters,
+    )
 
     # Check the solidity compiler early in the smoketest.
     #
