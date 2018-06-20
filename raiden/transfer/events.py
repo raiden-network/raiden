@@ -83,7 +83,7 @@ class ContractSendChannelUpdateTransfer(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelUnlock(Event):
+class ContractSendChannelBatchUnlock(Event):
     """ Event emitted when the lock must be claimed on-chain. """
 
     def __init__(self, channel_identifier, unlock_proofs):
@@ -91,14 +91,14 @@ class ContractSendChannelUnlock(Event):
         self.unlock_proofs = unlock_proofs
 
     def __repr__(self):
-        return '<ContractSendChannelUnlock channel:{} unlock_proofs:{}>'.format(
+        return '<ContractSendChannelBatchUnlock channel:{} unlock_proofs:{}>'.format(
             pex(self.channel_identifier),
             self.unlock_proofs,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, ContractSendChannelUnlock) and
+            isinstance(other, ContractSendChannelBatchUnlock) and
             self.channel_identifier == other.channel_identifier and
             self.unlock_proofs == other.unlock_proofs
         )

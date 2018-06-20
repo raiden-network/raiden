@@ -456,7 +456,7 @@ class MediationPairState(State):
         'payer_pending',
         'payer_secret_revealed',    # SendRevealSecret was sent
         'payer_waiting_close',      # ContractSendChannelClose was sent
-        'payer_waiting_unlock',   # ContractSendChannelUnlock was sent
+        'payer_waiting_unlock',   # ContractSendChannelBatchUnlock was sent
         'payer_contract_unlock',  # ContractReceiveChannelUnlock for the above send received
         'payer_balance_proof',      # ReceiveUnlock was received
         'payer_expired',            # None of the above happened and the lock expired

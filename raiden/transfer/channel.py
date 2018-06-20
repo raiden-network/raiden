@@ -12,7 +12,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelUnlock,
+    ContractSendChannelBatchUnlock,
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
@@ -1386,7 +1386,7 @@ def handle_channel_closed(
 
         unlock_proofs = get_known_unlocks(channel_state.partner_state)
         if unlock_proofs:
-            onchain_unlock = ContractSendChannelUnlock(
+            onchain_unlock = ContractSendChannelBatchUnlock(
                 channel_state.identifier,
                 unlock_proofs,
             )
@@ -1449,7 +1449,7 @@ def handle_channel_settled2(
 
         unlock_proofs = get_batch_unlock(channel_state.partner_state)
         if unlock_proofs:
-            onchain_unlock = ContractSendChannelUnlock(
+            onchain_unlock = ContractSendChannelBatchUnlock(
                 channel_state.identifier,
                 unlock_proofs,
             )
@@ -1533,7 +1533,7 @@ def handle_channel_unlock(
         if is_lock_pending(our_state, secrethash):
             lock = get_lock(our_state, secrethash)
             proof = compute_proof_for_lock(our_state, secret, lock)
-            unlock = ContractSendChannelUnlock(channel_state.identifier, [proof])
+            unlock = ContractSendChannelBatchUnlock(channel_state.identifier, [proof])
             events.append(unlock)
 
         register_secret(channel_state, secret, secrethash)
