@@ -1,11 +1,4 @@
-from collections import namedtuple
-
 from raiden.transfer.architecture import StateManager
-
-InternalEvent = namedtuple(
-    'InternalEvent',
-    ('identifier', 'state_change_id', 'block_number', 'event_object'),
-)
 
 
 def restore_from_latest_snapshot(transition_function, storage):
