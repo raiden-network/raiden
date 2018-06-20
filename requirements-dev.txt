@@ -1,5 +1,8 @@
 -r requirements.txt
 
+# Split out to allow quicker lint turnaround on CI
+-r requirements-lint.txt
+
 # Testing
 pytest==3.6.0
 pytest-timeout==1.2.1
@@ -7,10 +10,6 @@ pytest-random==0.02
 pytest-cov==2.5.1
 flaky==3.4.0
 grequests==0.3.0
-flake8==3.5.0
-flake8-bugbear==18.2.0
-flake8-commas==2.0.0
-flake8-tuple==0.2.13
 mirakuru==0.9.0
 
 # Debugging

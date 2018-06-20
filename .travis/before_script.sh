@@ -3,8 +3,6 @@
 set -e
 set -x
 
-make lint
-python setup.py check --restructuredtext --strict
 if [ -z "$RUN_SYNAPSE" ]; then
     raiden smoketest
 else
