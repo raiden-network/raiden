@@ -12,7 +12,7 @@ fi
 pip install ${INSTALL_OPT} -U pip wheel coveralls "coverage<4.4"
 pip install ${INSTALL_OPT} pytest-travis-fold
 pip install ${INSTALL_OPT} pyinstaller
-pip install ${INSTALL_OPT} -r requirements-dev.txt
+pip install ${INSTALL_OPT} -U -r requirements-dev.txt
 pip install ${INSTALL_OPT} -e .
 
 pip list --outdated
