@@ -660,7 +660,7 @@ def get_distributable(
 ) -> typing.TokenAmount:
     """Return the amount of tokens that can be used by the `sender`.
 
-    The returned value is limted to a UINT256, since that is the representation
+    The returned value is limited to a UINT256, since that is the representation
     used in the smart contracts and we cannot use a larger value. The limit is
     enforced on transferred_amount + locked_amount to avoid overflows. This is
     an additional security check.
