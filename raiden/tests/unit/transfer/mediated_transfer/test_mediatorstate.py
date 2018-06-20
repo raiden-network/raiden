@@ -31,6 +31,7 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import Block
+from raiden.transfer.events import ContractSendSecretReveal
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     ADDR,
@@ -1072,6 +1073,48 @@ def test_events_for_close():
         assert pair.payer_state == 'payer_waiting_close'
 
 
+def test_events_for_onchain_secretreveal():
+    """ Secret must be registered on-chain when the unsafe region is reached and
+    the secret is known.
+    """
+
+    amount = 10
+    channelmap, transfers_pair = make_transfers_pair(
+        [HOP2_KEY, HOP3_KEY],
+        amount,
+    )
+
+    pair = transfers_pair[0]
+    channel_identifier = pair.payer_transfer.balance_proof.channel_address
+    channel_state = channelmap[channel_identifier]
+
+    # Reveal the secret off-chain
+    for channel_state in channelmap.values():
+        channel.register_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
+
+    block_number = (
+        pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
+    )
+
+    # If we are not in the unsafe region, we must NOT emit ContractSendSecretReveal
+    events = mediator.events_for_onchain_secretreveal(
+        channelmap,
+        transfers_pair,
+        block_number - 1,
+    )
+    assert not events
+
+    # If we are in the unsafe region, we must emit ContractSendSecretReveal
+    events = mediator.events_for_onchain_secretreveal(
+        channelmap,
+        transfers_pair,
+        block_number,
+    )
+
+    assert isinstance(events[0], ContractSendSecretReveal)
+    assert events[0].secret == UNIT_SECRET
+
+
 def test_events_for_close_hold_for_unpaid_payee():
     """ If the secret is known but the payee transfer has not been paid the
     node must not settle on-chain, otherwise the payee can burn tokens to
@@ -1617,7 +1660,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         assert not any(
             event
             for event in new_iteration.events
-            if not isinstance(event, EventUnlockFailed)
+            if not isinstance(event, (EventUnlockFailed, ContractSendSecretReveal))
         )
 
 
