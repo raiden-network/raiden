@@ -168,8 +168,7 @@ def handle_contract_send_secretreveal(
         raiden: 'RaidenService',
         channel_close_event: ContractSendSecretReveal,
 ):
-    secret_registry = raiden.chain.secret_registry()
-    secret_registry.register_secret(channel_close_event.secret)
+    raiden.default_secret_registry.register_secret(channel_close_event.secret)
 
 
 def handle_contract_send_channelclose(
@@ -281,8 +280,7 @@ def on_raiden_event(raiden: RaidenService, event: Event):
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
     elif type(event) == ContractSendSecretReveal:
-        # handle_contract_send_secretreveal(raiden, event)
-        pass
+        handle_contract_send_secretreveal(raiden, event)
     elif type(event) == ContractSendChannelClose:
         handle_contract_send_channelclose(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:

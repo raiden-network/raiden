@@ -202,6 +202,7 @@ def create_apps(
         blockchain_services,
         endpoint_discovery_services,
         registry_address,
+        secret_registry_address,
         raiden_udp_ports,
         reveal_timeout,
         settle_timeout,
@@ -271,6 +272,7 @@ def create_apps(
         config_copy.update(config)
 
         registry = blockchain.registry(registry_address)
+        secret_registry = blockchain.secret_registry(secret_registry_address)
 
         if use_matrix:
             transport = MatrixTransport(config['matrix'])
@@ -291,7 +293,7 @@ def create_apps(
             config_copy,
             blockchain,
             registry,
-            None,  # the SecretRegistry, fix once used
+            secret_registry,
             transport,
             discovery,
         )

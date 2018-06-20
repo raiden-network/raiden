@@ -25,6 +25,7 @@ BlockchainServices = namedtuple(
     'BlockchainServices',
     (
         'deploy_registry',
+        'secret_registry',
         'deploy_service',
         'blockchain_services',
     ),
@@ -186,6 +187,7 @@ def _jsonrpc_services(
         poll_timeout,
         deploy_new_contracts,
         registry_address=None,
+        secret_registry_address=None,
         web3=None,
 ):
     deploy_blockchain = BlockChainService(
@@ -195,14 +197,6 @@ def _jsonrpc_services(
     )
 
     if deploy_new_contracts:
-        # secret registry
-        secret_registry_address = deploy_contract_web3(
-            CONTRACT_SECRET_REGISTRY,
-            poll_timeout,
-            deploy_client,
-        )
-        secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
-
         network_registry_address = deploy_contract_web3(
             CONTRACT_TOKEN_NETWORK_REGISTRY,
             poll_timeout,
@@ -211,6 +205,15 @@ def _jsonrpc_services(
             deploy_blockchain.network_id,
         )
         network_registry = deploy_blockchain.token_network_registry(network_registry_address)  # noqa
+
+    # Deploy the secret registry
+    if secret_registry_address is None:
+        secret_registry_address = deploy_contract_web3(
+            CONTRACT_SECRET_REGISTRY,
+            poll_timeout,
+            deploy_client,
+        )
+        secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
 
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
@@ -253,6 +256,7 @@ def _jsonrpc_services(
 
     return BlockchainServices(
         deploy_registry,
+        secret_registry,
         deploy_blockchain,
         blockchain_services,
     )
