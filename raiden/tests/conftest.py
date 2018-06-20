@@ -67,24 +67,17 @@ def pytest_addoption(parser):
     parser.addoption(
         '--local-matrix',
         dest='local_matrix',
-        default=None,
-        help='Command to run the local matrix server. Defaults to .synapse/run_synapse.sh',
+        default='.synapse/run_synapse.sh',
+        help="Command to run the local matrix server, or 'none', "
+             "default: '.synapse/run_synapse.sh'",
     )
 
     parser.addoption(
-        '--matrix-host',
+        '--matrix-server',
         action='store',
-        dest='matrix_host',
-        default='localhost',
-        help="Host name of local matrix server if used, default: 'localhost'",
-    )
-
-    parser.addoption(
-        '--matrix-port',
-        action='store',
-        dest='matrix_port',
-        default=8008,
-        help='Port of local matrix server if used, default: 8008',
+        dest='matrix_server',
+        default='http://localhost:8008',
+        help="Host name of local matrix server if used, default: 'http://localhost:8008'",
     )
 
 

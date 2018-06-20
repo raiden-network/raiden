@@ -33,13 +33,13 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
-from raiden.utils import sha3, privatekey_to_address
+from raiden.utils import sha3
 from raiden.udp_message_handler import on_udp_message
 
 
 def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
-    message.sign(key, address)
+    message.sign(key)
     on_udp_message(app.raiden, message)
 
 
@@ -360,9 +360,8 @@ def increase_transferred_amount(
     )
 
     direct_transfer_message = DirectTransfer.from_event(event)
-    address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    direct_transfer_message.sign(sign_key, address)
+    direct_transfer_message.sign(sign_key)
 
     # if this fails it's not the right key for the current `from_channel`
     assert direct_transfer_message.sender == from_channel.our_state.address
@@ -412,9 +411,8 @@ def make_direct_transfer_from_channel(
     assert isinstance(iteration.events[0], SendDirectTransfer)
     direct_transfer_message = DirectTransfer.from_event(iteration.events[0])
 
-    address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    direct_transfer_message.sign(sign_key, address)
+    direct_transfer_message.sign(sign_key)
 
     # if this fails it's not the right key for the current `from_channel`
     assert direct_transfer_message.sender == from_channel.our_state.address
@@ -462,9 +460,8 @@ def make_mediated_transfer(
     )
     mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
-    address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key, address)
+    mediated_transfer_msg.sign(sign_key)
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)

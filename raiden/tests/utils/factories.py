@@ -254,7 +254,8 @@ def make_signed_transfer(
         target,
         initiator,
     )
-    transfer.sign(pkey, sender)
+    transfer.sign(pkey)
+    assert transfer.sender == sender
 
     return lockedtransfersigned_from_message(transfer)
 

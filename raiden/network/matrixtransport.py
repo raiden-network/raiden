@@ -1,17 +1,18 @@
-# -*- coding: utf-8 -*-
-import binascii
 import json
 import re
+from collections import defaultdict
 from enum import Enum
 from json import JSONDecodeError
+from binascii import Error as DecodeError
 from operator import itemgetter
 from random import Random
-from typing import Dict, Set, Tuple, List, Optional
 from urllib.parse import urlparse
 from eth_utils import (
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
+    encode_hex,
+    decode_hex,
 )
 
 import gevent
@@ -47,12 +48,10 @@ from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNREACHAB
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
-    data_decoder,
-    data_encoder,
     eth_sign_sha3,
     pex,
-    typing,
 )
+from raiden.utils.typing import Dict, Set, Tuple, List, Optional, Address
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
@@ -68,6 +67,7 @@ class UserPresence(Enum):
 class MatrixTransport:
     _room_prefix = 'raiden'
     _room_sep = '_'
+    _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 
     def __init__(self, config: dict):
         self._raiden_service: RaidenService = None
@@ -80,13 +80,12 @@ class MatrixTransport:
 
         self._discovery_room: Room = None
 
-        self._messageids_to_asyncresult: Dict[typing.Address, AsyncResult] = dict()
-        self._addresses_of_interest: Set[typing.Address] = set()
-        self._address_to_userids: Dict[typing.Address, Set[str]] = dict()
+        self._messageids_to_asyncresult: Dict[Address, AsyncResult] = dict()
+        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
+        self._address_to_presence: Dict[Address, UserPresence] = dict()
+        self._userids_to_address: Dict[str, Address] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
-        self._address_to_presence: Dict[typing.Address, UserPresence] = dict()
-        self._userids_to_address: Dict[str, typing.Address] = dict()
-        self._address_to_roomid: Dict[typing.Address, str] = dict()
+        self._address_to_roomid: Dict[Address, str] = dict()
 
         self._discovery_room_alias = None
         self._discovery_room_alias_full = None
@@ -96,11 +95,12 @@ class MatrixTransport:
 
         self._bound_logger = None
         self._running = False
+        self._health_semaphore = gevent.lock.Semaphore()
 
     def start(
         self,
         raiden_service: RaidenService,
-        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]],
+        queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
         self._raiden_service = raiden_service
         room_alias_re = self._make_room_alias(
@@ -141,18 +141,19 @@ class MatrixTransport:
             return
         self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
-        users = [
-            user
-            for user
-            in self._client.search_user_directory(node_address_hex)
-            if _validate_userid_signature(user)
-        ]
-        existing = {presence['user_id'] for presence in self._client.get_presence_list()}
-        user_ids_to_add = {u.user_id for u in users}
-        user_ids = user_ids_to_add - existing
-        if user_ids:
-            self.log.debug('Add to presence list', added_users=user_ids)
-            self._client.modify_presence_list(add_user_ids=list(user_ids))
+        with self._health_semaphore:
+            users = [
+                user
+                for user
+                in self._client.search_user_directory(node_address_hex)
+                if self._validate_userid_signature(user)
+            ]
+            existing = {presence['user_id'] for presence in self._client.get_presence_list()}
+            user_ids_to_add = {u.user_id for u in users}
+            user_ids = user_ids_to_add - existing
+            if user_ids:
+                self.log.debug('Add to presence list', added_users=user_ids)
+                self._client.modify_presence_list(add_user_ids=list(user_ids))
         # FIXME: Figure out a better place to do this
         self._address_to_userids.setdefault(node_address, set()).update(user_ids_to_add)
 
@@ -166,7 +167,7 @@ class MatrixTransport:
 
     def send_async(
         self,
-        receiver_address: typing.Address,
+        receiver_address: Address,
         queue_name: bytes,
         message: Message,
     ) -> AsyncResult:
@@ -186,10 +187,6 @@ class MatrixTransport:
             raise ValueError(
                 'Do not use send_async for {} messages'.format(message.__class__.__name__),
             )
-
-        if isinstance(message, SignedMessage) and not message.sender:
-            # FIXME: This can't be right
-            message.sender = self._client.user_id
 
         # Ignore duplicated messages
         message_id = message.message_identifier
@@ -233,7 +230,7 @@ class MatrixTransport:
 
     def _login_or_register(self):
         # password is signed server address
-        password = data_encoder(self._sign(self._server_url.encode()))
+        password = encode_hex(self._sign(self._server_url.encode()))
         seed = int.from_bytes(self._sign(b'seed')[-32:], 'big')
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
@@ -276,7 +273,7 @@ class MatrixTransport:
         else:
             raise ValueError('Could not register or login!')
         # TODO: persist access_token, to avoid generating a new login every time
-        name = data_encoder(self._sign(self._client.user_id.encode()))
+        name = encode_hex(self._sign(self._client.user_id.encode()))
         self._client.get_user(self._client.user_id).set_display_name(name)
 
     def _join_discovery_room(self):
@@ -328,9 +325,11 @@ class MatrixTransport:
         """ Join all invited rooms """
         if not self._running:
             return
+        # one must join to be able to fetch room alias
         room = self._client.join_room(room_id)
         if not room.canonical_alias:
             self.log.warning('Got invited to a room without canonical alias - ignoring', room=room)
+            room.leave()
             return
         peer_address = self._get_peer_address_from_room(room.canonical_alias)
         if not peer_address:
@@ -338,6 +337,7 @@ class MatrixTransport:
                 'Got invited to a room we\'re not supposed to be a member of - ignoring',
                 room=room,
             )
+            room.leave()
             return
         self._address_to_roomid[peer_address] = room.room_id
         room.add_listener(self._handle_message, 'm.room.message')
@@ -364,32 +364,17 @@ class MatrixTransport:
             return
 
         user = self._client.get_user(sender_id)
-
-        peer_address = self._userids_to_address.get(sender_id)
+        peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            try:
-                # recover displayname signature
-                peer_address = signing.recover_address(
-                    sender_id.encode(),
-                    signature=data_decoder(user.get_display_name()),
-                    hasher=eth_sign_sha3,
-                )
-            except AssertionError:
-                self.log.warning('INVALID MESSAGE', sender_id=sender_id)
-                return
-            node_address_hex = to_normalized_address(peer_address)
-            if node_address_hex.lower() not in sender_id:
-                self.log.warning(
-                    'INVALID SIGNATURE',
-                    peer_address=node_address_hex,
-                    sender_id=sender_id,
-                )
-                return
-            self._userids_to_address[sender_id] = peer_address
+            self.log.debug(
+                'INVALID SIGNATURE',
+                sender_id=pex(sender_id),
+            )
+            return
 
         data = event['content']['body']
         if data.startswith('0x'):
-            message = message_from_bytes(data_decoder(data))
+            message = message_from_bytes(decode_hex(data))
         else:
             try:
                 message_dict = json.loads(data)
@@ -402,13 +387,7 @@ class MatrixTransport:
                 )
                 return
             self.log.debug('MESSAGE_DATA', data=message_dict)
-            message_dict = json.loads(data)
-            self.log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
-
-        if isinstance(message, SignedMessage) and not message.sender:
-            # FIXME: This can't be right
-            message.sender = peer_address
 
         if isinstance(message, Delivered):
             self._receive_delivered(message)
@@ -483,7 +462,7 @@ class MatrixTransport:
 
     def _send_queued_messages(
         self,
-        queueids_to_queues: Dict[Tuple[typing.Address, str], List[Event]],
+        queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
         def send_queue(address, events):
             if not self._running:
@@ -498,7 +477,7 @@ class MatrixTransport:
 
     def _send_with_retry(
         self,
-        receiver_address: typing.Address,
+        receiver_address: Address,
         async_result: AsyncResult,
         data: str,
     ):
@@ -528,7 +507,7 @@ class MatrixTransport:
 
     def _get_room_for_address(
         self,
-        receiver_address: typing.Address,
+        receiver_address: Address,
         allow_missing_peers=False,
     ) -> Optional[Room]:
         if not self._running:
@@ -546,7 +525,7 @@ class MatrixTransport:
         # of communication.
         # e.g.: raiden_ropsten_0xaaaa_0xbbbb
         address_pair = sorted([
-            to_normalized_address(address).lower()
+            to_normalized_address(address)
             for address in [receiver_address, self._raiden_service.address]
         ])
         room_name = self._make_room_alias(*address_pair)
@@ -554,6 +533,8 @@ class MatrixTransport:
         room_candidates = self._client.search_room_directory(room_name)
         if room_candidates:
             room = room_candidates[0]
+            if room.room_id not in self._client.get_rooms():
+                room = self._client.join_room(room.room_id)
         else:
             # no room with expected name => create one and invite peer
             address = to_normalized_address(receiver_address)
@@ -563,7 +544,7 @@ class MatrixTransport:
                 return
 
             # filter candidates
-            peers = [user for user in candidates if _validate_userid_signature(user)]
+            peers = [user for user in candidates if self._validate_userid_signature(user)]
             if not peers and not allow_missing_peers:
                 self.log.error('No valid peer found', peer_address=address)
                 return
@@ -594,7 +575,11 @@ class MatrixTransport:
         for _ in range(10):
             if room_not_found:
                 try:
-                    room = self._client.create_room(room_name, invitees=invitees)
+                    room = self._client.create_room(
+                        room_name,
+                        invitees=invitees,
+                        is_public=True,  # FIXME: debug only
+                    )
                 except MatrixRequestError as error:
                     if error.code == 409:
                         message = 'seems to have been created by peer meanwhile.'
@@ -635,9 +620,9 @@ class MatrixTransport:
         """
         if not self._running:
             return
-        if event['type'] != 'm.presence':
-            return
         user_id = event['sender']
+        if event['type'] != 'm.presence' or user_id == self._client.user_id:
+            return
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
             return
@@ -653,10 +638,9 @@ class MatrixTransport:
         # User should be re-validated after presence change
         self._userids_to_address.pop(user_id, None)
 
-        try:
-            # FIXME: This should probably use ecrecover instead
-            address = self._address_from_user_id(user_id)
-        except (binascii.Error, AssertionError):
+        user = self._client.get_user(user_id)
+        address = self._validate_userid_signature(user)
+        if not address:
             # Malformed address - skip
             self.log.debug('Malformed address, probably not a raiden node', user_id=user_id)
             return
@@ -719,9 +703,8 @@ class MatrixTransport:
             self._maybe_invite_user(member)
 
     def _maybe_invite_user(self, user):
-        try:
-            address = self._address_from_user_id(user.user_id)
-        except (binascii.Error, AssertionError):
+        address = self._validate_userid_signature(user)
+        if not address:
             return
 
         room_id = self._address_to_roomid.get(address)
@@ -739,10 +722,6 @@ class MatrixTransport:
         if user.user_id not in room._members.keys():
             self.log.debug('INVITE', user=user, room=room)
             room.invite_user(user.user_id)
-
-    @staticmethod
-    def _address_from_user_id(user_id):
-        return to_canonical_address(user_id.partition(':')[0].replace('@', '').partition('.')[0])
 
     def _select_server(self, config):
         server = config['server']
@@ -771,34 +750,57 @@ class MatrixTransport:
         return best_server
 
     def _sign(self, data: bytes) -> bytes:
-        """Use eth_sign compatible hasher to sign matrix data"""
+        """ Use eth_sign compatible hasher to sign matrix data """
         return signing.sign(
             data,
             self._raiden_service.private_key,
             hasher=eth_sign_sha3,
         )
 
-    def _get_peer_address_from_room(self, room_alias):
+    @staticmethod
+    def _recover(data: bytes, signature: bytes) -> Address:
+        """ Use eth_sign compatible hasher to recover address from signed data """
+        return signing.recover_address(
+            data,
+            signature=signature,
+            hasher=eth_sign_sha3,
+        )
+
+    def _get_peer_address_from_room(self, room_alias) -> Optional[Address]:
+        """ Given a room name/alias which contains our address on it, return the other address """
         match = self._room_alias_re.match(room_alias)
         if match:
             addresses = {
                 to_canonical_address(address)
-                for address
-                in (match.group('peer1', 'peer2'))
+                for address in (match.group('peer1', 'peer2'))
             }
             addresses = addresses - {self._raiden_service.address}
             if len(addresses) == 1:
                 return addresses.pop()
 
-
-def _validate_userid_signature(user: User) -> bool:
-    # display_name should be an address present in the user_id
-    recovered = signing.recover_address(
-        user.user_id.encode(),
-        signature=data_decoder(user.get_display_name()),
-        hasher=eth_sign_sha3,
-    )
-    return to_normalized_address(recovered).lower() in user.user_id
+    def _validate_userid_signature(self, user: User) -> Optional[Address]:
+        """ Validate a userId format and signature on displayName, and return its address"""
+        # display_name should be an address in the self._userid_re format
+        address = self._userids_to_address.get(user.user_id)
+        if address:
+            return address
+        match = self._userid_re.match(user.user_id)
+        if not match:
+            return
+        encoded_address: str = match.group(1)
+        address: Address = to_canonical_address(encoded_address)
+        try:
+            recovered = self._recover(
+                user.user_id.encode(),
+                decode_hex(user.get_display_name()),
+            )
+            if not address or not recovered or recovered != address:
+                return
+        except (DecodeError, TypeError):
+            return
+        self._userids_to_address[user.user_id] = address
+        self._address_to_userids[address].add(user.user_id)
+        return address
 
 
 def _event_to_message(event, node_address):
