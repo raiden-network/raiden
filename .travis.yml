@@ -38,7 +38,7 @@ install:
 before_script:
   ./.travis/before_script.sh
 script:
-  - coverage run -m py.test -Wd --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random --blockchain-type=geth $TRANSPORT_OPTIONS $TEST
+  - ./.travis/run.sh
 after_script:
   - coveralls
 notifications:
