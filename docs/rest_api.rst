@@ -280,66 +280,6 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
-Token Swaps
-------------
-
-You can perform a token swap by using the ``token_swaps`` endpoint. A swap consists of two users agreeing on atomically exchanging two different tokens at a particular exchange rate.
-
-By making a ``PUT`` request to ``/api/<version>/token_swaps/<target_address>/<identifier>`` you can either initiate or participate in a token swap with a specific user. The details, along with the role, come as part of the json payload.
-
-Example Request
-^^^^^^^^^^^^^^^
-
-The maker (in our case ``0xbbc5ee8be95683983df67260b0ab033c237bde60``) would do
-
-``PUT /api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337``
-
-with payload
-::
-
-    {
-        "role": "maker",
-        "sending_amount": 42,
-        "sending_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-        "receiving_amount": 76,
-        "receiving_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"
-    }
-
-and the taker (in our case ``0x61c808d82a3ac53231750dadc13c777b59310bd9``) would use:
-``PUT /api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337``
-
-::
-
-    {
-        "role": "taker",
-        "sending_amount": 76,
-        "sending_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-        "receiving_amount": 42,
-        "receiving_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
-    }
-
-Please note that the sending/receiving amount and token is always from the perspective of each node. That is why you see the reverse values in the two different examples.
-
-Example Response
-^^^^^^^^^^^^^^^^
-``201 CREATED``
-
-Possible Responses
-^^^^^^^^^^^^^^^^^^
-
-+------------------+---------------------------+
-| HTTP Code        | Condition                 |
-+==================+===========================+
-| 201 Created      | For successful Creation   |
-+------------------+---------------------------+
-| 400 Bad Request  | If the provided json is in|
-|                  | some way malformed        |
-+------------------+---------------------------+
-| 408 Request      | If the token swap         |
-| Timeout          | operation times out       |
-+------------------+---------------------------+
-| 500 Server Error | Internal Raiden node error|
-+------------------+---------------------------+
 
 Channel Management
 ==================
