@@ -1,8 +1,11 @@
 import itertools
 from collections import namedtuple, defaultdict
+from typing import List, Dict
 
 import structlog
 from eth_utils import to_canonical_address
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
+import raiden_contracts.contract_manager
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -23,9 +26,11 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SETTLED,
     EVENT_CHANNEL_SECRET_REVEALED,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex
 from raiden.network.rpc.smartcontract_proxy import decode_event
+from raiden.utils.typing import Address, BlockSpecification
 
 EventListener = namedtuple(
     'EventListener',
@@ -46,12 +51,13 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def get_contract_events(
-        chain,
-        abi,
-        contract_address,
-        topics,
-        from_block,
-        to_block):
+        chain: BlockChainService,
+        abi: Dict,
+        contract_address: Address,
+        topics: List[str],
+        from_block: BlockSpecification,
+        to_block: BlockSpecification,
+) -> List[Dict]:
     """ Query the blockchain for all events of the smart contract at
     `contract_address` that match the filters `topics`, `from_block`, and
     `to_block`.
@@ -76,14 +82,13 @@ def get_contract_events(
 # the caller.
 
 def get_all_channel_manager_events(
-        chain,
-        channel_manager_address,
-        events=ALL_EVENTS,
-        from_block=0,
-        to_block='latest'):
-    """ Helper to get all events of the ChannelManagerContract at
-    `token_address`.
-    """
+        chain: BlockChainService,
+        channel_manager_address: Address,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    """ Helper to get all events of the ChannelManagerContract at `token_address`. """
 
     return get_contract_events(
         chain,
@@ -96,14 +101,13 @@ def get_all_channel_manager_events(
 
 
 def get_all_registry_events(
-        chain,
-        registry_address,
-        events=ALL_EVENTS,
-        from_block=0,
-        to_block='latest'):
-    """ Helper to get all events of the Registry contract at
-    `registry_address`.
-    """
+        chain: BlockChainService,
+        registry_address: Address,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
         chain,
         CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
@@ -115,19 +119,39 @@ def get_all_registry_events(
 
 
 def get_all_netting_channel_events(
-        chain,
-        netting_channel_address,
-        events=ALL_EVENTS,
-        from_block=0,
-        to_block='latest'):
-    """ Helper to get all events of a NettingChannelContract at
-    `channel_identifier`.
-    """
+        chain: BlockChainService,
+        netting_channel_address: Address,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    """ Helper to get all events of a NettingChannelContract. """
 
     return get_contract_events(
         chain,
         CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
+        events,
+        from_block,
+        to_block,
+    )
+
+
+def get_all_secret_registry_events(
+        chain: BlockChainService,
+        secret_registry_address: Address,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    """ Helper to get all events of a SecretRegistry. """
+
+    return get_contract_events(
+        chain,
+        raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
+            CONTRACT_SECRET_REGISTRY,
+        ),
+        secret_registry_address,
         events,
         from_block,
         to_block,
