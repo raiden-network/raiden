@@ -50,7 +50,7 @@ delivered_message_identifier = make_field(
     '8s',
     integer(0, UINT64_MAX),
 )
-expiration = make_field('expiration', 8, '8s', integer(0, UINT64_MAX))
+expiration = make_field('expiration', 32, '32s', integer(0, UINT256_MAX))
 
 token_network_address = make_field('token_network_address', 20, '20s')
 token = make_field('token', 20, '20s')

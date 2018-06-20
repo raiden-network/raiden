@@ -112,6 +112,6 @@ def merkleroot(merkletree):
 def merkle_leaves_from_packed_data(packed_data):
     number_of_bytes = len(packed_data)
     leaves = []
-    for i in range(0, number_of_bytes, 72):
-        leaves.append(sha3(packed_data[i: i + 72]))
+    for i in range(0, number_of_bytes, 96):
+        leaves.append(sha3(packed_data[i: i + 96]))
     return leaves
