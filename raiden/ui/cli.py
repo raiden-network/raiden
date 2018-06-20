@@ -630,7 +630,7 @@ def app(
     config['database_path'] = database_path
     print(
         'You are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME[net_id],
+            ID_TO_NETWORKNAME.get(net_id) or net_id,
             database_path,
         ),
     )
