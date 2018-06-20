@@ -325,9 +325,11 @@ class MatrixTransport:
         """ Join all invited rooms """
         if not self._running:
             return
+        # one must join to be able to fetch room alias
         room = self._client.join_room(room_id)
         if not room.canonical_alias:
             self.log.warning('Got invited to a room without canonical alias - ignoring', room=room)
+            room.leave()
             return
         peer_address = self._get_peer_address_from_room(room.canonical_alias)
         if not peer_address:
@@ -335,6 +337,7 @@ class MatrixTransport:
                 'Got invited to a room we\'re not supposed to be a member of - ignoring',
                 room=room,
             )
+            room.leave()
             return
         self._address_to_roomid[peer_address] = room.room_id
         room.add_listener(self._handle_message, 'm.room.message')
@@ -383,8 +386,6 @@ class MatrixTransport:
                     exception=ex,
                 )
                 return
-            self.log.debug('MESSAGE_DATA', data=message_dict)
-            message_dict = json.loads(data)
             self.log.debug('MESSAGE_DATA', data=message_dict)
             message = message_from_dict(message_dict)
 
@@ -619,9 +620,9 @@ class MatrixTransport:
         """
         if not self._running:
             return
-        if event['type'] != 'm.presence':
-            return
         user_id = event['sender']
+        if event['type'] != 'm.presence' or user_id == self._client.user_id:
+            return
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
             return
@@ -762,7 +763,7 @@ class MatrixTransport:
         return signing.recover_address(
             data,
             signature=signature,
-            hasher=eth_sign_sha3
+            hasher=eth_sign_sha3,
         )
 
     def _get_peer_address_from_room(self, room_alias) -> Optional[Address]:
