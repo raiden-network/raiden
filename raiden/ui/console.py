@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify
-import io
 import errno
 import os
 import select
 import signal
 import sys
 import time
-import structlog
-from logging import StreamHandler, Formatter
 
 from eth_utils import denoms, to_checksum_address
 import gevent
@@ -17,6 +14,7 @@ from gevent import Greenlet
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
+from raiden import settings, waiting
 from raiden.api.python import RaidenAPI
 from raiden.utils import get_contract_path, safe_address_decode
 from raiden.utils.solc import compile_files_cwd
@@ -234,51 +232,6 @@ class Console(BaseService):
         print('Tip:' + OKBLUE)
         print_usage()
 
-        # Remove handlers that log to stderr
-        root = structlog.get_logger()
-        for handler in root.handlers[:]:
-            if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
-                root.removeHandler(handler)
-
-        stream = io.StringIO()
-        handler = StreamHandler(stream=stream)
-        handler.formatter = Formatter(u'%(levelname)s:%(name)s %(message)s')
-        root.addHandler(handler)
-
-        def lastlog(n=10, prefix=None, level=None):
-            """ Print the last `n` log lines to stdout.
-            Use `prefix='p2p'` to filter for a specific logger.
-            Use `level=INFO` to filter for a specific level.
-            Level- and prefix-filtering are applied before tailing the log.
-            """
-            lines = (stream.getvalue().strip().split('\n') or [])
-            if prefix:
-                lines = [
-                    line
-                    for line in lines
-                    if line.split(':')[1].startswith(prefix)
-                ]
-            if level:
-                lines = [
-                    line
-                    for line in lines
-                    if line.split(':')[0] == level
-                ]
-            for line in lines[-n:]:
-                print(line)
-
-        self.console_locals['lastlog'] = lastlog
-
-        err = io.StringIO()
-        sys.stderr = err
-
-        def lasterr(n=1):
-            """ Print the last `n` entries of stderr to stdout. """
-            for line in (err.getvalue().strip().split('\n') or [])[-n:]:
-                print(line)
-
-        self.console_locals['lasterr'] = lasterr
-
         IPython.start_ipython(argv=['--gui', 'gevent'], user_ns=self.console_locals)
         self.interrupt.clear()
 
@@ -359,7 +312,13 @@ class ConsoleTools:
         channel_manager = registry.manager_by_token(token_address)
 
         # Register the channel manager with the raiden registry
-        self._raiden.register_channel_manager(channel_manager.address)
+        waiting.wait_for_payment_network(
+            self._raiden,
+            registry.address,
+            token_address,
+            settings.DEFAULT_EVENTS_POLL_TIMEOUT,
+        )
+
         return channel_manager
 
     def open_channel_with_funding(
