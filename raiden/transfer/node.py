@@ -604,11 +604,6 @@ def handle_receive_secret_request(node_state, state_change):
     return subdispatch_to_paymenttask(node_state, state_change, secrethash)
 
 
-def handle_receive_secret_reveal(node_state, state_change):
-    secrethash = state_change.secrethash
-    return subdispatch_to_paymenttask(node_state, state_change, secrethash)
-
-
 def handle_processed(node_state, state_change):
     # TODO: improve the complexity of this algorithm
     for queue in node_state.queueids_to_queues.values():
@@ -748,11 +743,6 @@ def state_transition(node_state, state_change):
         )
     elif type(state_change) == ReceiveSecretRequest:
         iteration = handle_receive_secret_request(
-            node_state,
-            state_change,
-        )
-    elif type(state_change) == ReceiveSecretReveal:
-        iteration = handle_receive_secret_reveal(
             node_state,
             state_change,
         )
