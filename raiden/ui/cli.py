@@ -989,6 +989,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     args = dict(
         discovery_contract_address=smoketest_config['contracts']['discovery_address'],
         registry_contract_address=smoketest_config['contracts']['registry_address'],
+        secret_registry_contract_address=smoketest_config['contracts']['secret_registry_address'],
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
