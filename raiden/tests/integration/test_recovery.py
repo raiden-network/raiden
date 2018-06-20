@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import pytest
 from gevent import server
 
 from raiden import waiting
+from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.tests.utils.network import CHAIN
@@ -18,7 +17,7 @@ from raiden.transfer import views
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_mediated_transfer(
+def test_recovery_happy_case(
         raiden_network,
         number_of_nodes,
         deposit,
@@ -63,12 +62,13 @@ def test_mediated_transfer(
         app0.config,
         app0.raiden.chain,
         app0.raiden.default_registry,
+        app0.raiden.default_secret_registry,
         new_transport,
         app0.raiden.discovery,
     )
 
     app0.stop()
-    del app0  # the app0 object should not be used after it is stopped
+    del app0  # from here on the app0_restart should be used
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -107,6 +107,97 @@ def test_mediated_transfer(
         amount,
         timeout=network_wait * number_of_nodes * 2,
     )
+
+    assert_synched_channel_state(
+        token_network_identifier,
+        app0_restart, deposit - spent_amount, [],
+        app1, deposit + spent_amount, [],
+    )
+    assert_synched_channel_state(
+        token_network_identifier,
+        app1, deposit - spent_amount, [],
+        app2, deposit + spent_amount, [],
+    )
+
+
+@pytest.mark.parametrize('in_memory_database', [False])
+@pytest.mark.parametrize('deposit', [10])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_recovery_unhappy_case(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+        skip_if_not_udp,
+        events_poll_timeout,
+):
+    app0, app1, app2 = raiden_network
+    token_address = token_addresses[0]
+    node_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        node_state,
+        payment_network_id,
+        token_address,
+    )
+
+    # make a few transfers from app0 to app2
+    amount = 1
+    spent_amount = deposit - 2
+    for _ in range(spent_amount):
+        mediated_transfer(
+            app0,
+            app2,
+            token_network_identifier,
+            amount,
+            timeout=network_wait * number_of_nodes,
+        )
+
+    app0.raiden.stop()
+    host_port = (app0.raiden.config['host'], app0.raiden.config['port'])
+    socket = server._udp_socket(host_port)
+
+    new_transport = UDPTransport(
+        app0.discovery,
+        socket,
+        app0.raiden.transport.throttle_policy,
+        app0.raiden.config['transport'],
+    )
+
+    app0.stop()
+
+    RaidenAPI(app1.raiden).channel_close(
+        app1.raiden.default_registry.address,
+        token_address,
+        app0.raiden.address,
+    )
+
+    channel01 = views.get_channelstate_for(
+        views.state_from_app(app1),
+        app1.raiden.default_registry.address,
+        token_address,
+        app0.raiden.address,
+    )
+
+    waiting.wait_for_settle(
+        app1.raiden,
+        app1.raiden.default_registry.address,
+        token_address,
+        [channel01.identifier],
+        events_poll_timeout,
+    )
+
+    app0_restart = App(
+        app0.config,
+        app0.raiden.chain,
+        app0.raiden.default_registry,
+        app0.raiden.default_secret_registry,
+        new_transport,
+        app0.raiden.discovery,
+    )
+    del app0  # from here on the app0_restart should be used
 
     assert_synched_channel_state(
         token_network_identifier,
