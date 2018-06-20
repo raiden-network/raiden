@@ -1,4 +1,3 @@
-import gevent
 from eth_utils import (
     to_canonical_address,
     encode_hex,
@@ -8,19 +7,13 @@ from eth_utils import (
 from raiden_libs.utils.signing import sign_data
 from raiden_libs.messages import BalanceProof
 
-
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import TokenNetwork, PaymentChannel
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     EMPTY_HASH,
 )
-
-
-def wait_blocks(web3, blocks):
-    target_block = web3.eth.blockNumber + blocks
-    while web3.eth.blockNumber < target_block:
-        gevent.sleep(0.5)
+from raiden.tests.utils import wait_blocks
 
 
 def test_payment_channel_proxy_basics(
@@ -37,11 +30,13 @@ def test_payment_channel_proxy_basics(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[1],
+        web3=web3,
     )
     c2_client = JSONRPCClient(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[2],
+        web3=web3,
     )
     c1_token_network_proxy = TokenNetwork(
         c1_client,
@@ -81,9 +76,6 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.opened() is True
 
     # check the settlement timeouts
-    assert channel_proxy_1.settle_block_number() == channel_proxy_2.settle_block_number()
-    assert channel_proxy_1.settle_block_number() == NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
-
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
     assert channel_proxy_1.settle_timeout() == NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
@@ -131,9 +123,6 @@ def test_payment_channel_proxy_basics(
     assert len(events) == 3  # ChannelOpened, ChannelNewDeposit, ChannelClosed
 
     # check the settlement timeouts again
-    assert channel_proxy_1.settle_block_number() == channel_proxy_2.settle_block_number()
-    assert channel_proxy_1.settle_block_number() != NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
-
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
     assert channel_proxy_1.settle_timeout() == NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
