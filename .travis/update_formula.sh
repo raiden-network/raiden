@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+
+set -e
+set -x
+
+clone_repo() {
+    git clone https://github.com/raiden-network/homebrew-raiden
+}
+
+update_formula() {
+    UPDATED_SHA256=$(openssl sha -sha256 raiden-${TRAVIS_TAG}-macOS.zip)
+    FORMULA_FILE="./homebrew-raiden/raiden.rb"
+
+    sed "s/v[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG}/g" $FORMULA_FILE
+    sed "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE
+    sed "s/sha256 \"[a-z0-9]\"/sha256 \"${UPDATED_SHA256}\"/g" $FORMULA_FILE
+}
+
+setup_git() {
+    git config --global user.email "travis@travis-ci.org"
+    git config --global user.name "Travis CI"
+}
+
+commit_formula_file() {
+    git checkout -b release-${TRAVIS_TAG}
+    git add raiden.rb
+    git commit -m "Update formula to ${TRAVIS_TAG}"
+}
+
+upload_file() {
+    git remote add release-${TRAVIS_TAG} https://${GH_TOKEN}@github.com/raiden-network/homebrew-raiden.git > /dev/null 2>&1
+    git push --quiet --set-upstream release-${TRAVIS_TAG} master
+}
+
+clone_repo
+update_formula
+setup_git
+commit_formula_file
+upload_file

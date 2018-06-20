@@ -102,6 +102,8 @@ jobs:
         - .travis/before_script.sh
         - python setup.py build
         - python setup.py compile_webui
+      after_script:
+        - .travis/update_formula.sh
       script:
         # pdbpp interferes with pyinstaller, uninstall it
         - pip uninstall -y pdbpp
