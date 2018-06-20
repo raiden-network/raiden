@@ -4,7 +4,7 @@ from typing import List, Dict
 
 import structlog
 from eth_utils import to_canonical_address
-from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 import raiden_contracts.contract_manager
 
 from raiden.blockchain.abi import (
@@ -259,6 +259,10 @@ def decode_event_to_internal2(event):
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+
+    elif data['event'] == EVENT_SECRET_REVEALED:
+        data['secrethash'] = data['args']['secrethash']
+        data['secret'] = data['args']['secret']
 
     return event
 
