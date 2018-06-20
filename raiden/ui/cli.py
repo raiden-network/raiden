@@ -378,11 +378,6 @@ def options(func):
                 type=str,
                 show_default=True,
             ),
-            option(
-                '--eth-client-communication',
-                help='Print all communication with the underlying eth client',
-                is_flag=True,
-            ),
         ),
         option_group(
             'UDP Transport Options',
@@ -534,7 +529,6 @@ def app(
         password_file,
         web_ui,
         datadir,
-        eth_client_communication,
         nat,
         transport,
         matrix_server,
