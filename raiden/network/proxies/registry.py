@@ -155,8 +155,8 @@ class Registry:
 
     def tokenadded_filter(
             self,
-            from_block: typing.blockSpecification = 0,
-            to_block: typing.blockSpecification = 'latest',
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
