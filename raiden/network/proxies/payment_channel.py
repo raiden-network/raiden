@@ -29,13 +29,6 @@ class PaymentChannel:
         """ Returns the channel details. """
         return self.token_network.detail(self.partner_address)
 
-    def settle_block_number(self) -> int:
-        """ Returns the channels settle block number.
-
-        This is relative while the channel is open and becomes absolute when the channel is closed
-        """
-        return self.token_network.settle_block_number(self.partner_address)
-
     def settle_timeout(self) -> int:
         """ Returns the channels settle_timeout. """
 

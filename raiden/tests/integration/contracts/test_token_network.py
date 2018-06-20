@@ -1,5 +1,4 @@
 import pytest
-import gevent
 from eth_utils import (
     to_canonical_address,
     encode_hex,
@@ -20,14 +19,9 @@ from raiden.exceptions import (
     TransactionThrew,
     ChannelIncorrectStateError,
 )
+from raiden.tests.utils import wait_blocks
 from raiden_libs.messages import BalanceProof
 from raiden_libs.utils.signing import sign_data
-
-
-def wait_blocks(web3, blocks):
-    target_block = web3.eth.blockNumber + blocks
-    while web3.eth.blockNumber < target_block:
-        gevent.sleep(0.5)
 
 
 def test_token_network_proxy_basics(
