@@ -36,6 +36,7 @@ def test_token_network_proxy_basics(
     blockchain_rpc_ports,
     token_proxy,
     chain_id,
+    web3,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -43,11 +44,13 @@ def test_token_network_proxy_basics(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[1],
+        web3=web3,
     )
     c2_client = JSONRPCClient(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[2],
+        web3=web3,
     )
     c1_token_network_proxy = TokenNetwork(
         c1_client,
@@ -182,6 +185,7 @@ def test_token_network_proxy_update_transfer(
     blockchain_rpc_ports,
     token_proxy,
     chain_id,
+    web3,
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
@@ -190,11 +194,13 @@ def test_token_network_proxy_update_transfer(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[1],
+        web3=web3,
     )
     c2_client = JSONRPCClient(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         private_keys[2],
+        web3=web3,
     )
     c1_token_network_proxy = TokenNetwork(
         c1_client,

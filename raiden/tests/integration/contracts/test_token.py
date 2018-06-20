@@ -9,6 +9,7 @@ def test_token(
     token_proxy,
     private_keys,
     blockchain_rpc_ports,
+    web3,
 ):
     privkey = private_keys[1]
     address = privatekey_to_address(privkey)
@@ -17,6 +18,7 @@ def test_token(
         '0.0.0.0',
         blockchain_rpc_ports[0],
         privkey,
+        web3=web3,
     )
     other_token_proxy = Token(
         other_client,
