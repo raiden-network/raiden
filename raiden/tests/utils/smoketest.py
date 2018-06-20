@@ -15,11 +15,13 @@ import traceback
 
 from eth_utils import to_checksum_address, to_canonical_address
 
-from raiden.utils import get_project_root
+from raiden.utils import get_project_root, data_decoder
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.network.utils import get_free_port
 from raiden.connection_manager import ConnectionManager
+from raiden.blockchain_events_handler import on_blockchain_event
+from raiden.blockchain.events import Event
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -227,3 +229,41 @@ def start_ethereum(smoketest_genesis):
         init_log_err=init_err,
     )
     return ethereum_node, ethereum_config
+
+
+def patch_smoke_fns(fn):
+    def new_fn(*args, **kwargs):
+        fn(*args, **kwargs)
+
+        # add the needed events for the smoketest manually
+        channel_manager_address_hex = '0x9b04f88ae4b53e760556b487dda3d989e8a5b810'
+        token_address_hex = '0xcDb47D5e8Cf28d7bF0afC0AbB438eF93fbF22D2D'
+        registry_address = data_decoder('0x899D487d7c6110b394B07521B93621aAD0E5122a')
+        event_data = {
+            'args': {
+                'registry_address': '0x899D487d7c6110b394B07521B93621aAD0E5122a',
+                'token_address': token_address_hex,
+                'channel_manager_address': channel_manager_address_hex,
+            },
+            'event': 'TokenAdded',
+            'blockNumber': 0,
+            'block_number': 0,
+        }
+        event = Event(registry_address, event_data)
+        on_blockchain_event(args[0], event, 0)
+
+        event_data = {
+            'args': {
+                'registry_address': '0x899D487d7c6110b394B07521B93621aAD0E5122a',
+                'participant1': '0x67a5e21e34a58ed8d47c719fe291ddd2ea825e12',
+                'participant2': '0x2222222222222222222222222222222222222222',
+            },
+            'netting_channel': data_decoder('0x90cad1c36d8030f1ec5af246046def1e3659ad6f'),
+            'event': 'ChannelNew',
+            'blockNumber': 0,
+            'block_number': 0,
+        }
+        event = Event(data_decoder(channel_manager_address_hex), event_data)
+        on_blockchain_event(args[0], event, 0)
+
+    return new_fn
