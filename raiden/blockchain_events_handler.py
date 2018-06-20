@@ -282,6 +282,7 @@ def handle_secret_revealed(raiden, event, current_block_number):
     registeredsecret_state_change = ContractReceiveSecretReveal(
         secret_registry_address,
         data['secrethash'],
+        data['secret'],
     )
 
     raiden.handle_state_change(registeredsecret_state_change, current_block_number)
@@ -388,6 +389,7 @@ def on_blockchain_event2(raiden, event, current_block_number):
 
     elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED2:
         data['secrethash'] = data['args']['secrethash']
+        data['secret'] = data['args']['secret']
         handle_secret_revealed(raiden, event, current_block_number)
 
     else:

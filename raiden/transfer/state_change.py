@@ -465,26 +465,32 @@ class ContractReceiveSecretReveal(StateChange):
         self,
         secret_registry_address: typing.SecretRegistryAddress,
         secrethash: typing.SecretHash,
+        secret: typing.Secret,
     ):
         if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
             raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
         if not isinstance(secrethash, typing.T_SecretHash):
             raise ValueError('secrethash must be of type SecretHash')
+        if not isinstance(secret, typing.T_Secret):
+            raise ValueError('secret must be of type Secret')
 
         self.secret_registry_address = secret_registry_address
         self.secrethash = secrethash
+        self.secret = secret
 
     def __repr__(self):
-        return '<ContractReceiveSecretReveal secret registry:{} secrethash:{}>'.format(
+        return '<ContractReceiveSecretReveal secret_registry:{} secrethash:{} secret:{}>'.format(
             pex(self.secret_registry_address),
             pex(self.secrethash),
+            pex(self.secret),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveSecretReveal) and
             self.secret_registry_address == other.secret_registry_address and
-            self.secrethash == other.secrethash
+            self.secrethash == other.secrethash and
+            self.secret == other.secret
         )
 
     def __ne__(self, other):

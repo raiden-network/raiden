@@ -20,6 +20,7 @@ from raiden.transfer.state import message_identifier_from_prng
 from raiden.transfer.state_change import (
     Block,
     ReceiveUnlock,
+    ContractReceiveSecretReveal,
 )
 
 
@@ -269,6 +270,13 @@ def state_transition(
             state_change.block_number,
         )
     elif type(state_change) == ReceiveSecretReveal:
+        iteration = handle_secretreveal(
+            target_state,
+            state_change,
+            channel_state,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ContractReceiveSecretReveal:
         iteration = handle_secretreveal(
             target_state,
             state_change,

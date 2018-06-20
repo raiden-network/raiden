@@ -35,6 +35,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelUnlock,
+    ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
 from raiden.utils import sha3
@@ -1258,6 +1259,15 @@ def state_transition(
         )
 
     elif isinstance(state_change, ReceiveSecretReveal):
+        iteration = handle_secretreveal(
+            mediator_state,
+            state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
+            block_number,
+        )
+
+    elif isinstance(state_change, ContractReceiveSecretReveal):
         iteration = handle_secretreveal(
             mediator_state,
             state_change,

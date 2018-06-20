@@ -33,6 +33,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
+    ContractReceiveSecretReveal,
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveTransferDirect,
@@ -713,6 +714,11 @@ def state_transition(node_state, state_change):
         )
     elif type(state_change) == ContractReceiveRouteNew:
         iteration = handle_token_network_action(
+            node_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveSecretReveal:
+        iteration = handle_secret_reveal(
             node_state,
             state_change,
         )
