@@ -144,8 +144,8 @@ class TokenNetworkRegistry:
 
     def tokenadded_filter(
             self,
-            from_block: typing.blockSpecification = 0,
-            to_block: typing.blockSpecification = 'latest',
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_TOKEN_NETWORK_REGISTRY,
