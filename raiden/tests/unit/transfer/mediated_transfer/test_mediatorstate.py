@@ -33,6 +33,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import Block
 from raiden.transfer.events import ContractSendSecretReveal
 from raiden.tests.utils import factories
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
@@ -1111,8 +1112,9 @@ def test_events_for_onchain_secretreveal():
         block_number,
     )
 
-    assert isinstance(events[0], ContractSendSecretReveal)
-    assert events[0].secret == UNIT_SECRET
+    assert must_contain_entry(events, ContractSendSecretReveal, {
+        'secret': UNIT_SECRET,
+    })
 
 
 def test_events_for_close_hold_for_unpaid_payee():
