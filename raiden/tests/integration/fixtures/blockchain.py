@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import namedtuple
+from binascii import unhexlify
 
 import pytest
 import structlog
@@ -9,6 +10,7 @@ from raiden.utils import (
     get_contract_path,
     privatekey_to_address,
 )
+from raiden.utils.typing import Address
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
@@ -150,14 +152,13 @@ def deploy_contract_web3(
     web3 = deploy_client.web3
 
     contract_interface = CONTRACT_MANAGER.abi[contract_name]
-    contract = web3.eth.contract(
-        abi=contract_interface['abi'],
-        bytecode=contract_interface['bin'],
-    )
+
     # Submit the transaction that deploys the contract
-    tx_hash = contract.constructor(*args).transact(
-        {'from': to_checksum_address(deploy_client.sender)},
+    tx_hash = deploy_client.send_transaction(
+        to=Address(b''),
+        data=contract_interface['bin'],
     )
+    tx_hash = unhexlify(tx_hash)
 
     deploy_client.poll(tx_hash, timeout=poll_timeout)
     receipt = web3.eth.getTransactionReceipt(tx_hash)
