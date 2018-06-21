@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify
 import errno
+import io
+import logging
 import os
 import select
 import signal
@@ -231,6 +233,51 @@ class Console(BaseService):
         print('Entering Console' + OKGREEN)
         print('Tip:' + OKBLUE)
         print_usage()
+
+        # Remove handlers that log to stderr
+        root = logging.getLogger()
+        for handler in root.handlers[:]:
+            if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stderr:
+                root.removeHandler(handler)
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream=stream)
+        handler.formatter = logging.Formatter(u'%(levelname)s:%(name)s %(message)s')
+        root.addHandler(handler)
+
+        def lastlog(n=10, prefix=None, level=None):
+            """ Print the last `n` log lines to stdout.
+            Use `prefix='p2p'` to filter for a specific logger.
+            Use `level=INFO` to filter for a specific level.
+            Level- and prefix-filtering are applied before tailing the log.
+            """
+            lines = (stream.getvalue().strip().split('\n') or [])
+            if prefix:
+                lines = [
+                    line
+                    for line in lines
+                    if line.split(':')[1].startswith(prefix)
+                ]
+            if level:
+                lines = [
+                    line
+                    for line in lines
+                    if line.split(':')[0] == level
+                ]
+            for line in lines[-n:]:
+                print(line)
+
+        self.console_locals['lastlog'] = lastlog
+
+        err = io.StringIO()
+        sys.stderr = err
+
+        def lasterr(n=1):
+            """ Print the last `n` entries of stderr to stdout. """
+            for line in (err.getvalue().strip().split('\n') or [])[-n:]:
+                print(line)
+
+        self.console_locals['lasterr'] = lasterr
 
         IPython.start_ipython(argv=['--gui', 'gevent'], user_ns=self.console_locals)
         self.interrupt.clear()
