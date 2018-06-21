@@ -2,14 +2,12 @@
 import pytest
 
 from raiden.api.python import RaidenAPI
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
-    NODE_NETWORK_UNREACHABLE,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
@@ -47,14 +45,9 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
 
     registry_address = node1.raiden.default_registry.address
 
-    if transport_config.protocol == TransportProtocol.UDP:
-        # nodes don't have a channel, so they are not healthchecking
-        assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNKNOWN
-        assert api2.get_node_network_state(api1.address) == NODE_NETWORK_UNKNOWN
-    elif transport_config.protocol == TransportProtocol.MATRIX:
-        # with Matrix nodes do not need a health check to know each others reachability
-        assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNREACHABLE
-        assert api2.get_node_network_state(api1.address) == NODE_NETWORK_UNREACHABLE
+    # nodes don't have a channel, so they are not healthchecking
+    assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNKNOWN
+    assert api2.get_node_network_state(api1.address) == NODE_NETWORK_UNKNOWN
     assert not api1.get_channel_list(registry_address, token_address, api2.address)
 
     # open is a synchronous api

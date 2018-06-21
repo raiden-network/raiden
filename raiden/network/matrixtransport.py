@@ -20,6 +20,9 @@ import structlog
 from gevent.event import AsyncResult
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
+from cachetools import cachedmethod
+from operator import attrgetter
+from weakref import WeakKeyDictionary
 
 from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
@@ -44,24 +47,73 @@ from raiden.raiden_service import RaidenService
 from raiden.transfer import events as transfer_events
 from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
-from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNREACHABLE
+from raiden.transfer.state import (
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_UNKNOWN,
+)
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.udp_message_handler import on_udp_message
 from raiden.utils import (
     eth_sign_sha3,
     pex,
 )
-from raiden.utils.typing import Dict, Set, Tuple, List, Optional, Address
+from raiden.utils.typing import (
+    Dict,
+    Set,
+    Tuple,
+    List,
+    Optional,
+    Address,
+    Callable,
+    Mapping,
+    TypeVar,
+    Union,
+    Type,
+)
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
 log = structlog.get_logger(__name__)
+
+_CT = TypeVar('CT')  # class type
+_CIT = Union[_CT, Type[_CT]]  # class or instance type
+_RT = TypeVar('RT')  # return type
+_CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
+
+
+def _cachegetter(
+        attr: str,
+        cachefactory: Callable[[], _CacheT]=WeakKeyDictionary,  # WeakKewDict best for properties
+) -> Callable[[_CIT], _CacheT]:
+    """Returns a safer attrgetter which constructs the missing object with cachefactory
+
+    May be used for normal methods, classmethods and properties, as default
+    factory is a WeakKeyDictionary (good for storing weak-refs for self or cls).
+    It may also safely be used with staticmethods, if first parameter is an object
+    on which the cache will be stored.
+    Better when used with key getter. If it's a tuple, you should use e.g. cachefactory=dict
+    Example usage with cachetools.cachedmethod:
+    class Foo:
+        @property
+        @cachedmethod(_cachegetter("__bar_cache"))
+        def bar(self) -> _RT:
+            return 2+3
+    """
+    def cachegetter(cls_or_obj: _CIT) -> _CacheT:
+        cache = getattr(cls_or_obj, attr, None)
+        if cache is None:
+            cache = cachefactory()
+            setattr(cls_or_obj, attr, cache)
+        return cache
+    return cachegetter
 
 
 class UserPresence(Enum):
     ONLINE = 'online'
     UNAVAILABLE = 'unavailable'
     OFFLINE = 'offline'
+    UNKNOWN = 'unknown'
 
 
 class MatrixTransport:
@@ -83,7 +135,6 @@ class MatrixTransport:
         self._messageids_to_asyncresult: Dict[Address, AsyncResult] = dict()
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_presence: Dict[Address, UserPresence] = dict()
-        self._userids_to_address: Dict[str, Address] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
         self._address_to_roomid: Dict[Address, str] = dict()
 
@@ -142,28 +193,17 @@ class MatrixTransport:
         self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
         with self._health_semaphore:
-            users = [
-                user
+            user_ids = {
+                user.user_id
                 for user
                 in self._client.search_user_directory(node_address_hex)
                 if self._validate_userid_signature(user)
-            ]
-            existing = {presence['user_id'] for presence in self._client.get_presence_list()}
-            user_ids_to_add = {u.user_id for u in users}
-            user_ids = user_ids_to_add - existing
-            if user_ids:
-                self.log.debug('Add to presence list', added_users=user_ids)
-                self._client.modify_presence_list(add_user_ids=list(user_ids))
-        # FIXME: Figure out a better place to do this
-        self._address_to_userids.setdefault(node_address, set()).update(user_ids_to_add)
+            }
+            self._address_to_userids[node_address].update(user_ids)
 
-        # Ensure network state is updated in case we already know about the user presences
-        # representing the target node
-        self._update_address_presence(node_address)
-
-        # Ensure there is a room for the peer node
-        # We use spawn_later to avoid races if the peer is already expecting us and sent an invite
-        gevent.spawn_later(1, self._get_room_for_address, node_address, allow_missing_peers=True)
+            # Ensure network state is updated in case we already know about the user presences
+            # representing the target node
+            self._update_address_presence(node_address)
 
     def send_async(
         self,
@@ -553,7 +593,8 @@ class MatrixTransport:
 
             offline_peers = [
                 user for user in peers
-                if self._userid_to_presence.get(user.user_id) is UserPresence.OFFLINE
+                if self._userid_to_presence.get(user.user_id, UserPresence.UNKNOWN) in
+                (UserPresence.OFFLINE, UserPresence.UNKNOWN)
             ]
             if offline_peers:
                 self.log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
@@ -623,6 +664,18 @@ class MatrixTransport:
         user_id = event['sender']
         if event['type'] != 'm.presence' or user_id == self._client.user_id:
             return
+
+        user = self._client.get_user(user_id)
+        address = self._validate_userid_signature(user)
+        if not address:
+            # Malformed address - skip
+            return
+
+        # not a user we've started healthcheck, skip
+        if address not in self._address_to_userids:
+            return
+        self._address_to_userids[address].add(user_id)
+
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
             return
@@ -635,30 +688,27 @@ class MatrixTransport:
         )
         self._userid_to_presence[user_id] = new_state
 
-        # User should be re-validated after presence change
-        self._userids_to_address.pop(user_id, None)
-
-        user = self._client.get_user(user_id)
-        address = self._validate_userid_signature(user)
-        if not address:
-            # Malformed address - skip
-            self.log.debug('Malformed address, probably not a raiden node', user_id=user_id)
-            return
-
         self._update_address_presence(address)
+
+    def _get_user_presence(self, user_id: str) -> UserPresence:
+        if user_id not in self._userid_to_presence:
+            self._userid_to_presence[user_id] = UserPresence(
+                self._client.get_user_presence(user_id),
+            )
+        return self._userid_to_presence[user_id]
 
     def _update_address_presence(self, address):
         """ Update synthesized address presence state from user presence state """
         self.log.debug('Address to userids', address_to_userids=self._address_to_userids)
 
         composite_presence = {
-            self._userid_to_presence.get(uid)
+            self._get_user_presence(uid)
             for uid
             in self._address_to_userids.get(address, set())
         }
 
         # Iterate over UserPresence in definition order and pick first matching state
-        new_state = UserPresence.OFFLINE
+        new_state = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
             if presence in composite_presence:
                 new_state = presence
@@ -676,7 +726,9 @@ class MatrixTransport:
         if new_state is None:
             return
 
-        if new_state is UserPresence.OFFLINE:
+        if new_state is UserPresence.UNKNOWN:
+            reachability = NODE_NETWORK_UNKNOWN
+        elif new_state is UserPresence.OFFLINE:
             reachability = NODE_NETWORK_UNREACHABLE
         else:
             reachability = NODE_NETWORK_REACHABLE
@@ -710,12 +762,10 @@ class MatrixTransport:
         room_id = self._address_to_roomid.get(address)
         if not room_id:
             return
+        if room_id not in self._client.get_rooms():
+            self._address_to_roomid.pop(address)
+            return
 
-        # This is an address we care about - add new user to health check
-        if user.user_id not in self._address_to_userids.get(address, set()):
-            self.start_health_check(address)
-
-        # Health check will ensure room exists
         room = self._client.rooms.get(room_id)
         # Refresh members
         room.get_joined_members()
@@ -778,19 +828,18 @@ class MatrixTransport:
             if len(addresses) == 1:
                 return addresses.pop()
 
-    def _validate_userid_signature(self, user: User) -> Optional[Address]:
+    @staticmethod
+    @cachedmethod(_cachegetter('__address_cache', dict), key=attrgetter('user_id', 'displayname'))
+    def _validate_userid_signature(user: User) -> Optional[Address]:
         """ Validate a userId format and signature on displayName, and return its address"""
         # display_name should be an address in the self._userid_re format
-        address = self._userids_to_address.get(user.user_id)
-        if address:
-            return address
-        match = self._userid_re.match(user.user_id)
+        match = MatrixTransport._userid_re.match(user.user_id)
         if not match:
             return
         encoded_address: str = match.group(1)
         address: Address = to_canonical_address(encoded_address)
         try:
-            recovered = self._recover(
+            recovered = MatrixTransport._recover(
                 user.user_id.encode(),
                 decode_hex(user.get_display_name()),
             )
@@ -798,8 +847,6 @@ class MatrixTransport:
                 return
         except (DecodeError, TypeError):
             return
-        self._userids_to_address[user.user_id] = address
-        self._address_to_userids[address].add(user.user_id)
         return address
 
 
