@@ -435,7 +435,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
         )
 
         payee_channel = channelidentifiers_to_channels[
-            pair.payer_transfer.balance_proof.channel_address
+            pair.payee_transfer.balance_proof.channel_address
         ]
         channel.register_secret(
             payee_channel,
