@@ -9,7 +9,7 @@ from raiden.transfer.state import (
 )
 
 
-def events_for_onchain_secretregister(
+def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
         secret: typing.Secret,

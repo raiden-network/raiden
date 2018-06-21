@@ -47,7 +47,7 @@ def events_for_close(target_state, channel_state, block_number):
     return list()
 
 
-def events_for_onchain_secretregister(target_state, channel_state, block_number):
+def events_for_onchain_secretreveal(target_state, channel_state, block_number):
     """ Emits the event for revealing the secret on-chain if the transfer cannot
     to be settled off-chain.
     """
@@ -68,7 +68,7 @@ def events_for_onchain_secretregister(target_state, channel_state, block_number)
             channel_state.partner_state,
             transfer.lock.secrethash,
         )
-        return secret_registry.events_for_onchain_secretregister(
+        return secret_registry.events_for_onchain_secretreveal(
             channel_state,
             block_number,
             secret,
@@ -234,7 +234,7 @@ def handle_block(target_state, channel_state, block_number):
         # TODO: to be removed
         events = events_for_close(target_state, channel_state, block_number)
 
-        events.extend(events_for_onchain_secretregister(target_state, channel_state, block_number))
+        events.extend(events_for_onchain_secretreveal(target_state, channel_state, block_number))
     else:
         events = list()
 

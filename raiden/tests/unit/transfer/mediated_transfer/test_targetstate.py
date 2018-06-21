@@ -104,7 +104,7 @@ def test_events_for_close():
     assert events[0].channel_identifier == from_route.channel_identifier
 
 
-def test_events_for_onchain_secretregister():
+def test_events_for_onchain_secretreveal():
     """ Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
@@ -141,10 +141,10 @@ def test_events_for_onchain_secretregister():
     unsafe_to_wait = expiration - from_channel.reveal_timeout
 
     state = TargetTransferState(from_route, from_transfer)
-    events = target.events_for_onchain_secretregister(state, from_channel, safe_to_wait)
+    events = target.events_for_onchain_secretreveal(state, from_channel, safe_to_wait)
     assert not events
 
-    events = target.events_for_onchain_secretregister(state, from_channel, unsafe_to_wait)
+    events = target.events_for_onchain_secretreveal(state, from_channel, unsafe_to_wait)
     assert events
     assert isinstance(events[0], ContractSendSecretReveal)
     assert events[0].secret == UNIT_SECRET
