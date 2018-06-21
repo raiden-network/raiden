@@ -5,7 +5,8 @@ set -ex
 if [[ ${TRAVIS_EVENT_TYPE} == "cron" ]]; then
     BLOCKCHAIN_TYPE="geth"
 else
-    BLOCKCHAIN_TYPE="tester"
+    # FIXME: chagne to "tester" once the test failures are fixed
+    BLOCKCHAIN_TYPE="geth"
 fi
 
 coverage run \
