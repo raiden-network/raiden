@@ -117,7 +117,6 @@ class PaymentChannel:
             transferred_amount: int,
             locked_amount: int,
             locksroot: typing.Locksroot,
-            partner: typing.Address,
             partner_transferred_amount: int,
             partner_locked_amount: int,
             partner_locksroot: typing.Locksroot,

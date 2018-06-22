@@ -3,6 +3,7 @@ from raiden.transfer.architecture import (
     Event,
     SendMessageEvent,
 )
+from raiden.transfer.state import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.utils import pex, typing, sha3
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -40,8 +41,38 @@ class ContractSendChannelClose(Event):
 class ContractSendChannelSettle(Event):
     """ Event emitted if the netting channel must be settled. """
 
-    def __init__(self, channel_identifier):
+    def __init__(
+            self,
+            channel_identifier: typing.ChannelID,
+            our_balance_proof: typing.Union[
+                BalanceProofSignedState,
+                BalanceProofUnsignedState,
+                None,
+            ],
+            partner_balance_proof: typing.Union[
+                BalanceProofSignedState,
+                BalanceProofUnsignedState,
+                None,
+            ],
+    ):
+        if not isinstance(channel_identifier, typing.T_ChannelID):
+            raise ValueError('channel_identifier must be a ChannelID instance')
+
+        if our_balance_proof and not isinstance(
+            our_balance_proof,
+            (BalanceProofUnsignedState, BalanceProofSignedState),
+        ):
+            raise ValueError('our_balance_proof must be a BalanceProofSignedState instance')
+
+        if partner_balance_proof and not isinstance(
+            partner_balance_proof,
+            (BalanceProofUnsignedState, BalanceProofSignedState),
+        ):
+            raise ValueError('partner_balance_proof must be a BalanceProofSignedState instance')
+
         self.channel_identifier = channel_identifier
+        self.our_balance_proof = our_balance_proof
+        self.partner_balance_proof = partner_balance_proof
 
     def __repr__(self):
         return '<ContractSendChannelSettle channel:{}>'.format(
@@ -51,7 +82,9 @@ class ContractSendChannelSettle(Event):
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendChannelSettle) and
-            self.channel_identifier == other.channel_identifier
+            self.channel_identifier == other.channel_identifier and
+            self.our_balance_proof == other.our_balance_proof and
+            self.partner_balance_proof == other.partner_balance_proof
         )
 
     def __ne__(self, other):

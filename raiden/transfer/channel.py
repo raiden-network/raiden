@@ -1524,7 +1524,11 @@ def handle_block(
                 None,
                 None,
             )
-            event = ContractSendChannelSettle(channel_state.identifier)
+            event = ContractSendChannelSettle(
+                channel_state.identifier,
+                channel_state.our_state.balance_proof,
+                channel_state.partner_state.balance_proof,
+            )
             events.append(event)
 
     while is_deposit_confirmed(channel_state, block_number):
