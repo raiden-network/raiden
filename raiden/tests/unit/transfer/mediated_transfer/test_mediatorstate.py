@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 

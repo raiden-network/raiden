@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import stun
 import structlog as structlog
 

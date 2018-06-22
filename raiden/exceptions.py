@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 
 class RaidenError(Exception):
@@ -95,6 +94,7 @@ class RaidenShuttingDown(RaidenError):
 class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""
+
     def __init__(self, error_msg, error_code=None):
         super().__init__(error_msg)
         self.error_code = error_code
@@ -130,6 +130,7 @@ class ContractVersionMismatch(RaidenError):
 class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""
+
     def __init__(self, txname, receipt):
         super().__init__(
             '{} transaction threw. Receipt={}'.format(txname, receipt),

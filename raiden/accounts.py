@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import getpass
 import json
 import os

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 
 import structlog

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from coincurve import PublicKey
 import structlog
 

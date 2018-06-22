@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 # pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
 import random
 from copy import deepcopy

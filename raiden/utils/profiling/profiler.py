@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import contextlib
 import sys
 import threading
@@ -146,6 +145,7 @@ def calculate_metrics(info):
 
 class GlobalState(dict):
     ''' This class is responsable to store the state of a profiling session '''
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last = None
@@ -159,6 +159,7 @@ class ThreadState:
     This will store not trace every single line but the call's and return's in
     the code.
     '''
+
     def __init__(self, name, trace):
         self.root = CallNode({}, OrderedDict(), None)  # the root node is empty
         self.calltree = self.root

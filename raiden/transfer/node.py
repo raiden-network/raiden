@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.transfer import (
     channel,
     token_network,

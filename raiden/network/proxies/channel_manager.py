@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from binascii import unhexlify
 from typing import List, Tuple
 from eth_utils import (

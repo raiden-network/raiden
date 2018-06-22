@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=too-many-arguments,too-few-public-methods
 from raiden.transfer.architecture import (
     Event,
@@ -81,6 +80,7 @@ class SendRevealSecret(SendMessageEvent):
         to the sender, so when the secret is learned it is not yet time to
         update the balance.
     """
+
     def __init__(
             self,
             recipient,
@@ -133,6 +133,7 @@ class SendBalanceProof(SendMessageEvent):
         two uni-directional channels), as a consequence the merkle root is only
         updated by the recipient once a balance proof message is received.
     """
+
     def __init__(
             self,
             recipient,
@@ -182,6 +183,7 @@ class SendSecretRequest(SendMessageEvent):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
     """
+
     def __init__(
             self,
             recipient,
@@ -231,6 +233,7 @@ class SendRefundTransfer(SendMessageEvent):
     the sender, allowing the sender to try a different route without the risk
     of losing token.
     """
+
     def __init__(
             self,
             recipient,
@@ -291,6 +294,7 @@ class SendRefundTransfer(SendMessageEvent):
 
 class EventUnlockSuccess(Event):
     """ Event emitted when a lock unlock succeded. """
+
     def __init__(self, identifier, secrethash):
         self.identifier = identifier
         self.secrethash = secrethash
@@ -314,6 +318,7 @@ class EventUnlockSuccess(Event):
 
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
+
     def __init__(self, identifier, secrethash, reason):
         self.identifier = identifier
         self.secrethash = secrethash
@@ -339,6 +344,7 @@ class EventUnlockFailed(Event):
 
 class EventUnlockClaimSuccess(Event):
     """ Event emitted when a lock claim succeded. """
+
     def __init__(self, identifier, secrethash):
         self.identifier = identifier
         self.secrethash = secrethash
@@ -362,6 +368,7 @@ class EventUnlockClaimSuccess(Event):
 
 class EventUnlockClaimFailed(Event):
     """ Event emitted when a lock claim failed. """
+
     def __init__(self, identifier, secrethash, reason):
         self.identifier = identifier
         self.secrethash = secrethash

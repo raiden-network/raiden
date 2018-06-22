@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.messages import Processed
 from raiden.tests.utils import factories
 from raiden.transfer.state_change import (

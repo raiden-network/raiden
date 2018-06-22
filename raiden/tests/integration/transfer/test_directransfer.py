@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import gevent
 import pytest
 from raiden.transfer import views

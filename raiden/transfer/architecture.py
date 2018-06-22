@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
 from typing import List

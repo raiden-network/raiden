@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the classes responsible to implement the network
 communication.
@@ -10,6 +9,7 @@ class DummyPolicy:
     """Dummy implementation for the throttling policy that always
     returns a wait_time of 0.
     """
+
     def __init__(self):
         pass
 

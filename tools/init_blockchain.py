@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 from binascii import hexlify
-
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3

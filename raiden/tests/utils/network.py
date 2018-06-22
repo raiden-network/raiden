@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 """ Utilities to set-up a Raiden network. """
-
 from binascii import hexlify
 from os import environ
 

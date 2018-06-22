@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from binascii import hexlify
 from eth_utils import denoms, int_to_big_endian
 

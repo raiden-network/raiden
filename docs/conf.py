@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from docutils.parsers.rst.directives.admonitions import BaseAdmonition
 from sphinx.util import compat
 compat.make_admonition = BaseAdmonition

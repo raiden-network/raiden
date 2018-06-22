@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import NewType, Tuple, Optional, Union
 

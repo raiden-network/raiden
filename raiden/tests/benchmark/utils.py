@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 
 def print_serialization(pstats):  # pylint: disable=too-many-locals
