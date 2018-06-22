@@ -1,11 +1,6 @@
-import networkx
-
-from raiden.routing import make_graph
 from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
-    TokenNetworkGraphState,
-    TokenNetworkState,
     TransactionExecutionStatus,
 )
 

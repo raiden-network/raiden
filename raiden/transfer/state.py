@@ -175,12 +175,7 @@ class TokenNetworkState(State):
         'partneraddresses_to_channels',
     )
 
-    def __init__(
-            self,
-            address: typing.Address,
-            token_address: typing.Address,
-            network_graph: 'TokenNetworkGraphState',
-            partner_channels: typing.List['NettingChannelState']):
+    def __init__(self, address: typing.Address, token_address: typing.Address):
 
         if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
@@ -188,21 +183,12 @@ class TokenNetworkState(State):
         if not isinstance(token_address, typing.T_Address):
             raise ValueError('token_address must be an address instance')
 
-        if not isinstance(network_graph, TokenNetworkGraphState):
-            raise ValueError('network_graph must be a TokenNetworkGraphState instance')
-
         self.address = address
         self.token_address = token_address
-        self.network_graph = network_graph
+        self.network_graph = TokenNetworkGraphState(networkx.Graph())
 
-        self.channelidentifiers_to_channels = {
-            channel.identifier: channel
-            for channel in partner_channels
-        }
-        self.partneraddresses_to_channels = {
-            channel.partner_state.address: channel
-            for channel in partner_channels
-        }
+        self.channelidentifiers_to_channels = dict()
+        self.partneraddresses_to_channels = dict()
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(

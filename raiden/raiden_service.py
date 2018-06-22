@@ -261,7 +261,7 @@ class RaidenService:
             # On first run Raiden needs to fetch all events for the payment
             # network, to reconstruct all token network graphs and find opened
             # channels
-            last_log_block_number = None
+            last_log_block_number = 0
         else:
             # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
@@ -270,7 +270,7 @@ class RaidenService:
 
         self.install_and_query_payment_network_filters(
             self.default_registry.address,
-            0 if not last_log_block_number else last_log_block_number,
+            last_log_block_number,
         )
 
         # Regarding the timing of starting the alarm task it is important to:
