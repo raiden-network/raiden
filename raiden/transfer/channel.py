@@ -78,7 +78,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
 EventsOrError = typing.Tuple[bool, typing.List[Event], typing.Any]
-BalanceProofData = typing.Tuple[typing.Locksroot, typing.Nonce, typing.TokenAmount]
+BalanceProofData = typing.Tuple[typing.Locksroot, typing.Nonce, typing.TokenAmount, typing.TokenAmount]  # noqa
 SendUnlockAndMerkleTree = typing.Tuple[SendBalanceProof, MerkleTreeState]
 
 
