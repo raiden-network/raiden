@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 class FlatList(list):
     """
     This class inherits from list and has the same interface as a list-type.
