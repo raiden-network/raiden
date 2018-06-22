@@ -6,7 +6,6 @@ from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import (
-    DirectTransfer,
     LockedTransfer,
     Secret,
 )
@@ -18,7 +17,6 @@ from raiden.raiden_service import (
 
 from raiden.tests.utils.events import must_contain_entry
 from raiden.transfer import channel, views
-from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.merkle_tree import compute_layers
@@ -28,11 +26,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
     NettingChannelState,
 )
-from raiden.transfer.state_change import (
-    ActionTransferDirect,
-    ReceiveTransferDirect,
-    ReceiveUnlock,
-)
+from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils import sha3
 from raiden.udp_message_handler import on_udp_message
 
@@ -41,10 +35,6 @@ def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(key)
     on_udp_message(app.raiden, message)
-
-
-def get_received_transfer(app_channel, transfer_number):
-    return app_channel.received_transfers[transfer_number]
 
 
 def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:
@@ -332,106 +322,6 @@ def assert_balance(from_channel, balance, locked):
 
     amount_locked = channel.get_amount_locked(from_channel.our_state)
     assert balance == amount_locked + distributable
-
-
-def increase_transferred_amount(
-        from_channel,
-        partner_channel,
-        amount,
-        pkey,
-):
-    assert from_channel.token_network_identifier == partner_channel.token_network_identifier
-
-    # increasing the transferred amount by a value larger than distributable
-    # would put one end of the channel in a negative balance, which is forbidden
-    distributable_from_to = channel.get_distributable(
-        from_channel.our_state,
-        from_channel.partner_state,
-    )
-    assert distributable_from_to >= amount, 'operation would end up in a incosistent state'
-
-    message_identifier = random.randint(0, UINT64_MAX)
-    payment_identifier = 1
-    event = channel.send_directtransfer(
-        from_channel,
-        amount,
-        payment_identifier,
-        message_identifier,
-    )
-
-    direct_transfer_message = DirectTransfer.from_event(event)
-    sign_key = PrivateKey(pkey)
-    direct_transfer_message.sign(sign_key)
-
-    # if this fails it's not the right key for the current `from_channel`
-    assert direct_transfer_message.sender == from_channel.our_state.address
-
-    balance_proof = balanceproof_from_envelope(direct_transfer_message)
-    receive_direct = ReceiveTransferDirect(
-        from_channel.token_network_identifier,
-        message_identifier,
-        payment_identifier,
-        balance_proof,
-    )
-
-    channel.handle_receive_directtransfer(
-        partner_channel,
-        receive_direct,
-    )
-
-    return direct_transfer_message
-
-
-def make_direct_transfer_from_channel(
-        from_channel,
-        partner_channel,
-        amount,
-        pkey,
-):
-    """ Helper to create and register a direct transfer from `from_channel` to
-    `partner_channel`."""
-    assert from_channel.token_network_identifier == partner_channel.token_network_identifier
-
-    token_network_identifier = from_channel.token_network_identifier
-    payment_identifier = channel.get_next_nonce(from_channel.our_state)
-    pseudo_random_generator = random.Random()
-
-    state_change = ActionTransferDirect(
-        token_network_identifier,
-        from_channel.partner_state.address,
-        payment_identifier,
-        amount,
-    )
-
-    iteration = channel.handle_send_directtransfer(
-        from_channel,
-        state_change,
-        pseudo_random_generator,
-    )
-    assert isinstance(iteration.events[0], SendDirectTransfer)
-    direct_transfer_message = DirectTransfer.from_event(iteration.events[0])
-
-    sign_key = PrivateKey(pkey)
-    direct_transfer_message.sign(sign_key)
-
-    # if this fails it's not the right key for the current `from_channel`
-    assert direct_transfer_message.sender == from_channel.our_state.address
-
-    balance_proof = balanceproof_from_envelope(direct_transfer_message)
-    message_identifier = random.randint(0, UINT64_MAX)
-    receive_direct = ReceiveTransferDirect(
-        token_network_identifier,
-        message_identifier,
-        payment_identifier,
-        balance_proof,
-    )
-
-    channel.handle_receive_directtransfer(
-        partner_channel,
-        receive_direct,
-    )
-
-    return direct_transfer_message
 
 
 def make_mediated_transfer(

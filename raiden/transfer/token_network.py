@@ -13,13 +13,6 @@ from raiden.transfer.state_change import (
 )
 
 
-def maybe_update_subtask(new_state, secrethash, secrethashes_to_states):
-    if new_state:
-        secrethashes_to_states[secrethash] = new_state
-    elif secrethash in secrethashes_to_states:
-        del secrethashes_to_states[secrethash]
-
-
 def subdispatch_to_channel_by_id(
         token_network_state,
         state_change,

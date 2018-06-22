@@ -194,18 +194,6 @@ def safe_lstrip_hex(val):
     return val
 
 
-def get_encoded_transfers(their_transfer, our_transfer):
-    """Check for input sanity and return the encoded version of the transfers"""
-    if not their_transfer and our_transfer:
-        raise ValueError(
-            'There is no reason to provide our_transfer when their_transfer'
-            ' is not provided',
-        )
-    their_encoded = their_transfer.encode() if their_transfer else ''
-    our_encoded = our_transfer.encode() if our_transfer else ''
-    return their_encoded, our_encoded
-
-
 def camel_to_snake_case(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
