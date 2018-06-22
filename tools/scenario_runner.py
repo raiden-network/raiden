@@ -10,6 +10,8 @@ import gevent
 from gevent import monkey, server
 import structlog
 
+from eth_utils import decode_hex
+
 from raiden.app import App
 from raiden.api.python import RaidenAPI
 from raiden.network.blockchain_service import BlockChainService
@@ -19,7 +21,7 @@ from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.ui.console import ConsoleTools
-from raiden.utils import split_endpoint, decode_hex
+from raiden.utils import split_endpoint
 from raiden.settings import GAS_PRICE
 
 monkey.patch_all()

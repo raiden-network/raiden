@@ -35,14 +35,6 @@ def random_secret():
     return os.urandom(32)
 
 
-def decode_hex(s) -> bytes:
-    if isinstance(s, str):
-        return bytes.fromhex(s)
-    if isinstance(s, (bytes, bytearray)):
-        return unhexlify(s)
-    raise TypeError('Value must be an instance of str or bytes')
-
-
 def sha3(data: bytes) -> bytes:
     return keccak(data)
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import json
 import os
-from binascii import hexlify
 
 import click
 import structlog
@@ -10,7 +9,7 @@ from eth_utils import to_checksum_address
 from raiden.log_config import configure_logging
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
-from raiden.utils import decode_hex, get_contract_path
+from raiden.utils import get_contract_path
 from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)
@@ -112,9 +111,9 @@ def deploy_all(client):
     return deployed
 
 
-def get_privatekey_hex(keystore_path):
-    address_hex, privatekey_bin = prompt_account(None, keystore_path, None)
-    return hexlify(privatekey_bin)
+def get_privatekey(keystore_path):
+    address_hex, privatekey = prompt_account(None, keystore_path, None)
+    return privatekey
 
 
 @click.command(help="Deploy the Raiden smart contracts.\n\n"
@@ -127,9 +126,7 @@ def get_privatekey_hex(keystore_path):
 def main(keystore_path, pretty, gas_price, port):
     configure_logging({'': 'DEBUG'}, colorize=True)
 
-    privatekey_hex = get_privatekey_hex(keystore_path)
-
-    privatekey = decode_hex(privatekey_hex)
+    privatekey = get_privatekey(keystore_path)
 
     gas_price_in_wei = gas_price * 1000000000
     patch_deploy_solidity_contract()
