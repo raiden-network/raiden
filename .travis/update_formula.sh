@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -e
 set -x
@@ -8,12 +8,11 @@ clone_repo() {
 }
 
 update_formula() {
-    UPDATED_SHA256=$(openssl sha -sha256 raiden-${TRAVIS_TAG}-macOS.zip)
+    UPDATED_SHA256=$(openssl sha -sha256 dist/raiden-${TRAVIS_TAG}-macOS.zip)
     FORMULA_FILE="./homebrew-raiden/raiden.rb"
 
-    sed "s/v[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG}/g" $FORMULA_FILE
-    sed "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE
-    sed "s/sha256 \"[a-z0-9]\"/sha256 \"${UPDATED_SHA256}\"/g" $FORMULA_FILE
+    sed -i "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE
+    sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256}\"/g" $FORMULA_FILE
 }
 
 setup_git() {
