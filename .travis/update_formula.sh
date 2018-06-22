@@ -5,6 +5,14 @@ set -x
 
 clone_repo() {
     git clone git@github.com:raiden-network/homebrew-raiden
+    cd homebrew-raiden
+}
+
+setup_git() {
+    openssl aes-256-cbc -K $encrypted_d89a2734327d_key -iv $encrypted_d89a2734327d_iv -in ../.travis/homebrew-raiden_github_deploy.enc -out ${HOME}/homebrew-raiden_github_deploy -d
+    git config core.sshCommand "ssh -i ~/homebrew-raiden_github_deploy"
+    git config user.email "contact@raiden.network"
+    git config user.name "Raiden Network"
 }
 
 update_formula() {
@@ -15,11 +23,6 @@ update_formula() {
     sed -i .bak "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" $FORMULA_FILE
 
     rm $FORMULA_FILE.bak
-}
-
-setup_git() {
-    git config user.email "contact@raiden.network"
-    git config user.name "Raiden Network"
 }
 
 commit_formula_file() {
@@ -33,9 +36,7 @@ upload_file() {
 }
 
 clone_repo
-update_formula
-
-cd homebrew-raiden
 setup_git
+update_formula
 commit_formula_file
 upload_file
