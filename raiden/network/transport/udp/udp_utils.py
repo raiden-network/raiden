@@ -72,7 +72,7 @@ def timeout_two_stage(
 def retry(
         transport: UDPTransport,
         messagedata: bytes,
-        message_id: int,
+        message_id: typing.MessageID,
         recipient: typing.Address,
         event_stop: Event,
         timeout_backoff: typing.Generator[int, None, None],
@@ -131,7 +131,7 @@ def wait_recovery(event_stop: Event, event_healthy: Event):
 def retry_with_recovery(
         transport: UDPTransport,
         messagedata: bytes,
-        message_id: int,
+        message_id: typing.MessageID,
         recipient: typing.Address,
         event_stop: Event,
         event_healthy: Event,
