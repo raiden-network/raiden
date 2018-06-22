@@ -1259,9 +1259,19 @@ def register_onchain_secret_endstate(
         secret: typing.Secret,
         secrethash: typing.SecretHash,
 ) -> None:
+    # the lock might be in end_state.secrethashes_to_lockedlocks or
+    # end_state.secrethashes_to_unlockedlocks
+    # It should be removed from both and moved into secrethashes_to_onchain_unlockedlocks
+    pendinglock = None
+
     if is_lock_locked(end_state, secrethash):
         pendinglock = end_state.secrethashes_to_lockedlocks[secrethash]
-        del end_state.secrethashes_to_lockedlocks[secrethash]
+
+    if secrethash in end_state.secrethashes_to_unlockedlocks:
+        pendinglock = end_state.secrethashes_to_unlockedlocks[secrethash].lock
+
+    if pendinglock:
+        _del_lock(end_state, secrethash)
 
         end_state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
             pendinglock,
