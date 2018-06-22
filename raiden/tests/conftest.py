@@ -51,12 +51,6 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        '--profiler',
-        default=None,
-        choices=['cpu', 'sample'],
-    )
-
-    parser.addoption(
         '--transport',
         choices=('none', 'udp', 'matrix', 'all'),
         default='udp',
@@ -112,32 +106,6 @@ def pytest_configure(config):
     fixtures_all = load_fixtures_list(imports[config.option.blockchain_type])
     for k, v in fixtures_all.items():
         globals()[k] = v
-
-
-@pytest.fixture(autouse=True)
-def profiler(request, tmpdir):
-    if request.config.option.profiler == 'cpu':
-        from raiden.utils.profiling.cpu import CpuProfiler
-        profiler = CpuProfiler(str(tmpdir))
-        profiler.start()
-
-        yield
-
-        profiler.stop()
-
-    elif request.config.option.profiler == 'sample':
-        from raiden.utils.profiling.sampler import SampleProfiler
-        profiler = SampleProfiler(str(tmpdir))
-        profiler.start()
-
-        yield
-
-        profiler.stop()
-
-    else:
-        # do nothing, but yield a valid generator otherwise the autouse fixture
-        # will fail
-        yield
 
 
 @pytest.fixture(autouse=True, scope='session')
