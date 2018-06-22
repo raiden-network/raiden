@@ -1,4 +1,8 @@
 from web3 import Web3
+from eth_utils import encode_hex, decode_hex
+
+import raiden_libs.messages
+from raiden_libs.utils import sign_data
 
 from raiden.encoding.messages import (
     nonce as nonce_field,
@@ -64,6 +68,43 @@ def pack_signing_data(
     )
 
     return data_that_was_signed
+
+
+def pack_signing_data2(
+        nonce,
+        balance_hash,
+        additional_hash,
+        channel_identifier,
+        token_network_identifier,
+        chain_id,
+) -> bytes:
+    balance_proof = raiden_libs.messages.BalanceProof(
+        channel_identifier=channel_identifier,
+        token_network_address=token_network_identifier,
+        balance_hash=balance_hash,
+        nonce=nonce,
+        additional_hash=additional_hash,
+        chain_id=chain_id,
+    )
+
+    return balance_proof.serialize_bin()
+
+
+def signing_update_data(
+        balance_proof,  # BalanceProofSignedState
+        chain_id: int,
+        privkey: bytes,
+) -> typing.Signature:
+    update_data = pack_signing_data2(
+        balance_proof.nonce,
+        balance_proof.balance_hash,
+        balance_proof.message_hash,
+        balance_proof.channel_address,
+        balance_proof.token_network_identifier,
+        chain_id,
+    ) + decode_hex(balance_proof.signature)
+
+    return encode_hex(sign_data(privkey, update_data))
 
 
 def hash_balance_data(

@@ -9,7 +9,6 @@ import structlog
 from cachetools import LRUCache, cached
 from operator import attrgetter
 
-import raiden_libs.messages
 from raiden_libs.utils import sign_data
 from raiden.constants import (
     UINT256_MAX,
@@ -18,7 +17,7 @@ from raiden.constants import (
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
-from raiden.transfer.balance_proof import pack_signing_data, hash_balance_data
+from raiden.transfer.balance_proof import pack_signing_data, hash_balance_data, pack_signing_data2
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     ishash,
@@ -291,22 +290,18 @@ class EnvelopeMessage(SignedMessage):
             self.locked_amount,
             self.locksroot,
         )
-        balance_proof = raiden_libs.messages.BalanceProof(
+        balance_proof_packed = pack_signing_data2(
+            nonce=self.nonce,
+            balance_hash=balance_hash,
+            additional_hash=self.message_hash.decode(),
             channel_identifier=self.channel,
             token_network_address=self.token_network_address,
-            balance_hash=balance_hash,
-            nonce=self.nonce,
-            additional_hash=self.message_hash.decode(),
             chain_id=chain_id,
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
-        )
-        balance_proof.signature = encode_hex(
-            sign_data(self.privkey, balance_proof.serialize_bin()),
         )
 
-        self.signature = balance_proof.signature
+        self.signature = encode_hex(
+            sign_data(self.privkey, balance_proof_packed),
+        )
 
 
 class Processed(SignedMessage):
