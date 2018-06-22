@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 
 class FlatList(list):
     """
@@ -18,19 +20,11 @@ class ChannelList(FlatList):
     pass
 
 
-class TokensList(FlatList):
-    pass
-
-
 class AddressList(FlatList):
     pass
 
 
 class PartnersPerTokenList(FlatList):
-    pass
-
-
-class EventsList(FlatList):
     pass
 
 
@@ -63,66 +57,3 @@ class Channel:
         self.reveal_timeout = reveal_timeout
         self.balance = balance
         self.state = state
-
-
-class ChannelNew:
-
-    def __init__(
-            self,
-            registry_address,
-            netting_channel_address,
-            participant1,
-            participant2,
-            settle_timeout,
-    ):
-
-        self.registry_address = registry_address
-        self.netting_channel_address = netting_channel_address
-        self.participant1 = participant1
-        self.participant2 = participant2
-        self.settle_timeout = settle_timeout
-
-
-class ChannelNewBalance:
-
-    def __init__(
-            self,
-            registry_address,
-            netting_channel_address,
-            token_address,
-            participant_address,
-            new_balance,
-            block_number,
-    ):
-
-        self.registry_address = registry_address
-        self.netting_channel_address = netting_channel_address
-        self.token_address = token_address
-        self.participant_address = participant_address
-        self.new_balance = new_balance
-        self.block_number = block_number
-
-
-class ChannelClosed:
-
-    def __init__(self, registry_address, netting_channel_address, closing_address, block_number):
-        self.registry_address = registry_address
-        self.netting_channel_address = netting_channel_address
-        self.closing_address = closing_address
-        self.block_number = block_number
-
-
-class ChannelSettled:
-
-    def __init__(self, registry_address, netting_channel_address, block_number):
-        self.registry_address = registry_address
-        self.netting_channel_address = netting_channel_address
-        self.block_number = block_number
-
-
-class ChannelSecretRevealed:
-
-    def __init__(self, registry_address, netting_channel_address, secret):
-        self.registry_address = registry_address
-        self.netting_channel_address = netting_channel_address
-        self.secret = secret
