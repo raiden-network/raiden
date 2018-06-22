@@ -28,7 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.balance_proof import hash_balance_data
+from raiden.transfer.balance_proof import signing_update_data
 from raiden.utils import pex
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -213,11 +213,7 @@ def handle_contract_send_channelclose2(
 
     if balance_proof:
         nonce = balance_proof.nonce
-        balance_hash = hash_balance_data(
-            balance_proof.transferred_amount,
-            balance_proof.locked_amount,
-            balance_proof.locksroot,
-        )
+        balance_hash = balance_proof.balance_hash
         signature = balance_proof.signature
         message_hash = balance_proof.message_hash
 
@@ -252,6 +248,30 @@ def handle_contract_send_channelupdate(
             balance_proof.locksroot,
             balance_proof.message_hash,
             balance_proof.signature,
+        )
+
+
+def handle_contract_send_channelupdate2(
+        raiden: RaidenService,
+        channel_update_event: ContractSendChannelUpdateTransfer,
+):
+    balance_proof = channel_update_event.balance_proof
+
+    if balance_proof:
+        channel = raiden.chain.payment_channel(channel_update_event.channel_identifier)
+
+        our_signature = signing_update_data(
+            balance_proof,
+            raiden.chain.network_id,
+            raiden.privkey,
+        )
+
+        channel.update_transfer(
+            balance_proof.nonce,
+            balance_proof.balance_hash,
+            balance_proof.message_hash,
+            balance_proof.signature,
+            our_signature,
         )
 
 
@@ -318,6 +338,7 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         # handle_contract_send_channelclose2(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:
         handle_contract_send_channelupdate(raiden, event)
+        # handle_contract_send_channelupdate2(raiden, event)
     elif type(event) == ContractSendChannelBatchUnlock:
         handle_contract_send_channelunlock(raiden, event)
     elif type(event) == ContractSendChannelSettle:
