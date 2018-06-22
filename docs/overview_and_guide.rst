@@ -36,7 +36,14 @@ Download the latest :code:`raiden-<version>-macOS.zip`, and extract it::
     unzip raiden-<version>-macOS.zip
 
 The resulting binary will work on any version of macOS from 10.12 onwards without any other
-dependencies. An Ethereum client is required.
+dependencies.
+
+Or you can use Homebrew to install the most up to date binary::
+
+    brew tap raiden-network/raiden
+    brew install raiden
+
+An Ethereum client is required in both cases.
 
 Dependencies
 ************

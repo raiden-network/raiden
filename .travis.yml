@@ -117,3 +117,9 @@ jobs:
             tags: true
             repo: raiden-network/raiden
             branch: master
+        - provider: script
+          script: .travis/update_formula.sh
+          on:
+            tags: true
+            repo: raiden-network/raiden
+            branch: master
