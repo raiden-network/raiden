@@ -8,11 +8,13 @@ clone_repo() {
 }
 
 update_formula() {
-    UPDATED_SHA256=$(openssl sha -sha256 dist/raiden-${TRAVIS_TAG}-macOS.zip)
+    UPDATED_SHA256=$(openssl sha -sha256 ./dist/raiden-${TRAVIS_TAG}-macOS.zip)
     FORMULA_FILE="./homebrew-raiden/raiden.rb"
 
-    sed -i "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE
-    sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256}\"/g" $FORMULA_FILE
+    sed -i .bak "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE
+    sed -i .bak "s/sha256 \"[a-f0-9]{64}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" $FORMULA_FILE
+
+    rm $FORMULA_FILE.bak
 }
 
 setup_git() {
@@ -21,6 +23,7 @@ setup_git() {
 }
 
 commit_formula_file() {
+    cd ./homebrew-raiden
     git checkout -b release-${TRAVIS_TAG}
     git add raiden.rb
     git commit -m "Update formula to ${TRAVIS_TAG}"
