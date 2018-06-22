@@ -284,10 +284,20 @@ class BlockchainEvents:
 
     def __init__(self):
         self.event_listeners = list()
+        self.first_run = True
 
     def poll_blockchain_events(self):
+        # When we test with geth if the contracts have already been deployed
+        # before the filter creation we need to use `get_all_entries` to make
+        # sure we get all the events. With tester this is not required.
+        if self.first_run:
+            query_fn = 'get_all_entries'
+            self.first_run = False
+        else:
+            query_fn = 'get_new_entries'
+
         for event_listener in self.event_listeners:
-            for log_event in event_listener.filter.get_new_entries():
+            for log_event in getattr(event_listener.filter, query_fn)():
                 decoded_event = dict(decode_event(
                     event_listener.abi,
                     log_event,
