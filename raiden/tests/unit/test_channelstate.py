@@ -286,6 +286,7 @@ def test_new_end_state():
 
     assert not end_state.secrethashes_to_lockedlocks
     assert not end_state.secrethashes_to_unlockedlocks
+    assert not end_state.secrethashes_to_onchain_unlockedlocks
 
 
 def test_endstate_update_contract_balance():

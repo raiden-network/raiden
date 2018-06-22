@@ -444,6 +444,33 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
         )
 
 
+def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
+    """ Set the secret to all mediated transfers.
+    It doesn't matter if the secret was learned through the blockchain or a
+    secret reveal message.
+    """
+    state.secret = secret
+
+    for pair in state.transfers_pair:
+        payer_channel = channelidentifiers_to_channels[
+            pair.payer_transfer.balance_proof.channel_address
+        ]
+        channel.register_onchain_secret(
+            payer_channel,
+            secret,
+            secrethash,
+        )
+
+        payee_channel = channelidentifiers_to_channels[
+            pair.payee_transfer.balance_proof.channel_address
+        ]
+        channel.register_onchain_secret(
+            payee_channel,
+            secret,
+            secrethash,
+        )
+
+
 def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         transfers_pair,
         payee_address,
@@ -793,6 +820,7 @@ def secret_learned(
         secrethash,
         payee_address,
         new_payee_state,
+        from_onchain_secretreveal,
 ):
     """ Set the state of the `payee_address` transfer, check the secret is
     being revealed backwards, and if necessary send out RevealSecret,
@@ -801,16 +829,23 @@ def secret_learned(
     assert new_payee_state in STATE_SECRET_KNOWN
     assert payee_address in (pair.payee_address for pair in state.transfers_pair)
 
-    # TODO: if any of the transfers is in expired state, event for byzantine
-    # behavior
+    # TODO: if any of the transfers is in expired state, event for byzantine behavior
 
     if state.secret is None:
-        set_secret(
-            state,
-            channelidentifiers_to_channels,
-            secret,
-            secrethash,
-        )
+        if from_onchain_secretreveal:
+            set_onchain_secret(
+                state,
+                channelidentifiers_to_channels,
+                secret,
+                secrethash,
+            )
+        else:
+            set_secret(
+                state,
+                channelidentifiers_to_channels,
+                secret,
+                secrethash,
+            )
 
         # This task only needs to unlock if the channel is closed when the
         # secret is learned, otherwise the channel task will do it
@@ -1101,6 +1136,7 @@ def handle_secretreveal(
             mediator_state_change.secrethash,
             mediator_state_change.sender,
             'payee_secret_revealed',
+            isinstance(mediator_state_change, ContractReceiveSecretReveal),
         )
 
     else:
@@ -1171,6 +1207,7 @@ def handle_contractunlock(
         state_change.secrethash,
         state_change.receiver,
         'payee_contract_unlock',
+        False,
     )
 
     iteration.events.extend(events)

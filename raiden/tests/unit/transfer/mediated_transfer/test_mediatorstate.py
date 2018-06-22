@@ -1227,6 +1227,7 @@ def test_secret_learned():
         UNIT_SECRETHASH,
         channel1.partner_state.address,
         'payee_secret_revealed',
+        False,
     )
     transfer_pair = iteration.new_state.transfers_pair[0]
 

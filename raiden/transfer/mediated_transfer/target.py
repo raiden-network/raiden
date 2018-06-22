@@ -146,11 +146,20 @@ def handle_secretreveal(
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
 
     if valid_secret:
-        channel.register_secret(
-            channel_state,
-            state_change.secret,
-            state_change.secrethash,
-        )
+        if isinstance(state_change, ReceiveSecretReveal):
+            channel.register_secret(
+                channel_state,
+                state_change.secret,
+                state_change.secrethash,
+            )
+        elif isinstance(state_change, ContractReceiveSecretReveal):
+            channel.register_onchain_secret(
+                channel_state,
+                state_change.secret,
+                state_change.secrethash,
+            )
+        else:
+            assert False, 'Got unexpected StateChange'
 
         route = target_state.route
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
