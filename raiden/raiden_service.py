@@ -346,7 +346,7 @@ class RaidenService:
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
         for event in event_list:
-            log.debug('EVENT', node=pex(self.address), chain_event=event)
+            log.debug('EVENT', node=pex(self.address), raiden_event=event)
 
             on_raiden_event(self, event)
 
