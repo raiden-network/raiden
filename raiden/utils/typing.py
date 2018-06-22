@@ -93,7 +93,7 @@ T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
 
 T_TokenNetworkIdentifier = bytes
-TokenNetworkIdentifier = NewType('TokenNetworkIdentifier', bytes)
+TokenNetworkIdentifier = NewType('TokenNetworkIdentifier', T_TokenNetworkIdentifier)
 
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
