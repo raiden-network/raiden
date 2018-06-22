@@ -796,6 +796,7 @@ class NettingChannelEndState(State):
         'contract_balance',
         'secrethashes_to_lockedlocks',
         'secrethashes_to_unlockedlocks',
+        'secrethashes_to_onchain_unlockedlocks',
         'merkletree',
         'balance_proof',
     )
@@ -812,6 +813,7 @@ class NettingChannelEndState(State):
 
         self.secrethashes_to_lockedlocks: SecretHashToLock = dict()
         self.secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = dict()
+        self.secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof: typing.Optional[BalanceProofSignedState] = None
 
@@ -829,6 +831,8 @@ class NettingChannelEndState(State):
             self.contract_balance == other.contract_balance and
             self.secrethashes_to_lockedlocks == other.secrethashes_to_lockedlocks and
             self.secrethashes_to_unlockedlocks == other.secrethashes_to_unlockedlocks and
+            (self.secrethashes_to_onchain_unlockedlocks ==
+                other.secrethashes_to_onchain_unlockedlocks) and
             self.merkletree == other.merkletree and
             self.balance_proof == other.balance_proof
         )

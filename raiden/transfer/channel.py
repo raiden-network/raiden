@@ -96,7 +96,8 @@ def is_lock_pending(
     """
     return (
         secrethash in end_state.secrethashes_to_lockedlocks or
-        secrethash in end_state.secrethashes_to_unlockedlocks
+        secrethash in end_state.secrethashes_to_unlockedlocks or
+        secrethash in end_state.secrethashes_to_onchain_unlockedlocks
     )
 
 
@@ -126,7 +127,10 @@ def is_secret_known(
         secrethash: typing.SecretHash,
 ) -> bool:
     """True if the `secrethash` is for a lock with a known secret."""
-    return secrethash in end_state.secrethashes_to_unlockedlocks
+    return (
+        secrethash in end_state.secrethashes_to_unlockedlocks or
+        secrethash in end_state.secrethashes_to_onchain_unlockedlocks
+    )
 
 
 def get_secret(
@@ -135,7 +139,12 @@ def get_secret(
 ) -> typing.Optional[typing.Secret]:
     """Returns `secret` if the `secrethash` is for a lock with a known secret."""
     if is_secret_known(end_state, secrethash):
-        return end_state.secrethashes_to_unlockedlocks[secrethash].secret
+        partial_unlock_proof = end_state.secrethashes_to_unlockedlocks.get(secrethash)
+
+        if partial_unlock_proof is None:
+            partial_unlock_proof = end_state.secrethashes_to_onchain_unlockedlocks.get(secrethash)
+
+        return partial_unlock_proof.secret
 
     return None
 
@@ -613,7 +622,12 @@ def get_amount_locked(end_state: NettingChannelEndState) -> typing.Balance:
         for unlock in end_state.secrethashes_to_unlockedlocks.values()
     )
 
-    return total_pending + total_unclaimed
+    total_unclaimed_onchain = sum(
+        unlock.lock.amount
+        for unlock in end_state.secrethashes_to_onchain_unlockedlocks.values()
+    )
+
+    return total_pending + total_unclaimed + total_unclaimed_onchain
 
 
 def get_balance(
@@ -679,7 +693,7 @@ def get_distributable(
 def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockProofState]:
     """Generate unlocking proofs for the known secrets."""
 
-    return [
+    unlocked_locks_proofs = [
         compute_proof_for_lock(
             end_state,
             partialproof.secret,
@@ -687,6 +701,17 @@ def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockPr
         )
         for partialproof in end_state.secrethashes_to_unlockedlocks.values()
     ]
+
+    unlocked_locks_proofs.extend([
+        compute_proof_for_lock(
+            end_state,
+            partialproof.secret,
+            partialproof.lock,
+        )
+        for partialproof in end_state.secrethashes_to_onchain_unlockedlocks.values()
+    ])
+
+    return unlocked_locks_proofs
 
 
 def get_batch_unlock(
@@ -710,6 +735,10 @@ def get_batch_unlock(
         proof.lock.lockhash: proof.lock
         for secrethash, proof in end_state.secrethashes_to_unlockedlocks.items()
     })
+    lockhashes_to_locks.update({
+        proof.lock.lockhash: proof.lock
+        for secrethash, proof in end_state.secrethashes_to_onchain_unlockedlocks.items()
+    })
 
     all_locks_packed = b''.join(
         lockhashes_to_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
@@ -729,6 +758,9 @@ def get_lock(
 
     if not lock:
         partial_unlock = end_state.secrethashes_to_unlockedlocks.get(secrethash)
+
+        if not partial_unlock:
+            partial_unlock = end_state.secrethashes_to_onchain_unlockedlocks.get(secrethash)
 
         if partial_unlock:
             lock = partial_unlock.lock
@@ -791,6 +823,9 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: typing.SecretHash) 
 
     if secrethash in end_state.secrethashes_to_unlockedlocks:
         del end_state.secrethashes_to_unlockedlocks[secrethash]
+
+    if secrethash in end_state.secrethashes_to_onchain_unlockedlocks:
+        del end_state.secrethashes_to_onchain_unlockedlocks[secrethash]
 
 
 def set_closed(
@@ -1219,6 +1254,21 @@ def register_secret_endstate(
         )
 
 
+def register_onchain_secret_endstate(
+        end_state: NettingChannelEndState,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
+) -> None:
+    if is_lock_locked(end_state, secrethash):
+        pendinglock = end_state.secrethashes_to_lockedlocks[secrethash]
+        del end_state.secrethashes_to_lockedlocks[secrethash]
+
+        end_state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
+            pendinglock,
+            secret,
+        )
+
+
 def register_secret(
         channel_state: NettingChannelState,
         secret: typing.Secret,
@@ -1226,7 +1276,7 @@ def register_secret(
 ) -> None:
     """This will register the secret and set the lock to the unlocked stated.
 
-    Even though the lock is unlock it's is *not* claimed. The capacity will
+    Even though the lock is unlock it is *not* claimed. The capacity will
     increase once the next balance proof is received.
     """
     our_state = channel_state.our_state
@@ -1234,6 +1284,23 @@ def register_secret(
 
     register_secret_endstate(our_state, secret, secrethash)
     register_secret_endstate(partner_state, secret, secrethash)
+
+
+def register_onchain_secret(
+        channel_state: NettingChannelState,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
+) -> None:
+    """This will register the onchain secret and set the lock to the unlocked stated.
+
+    Even though the lock is unlock it is *not* claimed. The capacity will
+    increase once the next balance proof is received.
+    """
+    our_state = channel_state.our_state
+    partner_state = channel_state.partner_state
+
+    register_onchain_secret_endstate(our_state, secret, secrethash)
+    register_onchain_secret_endstate(partner_state, secret, secrethash)
 
 
 def handle_send_directtransfer(
