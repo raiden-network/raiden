@@ -10,7 +10,7 @@ from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State
 from raiden.transfer.merkle_tree import merkleroot
-from raiden.transfer.balance_proof import hash_balance_data
+from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3, typing
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
