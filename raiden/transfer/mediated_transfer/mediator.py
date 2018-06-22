@@ -446,8 +446,8 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
 
 def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
     """ Set the secret to all mediated transfers.
-    It doesn't matter if the secret was learned through the blockchain or a
-    secret reveal message.
+
+    The secret should have been learned from the secret registry.
     """
     state.secret = secret
 
