@@ -37,7 +37,7 @@ LockHash = NewType('LockHash', T_LockHash)
 T_MerkleTreeLeaves = bytes
 MerkleTreeLeaves = NewType('MerkleTreeLeaves', T_MerkleTreeLeaves)
 
-T_MessageID = int
+T_MessageID = Union(int, Tuple[str, int, bytes])
 MessageID = NewType('MessageID', T_MessageID)
 
 T_Nonce = int

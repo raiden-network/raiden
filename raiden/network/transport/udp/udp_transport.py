@@ -385,7 +385,7 @@ class UDPTransport:
             self,
             recipient: typing.Address,
             messagedata: bytes,
-            message_id: int,
+            message_id: typing.MessageID,
     ) -> AsyncResult:
         """ Send message to recipient if the transport is running.
 
