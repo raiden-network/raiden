@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import structlog
 
 from raiden.constants import UINT64_MAX, UINT256_MAX

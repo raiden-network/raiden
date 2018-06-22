@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import click
 
 from raiden.network.rpc.client import JSONRPCClient

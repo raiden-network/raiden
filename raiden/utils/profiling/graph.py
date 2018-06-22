@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 """
 Module to plot profile data.
 

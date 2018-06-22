@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import List, Tuple
 from heapq import heappush, heappop
 

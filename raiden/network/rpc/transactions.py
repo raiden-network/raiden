@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 def check_transaction_threw(client, transaction_hash):
     """Check if the transaction threw/reverted or if it executed properly
        Returns None in case of success and the transaction receipt if the

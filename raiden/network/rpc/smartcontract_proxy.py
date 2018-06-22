@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import Dict, List
 
 from eth_utils import (

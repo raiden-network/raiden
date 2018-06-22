@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
     Event,

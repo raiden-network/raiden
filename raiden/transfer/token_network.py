@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed

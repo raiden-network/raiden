@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import signal
 
 from .constants import INTERVAL_SECONDS

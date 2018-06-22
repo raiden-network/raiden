@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 from raiden.api.python import RaidenAPI
 
 NOVALUE = object()

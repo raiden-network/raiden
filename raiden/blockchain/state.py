@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import networkx
 
 from raiden.routing import make_graph

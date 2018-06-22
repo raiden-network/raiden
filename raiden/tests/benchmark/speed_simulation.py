@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A benchmark script to configure a test network and execute random Raiden
 transactions.

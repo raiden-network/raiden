@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState
 from raiden.transfer.mediated_transfer.state import (
@@ -188,6 +186,7 @@ class ReceiveSecretRequest(StateChange):
 
 class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
+
     def __init__(self, secret, sender):
         secrethash = sha3(secret)
 
@@ -252,6 +251,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
+
     def __init__(self, message_identifier, sender, transfer: LockedTransferSignedState):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')

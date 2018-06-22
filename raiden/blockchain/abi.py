@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 import hashlib
 import json
 import os
@@ -77,7 +74,7 @@ EVENT_TOKEN_ADDED = 'TokenAdded'
 EVENT_TOKEN_ADDED2 = 'TokenNetworkCreated'
 EVENT_ADDRESS_REGISTERED = 'AddressRegistered'
 
-CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$' # noqa
+CONTRACT_VERSION_RE = r'^\s*string constant public contract_version = "([0-9]+\.[0-9]+\.[0-9\_])";\s*$'  # noqa
 
 
 def parse_contract_version(contract_file, version_re):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import miniupnpc
 import ipaddress
 import structlog

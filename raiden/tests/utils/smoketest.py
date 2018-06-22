@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from binascii import hexlify
 from binascii import unhexlify
 from http import HTTPStatus
@@ -6,7 +5,6 @@ from string import Template
 import json
 import os
 import sys
-import pdb
 import requests
 import shlex
 import shutil
@@ -154,6 +152,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
     except Exception:
         error = traceback.format_exc()
         if debug:
+            import pdb
             pdb.post_mortem()
         return error
 

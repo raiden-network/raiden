@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.utils import split_in_pairs
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3

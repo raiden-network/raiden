@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import gc
 from itertools import chain, combinations, product
 

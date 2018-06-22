@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from raiden.utils.notifying_queue import NotifyingQueue
 
 

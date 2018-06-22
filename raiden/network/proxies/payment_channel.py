@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import Dict
 
 from web3.utils.filters import Filter

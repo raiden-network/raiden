@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 # pylint: disable=too-many-arguments
 import os
 import random

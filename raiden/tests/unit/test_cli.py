@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.utils import (
     is_minified_address,
     is_supported_client,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import structlog
 
 from raiden.raiden_service import RaidenService

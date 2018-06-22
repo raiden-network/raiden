@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
 from flask import Blueprint

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from raiden.constants import UINT256_MAX, UINT64_MAX

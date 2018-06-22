@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import socket
 from typing import Tuple
 from eth_utils import is_binary_address

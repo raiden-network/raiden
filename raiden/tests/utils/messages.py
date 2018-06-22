@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Utilities to track and assert transferred messages. """
 import string
 import random

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 from typing import Optional
 

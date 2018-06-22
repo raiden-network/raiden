@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import gevent
 from contextlib import ExitStack
 import structlog

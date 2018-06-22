@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=too-many-arguments,redefined-outer-name
 import os
 import pytest

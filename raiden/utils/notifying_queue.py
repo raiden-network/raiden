@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from gevent.queue import Queue
 from gevent.event import Event
 

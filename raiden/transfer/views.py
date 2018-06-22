@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
