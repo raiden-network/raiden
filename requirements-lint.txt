@@ -1,0 +1,5 @@
+flake8==3.5.0
+flake8-bugbear==18.2.0
+flake8-commas==2.0.0
+flake8-tuple==0.2.13
+readme-renderer==21.0

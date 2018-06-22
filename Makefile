@@ -39,6 +39,7 @@ clean-test:
 
 lint:
 	flake8 raiden/ tools/
+	python setup.py check --restructuredtext --strict
 
 test:
 	python setup.py test
