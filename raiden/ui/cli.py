@@ -21,7 +21,6 @@ from eth_utils import (
     to_normalized_address,
     to_canonical_address,
 )
-import structlog
 from requests.exceptions import RequestException
 from mirakuru import HTTPExecutor
 
@@ -80,38 +79,6 @@ CLEARLINE = '\x1b[2K'
 
 # 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
 DISCOVERY_TX_GAS_LIMIT = 60000
-
-
-def toogle_cpu_profiler(raiden):
-    try:
-        from raiden.utils.profiling.cpu import CpuProfiler
-    except ImportError:
-        structlog.get_logger(__name__).exception('cannot start cpu profiler')
-        return
-
-    if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, CpuProfiler):
-        raiden.profiler.stop()
-        raiden.profiler = None
-
-    elif not hasattr(raiden, 'profiler') and raiden.config['database_path'] != ':memory:':
-        raiden.profiler = CpuProfiler(raiden.config['database_path'])
-        raiden.profiler.start()
-
-
-def toggle_trace_profiler(raiden):
-    try:
-        from raiden.utils.profiling.trace import TraceProfiler
-    except ImportError:
-        structlog.get_logger(__name__).exception('cannot start tracer profiler')
-        return
-
-    if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, TraceProfiler):
-        raiden.profiler.stop()
-        raiden.profiler = None
-
-    elif not hasattr(raiden, 'profiler') and raiden.config['database_path'] != ':memory:':
-        raiden.profiler = TraceProfiler(raiden.config['database_path'])
-        raiden.profiler.start()
 
 
 def check_json_rpc(client):
@@ -846,9 +813,6 @@ def run(ctx, **kwargs):
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
-
-        gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
-        gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
 
         event.wait()
         print('Signal received. Shutting down ...')
