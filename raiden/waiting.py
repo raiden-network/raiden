@@ -7,6 +7,7 @@ from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
 )
 from raiden.transfer import channel, views
+from raiden.transfer.events import EventTransferReceivedSuccess
 from raiden.utils import typing
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -233,3 +234,32 @@ def wait_for_healthy(
         network_statuses = views.get_networkstatuses(
             views.state_from_raiden(raiden),
         )
+
+
+def wait_for_transfer_success(
+        raiden: RaidenService,
+        payment_identifier: typing.PaymentID,
+        amount: typing.PaymentAmount,
+        poll_timeout: typing.NetworkTimeout,
+) -> None:
+    """Wait until a direct transfer with a specific identifier and amount
+    is seen in the WAL.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = False
+    while not found:
+        state_events = raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        for event_tuple in state_events:
+            event = event_tuple[1]
+            # if isinstance(event, EventTransferReceivedSuccess):
+            found = (
+                isinstance(event, EventTransferReceivedSuccess) and
+                event.identifier == payment_identifier and
+                event.amount == amount
+            )
+            if found:
+                break
+
+        gevent.sleep(poll_timeout)

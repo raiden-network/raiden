@@ -1,6 +1,7 @@
 import gevent
 import pytest
 from raiden.transfer import views
+from raiden.waiting import wait_for_transfer_success
 
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
@@ -49,23 +50,29 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
         payment_network_id,
         token_address,
     )
-
     # Wait until the initialization of the node is complete and then stop it
     gevent.wait([app1.raiden.start_event])
     app1.raiden.stop()
 
     amount = 10
     target = app1.raiden.address
+    payment_identifier = 13
     app0.raiden.direct_transfer_async(
         token_network_identifier,
         amount,
         target,
-        identifier=1,
+        identifier=payment_identifier,
     )
 
     app1.raiden.start()
-
-    gevent.sleep(5)
+    exception = ValueError('Waiting for transfer received success in the WAL timed out')
+    with gevent.Timeout(seconds=5, exception=exception):
+        wait_for_transfer_success(
+            app1.raiden,
+            payment_identifier,
+            amount,
+            app1.raiden.alarm.wait_time,
+        )
 
     no_outstanding_locks = []
     assert_synched_channel_state(
