@@ -23,6 +23,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
 )
+from raiden.transfer.mediated_transfer.mediator import set_secret
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
@@ -1744,3 +1745,57 @@ def test_payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     race_block = payer_transfer.lock.expiration - channel1.reveal_timeout - mediator.TRANSIT_BLOCKS
     assert mediator.TRANSIT_BLOCKS > 0
     assert send_mediated.transfer.lock.expiration == race_block
+
+
+def test_set_secret():
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+
+    assert mediator_state.transfers_pair == list()
+    assert mediator_state.secret is None
+    assert mediator_state.secrethash == UNIT_SECRETHASH
+
+    amount = 10
+    channelmap, transfers_pair = make_transfers_pair(
+        [
+            HOP2_KEY,
+            HOP3_KEY,
+        ],
+        amount,
+    )
+    mediator_state.transfers_pair = transfers_pair
+
+    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_address
+    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_address
+
+    payer_channel_our_state = channelmap[payer_channelid].our_state
+    payer_channel_partner_state = channelmap[payer_channelid].partner_state
+    payee_channel_our_state = channelmap[payee_channelid].our_state
+    payee_channel_partner_state = channelmap[payee_channelid].partner_state
+
+    assert payer_channel_our_state.secrethashes_to_lockedlocks == dict()
+    assert payer_channel_our_state.secrethashes_to_unlockedlocks == dict()
+
+    assert UNIT_SECRETHASH in payer_channel_partner_state.secrethashes_to_lockedlocks.keys()
+    assert payer_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+
+    assert UNIT_SECRETHASH in payee_channel_our_state.secrethashes_to_lockedlocks.keys()
+    assert payee_channel_our_state.secrethashes_to_unlockedlocks == dict()
+
+    assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
+    assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+
+    set_secret(mediator_state, channelmap, UNIT_SECRET, UNIT_SECRETHASH)
+
+    assert mediator_state.secret == UNIT_SECRET
+
+    assert payer_channel_our_state.secrethashes_to_lockedlocks == dict()
+    assert payer_channel_our_state.secrethashes_to_unlockedlocks == dict()
+
+    assert payer_channel_partner_state.secrethashes_to_lockedlocks == dict()
+    assert UNIT_SECRETHASH in payer_channel_partner_state.secrethashes_to_unlockedlocks.keys()
+
+    assert payee_channel_our_state.secrethashes_to_lockedlocks == dict()
+    assert UNIT_SECRETHASH in payee_channel_our_state.secrethashes_to_unlockedlocks.keys()
+
+    assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
+    assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
