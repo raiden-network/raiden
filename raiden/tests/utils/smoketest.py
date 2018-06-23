@@ -16,11 +16,13 @@ import traceback
 from eth_utils import to_checksum_address, to_canonical_address
 
 from raiden.accounts import AccountManager
-from raiden.utils import get_project_root
+from raiden.connection_manager import ConnectionManager
+from raiden.network.utils import get_free_port
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.network.utils import get_free_port
-from raiden.connection_manager import ConnectionManager
+from raiden.tests.integration.fixtures.blockchain import deploy_contract_web3
+from raiden.utils import get_project_root
+from raiden.utils.deployment import deploy_contracts
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -228,6 +230,25 @@ def start_ethereum(smoketest_genesis):
         init_log_err=init_err,
     )
     return ethereum_node, ethereum_config
+
+
+def deploy_smoketest_contracts(client, contract_names):
+    addresses = deploy_contracts(client)
+
+    client.web3.personal.unlockAccount(
+        client.web3.eth.accounts[0],
+        TEST_ACCOUNT_PASSWORD,
+    )
+
+    for contract_name in contract_names:
+        print(f'Deploying {contract_name}')
+        contract_address = deploy_contract_web3(
+            contract_name,
+            10000,
+            client,
+        )
+        addresses[contract_name] = to_checksum_address(contract_address)
+    return addresses
 
 
 def get_private_key():
