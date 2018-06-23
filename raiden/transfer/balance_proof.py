@@ -1,9 +1,9 @@
-from web3 import Web3
 from eth_utils import encode_hex, decode_hex
 
 import raiden_libs.messages
 from raiden_libs.utils import sign_data
 
+from raiden.transfer.state import BalanceProofSignedState
 from raiden.encoding.messages import (
     nonce as nonce_field,
     transferred_amount as transferred_amount_field,
@@ -91,7 +91,7 @@ def pack_signing_data2(
 
 
 def signing_update_data(
-        balance_proof,  # BalanceProofSignedState
+        balance_proof: BalanceProofSignedState,
         chain_id: int,
         privkey: bytes,
 ) -> typing.Signature:
@@ -105,14 +105,3 @@ def signing_update_data(
     ) + decode_hex(balance_proof.signature)
 
     return encode_hex(sign_data(privkey, update_data))
-
-
-def hash_balance_data(
-        transferred_amount: typing.TokenAmount,
-        locked_amount: typing.TokenAmount,
-        locksroot: typing.Locksroot,
-) -> str:
-    return Web3.soliditySha3(
-        ['uint256', 'uint256', 'bytes32'],
-        [transferred_amount, locked_amount, locksroot],
-    )
