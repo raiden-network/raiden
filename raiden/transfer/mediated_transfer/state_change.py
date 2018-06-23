@@ -143,7 +143,7 @@ class ActionCancelRoute(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionCancelRoute) and
-            self.registry_address == self.registry_address and
+            self.registry_address == other.registry_address and
             self.identifier == other.identifier and
             self.routes == other.routes
         )
