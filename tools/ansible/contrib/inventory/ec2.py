@@ -928,15 +928,15 @@ class Ec2Inventory(object):
                 else:
                     values = [v]
 
-                for v in values:
-                    if v:
-                        key = self.to_safe("tag_" + k + "=" + v)
+                for z in values:
+                    if z:
+                        key = self.to_safe("tag_" + k + "=" + z)
                     else:
                         key = self.to_safe("tag_" + k)
                     self.push(self.inventory, key, hostname)
                     if self.nested_groups:
                         self.push_group(self.inventory, 'tags', self.to_safe("tag_" + k))
-                        if v:
+                        if z:
                             self.push_group(self.inventory, self.to_safe("tag_" + k), key)
 
         # Inventory: Group by Route53 domain names if enabled
@@ -1473,16 +1473,16 @@ class Ec2Inventory(object):
             if key == 'ec2_node_groups' and value:
                 host_info['ec2_endpoint_address'] = value[0]['PrimaryEndpoint']['Address']
                 host_info['ec2_endpoint_port'] = value[0]['PrimaryEndpoint']['Port']
-                for key, node in enumerate(value[0]['NodeGroupMembers']):
+                for o_key, node in enumerate(value[0]['NodeGroupMembers']):
                     prefix = 'ec2_primary_cluster_'
                     if node['CurrentRole'] == 'primary':
                         host_info[prefix + 'address'] = node['ReadEndpoint']['Address']
                         host_info[prefix + 'port'] = node['ReadEndpoint']['Port']
                         host_info[prefix + 'id'] = node['CacheClusterId']
                     elif node['CurrentRole'] == 'replica':
-                        host_info[prefix + 'address_' + str(key)] = node['ReadEndpoint']['Address']
-                        host_info[prefix + 'port_' + str(key)] = node['ReadEndpoint']['Port']
-                        host_info[prefix + 'id_' + str(key)] = node['CacheClusterId']
+                        host_info[prefix + 'address_' + str(o_key)] = node['ReadEndpoint']['Address']
+                        host_info[prefix + 'port_' + str(o_key)] = node['ReadEndpoint']['Port']
+                        host_info[prefix + 'id_' + str(o_key)] = node['CacheClusterId']
 
             # Target: Redis Replication Groups
             if key == 'ec2_member_clusters' and value:
