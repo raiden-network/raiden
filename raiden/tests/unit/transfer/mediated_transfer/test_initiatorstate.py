@@ -14,11 +14,13 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
+    ADDR,
 )
 from raiden.transfer.events import (
     EventTransferSentSuccess,
     EventTransferSentFailed,
 )
+from raiden.transfer.state import RouteState
 from raiden.transfer.mediated_transfer import initiator_manager
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -592,3 +594,17 @@ def test_cancel_transfer():
 
     assert unlocked_failed
     assert sent_failed
+
+
+def test_action_cancel_route_comparison():
+    """There was a bug in ActionCancelRoute comparison function which we check for"""
+    routes1 = []
+    routes2 = [RouteState(ADDR, ADDR)]
+    a = ActionCancelRoute(UNIT_TRANSFER_INITIATOR, 5, routes1)
+    b = ActionCancelRoute(UNIT_TRANSFER_TARGET, 5, routes1)
+    c = ActionCancelRoute(UNIT_TRANSFER_TARGET, 3, routes2)
+    d = ActionCancelRoute(UNIT_TRANSFER_TARGET, 3, routes2)
+
+    assert a != b
+    assert a != c
+    assert c == d
