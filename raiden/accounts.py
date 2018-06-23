@@ -3,7 +3,6 @@ import json
 import os
 import sys
 from binascii import hexlify, unhexlify
-from json import JSONDecodeError
 from typing import Dict
 
 from eth_keyfile import decode_keyfile_json
@@ -100,7 +99,7 @@ class AccountManager:
                             self.accounts[str(data['address']).lower()] = str(fullpath)
                     except (
                         IOError,
-                        JSONDecodeError,
+                        json.JSONDecodeError,
                         KeyError,
                         OSError,
                         UnicodeDecodeError,

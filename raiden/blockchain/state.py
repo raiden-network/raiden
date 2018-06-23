@@ -23,7 +23,6 @@ def get_channel_state(
     )
 
     identifier = netting_channel_proxy.address
-    reveal_timeout = reveal_timeout
     settle_timeout = channel_details['settle_timeout']
 
     opened_block_number = netting_channel_proxy.opened()

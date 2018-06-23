@@ -11,7 +11,6 @@ import time
 from eth_utils import denoms, to_checksum_address
 import gevent
 from gevent.event import Event
-from gevent import Greenlet
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
@@ -170,20 +169,20 @@ class SigINTHandler:
             self.install_handler()
 
 
-class BaseService(Greenlet):
+class BaseService(gevent.Greenlet):
     def __init__(self, app):
-        Greenlet.__init__(self)
+        gevent.Greenlet.__init__(self)
         self.is_stopped = False
         self.app = app
         self.config = app.config
 
     def start(self):
         self.is_stopped = False
-        Greenlet.start(self)
+        gevent.Greenlet.start(self)
 
     def stop(self):
         self.is_stopped = True
-        Greenlet.kill(self)
+        gevent.Greenlet.kill(self)
 
 
 class Console(BaseService):
