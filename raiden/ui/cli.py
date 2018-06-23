@@ -908,28 +908,20 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     import binascii
-
+    from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.tests.utils.blockchain import geth_wait_and_check
     from raiden.tests.integration.fixtures.backend_geth import web3
+    from raiden.tests.integration.fixtures.blockchain import deploy_client
     from raiden.tests.utils.smoketest import (
+        deploy_smoketest_contracts,
+        get_private_key,
         load_smoketest_config,
         start_ethereum,
         run_smoketests,
-        patch_smoke_fns,
     )
     from raiden.utils import get_contract_path
-    from raiden.raiden_service import RaidenService
-
-    # TODO: Temporary until we also deploy contracts in smoketests
-    # This function call patches the initial query filtering to create some fake
-    # events. That is done to make up for the missing events that would have
-    # been generated and populated the state if the contracts were deployed
-    # and not precompiled in the smoketest genesis file
-    RaidenService.install_and_query_payment_network_filters = patch_smoke_fns(
-        RaidenService.install_and_query_payment_network_filters,
-    )
 
     # Check the solidity compiler early in the smoketest.
     #
@@ -967,18 +959,23 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
     web3_client = web3([port])
-
+    web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
     random_marker = binascii.hexlify(b'raiden').decode()
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
+
+    client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
+    contract_addresses = deploy_smoketest_contracts(client, [
+        'SecretRegistry',
+    ])
 
     print('[3/5] starting raiden')
 
     # setup cli arguments for starting raiden
     args = dict(
-        discovery_contract_address=smoketest_config['contracts']['discovery_address'],
-        registry_contract_address=smoketest_config['contracts']['registry_address'],
-        secret_registry_contract_address=smoketest_config['contracts']['secret_registry_address'],
+        discovery_contract_address=contract_addresses['EndpointRegistry'],
+        registry_contract_address=contract_addresses['Registry'],
+        secret_registry_contract_address=contract_addresses['SecretRegistry'],
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
