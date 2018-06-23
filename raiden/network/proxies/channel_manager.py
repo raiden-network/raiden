@@ -121,7 +121,7 @@ class ChannelManager:
                 self.open_channel_transactions.pop(other_peer, None)
         else:
             # All other concurrent threads should block on the result of opening this channel
-            transaction_hash = self.open_channel_transactions[other_peer].get()
+            self.open_channel_transactions[other_peer].get()
 
         netting_channel_results_encoded = self.proxy.contract.functions.getChannelWith(
             to_checksum_address(other_peer),

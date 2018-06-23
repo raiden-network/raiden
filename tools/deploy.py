@@ -42,11 +42,10 @@ def patch_deploy_solidity_contract():
     """
 
     import ast
-    from ast import NodeTransformer
     from inspect import getsource, getsourcefile
     from textwrap import dedent
 
-    class RemoveLibraryDeref(NodeTransformer):
+    class RemoveLibraryDeref(ast.NodeTransformer):
         """
         Removes the AST node representing the line
         `    libraries = dict(libraries)`
