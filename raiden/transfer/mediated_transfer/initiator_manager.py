@@ -170,7 +170,6 @@ def handle_transferrefundcancelroute(
     channel_state = channelidentifiers_to_channels[channel_identifier]
     refund_transfer = state_change.transfer
     original_transfer = payment_state.initiator.transfer
-    maximum_expiration = original_transfer.lock.expiration - channel_state.reveal_timeout
 
     if channel_state.close_transaction:
         closed_block_number = channel_state.close_transaction.finished_block_number
