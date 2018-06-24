@@ -182,3 +182,120 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
+
+
+@pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [4])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, network_wait):
+    """Test the refund transfer sent due to failure after 2nd hop"""
+    # Topology:
+    #
+    #  0 -> 1 -> 2 -> 3
+    #
+    app0, app1, app2, app3 = raiden_chain
+    token_address = token_addresses[0]
+    payment_network_identifier = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        payment_network_identifier,
+        token_address,
+    )
+
+    # make a transfer to test the path app0 -> app1 -> app2 -> app3
+    identifier_path = 1
+    amount_path = 1
+    mediated_transfer(
+        app0,
+        app3,
+        token_network_identifier,
+        amount_path,
+        identifier_path,
+        timeout=network_wait,
+    )
+
+    # drain the channel app2 -> app3
+    identifier_drain = 2
+    amount_drain = deposit * 8 // 10
+    direct_transfer(
+        app2,
+        app3,
+        token_network_identifier,
+        amount_drain,
+        identifier_drain,
+        timeout=network_wait,
+    )
+
+    # wait for the nodes to sync
+    gevent.sleep(0.2)
+
+    assert_synched_channel_state(
+        token_network_identifier,
+        app0, deposit - amount_path, [],
+        app1, deposit + amount_path, [],
+    )
+    assert_synched_channel_state(
+        token_network_identifier,
+        app1, deposit - amount_path, [],
+        app2, deposit + amount_path, [],
+    )
+    assert_synched_channel_state(
+        token_network_identifier,
+        app2, deposit - amount_path - amount_drain, [],
+        app3, deposit + amount_path + amount_drain, [],
+    )
+
+    # app0 -> app1 -> app2 > app3 is the only available path, but the channel
+    # app2 -> app3 doesn't have capacity, so a refund will be sent on
+    # app2 -> app1 -> app0
+    identifier_refund = 3
+    amount_refund = 50
+    async_result = app0.raiden.mediated_transfer_async(
+        token_network_identifier,
+        amount_refund,
+        app3.raiden.address,
+        identifier_refund,
+    )
+    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
+
+    gevent.sleep(0.2)
+
+    # A lock structure with the correct amount
+
+    send_locked = next(
+        event
+        for _, event in app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
+    )
+    assert send_locked
+
+    send_refund = next(
+        event
+        for _, event in app2.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendRefundTransfer)
+    )
+    assert send_refund
+
+    lock = send_locked.transfer.lock
+    refund_lock = send_refund.lock
+    assert lock.amount == refund_lock.amount
+    assert lock.secrethash
+    assert lock.expiration
+
+    # channels have the amount locked because of the refund message
+    assert_synched_channel_state(
+        token_network_identifier,
+        app0, deposit - amount_path, [lockstate_from_lock(lock)],
+        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
+    )
+    assert_synched_channel_state(
+        token_network_identifier,
+        app0, deposit - amount_path, [lockstate_from_lock(lock)],
+        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
+    )
+    assert_synched_channel_state(
+        token_network_identifier,
+        app1, deposit - amount_path - amount_drain, [],
+        app2, deposit + amount_path + amount_drain, [],
+    )
