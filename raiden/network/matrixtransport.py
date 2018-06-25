@@ -273,7 +273,7 @@ class MatrixTransport:
 
     def _login_or_register(self):
         # password is signed server address
-        password = encode_hex(self._sign(self._server_url.encode()))
+        password = encode_hex(self._sign(self._server_name.encode()))
         seed = int.from_bytes(self._sign(b'seed')[-32:], 'big')
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
@@ -288,7 +288,8 @@ class MatrixTransport:
                 self._client.login_with_password(username, password)
                 self.log.info(
                     'LOGIN',
-                    homeserver=self._server_url,
+                    homeserver=self._server_name,
+                    server_url=self._server_url,
                     username=username,
                 )
                 break
@@ -297,14 +298,16 @@ class MatrixTransport:
                     raise
                 self.log.debug(
                     'Could not login. Trying register',
-                    homeserver=self._server_url,
+                    homeserver=self._server_name,
+                    server_url=self._server_url,
                     username=username,
                 )
                 try:
                     self._client.register_with_password(username, password)
                     self.log.info(
                         'REGISTER',
-                        homeserver=self._server_url,
+                        homeserver=self._server_name,
+                        server_url=self._server_url,
                         username=username,
                     )
                     break
