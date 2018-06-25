@@ -1,9 +1,34 @@
-dist: trusty
-sudo: true
+stages:
+  - name: lint
+  - name: test
+  - name: integration
+    if: type = cron OR commit_message =~ /\[ci integration\]/ OR (tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/)
+  - name: deploy
+    if: tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
+templates:
+  job-template-test: &job-template-test
+    before_install:
+      - mkdir -p $HOME/.bin
+      - export PATH=$PATH:$HOME/.bin
+      - .travis/before_install.sh
+    install:
+      - .travis/install.sh
+    script:
+      - .travis/run.sh
+    after_script:
+      - coveralls
+
+  job-template-integration: &job-template-integration
+    <<: *job-template-test
+    sudo: true
+
+dist: trusty
+sudo: false
 language: python
 python:
-- '3.6'
+  - '3.6'
+
 env:
   global:
   - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.0-5f540757.tar.gz'
@@ -15,60 +40,109 @@ env:
   - SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=synapse'
   - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   - COVERALLS_PARALLEL=true
-  matrix:
-  - TEST='./raiden/tests/unit'
-  - TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api --ignore=.raiden/tests/integration/contracts' TRANSPORT_OPTIONS='--transport=udp'
-  #- TEST='./raiden/tests/integration --ignore=./raiden/tests/integration/transfer --ignore=./raiden/tests/integration/long_running --ignore=./raiden/tests/integration/api --ignore=.raiden/tests/integration/contracts' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh' RUN_SYNAPSE=1
-  - TEST='./raiden/tests/integration/transfer' TRANSPORT_OPTIONS='--transport=udp'
-  #- TEST='./raiden/tests/integration/transfer' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh' RUN_SYNAPSE=1
-  - TEST='./raiden/tests/integration/long_running ./raiden/tests/integration/contracts'
-  - TEST='./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=udp'
-  #- TEST='./raiden/tests/integration/api' TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh' RUN_SYNAPSE=1
+
 cache:
   pip: true
   directories:
   - "$HOME/.cache/pip"
   - "$HOME/.ethash"
   - "$HOME/.bin"
-before_install:
-  - mkdir -p $HOME/.bin
-  - export PATH=$PATH:$HOME/.bin
-  - ./.travis/before_install.sh
-install:
-  ./.travis/install.sh
-before_script:
-  ./.travis/before_script.sh
-script:
-  - ./.travis/run.sh
-after_script:
-  - coveralls
 notifications:
   webhooks:
   # Chat notification
   - secure: IXBsyQtH29Vkh+Pe2exrbE3L8FJMQFqJ8ZRxkACts7cQtB8Iz1vyjWg9nYE9ZuCj/JWEeMZd/09JvwwKUj8ZEzwj59gFwVQFwTAxJbiDLRsn7WpdI5Q2fQ9ZPZIAbPo/mJejeHC+z3d5UgY72hbhqWuPJAa4ApWWKE5mPFUIr9uxgs01ReWs/y5HaPawQkSQAKVWWsS5R52Oyr9CYQNbfqfWcoLvzdiIZpsBi2r4ZK3NGrBZPGo4b+PkDkWjuBhMJ0FVABFCJT/bT2ORFsmsCDwZ4I3vOrKtJGDybmwONZqr0ymfYo1lbcUp0mE0zJ0ApyRtLqEFiTzaQqenlAZmBAtpDZVvpxFuDwZgFxafpNutO3Aj3Xbfe+aaooPfHA7SoxmxG/3gWY+OyaME8EDePfBHM0c1gGsNHmbPLt8k0lmwYKlNTFtFFyRAbL3700j19utkGroOK6CUYbed9YD96UehQTj7HN8rpLTZzSMh39c1JHVyqxsUZKkhQgY4GPgx2RAIiCVrwc6wN3Ebtwft0hA2UhvDodsc/qBAyz/YnSp2oKZKagLy5747torZybtNOGKCaV2fT3mSTxV2UNwPJ/N94dlTquJNx3StHT0IqD3Kfo5HYKJKHeri6lttTDul3rjAs1xxB2aAMutsyg7dRbBMmuKlK9gAtoS3UKthQdk=
   # coveralls 'parallel build done' trigger
   - secure: "eFjTor3HH4OiMkBYJAbiri09AV86KbMoPi9khESCOTicM/AnofrAdObguxa4v/s1d2AXbpaEpvy59R2ZaocucwSnw2UoCa/VgTPZf8FOazShn001g0PN2LS6hQFxCTFDowOHZKx9P2jqoUf17rtUDDbGfin6L/aaykJ9MCXxJKY+jlf8roDGArbaXHqntkhphNYuFsmaHHqQqjuRUdCB+Ys8BAQavsePWpyJ0kjlPo4UuSasn6OpRnrz7E6K/3tziFJB0l4hTghU2wzDYF9V+eF9jIyoqoUkcgqTeyjjAO2Rf1If20gQerf09wC8xl965VLgzZ/oQCp4WpIFzorJielLwdE498N0S/gZ0GktqO3jPfS97JaH2+ZkSb2yUdTSLxTHCva9mgqpnQAK8AOEndjMUupbc0UXe440MJzX1wT6IaQ2IwibRwADWAgUqOu5XSaV+rWPvKbBl54NwO7yAVxV20PbKqJMFAYiuVKnRRqnLDhKsZpPxEf0nfrbu/VARKeVuWEg6LkaBFPA4r+EjCQFhT/hwB/DFjoYSCf5PpFcvwL1Tl2gpQcxFhDHKHAITLwYCVCiQHkG1MdQt4fTaBUEm+BcmIbZ4FVfTYbCdys7Hge6RTKxVl8Xe7jDgibHXF4wTPHR81crX9Xk3nUm6VwJzluaTUi1OKj8Nathqbk="
-stages:
-  - lint
-  - test
-  - deploy
+
 jobs:
   include:
     - stage: lint
       sudo: false
-      before_install: /bin/true
       install: pip install -r requirements-lint.txt
-      before_script: /bin/true
       script: make lint
+
+    - stage: test
+      <<: *job-template-test
+      script: .travis/run_smoketest.sh
       after_script: /bin/true
-      env: LINT=1 TEST=""
+      env:
+        - SMOKETEST=1
+
+    - stage: test
+      <<: *job-template-test
+      script: .travis/run_smoketest.sh
+      after_script: /bin/true
+      env:
+        - SMOKETEST=1
+        - RUN_SYNAPSE=1
+
+    - stage: test
+      <<: *job-template-test
+      env:
+        - TEST='raiden/tests/unit'
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
+        - TRANSPORT_OPTIONS='--transport=udp'
+
+#    - stage: integration
+#      <<: *job-template-integration
+#      env:
+#        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
+#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#        - RUN_SYNAPSE=1
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/transfer'
+        - TRANSPORT_OPTIONS='--transport=udp'
+
+#    - stage: integration
+#      <<: *job-template-integration
+#      env:
+#        - TEST='raiden/tests/integration/transfer'
+#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#        - RUN_SYNAPSE=1
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/long_running'
+        - TRANSPORT_OPTIONS='--transport=udp'
+
+#    - stage: integration
+#      <<: *job-template-integration
+#      env:
+#        - TEST='raiden/tests/integration/long_running'
+#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#        - RUN_SYNAPSE=1
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/contracts'
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/api'
+        - TRANSPORT_OPTIONS='--transport=udp'
+
+#    - stage: integration
+#      <<: *job-template-integration
+#      env:
+#        - TEST='raiden/tests/integration/api'
+#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#        - RUN_SYNAPSE=1
+
     - stage: deploy
-      if: tag IS present
-      before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh
-      install: ./.travis/install.sh
-      before_script: ./.travis/before_script.sh
+      before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; .travis/before_install.sh
+      install: .travis/install.sh
+      before_script: .travis/before_script.sh
       script: RAIDENVERSION=$TRAVIS_TAG make bundle-docker
-      env: TEST=""
       deploy:
       - provider: releases
         api_key:
@@ -89,8 +163,8 @@ jobs:
           distributions: sdist bdist_wheel
           repo: raiden-network/raiden
           branch: master
+
     - stage: deploy
-      if: tag IS present
       os: osx
       language: generic
       osx_image: xcode8.3
