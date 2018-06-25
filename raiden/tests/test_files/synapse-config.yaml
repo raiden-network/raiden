@@ -1,20 +1,20 @@
-no_tls: True
+no_tls: true
 tls_fingerprints: []
 server_name: "matrix.local.raiden"
-web_client: False
+web_client: true
 
 soft_file_limit: 0
 
 listeners:
   - port: 8008
     tls: false
-    bind_addresses: ['::', '0.0.0.0']
+    bind_addresses: ['127.0.0.1']
     type: http
 
     x_forwarded: false
 
     resources:
-      - names: [client]  # changed
+      - names: [client, webclient]  # changed
         compress: true
       - names: [federation]
         compress: false
@@ -37,13 +37,13 @@ federation_rc_concurrent: 3
 
 max_upload_size: "0M"  # changed
 max_image_pixels: "0M"  # changed
-url_preview_enabled: False
+url_preview_enabled: false
 
-enable_registration: True  # changed
+enable_registration: true  # changed
 bcrypt_rounds: 12
-allow_guest_access: False
-enable_metrics: False
-report_stats: False
+allow_guest_access: false
+enable_metrics: false
+report_stats: false
 
 # A list of event types that will be included in the room_invite_state
 room_invite_state_types:
@@ -55,7 +55,7 @@ room_invite_state_types:
 # A list of application service config file to use
 app_service_config_files: []
 
-expire_access_token: False
+expire_access_token: false
 old_signing_keys: {}
 key_refresh_interval: "1d" # 1 Day.
 

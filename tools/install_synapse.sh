@@ -22,9 +22,15 @@ if [[ ! -d ${DESTDIR} ]]; then
     fi
 fi
 
+# this function sets the modification time of file to time of last commit
+gitmtime(){ local f;for f;do touch -d @0`git log --pretty=%at -n1 -- "$f"` "$f"; done; }
+
+gitmtime "$0"
+
 SYNAPSE="${DESTDIR}/synapse"
 # build synapse single-file executable
-if [[ ! -x ${SYNAPSE} ]]; then
+# if file not exist or this script is newer than it
+if [[ ( ! -x ${SYNAPSE} ) || ( ${0} -nt ${SYNAPSE} ) ]]; then
     if [[ ! -d ${BUILDDIR} ]]; then
         BUILDDIR="$( mktemp -d )"
         RMBUILDDIR="1"
@@ -36,32 +42,32 @@ if [[ ! -x ${SYNAPSE} ]]; then
     SYNDIR="$( find venv/lib -name synapse -type d | head -1 )"
     ./venv/bin/pyinstaller -F -n synapse \
         --hidden-import="sqlite3" \
+        --hidden-import="syweb" \
         --add-data="${SYNDIR}/storage/schema:synapse/storage/schema" \
+        --add-data="${SYNDIR}/../syweb:syweb" \
         "${SYNDIR}/app/homeserver.py"
-    cp -v dist/synapse "${SYNAPSE}"
+    cp dist/synapse "${SYNAPSE}"
 
     popd
     [[ -n ${RMBUILDDIR} ]] && rm -r "${BUILDDIR}"
 fi
 
-cp ${BASEDIR}/raiden/tests/test_files/synapse-config.yaml ${DESTDIR}/synapse-config.yml
+cp "${BASEDIR}/raiden/tests/test_files/synapse-config.yaml" "${DESTDIR}/"
 "${SYNAPSE}" --server-name="${SYNAPSE_SERVER_NAME}" \
-           --config-path="${DESTDIR}/synapse-config.yml" \
+           --config-path="${DESTDIR}/synapse-config.yaml" \
            --generate-keys
-
-if [[ -z ${TRAVIS} ]]; then
-  LOG_FILE="${DESTDIR}/homeserver.log"
-  CLEAR_LOG="[[ -f ${LOG_FILE} ]] && rm ${LOG_FILE}"
-  LOGGING_OPTION="--log-file ${LOG_FILE}"
-fi
 
 cat > "${DESTDIR}/run_synapse.sh" << EOF
 #!/usr/bin/env bash
 SYNAPSEDIR=\$( dirname "\$0" )
-${CLEAR_LOG}
+if [[ -z \${TRAVIS} ]]; then
+  LOG_FILE="\${SYNAPSEDIR}/homeserver.log"
+  [[ -f \${LOG_FILE} ]] && rm "\${LOG_FILE}"
+  LOGGING_OPTION="--log-file \${LOG_FILE}"
+fi
 exec "\${SYNAPSEDIR}/synapse" \
   --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
-  --config-path="\${SYNAPSEDIR}/synapse-config.yml" \
-  ${LOGGING_OPTION}
+  --config-path="\${SYNAPSEDIR}/synapse-config.yaml" \
+  \${LOGGING_OPTION} \$@
 EOF
 chmod 775 "${DESTDIR}/run_synapse.sh"
