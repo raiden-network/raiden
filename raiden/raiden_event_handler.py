@@ -308,6 +308,24 @@ def handle_contract_send_channelsettle(
     channel.settle()
 
 
+def handle_contract_send_channelsettle2(
+        raiden: RaidenService,
+        channel_settle_event: ContractSendChannelSettle,
+):
+    channel = raiden.chain.payment_channel(channel_settle_event.channel_identifier)
+    our_balance_proof = channel_settle_event.our_balance_proof
+    partner_balance_proof = channel_settle_event.partner_balance_proof
+
+    channel.settle(
+        our_balance_proof.transferred_amount,
+        our_balance_proof.locked_amount,
+        our_balance_proof.locksroot,
+        partner_balance_proof.transferred_amount,
+        partner_balance_proof.locked_amount,
+        partner_balance_proof.locksroot,
+    )
+
+
 def on_raiden_event(raiden: RaidenService, event: Event):
     # pylint: disable=too-many-branches
 
@@ -343,6 +361,7 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         handle_contract_send_channelunlock(raiden, event)
     elif type(event) == ContractSendChannelSettle:
         handle_contract_send_channelsettle(raiden, event)
+        # handle_contract_send_channelsettle2(raiden, event)
     elif type(event) in UNEVENTFUL_EVENTS:
         pass
     else:
