@@ -36,7 +36,7 @@ def deploy_file(contract, compiled_contracts, client):
     )
 
     log.info(f"Deployed {name} @ {to_checksum_address(proxy.contract_address)}")
-    libraries[name] = to_checksum_address(proxy.contract_address)
+    libraries[name] = proxy.contract_address
     return libraries
 
 
