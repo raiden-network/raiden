@@ -93,7 +93,10 @@ def main(keystore_path, pretty, gas_price, port):
 
     deployed = deploy_contracts(client)
 
-    print(json.dumps(deployed, indent=2 if pretty else None))
+    print(json.dumps({
+        name: to_checksum_address(address)
+        for name, address in deployed.items()
+    }, indent=2 if pretty else None))
 
 
 if __name__ == '__main__':

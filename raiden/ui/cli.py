@@ -911,10 +911,14 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
+    from raiden.network.proxies.registry import Registry
     from raiden.tests.utils.blockchain import geth_wait_and_check
     from raiden.tests.integration.fixtures.backend_geth import web3
     from raiden.tests.integration.fixtures.blockchain import deploy_client
+    from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
+        TEST_PARTNER_ADDRESS,
+        TEST_DEPOSIT_AMOUNT,
         deploy_smoketest_contracts,
         get_private_key,
         load_smoketest_config,
@@ -947,7 +951,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
 
-    print('[1/5] getting smoketest configuration')
+    print('[1/6] getting smoketest configuration')
     smoketest_config = load_smoketest_config()
     if not smoketest_config:
         append_report(
@@ -955,7 +959,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             'Could not load the smoketest genesis configuration file.',
         )
 
-    print('[2/5] starting ethereum')
+    print('[2/6] starting ethereum')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
     web3_client = web3([port])
@@ -964,18 +968,29 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
+    print('[3/6] Deploying Raiden contracts')
     client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
     contract_addresses = deploy_smoketest_contracts(client, [
         'SecretRegistry',
     ])
 
-    print('[3/5] starting raiden')
+    token_contract = deploy_token(None, client)
+    token = token_contract(1000, 0, 'TKN', 'TKN')
+
+    registry = Registry(
+        client,
+        contract_addresses['Registry'],
+    )
+
+    registry.add_token(to_canonical_address(token.contract.address))
+
+    print('[4/6] starting raiden')
 
     # setup cli arguments for starting raiden
     args = dict(
-        discovery_contract_address=contract_addresses['EndpointRegistry'],
-        registry_contract_address=contract_addresses['Registry'],
-        secret_registry_contract_address=contract_addresses['SecretRegistry'],
+        discovery_contract_address=to_checksum_address(contract_addresses['EndpointRegistry']),
+        registry_contract_address=to_checksum_address(contract_addresses['Registry']),
+        secret_registry_contract_address=to_checksum_address(contract_addresses['SecretRegistry']),
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
@@ -1012,9 +1027,33 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         (api_host, api_port) = split_endpoint(args['api_address'])
         api_server.start(api_host, api_port)
 
+        raiden_api.channel_open(
+            contract_addresses['Registry'],
+            to_canonical_address(token.contract.address),
+            to_canonical_address(TEST_PARTNER_ADDRESS),
+            None,
+            None,
+        )
+        raiden_api.set_total_channel_deposit(
+            contract_addresses['Registry'],
+            to_canonical_address(token.contract.address),
+            to_canonical_address(TEST_PARTNER_ADDRESS),
+            TEST_DEPOSIT_AMOUNT,
+        )
+
+        smoketest_config['contracts']['registry_address'] = to_checksum_address(
+            contract_addresses['Registry'],
+        )
+        smoketest_config['contracts']['discovery_address'] = to_checksum_address(
+            contract_addresses['EndpointRegistry'],
+        )
+        smoketest_config['contracts']['token_address'] = to_checksum_address(
+            token.contract.address,
+        )
+
         success = False
         try:
-            print('[4/5] running smoketests...')
+            print('[5/6] running smoketests...')
             error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
             if error is not None:
                 append_report('smoketest assertion error', error)
@@ -1031,9 +1070,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             append_report('ethereum stderr', err)
             append_report('smoketest configuration', json.dumps(smoketest_config))
         if success:
-            print('[5/5] smoketest successful, report was written to {}'.format(report_file))
+            print('[6/6] smoketest successful, report was written to {}'.format(report_file))
         else:
-            print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
+            print('[6/6] smoketest had errors, report was written to {}'.format(report_file))
         return success
 
     if args['transport'] == 'udp':

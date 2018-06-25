@@ -241,13 +241,12 @@ def deploy_smoketest_contracts(client, contract_names):
     )
 
     for contract_name in contract_names:
-        print(f'Deploying {contract_name}')
         contract_address = deploy_contract_web3(
             contract_name,
             10000,
             client,
         )
-        addresses[contract_name] = to_checksum_address(contract_address)
+        addresses[contract_name] = contract_address
     return addresses
 
 
