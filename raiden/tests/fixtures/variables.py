@@ -81,6 +81,12 @@ def number_of_tokens():
 
 
 @pytest.fixture
+def register_tokens():
+    """ Should fixture generated tokens be registered with raiden. """
+    return True
+
+
+@pytest.fixture
 def number_of_nodes():
     """ Number of raiden nodes in the test network. """
     return 3
