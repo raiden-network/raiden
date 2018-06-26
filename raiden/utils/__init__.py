@@ -13,9 +13,9 @@ from coincurve import PrivateKey
 from eth_utils import remove_0x_prefix, keccak, is_checksum_address
 
 import raiden
+from raiden import constants
 from raiden.utils import typing
 from raiden.exceptions import InvalidAddress
-from raiden.constants import UINT64_MAX
 
 
 LETTERS = string.printable
@@ -133,6 +133,24 @@ def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     if port:
         port = int(port)
     return host, port
+
+
+def eth_endpoint_to_hostport(eth_rpc_endpoint: str):
+    if eth_rpc_endpoint.startswith('http://'):
+        rpc_host = eth_rpc_endpoint[len('http://'):]
+        rpc_port = constants.HTTP_PORT
+    elif eth_rpc_endpoint.startswith('https://'):
+        rpc_host = eth_rpc_endpoint[len('https://'):]
+        rpc_port = constants.HTTPS_PORT
+    else:
+        # Fallback to default port if only an IP address is given
+        rpc_host = eth_rpc_endpoint
+        rpc_port = constants.ETH_RPC_DEFAULT_PORT
+
+    if ':' in rpc_host:
+        return split_endpoint(rpc_host)
+
+    return (rpc_host, rpc_port)
 
 
 def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
@@ -322,7 +340,7 @@ def compare_versions(deployed_version, current_version):
 
 def create_default_identifier():
     """ Generates a random identifier. """
-    return random.randint(0, UINT64_MAX)
+    return random.randint(0, constants.UINT64_MAX)
 
 
 def merge_dict(a: dict, b: dict, path=None) -> dict:

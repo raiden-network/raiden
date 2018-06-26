@@ -24,14 +24,9 @@ from eth_utils import (
 from requests.exceptions import RequestException
 from mirakuru import HTTPExecutor
 
+from raiden import constants
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
-from raiden.constants import (
-    ID_TO_NETWORKNAME,
-    ROPSTEN_DISCOVERY_ADDRESS,
-    ROPSTEN_REGISTRY_ADDRESS,
-    ROPSTEN_SECRET_REGISTRY_ADDRESS,
-)
 from raiden.exceptions import (
     EthNodeCommunicationError,
     ContractVersionMismatch,
@@ -52,11 +47,12 @@ from raiden.settings import (
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
 from raiden.utils import (
+    eth_endpoint_to_hostport,
     get_system_spec,
     is_minified_address,
     is_supported_client,
-    split_endpoint,
     merge_dict,
+    split_endpoint,
     typing,
 )
 from raiden.network.sockfactory import SocketFactory
@@ -73,14 +69,6 @@ from raiden.utils.cli import (
     LOG_LEVEL_CONFIG_TYPE,
 )
 from raiden.log_config import configure_logging
-
-
-# ansi escape code for moving the cursor and clearing the line
-CURSOR_STARTLINE = '\x1b[1000D'
-CLEARLINE = '\x1b[2K'
-
-# 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
-DISCOVERY_TX_GAS_LIMIT = 60000
 
 
 def check_json_rpc(blockchain_service: BlockChainService) -> None:
@@ -106,7 +94,7 @@ def check_json_rpc(blockchain_service: BlockChainService) -> None:
 def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
-        network = ID_TO_NETWORKNAME[net_id]
+        network = constants.ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(
             'Could not determine the network the ethereum node is connected.\n'
@@ -140,7 +128,7 @@ def check_discovery_registration_gas(
         blockchain_service: BlockChainService,
         account_address: typing.Address,
 ) -> None:
-    discovery_tx_cost = blockchain_service.client.gasprice() * DISCOVERY_TX_GAS_LIMIT
+    discovery_tx_cost = blockchain_service.client.gasprice() * constants.DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
     if discovery_tx_cost > account_balance:
@@ -199,7 +187,7 @@ def wait_for_sync_etherscan(
             if local_block >= etherscan_block - tolerance:
                 return
 
-        print(CLEARLINE + CURSOR_STARTLINE, end='')
+        print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
         print(syncing_str.format(local_block, etherscan_block), end='')
 
 
@@ -214,7 +202,7 @@ def wait_for_sync_rpc_api(
 
     for i in count():
         if i % 3 == 0:
-            print(CLEARLINE + CURSOR_STARTLINE, end='')
+            print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
 
         print('.', end='')
         sys.stdout.flush()
@@ -294,21 +282,21 @@ def options(func):
         option(
             '--registry-contract-address',
             help='hex encoded address of the registry contract.',
-            default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--secret-registry-contract-address',
             help='hex encoded address of the secret registry contract.',
-            default=ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--discovery-contract-address',
             help='hex encoded address of the discovery contract.',
-            default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
@@ -564,21 +552,7 @@ def app(
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
 
-    endpoint = eth_rpc_endpoint
-
-    # Fallback to default port if only an IP address is given
-    rpc_port = 8545
-    if eth_rpc_endpoint.startswith('http://'):
-        endpoint = eth_rpc_endpoint[len('http://'):]
-        rpc_port = 80
-    elif eth_rpc_endpoint.startswith('https://'):
-        endpoint = eth_rpc_endpoint[len('https://'):]
-        rpc_port = 443
-
-    if ':' not in endpoint:  # no port was given in url
-        rpc_host = endpoint
-    else:
-        rpc_host, rpc_port = split_endpoint(endpoint)
+    rpc_host, rpc_port = eth_endpoint_to_hostport(eth_rpc_endpoint)
 
     rpc_client = JSONRPCClient(
         rpc_host,
@@ -598,11 +572,11 @@ def app(
 
     net_id = blockchain_service.network_id
     if net_id != network_id:
-        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
+        if network_id in constants.ID_TO_NETWORKNAME and net_id in constants.ID_TO_NETWORKNAME:
             print((
                 "The chosen ethereum network '{}' differs from the ethereum client '{}'. "
                 'Please update your settings.'
-            ).format(ID_TO_NETWORKNAME[network_id], ID_TO_NETWORKNAME[net_id]))
+            ).format(constants.ID_TO_NETWORKNAME[network_id], constants.ID_TO_NETWORKNAME[net_id]))
         else:
             print((
                 "The chosen ethereum network id '{}' differs from the ethereum client '{}'. "
@@ -617,7 +591,7 @@ def app(
     config['database_path'] = database_path
     print(
         'You are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(net_id) or net_id,
+            constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
             database_path,
         ),
     )
