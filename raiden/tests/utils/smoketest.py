@@ -22,7 +22,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.integration.fixtures.blockchain import deploy_contract_web3
 from raiden.utils import get_project_root
-from raiden.utils.deployment import deploy_contracts
+from raiden.utils.deployment import deploy_contracts, NEW_CONTRACTS_TO_DEPLOY
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -232,7 +232,7 @@ def start_ethereum(smoketest_genesis):
     return ethereum_node, ethereum_config
 
 
-def deploy_smoketest_contracts(client, contract_names):
+def deploy_smoketest_contracts(client):
     addresses = deploy_contracts(client)
 
     client.web3.personal.unlockAccount(
@@ -240,7 +240,7 @@ def deploy_smoketest_contracts(client, contract_names):
         TEST_ACCOUNT_PASSWORD,
     )
 
-    for contract_name in contract_names:
+    for contract_name in NEW_CONTRACTS_TO_DEPLOY:
         contract_address = deploy_contract_web3(
             contract_name,
             10000,

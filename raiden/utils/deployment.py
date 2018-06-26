@@ -22,6 +22,10 @@ CONTRACTS_TO_DEPLOY = [
     'EndpointRegistry.sol:EndpointRegistry',
 ]
 
+NEW_CONTRACTS_TO_DEPLOY = [
+    'SecretRegistry',
+]
+
 
 def deploy_file(contract, compiled_contracts, client):
     libraries = dict()
@@ -40,13 +44,18 @@ def deploy_file(contract, compiled_contracts, client):
     return libraries
 
 
-def deploy_contracts(client):
+def deploy_contracts(client, compile_list=None, deploy_list=None):
+    if compile_list is None:
+        compile_list = RAIDEN_CONTRACT_FILES
+    if deploy_list is None:
+        deploy_list = CONTRACTS_TO_DEPLOY
+
     contracts_expanded = [
         get_contract_path(x)
-        for x in RAIDEN_CONTRACT_FILES
+        for x in compile_list
     ]
     compiled_contracts = compile_files_cwd(contracts_expanded)
     deployed = {}
-    for contract in CONTRACTS_TO_DEPLOY:
+    for contract in deploy_list:
         deployed.update(deploy_file(contract, compiled_contracts, client))
     return deployed
