@@ -45,7 +45,7 @@ def raiden_events_must_contain_entry(raiden, type_, data):
     return must_contain_entry(
         [x[1] for x in raiden.wal.storage.get_events_by_identifier(0, 'latest')],
         type_,
-        data
+        data,
     )
 
 

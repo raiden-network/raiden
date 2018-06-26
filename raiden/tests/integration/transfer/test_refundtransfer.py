@@ -52,7 +52,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     send_lockedtransfer = raiden_events_must_contain_entry(
         app0.raiden,
         SendLockedTransfer,
-        {'transfer': {'lock': {'amount': refund_amount}}}
+        {'transfer': {'lock': {'amount': refund_amount}}},
     )
     assert send_lockedtransfer
 
@@ -153,7 +153,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
     send_locked = raiden_events_must_contain_entry(
         app0.raiden,
         SendLockedTransfer,
-        {'transfer': {'lock': {'amount': amount_refund}}}
+        {'transfer': {'lock': {'amount': amount_refund}}},
     )
     assert send_locked
 
@@ -261,7 +261,7 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
     send_locked1 = raiden_events_must_contain_entry(
         app0.raiden,
         SendLockedTransfer,
-        {'transfer': {'lock': {'amount': amount_refund}}}
+        {'transfer': {'lock': {'amount': amount_refund}}},
     )
     assert send_locked1
 
@@ -275,7 +275,7 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
     send_locked2 = raiden_events_must_contain_entry(
         app1.raiden,
         SendLockedTransfer,
-        {'transfer': {'lock': {'amount': amount_refund}}}
+        {'transfer': {'lock': {'amount': amount_refund}}},
     )
     assert send_locked2
 
