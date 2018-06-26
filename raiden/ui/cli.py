@@ -1,3 +1,6 @@
+import gevent.monkey
+gevent.monkey.patch_all()
+
 from binascii import hexlify
 import sys
 import os
@@ -5,14 +8,14 @@ import tempfile
 import json
 import signal
 import shutil
+import traceback
 from copy import deepcopy
 from itertools import count
+from pathlib import Path
 from urllib.parse import urljoin
 
 import click
 import gevent
-import gevent.monkey
-gevent.monkey.patch_all()
 import requests
 from eth_utils import (
     to_int,
@@ -22,7 +25,7 @@ from eth_utils import (
     to_canonical_address,
 )
 from requests.exceptions import RequestException
-from mirakuru import HTTPExecutor
+from mirakuru import HTTPExecutor, ProcessExitedWithError
 
 from raiden import constants
 from raiden.accounts import AccountManager
@@ -869,13 +872,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @option(
     '--local-matrix',
     help='Command-line to be used to run a local matrix server (or "none")',
-    default=os.path.abspath(os.path.join(
-        os.path.dirname(__file__),
-        '..',
-        '..',
-        '.synapse',
-        'run_synapse.sh',
-    )),
+    default=str(Path(__file__).parent.parent.parent.joinpath('.synapse', 'run_synapse.sh')),
     show_default=True,
 )
 @click.pass_context
@@ -922,18 +919,33 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                     data = data.decode()
                 handler.writelines([data + os.linesep])
 
-    append_report('raiden version', json.dumps(get_system_spec()))
-    append_report('raiden log', None)
+    append_report('Raiden version', json.dumps(get_system_spec()))
+    append_report('Raiden log', None)
 
-    print('[1/6] getting smoketest configuration')
+    step_count = 7
+    if ctx.parent.params['transport'] == 'matrix':
+        step_count = 8
+    step = 0
+
+    def print_step(description, error=False):
+        nonlocal step
+        step += 1
+        click.echo(
+            '{} {}'.format(
+                click.style(f'[{step}/{step_count}]', fg='blue'),
+                click.style(description, fg='green' if not error else 'red'),
+            ),
+        )
+
+    print_step('Getting smoketest configuration')
     smoketest_config = load_smoketest_config()
     if not smoketest_config:
         append_report(
-            'smoketest configuration',
+            'Smoketest configuration',
             'Could not load the smoketest genesis configuration file.',
         )
 
-    print('[2/6] starting ethereum')
+    print_step('Starting Ethereum node')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
     web3_client = web3([port])
@@ -942,7 +954,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
-    print('[3/6] Deploying Raiden contracts')
+    print_step('Deploying Raiden contracts')
     client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
     contract_addresses = deploy_smoketest_contracts(client)
 
@@ -956,8 +968,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     registry.add_token(to_canonical_address(token.contract.address))
 
-    print('[4/6] starting raiden')
-
+    print_step('Setting up Raiden')
     # setup cli arguments for starting raiden
     args = dict(
         discovery_contract_address=to_checksum_address(contract_addresses['EndpointRegistry']),
@@ -990,6 +1001,8 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     args['sync_check'] = False
 
     def _run_smoketest():
+        print_step('Starting Raiden')
+
         # invoke the raiden app
         app_ = ctx.invoke(app, **args)
 
@@ -1025,10 +1038,10 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
         success = False
         try:
-            print('[5/6] running smoketests...')
+            print_step('Running smoketest')
             error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
             if error is not None:
-                append_report('smoketest assertion error', error)
+                append_report('Smoketest assertion error', error)
             else:
                 success = True
         finally:
@@ -1036,15 +1049,15 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             ethereum.send_signal(2)
 
             err, out = ethereum.communicate()
-            append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
-            append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
-            append_report('ethereum stdout', out)
-            append_report('ethereum stderr', err)
-            append_report('smoketest configuration', json.dumps(smoketest_config))
+            append_report('Ethereum init stdout', ethereum_config['init_log_out'].decode('utf-8'))
+            append_report('Ethereum init stderr', ethereum_config['init_log_err'].decode('utf-8'))
+            append_report('Ethereum stdout', out)
+            append_report('Ethereum stderr', err)
+            append_report('Smoketest configuration', json.dumps(smoketest_config))
         if success:
-            print('[6/6] smoketest successful, report was written to {}'.format(report_file))
+            print_step(f'Smoketest successful, report was written to {report_file}')
         else:
-            print('[6/6] smoketest had errors, report was written to {}'.format(report_file))
+            print_step(f'Smoketest had errors, report was written to {report_file}', error=True)
         return success
 
     if args['transport'] == 'udp':
@@ -1054,18 +1067,28 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
         print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
-        with HTTPExecutor(
+        print_step('Starting Matrix transport')
+        try:
+            with HTTPExecutor(
                 local_matrix,
                 status=r'^[24]\d\d$',
-                url=urljoin(args['matrix_server'], '/_matrix'),
-        ):
-            args['extra_config'] = {
-                'matrix': {
-                    'discovery_room': {'server': 'matrix.local.raiden'},
-                    'server_name': 'matrix.local.raiden',
-                },
-            }
-            success = _run_smoketest()
+                url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
+                shell=True,
+            ):
+                args['extra_config'] = {
+                    'matrix': {
+                        'discovery_room': {'server': 'matrix.local.raiden'},
+                        'server_name': 'matrix.local.raiden',
+                    },
+                }
+                success = _run_smoketest()
+        except (PermissionError, ProcessExitedWithError):
+            append_report('Matrix server start exception', traceback.format_exc())
+            print_step(
+                f'Error during smoketest setup, report was written to {report_file}',
+                error=True,
+            )
+            success = False
     elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
         print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
