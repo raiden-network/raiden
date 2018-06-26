@@ -3,8 +3,7 @@ import pytest
 import structlog
 
 from raiden import waiting
-from raiden.exceptions import RaidenShuttingDown
-from raiden.tests.utils.tests import cleanup_tasks
+from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
     create_apps,
@@ -14,23 +13,6 @@ from raiden.tests.utils.network import (
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
-def _raiden_cleanup(request, raiden_apps):
-    """ Helper to do cleanup a Raiden App. """
-    def _cleanup():
-        for app in raiden_apps:
-            try:
-                app.stop(leave_channels=False)
-            except RaidenShuttingDown:
-                pass
-
-        # Two tests in sequence could run a UDP server on the same port, a hanging
-        # greenlet from the previous tests could send packet to the new server and
-        # mess things up. Kill all greenlets to make sure that no left-over state
-        # from a previous test interferes with a new one.
-        cleanup_tasks()
-    request.addfinalizer(_cleanup)
 
 
 def wait_for_alarm_start(raiden_apps):
@@ -202,9 +184,9 @@ def raiden_chain(
             deposit,
         )
 
-    _raiden_cleanup(request, raiden_apps)
+    yield raiden_apps
 
-    return raiden_apps
+    shutdown_apps_and_cleanup_tasks(raiden_apps)
 
 
 @pytest.fixture
@@ -275,8 +257,6 @@ def raiden_network(
             deposit,
         )
 
-    _raiden_cleanup(request, raiden_apps)
-
     # Force blocknumber update
     exception = RuntimeError('Alarm failed to start and set up start_block correctly')
     with gevent.Timeout(seconds=5, exception=exception):
@@ -285,4 +265,5 @@ def raiden_network(
         app.raiden.alarm.poll_for_new_block()
 
     yield raiden_apps
-    [app.stop() for app in raiden_apps]
+
+    shutdown_apps_and_cleanup_tasks(raiden_apps)
