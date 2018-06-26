@@ -304,17 +304,15 @@ def create_apps(
 
 def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
     """Wait until all Alarm tasks start & set up the last_block"""
-    while True:
-        count_pending = len(
-            app
-            for app in raiden_apps
-            if app.raiden.alarm.last_block_number is None
-        )
+    apps = list(raiden_apps)
 
-        if count_pending == 0:
-            return
+    while apps:
+        app = apps[-1]
 
-        gevent.sleep(events_poll_timeout)
+        if app.raiden.alarm.last_block_number is None:
+            gevent.sleep(events_poll_timeout)
+        else:
+            apps.pop()
 
 
 def wait_for_usable_channel(
