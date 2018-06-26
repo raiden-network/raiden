@@ -261,41 +261,68 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
 
     gevent.sleep(0.2)
 
-    # A lock structure with the correct amount
-
-    send_locked = next(
+    # Lock structures with the correct amount
+    send_locked1 = next(
         event
         for _, event in app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
         if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
     )
-    assert send_locked
+    assert send_locked1
 
-    send_refund = next(
+    send_refund1 = next(
+        event
+        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendRefundTransfer)
+    )
+    assert send_refund1
+
+    lock1 = send_locked1.transfer.lock
+    refund_lock1 = send_refund1.lock
+    assert lock1.amount == refund_lock1.amount
+
+    send_locked2 = next(
+        event
+        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
+    )
+    assert send_locked2
+
+    send_refund2 = next(
         event
         for _, event in app2.raiden.wal.storage.get_events_by_identifier(0, 'latest')
         if isinstance(event, SendRefundTransfer)
     )
-    assert send_refund
+    assert send_refund2
 
-    lock = send_locked.transfer.lock
-    refund_lock = send_refund.lock
-    assert lock.amount == refund_lock.amount
-    assert lock.secrethash
-    assert lock.expiration
+    lock2 = send_locked2.transfer.lock
+    refund_lock2 = send_refund2.lock
+    assert lock2.amount == refund_lock2.amount
+    assert lock2.secrethash
+    assert lock2.expiration
 
     # channels have the amount locked because of the refund message
     assert_synched_channel_state(
         token_network_identifier,
-        app0, deposit - amount_path, [lockstate_from_lock(lock)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
+        app0, deposit - amount_path, [lockstate_from_lock(lock1)],
+        app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
+    )
+    # TODO: This fails.
+    # app1's view of it's partner state locked amount is not up to date.
+    # (Pdb++) channel.get_amount_locked(channel0.our_state)
+    # 50
+    # (Pdb++) channel.get_amount_locked(channel0.partner_state)
+    # 0
+    # (Pdb++) channel.get_amount_locked(channel1.our_state)
+    # 50
+    # (Pdb++) channel.get_amount_locked(channel1.partner_state)
+    # 50
+    assert_synched_channel_state(
+        token_network_identifier,
+        app1, deposit - amount_path, [lockstate_from_lock(lock2)],
+        app2, deposit + amount_path, [lockstate_from_lock(refund_lock2)],
     )
     assert_synched_channel_state(
         token_network_identifier,
-        app0, deposit - amount_path, [lockstate_from_lock(lock)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
-    )
-    assert_synched_channel_state(
-        token_network_identifier,
-        app1, deposit - amount_path - amount_drain, [],
-        app2, deposit + amount_path + amount_drain, [],
+        app2, deposit - amount_path - amount_drain, [],
+        app3, deposit + amount_path + amount_drain, [],
     )
