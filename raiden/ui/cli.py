@@ -970,9 +970,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     print('[3/6] Deploying Raiden contracts')
     client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
-    contract_addresses = deploy_smoketest_contracts(client, [
-        'SecretRegistry',
-    ])
+    contract_addresses = deploy_smoketest_contracts(client)
 
     token_contract = deploy_token(None, client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
