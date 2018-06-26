@@ -2,7 +2,6 @@ import gevent
 import pytest
 import structlog
 
-from raiden import waiting
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
@@ -10,103 +9,11 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
     netting_channel_open_and_deposit,
+    wait_for_channels,
+    wait_for_alarm_start,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
-def wait_for_alarm_start(raiden_apps):
-    """Wait until all Alarm tasks start & set up the last_block"""
-    while True:
-        count_pending = len(
-            app
-            for app in raiden_apps
-            if app.raiden.alarm.last_block_number is None
-        )
-
-        if count_pending == 0:
-            return
-
-        gevent.sleep(0.5)
-
-
-def wait_for_usable_channel(
-        app0,
-        app1,
-        registry_address,
-        token_address,
-        our_deposit,
-        partner_deposit,
-        events_poll_timeout=0.5,
-):
-    """ Wait until the channel from app0 to app1 is usable.
-
-    The channel and the deposits are registered, and the partner network state
-    is reachable.
-    """
-    waiting.wait_for_newchannel(
-        app0.raiden,
-        registry_address,
-        token_address,
-        app1.raiden.address,
-        events_poll_timeout,
-    )
-
-    waiting.wait_for_participant_newbalance(
-        app0.raiden,
-        registry_address,
-        token_address,
-        app1.raiden.address,
-        app0.raiden.address,
-        our_deposit,
-        events_poll_timeout,
-    )
-
-    waiting.wait_for_participant_newbalance(
-        app0.raiden,
-        registry_address,
-        token_address,
-        app1.raiden.address,
-        app1.raiden.address,
-        partner_deposit,
-        events_poll_timeout,
-    )
-
-    waiting.wait_for_healthy(
-        app0.raiden,
-        app1.raiden.address,
-        events_poll_timeout,
-    )
-
-
-def wait_for_channels(
-        app_channels,
-        registry_address,
-        token_addresses,
-        deposit,
-        events_poll_timeout=0.5,
-):
-    """ Wait until all channels are usable from both directions. """
-    for app0, app1 in app_channels:
-        for token_address in token_addresses:
-            wait_for_usable_channel(
-                app0,
-                app1,
-                registry_address,
-                token_address,
-                deposit,
-                deposit,
-                events_poll_timeout,
-            )
-            wait_for_usable_channel(
-                app1,
-                app0,
-                registry_address,
-                token_address,
-                deposit,
-                deposit,
-                events_poll_timeout,
-            )
 
 
 @pytest.fixture
@@ -263,8 +170,10 @@ def raiden_network(
 
     # Force blocknumber update
     exception = RuntimeError('Alarm failed to start and set up start_block correctly')
+
     with gevent.Timeout(seconds=5, exception=exception):
         wait_for_alarm_start(raiden_apps)
+
     for app in raiden_apps:
         app.raiden.alarm.poll_for_new_block()
 
