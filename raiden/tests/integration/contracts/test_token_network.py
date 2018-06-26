@@ -56,9 +56,9 @@ def test_token_network_proxy_basics(
     )
 
     # instantiating a new channel - test basic assumptions
-    assert c1_token_network_proxy.channel_exists(c2_client.sender) is False
-    assert c1_token_network_proxy.channel_is_opened(c2_client.sender) is False
-    assert c1_token_network_proxy.channel_is_closed(c2_client.sender) is False
+    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is False
+    assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is False
+    assert c1_token_network_proxy.channel_is_closed(c1_client.sender, c2_client.sender) is False
     # test timeout limits
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
@@ -88,8 +88,8 @@ def test_token_network_proxy_basics(
             c2_client.sender,
             NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
         )
-    assert c1_token_network_proxy.channel_exists(c2_client.sender) is True
-    assert c1_token_network_proxy.channel_is_opened(c2_client.sender) is True
+    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is True
+    assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is True
 
     # channel is open.
     # deposit with no balance
@@ -145,8 +145,8 @@ def test_token_network_proxy_basics(
         decode_hex(balance_proof.additional_hash),
         decode_hex(balance_proof.signature),
     )
-    assert c1_token_network_proxy.channel_is_closed(c2_client.sender) is True
-    assert c1_token_network_proxy.channel_exists(c2_client.sender) is True
+    assert c1_token_network_proxy.channel_is_closed(c1_client.sender, c2_client.sender) is True
+    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is True
     # closing already closed channel
     with pytest.raises(ChannelIncorrectStateError):
         c2_token_network_proxy.close(
@@ -168,7 +168,7 @@ def test_token_network_proxy_basics(
         0,
         EMPTY_HASH,
     )
-    assert c1_token_network_proxy.channel_exists(c2_client.sender) is False
+    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is False
     assert token_proxy.balance_of(c1_client.sender) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.sender) == (initial_balance_c2 + transferred_amount)
 

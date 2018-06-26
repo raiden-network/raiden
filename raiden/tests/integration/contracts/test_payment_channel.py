@@ -47,33 +47,27 @@ def test_payment_channel_proxy_basics(
         token_network_address,
     )
 
-    channel_proxy_1 = PaymentChannel(c1_token_network_proxy, c2_client.sender)
-    channel_proxy_2 = PaymentChannel(c2_token_network_proxy, c1_client.sender)
-    event_filter = channel_proxy_1.all_events_filter(
-        from_block=web3.eth.blockNumber,
-        to_block='latest',
-    )
-
-    # test basic assumptions
-    assert channel_proxy_1.channel_identifier() == channel_proxy_2.channel_identifier()
-
-    assert channel_proxy_1.opened() is False
-    assert channel_proxy_2.opened() is False
-    assert channel_proxy_1.closed() is False
-    assert channel_proxy_2.closed() is False
-
-    events = event_filter.get_all_entries()
-    assert len(events) == 0  # no event for this channel yet
-
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
         NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     )
     assert channel_identifier is not None
+
+    # create channel proxies
+    channel_proxy_1 = PaymentChannel(c1_token_network_proxy, channel_identifier)
+    channel_proxy_2 = PaymentChannel(c2_token_network_proxy, channel_identifier)
+
+    event_filter = channel_proxy_1.all_events_filter(
+        from_block=web3.eth.blockNumber,
+        to_block='latest',
+    )
+
     assert channel_proxy_1.channel_identifier() == channel_identifier
+    assert channel_proxy_2.channel_identifier() == channel_identifier
 
     assert channel_proxy_1.opened() is True
+    assert channel_proxy_2.opened() is True
 
     # check the settlement timeouts
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
