@@ -3,7 +3,7 @@ import os
 import random
 
 import pytest
-from eth_utils import to_normalized_address
+from eth_utils import to_normalized_address, remove_0x_prefix
 from raiden.network.utils import get_free_port
 
 from raiden.utils import privatekey_to_address
@@ -63,9 +63,7 @@ def random_marker():
     value.
     """
     random_hex = hex(random.getrandbits(100))
-
-    # strip the leading 0x and trailing L
-    return random_hex[2:-1]
+    return remove_0x_prefix(random_hex)
 
 
 @pytest.fixture
