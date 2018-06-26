@@ -84,12 +84,6 @@ def _token_addresses(
 
 
 @pytest.fixture
-def register_tokens():
-    """ Should fixture generated tokens be registered with raiden (default: True). """
-    return True
-
-
-@pytest.fixture
 def token_addresses(
         request,
         token_amount,
