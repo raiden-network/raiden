@@ -75,12 +75,6 @@ def deposit():
 
 
 @pytest.fixture
-def both_participants_deposit():
-    """ Boolean flag indicating if both participants of a channel put a deposit. """
-    return True
-
-
-@pytest.fixture
 def number_of_tokens():
     """ Number of tokens pre-registered in the test Registry. """
     return 1
