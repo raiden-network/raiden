@@ -18,11 +18,15 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def wait_for_alarm_start(raiden_apps):
     """Wait until all Alarm tasks start & set up the last_block"""
     while True:
-        if len([
-            True for app in raiden_apps
+        count_pending = len(
+            app
+            for app in raiden_apps
             if app.raiden.alarm.last_block_number is None
-        ]) == 0:
+        )
+
+        if count_pending == 0:
             return
+
         gevent.sleep(0.5)
 
 
