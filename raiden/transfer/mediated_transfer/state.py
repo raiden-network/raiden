@@ -328,6 +328,10 @@ class LockedTransferSignedState(State):
             encode_hex(self.target),
         )
 
+    @property
+    def payer_address(self):
+        return self.balance_proof.sender
+
     def __eq__(self, other):
         return (
             isinstance(other, LockedTransferSignedState) and
@@ -492,6 +496,10 @@ class MediationPairState(State):
             pex(self.payee_address),
             self.payee_transfer,
         )
+
+    @property
+    def payer_address(self):
+        return self.payer_transfer.payer_address
 
     def __eq__(self, other):
         return (
