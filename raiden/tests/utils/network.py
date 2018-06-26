@@ -2,9 +2,11 @@
 from binascii import hexlify
 from os import environ
 
+import gevent
 from gevent import server
 import structlog
 
+from raiden import waiting
 from raiden.app import App
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
@@ -298,3 +300,97 @@ def create_apps(
         apps.append(app)
 
     return apps
+
+
+def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
+    """Wait until all Alarm tasks start & set up the last_block"""
+    while True:
+        count_pending = len(
+            app
+            for app in raiden_apps
+            if app.raiden.alarm.last_block_number is None
+        )
+
+        if count_pending == 0:
+            return
+
+        gevent.sleep(events_poll_timeout)
+
+
+def wait_for_usable_channel(
+        app0,
+        app1,
+        registry_address,
+        token_address,
+        our_deposit,
+        partner_deposit,
+        events_poll_timeout=0.5,
+):
+    """ Wait until the channel from app0 to app1 is usable.
+
+    The channel and the deposits are registered, and the partner network state
+    is reachable.
+    """
+    waiting.wait_for_newchannel(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        events_poll_timeout,
+    )
+
+    waiting.wait_for_participant_newbalance(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        app0.raiden.address,
+        our_deposit,
+        events_poll_timeout,
+    )
+
+    waiting.wait_for_participant_newbalance(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        app1.raiden.address,
+        partner_deposit,
+        events_poll_timeout,
+    )
+
+    waiting.wait_for_healthy(
+        app0.raiden,
+        app1.raiden.address,
+        events_poll_timeout,
+    )
+
+
+def wait_for_channels(
+        app_channels,
+        registry_address,
+        token_addresses,
+        deposit,
+        events_poll_timeout=0.5,
+):
+    """ Wait until all channels are usable from both directions. """
+    for app0, app1 in app_channels:
+        for token_address in token_addresses:
+            wait_for_usable_channel(
+                app0,
+                app1,
+                registry_address,
+                token_address,
+                deposit,
+                deposit,
+                events_poll_timeout,
+            )
+            wait_for_usable_channel(
+                app1,
+                app0,
+                registry_address,
+                token_address,
+                deposit,
+                deposit,
+                events_poll_timeout,
+            )
