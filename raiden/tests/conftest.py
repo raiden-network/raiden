@@ -19,9 +19,6 @@ gevent.get_hub().SYSTEM_ERROR = BaseException
 gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
 
 
-CATCH_LOG_HANDLER_NAME = 'catch_log_handler'
-
-
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
