@@ -15,9 +15,6 @@ from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
 
-gevent.get_hub().SYSTEM_ERROR = BaseException
-gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
-
 
 def pytest_addoption(parser):
     parser.addoption(
