@@ -38,6 +38,7 @@ from raiden.exceptions import (
     APIServerPortInUseError,
     RaidenServicePortInUseError,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
@@ -56,6 +57,7 @@ from raiden.utils import (
     is_supported_client,
     split_endpoint,
     merge_dict,
+    typing,
 )
 from raiden.network.sockfactory import SocketFactory
 
@@ -81,9 +83,9 @@ CLEARLINE = '\x1b[2K'
 DISCOVERY_TX_GAS_LIMIT = 60000
 
 
-def check_json_rpc(client):
+def check_json_rpc(blockchain_service: BlockChainService) -> None:
     try:
-        client_version = client.web3.version.node
+        client_version = blockchain_service.client.web3.version.node
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
@@ -101,7 +103,7 @@ def check_json_rpc(client):
             sys.exit(1)
 
 
-def check_synced(blockchain_service):
+def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
         network = ID_TO_NETWORKNAME[net_id]
@@ -134,7 +136,10 @@ def check_synced(blockchain_service):
     )
 
 
-def check_discovery_registration_gas(blockchain_service, account_address):
+def check_discovery_registration_gas(
+        blockchain_service: BlockChainService,
+        account_address: typing.Address,
+) -> None:
     discovery_tx_cost = blockchain_service.client.gasprice() * DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
@@ -149,7 +154,11 @@ def check_discovery_registration_gas(blockchain_service, account_address):
         sys.exit(1)
 
 
-def etherscan_query_with_retries(url, sleep, retries=3):
+def etherscan_query_with_retries(
+        url: str,
+        sleep: float,
+        retries: int = 3,
+) -> int:
     for _ in range(retries - 1):
         try:
             etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
@@ -162,7 +171,12 @@ def etherscan_query_with_retries(url, sleep, retries=3):
     return etherscan_block
 
 
-def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
+def wait_for_sync_etherscan(
+        blockchain_service: BlockChainService,
+        url: str,
+        tolerance: int,
+        sleep: float,
+) -> None:
     local_block = blockchain_service.client.block_number()
     etherscan_block = etherscan_query_with_retries(url, sleep)
     syncing_str = 'Syncing ... Current: {} / Target: ~{}'
@@ -189,7 +203,10 @@ def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
         print(syncing_str.format(local_block, etherscan_block), end='')
 
 
-def wait_for_sync_rpc_api(blockchain_service, sleep):
+def wait_for_sync_rpc_api(
+        blockchain_service: BlockChainService,
+        sleep: float,
+) -> None:
     if blockchain_service.is_synced():
         return
 
@@ -208,7 +225,12 @@ def wait_for_sync_rpc_api(blockchain_service, sleep):
             return
 
 
-def wait_for_sync(blockchain_service, url, tolerance, sleep):
+def wait_for_sync(
+        blockchain_service: BlockChainService,
+        url: str,
+        tolerance: int,
+        sleep: float,
+) -> None:
     # print something since the actual test may take a few moments for the first
     # iteration
     print('Checking if the ethereum node is synchronized')
@@ -504,7 +526,6 @@ def app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
-    from raiden.network.blockchain_service import BlockChainService
 
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
@@ -573,7 +594,7 @@ def app(
     )
 
     # this assumes the eth node is already online
-    check_json_rpc(rpc_client)
+    check_json_rpc(blockchain_service)
 
     net_id = blockchain_service.network_id
     if net_id != network_id:
