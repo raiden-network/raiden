@@ -3,6 +3,7 @@ import pytest
 
 from raiden.transfer import views
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.events import raiden_events_must_contain_entry
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
     direct_transfer,
@@ -48,17 +49,15 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     # The transfer from app0 to app2 failed, so the balances did change.
     # Since the refund is not unlocked both channels have the corresponding
     # amount locked (issue #1091)
-    send_lockedtransfer = next(
-        event
-        for _, event in app0.raiden.wal.storage.get_events_by_block(0, 'latest')
-        if isinstance(event, SendLockedTransfer)
+    send_lockedtransfer = raiden_events_must_contain_entry(
+        app0.raiden,
+        SendLockedTransfer,
+        {'transfer': {'lock': {'amount': refund_amount}}}
     )
+    assert send_lockedtransfer
 
-    send_refundtransfer = next(
-        event
-        for _, event in app1.raiden.wal.storage.get_events_by_block(0, 'latest')
-        if isinstance(event, SendRefundTransfer)
-    )
+    send_refundtransfer = raiden_events_must_contain_entry(app1.raiden, SendRefundTransfer, {})
+    assert send_refundtransfer
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -151,18 +150,14 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
 
     # A lock structure with the correct amount
 
-    send_locked = next(
-        event
-        for _, event in app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
+    send_locked = raiden_events_must_contain_entry(
+        app0.raiden,
+        SendLockedTransfer,
+        {'transfer': {'lock': {'amount': amount_refund}}}
     )
     assert send_locked
 
-    send_refund = next(
-        event
-        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendRefundTransfer)
-    )
+    send_refund = raiden_events_must_contain_entry(app1.raiden, SendRefundTransfer, {})
     assert send_refund
 
     lock = send_locked.transfer.lock
@@ -262,36 +257,29 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
     gevent.sleep(0.2)
 
     # Lock structures with the correct amount
-    send_locked1 = next(
-        event
-        for _, event in app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
+
+    send_locked1 = raiden_events_must_contain_entry(
+        app0.raiden,
+        SendLockedTransfer,
+        {'transfer': {'lock': {'amount': amount_refund}}}
     )
     assert send_locked1
 
-    send_refund1 = next(
-        event
-        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendRefundTransfer)
-    )
+    send_refund1 = raiden_events_must_contain_entry(app1.raiden, SendRefundTransfer, {})
     assert send_refund1
 
     lock1 = send_locked1.transfer.lock
     refund_lock1 = send_refund1.lock
     assert lock1.amount == refund_lock1.amount
 
-    send_locked2 = next(
-        event
-        for _, event in app1.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendLockedTransfer) and event.transfer.lock.amount == amount_refund
+    send_locked2 = raiden_events_must_contain_entry(
+        app1.raiden,
+        SendLockedTransfer,
+        {'transfer': {'lock': {'amount': amount_refund}}}
     )
     assert send_locked2
 
-    send_refund2 = next(
-        event
-        for _, event in app2.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-        if isinstance(event, SendRefundTransfer)
-    )
+    send_refund2 = raiden_events_must_contain_entry(app2.raiden, SendRefundTransfer, {})
     assert send_refund2
 
     lock2 = send_locked2.transfer.lock
@@ -307,7 +295,7 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
     )
     # TODO: This fails.
-    # app1's view of it's partner state locked amount is not up to date.
+    # app1's view of its partner state locked amount is not up to date.
     # (Pdb++) channel.get_amount_locked(channel0.our_state)
     # 50
     # (Pdb++) channel.get_amount_locked(channel0.partner_state)
