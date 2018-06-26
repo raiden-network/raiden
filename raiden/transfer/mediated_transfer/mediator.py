@@ -178,6 +178,14 @@ def is_send_transfer_almost_equal(
 
 
 def filter_available_routes(transfers_pair, routes):
+    """This function makes sure we don't try routes that have already been tried
+       So in a setup like this, we want to make sure than node 2, having tried to
+       route the transfer through 3 will also try 5 before sending it backwards to 1
+
+       1 -> 2 -> 3 -> 4
+            v         ^
+            5 -> 6 -> 7
+    """
     channelid_to_route = {r.channel_identifier: r for r in routes}
 
     for pair in transfers_pair:
@@ -189,7 +197,13 @@ def filter_available_routes(transfers_pair, routes):
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-    return list(channelid_to_route.values())
+    available_routes = list(channelid_to_route.values())
+
+    # If all routes have already been tried then allow sending the transfer back
+    if len(available_routes) == 0:
+        available_routes = routes
+
+    return available_routes
 
 
 def get_payee_channel(channelidentifiers_to_channels, transfer_pair):
@@ -1089,7 +1103,7 @@ def handle_refundtransfer(
 
             iteration = mediate_transfer(
                 mediator_state,
-                [],
+                mediator_state_change.routes,
                 payer_channel,
                 channelidentifiers_to_channels,
                 pseudo_random_generator,
