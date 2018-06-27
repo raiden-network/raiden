@@ -54,11 +54,17 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
 
     # Install the filters first to avoid missing changes, as a consequence
     # some events might be applied twice.
-    raiden.blockchain_events.add_channel_manager_listener(manager_proxy)
+    raiden.blockchain_events.add_channel_manager_listener(
+        manager_proxy,
+        from_block=data['blockNumber'],
+    )
     for channel_proxy in netting_channel_proxies:
-        raiden.blockchain_events.add_netting_channel_listener(channel_proxy)
+        raiden.blockchain_events.add_netting_channel_listener(
+            channel_proxy,
+            from_block=data['blockNumber'],
+        )
 
-    token_address = data_decoder(event.event_data['args']['token_address'])
+    token_address = data_decoder(data['args']['token_address'])
 
     token_network_state = TokenNetworkState(
         manager_address,

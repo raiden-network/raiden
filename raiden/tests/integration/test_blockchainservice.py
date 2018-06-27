@@ -1,5 +1,6 @@
 import os
 import itertools
+import gevent
 
 import pytest
 from eth_utils import to_canonical_address, is_address, is_same_address
@@ -66,6 +67,15 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
         peer1_address,
         settle_timeout,
     )
+    exception = RuntimeError("Timeout while waiting for a new channel")
+    with gevent.Timeout(seconds=10, exception=exception):
+        waiting.wait_for_newchannel(
+            app1.raiden,
+            registry_address,
+            token_address,
+            app0.raiden.address,
+            app1.raiden.alarm.wait_time,
+        )
 
     # check contract state
     netting_channel_01 = blockchain_service0.netting_channel(netting_address_01)

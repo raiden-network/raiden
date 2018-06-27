@@ -322,6 +322,9 @@ class BlockchainEvents:
         self.event_listeners = list()
 
     def add_event_listener(self, event_name, eth_filter, abi):
+        existing_listeners = [x.event_name for x in self.event_listeners]
+        if event_name in existing_listeners:
+            return
         event = EventListener(
             event_name,
             eth_filter,
@@ -348,7 +351,7 @@ class BlockchainEvents:
             channel_manager_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        channelnew = channel_manager_proxy.channelnew_filter(from_block)
+        channelnew = channel_manager_proxy.channelnew_filter(from_block=from_block)
         manager_address = channel_manager_proxy.address
 
         self.add_event_listener(
@@ -376,7 +379,7 @@ class BlockchainEvents:
             netting_channel_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        netting_channel_events = netting_channel_proxy.all_events_filter(from_block)
+        netting_channel_events = netting_channel_proxy.all_events_filter(from_block=from_block)
         channel_address = netting_channel_proxy.address
 
         self.add_event_listener(
