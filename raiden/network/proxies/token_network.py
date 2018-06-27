@@ -251,7 +251,17 @@ class TokenNetwork:
             participant1: typing.Address,
             participant2: typing.Address,
     ) -> Dict:
-        """ Returns a dictionary with the participants' channel information. """
+        """ Returns a dictionary with the participants' channel information.
+
+        Note:
+            For now one of the participants has to be the node_address
+        """
+        if self.node_address not in (participant1, participant2):
+            raise ValueError('One participant must be the node address')
+
+        if self.node_address == participant2:
+            participant1, participant2 = participant2, participant1
+
         our_data = self.detail_participant(participant1, participant2)
         partner_data = self.detail_participant(participant2, participant1)
         return {
@@ -271,7 +281,16 @@ class TokenNetwork:
 
     def detail(self, participant1: typing.Address, participant2: typing.Address) -> Dict:
         """ Returns a dictionary with all the details of the channel and the channel participants.
+
+        Note:
+            For now one of the participants has to be the node_address
         """
+        if self.node_address not in (participant1, participant2):
+            raise ValueError('One participant must be the node address')
+
+        if self.node_address == participant2:
+            participant1, participant2 = participant2, participant1
+
         channel_data = self.detail_channel(participant1, participant2)
         participants_data = self.detail_participants(participant1, participant2)
 
