@@ -27,6 +27,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies import PaymentChannel
 from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex, typing
 from raiden.utils.filters import decode_event
@@ -387,6 +388,23 @@ class BlockchainEvents:
             netting_channel_events,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
             netting_channel_proxy.all_events_filter,
+        )
+
+    def add_payment_channel_listener(
+        self,
+        payment_channel_proxy: PaymentChannel,
+        from_block: typing.BlockSpecification = 'latest',
+    ):
+        payment_channel_filter = payment_channel_proxy.all_events_filter(from_block=from_block)
+        channel_identifier = payment_channel_proxy.channel_identifier()
+
+        self.add_event_listener(
+            f'PaymentChannel event {channel_identifier}',
+            payment_channel_filter,
+            raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
+                CONTRACT_TOKEN_NETWORK,
+            ),
+            payment_channel_proxy.all_events_filter,
         )
 
     def add_proxies_listeners(self, proxies, from_block: typing.BlockSpecification = 'latest'):
