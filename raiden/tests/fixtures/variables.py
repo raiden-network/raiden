@@ -156,8 +156,6 @@ def token_amount(number_of_nodes, deposit):
 @pytest.fixture
 def network_wait(transport_config, blockchain_type):
     """Time in seconds used to wait for network events."""
-    # set higher for Travis builds and for the Matrix versions of the
-    # tests, due to Travis and the local Synapse server being slow sometimes
     return 5.0
 
 
