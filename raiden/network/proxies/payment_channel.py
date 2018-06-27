@@ -34,8 +34,14 @@ class PaymentChannel:
             raise ValueError('Channel is non-existing.')
 
         event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
-        self.participant = decode_hex(event['args']['participant1'])
-        self.partner = decode_hex(event['args']['participant2'])
+        self.participant1 = decode_hex(event['args']['participant1'])
+        self.participant2 = decode_hex(event['args']['participant2'])
+
+        if token_network.node_address not in (self.participant1, self.participant2):
+            raise ValueError('One participant must be the node address')
+
+        if token_network.node_address == self.participant2:
+            self.participant1, self.participant2 = self.participant2, self.participant1
 
     def token_address(self) -> typing.Address:
         """ Returns the address of the token for the channel. """
@@ -47,7 +53,7 @@ class PaymentChannel:
 
     def detail(self) -> Dict:
         """ Returns the channel details. """
-        return self.token_network.detail(self.participant, self.partner)
+        return self.token_network.detail(self.participant1, self.participant2)
 
     def settle_timeout(self) -> int:
         """ Returns the channels settle_timeout. """
@@ -69,26 +75,26 @@ class PaymentChannel:
 
     def opened(self) -> bool:
         """ Returns if the channel is opened. """
-        return self.token_network.channel_is_opened(self.participant, self.partner)
+        return self.token_network.channel_is_opened(self.participant1, self.participant2)
 
     def closed(self) -> bool:
         """ Returns if the channel is closed. """
-        return self.token_network.channel_is_closed(self.participant, self.partner)
+        return self.token_network.channel_is_closed(self.participant1, self.participant2)
 
     def settled(self) -> bool:
         """ Returns if the channel is settled. """
-        return self.token_network.channel_is_settled(self.participant, self.partner)
+        return self.token_network.channel_is_settled(self.participant1, self.participant2)
 
     def closing_address(self) -> typing.Address:
         """ Returns the address of the closer of the channel. """
-        return self.token_network.closing_address(self.participant, self.partner)
+        return self.token_network.closing_address(self.participant1, self.participant2)
 
     def can_transfer(self) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
-        return self.token_network.can_transfer(self.participant, self.partner)
+        return self.token_network.can_transfer(self.participant1, self.participant2)
 
     def deposit(self, total_deposit: typing.TokenAmount):
-        self.token_network.deposit(total_deposit, self.partner)
+        self.token_network.deposit(total_deposit, self.participant2)
 
     def close(
             self,
@@ -99,7 +105,7 @@ class PaymentChannel:
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
-            partner=self.partner,
+            partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -116,7 +122,7 @@ class PaymentChannel:
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
-            partner=self.partner,
+            partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -126,7 +132,7 @@ class PaymentChannel:
 
     def unlock(self, merkle_tree_leaves: bytes):
         self.token_network.unlock(
-            self.partner,
+            self.participant2,
             merkle_tree_leaves,
         )
 
@@ -144,7 +150,7 @@ class PaymentChannel:
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,
-            partner=self.partner,
+            partner=self.participant2,
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
