@@ -3,7 +3,7 @@ from binascii import hexlify
 from eth_utils import denoms, encode_hex
 
 from raiden.utils import privatekey_to_address, sha3
-from raiden.tests.utils.blockchain import GENESIS_STUB
+from raiden.tests.utils.genesis import GENESIS_STUB
 
 CLUSTER_NAME = 'raiden'
 

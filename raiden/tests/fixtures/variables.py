@@ -3,7 +3,7 @@ import os
 import random
 
 import pytest
-from eth_utils import to_normalized_address, remove_0x_prefix
+from eth_utils import to_normalized_address, remove_0x_prefix, denoms
 from raiden.network.utils import get_free_port
 
 from raiden.utils import privatekey_to_address
@@ -17,6 +17,10 @@ from raiden.utils import sha3
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
+
+DEFAULT_BALANCE = denoms.ether * 100000
+DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
+DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 
 @pytest.fixture

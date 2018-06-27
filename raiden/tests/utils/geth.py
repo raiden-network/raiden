@@ -1,4 +1,5 @@
 from binascii import hexlify
+from collections import namedtuple
 import json
 import io
 import os
@@ -10,7 +11,6 @@ import time
 import gevent
 
 from eth_utils import (
-    denoms,
     encode_hex,
     remove_0x_prefix,
     to_checksum_address,
@@ -22,14 +22,25 @@ from requests import ConnectionError
 from raiden.utils import (
     privatekey_to_address,
     privtopub,
+    typing,
 )
 from raiden.tests.utils.genesis import GENESIS_STUB
+from raiden.tests.fixtures.variables import (
+    DEFAULT_BALANCE_BIN,
+    DEFAULT_PASSPHRASE,
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_BALANCE = denoms.ether * 10000000
-DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
-DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
+
+GethNodeDescription = namedtuple(
+    'GethNodeDescription',
+    [
+        'private_key',
+        'rpc_port',
+        'p2p_port',
+    ],
+)
 
 
 def wait_until_block(chain, block):
@@ -41,7 +52,7 @@ def wait_until_block(chain, block):
         gevent.sleep(0.001)
 
 
-def clique_extradata(extra_vanity, extra_seal):
+def geth_clique_extradata(extra_vanity, extra_seal):
     if len(extra_vanity) > 64:
         raise ValueError('extra_vanity length must be smaller-or-equal to 64')
 
@@ -81,7 +92,7 @@ def geth_to_cmd(node, datadir, verbosity):
     for config in node_config:
         if config in node:
             value = node[config]
-            cmd.extend(['--{}'.format(config), str(value)])
+            cmd.extend([f'--{config}', str(value)])
 
     # dont use the '--dev' flag
     cmd.extend([
@@ -90,7 +101,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
-        '--verbosity', str(verbosity),
+        '--verbosity', '3',
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),
     ])
@@ -129,34 +140,36 @@ def geth_create_account(datadir, privkey):
     assert create.returncode == 0
 
 
-def geth_bare_genesis(genesis_path, private_keys, random_marker):
+def geth_generate_poa_genesis(
+        genesis_path,
+        accounts_addresses,
+        seal_address,
+        random_marker,
+):
     """Writes a bare genesis to `genesis_path`.
 
     Args:
         genesis_path (str): the path in which the genesis block is written.
-        private_keys list(str): iterable list of privatekeys whose corresponding accounts will
-                    have a premined balance available.
+        accounts_addresses (List[str]): iterable list of privatekeys whose
+            corresponding accounts will have a premined balance available.
+        seal_address (str): Address of the ethereum account that can seal
+            blocks in the PoA chain
     """
-
-    account_addresses = [
-        privatekey_to_address(key)
-        for key in sorted(set(private_keys))
-    ]
 
     alloc = {
         to_normalized_address(address): {
             'balance': DEFAULT_BALANCE_BIN,
         }
-        for address in account_addresses
+        for address in accounts_addresses
     }
     genesis = GENESIS_STUB.copy()
     genesis['alloc'].update(alloc)
 
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
 
-    genesis['extraData'] = clique_extradata(
+    genesis['extraData'] = geth_clique_extradata(
         random_marker,
-        to_normalized_address(account_addresses[0])[2:],
+        to_normalized_address(seal_address)[2:],
     )
 
     with open(genesis_path, 'w') as handler:
@@ -186,7 +199,7 @@ def geth_init_datadir(datadir, genesis_path):
         raise ValueError(msg)
 
 
-def geth_wait_and_check(web3, privatekeys, random_marker):
+def geth_wait_and_check(web3, accounts_addresses, random_marker):
     """ Wait until the geth cluster is ready. """
     jsonrpc_running = False
 
@@ -215,13 +228,11 @@ def geth_wait_and_check(web3, privatekeys, random_marker):
     if jsonrpc_running is False:
         raise ValueError('geth didnt start the jsonrpc interface')
 
-    for key in sorted(set(privatekeys)):
-        address = to_checksum_address(privatekey_to_address(key))
-
+    for account in accounts_addresses:
         tries = 10
         balance = 0
         while balance == 0 and tries > 0:
-            balance = web3.eth.getBalance(address, 'latest')
+            balance = web3.eth.getBalance(to_checksum_address(account), 'latest')
             gevent.sleep(1)
             tries -= 1
 
@@ -229,92 +240,81 @@ def geth_wait_and_check(web3, privatekeys, random_marker):
             raise ValueError('account is with a balance of 0')
 
 
-def geth_create_blockchain(
-        deploy_key,
-        web3,
-        private_keys,
-        blockchain_private_keys,
-        rpc_ports,
-        p2p_ports,
-        base_datadir,
-        verbosity,
-        random_marker,
-        genesis_path=None,
-        logdirectory=None,
-):
-    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
+def geth_node_config(miner_pkey, p2p_port, rpc_port, unlock=False):
+    address = privatekey_to_address(miner_pkey)
+    pub = remove_0x_prefix(encode_hex(privtopub(miner_pkey)))
 
-    nodes_configuration = []
-    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
+    config = {
+        'nodekey': miner_pkey,
+        'nodekeyhex': remove_0x_prefix(encode_hex(miner_pkey)),
+        'pub': pub,
+        'address': address,
+        'port': p2p_port,
+        'rpcport': rpc_port,
+        'enode': f'enode://{pub}@127.0.0.1:{p2p_port}',
+    }
 
-    for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
-        config = dict()
+    if unlock:
+        config['unlock'] = 0
 
-        address = privatekey_to_address(key)
-        # make the first node miner
-        if pos == 0:
-            config['unlock'] = 0
+    return config
 
-        config['nodekey'] = key
-        config['nodekeyhex'] = remove_0x_prefix(encode_hex(key))
-        config['pub'] = remove_0x_prefix(encode_hex(privtopub(key)))
-        config['address'] = address
-        config['port'] = p2p_port
-        config['rpcport'] = rpc_port
-        config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
-            pub=config['pub'],
-            port=config['port'],
-        )
-        nodes_configuration.append(config)
+
+def geth_node_config_set_bootnodes(nodes_configuration: typing.Dict) -> None:
+    bootnodes = ','.join(node['enode'] for node in nodes_configuration)
 
     for config in nodes_configuration:
-        config['bootnodes'] = ','.join(node['enode'] for node in nodes_configuration)
+        config['bootnodes'] = bootnodes
 
-    all_keys = set(private_keys)
-    all_keys.add(deploy_key)
-    all_keys = sorted(all_keys)
+
+def geth_node_to_datadir(node_config, base_datadir):
+    # HACK: Use only the first 8 characters to avoid golang's issue
+    # https://github.com/golang/go/issues/6895 (IPC bind fails with path
+    # longer than 108 characters).
+    # BSD (and therefore macOS) socket path length limit is 104 chars
+    nodekey_part = node_config['nodekeyhex'][:8]
+    datadir = os.path.join(base_datadir, nodekey_part)
+    return datadir
+
+
+def geth_prepare_datadir(node_config, datadir, genesis_file):
+    node_genesis_path = os.path.join(datadir, 'custom_genesis.json')
+    assert len(datadir + '/geth.ipc') <= 104, 'geth data path is too large'
+
+    os.makedirs(datadir)
+    shutil.copy(genesis_file, node_genesis_path)
+    geth_init_datadir(datadir, node_genesis_path)
+
+
+def geth_run_nodes(
+        geth_nodes,
+        nodes_configuration,
+        base_datadir,
+        genesis_file,
+        verbosity,
+        logdir,
+):
+    os.makedirs(logdir)
 
     cmds = []
-    for i, config in enumerate(nodes_configuration):
-        # HACK: Use only the first 8 characters to avoid golang's issue
-        # https://github.com/golang/go/issues/6895 (IPC bind fails with path
-        # longer than 108 characters).
-        # BSD (and therefore macOS) socket path length limit is 104 chars
-        nodekey_part = config['nodekeyhex'][:8]
-        nodedir = os.path.join(base_datadir, nodekey_part)
-        node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
-
-        assert len(nodedir + '/geth.ipc') <= 104, 'geth data path is too large'
-
-        os.makedirs(nodedir)
-
-        if genesis_path is None:
-            geth_bare_genesis(node_genesis_path, all_keys, random_marker)
-        else:
-            shutil.copy(genesis_path, node_genesis_path)
-
-        geth_init_datadir(nodedir, node_genesis_path)
+    for config, node in zip(nodes_configuration, geth_nodes):
+        datadir = geth_node_to_datadir(config, base_datadir)
+        geth_prepare_datadir(config, datadir, genesis_file)
 
         if 'unlock' in config:
-            geth_create_account(nodedir, all_keys[i])
+            geth_create_account(datadir, node.private_key)
 
-        commandline = geth_to_cmd(config, nodedir, verbosity)
+        commandline = geth_to_cmd(config, datadir, verbosity)
         cmds.append(commandline)
-
-    # save current term settings before running geth
-    if isinstance(sys.stdin, io.IOBase):  # check that the test is running on non-capture mode
-        term_settings = termios.tcgetattr(sys.stdin)
 
     stdout = None
     stderr = None
     processes_list = []
     for pos, cmd in enumerate(cmds):
-        if logdirectory:
-            log_path = os.path.join(logdirectory, str(pos))
-            logfile = open(log_path, 'w')
-
-            stdout = logfile
-            stderr = logfile
+        log_path = os.path.join(logdir, str(pos))
+        logfile = open(log_path, 'w')
+        stdout = logfile
+        stderr = logfile
 
         if '--unlock' in cmd:
             cmd.append('--mine')
@@ -339,8 +339,74 @@ def geth_create_blockchain(
 
         processes_list.append(process)
 
+    return processes_list
+
+
+def geth_run_private_blockchain(
+        web3,
+        accounts_to_fund,
+        geth_nodes,
+        base_datadir,
+        verbosity,
+        random_marker,
+):
+    """ Starts a private network with private_keys accounts funded.
+
+    Args:
+        web3 (Web): A Web3 instance used to check when the private chain is running.
+        accounts_to_fund (List[bin]): Accounts that will start with funds in
+            the private chain.
+        geth_nodes (List[GethNodeDescription]): A list of geth node
+            description, containing the details of each node of the private
+            chain.
+        base_datadir (str): The directory that will be used for the private
+            chain data.
+        verbosity (str): Verbosity used by the geth nodes.
+        random_marker (str): A random marked used to identify the private chain.
+    """
+    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
+    nodes_configuration = []
+    seal_account = None
+    for pos, node in enumerate(geth_nodes):
+        if pos == 0:
+            unlock = True  # make the first node miner
+            seal_account = privatekey_to_address(node.private_key)
+
+        config = geth_node_config(
+            node.private_key,
+            node.p2p_port,
+            node.rpc_port,
+            unlock,
+        )
+        nodes_configuration.append(config)
+
+    geth_node_config_set_bootnodes(nodes_configuration)
+
+    genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
+    geth_generate_poa_genesis(
+        genesis_path,
+        accounts_to_fund,
+        seal_account,
+        random_marker,
+    )
+    logdir = os.path.join(base_datadir, 'logs')
+
+    # check that the test is running on non-capture mode, and if it is save
+    # current term settings before running geth
+    if isinstance(sys.stdin, io.IOBase):
+        term_settings = termios.tcgetattr(sys.stdin)
+
+    processes_list = geth_run_nodes(
+        geth_nodes,
+        nodes_configuration,
+        base_datadir,
+        genesis_path,
+        verbosity,
+        logdir,
+    )
+
     try:
-        geth_wait_and_check(web3, private_keys, random_marker)
+        geth_wait_and_check(web3, accounts_to_fund, random_marker)
 
         for process in processes_list:
             process.poll()

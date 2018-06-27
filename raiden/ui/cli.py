@@ -875,13 +875,12 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     import binascii
+    from web3 import Web3, HTTPProvider
     from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.network.proxies.registry import Registry
-    from raiden.tests.utils.blockchain import geth_wait_and_check
-    from raiden.tests.integration.fixtures.backend_geth import web3
-    from raiden.tests.integration.fixtures.blockchain import deploy_client
+    from raiden.tests.utils.geth import geth_wait_and_check
     from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
         TEST_PARTNER_ADDRESS,
@@ -944,14 +943,20 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     print_step('Starting Ethereum node')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
-    web3_client = web3([port])
+    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
     web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
     random_marker = binascii.hexlify(b'raiden').decode()
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
     print_step('Deploying Raiden contracts')
-    client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
+    host = '0.0.0.0'
+    client = JSONRPCClient(
+        host,
+        ethereum_config['rpc'],
+        get_private_key(),
+        web3=web3_client,
+    )
     contract_addresses = deploy_smoketest_contracts(client)
 
     token_contract = deploy_token(None, client)

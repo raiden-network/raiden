@@ -2,7 +2,7 @@ import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,

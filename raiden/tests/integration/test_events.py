@@ -23,7 +23,7 @@ from raiden.tests.utils.transfer import (
     get_channelstate,
     pending_mediated_transfer,
 )
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.transfer import views, channel
 from raiden.utils import sha3

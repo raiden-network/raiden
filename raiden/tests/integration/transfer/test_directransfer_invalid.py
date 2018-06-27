@@ -7,7 +7,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
 from raiden.transfer import channel, views
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_address,
