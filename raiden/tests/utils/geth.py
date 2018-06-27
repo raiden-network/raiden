@@ -102,7 +102,7 @@ def geth_to_cmd(node: typing.Dict, datadir: str, verbosity: int) -> typing.List[
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
-        '--verbosity', str(verbosity),
+        '--verbosity', '3',
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),
     ])
@@ -309,6 +309,8 @@ def geth_run_nodes(
         commandline = geth_to_cmd(config, datadir, verbosity)
         cmds.append(commandline)
 
+    stdout = None
+    stderr = None
     processes_list = []
     for pos, cmd in enumerate(cmds):
         log_path = os.path.join(logdir, str(pos))
