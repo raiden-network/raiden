@@ -35,7 +35,7 @@ from raiden.utils.typing import Address, BlockSpecification
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'abi', 'filter_creation_function'),
+    ('event_name', 'filter', 'abi'),
 )
 Proxies = namedtuple(
     'Proxies',
@@ -321,12 +321,11 @@ class BlockchainEvents:
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, eth_filter, abi, filter_creation_function):
+    def add_event_listener(self, event_name, eth_filter, abi):
         event = EventListener(
             event_name,
             eth_filter,
             abi,
-            filter_creation_function,
         )
         self.event_listeners.append(event)
 
@@ -342,7 +341,6 @@ class BlockchainEvents:
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
-            registry_proxy.tokenadded_filter,
         )
 
     def add_channel_manager_listener(
@@ -357,7 +355,6 @@ class BlockchainEvents:
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-            channel_manager_proxy.channelnew_filter,
         )
 
     def add_token_network_listener(
@@ -372,7 +369,6 @@ class BlockchainEvents:
             'TokenNetwork {}'.format(pex(token_network_address)),
             channel_new_filter,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            token_network_proxy.channelnew_filter,
         )
 
     def add_netting_channel_listener(
@@ -387,7 +383,6 @@ class BlockchainEvents:
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-            netting_channel_proxy.all_events_filter,
         )
 
     def add_payment_channel_listener(
@@ -404,7 +399,6 @@ class BlockchainEvents:
             raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
                 CONTRACT_TOKEN_NETWORK,
             ),
-            payment_channel_proxy.all_events_filter,
         )
 
     def add_proxies_listeners(self, proxies, from_block: typing.BlockSpecification = 'latest'):
