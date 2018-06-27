@@ -8,8 +8,7 @@ from raiden.network.utils import get_free_port
 
 from raiden.utils import privatekey_to_address
 from raiden.settings import (
-    DEFAULT_EVENTS_POLL_TIMEOUT,
-    DEFAULT_POLL_TIMEOUT,
+    DEFAULT_RETRY_TIMEOUT,
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
@@ -41,8 +40,8 @@ def reveal_timeout():
 
 
 @pytest.fixture
-def events_poll_timeout():
-    return DEFAULT_EVENTS_POLL_TIMEOUT
+def retry_timeout():
+    return DEFAULT_RETRY_TIMEOUT
 
 
 @pytest.fixture
@@ -95,12 +94,6 @@ def number_of_nodes():
 def channels_per_node():
     """ Number of pre-created channels per test raiden node. """
     return 1
-
-
-@pytest.fixture
-def poll_timeout():
-    """ Timeout in seconds for polling a cluster. Used for geth. """
-    return DEFAULT_POLL_TIMEOUT
 
 
 @pytest.fixture

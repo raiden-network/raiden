@@ -55,7 +55,7 @@ def test_register_token(raiden_network, token_amount):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_token_registered_race(raiden_chain, token_amount, events_poll_timeout):
+def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
     """If a token is registered it must appear on the token list.
 
     If two nodes register the same token one of the transactions will fail. The
@@ -96,7 +96,7 @@ def test_token_registered_race(raiden_chain, token_amount, events_poll_timeout):
     waiting.wait_for_block(
         app1.raiden,
         app1.raiden.get_block_number() + 1,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     assert token_address in api1.get_tokens_list(registry_address)
@@ -143,7 +143,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
             token_address,
             10,
             target=non_existing_address,
-            timeout=10,
+            transfer_timeout=10,
         )
 
 

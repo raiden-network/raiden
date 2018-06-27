@@ -17,7 +17,6 @@ from raiden.exceptions import (
 )
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.constants import NULL_ADDRESS
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import pex
@@ -33,7 +32,6 @@ class Discovery:
             self,
             jsonrpc_client,
             discovery_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
@@ -53,7 +51,6 @@ class Discovery:
 
         self.address = discovery_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.not_found_address = NULL_ADDRESS
 
     def register_endpoint(self, node_address, endpoint):
@@ -65,10 +62,7 @@ class Discovery:
             endpoint,
         )
 
-        self.client.poll(
-            unhexlify(transaction_hash),
-            timeout=self.poll_timeout,
-        )
+        self.client.poll(unhexlify(transaction_hash))
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:

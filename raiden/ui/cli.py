@@ -564,11 +564,7 @@ def app(
         gas_price,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        rpc_client,
-        gas_price,
-    )
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
     # this assumes the eth node is already online
     check_json_rpc(blockchain_service)

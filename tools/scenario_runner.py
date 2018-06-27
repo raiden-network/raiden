@@ -21,7 +21,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
-from raiden.settings import GAS_PRICE
 
 gevent.monkey.patch_all()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -100,11 +99,7 @@ def run(
         privatekey_bin,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        rpc_client,
-        GAS_PRICE,
-    )
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
     discovery = ContractDiscovery(
         blockchain_service,

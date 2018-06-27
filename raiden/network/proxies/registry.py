@@ -24,9 +24,6 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-)
 from raiden.network.proxies.channel_manager import ChannelManager
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
@@ -48,7 +45,6 @@ class Registry:
             self,
             jsonrpc_client,
             registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
@@ -69,7 +65,6 @@ class Registry:
 
         self.address = registry_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.node_address = privatekey_to_address(self.client.privkey)
 
         self.address_to_channelmanager = dict()
@@ -106,7 +101,7 @@ class Registry:
             token_address,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.info(
@@ -177,7 +172,6 @@ class Registry:
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.poll_timeout,
             )
 
             token_address = manager.token_address()
@@ -209,7 +203,6 @@ class Registry:
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                self.poll_timeout,
             )
 
             self.token_to_channelmanager[token_address] = manager

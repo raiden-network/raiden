@@ -91,13 +91,11 @@ def blockchain_services(
         deploy_key,
         deploy_client,
         private_keys,
-        poll_timeout,
         web3,
 ):
     return jsonrpc_services(
         deploy_key,
         deploy_client,
         private_keys,
-        poll_timeout,
         web3=web3,
     )

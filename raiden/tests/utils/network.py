@@ -16,7 +16,7 @@ from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport.udp.udp_transport import UDPTransport
-from raiden.settings import GAS_PRICE
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import (
     get_contract_path,
@@ -326,18 +326,12 @@ def jsonrpc_services(
         deploy_key,
         deploy_client,
         private_keys,
-        poll_timeout,
         web3=None,
 ):
-    deploy_blockchain = BlockChainService(
-        deploy_key,
-        deploy_client,
-        GAS_PRICE,
-    )
+    deploy_blockchain = BlockChainService(deploy_key, deploy_client)
 
     secret_registry_address = deploy_contract_web3(
         CONTRACT_SECRET_REGISTRY,
-        poll_timeout,
         deploy_client,
     )
     secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
@@ -352,7 +346,6 @@ def jsonrpc_services(
         dict(),
         tuple(),
         contract_path=registry_path,
-        timeout=poll_timeout,
     )
     registry_address = decode_hex(registry_proxy.contract.address)
 
@@ -371,11 +364,7 @@ def jsonrpc_services(
             web3=web3,
         )
 
-        blockchain = BlockChainService(
-            privkey,
-            rpc_client,
-            GAS_PRICE,
-        )
+        blockchain = BlockChainService(privkey, rpc_client)
         blockchain_services.append(blockchain)
 
     return BlockchainServices(
@@ -386,7 +375,7 @@ def jsonrpc_services(
     )
 
 
-def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
+def wait_for_alarm_start(raiden_apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
     """Wait until all Alarm tasks start & set up the last_block"""
     apps = list(raiden_apps)
 
@@ -394,7 +383,7 @@ def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
         app = apps[-1]
 
         if app.raiden.alarm.last_block_number is None:
-            gevent.sleep(events_poll_timeout)
+            gevent.sleep(retry_timeout)
         else:
             apps.pop()
 
@@ -406,7 +395,7 @@ def wait_for_usable_channel(
         token_address,
         our_deposit,
         partner_deposit,
-        events_poll_timeout=0.5,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
 ):
     """ Wait until the channel from app0 to app1 is usable.
 
@@ -418,7 +407,7 @@ def wait_for_usable_channel(
         registry_address,
         token_address,
         app1.raiden.address,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_participant_newbalance(
@@ -428,7 +417,7 @@ def wait_for_usable_channel(
         app1.raiden.address,
         app0.raiden.address,
         our_deposit,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_participant_newbalance(
@@ -438,13 +427,13 @@ def wait_for_usable_channel(
         app1.raiden.address,
         app1.raiden.address,
         partner_deposit,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_healthy(
         app0.raiden,
         app1.raiden.address,
-        events_poll_timeout,
+        retry_timeout,
     )
 
 
@@ -453,7 +442,7 @@ def wait_for_channels(
         registry_address,
         token_addresses,
         deposit,
-        events_poll_timeout=0.5,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
 ):
     """ Wait until all channels are usable from both directions. """
     for app0, app1 in app_channels:
@@ -465,7 +454,7 @@ def wait_for_channels(
                 token_address,
                 deposit,
                 deposit,
-                events_poll_timeout,
+                retry_timeout,
             )
             wait_for_usable_channel(
                 app1,
@@ -474,5 +463,5 @@ def wait_for_channels(
                 token_address,
                 deposit,
                 deposit,
-                events_poll_timeout,
+                retry_timeout,
             )

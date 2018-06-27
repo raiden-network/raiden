@@ -30,6 +30,7 @@ from raiden.exceptions import (
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
+    DEFAULT_RETRY_TIMEOUT,
 )
 from raiden.utils import (
     pex,
@@ -72,6 +73,7 @@ class RaidenAPI:
             registry_address,
             token_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
     ):
         """Register the `token_address` in the blockchain. If the address is already
            registered but the event has not been processed this function will block
@@ -96,7 +98,13 @@ class RaidenAPI:
 
         try:
             registry = self.raiden.chain.registry(registry_address)
-            return registry.add_token(token_address)
+
+            msg = 'After {} seconds the channel was not properly created.'.format(
+                poll_timeout,
+            )
+
+            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
+                return registry.add_token(token_address)
         finally:
             # Assume the transaction failed because the token is already
             # registered with the smart contract and this node has not yet
@@ -106,7 +114,7 @@ class RaidenAPI:
             # To provide a consistent view to the user, wait one block, this
             # will guarantee that the events have been processed.
             next_block = self.raiden.get_block_number() + 1
-            waiting.wait_for_block(self.raiden, next_block, poll_timeout)
+            waiting.wait_for_block(self.raiden, next_block, retry_timeout)
 
     def token_network_connect(
             self,
@@ -162,6 +170,7 @@ class RaidenAPI:
             settle_timeout=None,
             reveal_timeout=None,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
     ):
         """ Open a channel with the peer at `partner_address`
         with the given `token_address`.
@@ -203,7 +212,7 @@ class RaidenAPI:
                 registry_address,
                 token_address,
                 partner_address,
-                self.raiden.alarm.wait_time,
+                retry_timeout,
             )
 
         return netcontract_address
@@ -215,6 +224,7 @@ class RaidenAPI:
             partner_address,
             total_deposit,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
     ):
         """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
@@ -305,7 +315,7 @@ class RaidenAPI:
                     partner_address,
                     target_address,
                     total_deposit,
-                    self.raiden.alarm.wait_time,
+                    retry_timeout,
                 )
 
     def channel_close(
@@ -314,6 +324,7 @@ class RaidenAPI:
             token_address,
             partner_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
     ):
         """Close a channel opened with `partner_address` for the given
         `token_address`.
@@ -324,7 +335,7 @@ class RaidenAPI:
             registry_address,
             token_address,
             [partner_address],
-            poll_timeout,
+            retry_timeout,
         )
 
     def channel_batch_close(
@@ -333,6 +344,7 @@ class RaidenAPI:
             token_address,
             partner_addresses,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
     ):
         """Close a channel opened with `partner_address` for the given
         `token_address`.
@@ -404,7 +416,7 @@ class RaidenAPI:
                     registry_address,
                     token_address,
                     channel_ids,
-                    self.raiden.alarm.wait_time,
+                    retry_timeout,
                 )
 
     def get_channel_list(self, registry_address, token_address=None, partner_address=None):
@@ -490,7 +502,8 @@ class RaidenAPI:
             amount,
             target,
             identifier=None,
-            timeout=None):
+            transfer_timeout=None,
+    ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
 
@@ -501,7 +514,7 @@ class RaidenAPI:
             target,
             identifier,
         )
-        return async_result.wait(timeout=timeout)
+        return async_result.wait(timeout=transfer_timeout)
 
     def transfer_async(
             self,
@@ -509,7 +522,8 @@ class RaidenAPI:
             token_address,
             amount,
             target,
-            identifier=None):
+            identifier=None,
+    ):
 
         if not isinstance(amount, int):
             raise InvalidAmount('Amount not a number')

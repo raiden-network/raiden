@@ -11,9 +11,6 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-)
 from eth_utils import to_checksum_address, to_normalized_address
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
@@ -23,7 +20,6 @@ class Token:
             self,
             jsonrpc_client,
             token_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
@@ -38,7 +34,6 @@ class Token:
 
         self.address = token_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
 
     def approve(self, contract_address, allowance):
         """ Aprove `contract_address` to transfer up to `deposit` amount of token. """
@@ -51,7 +46,7 @@ class Token:
             allowance,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:

@@ -26,9 +26,6 @@ from raiden.exceptions import AddressWithoutCode
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-)
 from raiden.utils import (
     pex,
     privatekey_to_address,
@@ -44,7 +41,6 @@ class NettingChannel:
             self,
             jsonrpc_client,
             channel_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
@@ -54,7 +50,6 @@ class NettingChannel:
 
         self.address = channel_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         # Prevents concurrent deposit, close, or settle operations on the same channel
         self.channel_operations_lock = RLock()
         self.client = jsonrpc_client
@@ -214,10 +209,7 @@ class NettingChannel:
                 total_deposit,
             )
 
-            self.client.poll(
-                unhexlify(transaction_hash),
-                timeout=self.poll_timeout,
-            )
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -273,7 +265,7 @@ class NettingChannel:
                 extra_hash,
                 signature,
             )
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -335,10 +327,7 @@ class NettingChannel:
                 signature,
             )
 
-            self.client.poll(
-                unhexlify(transaction_hash),
-                timeout=self.poll_timeout,
-            )
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -387,7 +376,7 @@ class NettingChannel:
             unlock_proof.secret,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
@@ -429,7 +418,7 @@ class NettingChannel:
                 'settle',
             )
 
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash))
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.info(
