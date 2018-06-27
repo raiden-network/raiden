@@ -18,13 +18,13 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def wait_for_block(
         raiden: RaidenService,
         block_number: typing.BlockNumber,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     current_block_number = views.block_number(
         views.state_from_raiden(raiden),
     )
     while current_block_number < block_number:
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)
         current_block_number = views.block_number(
             views.state_from_raiden(raiden),
         )
@@ -35,7 +35,7 @@ def wait_for_newchannel(
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until the channel with partner_address is registered.
 
@@ -50,7 +50,7 @@ def wait_for_newchannel(
     )
 
     while channel_state is None:
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
             payment_network_id,
@@ -66,7 +66,7 @@ def wait_for_participant_newbalance(
         partner_address: typing.Address,
         target_address: typing.Address,
         target_balance: typing.TokenAmount,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until a given channels balance exceeds the target balance.
 
@@ -88,7 +88,7 @@ def wait_for_participant_newbalance(
     )
 
     while balance(channel_state) < target_balance:
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
             payment_network_id,
@@ -102,7 +102,7 @@ def wait_for_close(
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.Address,
         channel_ids: typing.List[typing.ChannelID],
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until all channels are closed.
 
@@ -128,14 +128,14 @@ def wait_for_close(
         if channel_is_settled:
             channel_ids.pop()
         else:
-            gevent.sleep(poll_timeout)
+            gevent.sleep(retry_timeout)
 
 
 def wait_for_payment_network(
         raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(raiden),
@@ -143,7 +143,7 @@ def wait_for_payment_network(
         token_address,
     )
     while token_network is None:
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
             views.state_from_raiden(raiden),
             payment_network_id,
@@ -156,7 +156,7 @@ def wait_for_settle(
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until all channels are settled.
 
@@ -185,12 +185,12 @@ def wait_for_settle(
         if channel_is_settled:
             channel_ids.pop()
         else:
-            gevent.sleep(poll_timeout)
+            gevent.sleep(retry_timeout)
 
 
 def wait_for_settle_all_channels(
         raiden: RaidenService,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until all channels are settled.
 
@@ -211,14 +211,14 @@ def wait_for_settle_all_channels(
                 payment_network_id,
                 token_network_id,
                 channel_ids,
-                poll_timeout,
+                retry_timeout,
             )
 
 
 def wait_for_healthy(
         raiden: RaidenService,
         node_address: typing.Address,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until `node_address` becomes healthy.
 
@@ -230,7 +230,7 @@ def wait_for_healthy(
     )
 
     while network_statuses.get(node_address) != NODE_NETWORK_REACHABLE:
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)
         network_statuses = views.get_networkstatuses(
             views.state_from_raiden(raiden),
         )
@@ -240,7 +240,7 @@ def wait_for_transfer_success(
         raiden: RaidenService,
         payment_identifier: typing.PaymentID,
         amount: typing.PaymentAmount,
-        poll_timeout: typing.NetworkTimeout,
+        retry_timeout: float,
 ) -> None:
     """Wait until a direct transfer with a specific identifier and amount
     is seen in the WAL.
@@ -262,4 +262,4 @@ def wait_for_transfer_success(
             if found:
                 break
 
-        gevent.sleep(poll_timeout)
+        gevent.sleep(retry_timeout)

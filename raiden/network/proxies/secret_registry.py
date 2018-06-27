@@ -20,7 +20,6 @@ from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
 from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
     EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.utils import (
@@ -39,7 +38,6 @@ class SecretRegistry:
             self,
             jsonrpc_client,
             secret_registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         if not is_binary_address(secret_registry_address):
             raise InvalidAddress('Expected binary address format for secret registry')
@@ -60,7 +58,6 @@ class SecretRegistry:
         self.address = secret_registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.node_address = privatekey_to_address(self.client.privkey)
         self.open_secret_transactions = dict()
 
@@ -103,7 +100,7 @@ class SecretRegistry:
             secret,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:

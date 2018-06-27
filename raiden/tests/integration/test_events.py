@@ -49,7 +49,7 @@ def event_dicts_are_equal(dict1, dict2):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
+def test_channel_new(raiden_chain, retry_timeout, token_addresses):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -66,7 +66,7 @@ def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
         app1.raiden.address,
     )
 
-    gevent.sleep(events_poll_timeout)
+    gevent.sleep(retry_timeout)
 
     # The channel is created but without funds
     channelcount1 = views.total_token_network_channels(
@@ -80,7 +80,7 @@ def test_channel_new(raiden_chain, events_poll_timeout, token_addresses):
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addresses):
+def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
@@ -97,7 +97,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
     assert channel1 is None
 
     RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
-    gevent.sleep(events_poll_timeout)
+    gevent.sleep(retry_timeout)
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -112,7 +112,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         deposit,
     )
 
-    gevent.sleep(events_poll_timeout)
+    gevent.sleep(retry_timeout)
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -127,7 +127,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
         deposit,
     )
 
-    gevent.sleep(events_poll_timeout)
+    gevent.sleep(retry_timeout)
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -138,7 +138,7 @@ def test_channel_deposit(raiden_chain, deposit, events_poll_timeout, token_addre
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, events_poll_timeout):
+def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, retry_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -188,7 +188,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         app1.raiden.address,
     )
 
-    gevent.sleep(events_poll_timeout * 2)
+    gevent.sleep(retry_timeout * 2)
 
     events = get_all_channel_manager_events(
         app0.raiden.chain,
@@ -239,7 +239,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         deposit,
     )
 
-    gevent.sleep(events_poll_timeout * 2)
+    gevent.sleep(retry_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(
         app0.raiden.chain,
@@ -275,7 +275,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, ev
         app1.raiden.address,
     )
 
-    gevent.sleep(events_poll_timeout * 2)
+    gevent.sleep(retry_timeout * 2)
 
     all_netting_channel_events = get_all_netting_channel_events(
         app0.raiden.chain,

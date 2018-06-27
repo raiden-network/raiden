@@ -46,7 +46,6 @@ def deploy_tokens_and_fund_accounts(
 
 def deploy_contract_web3(
         contract_name: str,
-        poll_timeout: float,
         deploy_client: BlockChainService,
         *args,
 ) -> typing.Address:
@@ -61,7 +60,7 @@ def deploy_contract_web3(
     )
     tx_hash = unhexlify(tx_hash)
 
-    deploy_client.poll(tx_hash, timeout=poll_timeout)
+    deploy_client.poll(tx_hash)
     receipt = web3.eth.getTransactionReceipt(tx_hash)
 
     contract_address = receipt['contractAddress']

@@ -31,7 +31,6 @@ from raiden.utils import (
     privatekey_to_address,
 )
 from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
     EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.network.proxies.token_network import TokenNetwork
@@ -48,7 +47,6 @@ class TokenNetworkRegistry:
             self,
             jsonrpc_client,
             registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
@@ -69,7 +67,6 @@ class TokenNetworkRegistry:
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.node_address = privatekey_to_address(self.client.privkey)
 
         self.address_to_tokennetwork = dict()
@@ -105,7 +102,7 @@ class TokenNetworkRegistry:
             token_address,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.info(
@@ -129,7 +126,6 @@ class TokenNetworkRegistry:
         self.token_to_tokennetwork[token_address] = TokenNetwork(
             self.client,
             token_network_address,
-            self.poll_timeout,
         )
 
         log.info(
@@ -170,7 +166,6 @@ class TokenNetworkRegistry:
             token_network = TokenNetwork(
                 self.client,
                 token_network_address,
-                self.poll_timeout,
             )
 
             token_address = token_network.token_address()
@@ -202,7 +197,6 @@ class TokenNetworkRegistry:
             token_network = TokenNetwork(
                 self.client,
                 token_network_address,
-                self.poll_timeout,
             )
 
             self.token_to_tokennetwork[token_address] = token_network

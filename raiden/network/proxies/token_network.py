@@ -43,7 +43,6 @@ from raiden.exceptions import (
     ContractVersionMismatch,
 )
 from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
     EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.utils import (
@@ -60,7 +59,6 @@ class TokenNetwork:
             self,
             jsonrpc_client,
             manager_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         if not is_binary_address(manager_address):
             raise InvalidAddress('Expected binary address format for token nework')
@@ -82,7 +80,6 @@ class TokenNetwork:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
-        self.poll_timeout = poll_timeout
         # Prevents concurrent deposit, withdraw, close, or settle operations on the same channel
         self.channel_operations_lock = dict()
         self.open_channel_transactions = dict()
@@ -194,7 +191,7 @@ class TokenNetwork:
         if not transaction_hash:
             raise RuntimeError('open channel transaction failed')
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
 
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
@@ -407,11 +404,7 @@ class TokenNetwork:
 
         token_address = self.token_address()
 
-        token = Token(
-            self.client,
-            token_address,
-            self.poll_timeout,
-        )
+        token = Token(self.client, token_address)
         current_balance = token.balance_of(self.node_address)
         current_deposit = self.detail_participant(self.node_address, partner)['deposit']
         amount_to_deposit = total_deposit - current_deposit
@@ -448,10 +441,7 @@ class TokenNetwork:
                 partner,
             )
 
-            self.client.poll(
-                unhexlify(transaction_hash),
-                timeout=self.poll_timeout,
-            )
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -514,7 +504,7 @@ class TokenNetwork:
                 additional_hash,
                 signature,
             )
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -578,10 +568,7 @@ class TokenNetwork:
             non_closing_signature,
         )
 
-        self.client.poll(
-            unhexlify(transaction_hash),
-            timeout=self.poll_timeout,
-        )
+        self.client.poll(unhexlify(transaction_hash))
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
@@ -639,7 +626,7 @@ class TokenNetwork:
                 partner_signature,
                 signature,
             )
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -686,7 +673,7 @@ class TokenNetwork:
             merkle_tree_leaves,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
@@ -769,7 +756,7 @@ class TokenNetwork:
                     partner_locksroot,
                 )
 
-            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash))
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.info(

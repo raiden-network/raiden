@@ -212,12 +212,7 @@ def test_channelmanager_graph_building(
     reason='Flaky test due to mark.timeout not being scheduled. Issue #319',
 )
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_blockchain(
-        init_blockchain,
-        web3,
-        blockchain_rpc_ports,
-        private_keys,
-        poll_timeout):
+def test_blockchain(init_blockchain, web3, blockchain_rpc_ports, private_keys):
     # pylint: disable=too-many-locals
 
     addresses = [
@@ -245,7 +240,6 @@ def test_blockchain(
         list(),
         (total_token, 'raiden', 2, 'Rd'),
         contract_path=humantoken_path,
-        timeout=poll_timeout,
     )
     token_proxy = Token(jsonrpc_client, to_canonical_address(token_proxy.contract.address))
 
@@ -257,7 +251,6 @@ def test_blockchain(
         list(),
         tuple(),
         contract_path=registry_path,
-        timeout=poll_timeout,
     )
     registry_proxy = Registry(
         jsonrpc_client,

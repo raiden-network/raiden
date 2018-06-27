@@ -21,7 +21,6 @@ from raiden.network.proxies import (
     SecretRegistry,
     PaymentChannel,
 )
-from raiden.settings import DEFAULT_POLL_TIMEOUT
 from raiden.utils import privatekey_to_address, ishash
 from raiden.utils.solc import compile_files_cwd
 from raiden.utils.typing import Address, ChannelID
@@ -37,7 +36,6 @@ class BlockChainService:
             self,
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
-            poll_timeout: int = DEFAULT_POLL_TIMEOUT,
     ):
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -54,7 +52,6 @@ class BlockChainService:
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
-        self.poll_timeout = poll_timeout
 
     def block_number(self) -> int:
         return self.client.block_number()
@@ -118,7 +115,6 @@ class BlockChainService:
             self.address_to_token[token_address] = Token(
                 self.client,
                 token_address,
-                self.poll_timeout,
             )
 
         return self.address_to_token[token_address]
@@ -128,7 +124,6 @@ class BlockChainService:
             self.address_to_manager[channel_manager_address] = ChannelManager(
                 self.client,
                 channel_manager_address,
-                self.poll_timeout,
             )
 
         return self.address_to_manager[channel_manager_address]
@@ -142,7 +137,6 @@ class BlockChainService:
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
-                self.poll_timeout,
             )
 
         return self.address_to_discovery[discovery_address]
@@ -156,7 +150,6 @@ class BlockChainService:
             channel = NettingChannel(
                 self.client,
                 netting_channel_address,
-                self.poll_timeout,
             )
             self.address_to_nettingchannel[netting_channel_address] = channel
 
@@ -170,7 +163,6 @@ class BlockChainService:
             self.address_to_registry[registry_address] = Registry(
                 self.client,
                 registry_address,
-                self.poll_timeout,
             )
 
         return self.address_to_registry[registry_address]
@@ -183,7 +175,6 @@ class BlockChainService:
             self.address_to_token_network_registry[address] = TokenNetworkRegistry(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_token_network_registry[address]
@@ -196,7 +187,6 @@ class BlockChainService:
             self.address_to_token_network[address] = TokenNetwork(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_token_network[address]
@@ -209,7 +199,6 @@ class BlockChainService:
             self.address_to_secret_registry[address] = SecretRegistry(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_secret_registry[address]
@@ -248,8 +237,8 @@ class BlockChainService:
             list(),
             constructor_parameters,
             contract_path=contract_path,
-            timeout=self.poll_timeout,
         )
+
         return decode_hex(proxy.contract.address)
 
     def deploy_and_register_token(

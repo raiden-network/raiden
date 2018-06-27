@@ -340,7 +340,6 @@ class JSONRPCClient:
             libraries=None,
             constructor_parameters=None,
             contract_path=None,
-            timeout=None,
     ):
         """
         Deploy a solidity contract.
@@ -353,7 +352,6 @@ class JSONRPCClient:
             contract_path (str): If we are dealing with solc >= v0.4.9 then the path
                                  to the contract is a required argument to extract
                                  the contract data from the `all_contracts` dict.
-            timeout (int): Amount of time to poll the chain to confirm deployment
         """
         if libraries is None:
             libraries = dict()
@@ -410,7 +408,7 @@ class JSONRPCClient:
                 )
                 transaction_hash = unhexlify(transaction_hash_hex)
 
-                self.poll(transaction_hash, timeout=timeout)
+                self.poll(transaction_hash)
                 receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
 
                 contract_address = receipt['contractAddress']
@@ -443,7 +441,7 @@ class JSONRPCClient:
         )
         transaction_hash = unhexlify(transaction_hash_hex)
 
-        self.poll(transaction_hash, timeout=timeout)
+        self.poll(transaction_hash)
         receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
@@ -495,20 +493,13 @@ class JSONRPCClient:
         encoded_result = encode_hex(result)
         return remove_0x_prefix(encoded_result)
 
-    def poll(
-            self,
-            transaction_hash: bytes,
-            confirmations: int = None,
-            timeout: float = None,
-    ):
+    def poll(self, transaction_hash: bytes, confirmations: int = None):
         """ Wait until the `transaction_hash` is applied or rejected.
-        If timeout is None, this could wait indefinitely!
 
         Args:
             transaction_hash: Transaction hash that we are waiting for.
             confirmations: Number of block confirmations that we will
                 wait for.
-            timeout: Timeout in seconds, raise an Excpetion on timeout.
         """
         if transaction_hash.startswith(b'0x'):
             warnings.warn(
@@ -523,55 +514,42 @@ class JSONRPCClient:
 
         transaction_hash = data_encoder(transaction_hash)
 
-        deadline = None
-        if timeout:
-            deadline = gevent.Timeout(timeout)
-            deadline.start()
+        # used to check if the transaction was removed, this could happen
+        # if gas price is too low:
+        #
+        # > Transaction (acbca3d6) below gas price (tx=1 Wei ask=18
+        # > Shannon). All sequential txs from this address(7d0eae79)
+        # > will be ignored
+        #
+        last_result = None
 
-        try:
-            # used to check if the transaction was removed, this could happen
-            # if gas price is too low:
-            #
-            # > Transaction (acbca3d6) below gas price (tx=1 Wei ask=18
-            # > Shannon). All sequential txs from this address(7d0eae79)
-            # > will be ignored
-            #
-            last_result = None
+        while True:
+            # Could return None for a short period of time, until the
+            # transaction is added to the pool
+            transaction = self.web3.eth.getTransaction(transaction_hash)
 
-            while True:
-                # Could return None for a short period of time, until the
-                # transaction is added to the pool
-                transaction = self.web3.eth.getTransaction(transaction_hash)
+            # if the transaction was added to the pool and then removed
+            if transaction is None and last_result is not None:
+                raise Exception('invalid transaction, check gas price')
 
-                # if the transaction was added to the pool and then removed
-                if transaction is None and last_result is not None:
-                    raise Exception('invalid transaction, check gas price')
+            # the transaction was added to the pool and mined
+            if transaction and transaction['blockNumber'] is not None:
+                break
 
-                # the transaction was added to the pool and mined
-                if transaction and transaction['blockNumber'] is not None:
-                    break
+            last_result = transaction
 
-                last_result = transaction
+            gevent.sleep(.5)
 
+        if confirmations:
+            # this will wait for both APPLIED and REVERTED transactions
+            transaction_block = to_int(hexstr=transaction['blockNumber'])
+            confirmation_block = transaction_block + confirmations
+
+            block_number = self.block_number()
+
+            while block_number < confirmation_block:
                 gevent.sleep(.5)
-
-            if confirmations:
-                # this will wait for both APPLIED and REVERTED transactions
-                transaction_block = to_int(hexstr=transaction['blockNumber'])
-                confirmation_block = transaction_block + confirmations
-
                 block_number = self.block_number()
-
-                while block_number < confirmation_block:
-                    gevent.sleep(.5)
-                    block_number = self.block_number()
-
-        except gevent.Timeout:
-            raise Exception('timeout when polling for transaction')
-
-        finally:
-            if deadline:
-                deadline.cancel()
 
     def new_filter(
             self,
