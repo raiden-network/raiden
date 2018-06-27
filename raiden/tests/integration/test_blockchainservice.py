@@ -14,12 +14,12 @@ from raiden.blockchain.abi import (
 )
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.rpc.smartcontract_proxy import decode_event
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.proxies import Token, Registry, ChannelManager
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils.filters import decode_event
 from raiden.utils.solc import compile_files_cwd
 
 

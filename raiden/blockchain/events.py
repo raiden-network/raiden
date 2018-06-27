@@ -29,7 +29,7 @@ from raiden.blockchain.abi import (
 from raiden.network.blockchain_service import BlockChainService
 from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex, typing
-from raiden.network.rpc.smartcontract_proxy import decode_event
+from raiden.utils.filters import decode_event
 from raiden.utils.typing import Address, BlockSpecification
 
 EventListener = namedtuple(
