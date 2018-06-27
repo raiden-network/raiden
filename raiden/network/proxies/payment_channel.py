@@ -9,8 +9,8 @@ from raiden.utils import typing
 from raiden.utils.filters import (
     get_filter_args_for_all_events_from_channel,
     get_filter_args_for_specific_event_from_channel,
+    decode_event,
 )
-from raiden.network.rpc.smartcontract_proxy import decode_event
 from raiden.network.proxies import TokenNetwork
 
 
