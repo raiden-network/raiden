@@ -17,7 +17,7 @@ from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.proxies import Token, Registry, ChannelManager
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.utils.filters import decode_event
@@ -212,7 +212,11 @@ def test_channelmanager_graph_building(
     reason='Flaky test due to mark.timeout not being scheduled. Issue #319',
 )
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_blockchain(init_blockchain, web3, blockchain_rpc_ports, private_keys):
+def test_blockchain(
+        web3,
+        blockchain_rpc_ports,
+        private_keys,
+):
     # pylint: disable=too-many-locals
 
     addresses = [

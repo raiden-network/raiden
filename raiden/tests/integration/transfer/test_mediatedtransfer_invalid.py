@@ -8,7 +8,7 @@ from raiden.messages import (
     Lock,
     LockedTransfer,
 )
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.factories import (
     make_address,
     make_privkey_address,

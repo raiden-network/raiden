@@ -7,7 +7,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret
 from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,

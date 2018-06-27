@@ -4,7 +4,6 @@ import re
 import gevent
 import py
 import sys
-from typing import Dict
 from gevent import monkey
 monkey.patch_all()
 
@@ -66,40 +65,6 @@ def pytest_addoption(parser):
         default='http://localhost:8008',
         help="Host name of local matrix server if used, default: 'http://localhost:8008'",
     )
-
-
-def load_fixtures(module_name: str) -> Dict:
-    """Load all fixture functions from a module"""
-    import importlib
-    module = importlib.import_module(module_name)
-    return {
-        k: v for k, v in module.__dict__.items()
-        if hasattr(v, '_pytestfixturefunction')
-    }
-
-
-def load_fixtures_list(module_list: str) -> Dict:
-    fixtures_all = {}
-    for module in module_list:
-        fixtures_all.update(load_fixtures(module))
-    return fixtures_all
-
-
-@pytest.hookspec()
-def pytest_configure(config):
-    """Imports backend-specific fixtures on startup and puts them to globals(). Pytest
-    will later use them to build fixture dependencies."""
-    imports = {
-        'tester': [
-            'raiden.tests.integration.fixtures.backend_tester',
-        ],
-        'geth': [
-            'raiden.tests.integration.fixtures.backend_geth',
-        ],
-    }
-    fixtures_all = load_fixtures_list(imports[config.option.blockchain_type])
-    for k, v in fixtures_all.items():
-        globals()[k] = v
 
 
 @pytest.fixture(autouse=True, scope='session')
