@@ -199,10 +199,6 @@ def filter_available_routes(transfers_pair, routes):
 
     available_routes = list(channelid_to_route.values())
 
-    # If all routes have already been tried then allow sending the transfer back
-    if len(available_routes) == 0:
-        available_routes = routes
-
     return available_routes
 
 
@@ -1087,37 +1083,27 @@ def handle_refundtransfer(
     iteration = TransitionResult(mediator_state, list())
 
     if mediator_state.secret is None:
-        # The last sent transfer is the only one thay may be refunded, all the
+        # The last sent transfer is the only one that may be refunded, all the
         # previous ones are refunded already.
-        transfer_pair = mediator_state.transfers_pair[-1]
-        payee_transfer = transfer_pair.payee_transfer
-
-        is_valid = is_valid_refund(
-            payee_transfer,
-            mediator_state_change.transfer,
+        payer_transfer = mediator_state_change.transfer
+        channel_address = payer_transfer.balance_proof.channel_address
+        payer_channel = channelidentifiers_to_channels[channel_address]
+        is_valid, events, _ = channel.handle_refundtransfer(
+            payer_channel,
+            mediator_state_change,
         )
-        if is_valid:
-            payer_transfer = mediator_state_change.transfer
-            channel_address = payer_transfer.balance_proof.channel_address
-            payer_channel = channelidentifiers_to_channels[channel_address]
+        if not is_valid:
+            return TransitionResult(None, events)
 
-            iteration = mediate_transfer(
-                mediator_state,
-                mediator_state_change.routes,
-                payer_channel,
-                channelidentifiers_to_channels,
-                pseudo_random_generator,
-                payer_transfer,
-                block_number,
-            )
-
-            events = list(iteration.events)
-            send_processed = SendProcessed(
-                mediator_state_change.transfer.balance_proof.sender,
-                b'global',
-                mediator_state_change.transfer.message_identifier,
-            )
-            events.append(send_processed)
+        iteration = mediate_transfer(
+            mediator_state,
+            mediator_state_change.routes,
+            payer_channel,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
+            payer_transfer,
+            block_number,
+        )
 
         # else: TODO: Use an event to notify about byzantine behavior
 

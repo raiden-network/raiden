@@ -25,6 +25,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
+    ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.events import (
     refund_from_sendmediated,
@@ -474,6 +475,145 @@ def is_valid_lockedtransfer(
         elif lock.amount > distributable:
             msg = (
                 'Invalid LockedTransfer message. '
+                'Lock amount larger than the available distributable, '
+                'lock amount: {} maximum distributable: {}'
+            ).format(
+                lock.amount,
+                distributable,
+            )
+
+            result = (False, msg, None)
+
+        else:
+            result = (True, None, merkletree)
+
+    return result
+
+
+def is_valid_refund(
+        refund: ReceiveTransferRefund,
+        channel_state: NettingChannelState,
+        sender_state: NettingChannelEndState,
+        receiver_state: NettingChannelEndState,
+) -> MerkletreeOrError:
+    received_balance_proof = refund.transfer.balance_proof
+    current_balance_proof = get_current_balanceproof(sender_state)
+
+    lock = refund.transfer.lock
+    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
+
+    _, _, current_transferred_amount, current_locked_amount = current_balance_proof
+    distributable = get_distributable(sender_state, receiver_state)
+    expected_nonce = get_next_nonce(sender_state)
+    expected_locked_amount = current_locked_amount + lock.amount
+    transferred_amount_after_unlock = (
+        received_balance_proof.transferred_amount +
+        expected_locked_amount
+    )
+
+    if get_status(channel_state) != CHANNEL_STATE_OPENED:
+        msg = 'Invalid RefundTransfer message. The channel is already closed.'
+        result = (False, msg, None)
+
+    if merkletree is None:
+        msg = 'Invalid RefundTransfer message. Same lockhash handled twice.'
+        result = (False, msg, None)
+
+    else:
+        locksroot_with_lock = merkleroot(merkletree)
+
+        (is_valid, signature_msg) = is_valid_signature(
+            received_balance_proof,
+            sender_state.address,
+        )
+
+        if not is_valid:
+            # The signature must be valid, otherwise the balance proof cannot be
+            # used onchain
+            msg = 'Invalid RefundTransfer message. {}'.format(signature_msg)
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.nonce != expected_nonce:
+            # The nonces must increase sequentially, otherwise there is a
+            # synchronization problem
+            msg = (
+                'Invalid RefundTransfer message. '
+                'Nonce did not change sequentially, expected: {} got: {}.'
+            ).format(
+                expected_nonce,
+                received_balance_proof.nonce,
+            )
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.locksroot != locksroot_with_lock:
+            # The locksroot must be updated to include the new lock
+            msg = (
+                'Invalid RefundTransfer message. '
+                "Balance proof's locksroot didn't match, expected: {} got: {}."
+            ).format(
+                hexlify(locksroot_with_lock).decode(),
+                hexlify(received_balance_proof.locksroot).decode(),
+            )
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.transferred_amount != current_transferred_amount:
+            # Mediated transfers must not change transferred_amount
+            msg = (
+                'Invalid RefundTransfer message. '
+                "Balance proof's transferred_amount changed, expected: {} got: {}."
+            ).format(
+                current_transferred_amount,
+                received_balance_proof.transferred_amount,
+            )
+
+            result = (False, msg, None)
+
+        elif not is_valid_amount(sender_state, lock.amount):
+            # We can validate that the Unlock message will have a transferred
+            # amount, accepting a lock that cannot be unlocked is useless
+            msg = (
+                "Invalid RefundTransfer message. "
+                "Unlocking the lock would result in an overflow. max: {} result would be: {}"
+            ).format(
+                UINT256_MAX,
+                transferred_amount_after_unlock,
+            )
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.locked_amount != expected_locked_amount:
+            # Mediated transfers must increase the locked_amount by lock.amount
+            msg = (
+                'Invalid RefundTransfer message. '
+                "Balance proof's locked_amount is invalid, expected: {} got: {}."
+            ).format(
+                expected_locked_amount,
+                received_balance_proof.locked_amount,
+            )
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.channel_address != channel_state.identifier:
+            # The balance proof must be tied to this channel, otherwise the
+            # on-chain contract would be sucesstible to replay attacks across
+            # channels.
+            msg = (
+                'Invalid RefundTransfer message. '
+                'Balance proof is tied to the wrong channel, expected: {} got: {}'
+            ).format(
+                hexlify(channel_state.identifier).decode(),
+                hexlify(received_balance_proof.channel_address).decode(),
+            )
+            result = (False, msg, None)
+
+        # the locked amount is limited to the current available balance, otherwise
+        # the sender is doing a trying to play the protocol and do a double spend
+        elif lock.amount > distributable:
+            msg = (
+                'Invalid RefundTransfer message. '
                 'Lock amount larger than the available distributable, '
                 'lock amount: {} maximum distributable: {}'
             ).format(
@@ -1433,6 +1573,37 @@ def handle_receive_directtransfer(
         events = [transfer_invalid_event]
 
     return TransitionResult(channel_state, events)
+
+
+def handle_refundtransfer(
+        channel_state: NettingChannelState,
+        refund: ReceiveTransferRefund,
+):
+    # TODO model it from handle_receive_lockedtransfer and use the is_valid_refund()
+    # which should also be made in this file
+    is_valid, msg, merkletree = is_valid_refund(
+        refund,
+        channel_state,
+        channel_state.partner_state,
+        channel_state.our_state,
+    )
+    if is_valid:
+        channel_state.partner_state.balance_proof = refund.transfer.balance_proof
+        channel_state.partner_state.merkletree = merkletree
+
+        lock = refund.transfer.lock
+        channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
+
+        send_processed = SendProcessed(
+            refund.transfer.balance_proof.sender,
+            b'global',
+            refund.transfer.message_identifier,
+        )
+        events = [send_processed]
+    else:
+        events = list()
+
+    return is_valid, events, msg
 
 
 def handle_receive_lockedtransfer(
