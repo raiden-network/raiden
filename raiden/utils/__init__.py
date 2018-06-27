@@ -91,11 +91,6 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
     return addr
 
 
-def data_encoder(data: bytes, length: int = 0) -> str:
-    data = hexlify(data)
-    return '0x' + data.rjust(length * 2, b'0').decode()
-
-
 def data_decoder(data: str) -> bytes:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
