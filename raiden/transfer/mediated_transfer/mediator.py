@@ -38,7 +38,8 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-from raiden.utils import sha3
+from raiden.transfer.mediated_transfer import initiator
+from raiden.utils import sha3, typing
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:
 # The payee could reveal the secret on it's lock expiration block, the lock
@@ -197,9 +198,7 @@ def filter_available_routes(transfers_pair, routes):
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-    available_routes = list(channelid_to_route.values())
-
-    return available_routes
+    return list(channelid_to_route.values())
 
 
 def get_payee_channel(channelidentifiers_to_channels, transfer_pair):
@@ -1059,11 +1058,11 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
 
 
 def handle_refundtransfer(
-        mediator_state,
+        mediator_state: MediatorTransferState,
         mediator_state_change: ReceiveTransferRefund,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
-        block_number,
+        channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
 ):
     """ Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of

@@ -2,6 +2,7 @@
 import heapq
 from binascii import hexlify
 from collections import namedtuple
+from typing import Union
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
@@ -352,15 +353,32 @@ def is_valid_directtransfer(
 
 
 def is_valid_lockedtransfer(
-        mediated_transfer: LockedTransferSignedState,
+        transfer_state: Union[LockedTransferSignedState, ReceiveTransferRefund],
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
-    received_balance_proof = mediated_transfer.balance_proof
-    current_balance_proof = get_current_balanceproof(sender_state)
+    return valid_lockedtransfer_check(
+        transfer_state,
+        channel_state,
+        sender_state,
+        receiver_state,
+        'LockedTransfer',
+        transfer_state.balance_proof,
+        transfer_state.lock,
+    )
 
-    lock = mediated_transfer.lock
+
+def valid_lockedtransfer_check(
+        mediated_transfer: LockedTransferSignedState,
+        channel_state: NettingChannelState,
+        sender_state: NettingChannelEndState,
+        receiver_state: NettingChannelEndState,
+        message_name: str,
+        received_balance_proof: BalanceProofSignedState,
+        lock: HashTimeLockState,
+) -> MerkletreeOrError:
+    current_balance_proof = get_current_balanceproof(sender_state)
     merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
@@ -373,11 +391,11 @@ def is_valid_lockedtransfer(
     )
 
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
-        msg = 'Invalid direct message. The channel is already closed.'
+        msg = 'Invalid {} message. The channel is already closed.'.format(message_name)
         result = (False, msg, None)
 
     if merkletree is None:
-        msg = 'Invalid LockedTransfer message. Same lockhash handled twice.'
+        msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
         result = (False, msg, None)
 
     else:
@@ -391,7 +409,7 @@ def is_valid_lockedtransfer(
         if not is_valid:
             # The signature must be valid, otherwise the balance proof cannot be
             # used onchain
-            msg = 'Invalid LockedTransfer message. {}'.format(signature_msg)
+            msg = 'Invalid {} message. {}'.format(message_name, signature_msg)
 
             result = (False, msg, None)
 
@@ -399,9 +417,10 @@ def is_valid_lockedtransfer(
             # The nonces must increase sequentially, otherwise there is a
             # synchronization problem
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 'Nonce did not change sequentially, expected: {} got: {}.'
             ).format(
+                message_name,
                 expected_nonce,
                 received_balance_proof.nonce,
             )
@@ -411,9 +430,10 @@ def is_valid_lockedtransfer(
         elif received_balance_proof.locksroot != locksroot_with_lock:
             # The locksroot must be updated to include the new lock
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
+                message_name,
                 hexlify(locksroot_with_lock).decode(),
                 hexlify(received_balance_proof.locksroot).decode(),
             )
@@ -423,9 +443,10 @@ def is_valid_lockedtransfer(
         elif received_balance_proof.transferred_amount != current_transferred_amount:
             # Mediated transfers must not change transferred_amount
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 "Balance proof's transferred_amount changed, expected: {} got: {}."
             ).format(
+                message_name,
                 current_transferred_amount,
                 received_balance_proof.transferred_amount,
             )
@@ -436,9 +457,10 @@ def is_valid_lockedtransfer(
             # We can validate that the Unlock message will have a transferred
             # amount, accepting a lock that cannot be unlocked is useless
             msg = (
-                "Invalid LockedTransfer message. "
+                "Invalid {} message. "
                 "Unlocking the lock would result in an overflow. max: {} result would be: {}"
             ).format(
+                message_name,
                 UINT256_MAX,
                 transferred_amount_after_unlock,
             )
@@ -448,9 +470,10 @@ def is_valid_lockedtransfer(
         elif received_balance_proof.locked_amount != expected_locked_amount:
             # Mediated transfers must increase the locked_amount by lock.amount
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 "Balance proof's locked_amount is invalid, expected: {} got: {}."
             ).format(
+                message_name,
                 expected_locked_amount,
                 received_balance_proof.locked_amount,
             )
@@ -462,22 +485,24 @@ def is_valid_lockedtransfer(
             # on-chain contract would be sucesstible to replay attacks across
             # channels.
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 'Balance proof is tied to the wrong channel, expected: {} got: {}'
             ).format(
+                message_name,
                 hexlify(channel_state.identifier).decode(),
                 hexlify(received_balance_proof.channel_address).decode(),
             )
             result = (False, msg, None)
 
         # the locked amount is limited to the current available balance, otherwise
-        # the sender is doing a trying to play the protocol and do a double spend
+        # the sender is attempting to game the protocol and do a double spend
         elif lock.amount > distributable:
             msg = (
-                'Invalid LockedTransfer message. '
+                'Invalid {} message. '
                 'Lock amount larger than the available distributable, '
                 'lock amount: {} maximum distributable: {}'
             ).format(
+                message_name,
                 lock.amount,
                 distributable,
             )
@@ -496,137 +521,15 @@ def is_valid_refund(
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
-    received_balance_proof = refund.transfer.balance_proof
-    current_balance_proof = get_current_balanceproof(sender_state)
-
-    lock = refund.transfer.lock
-    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
-
-    _, _, current_transferred_amount, current_locked_amount = current_balance_proof
-    distributable = get_distributable(sender_state, receiver_state)
-    expected_nonce = get_next_nonce(sender_state)
-    expected_locked_amount = current_locked_amount + lock.amount
-    transferred_amount_after_unlock = (
-        received_balance_proof.transferred_amount +
-        expected_locked_amount
+    return valid_lockedtransfer_check(
+        refund,
+        channel_state,
+        sender_state,
+        receiver_state,
+        'RefundTransfer',
+        refund.transfer.balance_proof,
+        refund.transfer.lock,
     )
-
-    if get_status(channel_state) != CHANNEL_STATE_OPENED:
-        msg = 'Invalid RefundTransfer message. The channel is already closed.'
-        result = (False, msg, None)
-
-    if merkletree is None:
-        msg = 'Invalid RefundTransfer message. Same lockhash handled twice.'
-        result = (False, msg, None)
-
-    else:
-        locksroot_with_lock = merkleroot(merkletree)
-
-        (is_valid, signature_msg) = is_valid_signature(
-            received_balance_proof,
-            sender_state.address,
-        )
-
-        if not is_valid:
-            # The signature must be valid, otherwise the balance proof cannot be
-            # used onchain
-            msg = 'Invalid RefundTransfer message. {}'.format(signature_msg)
-
-            result = (False, msg, None)
-
-        elif received_balance_proof.nonce != expected_nonce:
-            # The nonces must increase sequentially, otherwise there is a
-            # synchronization problem
-            msg = (
-                'Invalid RefundTransfer message. '
-                'Nonce did not change sequentially, expected: {} got: {}.'
-            ).format(
-                expected_nonce,
-                received_balance_proof.nonce,
-            )
-
-            result = (False, msg, None)
-
-        elif received_balance_proof.locksroot != locksroot_with_lock:
-            # The locksroot must be updated to include the new lock
-            msg = (
-                'Invalid RefundTransfer message. '
-                "Balance proof's locksroot didn't match, expected: {} got: {}."
-            ).format(
-                hexlify(locksroot_with_lock).decode(),
-                hexlify(received_balance_proof.locksroot).decode(),
-            )
-
-            result = (False, msg, None)
-
-        elif received_balance_proof.transferred_amount != current_transferred_amount:
-            # Mediated transfers must not change transferred_amount
-            msg = (
-                'Invalid RefundTransfer message. '
-                "Balance proof's transferred_amount changed, expected: {} got: {}."
-            ).format(
-                current_transferred_amount,
-                received_balance_proof.transferred_amount,
-            )
-
-            result = (False, msg, None)
-
-        elif not is_valid_amount(sender_state, lock.amount):
-            # We can validate that the Unlock message will have a transferred
-            # amount, accepting a lock that cannot be unlocked is useless
-            msg = (
-                "Invalid RefundTransfer message. "
-                "Unlocking the lock would result in an overflow. max: {} result would be: {}"
-            ).format(
-                UINT256_MAX,
-                transferred_amount_after_unlock,
-            )
-
-            result = (False, msg, None)
-
-        elif received_balance_proof.locked_amount != expected_locked_amount:
-            # Mediated transfers must increase the locked_amount by lock.amount
-            msg = (
-                'Invalid RefundTransfer message. '
-                "Balance proof's locked_amount is invalid, expected: {} got: {}."
-            ).format(
-                expected_locked_amount,
-                received_balance_proof.locked_amount,
-            )
-
-            result = (False, msg, None)
-
-        elif received_balance_proof.channel_address != channel_state.identifier:
-            # The balance proof must be tied to this channel, otherwise the
-            # on-chain contract would be sucesstible to replay attacks across
-            # channels.
-            msg = (
-                'Invalid RefundTransfer message. '
-                'Balance proof is tied to the wrong channel, expected: {} got: {}'
-            ).format(
-                hexlify(channel_state.identifier).decode(),
-                hexlify(received_balance_proof.channel_address).decode(),
-            )
-            result = (False, msg, None)
-
-        # the locked amount is limited to the current available balance, otherwise
-        # the sender is doing a trying to play the protocol and do a double spend
-        elif lock.amount > distributable:
-            msg = (
-                'Invalid RefundTransfer message. '
-                'Lock amount larger than the available distributable, '
-                'lock amount: {} maximum distributable: {}'
-            ).format(
-                lock.amount,
-                distributable,
-            )
-
-            result = (False, msg, None)
-
-        else:
-            result = (True, None, merkletree)
-
-    return result
 
 
 def is_valid_unlock(
@@ -667,7 +570,7 @@ def is_valid_unlock(
         result = (False, msg, None)
 
     elif lock is None:
-        msg = 'Invalid Secret message. There is no correspoding lock for {}'.format(
+        msg = 'Invalid Unlock message. There is no corresponding lock for {}'.format(
             hexlify(unlock.secrethash).decode(),
         )
 
@@ -676,7 +579,7 @@ def is_valid_unlock(
     elif not is_valid:
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
-        msg = 'Invalid Secret message. {}'.format(signature_msg)
+        msg = 'Invalid Unlock message. {}'.format(signature_msg)
 
         result = (False, msg, None)
 
@@ -684,7 +587,7 @@ def is_valid_unlock(
         # The nonces must increase sequentially, otherwise there is a
         # synchronization problem.
         msg = (
-            'Invalid Secret message. '
+            'Invalid Unlock message. '
             'Nonce did not change sequentially, expected: {} got: {}.'
         ).format(
             expected_nonce,
@@ -698,7 +601,7 @@ def is_valid_unlock(
         # that lock removed, otherwise the sender may be trying to remove
         # additional locks.
         msg = (
-            'Invalid Secret message. '
+            'Invalid Unlock message. '
             "Balance proof's locksroot didn't match, expected: {} got: {}."
         ).format(
             hexlify(locksroot_without_lock).decode(),
@@ -711,7 +614,7 @@ def is_valid_unlock(
         # Secret messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
-            "Invalid Secret message. "
+            "Invalid Unlock message. "
             "Balance proof's wrong transferred_amount, expected: {} got: {}."
         ).format(
             expected_transferred_amount,
@@ -723,7 +626,7 @@ def is_valid_unlock(
     elif received_balance_proof.transferred_amount > UINT256_MAX:
         # Some serialization formats allow values to be larger than the maximum
         msg = (
-            "Invalid Secret message. "
+            "Invalid Unlock message. "
             "Balance proof's transferred_amount is larger than the maximum value. max: {} got: {}"
         ).format(
             UINT256_MAX,
@@ -737,7 +640,7 @@ def is_valid_unlock(
         # on-chain contract would be sucesstible to replay attacks across
         # channels.
         msg = (
-            'Invalid Secret message. '
+            'Invalid Unlock message. '
             'Balance proof is tied to the wrong channel, expected: {} got: {}'
         ).format(
             channel_state.identifier,
