@@ -1,21 +1,41 @@
 """ Utilities to set-up a Raiden network. """
 from binascii import hexlify
+from collections import namedtuple
 from os import environ
 
 import gevent
 from gevent import server
 import structlog
+from eth_utils import decode_hex
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
 
 from raiden import waiting
 from raiden.app import App
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.matrixtransport import MatrixTransport
-from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
-from raiden.utils import privatekey_to_address
+from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.settings import GAS_PRICE
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.utils import (
+    get_contract_path,
+    privatekey_to_address,
+)
+from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
+BlockchainServices = namedtuple(
+    'BlockchainServices',
+    (
+        'deploy_registry',
+        'secret_registry',
+        'deploy_service',
+        'blockchain_services',
+    ),
+)
 
 
 def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_amount):
@@ -300,6 +320,70 @@ def create_apps(
         apps.append(app)
 
     return apps
+
+
+def jsonrpc_services(
+        deploy_key,
+        deploy_client,
+        private_keys,
+        poll_timeout,
+        web3=None,
+):
+    deploy_blockchain = BlockChainService(
+        deploy_key,
+        deploy_client,
+        GAS_PRICE,
+    )
+
+    secret_registry_address = deploy_contract_web3(
+        CONTRACT_SECRET_REGISTRY,
+        poll_timeout,
+        deploy_client,
+    )
+    secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
+
+    registry_path = get_contract_path('Registry.sol')
+    registry_contracts = compile_files_cwd([registry_path])
+
+    log.info('Deploying registry contract')
+    registry_proxy = deploy_client.deploy_solidity_contract(
+        'Registry',
+        registry_contracts,
+        dict(),
+        tuple(),
+        contract_path=registry_path,
+        timeout=poll_timeout,
+    )
+    registry_address = decode_hex(registry_proxy.contract.address)
+
+    # at this point the blockchain must be running, this will overwrite the
+    # method so even if the client is patched twice, it should work fine
+
+    deploy_registry = deploy_blockchain.registry(registry_address)
+
+    host = '0.0.0.0'
+    blockchain_services = list()
+    for privkey in private_keys:
+        rpc_client = JSONRPCClient(
+            host,
+            deploy_client.port,
+            privkey,
+            web3=web3,
+        )
+
+        blockchain = BlockChainService(
+            privkey,
+            rpc_client,
+            GAS_PRICE,
+        )
+        blockchain_services.append(blockchain)
+
+    return BlockchainServices(
+        deploy_registry,
+        secret_registry,
+        deploy_blockchain,
+        blockchain_services,
+    )
 
 
 def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):

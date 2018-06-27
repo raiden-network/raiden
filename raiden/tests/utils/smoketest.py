@@ -20,7 +20,7 @@ from raiden.connection_manager import ConnectionManager
 from raiden.network.utils import get_free_port
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.tests.integration.fixtures.blockchain import deploy_contract_web3
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import get_project_root
 from raiden.utils.deployment import deploy_contracts, NEW_CONTRACTS_TO_DEPLOY
 
