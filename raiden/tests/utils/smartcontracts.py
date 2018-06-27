@@ -3,16 +3,17 @@ from binascii import unhexlify
 from eth_utils import to_canonical_address
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
+from raiden.network.blockchain_service import BlockChainService
 from raiden.utils import get_contract_path
-from raiden.utils.typing import Address
+from raiden.utils import typing
 
 
 def deploy_tokens_and_fund_accounts(
-        token_amount,
-        number_of_tokens,
-        deploy_service,
-        participants,
-):
+        token_amount: int,
+        number_of_tokens: int,
+        deploy_service: BlockChainService,
+        participants: typing.List[typing.Address],
+) -> typing.List[typing.TokenAddress]:
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
     distributed among `blockchain_services`. Optionally the instances will be registered with
     the raiden registry.
@@ -20,7 +21,7 @@ def deploy_tokens_and_fund_accounts(
     Args:
         token_amount (int): number of units that will be created per token
         number_of_tokens (int): number of token instances that will be created
-        deploy_service (BlockchainService): the blockchain connection that will deploy
+        deploy_service (BlockChainService): the blockchain connection that will deploy
         participants (list(address)): participant addresses that will receive tokens
     """
     result = list()
@@ -45,17 +46,17 @@ def deploy_tokens_and_fund_accounts(
 
 def deploy_contract_web3(
         contract_name: str,
-        poll_timeout,
-        deploy_client,
+        poll_timeout: float,
+        deploy_client: BlockChainService,
         *args,
-):
+) -> typing.Address:
     web3 = deploy_client.web3
 
     contract_interface = CONTRACT_MANAGER.abi[contract_name]
 
     # Submit the transaction that deploys the contract
     tx_hash = deploy_client.send_transaction(
-        to=Address(b''),
+        to=typing.Address(b''),
         data=contract_interface['bin'],
     )
     tx_hash = unhexlify(tx_hash)
