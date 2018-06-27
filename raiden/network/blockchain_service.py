@@ -232,7 +232,7 @@ class BlockChainService:
 
             self.identifier_to_payment_channel[dict_key] = PaymentChannel(
                 token_network=token_network,
-                channel_id=channel_id,
+                channel_identifier=channel_id,
             )
 
         return self.identifier_to_payment_channel[dict_key]

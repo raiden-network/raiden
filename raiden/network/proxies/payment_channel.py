@@ -2,9 +2,15 @@ from typing import Dict
 
 from eth_utils import decode_hex
 from web3.utils.filters import Filter
-from raiden.utils import typing
-from raiden.utils.filters import get_filter_args_for_channel_from_token_network
+from raiden_contracts.constants import EVENT_CHANNEL_OPENED, CONTRACT_TOKEN_NETWORK
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
+from raiden.utils import typing
+from raiden.utils.filters import (
+    get_filter_args_for_all_events_from_channel,
+    get_filter_args_for_specific_event_from_channel,
+)
+from raiden.network.rpc.smartcontract_proxy import decode_event
 from raiden.network.proxies import TokenNetwork
 
 
@@ -12,26 +18,22 @@ class PaymentChannel:
     def __init__(
         self,
         token_network: TokenNetwork,
-        channel_id: typing.ChannelID,
+        channel_identifier: typing.ChannelID,
     ):
         self.token_network = token_network
-        self.channel_id = channel_id
+        self.channel_id = channel_identifier
 
-        # query the blockchain to get the partner addresses for the channel id
-        filter = token_network.proxy.contract.events.ChannelOpened.createFilter(
-            fromBlock=0,
-            argument_filters={
-                'channel_identifier': channel_id,
-            },
+        filter_args = get_filter_args_for_specific_event_from_channel(
+            token_network_address=token_network.address,
+            channel_identifier=channel_identifier,
+            event_name=EVENT_CHANNEL_OPENED,
         )
 
-        events = filter.get_all_entries()
-        token_network.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
-
+        events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
         if not len(events) > 0:
             raise ValueError('Channel is non-existing.')
 
-        event = events[-1]
+        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
         self.participant = decode_hex(event['args']['participant1'])
         self.partner = decode_hex(event['args']['participant2'])
 
@@ -52,21 +54,18 @@ class PaymentChannel:
 
         # There is no way to get the settle timeout after the channel has been closed as
         # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
-        filter = self.token_network.proxy.contract.events.ChannelOpened.createFilter(
-            fromBlock=0,
-            argument_filters={
-                'channel_identifier': self.channel_identifier(),
-            },
+        filter_args = get_filter_args_for_specific_event_from_channel(
+            token_network_address=self.token_network.address,
+            channel_identifier=self.channel_identifier(),
+            event_name=EVENT_CHANNEL_OPENED,
         )
 
-        events = filter.get_all_entries()
-        # uninstall the filter, otherwise it leaks
-        self.token_network.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
-
+        events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
         assert len(events) > 0, 'No matching ChannelOpen event found.'
 
         # we want the latest event here, there might have been multiple channels
-        return events[-1]['args']['settle_timeout']
+        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        return event['args']['settle_timeout']
 
     def opened(self) -> bool:
         """ Returns if the channel is opened. """
@@ -156,7 +155,7 @@ class PaymentChannel:
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
     ) -> Filter:
-        args = get_filter_args_for_channel_from_token_network(
+        args = get_filter_args_for_all_events_from_channel(
             token_network_address=self.token_network.address,
             channel_identifier=self.channel_identifier(),
             from_block=from_block,
