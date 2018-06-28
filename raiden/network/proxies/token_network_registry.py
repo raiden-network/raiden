@@ -58,10 +58,11 @@ class TokenNetworkRegistry:
             to_normalized_address(registry_address),
         )
 
-        if not compare_versions(
+        is_valid_version = compare_versions(
             proxy.contract.functions.contract_version().call(),
             EXPECTED_CONTRACTS_VERSION,
-        ):
+        )
+        if not is_valid_version:
             raise ContractVersionMismatch('Incompatible ABI for TokenNetworkRegistry')
 
         self.address = registry_address

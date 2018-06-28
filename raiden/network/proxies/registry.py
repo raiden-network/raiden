@@ -13,24 +13,21 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_REGISTRY,
-
     EVENT_TOKEN_ADDED,
 )
 from raiden.exceptions import (
     NoTokenManager,
     TransactionThrew,
 )
+from raiden.network.proxies.channel_manager import ChannelManager
+from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import (
     pex,
     privatekey_to_address,
+    typing,
 )
-from raiden.network.proxies.channel_manager import ChannelManager
-from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
-)
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -51,7 +48,7 @@ class Registry:
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
             to_normalized_address(registry_address),
         )
-        self.proxy = ContractProxy(jsonrpc_client, contract)
+        proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(registry_address):
             raise ValueError('registry_address must be a valid address')
@@ -59,13 +56,14 @@ class Registry:
         check_address_has_code(jsonrpc_client, registry_address, 'Registry')
 
         CONTRACT_MANAGER.check_contract_version(
-            self.proxy.contract.functions.contract_version().call(),
+            proxy.contract.functions.contract_version().call(),
             CONTRACT_REGISTRY,
         )
 
         self.address = registry_address
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
+        self.proxy = proxy
 
         self.address_to_channelmanager = dict()
         self.token_to_channelmanager = dict()

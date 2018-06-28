@@ -102,7 +102,7 @@ def geth_to_cmd(node: typing.Dict, datadir: str, verbosity: int) -> typing.List[
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
-        '--verbosity', '3',
+        '--verbosity', str(verbosity),
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),
     ])

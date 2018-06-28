@@ -333,6 +333,9 @@ class JSONRPCClient:
             address=to_checksum_address(contract_address),
         )
 
+    def get_transaction_receipt(self, tx_hash):
+        return self.web3.eth.getTransactionReceipt(tx_hash)
+
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals
             contract_name,
@@ -409,7 +412,7 @@ class JSONRPCClient:
                 transaction_hash = unhexlify(transaction_hash_hex)
 
                 self.poll(transaction_hash)
-                receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
+                receipt = self.get_transaction_receipt(transaction_hash)
 
                 contract_address = receipt['contractAddress']
                 # remove the hexadecimal prefix 0x from the address
@@ -442,7 +445,7 @@ class JSONRPCClient:
         transaction_hash = unhexlify(transaction_hash_hex)
 
         self.poll(transaction_hash)
-        receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
+        receipt = self.get_transaction_receipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
         deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
