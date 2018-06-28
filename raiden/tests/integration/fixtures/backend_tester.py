@@ -14,6 +14,7 @@ def fund_accounts(web3, blockchain_type, faucet_address, private_keys, ethereum_
         if to_checksum_address(privatekey_to_address(key)) not in ethereum_tester.get_accounts():
             ethereum_tester.add_account(encode_hex(key))
 
+    for key in private_keys:
         ethereum_tester.send_transaction({
             'from': faucet_address,
             'to': to_checksum_address(privatekey_to_address(key)),
