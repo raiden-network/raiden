@@ -2,6 +2,7 @@
 import random
 
 import gevent
+import time
 from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
@@ -266,6 +267,20 @@ def assert_synched_channel_state(
 
     assert_mirror(channel0, channel1)
     assert_mirror(channel1, channel0)
+
+
+def wait_assert(*args, func, timeout=5, **kwargs):
+    """Like assert_*, but retry and raises the last AssertionError only after timeout"""
+    start_time = time.time()
+    while True:
+        try:
+            func(*args, **kwargs)
+        except AssertionError:
+            if timeout and time.time() > start_time + timeout:
+                raise
+            gevent.sleep(0.5)
+        else:
+            return True
 
 
 def assert_mirror(original, mirror):
