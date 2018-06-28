@@ -46,15 +46,30 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
 
     public registerToken() {
         if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
+            this.raidenService.
             this.raidenService.registerToken(this.tokenAddress.value)
-                .subscribe((userToken: Usertoken) => {
+                .subscribe(
+                    (userToken: Usertoken) => {
                     this.tokensChange.emit(null);
                     this.sharedService.msg({
                         severity: 'success',
                         summary: 'Token registered',
                         detail: 'Your token was successfully registered: ' + userToken.address,
                     });
-                });
+                    },
+                    (err: any) => {
+                        this.sharedService.msg({
+                            severity: 'fail',
+                            summary: 'Invalid Token',
+                            detail: 'Invalid address, !'
+                        });
+                    });
+            } else {
+            this.sharedService.msg({
+                severity: 'fail',
+                summary: 'Invalid Token',
+                detail: 'Invalid address, please re-enter!'
+            });
         }
         this.visible = false;
     }

@@ -55,7 +55,7 @@
 }
 .nav-side-menu li a {
   text-decoration: none;
-  color: #e1ffff;
+  color: white;
 }
 .nav-side-menu li a i {
   padding-left: 10px;
@@ -115,6 +115,7 @@
 body {
   margin: 0px;
   padding: 0px;
+    background-color: #333333;
 }
 
 /*For Top Nav Bar*/

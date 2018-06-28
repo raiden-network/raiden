@@ -17,5 +17,4 @@ export class SubsetPipe implements PipeTransform {
             .filter((k) => k && (exc || []).indexOf(k) < 0 && value.hasOwnProperty(k))
             .reduce((o, k) => (o[k] = value[k], o), {});
     }
-
 }

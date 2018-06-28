@@ -12,6 +12,8 @@ from raiden.api.v1.encoding import (
 
 import structlog
 
+from eth_utils import to_checksum_address
+
 log = structlog.get_logger(__name__)
 
 
