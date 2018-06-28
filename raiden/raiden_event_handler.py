@@ -165,7 +165,7 @@ def handle_unlockfailed(
 
 
 def handle_contract_send_secretreveal(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         channel_close_event: ContractSendSecretReveal,
 ):
     raiden.default_secret_registry.register_secret(channel_close_event.secret)
@@ -223,10 +223,7 @@ def handle_contract_send_channelclose2(
         signature = b''
         message_hash = b''
 
-    channel = raiden.chain.payment_channel(
-        token_network_address=channel_close_event.token_network_identifier,
-        channel_id=channel_close_event.channel_identifier,
-    )
+    channel = raiden.chain.payment_channel(channel_close_event.channel_identifier)
 
     channel.close(
         nonce,
@@ -261,10 +258,7 @@ def handle_contract_send_channelupdate2(
     balance_proof = channel_update_event.balance_proof
 
     if balance_proof:
-        channel = raiden.chain.payment_channel(
-            token_network_address=channel_update_event.token_network_identifier,
-            channel_id=channel_update_event.channel_identifier,
-        )
+        channel = raiden.chain.payment_channel(channel_update_event.channel_identifier)
 
         our_signature = signing_update_data(
             balance_proof,
@@ -298,7 +292,7 @@ def handle_contract_send_channelunlock(
 
 
 def handle_contract_send_channelunlock2(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         channel_unlock_event: ContractSendChannelBatchUnlock,
 ):
     channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
@@ -318,10 +312,7 @@ def handle_contract_send_channelsettle2(
         raiden: RaidenService,
         channel_settle_event: ContractSendChannelSettle,
 ):
-    channel = raiden.chain.payment_channel(
-        token_network_address=channel_settle_event.token_network_identifier,
-        channel_id=channel_settle_event.channel_identifier,
-    )
+    channel = raiden.chain.payment_channel(channel_settle_event.channel_identifier)
     our_balance_proof = channel_settle_event.our_balance_proof
     partner_balance_proof = channel_settle_event.partner_balance_proof
 

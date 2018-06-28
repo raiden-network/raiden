@@ -14,21 +14,19 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     EVENT_SECRET_REVEALED,
 )
-from raiden.exceptions import TransactionThrew, InvalidAddress, ContractVersionMismatch
+from raiden.exceptions import TransactionThrew, InvalidAddress
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
-    EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.utils import (
     pex,
     typing,
     sha3,
     privatekey_to_address,
-    compare_versions,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -41,6 +39,8 @@ class SecretRegistry:
             secret_registry_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
+        # pylint: disable=too-many-arguments
+
         if not is_binary_address(secret_registry_address):
             raise InvalidAddress('Expected binary address format for secret registry')
 
@@ -51,11 +51,11 @@ class SecretRegistry:
             to_normalized_address(secret_registry_address),
         )
 
-        if not compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            EXPECTED_CONTRACTS_VERSION,
-        ):
-            raise ContractVersionMismatch('Incompatible ABI for SecretRegistry')
+        # TODO: add this back
+        # CONTRACT_MANAGER.check_contract_version(
+        #     proxy.functions.contract_version().call(),
+        #     CONTRACT_SECRET_REGISTRY
+        # )
 
         self.address = secret_registry_address
         self.proxy = proxy

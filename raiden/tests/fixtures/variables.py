@@ -3,7 +3,7 @@ import os
 import random
 
 import pytest
-from eth_utils import to_normalized_address, remove_0x_prefix
+from eth_utils import to_normalized_address
 from raiden.network.utils import get_free_port
 
 from raiden.utils import privatekey_to_address
@@ -13,6 +13,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
+from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 
@@ -62,7 +63,9 @@ def random_marker():
     value.
     """
     random_hex = hex(random.getrandbits(100))
-    return remove_0x_prefix(random_hex)
+
+    # strip the leading 0x and trailing L
+    return random_hex[2:-1]
 
 
 @pytest.fixture
@@ -74,15 +77,15 @@ def deposit():
 
 
 @pytest.fixture
-def number_of_tokens():
-    """ Number of tokens pre-registered in the test Registry. """
-    return 1
+def both_participants_deposit():
+    """ Boolean flag indicating if both participants of a channel put a deposit. """
+    return True
 
 
 @pytest.fixture
-def register_tokens():
-    """ Should fixture generated tokens be registered with raiden. """
-    return True
+def number_of_tokens():
+    """ Number of tokens pre-registered in the test Registry. """
+    return 1
 
 
 @pytest.fixture
@@ -156,7 +159,16 @@ def token_amount(number_of_nodes, deposit):
 @pytest.fixture
 def network_wait(transport_config, blockchain_type):
     """Time in seconds used to wait for network events."""
-    return 5.0
+    # Has to be set higher for Travis builds and for the Matrix versions of the
+    # tests, due to Travis and the local Synapse server being slow sometimes
+    network_wait = 0.3
+    if blockchain_type == 'tester':
+        network_wait += 0.3
+    if 'TRAVIS' in os.environ:
+        network_wait += 0.5
+    if transport_config.protocol == TransportProtocol.MATRIX:
+        network_wait += 2.7
+    return network_wait
 
 
 @pytest.fixture

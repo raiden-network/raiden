@@ -24,6 +24,7 @@ def blockchain_backend(
         tmpdir,
         random_marker,
 ):
+
     """ Helper to do proper cleanup. """
     geth_processes = geth_create_blockchain(
         deploy_key,
@@ -37,12 +38,9 @@ def blockchain_backend(
         random_marker,
         None,
     )
-
     yield geth_processes
 
-    for process in geth_processes:
-        process.terminate()
-
+    [x.terminate() for x in geth_processes]
     cleanup_tasks()
 
 

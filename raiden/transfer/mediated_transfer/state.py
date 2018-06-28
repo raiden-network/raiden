@@ -164,6 +164,7 @@ class TargetTransferState(State):
         'route',
         'transfer',
         'secret',
+        'hahslock',
         'state',
     )
 

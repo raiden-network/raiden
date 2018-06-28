@@ -13,6 +13,7 @@ coverage run \
     -m py.test \
     -Wd \
     --travis-fold=always \
+    -vvvvvv \
     --log-config='raiden:DEBUG' \
     --random \
     --blockchain-type=${BLOCKCHAIN_TYPE} \
