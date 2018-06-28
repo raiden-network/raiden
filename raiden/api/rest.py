@@ -54,6 +54,7 @@ from raiden.api.v1.resources import (
     TransferToTargetResource,
     ConnectionsResource,
     ConnectionsInfoResource,
+    MetricsResource,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -454,9 +455,7 @@ class RestAPI:
         return api_response(result=checksummed_response_dict(result.data))
 
     def get_metrics(self):
-        return api_response(
-            result=self.raiden_api.raiden.wal.state_manager.current_state
-        )
+        return api_response(result=self.raiden_api.raiden.wal.state_manager.current_state)
 
     def get_connection_managers_info(self, registry_address):
         """Get a dict whose keys are token addresses and whose values are

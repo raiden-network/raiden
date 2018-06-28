@@ -976,122 +976,27 @@ class MetricsState(State):
     __slots__ = (
         'num_of_payments',
         'num_no_capacity_payments',
-        'num_of_finalized_payments',
-        'num_of_no_route_transfers',
-        'num_of_no_capacity_transfers',
-        'num_of_finalized_transfers',
-        'num_of_expired_transfers',
-        'num_of_pending_transfers',
-        'num_of_no_route_transfers',
-        'num_of_no_capacity_transfers',
-        'num_of_expired_transfers',
-        'num_of_pending_transfers',
-        'num_of_backtracked_transfers',
-        'num_of_finalized_off_chain_transfers',
-        'num_of_finalized_on_chain_transfers',
-        'num_of_expired_transfers',
-        'num_of_pending_transfers',
-        'num_of_finalized_payments',
-        'num_of_finalized_transfers',
-        'num_of_expired_transfers',
-        'num_of_pending_transfers',
     )
 
     def __init__(
             self,
             num_of_payments,
             num_no_capacity_payments,
-            num_of_finalized_payments,
-            num_of_no_route_transfers,
-            num_of_no_capacity_transfers,
-            num_of_finalized_transfers,
-            num_of_expired_transfers,
-            num_of_pending_transfers,
-            num_of_no_route_transfers,
-            num_of_no_capacity_transfers,
-            num_of_expired_transfers,
-            num_of_pending_transfers,
-            num_of_backtracked_transfers,
-            num_of_finalized_off_chain_transfers,
-            num_of_finalized_on_chain_transfers,
-            num_of_expired_transfers,
-            num_of_pending_transfers,
-            num_of_finalized_payments,
-            num_of_finalized_transfers,
-            num_of_expired_transfers,
-            num_of_pending_transfers,
     ):
         self.num_of_payments = num_of_payments
         self.num_no_capacity_payments = num_no_capacity_payments
-        self.num_of_finalized_payments = num_of_finalized_payments
-        self.num_of_no_route_transfers = num_of_no_route_transfers
-        self.num_of_no_capacity_transfers = num_of_no_capacity_transfers
-        self.num_of_finalized_transfers = num_of_finalized_transfers
-        self.num_of_expired_transfers = num_of_expired_transfers
-        self.num_of_pending_transfers = num_of_pending_transfers
-        self.num_of_no_route_transfers = num_of_no_route_transfers
-        self.num_of_no_capacity_transfers = num_of_no_capacity_transfers
-        self.num_of_expired_transfers = num_of_expired_transfers
-        self.num_of_pending_transfers = num_of_pending_transfers
-        self.num_of_backtracked_transfers = num_of_backtracked_transfers
-        self.num_of_finalized_off_chain_transfers = num_of_finalized_off_chain_transfers
-        self.num_of_finalized_on_chain_transfers = num_of_finalized_on_chain_transfers
-        self.num_of_expired_transfers = num_of_expired_transfers
-        self.num_of_pending_transfers = num_of_pending_transfers
-        self.num_of_finalized_payments = num_of_finalized_payments
-        self.num_of_finalized_transfers = num_of_finalized_transfers
-        self.num_of_expired_transfers = num_of_expired_transfers
-        self.num_of_pending_transfers = num_of_pending_transfers
 
     def __repr__(self):
-        return '<MetricsState num_of_payments: num_of_payments: {} num_no_capacity_payments: {} num_of_finalized_payments: {} num_of_no_route_transfers: {} num_of_no_capacity_transfers: {} num_of_finalized_transfers: {} num_of_expired_transfers: {} num_of_pending_transfers: {} num_of_no_route_transfers: {} num_of_no_capacity_transfers: {} num_of_expired_transfers: {} num_of_pending_transfers: {} num_of_backtracked_transfers: {} num_of_finalized_off_chain_transfers: {} num_of_finalized_on_chain_transfers: {} num_of_expired_transfers: {} num_of_pending_transfers: {} num_of_finalized_payments: {} num_of_finalized_transfers: {} num_of_expired_transfers: {} num_of_pending_transfers: {}>'.format(
+        return '<MetricsState num_of_payments: num_of_payments: {} num_no_capacity_payments: {}>'.format(
             self.num_of_payments,
             self.num_no_capacity_payments,
-            self.num_of_finalized_payments,
-            self.num_of_no_route_transfers,
-            self.num_of_no_capacity_transfers,
-            self.num_of_finalized_transfers,
-            self.num_of_expired_transfers,
-            self.num_of_pending_transfers,
-            self.num_of_no_route_transfers,
-            self.num_of_no_capacity_transfers,
-            self.num_of_expired_transfers,
-            self.num_of_pending_transfers,
-            self.num_of_backtracked_transfers,
-            self.num_of_finalized_off_chain_transfers,
-            self.num_of_finalized_on_chain_transfers,
-            self.num_of_expired_transfers,
-            self.num_of_pending_transfers,
-            self.num_of_finalized_payments,
-            self.num_of_finalized_transfers,
-            self.num_of_expired_transfers,
-            self.num_of_pending_transfers,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, MetricsState) and
             self.num_of_payments == other.num_of_payments and
-            self.num_no_capacity_payments == other.num_no_capacity_payments and
-            self.num_of_finalized_payments == other.num_of_finalized_payments and
-            self.num_of_no_route_transfers == other.num_of_no_route_transfers and
-            self.num_of_no_capacity_transfers == other.num_of_no_capacity_transfers and
-            self.num_of_finalized_transfers == other.num_of_finalized_transfers and
-            self.num_of_expired_transfers == other.num_of_expired_transfers and
-            self.num_of_pending_transfers == other.num_of_pending_transfers and
-            self.num_of_no_route_transfers == other.num_of_no_route_transfers and
-            self.num_of_no_capacity_transfers == other.num_of_no_capacity_transfers and
-            self.num_of_expired_transfers == other.num_of_expired_transfers and
-            self.num_of_pending_transfers == other.num_of_pending_transfers and
-            self.num_of_backtracked_transfers == other.num_of_backtracked_transfers and
-            self.num_of_finalized_off_chain_transfers == other.num_of_finalized_off_chain_transfers and
-            self.num_of_finalized_on_chain_transfers == other.num_of_finalized_on_chain_transfers and
-            self.num_of_expired_transfers == other.num_of_expired_transfers and
-            self.num_of_pending_transfers == other.num_of_pending_transfers and
-            self.num_of_finalized_payments == other.num_of_finalized_payments and
-            self.num_of_finalized_transfers == other.num_of_finalized_transfers and
-            self.num_of_expired_transfers == other.num_of_expired_transfers and
-            self.num_of_pending_transfers == other.num_of_pending_transfers
+            self.num_no_capacity_payments == other.num_no_capacity_payments
         )
 
     def __ne__(self, other):
