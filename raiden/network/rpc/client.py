@@ -30,7 +30,6 @@ from raiden.exceptions import (
 )
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
-    data_encoder,
     privatekey_to_address,
     quantity_encoder,
 )
@@ -167,7 +166,7 @@ def format_data_for_rpccall(
         'value': quantity_encoder(value),
         'gasPrice': quantity_encoder(gasprice),
         'gas': quantity_encoder(startgas),
-        'data': data_encoder(data),
+        'data': encode_hex(data),
     }
 
 
@@ -521,7 +520,7 @@ class JSONRPCClient:
                 'transaction_hash length must be 32 (it might be hex encoded)',
             )
 
-        transaction_hash = data_encoder(transaction_hash)
+        transaction_hash = encode_hex(transaction_hash)
 
         deadline = None
         if timeout:

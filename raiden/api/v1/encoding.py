@@ -1,5 +1,4 @@
 import binascii
-from binascii import unhexlify
 
 from marshmallow import (
     fields,
@@ -14,7 +13,12 @@ from werkzeug.routing import (
     BaseConverter,
     ValidationError,
 )
-from eth_utils import is_checksum_address, to_checksum_address
+from eth_utils import (
+    encode_hex,
+    decode_hex,
+    is_checksum_address,
+    to_checksum_address,
+)
 
 
 from raiden.api.objects import (
@@ -37,7 +41,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import data_encoder, data_decoder
+from raiden.utils import data_decoder
 
 
 class HexAddressConverter(BaseConverter):
@@ -49,7 +53,7 @@ class HexAddressConverter(BaseConverter):
             raise ValidationError()
 
         try:
-            value = unhexlify(value[2:])
+            value = decode_hex(value)
         except TypeError:
             raise ValidationError()
 
@@ -81,7 +85,7 @@ class AddressField(fields.Field):
             self.fail('invalid_checksum')
 
         try:
-            value = unhexlify(value[2:])
+            value = decode_hex(value)
         except binascii.Error:
             self.fail('invalid_data')
 
@@ -93,7 +97,7 @@ class AddressField(fields.Field):
 
 class DataField(fields.Field):
     def _serialize(self, value, attr, obj):
-        return data_encoder(value)
+        return encode_hex(value)
 
     def _deserialize(self, value, attr, data):
         return data_decoder(value)

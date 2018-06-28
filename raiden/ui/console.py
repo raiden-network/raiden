@@ -1,4 +1,3 @@
-from binascii import hexlify
 import errno
 import io
 import logging
@@ -8,7 +7,12 @@ import signal
 import sys
 import time
 
-from eth_utils import denoms, to_checksum_address
+from eth_utils import (
+    denoms,
+    encode_hex,
+    decode_hex,
+    to_checksum_address,
+)
 import gevent
 from gevent.event import Event
 import IPython
@@ -327,7 +331,7 @@ class ConsoleTools:
             contract_path=contract_path,
             timeout=timeout,
         )
-        token_address_hex = hexlify(token_proxy.contract_address)
+        token_address_hex = encode_hex(token_proxy.contract_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(
@@ -350,7 +354,7 @@ class ConsoleTools:
         registry = self._raiden.chain.registry(registry_address_hex)
 
         # Add the ERC20 token to the raiden registry
-        token_address = safe_address_decode(token_address_hex)
+        token_address = decode_hex(token_address_hex)
         registry.add_token(token_address)
 
         # Obtain the channel manager for the token

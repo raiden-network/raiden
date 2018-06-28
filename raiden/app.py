@@ -1,8 +1,7 @@
 import filelock
 import sys
 import structlog
-from binascii import unhexlify
-from eth_utils import to_normalized_address
+from eth_utils import to_normalized_address, decode_hex
 from typing import Dict
 
 import gevent
@@ -94,14 +93,14 @@ class App:  # pylint: disable=too-few-public-methods
                 chain,
                 default_registry,
                 default_secret_registry,
-                unhexlify(config['privatekey_hex']),
+                decode_hex(config['privatekey_hex']),
                 transport,
                 config,
                 discovery,
             )
         except filelock.Timeout:
             pubkey = to_normalized_address(
-                privatekey_to_address(unhexlify(self.config['privatekey_hex'])),
+                privatekey_to_address(decode_hex(config['privatekey_hex'])),
             )
             print(
                 f'FATAL: Another Raiden instance already running for account {pubkey} on '

@@ -1,4 +1,3 @@
-from binascii import hexlify
 from binascii import unhexlify
 from http import HTTPStatus
 from string import Template
@@ -13,7 +12,11 @@ import tempfile
 import time
 import traceback
 
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import (
+    encode_hex,
+    to_checksum_address,
+    to_canonical_address,
+)
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
@@ -104,7 +107,7 @@ def run_restapi_smoketests(raiden_service, test_config):
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            '0x' + hexlify(ConnectionManager.BOOTSTRAP_ADDR).decode())
+            encode_hex(ConnectionManager.BOOTSTRAP_ADDR))
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 

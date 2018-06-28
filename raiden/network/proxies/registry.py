@@ -1,7 +1,8 @@
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
 import structlog
 from eth_utils import (
+    encode_hex,
     is_binary_address,
     to_checksum_address,
     to_normalized_address,
@@ -203,7 +204,7 @@ class Registry:
 
             if manager_address is None:
                 raise NoTokenManager(
-                    'Manager for token 0x{} does not exist'.format(hexlify(token_address)),
+                    'Manager for token {} does not exist'.format(encode_hex(token_address)),
                 )
 
             manager = ChannelManager(

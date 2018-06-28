@@ -1,7 +1,8 @@
 # pylint: disable=too-many-lines
 import heapq
-from binascii import hexlify
 from collections import namedtuple
+
+from eth_utils import encode_hex
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
@@ -271,8 +272,8 @@ def is_valid_directtransfer(
             'Invalid DirectTransfer message. '
             "Balance proof's locksroot changed, expected: {} got: {}."
         ).format(
-            hexlify(current_locksroot).decode(),
-            hexlify(received_balance_proof.locksroot).decode(),
+            encode_hex(current_locksroot),
+            encode_hex(received_balance_proof.locksroot),
         )
 
         result = (False, msg)
@@ -324,8 +325,8 @@ def is_valid_directtransfer(
             'Invalid DirectTransfer message. '
             'Balance proof is tied to the wrong channel, expected: {} got: {}'
         ).format(
-            hexlify(channel_state.identifier).decode(),
-            hexlify(received_balance_proof.channel_address).decode(),
+            encode_hex(channel_state.identifier),
+            encode_hex(received_balance_proof.channel_address),
         )
         result = (False, msg)
 
@@ -413,8 +414,8 @@ def is_valid_lockedtransfer(
                 'Invalid LockedTransfer message. '
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
-                hexlify(locksroot_with_lock).decode(),
-                hexlify(received_balance_proof.locksroot).decode(),
+                encode_hex(locksroot_with_lock),
+                encode_hex(received_balance_proof.locksroot),
             )
 
             result = (False, msg, None)
@@ -464,8 +465,8 @@ def is_valid_lockedtransfer(
                 'Invalid LockedTransfer message. '
                 'Balance proof is tied to the wrong channel, expected: {} got: {}'
             ).format(
-                hexlify(channel_state.identifier).decode(),
-                hexlify(received_balance_proof.channel_address).decode(),
+                encode_hex(channel_state.identifier),
+                encode_hex(received_balance_proof.channel_address),
             )
             result = (False, msg, None)
 
@@ -521,14 +522,14 @@ def is_valid_unlock(
     # unlock on-chain for the non-closing party.
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
         msg = 'Invalid Unlock message for {}. The channel is already closed.'.format(
-            hexlify(unlock.secrethash).decode(),
+            encode_hex(unlock.secrethash),
         )
 
         result = (False, msg, None)
 
     elif lock is None:
         msg = 'Invalid Secret message. There is no correspoding lock for {}'.format(
-            hexlify(unlock.secrethash).decode(),
+            encode_hex(unlock.secrethash),
         )
 
         result = (False, msg, None)
@@ -561,8 +562,8 @@ def is_valid_unlock(
             'Invalid Secret message. '
             "Balance proof's locksroot didn't match, expected: {} got: {}."
         ).format(
-            hexlify(locksroot_without_lock).decode(),
-            hexlify(received_balance_proof.locksroot).decode(),
+            encode_hex(locksroot_without_lock),
+            encode_hex(received_balance_proof.locksroot),
         )
 
         result = (False, msg, None)
@@ -601,7 +602,7 @@ def is_valid_unlock(
             'Balance proof is tied to the wrong channel, expected: {} got: {}'
         ).format(
             channel_state.identifier,
-            hexlify(received_balance_proof.channel_address).decode(),
+            encode_hex(received_balance_proof.channel_address),
         )
         result = (False, msg, None)
 

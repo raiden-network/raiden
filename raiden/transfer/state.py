@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
-from binascii import hexlify
 from collections import namedtuple
+from eth_utils import encode_hex
 
 import networkx
 
@@ -680,8 +680,8 @@ class UnlockProofState(State):
         self.secret = secret
 
     def __repr__(self):
-        full_proof = [hexlify(entry) for entry in self.merkle_proof]
-        return f'<UnlockProofState proof:{full_proof} lock:{hexlify(self.lock_encoded)}>'
+        full_proof = [encode_hex(entry) for entry in self.merkle_proof]
+        return f'<UnlockProofState proof:{full_proof} lock:{encode_hex(self.lock_encoded)}>'
 
     def __eq__(self, other):
         return (

@@ -1,4 +1,4 @@
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 import os
 import re
 import string
@@ -10,7 +10,12 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, is_checksum_address
+from eth_utils import (
+    keccak,
+    encode_hex,
+    remove_0x_prefix,
+    is_checksum_address,
+)
 
 import raiden
 from raiden import constants
@@ -91,11 +96,6 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
     return addr
 
 
-def data_encoder(data: bytes, length: int = 0) -> str:
-    data = hexlify(data)
-    return '0x' + data.rjust(length * 2, b'0').decode()
-
-
 def data_decoder(data: str) -> bytes:
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
@@ -109,7 +109,7 @@ def quantity_encoder(i: int) -> str:
 
 
 def pex(data: bytes) -> str:
-    return hexlify(data).decode()[:8]
+    return encode_hex(data)[2:10]
 
 
 def lpex(lst: Iterable[bytes]) -> List[str]:
