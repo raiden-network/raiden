@@ -4,6 +4,7 @@ from eth_tester import EthereumTester, PyEVMBackend
 from web3 import Web3, HTTPProvider
 from web3.providers.eth_tester import EthereumTesterProvider
 
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.geth import (
@@ -11,14 +12,12 @@ from raiden.tests.utils.geth import (
     GethNodeDescription,
 )
 from raiden.tests.utils.network import jsonrpc_services
-from raiden.tests.utils.smartcontracts import deploy_tokens_and_fund_accounts
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester import (
     fund_accounts,
     Miner,
 )
 from raiden.utils import (
-    get_contract_path,
     privatekey_to_address,
 )
 
@@ -28,50 +27,9 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @pytest.fixture
-def token_addresses(
-        token_amount,
-        number_of_tokens,
-        blockchain_services,
-        register_tokens,
-):
-    """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
-    `token_amount` (per token) is distributed among the addresses behind `blockchain_services` and
-    potentially pre-registered with the raiden Registry.
-    The following arguments can control the behavior:
-
-    Args:
-        token_amount (int): the overall number of units minted per token
-        number_of_tokens (int): the number of token instances
-        register_tokens (bool): controls if tokens will be registered with raiden Registry
-    """
-
-    participants = [
-        privatekey_to_address(blockchain_service.private_key)
-        for blockchain_service in blockchain_services.blockchain_services
-    ]
-    token_addresses = deploy_tokens_and_fund_accounts(
-        token_amount,
-        number_of_tokens,
-        blockchain_services.deploy_service,
-        participants,
-    )
-
-    if register_tokens:
-        for token in token_addresses:
-            blockchain_services.deploy_registry.add_token(token)
-
-    return token_addresses
-
-
-@pytest.fixture
-def endpoint_discovery_services(blockchain_services):
-    discovery_address = blockchain_services.deploy_service.deploy_contract(
-        'EndpointRegistry',
-        get_contract_path('EndpointRegistry.sol'),
-    )
-
+def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
     return [
-        ContractDiscovery(chain.node_address, chain.discovery(discovery_address))
+        ContractDiscovery(chain.node_address, chain.discovery(endpoint_registry_address))
         for chain in blockchain_services.blockchain_services
     ]
 
@@ -178,15 +136,22 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 
 @pytest.fixture
+def deploy_service(deploy_key, deploy_client):
+    return BlockChainService(deploy_key, deploy_client)
+
+
+@pytest.fixture
 def blockchain_services(
-        deploy_key,
-        deploy_client,
+        deploy_service,
         private_keys,
+        secret_registry_address,
+        registry_address,
         web3,
 ):
     return jsonrpc_services(
-        deploy_key,
-        deploy_client,
+        deploy_service,
         private_keys,
+        secret_registry_address,
+        registry_address,
         web3=web3,
     )

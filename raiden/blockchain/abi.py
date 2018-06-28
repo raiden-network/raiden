@@ -239,7 +239,10 @@ class ContractManagerWrap(ContractManager):
         """Check if the deployed contract version matches used contract version."""
         our_version = CONTRACT_MANAGER.get_version(contract_name)
         if compare_versions(deployed_version, our_version) is False:
-            raise ContractVersionMismatch('Incompatible ABI for %s' % contract_name)
+            raise ContractVersionMismatch(
+                f'Incompatible ABI for {contract_name}. '
+                f'Expected {our_version} got {deployed_version}',
+            )
 
 
 CONTRACT_MANAGER = ContractManagerWrap('raiden/smart_contracts/')

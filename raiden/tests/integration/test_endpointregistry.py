@@ -1,9 +1,11 @@
 import pytest
 
+from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
-from raiden.utils import get_contract_path, privatekey_to_address
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.utils import privatekey_to_address
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -11,9 +13,9 @@ def test_endpointregistry(private_keys, blockchain_services):
     chain = blockchain_services.blockchain_services[0]
     my_address = privatekey_to_address(private_keys[0])
 
-    endpointregistry_address = chain.deploy_contract(
-        'EndpointRegistry',
-        get_contract_path('EndpointRegistry.sol'),
+    endpointregistry_address = deploy_contract_web3(
+        CONTRACT_ENDPOINT_REGISTRY,
+        chain.client,
     )
     discovery_proxy = chain.discovery(endpointregistry_address)
 
@@ -48,9 +50,9 @@ def test_endpointregistry(private_keys, blockchain_services):
 def test_endpointregistry_gas(private_keys, blockchain_services):
     chain = blockchain_services.blockchain_services[0]
 
-    endpointregistry_address = chain.deploy_contract(
-        'EndpointRegistry',
-        get_contract_path('EndpointRegistry.sol'),
+    endpointregistry_address = deploy_contract_web3(
+        CONTRACT_ENDPOINT_REGISTRY,
+        chain.client,
     )
 
     for i in range(len(private_keys)):

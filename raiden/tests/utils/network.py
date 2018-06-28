@@ -6,8 +6,6 @@ from os import environ
 import gevent
 from gevent import server
 import structlog
-from eth_utils import decode_hex
-from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
 
 from raiden import waiting
 from raiden.app import App
@@ -17,12 +15,9 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import (
-    get_contract_path,
     privatekey_to_address,
 )
-from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -323,43 +318,21 @@ def create_apps(
 
 
 def jsonrpc_services(
-        deploy_key,
-        deploy_client,
+        deploy_service,
         private_keys,
+        secret_registry_address,
+        registry_address,
         web3=None,
 ):
-    deploy_blockchain = BlockChainService(deploy_key, deploy_client)
-
-    secret_registry_address = deploy_contract_web3(
-        CONTRACT_SECRET_REGISTRY,
-        deploy_client,
-    )
-    secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
-
-    registry_path = get_contract_path('Registry.sol')
-    registry_contracts = compile_files_cwd([registry_path])
-
-    log.info('Deploying registry contract')
-    registry_proxy = deploy_client.deploy_solidity_contract(
-        'Registry',
-        registry_contracts,
-        dict(),
-        tuple(),
-        contract_path=registry_path,
-    )
-    registry_address = decode_hex(registry_proxy.contract.address)
-
-    # at this point the blockchain must be running, this will overwrite the
-    # method so even if the client is patched twice, it should work fine
-
-    deploy_registry = deploy_blockchain.registry(registry_address)
+    secret_registry = deploy_service.secret_registry(secret_registry_address)
+    deploy_registry = deploy_service.registry(registry_address)
 
     host = '0.0.0.0'
     blockchain_services = list()
     for privkey in private_keys:
         rpc_client = JSONRPCClient(
             host,
-            deploy_client.port,
+            deploy_service.client.port,
             privkey,
             web3=web3,
         )
@@ -370,7 +343,7 @@ def jsonrpc_services(
     return BlockchainServices(
         deploy_registry,
         secret_registry,
-        deploy_blockchain,
+        deploy_service,
         blockchain_services,
     )
 

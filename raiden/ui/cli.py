@@ -59,9 +59,9 @@ from raiden.utils import (
     typing,
 )
 from raiden.network.sockfactory import SocketFactory
-
 from raiden.utils.cli import (
     ADDRESS_TYPE,
+    LOG_LEVEL_CONFIG_TYPE,
     command,
     group,
     MatrixServerType,
@@ -69,7 +69,6 @@ from raiden.utils.cli import (
     NetworkChoiceType,
     option,
     option_group,
-    LOG_LEVEL_CONFIG_TYPE,
 )
 from raiden.log_config import configure_logging
 

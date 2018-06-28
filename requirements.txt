@@ -18,7 +18,7 @@ pycryptodome==3.6.1
 # raiden-libs==???
 # FIXME: replace with released version before merge
 git+https://github.com/raiden-network/raiden-libs.git@f403970bb08bd87e234c27c8977c95746fe451c2#egg=raiden-libs
-git+https://github.com/raiden-network/raiden-contracts.git#egg=raiden-contracts
+git+https://github.com/raiden-network/raiden-contracts.git@8dc3bf0dac843ced74b67c70f0209320b633c7a6#egg=raiden-contracts
 webargs==1.8.1
 eth-keyfile==0.5.1
 eth_utils==1.0.3
