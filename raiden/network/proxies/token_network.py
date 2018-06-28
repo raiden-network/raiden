@@ -2,7 +2,7 @@ from binascii import unhexlify
 from gevent.lock import RLock
 from gevent.event import AsyncResult
 from typing import List, Dict, Optional
-from raiden.utils import typing
+from raiden.utils import typing, compare_versions
 
 import structlog
 from web3.utils.filters import Filter
@@ -40,9 +40,11 @@ from raiden.exceptions import (
     ChannelBusyError,
     TransactionThrew,
     InvalidAddress,
+    ContractVersionMismatch,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
+    EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.utils import (
     pex,
@@ -60,8 +62,6 @@ class TokenNetwork:
             manager_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-        # pylint: disable=too-many-arguments
-
         if not is_binary_address(manager_address):
             raise InvalidAddress('Expected binary address format for token nework')
 
@@ -72,11 +72,11 @@ class TokenNetwork:
             to_normalized_address(manager_address),
         )
 
-        # TODO: add this back
-        # CONTRACT_MANAGER.check_contract_version(
-        #     proxy.functions.contract_version().call(),
-        #     CONTRACT_TOKEN_NETWORK
-        # )
+        if not compare_versions(
+            proxy.contract.functions.contract_version().call(),
+            EXPECTED_CONTRACTS_VERSION,
+        ):
+            raise ContractVersionMismatch('Incompatible ABI for TokenNetwork')
 
         self.address = manager_address
         self.proxy = proxy

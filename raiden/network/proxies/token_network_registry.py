@@ -14,7 +14,7 @@ from eth_utils import (
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-from raiden.utils import typing
+from raiden.utils import typing, compare_versions
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -24,6 +24,7 @@ from raiden.exceptions import (
     NoTokenManager,
     TransactionThrew,
     InvalidAddress,
+    ContractVersionMismatch,
 )
 from raiden.utils import (
     pex,
@@ -31,6 +32,7 @@ from raiden.utils import (
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
+    EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import check_address_has_code
@@ -48,8 +50,6 @@ class TokenNetworkRegistry:
             registry_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-        # pylint: disable=too-many-arguments
-
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
 
@@ -60,11 +60,11 @@ class TokenNetworkRegistry:
             to_normalized_address(registry_address),
         )
 
-        # TODO: add this back
-        # CONTRACT_MANAGER.check_contract_version(
-        #     proxy.functions.contract_version().call(),
-        #     CONTRACT_TOKEN_NETWORK_REGISTRY
-        # )
+        if not compare_versions(
+            proxy.contract.functions.contract_version().call(),
+            EXPECTED_CONTRACTS_VERSION,
+        ):
+            raise ContractVersionMismatch('Incompatible ABI for TokenNetworkRegistry')
 
         self.address = registry_address
         self.proxy = proxy
