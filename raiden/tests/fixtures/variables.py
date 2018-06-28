@@ -3,22 +3,24 @@ import os
 import random
 
 import pytest
-from eth_utils import to_normalized_address
+from eth_utils import to_normalized_address, remove_0x_prefix, denoms
 from raiden.network.utils import get_free_port
 
 from raiden.utils import privatekey_to_address
 from raiden.settings import (
-    DEFAULT_EVENTS_POLL_TIMEOUT,
-    DEFAULT_POLL_TIMEOUT,
+    DEFAULT_RETRY_TIMEOUT,
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import sha3
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
+
+DEFAULT_BALANCE = denoms.ether * 100000
+DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
+DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 
 @pytest.fixture
@@ -42,8 +44,8 @@ def reveal_timeout():
 
 
 @pytest.fixture
-def events_poll_timeout():
-    return DEFAULT_EVENTS_POLL_TIMEOUT
+def retry_timeout():
+    return DEFAULT_RETRY_TIMEOUT
 
 
 @pytest.fixture
@@ -63,9 +65,7 @@ def random_marker():
     value.
     """
     random_hex = hex(random.getrandbits(100))
-
-    # strip the leading 0x and trailing L
-    return random_hex[2:-1]
+    return remove_0x_prefix(random_hex)
 
 
 @pytest.fixture
@@ -77,15 +77,15 @@ def deposit():
 
 
 @pytest.fixture
-def both_participants_deposit():
-    """ Boolean flag indicating if both participants of a channel put a deposit. """
-    return True
-
-
-@pytest.fixture
 def number_of_tokens():
     """ Number of tokens pre-registered in the test Registry. """
     return 1
+
+
+@pytest.fixture
+def register_tokens():
+    """ Should fixture generated tokens be registered with raiden. """
+    return True
 
 
 @pytest.fixture
@@ -98,12 +98,6 @@ def number_of_nodes():
 def channels_per_node():
     """ Number of pre-created channels per test raiden node. """
     return 1
-
-
-@pytest.fixture
-def poll_timeout():
-    """ Timeout in seconds for polling a cluster. Used for geth. """
-    return DEFAULT_POLL_TIMEOUT
 
 
 @pytest.fixture
@@ -159,16 +153,7 @@ def token_amount(number_of_nodes, deposit):
 @pytest.fixture
 def network_wait(transport_config, blockchain_type):
     """Time in seconds used to wait for network events."""
-    # Has to be set higher for Travis builds and for the Matrix versions of the
-    # tests, due to Travis and the local Synapse server being slow sometimes
-    network_wait = 0.3
-    if blockchain_type == 'tester':
-        network_wait += 0.3
-    if 'TRAVIS' in os.environ:
-        network_wait += 0.5
-    if transport_config.protocol == TransportProtocol.MATRIX:
-        network_wait += 2.7
-    return network_wait
+    return 5.0
 
 
 @pytest.fixture

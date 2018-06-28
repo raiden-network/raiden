@@ -1,5 +1,9 @@
 from eth_utils import keccak
 from raiden.tests.utils import get_random_bytes
+import pytest
+import types
+import gevent
+from raiden.network.proxies import SecretRegistry
 
 
 def test_secret_registry(secret_registry_proxy):
@@ -15,8 +19,52 @@ def test_secret_registry(secret_registry_proxy):
     data = keccak(secret)
     assert decoded_event['args']['secrethash'] == data
     # check if registration block matches
-    block = secret_registry_proxy.get_register_block_for_secrehash(data)
+    block = secret_registry_proxy.get_register_block_for_secrethash(data)
     assert logs[0]['blockNumber'] == block
 
     #  test non-existing secret
-    assert 0 == secret_registry_proxy.get_register_block_for_secrehash(b'\x11' * 32)
+    assert 0 == secret_registry_proxy.get_register_block_for_secrethash(b'\x11' * 32)
+
+
+@pytest.fixture
+def secret_registry_proxy_patched(secret_registry_proxy):
+    secret_registry_patched = SecretRegistry(
+        secret_registry_proxy.client,
+        secret_registry_proxy.address,
+    )
+    _register_secret = secret_registry_patched._register_secret
+
+    def register_secret_patched(self, secret):
+        """Make sure the transaction is sent only once per secret"""
+        assert secret not in self.trigger
+        self.trigger[secret] = True
+        return _register_secret(secret)
+
+    secret_registry_patched._register_secret = types.MethodType(
+        register_secret_patched,
+        secret_registry_patched,
+    )
+    secret_registry_patched.trigger = dict()
+    return secret_registry_patched
+
+
+def test_concurrent_access(
+    secret_registry_proxy_patched,
+):
+    """Test if multiple greenlets actually send only one transaction
+    when registering a secret.
+    This is done by patchin secret_registry_proxy to forbid more than
+    one call to `_register_secret`.
+    """
+    secret = get_random_bytes(32)
+    # Spawn multiple greenlets registrering a single secret
+    # Patched secret registry asserts that the on-chain registry call
+    # is only called once.
+    events = [
+        gevent.spawn(
+            secret_registry_proxy_patched.register_secret,
+            secret,
+        )
+        for _ in range(0, 40)
+    ]
+    gevent.joinall(events)

@@ -1,5 +1,7 @@
 from binascii import hexlify
 
+import gevent
+
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3
 from raiden.utils.solc import compile_files_cwd
@@ -26,19 +28,21 @@ def create_and_distribute_token(
     """
     name = name or hexlify(sha3(''.join(receivers).encode()))
     contract_path = get_contract_path('HumanStandardToken.sol')
-    token_proxy = client.deploy_solidity_contract(
-        'HumanStandardToken',
-        compile_files_cwd([contract_path]),
-        dict(),
-        (
-            len(receivers) * amount_per_receiver,
-            name,
-            2,  # decimals
-            name[:4].upper(),  # symbol
-        ),
-        contract_path=contract_path,
-        timeout=timeout,
-    )
+
+    with gevent.Timeout(timeout):
+        token_proxy = client.deploy_solidity_contract(
+            'HumanStandardToken',
+            compile_files_cwd([contract_path]),
+            dict(),
+            (
+                len(receivers) * amount_per_receiver,
+                name,
+                2,  # decimals
+                name[:4].upper(),  # symbol
+            ),
+            contract_path=contract_path,
+        )
+
     for receiver in receivers:
         token_proxy.transact('transfer', receiver, amount_per_receiver)
     return hexlify(token_proxy.contract_address)

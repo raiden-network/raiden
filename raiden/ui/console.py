@@ -11,12 +11,12 @@ import time
 from eth_utils import denoms, to_checksum_address
 import gevent
 from gevent.event import Event
-from gevent import Greenlet
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
-from raiden import settings, waiting
+from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import get_contract_path, safe_address_decode
 from raiden.utils.solc import compile_files_cwd
 
@@ -170,20 +170,20 @@ class SigINTHandler:
             self.install_handler()
 
 
-class BaseService(Greenlet):
+class BaseService(gevent.Greenlet):
     def __init__(self, app):
-        Greenlet.__init__(self)
+        gevent.Greenlet.__init__(self)
         self.is_stopped = False
         self.app = app
         self.config = app.config
 
     def start(self):
         self.is_stopped = False
-        Greenlet.start(self)
+        gevent.Greenlet.start(self)
 
     def stop(self):
         self.is_stopped = True
-        Greenlet.kill(self)
+        gevent.Greenlet.kill(self)
 
 
 class Console(BaseService):
@@ -320,14 +320,15 @@ class ConsoleTools:
         """
         contract_path = get_contract_path('HumanStandardToken.sol')
         # Deploy a new ERC20 token
-        token_proxy = self._chain.client.deploy_solidity_contract(
-            'HumanStandardToken',
-            compile_files_cwd([contract_path]),
-            dict(),
-            (initial_alloc, name, decimals, symbol),
-            contract_path=contract_path,
-            timeout=timeout,
-        )
+        with gevent.Timeout(timeout):
+            token_proxy = self._chain.client.deploy_solidity_contract(
+                'HumanStandardToken',
+                compile_files_cwd([contract_path]),
+                dict(),
+                (initial_alloc, name, decimals, symbol),
+                contract_path=contract_path,
+            )
+
         token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
@@ -337,7 +338,12 @@ class ConsoleTools:
         ))
         return token_address_hex
 
-    def register_token(self, registry_address_hex, token_address_hex):
+    def register_token(
+            self,
+            registry_address_hex,
+            token_address_hex,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
+    ):
         """ Register a token with the raiden token manager.
 
         Args:
@@ -362,7 +368,7 @@ class ConsoleTools:
             self._raiden,
             registry.address,
             token_address,
-            settings.DEFAULT_EVENTS_POLL_TIMEOUT,
+            retry_timeout,
         )
 
         return channel_manager

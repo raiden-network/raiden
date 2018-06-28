@@ -1,3 +1,6 @@
+import gevent.monkey
+gevent.monkey.patch_all()
+
 from binascii import hexlify
 import sys
 import os
@@ -5,14 +8,14 @@ import tempfile
 import json
 import signal
 import shutil
+import traceback
 from copy import deepcopy
 from itertools import count
+from pathlib import Path
 from urllib.parse import urljoin
 
 import click
 import gevent
-import gevent.monkey
-gevent.monkey.patch_all()
 import requests
 from eth_utils import (
     to_int,
@@ -22,22 +25,18 @@ from eth_utils import (
     to_canonical_address,
 )
 from requests.exceptions import RequestException
-from mirakuru import HTTPExecutor
+from mirakuru import HTTPExecutor, ProcessExitedWithError
 
+from raiden import constants
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
-from raiden.constants import (
-    ID_TO_NETWORKNAME,
-    ROPSTEN_DISCOVERY_ADDRESS,
-    ROPSTEN_REGISTRY_ADDRESS,
-    ROPSTEN_SECRET_REGISTRY_ADDRESS,
-)
 from raiden.exceptions import (
     EthNodeCommunicationError,
     ContractVersionMismatch,
     APIServerPortInUseError,
     RaidenServicePortInUseError,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.transport.udp.udp_transport import UDPTransport
@@ -51,11 +50,13 @@ from raiden.settings import (
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
 from raiden.utils import (
+    eth_endpoint_to_hostport,
     get_system_spec,
     is_minified_address,
     is_supported_client,
-    split_endpoint,
     merge_dict,
+    split_endpoint,
+    typing,
 )
 from raiden.network.sockfactory import SocketFactory
 
@@ -73,17 +74,9 @@ from raiden.utils.cli import (
 from raiden.log_config import configure_logging
 
 
-# ansi escape code for moving the cursor and clearing the line
-CURSOR_STARTLINE = '\x1b[1000D'
-CLEARLINE = '\x1b[2K'
-
-# 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
-DISCOVERY_TX_GAS_LIMIT = 60000
-
-
-def check_json_rpc(client):
+def check_json_rpc(blockchain_service: BlockChainService) -> None:
     try:
-        client_version = client.web3.version.node
+        client_version = blockchain_service.client.web3.version.node
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
@@ -101,10 +94,10 @@ def check_json_rpc(client):
             sys.exit(1)
 
 
-def check_synced(blockchain_service):
+def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
-        network = ID_TO_NETWORKNAME[net_id]
+        network = constants.ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(
             'Could not determine the network the ethereum node is connected.\n'
@@ -134,8 +127,11 @@ def check_synced(blockchain_service):
     )
 
 
-def check_discovery_registration_gas(blockchain_service, account_address):
-    discovery_tx_cost = blockchain_service.client.gasprice() * DISCOVERY_TX_GAS_LIMIT
+def check_discovery_registration_gas(
+        blockchain_service: BlockChainService,
+        account_address: typing.Address,
+) -> None:
+    discovery_tx_cost = blockchain_service.client.gasprice() * constants.DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
     if discovery_tx_cost > account_balance:
@@ -149,7 +145,11 @@ def check_discovery_registration_gas(blockchain_service, account_address):
         sys.exit(1)
 
 
-def etherscan_query_with_retries(url, sleep, retries=3):
+def etherscan_query_with_retries(
+        url: str,
+        sleep: float,
+        retries: int = 3,
+) -> int:
     for _ in range(retries - 1):
         try:
             etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
@@ -162,7 +162,12 @@ def etherscan_query_with_retries(url, sleep, retries=3):
     return etherscan_block
 
 
-def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
+def wait_for_sync_etherscan(
+        blockchain_service: BlockChainService,
+        url: str,
+        tolerance: int,
+        sleep: float,
+) -> None:
     local_block = blockchain_service.client.block_number()
     etherscan_block = etherscan_query_with_retries(url, sleep)
     syncing_str = 'Syncing ... Current: {} / Target: ~{}'
@@ -185,11 +190,14 @@ def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
             if local_block >= etherscan_block - tolerance:
                 return
 
-        print(CLEARLINE + CURSOR_STARTLINE, end='')
+        print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
         print(syncing_str.format(local_block, etherscan_block), end='')
 
 
-def wait_for_sync_rpc_api(blockchain_service, sleep):
+def wait_for_sync_rpc_api(
+        blockchain_service: BlockChainService,
+        sleep: float,
+) -> None:
     if blockchain_service.is_synced():
         return
 
@@ -197,7 +205,7 @@ def wait_for_sync_rpc_api(blockchain_service, sleep):
 
     for i in count():
         if i % 3 == 0:
-            print(CLEARLINE + CURSOR_STARTLINE, end='')
+            print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
 
         print('.', end='')
         sys.stdout.flush()
@@ -208,7 +216,12 @@ def wait_for_sync_rpc_api(blockchain_service, sleep):
             return
 
 
-def wait_for_sync(blockchain_service, url, tolerance, sleep):
+def wait_for_sync(
+        blockchain_service: BlockChainService,
+        url: str,
+        tolerance: int,
+        sleep: float,
+) -> None:
     # print something since the actual test may take a few moments for the first
     # iteration
     print('Checking if the ethereum node is synchronized')
@@ -272,21 +285,21 @@ def options(func):
         option(
             '--registry-contract-address',
             help='hex encoded address of the registry contract.',
-            default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--secret-registry-contract-address',
             help='hex encoded address of the secret registry contract.',
-            default=ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--discovery-contract-address',
             help='hex encoded address of the discovery contract.',
-            default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
+            default=constants.ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
@@ -504,7 +517,6 @@ def app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
-    from raiden.network.blockchain_service import BlockChainService
 
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
@@ -543,21 +555,7 @@ def app(
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
 
-    endpoint = eth_rpc_endpoint
-
-    # Fallback to default port if only an IP address is given
-    rpc_port = 8545
-    if eth_rpc_endpoint.startswith('http://'):
-        endpoint = eth_rpc_endpoint[len('http://'):]
-        rpc_port = 80
-    elif eth_rpc_endpoint.startswith('https://'):
-        endpoint = eth_rpc_endpoint[len('https://'):]
-        rpc_port = 443
-
-    if ':' not in endpoint:  # no port was given in url
-        rpc_host = endpoint
-    else:
-        rpc_host, rpc_port = split_endpoint(endpoint)
+    rpc_host, rpc_port = eth_endpoint_to_hostport(eth_rpc_endpoint)
 
     rpc_client = JSONRPCClient(
         rpc_host,
@@ -566,22 +564,18 @@ def app(
         gas_price,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        rpc_client,
-        gas_price,
-    )
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
     # this assumes the eth node is already online
-    check_json_rpc(rpc_client)
+    check_json_rpc(blockchain_service)
 
     net_id = blockchain_service.network_id
     if net_id != network_id:
-        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
+        if network_id in constants.ID_TO_NETWORKNAME and net_id in constants.ID_TO_NETWORKNAME:
             print((
                 "The chosen ethereum network '{}' differs from the ethereum client '{}'. "
                 'Please update your settings.'
-            ).format(ID_TO_NETWORKNAME[network_id], ID_TO_NETWORKNAME[net_id]))
+            ).format(constants.ID_TO_NETWORKNAME[network_id], constants.ID_TO_NETWORKNAME[net_id]))
         else:
             print((
                 "The chosen ethereum network id '{}' differs from the ethereum client '{}'. "
@@ -596,7 +590,7 @@ def app(
     config['database_path'] = database_path
     print(
         'You are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(net_id) or net_id,
+            constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
             database_path,
         ),
     )
@@ -618,7 +612,7 @@ def app(
         )
     except ContractVersionMismatch:
         print(
-            'Deployed registry contract version mismatch. '
+            'Deployed secret registry contract version mismatch. '
             'Please update your Raiden installation.',
         )
         sys.exit(1)
@@ -874,41 +868,30 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @option(
     '--local-matrix',
     help='Command-line to be used to run a local matrix server (or "none")',
-    default=os.path.abspath(os.path.join(
-        os.path.dirname(__file__),
-        '..',
-        '..',
-        '.synapse',
-        'run_synapse.sh',
-    )),
+    default=str(Path(__file__).parent.parent.parent.joinpath('.synapse', 'run_synapse.sh')),
     show_default=True,
 )
 @click.pass_context
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     import binascii
-
+    from web3 import Web3, HTTPProvider
+    from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
-    from raiden.tests.utils.blockchain import geth_wait_and_check
-    from raiden.tests.integration.fixtures.backend_geth import web3
+    from raiden.network.proxies.registry import Registry
+    from raiden.tests.utils.geth import geth_wait_and_check
+    from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
+        TEST_PARTNER_ADDRESS,
+        TEST_DEPOSIT_AMOUNT,
+        deploy_smoketest_contracts,
+        get_private_key,
         load_smoketest_config,
         start_ethereum,
         run_smoketests,
-        patch_smoke_fns,
     )
     from raiden.utils import get_contract_path
-    from raiden.raiden_service import RaidenService
-
-    # TODO: Temporary until we also deploy contracts in smoketests
-    # This function call patches the initial query filtering to create some fake
-    # events. That is done to make up for the missing events that would have
-    # been generated and populated the state if the contracts were deployed
-    # and not precompiled in the smoketest genesis file
-    RaidenService.install_and_query_payment_network_filters = patch_smoke_fns(
-        RaidenService.install_and_query_payment_network_filters,
-    )
 
     # Check the solidity compiler early in the smoketest.
     #
@@ -931,33 +914,67 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                     data = data.decode()
                 handler.writelines([data + os.linesep])
 
-    append_report('raiden version', json.dumps(get_system_spec()))
-    append_report('raiden log', None)
+    append_report('Raiden version', json.dumps(get_system_spec()))
+    append_report('Raiden log', None)
 
-    print('[1/5] getting smoketest configuration')
+    step_count = 7
+    if ctx.parent.params['transport'] == 'matrix':
+        step_count = 8
+    step = 0
+
+    def print_step(description, error=False):
+        nonlocal step
+        step += 1
+        click.echo(
+            '{} {}'.format(
+                click.style(f'[{step}/{step_count}]', fg='blue'),
+                click.style(description, fg='green' if not error else 'red'),
+            ),
+        )
+
+    print_step('Getting smoketest configuration')
     smoketest_config = load_smoketest_config()
     if not smoketest_config:
         append_report(
-            'smoketest configuration',
+            'Smoketest configuration',
             'Could not load the smoketest genesis configuration file.',
         )
 
-    print('[2/5] starting ethereum')
+    print_step('Starting Ethereum node')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
-    web3_client = web3([port])
-
+    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
+    web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
     random_marker = binascii.hexlify(b'raiden').decode()
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
-    print('[3/5] starting raiden')
+    print_step('Deploying Raiden contracts')
+    host = '0.0.0.0'
+    client = JSONRPCClient(
+        host,
+        ethereum_config['rpc'],
+        get_private_key(),
+        web3=web3_client,
+    )
+    contract_addresses = deploy_smoketest_contracts(client)
 
+    token_contract = deploy_token(None, client)
+    token = token_contract(1000, 0, 'TKN', 'TKN')
+
+    registry = Registry(
+        client,
+        contract_addresses['Registry'],
+    )
+
+    registry.add_token(to_canonical_address(token.contract.address))
+
+    print_step('Setting up Raiden')
     # setup cli arguments for starting raiden
     args = dict(
-        discovery_contract_address=smoketest_config['contracts']['discovery_address'],
-        registry_contract_address=smoketest_config['contracts']['registry_address'],
-        secret_registry_contract_address=smoketest_config['contracts']['secret_registry_address'],
+        discovery_contract_address=to_checksum_address(contract_addresses['EndpointRegistry']),
+        registry_contract_address=to_checksum_address(contract_addresses['Registry']),
+        secret_registry_contract_address=to_checksum_address(contract_addresses['SecretRegistry']),
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
@@ -985,6 +1002,8 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     args['sync_check'] = False
 
     def _run_smoketest():
+        print_step('Starting Raiden')
+
         # invoke the raiden app
         app_ = ctx.invoke(app, **args)
 
@@ -994,12 +1013,36 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         (api_host, api_port) = split_endpoint(args['api_address'])
         api_server.start(api_host, api_port)
 
+        raiden_api.channel_open(
+            contract_addresses['Registry'],
+            to_canonical_address(token.contract.address),
+            to_canonical_address(TEST_PARTNER_ADDRESS),
+            None,
+            None,
+        )
+        raiden_api.set_total_channel_deposit(
+            contract_addresses['Registry'],
+            to_canonical_address(token.contract.address),
+            to_canonical_address(TEST_PARTNER_ADDRESS),
+            TEST_DEPOSIT_AMOUNT,
+        )
+
+        smoketest_config['contracts']['registry_address'] = to_checksum_address(
+            contract_addresses['Registry'],
+        )
+        smoketest_config['contracts']['discovery_address'] = to_checksum_address(
+            contract_addresses['EndpointRegistry'],
+        )
+        smoketest_config['contracts']['token_address'] = to_checksum_address(
+            token.contract.address,
+        )
+
         success = False
         try:
-            print('[4/5] running smoketests...')
+            print_step('Running smoketest')
             error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
             if error is not None:
-                append_report('smoketest assertion error', error)
+                append_report('Smoketest assertion error', error)
             else:
                 success = True
         finally:
@@ -1007,15 +1050,15 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             ethereum.send_signal(2)
 
             err, out = ethereum.communicate()
-            append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
-            append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
-            append_report('ethereum stdout', out)
-            append_report('ethereum stderr', err)
-            append_report('smoketest configuration', json.dumps(smoketest_config))
+            append_report('Ethereum init stdout', ethereum_config['init_log_out'].decode('utf-8'))
+            append_report('Ethereum init stderr', ethereum_config['init_log_err'].decode('utf-8'))
+            append_report('Ethereum stdout', out)
+            append_report('Ethereum stderr', err)
+            append_report('Smoketest configuration', json.dumps(smoketest_config))
         if success:
-            print('[5/5] smoketest successful, report was written to {}'.format(report_file))
+            print_step(f'Smoketest successful, report was written to {report_file}')
         else:
-            print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
+            print_step(f'Smoketest had errors, report was written to {report_file}', error=True)
         return success
 
     if args['transport'] == 'udp':
@@ -1025,18 +1068,28 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
         print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
-        with HTTPExecutor(
+        print_step('Starting Matrix transport')
+        try:
+            with HTTPExecutor(
                 local_matrix,
                 status=r'^[24]\d\d$',
-                url=urljoin(args['matrix_server'], '/_matrix'),
-        ):
-            args['extra_config'] = {
-                'matrix': {
-                    'discovery_room': {'server': 'matrix.local.raiden'},
-                    'server_name': 'matrix.local.raiden',
-                },
-            }
-            success = _run_smoketest()
+                url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
+                shell=True,
+            ):
+                args['extra_config'] = {
+                    'matrix': {
+                        'discovery_room': {'server': 'matrix.local.raiden'},
+                        'server_name': 'matrix.local.raiden',
+                    },
+                }
+                success = _run_smoketest()
+        except (PermissionError, ProcessExitedWithError):
+            append_report('Matrix server start exception', traceback.format_exc())
+            print_step(
+                f'Error during smoketest setup, report was written to {report_file}',
+                error=True,
+            )
+            success = False
     elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
         print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None

@@ -14,7 +14,7 @@ from eth_utils import (
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-from raiden.utils import typing
+from raiden.utils import typing, compare_versions
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -24,13 +24,14 @@ from raiden.exceptions import (
     NoTokenManager,
     TransactionThrew,
     InvalidAddress,
+    ContractVersionMismatch,
 )
 from raiden.utils import (
     pex,
     privatekey_to_address,
 )
 from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
+    EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import check_address_has_code
@@ -46,10 +47,7 @@ class TokenNetworkRegistry:
             self,
             jsonrpc_client,
             registry_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
-        # pylint: disable=too-many-arguments
-
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
 
@@ -60,16 +58,15 @@ class TokenNetworkRegistry:
             to_normalized_address(registry_address),
         )
 
-        # TODO: add this back
-        # CONTRACT_MANAGER.check_contract_version(
-        #     proxy.functions.contract_version().call(),
-        #     CONTRACT_TOKEN_NETWORK_REGISTRY
-        # )
+        if not compare_versions(
+            proxy.contract.functions.contract_version().call(),
+            EXPECTED_CONTRACTS_VERSION,
+        ):
+            raise ContractVersionMismatch('Incompatible ABI for TokenNetworkRegistry')
 
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.node_address = privatekey_to_address(self.client.privkey)
 
         self.address_to_tokennetwork = dict()
@@ -105,7 +102,7 @@ class TokenNetworkRegistry:
             token_address,
         )
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.info(
@@ -129,7 +126,6 @@ class TokenNetworkRegistry:
         self.token_to_tokennetwork[token_address] = TokenNetwork(
             self.client,
             token_network_address,
-            self.poll_timeout,
         )
 
         log.info(
@@ -170,7 +166,6 @@ class TokenNetworkRegistry:
             token_network = TokenNetwork(
                 self.client,
                 token_network_address,
-                self.poll_timeout,
             )
 
             token_address = token_network.token_address()
@@ -202,7 +197,6 @@ class TokenNetworkRegistry:
             token_network = TokenNetwork(
                 self.client,
                 token_network_address,
-                self.poll_timeout,
             )
 
             self.token_to_tokennetwork[token_address] = token_network

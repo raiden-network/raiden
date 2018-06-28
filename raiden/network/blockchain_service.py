@@ -19,11 +19,11 @@ from raiden.network.proxies import (
     TokenNetworkRegistry,
     TokenNetwork,
     SecretRegistry,
+    PaymentChannel,
 )
-from raiden.settings import DEFAULT_POLL_TIMEOUT
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, ishash
 from raiden.utils.solc import compile_files_cwd
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, ChannelID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -36,7 +36,6 @@ class BlockChainService:
             self,
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
-            poll_timeout: int = DEFAULT_POLL_TIMEOUT,
     ):
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -48,10 +47,11 @@ class BlockChainService:
         self.address_to_token_network = dict()
         self.address_to_secret_registry = dict()
 
+        self.identifier_to_payment_channel = dict()
+
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
-        self.poll_timeout = poll_timeout
 
     def block_number(self) -> int:
         return self.client.block_number()
@@ -115,7 +115,6 @@ class BlockChainService:
             self.address_to_token[token_address] = Token(
                 self.client,
                 token_address,
-                self.poll_timeout,
             )
 
         return self.address_to_token[token_address]
@@ -125,7 +124,6 @@ class BlockChainService:
             self.address_to_manager[channel_manager_address] = ChannelManager(
                 self.client,
                 channel_manager_address,
-                self.poll_timeout,
             )
 
         return self.address_to_manager[channel_manager_address]
@@ -139,7 +137,6 @@ class BlockChainService:
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
-                self.poll_timeout,
             )
 
         return self.address_to_discovery[discovery_address]
@@ -153,7 +150,6 @@ class BlockChainService:
             channel = NettingChannel(
                 self.client,
                 netting_channel_address,
-                self.poll_timeout,
             )
             self.address_to_nettingchannel[netting_channel_address] = channel
 
@@ -167,7 +163,6 @@ class BlockChainService:
             self.address_to_registry[registry_address] = Registry(
                 self.client,
                 registry_address,
-                self.poll_timeout,
             )
 
         return self.address_to_registry[registry_address]
@@ -180,7 +175,6 @@ class BlockChainService:
             self.address_to_token_network_registry[address] = TokenNetworkRegistry(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_token_network_registry[address]
@@ -193,7 +187,6 @@ class BlockChainService:
             self.address_to_token_network[address] = TokenNetwork(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_token_network[address]
@@ -206,10 +199,32 @@ class BlockChainService:
             self.address_to_secret_registry[address] = SecretRegistry(
                 self.client,
                 address,
-                self.poll_timeout,
             )
 
         return self.address_to_secret_registry[address]
+
+    def payment_channel(
+            self,
+            token_network_address: Address,
+            channel_id: ChannelID,
+    ) -> PaymentChannel:
+
+        if not is_binary_address(token_network_address):
+            raise ValueError('address must be a valid address')
+        if not ishash(channel_id):
+            raise ValueError('identifier must be a hash')
+
+        dict_key = (token_network_address, channel_id)
+
+        if dict_key not in self.identifier_to_payment_channel:
+            token_network = self.token_network(token_network_address)
+
+            self.identifier_to_payment_channel[dict_key] = PaymentChannel(
+                token_network=token_network,
+                channel_identifier=channel_id,
+            )
+
+        return self.identifier_to_payment_channel[dict_key]
 
     def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         contracts = compile_files_cwd([contract_path])
@@ -222,8 +237,8 @@ class BlockChainService:
             list(),
             constructor_parameters,
             contract_path=contract_path,
-            timeout=self.poll_timeout,
         )
+
         return decode_hex(proxy.contract.address)
 
     def deploy_and_register_token(

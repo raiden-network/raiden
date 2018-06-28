@@ -1231,6 +1231,7 @@ def events_for_close(
         close_event = ContractSendChannelClose(
             channel_state.identifier,
             channel_state.token_address,
+            channel_state.token_network_identifier,
             channel_state.partner_state.balance_proof,
         )
 
@@ -1524,7 +1525,12 @@ def handle_block(
                 None,
                 None,
             )
-            event = ContractSendChannelSettle(channel_state.identifier)
+            event = ContractSendChannelSettle(
+                channel_state.identifier,
+                channel_state.token_network_identifier,
+                channel_state.our_state.balance_proof,
+                channel_state.partner_state.balance_proof,
+            )
             events.append(event)
 
     while is_deposit_confirmed(channel_state, block_number):
@@ -1561,6 +1567,7 @@ def handle_channel_closed(
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
                 channel_state.identifier,
+                channel_state.token_network_identifier,
                 balance_proof,
             )
             events.append(update)
@@ -1600,6 +1607,7 @@ def handle_channel_closed2(
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
                 channel_state.identifier,
+                channel_state.token_network_identifier,
                 balance_proof,
             )
             events.append(update)

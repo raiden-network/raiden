@@ -4,32 +4,15 @@ from eth_utils import (
     to_canonical_address,
     decode_hex,
     to_checksum_address,
-    event_abi_to_log_topic,
 )
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
-from web3.utils.abi import get_abi_input_types, filter_by_type
-from web3.utils.events import get_event_data
+from web3.utils.abi import get_abi_input_types
 from web3.contract import Contract
+from raiden.utils.filters import decode_event
 try:
     from eth_tester.exceptions import TransactionFailed
 except ModuleNotFoundError:
     TransactionFailed = Exception()
-
-
-def decode_event(abi: Dict, log: Dict):
-    """Helper function to unpack event data using a provided ABI"""
-    if isinstance(log['topics'][0], str):
-        log['topics'][0] = decode_hex(log['topics'][0])
-    elif isinstance(log['topics'][0], int):
-        log['topics'][0] = decode_hex(hex(log['topics'][0]))
-    event_id = log['topics'][0]
-    events = filter_by_type('event', abi)
-    topic_to_event_abi = {
-        event_abi_to_log_topic(event_abi): event_abi
-        for event_abi in events
-    }
-    event_abi = topic_to_event_abi[event_id]
-    return get_event_data(event_abi, log)
 
 
 class ContractProxy:

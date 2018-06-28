@@ -17,7 +17,8 @@ from raiden.constants import (
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
-from raiden.transfer.balance_proof import pack_signing_data, hash_balance_data, pack_signing_data2
+from raiden.transfer.balance_proof import pack_signing_data, pack_signing_data2
+from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
     ishash,

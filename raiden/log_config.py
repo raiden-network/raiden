@@ -33,7 +33,14 @@ def configure_logging(
     if logger_level_config is None:
         logger_level_config = {'': DEFAULT_LOG_LEVEL}
     timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S")
-    pre_chain = [structlog.stdlib.add_log_level, timestamper]
+    processors = [
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        timestamper,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
     formatter = 'colorized' if colorize and not log_file else 'plain'
     if log_json:
         formatter = 'json'
@@ -41,21 +48,22 @@ def configure_logging(
     logging.config.dictConfig(
         {
             'version': 1,
+            'disable_existing_loggers': False,
             'formatters': {
                 'plain': {
                     '()': structlog.stdlib.ProcessorFormatter,
                     'processor': structlog.dev.ConsoleRenderer(colors=False),
-                    'foreign_pre_chain': pre_chain,
+                    'foreign_pre_chain': processors,
                 },
                 'json': {
                     '()': structlog.stdlib.ProcessorFormatter,
                     'processor': structlog.processors.JSONRenderer(),
-                    'foreign_pre_chain': pre_chain,
+                    'foreign_pre_chain': processors,
                 },
                 'colorized': {
                     '()': structlog.stdlib.ProcessorFormatter,
                     'processor': structlog.dev.ConsoleRenderer(colors=True),
-                    'foreign_pre_chain': pre_chain,
+                    'foreign_pre_chain': processors,
                 },
             },
             'handlers': log_handler,
@@ -69,18 +77,13 @@ def configure_logging(
         },
     )
     structlog.configure(
-        processors=[
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            timestamper,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
+        processors=processors + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
+        wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-
+    # set log levels for existing `logging` loggers
     for logger_name, level_name in logger_level_config.items():
-        logging.getLogger(logger_name).setLevel(level_name)
+        structlog.get_logger(logger_name).setLevel(level_name)

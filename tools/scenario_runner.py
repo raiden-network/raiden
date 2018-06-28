@@ -7,8 +7,9 @@ import random
 
 import click
 import gevent
-from gevent import monkey, server
 import structlog
+
+from eth_utils import decode_hex
 
 from raiden.app import App
 from raiden.api.python import RaidenAPI
@@ -19,10 +20,9 @@ from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.ui.console import ConsoleTools
-from raiden.utils import split_endpoint, decode_hex
-from raiden.settings import GAS_PRICE
+from raiden.utils import split_endpoint
 
-monkey.patch_all()
+gevent.monkey.patch_all()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
@@ -99,11 +99,7 @@ def run(
         privatekey_bin,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        rpc_client,
-        GAS_PRICE,
-    )
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
     discovery = ContractDiscovery(
         blockchain_service,
@@ -124,11 +120,10 @@ def run(
     )
 
     transport = UDPTransport(
-        discovery,
-        server._udp_socket((listen_host, listen_port)),
-        throttle_policy,
-        config['protocol'],
-        dict(),
+        discovery=discovery,
+        udpsocket=gevent.server._udp_socket((listen_host, listen_port)),
+        throttle_policy=throttle_policy,
+        config=config['protocol'],
     )
 
     app = App(
@@ -254,8 +249,6 @@ def run(
                 if our_index == 0:
                     last_node = nodes[-1]
                     transfers_by_peer[last_node] = int(amount)
-            else:
-                peer = nodes[-2]
 
         if stage_prefix is not None:
             open('{}.stage1'.format(stage_prefix), 'a').close()

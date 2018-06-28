@@ -183,8 +183,9 @@ class MatrixTransport:
         self._join_discovery_room()
         self._discovery_room.add_listener(self._handle_discovery_membership_event, 'm.room.member')
 
+        gevent.spawn_later(1, self._inventory_rooms)
         gevent.spawn_later(2, self._ensure_room_peers)
-        gevent.spawn_later(5, self._send_queued_messages, queueids_to_queues)
+        gevent.spawn_later(3, self._send_queued_messages, queueids_to_queues)
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
@@ -204,6 +205,8 @@ class MatrixTransport:
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             self._update_address_presence(node_address)
+            assert self._get_room_for_address(node_address, allow_missing_peers=True),\
+                f'Could not get room for {node_address_hex!r}'
 
     def send_async(
         self,
@@ -270,7 +273,7 @@ class MatrixTransport:
 
     def _login_or_register(self):
         # password is signed server address
-        password = encode_hex(self._sign(self._server_url.encode()))
+        password = encode_hex(self._sign(self._server_name.encode()))
         seed = int.from_bytes(self._sign(b'seed')[-32:], 'big')
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
@@ -285,7 +288,8 @@ class MatrixTransport:
                 self._client.login_with_password(username, password)
                 self.log.info(
                     'LOGIN',
-                    homeserver=self._server_url,
+                    homeserver=self._server_name,
+                    server_url=self._server_url,
                     username=username,
                 )
                 break
@@ -294,14 +298,16 @@ class MatrixTransport:
                     raise
                 self.log.debug(
                     'Could not login. Trying register',
-                    homeserver=self._server_url,
+                    homeserver=self._server_name,
+                    server_url=self._server_url,
                     username=username,
                 )
                 try:
                     self._client.register_with_password(username, password)
                     self.log.info(
                         'REGISTER',
-                        homeserver=self._server_url,
+                        homeserver=self._server_name,
+                        server_url=self._server_url,
                         username=username,
                     )
                     break
@@ -340,6 +346,7 @@ class MatrixTransport:
             if not room.canonical_alias:
                 # Leave any rooms that don't have a canonical alias as they are not part of the
                 # protocol
+                self.log.warning('Leaving room without canonical alias', room=room)
                 room.leave()
                 continue
             # Don't listen for messages in the discovery room
@@ -350,6 +357,7 @@ class MatrixTransport:
                     self.log.warning(
                         "Member of a room we're not supposed to be a member of - ignoring",
                         room=room,
+                        discovery=self._discovery_room_alias_full,
                     )
                     return
                 self._address_to_roomid[peer_address] = room.room_id
@@ -408,16 +416,21 @@ class MatrixTransport:
         if not peer_address:
             self.log.debug(
                 'INVALID SIGNATURE',
-                sender_id=pex(sender_id),
+                user=user,
+                name=user.get_display_name(),
             )
             return
 
         data = event['content']['body']
         if data.startswith('0x'):
             message = message_from_bytes(decode_hex(data))
+            if not message:
+                return
         else:
             try:
                 message_dict = json.loads(data)
+                self.log.debug('MESSAGE_DATA', data=message_dict)
+                message = message_from_dict(message_dict)
             except (UnicodeDecodeError, JSONDecodeError) as ex:
                 self.log.warning(
                     "Can't parse message data JSON",
@@ -426,8 +439,6 @@ class MatrixTransport:
                     exception=ex,
                 )
                 return
-            self.log.debug('MESSAGE_DATA', data=message_dict)
-            message = message_from_dict(message_dict)
 
         if isinstance(message, Delivered):
             self._receive_delivered(message)

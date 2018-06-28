@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import json
 import os
-from binascii import hexlify
 
 import click
 import structlog
@@ -10,26 +9,9 @@ from eth_utils import to_checksum_address
 from raiden.log_config import configure_logging
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.ui.cli import prompt_account
-from raiden.utils import decode_hex, get_contract_path
-from raiden.utils.solc import compile_files_cwd
+from raiden.utils.deployment import deploy_contracts
 
 log = structlog.get_logger(__name__)
-
-
-# Source files for all to be deployed solidity contracts
-RAIDEN_CONTRACT_FILES = [
-    'NettingChannelLibrary.sol',
-    'ChannelManagerLibrary.sol',
-    'Registry.sol',
-    'EndpointRegistry.sol',
-]
-
-# Top level contracts to be deployed. Dependencies are handled automatically
-# in `JSONRPCClient.deploy_solidity_contract()`
-CONTRACTS_TO_DEPLOY = [
-    'Registry.sol:Registry',
-    'EndpointRegistry.sol:EndpointRegistry',
-]
 
 
 def patch_deploy_solidity_contract():
@@ -43,11 +25,10 @@ def patch_deploy_solidity_contract():
     """
 
     import ast
-    from ast import NodeTransformer
     from inspect import getsource, getsourcefile
     from textwrap import dedent
 
-    class RemoveLibraryDeref(NodeTransformer):
+    class RemoveLibraryDeref(ast.NodeTransformer):
         """
         Removes the AST node representing the line
         `    libraries = dict(libraries)`
@@ -83,38 +64,9 @@ def name_from_file(filename):
     return os.path.split(filename)[-1].partition('.')[0]
 
 
-def deploy_file(contract, compiled_contracts, client):
-    libraries = dict()
-    filename, _, name = contract.partition(":")
-    log.info(f"Deploying {name}")
-    proxy = client.deploy_solidity_contract(
-        name,
-        compiled_contracts,
-        libraries,
-        '',
-        contract_path=filename,
-    )
-
-    log.info(f"Deployed {name} @ {to_checksum_address(proxy.contract_address)}")
-    libraries[contract] = proxy.contract_address
-    return libraries
-
-
-def deploy_all(client):
-    contracts_expanded = [
-        get_contract_path(x)
-        for x in RAIDEN_CONTRACT_FILES
-    ]
-    compiled_contracts = compile_files_cwd(contracts_expanded)
-    deployed = {}
-    for contract in CONTRACTS_TO_DEPLOY:
-        deployed.update(deploy_file(contract, compiled_contracts, client))
-    return deployed
-
-
-def get_privatekey_hex(keystore_path):
-    address_hex, privatekey_bin = prompt_account(None, keystore_path, None)
-    return hexlify(privatekey_bin)
+def get_privatekey(keystore_path):
+    address_hex, privatekey = prompt_account(None, keystore_path, None)
+    return privatekey
 
 
 @click.command(help="Deploy the Raiden smart contracts.\n\n"
@@ -127,9 +79,7 @@ def get_privatekey_hex(keystore_path):
 def main(keystore_path, pretty, gas_price, port):
     configure_logging({'': 'DEBUG'}, colorize=True)
 
-    privatekey_hex = get_privatekey_hex(keystore_path)
-
-    privatekey = decode_hex(privatekey_hex)
+    privatekey = get_privatekey(keystore_path)
 
     gas_price_in_wei = gas_price * 1000000000
     patch_deploy_solidity_contract()
@@ -141,16 +91,12 @@ def main(keystore_path, pretty, gas_price, port):
         gas_price_in_wei,
     )
 
-    deployed = deploy_all(client)
+    deployed = deploy_contracts(client)
 
-    deployed['EndpointRegistry.sol:EndpointRegistry'] = to_checksum_address(
-        deployed['EndpointRegistry.sol:EndpointRegistry'],
-    )
-    deployed['Registry.sol:Registry'] = to_checksum_address(
-        deployed['Registry.sol:Registry'],
-    )
-
-    print(json.dumps(deployed, indent=2 if pretty else None))
+    print(json.dumps({
+        name: to_checksum_address(address)
+        for name, address in deployed.items()
+    }, indent=2 if pretty else None))
 
 
 if __name__ == '__main__':

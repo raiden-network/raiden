@@ -14,6 +14,9 @@ ROPSTEN_DISCOVERY_ADDRESS = '0x1E3941d8c05ffFA7466216480209240cc26ea577'
 # from raiden-contracts commit 7d183081bcd6df06728bdb6b8da581e68c39dbc1
 ROPSTEN_SECRET_REGISTRY_ADDRESS = '0x7862eF1296EeF5Fa55ef056c0cB03FF8D4d49Cf8'
 
+# 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
+DISCOVERY_TX_GAS_LIMIT = 60000
+
 MINUTE_SEC = 60
 MINUTE_MS = 60 * 1000
 
@@ -26,6 +29,10 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
 
 # TODO: add this as an attribute of the transport class
 UDP_MAX_MESSAGE_SIZE = 1200
+
+ETH_RPC_DEFAULT_PORT = 8545
+HTTP_PORT = 80
+HTTPS_PORT = 443
 
 
 EMPTY_HASH = b'\x00' * 32
@@ -52,3 +59,7 @@ NETWORKNAME_TO_ID = {
 MIN_REQUIRED_SOLC = 'v0.4.23'
 NULL_ADDRESS = '0x' + '0' * 40
 NULL_ADDRESS_BYTES = b'\x00' * 20
+
+# ansi escape code for moving the cursor and clearing the line
+ANSI_ESCAPE_CURSOR_STARTLINE = '\x1b[1000D'
+ANSI_ESCAPE_CLEARLINE = '\x1b[2K'

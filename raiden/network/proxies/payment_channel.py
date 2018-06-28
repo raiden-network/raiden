@@ -1,9 +1,16 @@
 from typing import Dict
 
+from eth_utils import decode_hex
 from web3.utils.filters import Filter
-from raiden.utils import typing
-from raiden.utils.filters import get_filter_args_for_channel_from_token_network
+from raiden_contracts.constants import EVENT_CHANNEL_OPENED, CONTRACT_TOKEN_NETWORK
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
+from raiden.utils import typing
+from raiden.utils.filters import (
+    get_filter_args_for_all_events_from_channel,
+    get_filter_args_for_specific_event_from_channel,
+    decode_event,
+)
 from raiden.network.proxies import TokenNetwork
 
 
@@ -11,10 +18,30 @@ class PaymentChannel:
     def __init__(
         self,
         token_network: TokenNetwork,
-        partner_address: typing.Address,
+        channel_identifier: typing.ChannelID,
     ):
         self.token_network = token_network
-        self.partner_address = partner_address
+        self.channel_id = channel_identifier
+
+        filter_args = get_filter_args_for_specific_event_from_channel(
+            token_network_address=token_network.address,
+            channel_identifier=channel_identifier,
+            event_name=EVENT_CHANNEL_OPENED,
+        )
+
+        events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
+        if not len(events) > 0:
+            raise ValueError('Channel is non-existing.')
+
+        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        self.participant1 = decode_hex(event['args']['participant1'])
+        self.participant2 = decode_hex(event['args']['participant2'])
+
+        if token_network.node_address not in (self.participant1, self.participant2):
+            raise ValueError('One participant must be the node address')
+
+        if token_network.node_address == self.participant2:
+            self.participant1, self.participant2 = self.participant2, self.participant1
 
     def token_address(self) -> typing.Address:
         """ Returns the address of the token for the channel. """
@@ -22,55 +49,52 @@ class PaymentChannel:
 
     def channel_identifier(self) -> typing.ChannelID:
         """ Returns the channel identifier. """
-        return self.token_network.detail_channel(self.partner_address)['channel_identifier']
+        return self.channel_id
 
     def detail(self) -> Dict:
         """ Returns the channel details. """
-        return self.token_network.detail(self.partner_address)
+        return self.token_network.detail(self.participant1, self.participant2)
 
     def settle_timeout(self) -> int:
         """ Returns the channels settle_timeout. """
 
         # There is no way to get the settle timeout after the channel has been closed as
         # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
-        filter = self.token_network.proxy.contract.events.ChannelOpened.createFilter(
-            fromBlock=0,
-            argument_filters={
-                'channel_identifier': self.channel_identifier(),
-            },
+        filter_args = get_filter_args_for_specific_event_from_channel(
+            token_network_address=self.token_network.address,
+            channel_identifier=self.channel_identifier(),
+            event_name=EVENT_CHANNEL_OPENED,
         )
 
-        events = filter.get_all_entries()
-        # uninstall the filter, otherwise it leaks
-        self.token_network.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
-
+        events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
         assert len(events) > 0, 'No matching ChannelOpen event found.'
 
         # we want the latest event here, there might have been multiple channels
-        return events[-1]['args']['settle_timeout']
+        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        return event['args']['settle_timeout']
 
     def opened(self) -> bool:
         """ Returns if the channel is opened. """
-        return self.token_network.channel_is_opened(self.partner_address)
+        return self.token_network.channel_is_opened(self.participant1, self.participant2)
 
     def closed(self) -> bool:
         """ Returns if the channel is closed. """
-        return self.token_network.channel_is_closed(self.partner_address)
+        return self.token_network.channel_is_closed(self.participant1, self.participant2)
 
     def settled(self) -> bool:
         """ Returns if the channel is settled. """
-        return self.token_network.channel_is_settled(self.partner_address)
+        return self.token_network.channel_is_settled(self.participant1, self.participant2)
 
     def closing_address(self) -> typing.Address:
         """ Returns the address of the closer of the channel. """
-        return self.token_network.closing_address(self.partner_address)
+        return self.token_network.closing_address(self.participant1, self.participant2)
 
     def can_transfer(self) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
-        return self.token_network.can_transfer(self.partner_address)
+        return self.token_network.can_transfer(self.participant1, self.participant2)
 
     def deposit(self, total_deposit: typing.TokenAmount):
-        self.token_network.deposit(total_deposit, self.partner_address)
+        self.token_network.deposit(total_deposit, self.participant2)
 
     def close(
             self,
@@ -81,7 +105,7 @@ class PaymentChannel:
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
-            partner=self.partner_address,
+            partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -98,7 +122,7 @@ class PaymentChannel:
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
-            partner=self.partner_address,
+            partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -108,7 +132,7 @@ class PaymentChannel:
 
     def unlock(self, merkle_tree_leaves: bytes):
         self.token_network.unlock(
-            self.partner_address,
+            self.participant2,
             merkle_tree_leaves,
         )
 
@@ -117,7 +141,6 @@ class PaymentChannel:
             transferred_amount: int,
             locked_amount: int,
             locksroot: typing.Locksroot,
-            partner: typing.Address,
             partner_transferred_amount: int,
             partner_locked_amount: int,
             partner_locksroot: typing.Locksroot,
@@ -127,7 +150,7 @@ class PaymentChannel:
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,
-            partner=self.partner_address,
+            partner=self.participant2,
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
@@ -138,7 +161,7 @@ class PaymentChannel:
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
     ) -> Filter:
-        args = get_filter_args_for_channel_from_token_network(
+        args = get_filter_args_for_all_events_from_channel(
             token_network_address=self.token_network.address,
             channel_identifier=self.channel_identifier(),
             from_block=from_block,
