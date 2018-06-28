@@ -18,6 +18,7 @@ from eth_utils import (
 )
 import structlog
 from requests import ConnectionError
+from web3 import Web3
 
 from raiden.utils import (
     privatekey_to_address,
@@ -66,17 +67,17 @@ def geth_clique_extradata(extra_vanity, extra_seal):
     )
 
 
-def geth_to_cmd(node, datadir, verbosity):
+def geth_to_cmd(node: typing.Dict, datadir: str, verbosity: int) -> typing.List[str]:
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
     Args:
-        node (dict): a node configuration
-        datadir (str): the node's datadir
-        verbosity (int): geth structlog verbosity, 0 - nothing, 5 - max
+        node: a node configuration
+        datadir: the node's datadir
+        verbosity: geth structlog verbosity, 0 - nothing, 5 - max
 
     Return:
-        List[str]: cmd-args list
+        cmd-args list
     """
     node_config = [
         'nodekeyhex',
@@ -101,7 +102,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
-        '--verbosity', '3',
+        '--verbosity', str(verbosity),
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),
     ])
@@ -111,13 +112,14 @@ def geth_to_cmd(node, datadir, verbosity):
     return cmd
 
 
-def geth_create_account(datadir, privkey):
+def geth_create_account(datadir: str, privkey: bytes):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
 
     Args:
-        datadir (str): the datadir in which the account is created
+        datadir: the datadir in which the account is created
+        privkey: the private key for the account
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'wb') as handler:
@@ -141,18 +143,18 @@ def geth_create_account(datadir, privkey):
 
 
 def geth_generate_poa_genesis(
-        genesis_path,
-        accounts_addresses,
-        seal_address,
+        genesis_path: str,
+        accounts_addresses: typing.List[str],
+        seal_address: str,
         random_marker,
 ):
     """Writes a bare genesis to `genesis_path`.
 
     Args:
-        genesis_path (str): the path in which the genesis block is written.
-        accounts_addresses (List[str]): iterable list of privatekeys whose
+        genesis_path: the path in which the genesis block is written.
+        accounts_addresses: iterable list of privatekeys whose
             corresponding accounts will have a premined balance available.
-        seal_address (str): Address of the ethereum account that can seal
+        seal_address: Address of the ethereum account that can seal
             blocks in the PoA chain
     """
 
@@ -176,11 +178,11 @@ def geth_generate_poa_genesis(
         json.dump(genesis, handler)
 
 
-def geth_init_datadir(datadir, genesis_path):
+def geth_init_datadir(datadir: str, genesis_path: str):
     """Initialize a clients datadir with our custom genesis block.
 
     Args:
-        datadir (str): the datadir in which the blockchain is initialized.
+        datadir: the datadir in which the blockchain is initialized.
     """
     try:
         args = [
@@ -277,7 +279,7 @@ def geth_node_to_datadir(node_config, base_datadir):
     return datadir
 
 
-def geth_prepare_datadir(node_config, datadir, genesis_file):
+def geth_prepare_datadir(datadir, genesis_file):
     node_genesis_path = os.path.join(datadir, 'custom_genesis.json')
     assert len(datadir + '/geth.ipc') <= 104, 'geth data path is too large'
 
@@ -299,7 +301,7 @@ def geth_run_nodes(
     cmds = []
     for config, node in zip(nodes_configuration, geth_nodes):
         datadir = geth_node_to_datadir(config, base_datadir)
-        geth_prepare_datadir(config, datadir, genesis_file)
+        geth_prepare_datadir(datadir, genesis_file)
 
         if 'unlock' in config:
             geth_create_account(datadir, node.private_key)
@@ -307,8 +309,6 @@ def geth_run_nodes(
         commandline = geth_to_cmd(config, datadir, verbosity)
         cmds.append(commandline)
 
-    stdout = None
-    stderr = None
     processes_list = []
     for pos, cmd in enumerate(cmds):
         log_path = os.path.join(logdir, str(pos))
@@ -343,26 +343,26 @@ def geth_run_nodes(
 
 
 def geth_run_private_blockchain(
-        web3,
-        accounts_to_fund,
-        geth_nodes,
-        base_datadir,
-        verbosity,
-        random_marker,
+        web3: Web3,
+        accounts_to_fund: typing.List[bytes],
+        geth_nodes: typing.List[GethNodeDescription],
+        base_datadir: str,
+        verbosity: str,
+        random_marker: str,
 ):
     """ Starts a private network with private_keys accounts funded.
 
     Args:
-        web3 (Web): A Web3 instance used to check when the private chain is running.
-        accounts_to_fund (List[bin]): Accounts that will start with funds in
+        web3: A Web3 instance used to check when the private chain is running.
+        accounts_to_fund: Accounts that will start with funds in
             the private chain.
-        geth_nodes (List[GethNodeDescription]): A list of geth node
+        geth_nodes: A list of geth node
             description, containing the details of each node of the private
             chain.
-        base_datadir (str): The directory that will be used for the private
+        base_datadir: The directory that will be used for the private
             chain data.
-        verbosity (str): Verbosity used by the geth nodes.
-        random_marker (str): A random marked used to identify the private chain.
+        verbosity: Verbosity used by the geth nodes.
+        random_marker: A random marked used to identify the private chain.
     """
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
     nodes_configuration = []
