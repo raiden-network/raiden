@@ -72,7 +72,7 @@ The easiest way to do so is to start raiden using the new contracts (see.
 
 #. Register a token. For example the RTT token::
 
-    curl -X PUT http://localhost:5001/api/1/tokens/0x0f114a1e9db192502e7856309cc899952b3db1ed
+    curl -X PUT http://localhost:5001/api/1/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED
 
 The call will return the channel manager address. You can use this to verify
 the contract. To do so follow the same steps as before except this time use:
@@ -103,7 +103,7 @@ command::
 
     curl -X PUT -H "Content-Type: application/json" \
         http://localhost:5001/api/1/channels \
-        -d '{"partner_address": "0x2222222222222222222222222222222222222222", "token_address": "0x0f114a1e9db192502e7856309cc899952b3db1ed", "balance": 1}'
+        -d '{"partner_address": "0x2222222222222222222222222222222222222222", "token_address": "0x0f114A1E9Db192502E7856309cc899952b3db1ED", "balance": 1}'
 
 The call will return the information of the newly created channel. The important
 one for our purposes is the :code:`channel_address`. This is the address of a

@@ -21,12 +21,13 @@ Channel Object
 ::
 
     {
-       "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-       "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-       "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+       "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+       "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+       "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
        "balance": 35000000,
-       "state": "open",
-       "settle_timeout": 100
+       "state": "opened",
+       "settle_timeout": 100,
+       "reveal_timeout": 40
     }
 
 
@@ -49,8 +50,10 @@ A channel object consists of a
   - ``'opened'``: The channel is open and tokens are tradeable
   - ``'closed'``: The channel has been closed by a participant
   - ``'settled'``: The channel has been closed by a participant and also settled.
-  - ``'settle_timeout'``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
 
+- ``'settle_timeout'``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
+
+- ``'reveal_timeout'``: The maximum number of blocks allowed between the setting of a hashlock and the revealing of the related secret.
 
 Event Object
 ==============
@@ -90,7 +93,7 @@ Querying Information About Your Raiden Node
       Content-Type: application/json
 
       {
-          "our_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+          "our_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
       }
 
 Deploying
@@ -104,7 +107,7 @@ Deploying
 
    .. http:example:: curl wget httpie python-requests
 
-      PUT /api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8 HTTP/1.1
+      PUT /api/1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -119,7 +122,10 @@ Deploying
       }
 
    :statuscode 201: A channel manager for the token has been successfully created.
-   :statuscode 409: The token was already registered before.
+   :statuscode 404: The given token address is invalid.
+   :statuscode 409:
+    - The token was already registered before, or
+    - The registering transaction failed.
    :resjson address channel_manager_address: The deployed channel manager's address.
 
 Querying Information About Channels and Tokens
@@ -133,7 +139,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226 HTTP/1.1
+      GET /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -144,16 +150,19 @@ Querying Information About Channels and Tokens
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-          "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-          "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "state": "open",
-          "settle_timeout": 100
+          "settle_timeout": 100,
+          "reveal_timeout": 30
       }
 
    :statuscode 200: Successful query
-   :statuscode 404: Channel does not exist
+   :statuscode 404:
+    - Given channel address is not a valid eip55-encoded Ethereum address or
+    - Channel does not exist
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/channels
@@ -176,12 +185,13 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-              "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-              "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+              "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+              "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+              "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 35000000,
               "state": "open",
-              "settle_timeout": 100
+              "settle_timeout": 100,
+              "reveal_timeout": 30
           }
       ]
 
@@ -207,8 +217,8 @@ Querying Information About Channels and Tokens
       Content-Type: application/json
 
       [
-          "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-          "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"
+          "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
       ]
 
    :statuscode 200: Successful query
@@ -222,7 +232,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners HTTP/1.1
+      GET /api/1/tokens/0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6/partners HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -234,14 +244,14 @@ Querying Information About Channels and Tokens
 
       [
          {
-             "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-             "channel": "/api/<version>/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+             "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+             "channel": "/api/<version>/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
          }
       ]
 
    :statuscode 200: Successful query
    :statuscode 302: If the user accesses the channel link endpoint
-   :statuscode 404: If the token does not exist
+   :statuscode 404: If the token does not exist/the token address is invalid
    :statuscode 500: Internal Raiden node error
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
@@ -262,8 +272,8 @@ Channel Management
       Content-Type: application/json
 
       {
-          "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-          "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "settle_timeout": 100
       }
@@ -284,9 +294,9 @@ Channel Management
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-          "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-          "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "state": "open",
           "settle_timeout": 100,
@@ -301,13 +311,13 @@ Channel Management
 
 .. http:patch:: /api/(version)/channels/(channel_address)
 
-   This request is used to close a channel, to settle it or to increase the deposit in it.
+   This request is used to close a channel or to increase the deposit in it.
 
    **Example Request (close channel)**:
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226 HTTP/1.1
+      PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -319,7 +329,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226 HTTP/1.1
+      PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -327,7 +337,7 @@ Channel Management
           "total_deposit": 100
       }
 
-   :jsonparameter string state: Desired new state; "closed" or "settled"
+   :jsonparameter string state: Desired new state; the only valid choice is ``"closed"``
    :jsonparameter int total_deposit: The increased total deposit
 
    **Example Response**:
@@ -338,19 +348,25 @@ Channel Management
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-          "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-          "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "state": "closed",
-          "settle_timeout": 100
+          "settle_timeout": 100,
+          "reveal_timeout": 30
       }
 
    :statuscode 200: Success
-   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 400:
+    - The provided JSON is in some way malformed, or
+    - there is nothing to do since neither ``state`` nor ``total_deposit`` have been given, or
+    - the value of ``state`` is not a valid channel state.
    :statuscode 402: Insufficient balance to do a deposit
    :statuscode 408: Deposit event was not read in time by the Ethereum node
-   :statuscode 409: Provided channel does not exist
+   :statuscode 409:
+    - Provided channel does not exist or
+    - ``state`` and ``total_deposit`` have been attempted to update in the same request.
    :statuscode 500: Internal Raiden node error
 
 Connection Management
@@ -365,7 +381,7 @@ Connection Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PUT /api/1/connections/0x2a65aca4d5fc5b5c859090a6c34d164135398226 HTTP/1.1
+      PUT /api/1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -374,6 +390,8 @@ Connection Management
       }
 
    :jsonparameter int funds: amount of funding you want to put into the network
+   :jsonparameter int initial_channel_target: number of channels to open proactively
+   :jsonparameter float joinable_funds_target: fraction of funds that will be used to join channels opened by other participants
    :statuscode 204: For a successful connection creation
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance
    :statuscode 408: If a timeout happened during any of the transactions
@@ -395,6 +413,8 @@ Connection Management
           "only_receiving_channels": false
       }
 
+   :jsonparameter boolean only_receiving_channels: Only close and settle channels where your node has received transfers. Defaults to ``true``.
+
    **Example Response**:
 
    .. sourcecode:: http
@@ -403,9 +423,9 @@ Connection Management
       Content-Type: application/json
 
       [
-          "0x41bcbc2fd72a731bcc136cf6f7442e9c19e9f313",
-          "0x5a5f458f6c1a034930e45dc9a64b99d7def06d7e",
-          "0x8942c06faa74cebff7d55b79f9989adfc85c6b85"
+          "0x41BCBC2fD72a731bcc136Cf6F7442e9C19e9f313",
+          "0x5A5f458F6c1a034930E45dC9a64B99d7def06D7E",
+          "0x8942c06FaA74cEBFf7d55B79F9989AdfC85C6b85"
       ]
 
    The response is a list with the addresses of all closed channels.
@@ -413,11 +433,9 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
 
-   Important note. If no arguments are given then raiden will only close and settle channels where your node has received transfers. This is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
+   Important note. The default behavior to close and settle only receiving channels is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
 
    If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
-
-   A list with the addresses of all the closed channels will be returned.
 
 .. http:get:: /api/(version)/connections
 
@@ -440,12 +458,12 @@ Connection Management
       Content-Type: application/json
 
       {
-          "0x2a65aca4d5fc5b5c859090a6c34d164135398226": {
+          "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
               "funds": 100,
               "sum_deposits": 67,
               "channels": 3
           },
-          "0x0f114a1e9db192502e7856309cc899952b3db1ed": {
+          "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
               "funds": 49
               "sum_deposits": 31,
               "channels": 1
@@ -471,7 +489,7 @@ Transfers
 
    .. http:example:: curl wget httpie python-requests
 
-      POST /api/1/transfers/0x2a65aca4d5fc5b5c859090a6c34d164135398226/0x61c808d82a3ac53231750dadc13c777b59310bd9 HTTP/1.1
+      POST /api/1/transfers/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -491,9 +509,9 @@ Transfers
       Content-Type: application/json
 
       {
-          "initiator_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-          "target_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-          "token_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+          "initiator_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
           "amount": 200,
           "identifier": 42
       }
@@ -514,8 +532,8 @@ from either the beginning of time or the given block are returned.
 Events are queried by two different endpoints depending on whether they are related
 to a specific channel or not.
 
-All events can be filtered down by providing the query string argument ``from_block``
-to signify the block from which you would like the events to be returned.
+All events can be filtered down by providing the query string arguments ``from_block``
+and/or ``to_block`` to query only a events from a limited range of blocks.
 
 .. http:get:: /api/(version)/events/network
 
@@ -542,12 +560,12 @@ to signify the block from which you would like the events to be returned.
       [
           {
               "event_type": "TokenAdded",
-              "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-              "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
+              "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+              "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
           }, {
               "event_type": "TokenAdded",
-              "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
-              "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
+              "token_address": "0x91337A300e0361BDDb2e377DD4e88CCB7796663D",
+              "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
           }
       ]
 
@@ -563,7 +581,7 @@ to signify the block from which you would like the events to be returned.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9 HTTP/1.1
+      GET /api/1/events/tokens/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -577,15 +595,15 @@ to signify the block from which you would like the events to be returned.
           {
               "event_type": "ChannelNew",
               "settle_timeout": 10,
-              "netting_channel": "0xc0ea08a2d404d3172d2add29a45be56da40e2949",
-              "participant1": "0x4894a542053248e0c504e3def2048c08f73e1ca6",
+              "netting_channel": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949",
+              "participant1": "0x4894A542053248E0c504e3dEF2048c08f73E1CA6",
               "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A"
           }, {
               "event_type": "ChannelNew",
               "settle_timeout": 15,
-              "netting_channel": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-              "participant1": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-              "participant2": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b"
+              "netting_channel": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+              "participant1": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+              "participant2": "0xc7262f1447FCB2f75AB14B2A28DeEd6006eEA95B"
           }
       ]
 
@@ -602,7 +620,7 @@ to signify the block from which you would like the events to be returned.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337 HTTP/1.1
+      GET /api/1/events/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226?from_block=1337 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -615,19 +633,19 @@ to signify the block from which you would like the events to be returned.
      [
          {
              "event_type": "ChannelNewBalance",
-             "participant": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+             "participant": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
              "balance": 150000,
              "block_number": 54388
          }, {
              "event_type": "TransferUpdated",
-             "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
-             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
+             "token_address": "0x91337A300e0361BDDb2e377DD4e88CCB7796663D",
+             "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
          }, {
              "event_type": "EventTransferSentSuccess",
              "identifier": 14909067296492875713,
              "block_number": 2226,
              "amount": 7,
-             "target": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b"
+             "target": "0xc7262f1447FCB2f75AB14B2A28DeEd6006eEA95B"
          }
      ]
 

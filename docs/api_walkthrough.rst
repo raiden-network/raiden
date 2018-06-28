@@ -72,7 +72,7 @@ To open a channel with another Raiden node four things are needed: the address o
 With the payload::
 
     {
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
         "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
         "balance": 1337,
         "settle_timeout": 600
@@ -83,8 +83,8 @@ At this point the specific value of the ``balance`` field isn't too important, s
 Successfully opening a channel will return the following information::
 
     {
-        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
         "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
         "balance": 1337,
         "state": "opened",
@@ -98,9 +98,9 @@ Here it's interesting to notice that a ``channel_address`` has been generated. T
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the user's node and a counterparty with the address ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel::
+A payment channel is now open between the user's node and a counterparty with the address ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel::
 
-    PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+    PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226
 
 with the payload::
 
@@ -110,13 +110,13 @@ with the payload::
 
 To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from::
 
-    GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337
+    GET /api/1/events/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226?from_block=1337
 
 This will return a list of events that has happened in the specific payment channel. The relevant event in this case is::
 
     {
         "event_type": "ChannelNewBalance",
-        "participant": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "participant": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
         "balance": 7331,
         "block_number": 54388
     }
@@ -124,7 +124,7 @@ This will return a list of events that has happened in the specific payment chan
 From above event it can be deducted that the counterparty deposited to the channel.
 It is possible for both parties to query the state of the specific payment channel by calling::
 
-    GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+    GET /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226
 
 This will give us result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
@@ -196,9 +196,9 @@ For the token transfer example it is assumed a node is connected to the token ne
 
 Transfer
 ---------
-Transferring tokens to another node is quite easy. The address of the token desired for transfer is known ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
+Transferring tokens to another node is quite easy. The address of the token desired for transfer is known ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``::
 
-    POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61c808d82a3ac53231750dadc13c777b59310bd9
+    POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9
 
 The amount of the transfer is specified in the payload::
 
@@ -235,7 +235,7 @@ When successful this will give a response with a channel object where the state 
 
     {
         "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
         "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
         "balance": 350,
         "state": "closed",
@@ -248,28 +248,9 @@ Notice how the ``state`` is now set to ``"closed"`` compared to the previous cha
 
 Settle
 ------
-Once ``close`` has been called, the settle timeout period starts. During this period the counterparty of the node who closed the channel has to provide its last received message. When the settlement timeout period is over, the channel can finally be settled by doing::
+Once ``close`` has been called, the settle timeout period starts. The channel will be automatically settled as soon as it is over.
 
-    PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
-
-with the payload::
-
-    {
-        "state":"settled"
-    }
-
-this will trigger the ``settle()`` function in the `NettingChannel <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/NettingChannelContract.sol#L104>`_ smart contract. Once settlement is successful a channel object will be returned::
-
-    {
-        "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-        "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
-        "balance": 0,
-        "state": "settled",
-        "settle_timeout": 600
-    }
-
-Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that the netted balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended. At this point the blockchain contract has also self-destructed.
+The balance of the channel will then be ``0`` and the state ``"settled"``. This means that the netted balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended. At this point the blockchain contract has also self-destructed.
 
 
 Interacting with the Raiden Echo Node
@@ -283,17 +264,17 @@ For easy testing of Raiden, there is a specialized Raiden node running, the "Rai
 - for a transfer with any other ``amount`` it returns ``echo_amount = amount``
 
 
-The address of the Echo Node is ``0x02f4b6bc65561a792836212ebc54434db0ab759a`` and it is connected to the Raiden Testnet Token (RTT) with the address ``0x0f114a1e9db192502e7856309cc899952b3db1ed``. The RTT token contract is verified and can be seen in `etherscan <https://ropsten.etherscan.io/address/0x0f114a1e9db192502e7856309cc899952b3db1ed#code>`_. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>`.
+The address of the Echo Node is ``0x02f4b6BC65561A792836212Ebc54434Db0Ab759a`` and it is connected to the Raiden Testnet Token (RTT) with the address ``0x0f114a1e9db192502e7856309cc899952b3db1ed``. The RTT token contract is verified and can be seen in `etherscan <https://ropsten.etherscan.io/address/0x0f114A1E9Db192502E7856309cc899952b3db1ED#code>`_. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>`.
 
 You can obtain RTT tokens by calling the ``mint()`` function of the token. In javascript you can load the RTT token contract and call mint as such::
 
     var rtt_token_abi = [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":false,"inputs":[],"name":"mint","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"supply","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"version","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"},{"name":"target","type":"address"}],"name":"mintFor","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"},{"name":"_extraData","type":"bytes"}],"name":"approveAndCall","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"type":"function"},{"inputs":[{"name":"_tokenName","type":"string"},{"name":"_tokenSymbol","type":"string"}],"payable":false,"type":"constructor"},{"payable":false,"type":"fallback"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_from","type":"address"},{"indexed":true,"name":"_to","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_owner","type":"address"},{"indexed":true,"name":"_spender","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Approval","type":"event"}];
-    var rtt_token_address = "0x0f114a1e9db192502e7856309cc899952b3db1ed";
+    var rtt_token_address = "0x0f114A1E9Db192502E7856309cc899952b3db1ED";
     var rtt_token = web3.eth.contract(rtt_token_abi).at(rtt_token_address);
     rtt_token.mint({from: eth.accounts[0]}); // adjust to your raiden account and unlock first!
 
 
-Then you can send a transfer to it via the transfer endpoint: ``POST /api/1/transfers/0x0f114a1e9db192502e7856309cc899952b3db1ed/0x02f4b6bc65561a792836212ebc54434db0ab759a`` and with a payload containing the amount you want to send and an optional identifier::
+Then you can send a transfer to it via the transfer endpoint: ``POST /api/1/transfers/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x02f4b6BC65561A792836212Ebc54434Db0Ab759a`` and with a payload containing the amount you want to send and an optional identifier::
 
     {
         "amount": 1,
@@ -305,7 +286,7 @@ Afterwards you can check your events and you should find an ``EventTransferRecei
     {
         "amount": 1,
         "identifier": 43,
-        "initiator": "0x02f4b6bc65561a792836212ebc54434db0ab759a"
+        "initiator": "0x02f4b6BC65561A792836212Ebc54434Db0Ab759a"
     }
 
 According to the rules from above, you should try the same with different amounts, ``3``, ``6``, ``7``, ... -- have fun!
