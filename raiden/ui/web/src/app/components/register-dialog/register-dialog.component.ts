@@ -46,7 +46,6 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
 
     public registerToken() {
         if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
-            this.raidenService.
             this.raidenService.registerToken(this.tokenAddress.value)
                 .subscribe(
                     (userToken: Usertoken) => {
