@@ -2,9 +2,10 @@ import getpass
 import json
 import os
 import sys
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from typing import Dict
 
+from eth_utils import encode_hex
 from eth_keyfile import decode_keyfile_json
 import structlog
 
@@ -212,7 +213,7 @@ class Account:
             'version': self.keystore['version'],
         }
         if include_address and self.address is not None:
-            d['address'] = hexlify(self.address)
+            d['address'] = encode_hex(self.address)
         if include_id and self.uuid is not None:
             d['id'] = self.uuid
         return json.dumps(d)
@@ -308,7 +309,7 @@ class Account:
 
     def __repr__(self):
         if self.address is not None:
-            address = hexlify(self.address)
+            address = encode_hex(self.address)
         else:
             address = '?'
         return '<Account(address={address}, id={id})>'.format(address=address, id=self.uuid)

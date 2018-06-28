@@ -1,4 +1,4 @@
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 import os
 import re
 import string
@@ -10,7 +10,12 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, is_checksum_address
+from eth_utils import (
+    keccak,
+    encode_hex,
+    remove_0x_prefix,
+    is_checksum_address,
+)
 
 import raiden
 from raiden import constants
@@ -104,7 +109,7 @@ def quantity_encoder(i: int) -> str:
 
 
 def pex(data: bytes) -> str:
-    return hexlify(data).decode()[:8]
+    return encode_hex(data)[2:10]
 
 
 def lpex(lst: Iterable[bytes]) -> List[str]:

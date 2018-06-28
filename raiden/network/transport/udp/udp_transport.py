@@ -1,5 +1,4 @@
 import socket
-from binascii import hexlify
 
 import cachetools
 import gevent
@@ -9,7 +8,7 @@ from gevent.event import (
 )
 from gevent.server import DatagramServer
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, encode_hex
 
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.exceptions import (
@@ -444,7 +443,7 @@ class UDPTransport:
             log.error(
                 'INVALID MESSAGE: Packet larger than maximum size',
                 node=pex(self.raiden.address),
-                message=hexlify(messagedata),
+                message=encode_hex(messagedata),
                 length=len(messagedata),
             )
             return
@@ -463,7 +462,7 @@ class UDPTransport:
             log.error(
                 'INVALID MESSAGE: Unknown cmdid',
                 node=pex(self.raiden.address),
-                message=hexlify(messagedata),
+                message=encode_hex(messagedata),
             )
 
     def receive_message(self, message: Message):

@@ -1,12 +1,11 @@
 """ Utilities to set-up a Raiden network. """
-from binascii import hexlify
 from collections import namedtuple
 from os import environ
 
 import gevent
 from gevent import server
 import structlog
-from eth_utils import decode_hex
+from eth_utils import encode_hex, decode_hex
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
 
 from raiden import waiting
@@ -255,7 +254,7 @@ def create_apps(
             'port': port,
             'external_ip': host,
             'external_port': port,
-            'privatekey_hex': hexlify(private_key),
+            'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],

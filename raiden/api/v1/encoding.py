@@ -1,5 +1,4 @@
 import binascii
-from binascii import unhexlify
 
 from marshmallow import (
     fields,
@@ -16,6 +15,7 @@ from werkzeug.routing import (
 )
 from eth_utils import (
     encode_hex,
+    decode_hex,
     is_checksum_address,
     to_checksum_address,
 )
@@ -53,7 +53,7 @@ class HexAddressConverter(BaseConverter):
             raise ValidationError()
 
         try:
-            value = unhexlify(value[2:])
+            value = decode_hex(value)
         except TypeError:
             raise ValidationError()
 
@@ -85,7 +85,7 @@ class AddressField(fields.Field):
             self.fail('invalid_checksum')
 
         try:
-            value = unhexlify(value[2:])
+            value = decode_hex(value)
         except binascii.Error:
             self.fail('invalid_data')
 

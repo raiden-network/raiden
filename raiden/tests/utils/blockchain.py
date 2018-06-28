@@ -1,4 +1,3 @@
-from binascii import hexlify
 import json
 import io
 import os
@@ -110,7 +109,7 @@ def geth_create_account(datadir, privkey):
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'wb') as handler:
-        handler.write(hexlify(privkey))
+        handler.write(encode_hex(privkey))
 
     password_path = os.path.join(datadir, 'pw')
     with open(password_path, 'w') as handler:
@@ -205,7 +204,7 @@ def geth_wait_and_check(web3, privatekeys, random_marker):
             jsonrpc_running = True
 
             block = response['result']
-            running_marker = block['extraData'][2:len(random_marker) + 2]
+            running_marker = block['extraData']
             if running_marker != random_marker:
                 raise RuntimeError(
                     'the test marker does not match, maybe two tests are running in '

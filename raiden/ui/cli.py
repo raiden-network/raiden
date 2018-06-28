@@ -1,7 +1,6 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
-from binascii import hexlify
 import sys
 import os
 import tempfile
@@ -20,6 +19,7 @@ import requests
 from eth_utils import (
     to_int,
     denoms,
+    encode_hex,
     to_checksum_address,
     to_normalized_address,
     to_canonical_address,
@@ -552,8 +552,7 @@ def app(
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['nat_keepalive_timeout'] = timeout
 
-    privatekey_hex = hexlify(privatekey_bin)
-    config['privatekey_hex'] = privatekey_hex
+    config['privatekey_hex'] = encode_hex(privatekey_bin)
 
     rpc_host, rpc_port = eth_endpoint_to_hostport(eth_rpc_endpoint)
 
@@ -878,7 +877,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @click.pass_context
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
-    import binascii
+    from eth_utils import encode_hex
     from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
@@ -950,7 +949,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     port = ethereum_config['rpc']
     web3_client = web3([port])
     web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
-    random_marker = binascii.hexlify(b'raiden').decode()
+    random_marker = encode_hex(b'raiden')
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 

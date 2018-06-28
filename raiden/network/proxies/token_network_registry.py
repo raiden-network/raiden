@@ -1,4 +1,4 @@
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from typing import Optional
 
 import structlog
@@ -196,7 +196,7 @@ class TokenNetworkRegistry:
 
             if token_network_address is None:
                 raise NoTokenManager(
-                    'TokenNetwork for token 0x{} does not exist'.format(hexlify(token_address)),
+                    'TokenNetwork for token {} does not exist'.format(encode_hex(token_address)),
                 )
 
             token_network = TokenNetwork(
