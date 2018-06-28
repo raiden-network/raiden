@@ -3,6 +3,8 @@ from itertools import chain, combinations, product
 
 import gevent
 
+from raiden.exceptions import RaidenShuttingDown
+
 
 def cleanup_tasks():
     tasks = [
@@ -12,6 +14,20 @@ def cleanup_tasks():
     ]
     gevent.killall(tasks)
     gevent.hub.reinit()
+
+
+def shutdown_apps_and_cleanup_tasks(raiden_apps):
+    for app in raiden_apps:
+        try:
+            app.stop(leave_channels=False)
+        except RaidenShuttingDown:
+            pass
+
+    # Two tests in sequence could run a UDP server on the same port, a hanging
+    # greenlet from the previous tests could send packet to the new server and
+    # mess things up. Kill all greenlets to make sure that no left-over state
+    # from a previous test interferes with a new one.
+    cleanup_tasks()
 
 
 def all_combinations(values):
