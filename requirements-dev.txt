@@ -25,6 +25,6 @@ sphinxcontrib-images==0.7.0
 releases==1.5.0
 
 # Release
-bumpversion==0.5.3
+bump2version==0.5.8
 
 eth-tester[py-evm]==0.1.0b28
