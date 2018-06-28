@@ -22,15 +22,12 @@ if [[ ! -d ${DESTDIR} ]]; then
     fi
 fi
 
-# this function sets the modification time of file to time of last commit
-gitmtime(){ local f;for f;do touch -d @0`git log --pretty=%at -n1 -- "$f"` "$f"; done; }
-
-gitmtime "$0"
-
-SYNAPSE="${DESTDIR}/synapse"
+# versioned binary according to this script's last commit
+SYNAPSE="${DESTDIR}/synapse.$( git log -n1 --pretty=format:%h -- ${0} )"
+SYNAPSE_LINK="${DESTDIR}/synapse"
 # build synapse single-file executable
 # if file not exist or this script is newer than it
-if [[ ( ! -x ${SYNAPSE} ) || ( ${0} -nt ${SYNAPSE} ) ]]; then
+if [[ ! -x ${SYNAPSE} ]]; then
     if [[ ! -d ${BUILDDIR} ]]; then
         BUILDDIR="$( mktemp -d )"
         RMBUILDDIR="1"
@@ -46,7 +43,9 @@ if [[ ( ! -x ${SYNAPSE} ) || ( ${0} -nt ${SYNAPSE} ) ]]; then
         --add-data="${SYNDIR}/storage/schema:synapse/storage/schema" \
         --add-data="${SYNDIR}/../syweb:syweb" \
         "${SYNDIR}/app/homeserver.py"
+    rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
+    ln -fs "${SYNAPSE}" "${SYNAPSE_LINK}"
 
     popd
     [[ -n ${RMBUILDDIR} ]] && rm -r "${BUILDDIR}"
