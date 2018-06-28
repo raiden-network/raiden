@@ -17,6 +17,7 @@ from raiden.tests.utils.factories import (
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
+    wait_assert,
     get_channelstate,
     mediated_transfer,
     sign_and_inject,
@@ -137,10 +138,12 @@ def test_receive_lockedtransfer_invalidnonce(
         app1,
     )
 
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
 
 
