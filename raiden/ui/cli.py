@@ -612,7 +612,7 @@ def app(
         )
     except ContractVersionMismatch:
         print(
-            'Deployed registry contract version mismatch. '
+            'Deployed secret registry contract version mismatch. '
             'Please update your Raiden installation.',
         )
         sys.exit(1)
