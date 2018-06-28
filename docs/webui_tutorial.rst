@@ -52,7 +52,7 @@ In the ``Actions`` column it is possible to open an actions menu for each token 
 
 Should it at some point in time be desired to entirely leave a token network. The ``Leave  Network`` action menu point allows you to do so. This will automatically close and settle all open channels within a specified token network. For more information on how this works, please see :ref:`leave <leave-network>`.
 
-The most interesting feature in the ``Actions`` menu  is the ``Tranfer`` action. This will allow the user to choose an address to send tokens to that the user is not directly connected to. This is done by mediating transfers through nodes that are connected with each other.
+The most interesting feature in the ``Actions`` menu  is the ``Transfer`` action. This will allow the user to choose an address to send tokens to that the user is not directly connected to. This is done by mediating transfers through nodes that are connected with each other.
 
 The last point in the ``Actions`` menu is ``Watch Events``. This will simply open tab within the ``Tokens`` view and allow the user to see all channels created and deleted for the specific token.
 

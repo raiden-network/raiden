@@ -64,7 +64,7 @@ of the dictionary, with one difference. The ``event_type`` and the ``block_numbe
 Errors
 ======
 
-For any non-succesful http status code, e.g. ``409 CONFLICT`` or ``400 BAD REQUEST`` there will be an accompanying ``errors`` field in the response json which you can check for more information on what went wrong with your request.
+For any non-successful http status code, e.g. :http:statuscode:`409` or :http:statuscode:`400` there will be an accompanying ``errors`` field in the response json which you can check for more information on what went wrong with your request.
 
 Endpoints
 ***********
@@ -278,7 +278,7 @@ Channel Management
           "settle_timeout": 100
       }
 
-   :jsonparameter int balance: Initial deposit to make to the channel.
+   :reqjson int balance: Initial deposit to make to the channel.
 
    The request's payload is a channel object; since it is a new channel, its ``channel_address``
    and ``status`` fields will be ignored and can be omitted.
@@ -337,8 +337,8 @@ Channel Management
           "total_deposit": 100
       }
 
-   :jsonparameter string state: Desired new state; the only valid choice is ``"closed"``
-   :jsonparameter int total_deposit: The increased total deposit
+   :reqjson string state: Desired new state; the only valid choice is ``"closed"``
+   :reqjson int total_deposit: The increased total deposit
 
    **Example Response**:
 
@@ -389,9 +389,9 @@ Connection Management
           "funds": 1337
       }
 
-   :jsonparameter int funds: amount of funding you want to put into the network
-   :jsonparameter int initial_channel_target: number of channels to open proactively
-   :jsonparameter float joinable_funds_target: fraction of funds that will be used to join channels opened by other participants
+   :reqjson int funds: amount of funding you want to put into the network
+   :reqjson int initial_channel_target: number of channels to open proactively
+   :reqjson float joinable_funds_target: fraction of funds that will be used to join channels opened by other participants
    :statuscode 204: For a successful connection creation
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance
    :statuscode 408: If a timeout happened during any of the transactions
@@ -413,7 +413,7 @@ Connection Management
           "only_receiving_channels": false
       }
 
-   :jsonparameter boolean only_receiving_channels: Only close and settle channels where your node has received transfers. Defaults to ``true``.
+   :reqjson boolean only_receiving_channels: Only close and settle channels where your node has received transfers. Defaults to ``true``.
 
    **Example Response**:
 
@@ -433,9 +433,11 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
 
-   Important note. The default behavior to close and settle only receiving channels is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
+   .. note::
 
-   If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
+      The default behavior to close and settle only receiving channels is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
+
+      If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
 
 .. http:get:: /api/(version)/connections
 
@@ -498,8 +500,8 @@ Transfers
           "identifier": 42
       }
 
-   :jsonparameter int amount: Amount to be transferred
-   :jsonparameter int identifier: Identifier of the transfer (optional)
+   :reqjson int amount: Amount to be transferred
+   :reqjson int identifier: Identifier of the transfer (optional)
 
    **Example Response**:
 
