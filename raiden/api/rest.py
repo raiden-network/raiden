@@ -94,6 +94,7 @@ URLS_V1 = [
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
     ('/connections', ConnectionsInfoResource),
+    ('/metrics', MetricsResource),
 ]
 
 
@@ -451,6 +452,11 @@ class RestAPI:
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
         return api_response(result=checksummed_response_dict(result.data))
+
+    def get_metrics(self):
+        return api_response(
+            result=self.raiden_api.raiden.wal.state_manager.current_state
+        )
 
     def get_connection_managers_info(self, registry_address):
         """Get a dict whose keys are token addresses and whose values are
