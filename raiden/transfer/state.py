@@ -987,7 +987,7 @@ class MetricsState(State):
         self.num_no_capacity_payments = num_no_capacity_payments
 
     def __repr__(self):
-        return '<MetricsState num_of_payments: num_of_payments: {} num_no_capacity_payments: {}>'.format(
+        return '<MetricsState num_of_payments: {} num_no_capacity_payments: {}>'.format(
             self.num_of_payments,
             self.num_no_capacity_payments,
         )
@@ -1001,6 +1001,7 @@ class MetricsState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
 
 EMPTY_MERKLE_ROOT = b'\x00' * 32
 EMPTY_MERKLE_TREE = MerkleTreeState([
