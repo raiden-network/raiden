@@ -27,9 +27,6 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
 # https://github.com/raiden-network/raiden/issues/1038
 NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
 
-# TODO: add this as an attribute of the transport class
-UDP_MAX_MESSAGE_SIZE = 1200
-
 ETH_RPC_DEFAULT_PORT = 8545
 HTTP_PORT = 80
 HTTPS_PORT = 443
