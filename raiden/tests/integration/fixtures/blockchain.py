@@ -149,6 +149,7 @@ def web3(
 
     elif blockchain_type == 'tester':
         web3 = Web3(EthereumTesterProvider(ethereum_tester))
+        snapshot = ethereum_tester.take_snapshot()
 
         fund_accounts(web3, keys_to_fund, ethereum_tester)
 
@@ -159,6 +160,7 @@ def web3(
 
         miner.stop.set()
         miner.join()
+        ethereum_tester.revert_to_snapshot(snapshot)
 
     else:
         raise ValueError(f'unknwon blockchain_type {blockchain_type}')
