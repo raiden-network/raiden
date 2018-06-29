@@ -37,15 +37,19 @@ def test_mediated_transfer(
         timeout=network_wait * number_of_nodes,
     )
 
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app1, deposit - amount, [],
         app2, deposit + amount, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
 
 
