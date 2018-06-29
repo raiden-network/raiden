@@ -53,7 +53,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNKNOWN,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
-from raiden.udp_message_handler import on_udp_message
+from raiden.message_handler import on_message
 from raiden.utils import (
     eth_sign_sha3,
     pex,
@@ -491,7 +491,7 @@ class MatrixTransport:
         )
 
         try:
-            if on_udp_message(self._raiden_service, message):
+            if on_message(self._raiden_service, message):
                 # TODO: Maybe replace with Matrix read receipts.
                 #       Unfortunately those work on an 'up to' basis, not on individual messages
                 #       which means that message order is important which isn't guaranteed between

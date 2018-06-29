@@ -28,7 +28,7 @@ from raiden.messages import (
 from raiden.settings import CACHE_TTL
 from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.udp_message_handler import on_udp_message
+from raiden.message_handler import on_message
 from raiden.transfer.state_change import ReceiveDelivered
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.network.transport.udp import healthcheck
@@ -478,7 +478,7 @@ class UDPTransport:
         """
         # pylint: disable=unidiomatic-typecheck
 
-        if on_udp_message(self.raiden, message):
+        if on_message(self.raiden, message):
 
             # Sending Delivered after the message is decoded and *processed*
             # gives a stronger guarantee than what is required from a

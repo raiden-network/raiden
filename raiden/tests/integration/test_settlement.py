@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from raiden import waiting, udp_message_handler
+from raiden import waiting, message_handler
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret
@@ -305,7 +305,7 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
         secret,
     )
     app0.raiden.sign(reveal_secret)
-    udp_message_handler.on_udp_message(app1.raiden, reveal_secret)
+    message_handler.on_message(app1.raiden, reveal_secret)
 
     channel_state = get_channelstate(app0, app1, token_network_identifier)
     waiting.wait_for_settle(
