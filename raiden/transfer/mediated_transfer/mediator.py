@@ -806,7 +806,6 @@ def secret_learned(
     SendBalanceProof, and Unlocks.
     """
     assert new_payee_state in STATE_SECRET_KNOWN
-    assert payee_address in (pair.payee_address for pair in state.transfers_pair)
 
     # TODO: if any of the transfers is in expired state, event for byzantine behavior
 

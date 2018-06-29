@@ -45,6 +45,7 @@ from raiden.tests.utils.factories import (
     HOP3_KEY,
     HOP4,
     HOP4_KEY,
+    HOP5,
     HOP5_KEY,
     UNIT_SECRETHASH,
     UNIT_REVEAL_TIMEOUT,
@@ -92,23 +93,24 @@ def make_transfers_pair(privatekeys, amount):
 
     key_address = list(zip(privatekeys, addresses))
 
+    payment_identifier = UNIT_TRANSFER_IDENTIFIER
+
+    channels_state = {
+        address: factories.make_channel(
+            our_address=factories.HOP1,
+            our_balance=amount,
+            partner_balance=amount,
+            partner_address=address,
+            token_address=UNIT_TOKEN_ADDRESS,
+        )
+        for address in addresses
+    }
+
     for (payer_key, payer_address), payee_address in zip(key_address[:-1], addresses[1:]):
         assert next_expiration > 0
 
-        receive_channel = factories.make_channel(
-            our_address=factories.HOP1,
-            our_balance=amount,
-            partner_balance=amount,
-            partner_address=payer_address,
-            token_address=UNIT_TOKEN_ADDRESS,
-        )
-        pay_channel = factories.make_channel(
-            our_address=factories.HOP1,
-            our_balance=amount,
-            partner_balance=amount,
-            partner_address=payee_address,
-            token_address=UNIT_TOKEN_ADDRESS,
-        )
+        pay_channel = channels_state[payee_address]
+        receive_channel = channels_state[payer_address]
 
         received_transfer = factories.make_signed_transfer(
             amount,
@@ -116,6 +118,7 @@ def make_transfers_pair(privatekeys, amount):
             UNIT_TRANSFER_TARGET,
             next_expiration,
             UNIT_SECRET,
+            payment_identifier=payment_identifier,
             channel_identifier=receive_channel.identifier,
             pkey=payer_key,
             sender=payer_address,
@@ -134,7 +137,7 @@ def make_transfers_pair(privatekeys, amount):
             UNIT_TRANSFER_TARGET,
             amount,
             message_identifier,
-            UNIT_TRANSFER_IDENTIFIER,
+            payment_identifier,
             received_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT,
             UNIT_SECRETHASH,
         )
@@ -153,7 +156,10 @@ def make_transfers_pair(privatekeys, amount):
 
         # assumes that the node sending the refund will follow the protocol and
         # decrement the expiration for its lock
-        next_expiration = next_expiration - UNIT_REVEAL_TIMEOUT
+        next_expiration = next_expiration - (UNIT_REVEAL_TIMEOUT * 2)
+
+        assert channel.is_lock_locked(receive_channel.partner_state, UNIT_SECRETHASH)
+        assert channel.is_lock_locked(pay_channel.our_state, UNIT_SECRETHASH)
 
     return channelmap, transfers_pair
 
@@ -1022,7 +1028,6 @@ def test_events_for_onchain_secretreveal():
     """ Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
-
     amount = 10
     channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY],
@@ -1193,6 +1198,57 @@ def test_secret_learned():
 
     balance_events = [e for e in iteration.events if isinstance(e, SendBalanceProof)]
     assert len(balance_events) == 1
+
+
+def test_secret_learned_with_refund():
+    """ Test  """
+    amount = 10
+    privatekeys = [HOP2_KEY, HOP3_KEY, HOP4_KEY]
+    addresses = [HOP2, HOP3, HOP4]
+
+    #                                             /-> HOP3
+    # Emulate HOP2(Initiator) -> HOP1 (This node)
+    #                                             \-> HOP4 -> HOP5
+    channelmap, transfers_pair = make_transfers_pair(
+        privatekeys,
+        amount,
+    )
+
+    # Map HOP1 channel partner addresses to their channel states
+    partner_to_channel = {
+        channel_state.partner_state.address: channel_state
+        for channel_state in channelmap.values()
+    }
+
+    # Make sure that our state is updated once transfers are sent.
+    for address in addresses[1:]:
+        channel_state = partner_to_channel[address]
+        assert channel.is_lock_locked(channel_state.our_state, UNIT_SECRETHASH)
+
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    mediator_state.transfers_pair = transfers_pair
+
+    # Emulate a ReceiveSecretReveal state transition_result
+    # Which means that HOP5 sent a SecretReveal -> HOP4 -> HOP1 (Us)
+    transition_result = mediator.state_transition(
+        mediator_state,
+        ReceiveSecretReveal(UNIT_SECRET, HOP5),
+        channelmap,
+        random.Random(),
+        5,
+    )
+
+    assert not transition_result.events
+
+    assert mediator_state.secret == UNIT_SECRET
+
+    for address in addresses[:-1]:
+        channel_state = partner_to_channel[address]
+        assert channel.is_secret_known(channel_state.partner_state, UNIT_SECRETHASH)
+
+    for address in addresses[1:]:
+        channel_state = partner_to_channel[address]
+        assert channel.is_secret_known(channel_state.our_state, UNIT_SECRETHASH)
 
 
 def test_mediate_transfer():
