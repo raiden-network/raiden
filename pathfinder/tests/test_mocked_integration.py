@@ -72,7 +72,7 @@ def test_pfs_with_mocked_events(
             args=dict(
                 channel_identifier=channel_identifier,
                 participant=addresses[p1_index],
-                deposit=p1_deposit
+                total_deposit=p1_deposit
             )
         ))
 
@@ -82,7 +82,7 @@ def test_pfs_with_mocked_events(
             args=dict(
                 channel_identifier=channel_identifier,
                 participant=addresses[p2_index],
-                deposit=p2_deposit
+                total_deposit=p2_deposit
             )
         ))
 

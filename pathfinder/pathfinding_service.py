@@ -185,7 +185,7 @@ class PathfindingService(gevent.Greenlet):
 
         channel_identifier = encode_hex(event['args']['channel_identifier'])
         participant_address = event['args']['participant']
-        total_deposit = event['args']['deposit']
+        total_deposit = event['args']['total_deposit']
 
         token_network.handle_channel_new_deposit_event(
             channel_identifier,
