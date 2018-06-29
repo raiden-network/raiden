@@ -1,7 +1,7 @@
 Click>=6.0
 coincurve
 
-web3>=4.2.0,<5.0
+web3>=4.3.0,<4.4.0
 eth-utils>=1.0.1,<2.0.0
 
 flask
