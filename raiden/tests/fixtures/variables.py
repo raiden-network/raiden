@@ -18,7 +18,7 @@ from raiden.utils import sha3
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
 
-DEFAULT_BALANCE = denoms.ether * 100000
+DEFAULT_BALANCE = denoms.ether * 10
 DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
