@@ -4,7 +4,7 @@ from gevent import server
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,

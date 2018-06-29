@@ -10,10 +10,9 @@ import structlog
 from raiden import waiting
 from raiden.app import App
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
-from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
     privatekey_to_address,
