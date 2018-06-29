@@ -40,7 +40,9 @@ def chain_id(blockchain_services, deploy_client):
 
 
 @pytest.fixture(scope='session')
-def ethereum_tester():
+def ethereum_tester(
+    patch_genesis_gas_limit,
+):
     """Returns an instance of an Ethereum tester"""
     tester = EthereumTester(PyEVMBackend())
     tester.set_fork_block('FORK_BYZANTIUM', 0)
