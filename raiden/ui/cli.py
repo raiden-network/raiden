@@ -39,8 +39,7 @@ from raiden.exceptions import (
 )
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.matrixtransport import MatrixTransport
-from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.utils import get_free_port
