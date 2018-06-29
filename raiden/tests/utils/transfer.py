@@ -29,13 +29,13 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils import sha3
-from raiden.udp_message_handler import on_udp_message
+from raiden.message_handler import on_message
 
 
 def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(key)
-    on_udp_message(app.raiden, message)
+    on_message(app.raiden, message)
 
 
 def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:
