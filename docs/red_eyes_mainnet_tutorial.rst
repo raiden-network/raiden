@@ -31,11 +31,11 @@ With the payload::
         "funds": 20000
     }
 
-This automatically connects our node to 5(TODO) other nodes in the network with 20000 / 5 Rei tokens in each channel.
+This automatically connects our node to 3(TODO) other nodes in the network with 20000 / 5 Rei tokens in each channel.
 
 We're now ready to start sending RDN tokens using the Raiden Network.
 
-In case we know of a specific node in the network that we will do frequent transfers with, we can open a channel directly to this node by doing the following::
+In case we know of a specific address in the network that we will do frequent transfers with, we can open a channel directly to this address by doing the following::
 
     PUT /api/v2/channels
 
