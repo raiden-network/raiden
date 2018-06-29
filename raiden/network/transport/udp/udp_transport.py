@@ -17,7 +17,6 @@ from raiden.exceptions import (
     UnknownAddress,
     RaidenShuttingDown,
 )
-from raiden.constants import UDP_MAX_MESSAGE_SIZE
 from raiden.messages import (
     message_from_sendevent,
     decode,
@@ -143,6 +142,8 @@ def single_queue_send(
 
 
 class UDPTransport:
+    UDP_MAX_MESSAGE_SIZE = 1200
+
     def __init__(self, discovery, udpsocket, throttle_policy, config):
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
@@ -356,9 +357,9 @@ class UDPTransport:
             raise ValueError('Do not use send for {} messages'.format(message.__class__.__name__))
 
         messagedata = message.encode()
-        if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
+        if len(messagedata) > self.UDP_MAX_MESSAGE_SIZE:
             raise ValueError(
-                'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE),
+                'message size exceeds the maximum {}'.format(self.UDP_MAX_MESSAGE_SIZE),
             )
 
         # message identifiers must be unique
@@ -440,7 +441,7 @@ class UDPTransport:
         """ Handle an UDP packet. """
         # pylint: disable=unidiomatic-typecheck
 
-        if len(messagedata) > UDP_MAX_MESSAGE_SIZE:
+        if len(messagedata) > self.UDP_MAX_MESSAGE_SIZE:
             log.error(
                 'INVALID MESSAGE: Packet larger than maximum size',
                 node=pex(self.raiden.address),
