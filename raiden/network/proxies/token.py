@@ -2,8 +2,8 @@ from binascii import unhexlify
 
 from eth_utils import is_binary_address
 
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
 )
 from raiden.exceptions import TransactionThrew

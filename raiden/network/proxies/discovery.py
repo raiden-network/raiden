@@ -7,8 +7,8 @@ from eth_utils import (
     to_normalized_address,
 )
 
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
 )
 from raiden.exceptions import (
@@ -44,10 +44,11 @@ class Discovery:
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
-        CONTRACT_MANAGER.check_contract_version(
-            self.version(),
-            CONTRACT_ENDPOINT_REGISTRY,
-        )
+        # TODO: add this back
+        # CONTRACT_MANAGER.check_contract_version(
+        #     self.version(),
+        #     CONTRACT_ENDPOINT_REGISTRY,
+        # )
 
         self.address = discovery_address
         self.client = jsonrpc_client
