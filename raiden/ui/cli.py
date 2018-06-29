@@ -17,6 +17,7 @@ from urllib.parse import urljoin
 import click
 import gevent
 import requests
+import toml
 from eth_utils import (
     to_int,
     denoms,
@@ -57,6 +58,7 @@ from raiden.utils import (
     merge_dict,
     split_endpoint,
     typing,
+    address_checksum_and_decode,
 )
 from raiden.network.sockfactory import SocketFactory
 from raiden.utils.cli import (
@@ -252,6 +254,13 @@ def options(func):
                 resolve_path=True,
                 allow_dash=False,
             ),
+            show_default=True,
+        ),
+        option(
+            '--config-file',
+            help='TOML configuration file',
+            default=None,
+            type=click.File(lazy=True),
             show_default=True,
         ),
         option(
@@ -511,6 +520,7 @@ def app(
         transport,
         matrix_server,
         network_id,
+        config_file,
         extra_config=None,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -740,6 +750,28 @@ def run(ctx, **kwargs):
     print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
     from raiden.ui.console import Console
     from raiden.api.python import RaidenAPI
+
+    if kwargs['config_file']:
+        try:
+            config_file = toml.load(kwargs['config_file'])
+            optionname_to_default = {param.name: param.get_default(ctx) for param in run.params}
+            addr_options = {param.name for param in run.params if param.type == ADDRESS_TYPE}
+            for option_name, option_value in config_file.items():
+                option_name = option_name.replace('-', '_')
+
+                if option_name in addr_options:
+                    option_value = address_checksum_and_decode(option_value)
+
+                if (option_name not in kwargs or
+                        option_name not in optionname_to_default or
+                        kwargs[option_name] == optionname_to_default[option_name]):
+                    kwargs[option_name] = option_value
+        except TypeError:
+            print('Invalid config file')
+            sys.exit(1)
+        except toml.TomlDecodeError:
+            print('Error occurs while decoding config file')
+            sys.exit(1)
 
     configure_logging(
         kwargs['log_config'],
