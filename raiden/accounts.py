@@ -7,6 +7,7 @@ from typing import Dict
 
 from eth_keyfile import decode_keyfile_json
 import structlog
+from eth_utils import to_checksum_address
 
 from raiden.utils import privtopub, privatekey_to_address
 
@@ -148,7 +149,9 @@ class AccountManager:
 
         # Since file was found prompt for a password if not already given
         if password is None:
-            password = getpass.getpass('Enter the password to unlock %s: ' % address)
+            password = getpass.getpass(
+                f'Enter the password to unlock {to_checksum_address(address)}: ',
+            )
         acc = Account(data, password, self.accounts[address])
         return acc.privkey
 

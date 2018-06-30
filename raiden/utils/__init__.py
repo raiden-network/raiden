@@ -81,10 +81,10 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
         checksummed according to EIP55 specification
     """
     if addr[:2] != '0x':
-        raise InvalidAddress('All provided addresses must be 0x prefixed')
+        raise InvalidAddress('Address must be 0x prefixed')
 
     if not is_checksum_address(addr):
-        raise InvalidAddress('Provided addresses must be EIP55 checksummed')
+        raise InvalidAddress('Address must be EIP55 checksummed')
 
     addr = unhexlify(addr[2:])
     assert len(addr) in (20, 0)
