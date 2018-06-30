@@ -271,6 +271,7 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
     lock1 = send_locked1.transfer.lock
     refund_lock1 = send_refund1.lock
     assert lock1.amount == refund_lock1.amount
+    assert lock1.secrethash == refund_lock1.secrethash
 
     send_locked2 = raiden_events_must_contain_entry(
         app1.raiden,
@@ -294,16 +295,6 @@ def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, n
         app0, deposit - amount_path, [lockstate_from_lock(lock1)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
     )
-    # TODO: This fails.
-    # app1's view of its partner state locked amount is not up to date.
-    # (Pdb++) channel.get_amount_locked(channel0.our_state)
-    # 50
-    # (Pdb++) channel.get_amount_locked(channel0.partner_state)
-    # 0
-    # (Pdb++) channel.get_amount_locked(channel1.our_state)
-    # 50
-    # (Pdb++) channel.get_amount_locked(channel1.partner_state)
-    # 50
     assert_synched_channel_state(
         token_network_identifier,
         app1, deposit - amount_path, [lockstate_from_lock(lock2)],

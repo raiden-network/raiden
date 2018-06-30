@@ -1482,8 +1482,6 @@ def handle_refundtransfer(
         channel_state: NettingChannelState,
         refund: ReceiveTransferRefund,
 ):
-    # TODO model it from handle_receive_lockedtransfer and use the is_valid_refund()
-    # which should also be made in this file
     is_valid, msg, merkletree = is_valid_refund(
         refund,
         channel_state,

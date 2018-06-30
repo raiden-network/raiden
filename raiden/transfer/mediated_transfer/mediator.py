@@ -178,14 +178,15 @@ def is_send_transfer_almost_equal(
     )
 
 
-def filter_available_routes(transfers_pair, routes):
-    """This function makes sure we don't try routes that have already been tried
-       So in a setup like this, we want to make sure than node 2, having tried to
-       route the transfer through 3 will also try 5 before sending it backwards to 1
+def filter_used_routes(transfers_pair, routes):
+    """This function makes sure we filter routes that have already been used.
 
-       1 -> 2 -> 3 -> 4
-            v         ^
-            5 -> 6 -> 7
+    So in a setup like this, we want to make sure that node 2, having tried to
+    route the transfer through 3 will also try 5 before sending it backwards to 1
+
+    1 -> 2 -> 3 -> 4
+         v         ^
+         5 -> 6 -> 7
     """
     channelid_to_route = {r.channel_identifier: r for r in routes}
 
@@ -928,7 +929,7 @@ def mediate_transfer(
         block_number,
     )
 
-    available_routes = filter_available_routes(
+    available_routes = filter_used_routes(
         state.transfers_pair,
         possible_routes,
     )
@@ -1103,8 +1104,6 @@ def handle_refundtransfer(
             payer_transfer,
             block_number,
         )
-
-        # else: TODO: Use an event to notify about byzantine behavior
 
     return iteration
 
