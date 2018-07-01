@@ -1101,7 +1101,7 @@ def handle_refundtransfer(
             send_processed = SendProcessed(
                 mediator_state_change.transfer.balance_proof.sender,
                 b'global',
-                mediator_state_change.message_identifier,
+                mediator_state_change.transfer.message_identifier,
             )
             events.append(send_processed)
 
