@@ -520,8 +520,9 @@ def is_valid_refund(
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
+        received_transfer: LockedTransferUnsignedState,
 ) -> MerkletreeOrError:
-    return valid_lockedtransfer_check(
+    is_valid_locked_transfer = valid_lockedtransfer_check(
         refund,
         channel_state,
         sender_state,
@@ -529,6 +530,33 @@ def is_valid_refund(
         'RefundTransfer',
         refund.transfer.balance_proof,
         refund.transfer.lock,
+    )
+    if not is_valid_locked_transfer:
+        return False
+
+    refund_transfer = refund.transfer
+    refund_transfer_sender = refund_transfer.balance_proof.sender
+    # Ignore a refund from the target
+    if refund_transfer_sender == received_transfer.target:
+        return False
+
+    return (
+        received_transfer.payment_identifier == refund_transfer.payment_identifier and
+        received_transfer.lock.amount == refund_transfer.lock.amount and
+        received_transfer.lock.secrethash == refund_transfer.lock.secrethash and
+        received_transfer.target == refund_transfer.target and
+
+        # The refund transfer is not tied to the other direction of the same
+        # channel, it may reach this node through a different route depending
+        # on the path finding strategy
+        # original_receiver == refund_transfer_sender and
+        received_transfer.token == refund_transfer.token and
+
+        # A larger-or-equal expiration is byzantine behavior that favors the
+        # receiver node, nevertheless it's being ignored since the only reason
+        # for the other node to use an invalid expiration is to try to game the
+        # protocol.
+        received_transfer.lock.expiration > refund_transfer.lock.expiration
     )
 
 
@@ -1479,6 +1507,7 @@ def handle_receive_directtransfer(
 
 
 def handle_refundtransfer(
+        received_transfer: LockedTransferUnsignedState,
         channel_state: NettingChannelState,
         refund: ReceiveTransferRefund,
 ):

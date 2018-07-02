@@ -101,37 +101,6 @@ def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
     return block_number < lock_expiration - reveal_timeout
 
 
-def is_valid_refund(
-        original_transfer: LockedTransferUnsignedState,
-        refund_transfer: LockedTransferSignedState,
-):
-    """ True if the refund transfer matches the original transfer. """
-    refund_transfer_sender = refund_transfer.balance_proof.sender
-
-    # Ignore a refund from the target
-    if refund_transfer_sender == original_transfer.target:
-        return False
-
-    return (
-        original_transfer.payment_identifier == refund_transfer.payment_identifier and
-        original_transfer.lock.amount == refund_transfer.lock.amount and
-        original_transfer.lock.secrethash == refund_transfer.lock.secrethash and
-        original_transfer.target == refund_transfer.target and
-
-        # The refund transfer is not tied to the other direction of the same
-        # channel, it may reach this node through a different route depending
-        # on the path finding strategy
-        # original_receiver == refund_transfer_sender and
-        original_transfer.token == refund_transfer.token and
-
-        # A larger-or-equal expiration is byzantine behavior that favors the
-        # receiver node, neverthless it's being ignored since the only reason
-        # for the other node to use an invalid expiration is to play the
-        # protocol.
-        original_transfer.lock.expiration > refund_transfer.lock.expiration
-    )
-
-
 def is_channel_close_needed(payer_channel, transfer_pair, block_number):
     """ True if this node needs to close the channel to unlock on-chain.
     Only close the channel to unlock on chain if the corresponding payee node
@@ -1085,10 +1054,13 @@ def handle_refundtransfer(
     if mediator_state.secret is None:
         # The last sent transfer is the only one that may be refunded, all the
         # previous ones are refunded already.
+        transfer_pair = mediator_state.transfers_pair[-1]
+        payee_transfer = transfer_pair.payee_transfer
         payer_transfer = mediator_state_change.transfer
         channel_address = payer_transfer.balance_proof.channel_address
         payer_channel = channelidentifiers_to_channels[channel_address]
         is_valid, events, _ = channel.handle_refundtransfer(
+            payee_transfer,
             payer_channel,
             mediator_state_change,
         )
