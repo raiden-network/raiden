@@ -285,7 +285,7 @@ class MatrixTransport:
                 username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
 
             try:
-                self._client.login_with_password(username, password)
+                self._client.login(username, password)
                 self.log.info(
                     'LOGIN',
                     homeserver=self._server_name,
@@ -584,7 +584,7 @@ class MatrixTransport:
         room_candidates = self._client.search_room_directory(room_name)
         if room_candidates:
             room = room_candidates[0]
-            if room.room_id not in self._client.get_rooms():
+            if room.room_id not in self._client.rooms:
                 room = self._client.join_room(room.room_id)
         else:
             # no room with expected name => create one and invite peer
@@ -773,7 +773,7 @@ class MatrixTransport:
         room_id = self._address_to_roomid.get(address)
         if not room_id:
             return
-        if room_id not in self._client.get_rooms():
+        if room_id not in self._client.rooms:
             self._address_to_roomid.pop(address)
             return
 
