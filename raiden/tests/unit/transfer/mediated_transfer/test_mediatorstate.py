@@ -333,62 +333,6 @@ def test_is_channel_close_needed_closed():
     assert mediator.is_channel_close_needed(channel_state, paid_pair, unsafe_block) is True
 
 
-def test_is_valid_refund():
-    amount = 30
-    expiration = 50
-
-    transfer = factories.make_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    refund_lower_expiration = factories.make_signed_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration - 1,
-        UNIT_SECRET,
-    )
-
-    assert mediator.is_valid_refund(transfer, refund_lower_expiration) is True
-
-    refund_same_expiration = factories.make_signed_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration,
-        UNIT_SECRET,
-    )
-    assert mediator.is_valid_refund(transfer, refund_same_expiration) is False
-
-
-def test_refund_from_target_is_invalid():
-    amount = 30
-    expiration = 50
-    target = UNIT_TRANSFER_SENDER
-    transfer = factories.make_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        target,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    refund_from_target = factories.make_signed_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration - 1,
-        UNIT_SECRET,
-    )
-
-    # target cannot refund
-    assert not mediator.is_valid_refund(transfer, refund_from_target)
-
-
 def test_get_timeout_blocks():
     settle_timeout = 30
     block_number = 5

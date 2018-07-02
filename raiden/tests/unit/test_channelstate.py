@@ -53,6 +53,10 @@ from raiden.tests.utils.factories import (
     UNIT_REGISTRY_IDENTIFIER,
     HOP1,
     make_secret,
+    UNIT_TRANSFER_INITIATOR,
+    UNIT_TRANSFER_TARGET,
+    UNIT_SECRET,
+    UNIT_TRANSFER_SENDER,
 )
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
@@ -1351,3 +1355,59 @@ def test_channel_unlock_must_not_change_merkletree():
     new_channel = iteration.new_state
     assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash
     assert not channel.is_lock_pending(new_channel.partner_state, lock.secrethash)
+
+
+def test_refund_transfer_matches_received():
+    amount = 30
+    expiration = 50
+
+    transfer = factories.make_transfer(
+        amount,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    refund_lower_expiration = factories.make_signed_transfer(
+        amount,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
+        expiration - 1,
+        UNIT_SECRET,
+    )
+
+    assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is True
+
+    refund_same_expiration = factories.make_signed_transfer(
+        amount,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
+        expiration,
+        UNIT_SECRET,
+    )
+    assert channel.refund_transfer_matches_received(refund_same_expiration, transfer) is False
+
+
+def test_refund_transfer_does_not_match_received():
+    amount = 30
+    expiration = 50
+    target = UNIT_TRANSFER_SENDER
+    transfer = factories.make_transfer(
+        amount,
+        UNIT_TRANSFER_INITIATOR,
+        target,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    refund_from_target = factories.make_signed_transfer(
+        amount,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
+        expiration - 1,
+        UNIT_SECRET,
+    )
+
+    # target cannot refund
+    assert not channel.refund_transfer_matches_received(refund_from_target, transfer)

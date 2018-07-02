@@ -515,26 +515,10 @@ def valid_lockedtransfer_check(
     return result
 
 
-def is_valid_refund(
-        refund: ReceiveTransferRefund,
-        channel_state: NettingChannelState,
-        sender_state: NettingChannelEndState,
-        receiver_state: NettingChannelEndState,
+def refund_transfer_matches_received(
+        refund_transfer: LockedTransferSignedState,
         received_transfer: LockedTransferUnsignedState,
-) -> MerkletreeOrError:
-    is_valid_locked_transfer = valid_lockedtransfer_check(
-        refund,
-        channel_state,
-        sender_state,
-        receiver_state,
-        'RefundTransfer',
-        refund.transfer.balance_proof,
-        refund.transfer.lock,
-    )
-    if not is_valid_locked_transfer:
-        return False
-
-    refund_transfer = refund.transfer
+):
     refund_transfer_sender = refund_transfer.balance_proof.sender
     # Ignore a refund from the target
     if refund_transfer_sender == received_transfer.target:
@@ -558,6 +542,32 @@ def is_valid_refund(
         # protocol.
         received_transfer.lock.expiration > refund_transfer.lock.expiration
     )
+
+
+def is_valid_refund(
+        refund: ReceiveTransferRefund,
+        channel_state: NettingChannelState,
+        sender_state: NettingChannelEndState,
+        receiver_state: NettingChannelEndState,
+        received_transfer: LockedTransferUnsignedState,
+) -> MerkletreeOrError:
+    is_valid_locked_transfer, msg, merkletree = valid_lockedtransfer_check(
+        refund,
+        channel_state,
+        sender_state,
+        receiver_state,
+        'RefundTransfer',
+        refund.transfer.balance_proof,
+        refund.transfer.lock,
+    )
+
+    if not is_valid_locked_transfer:
+        return False, msg, None
+
+    if not refund_transfer_matches_received(refund.transfer, received_transfer):
+        return False, 'Refund transfer did not match the received transfer', None
+
+    return True, '', merkletree
 
 
 def is_valid_unlock(
@@ -1512,10 +1522,11 @@ def handle_refundtransfer(
         refund: ReceiveTransferRefund,
 ):
     is_valid, msg, merkletree = is_valid_refund(
-        refund,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
+        refund=refund,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+        receiver_state=channel_state.our_state,
+        received_transfer=received_transfer,
     )
     if is_valid:
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
