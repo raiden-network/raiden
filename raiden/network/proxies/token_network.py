@@ -173,7 +173,7 @@ class TokenNetwork:
             'new_netting_channel called',
             peer1=pex(self.node_address),
             peer2=pex(partner),
-            channel_identifier=channel_identifier,
+            channel_identifier=encode_hex(channel_identifier),
         )
 
         return channel_identifier

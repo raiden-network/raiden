@@ -64,13 +64,13 @@ def check_channel(
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
 
-    assert app1_details['our_balance'] == app2_details['partner_balance']
-    assert app1_details['partner_balance'] == app2_details['our_balance']
+    assert app1_details['our_deposit'] == app2_details['partner_deposit']
+    assert app1_details['partner_deposit'] == app2_details['our_deposit']
 
-    assert app1_details['our_balance'] == deposit_amount
-    assert app1_details['partner_balance'] == deposit_amount
-    assert app2_details['our_balance'] == deposit_amount
-    assert app2_details['partner_balance'] == deposit_amount
+    assert app1_details['our_deposit'] == deposit_amount
+    assert app1_details['partner_deposit'] == deposit_amount
+    assert app2_details['our_deposit'] == deposit_amount
+    assert app2_details['partner_deposit'] == deposit_amount
 
 
 def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
@@ -109,6 +109,7 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     check_channel(
         app0,
         app1,
+        token_network_proxy.address,
         netcontract_address,
         settle_timeout,
         deposit,

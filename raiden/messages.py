@@ -67,8 +67,8 @@ def assert_envelope_values(nonce, channel, transferred_amount, locked_amount, lo
     if nonce > UINT64_MAX:
         raise ValueError('nonce is too large')
 
-    if len(channel) != 20:
-        raise ValueError('channel is an invalid address')
+    if len(channel) != 32:
+        raise ValueError('channel id is invalid')
 
     if transferred_amount < 0:
         raise ValueError('transferred_amount cannot be negative')
