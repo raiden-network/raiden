@@ -32,9 +32,22 @@ BlockchainServices = namedtuple(
 )
 
 
-def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_amount):
-    netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
-    netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
+def check_channel(
+        app1,
+        app2,
+        token_network_identifier,
+        netting_channel_address,
+        settle_timeout,
+        deposit_amount,
+):
+    netcontract1 = app1.raiden.chain.payment_channel(
+        token_network_identifier,
+        netting_channel_address,
+    )
+    netcontract2 = app2.raiden.chain.payment_channel(
+        token_network_identifier,
+        netting_channel_address,
+    )
 
     # Check a valid settle timeout was used, the netting contract has an
     # enforced minimum and maximum
@@ -60,12 +73,12 @@ def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_a
     assert app2_details['partner_balance'] == deposit_amount
 
 
-def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
+def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    manager = app0.raiden.default_registry.manager_by_token(token_address)
-    netcontract_address = manager.new_netting_channel(
+    token_network_proxy = app0.raiden.default_registry.token_network_by_token(token_address)
+    netcontract_address = token_network_proxy.new_netting_channel(
         app1.raiden.address,
         settle_timeout,
     )
@@ -74,15 +87,19 @@ def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     for app in [app0, app1]:
         # Use each app's own chain because of the private key / local signing
         token = app.raiden.chain.token(token_address)
-        netting_channel = app.raiden.chain.netting_channel(netcontract_address)
+        payment_channel_proxy = app.raiden.chain.payment_channel(
+            token_network_proxy.address,
+            netcontract_address,
+        )
 
         # This check can succeed and the deposit still fail, if channels are
         # openned in parallel
         previous_balance = token.balance_of(app.raiden.address)
         assert previous_balance >= deposit
 
-        token.approve(netcontract_address, deposit)
-        netting_channel.set_total_deposit(deposit)
+        # the payment channel proxy will call approve
+        # token.approve(token_network_proxy.address, deposit)
+        payment_channel_proxy.set_total_deposit(deposit)
 
         # Balance must decrease by at least but not exactly `deposit` amount,
         # because channels can be openned in parallel

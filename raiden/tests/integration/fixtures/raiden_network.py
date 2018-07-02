@@ -8,7 +8,7 @@ from raiden.tests.utils.network import (
     create_apps,
     create_network_channels,
     create_sequential_channels,
-    netting_channel_open_and_deposit,
+    payment_channel_open_and_deposit,
     wait_for_channels,
     wait_for_alarm_start,
 )
@@ -78,7 +78,7 @@ def raiden_chain(
     for token_address in token_addresses:
         for app_pair in app_channels:
             greenlets.append(gevent.spawn(
-                netting_channel_open_and_deposit,
+                payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
                 token_address,
@@ -152,7 +152,7 @@ def raiden_network(
     for token_address in token_addresses:
         for app_pair in app_channels:
             greenlets.append(gevent.spawn(
-                netting_channel_open_and_deposit,
+                payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
                 token_address,

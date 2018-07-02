@@ -63,8 +63,8 @@ def test_payment_channel_proxy_basics(
         to_block='latest',
     )
 
-    assert channel_proxy_1.channel_identifier() == channel_identifier
-    assert channel_proxy_2.channel_identifier() == channel_identifier
+    assert channel_proxy_1.channel_identifier == channel_identifier
+    assert channel_proxy_2.channel_identifier == channel_identifier
 
     assert channel_proxy_1.opened() is True
     assert channel_proxy_2.opened() is True

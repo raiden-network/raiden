@@ -66,51 +66,51 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
 
 def handle_channel_new(raiden, event, current_block_number):
     data = event.event_data
-    registry_address = data['registry_address']
-    token_network_address = event.originating_contract
+    token_network_identifier = event.originating_contract
     participant1 = data['participant1']
     participant2 = data['participant2']
     is_participant = raiden.address in (participant1, participant2)
 
     if is_participant:
-        channel_proxy = raiden.chain.netting_channel(data['netting_channel'])
+        channel_proxy = raiden.chain.payment_channel(
+            token_network_identifier,
+            data['channel_identifier'],
+        )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
             token_address,
-            token_network_address,
+            token_network_identifier,
             raiden.config['reveal_timeout'],
             channel_proxy,
         )
 
         new_channel = ContractReceiveChannelNew(
-            token_network_address,
+            token_network_identifier,
             channel_state,
         )
         raiden.handle_state_change(new_channel, current_block_number)
 
         partner_address = channel_state.partner_state.address
-        connection_manager = raiden.connection_manager_for_token(
-            registry_address, token_address,
-        )
+        connection_manager = raiden.connection_manager_for_token_network(token_network_identifier)
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
-        gevent.spawn(connection_manager.retry_connect, registry_address)
+        gevent.spawn(connection_manager.retry_connect)
 
         # Start the listener *after* the channel is registered, to avoid None
         # exceptions (and not applying the event state change).
         #
         # TODO: install the filter on the same block or previous block in which
         # the channel state was queried
-        raiden.blockchain_events.add_netting_channel_listener(
+        raiden.blockchain_events.add_payment_channel_listener(
             channel_proxy,
             from_block=data['blockNumber'],
         )
 
     else:
         new_route = ContractReceiveRouteNew(
-            token_network_address,
+            token_network_identifier,
             participant1,
             participant2,
         )
@@ -119,17 +119,15 @@ def handle_channel_new(raiden, event, current_block_number):
 
 def handle_channel_new_balance(raiden, event, current_block_number):
     data = event.event_data
-    registry_address = data['registry_address']
-    channel_identifier = event.originating_contract
-    token_address = data['token_address']
+    channel_identifier = data['channel_identifier']
+    token_network_identifier = event.originating_contract
     participant_address = data['participant']
-    new_balance = data['balance']
+    total_deposit = data['args']['total_deposit']
     deposit_block_number = data['block_number']
 
-    previous_channel_state = views.get_channelstate_by_tokenaddress(
+    previous_channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
-        registry_address,
-        token_address,
+        token_network_identifier,
         channel_identifier,
     )
 
@@ -139,15 +137,10 @@ def handle_channel_new_balance(raiden, event, current_block_number):
     if is_participant:
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(raiden),
-            registry_address,
-            token_address,
-        )
 
         deposit_transaction = TransactionChannelNewBalance(
             participant_address,
-            new_balance,
+            total_deposit,
             deposit_block_number,
         )
         newbalance_statechange = ContractReceiveChannelNewBalance(
@@ -158,15 +151,14 @@ def handle_channel_new_balance(raiden, event, current_block_number):
         raiden.handle_state_change(newbalance_statechange, current_block_number)
 
         if balance_was_zero:
-            connection_manager = raiden.connection_manager_for_token(
-                registry_address, token_address,
+            connection_manager = raiden.connection_manager_for_token_network(
+                token_network_identifier,
             )
 
             gevent.spawn(
                 connection_manager.join_channel,
-                registry_address,
                 participant_address,
-                new_balance,
+                total_deposit,
             )
 
 
@@ -276,7 +268,7 @@ def on_blockchain_event(raiden, event, current_block_number):
         handle_channel_new(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_DEPOSIT:
-        data['deposit'] = data['args']['deposit']
+        data['deposit'] = data['args']['total_deposit']
         handle_channel_new_balance(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_WITHDRAW:

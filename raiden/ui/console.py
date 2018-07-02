@@ -361,7 +361,7 @@ class ConsoleTools:
         registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = registry.manager_by_token(token_address)
+        channel_manager = registry.token_network_by_token(token_address)
 
         # Register the channel manager with the raiden registry
         waiting.wait_for_payment_network(

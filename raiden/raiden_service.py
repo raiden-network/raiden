@@ -167,7 +167,7 @@ class RaidenService:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
             ))
 
-        self.tokens_to_connectionmanagers = dict()
+        self.tokennetworkids_to_connectionmanagers = dict()
         self.identifier_to_results = defaultdict(list)
 
         self.chain: BlockChainService = chain
@@ -424,23 +424,23 @@ class RaidenService:
             for event in self.blockchain_events.poll_blockchain_events():
                 on_blockchain_event(self, event, event.event_data['block_number'])
 
-    def connection_manager_for_token(self, registry_address, token_address):
-        if not is_binary_address(token_address):
+    def connection_manager_for_token_network(self, token_network_identifier):
+        if not is_binary_address(token_network_identifier):
             raise InvalidAddress('token address is not valid.')
 
-        known_token_networks = views.get_token_network_addresses_for(
-            self.wal.state_manager.current_state,
-            registry_address,
+        known_token_networks = views.get_token_network_identifiers(
+            views.state_from_raiden(self),
+            self.default_registry.address,
         )
 
-        if token_address not in known_token_networks:
+        if token_network_identifier not in known_token_networks:
             raise InvalidAddress('token is not registered.')
 
-        manager = self.tokens_to_connectionmanagers.get(token_address)
+        manager = self.tokennetworkids_to_connectionmanagers.get(token_network_identifier)
 
         if manager is None:
-            manager = ConnectionManager(self, registry_address, token_address)
-            self.tokens_to_connectionmanagers[token_address] = manager
+            manager = ConnectionManager(self, token_network_identifier)
+            self.tokennetworkids_to_connectionmanagers[token_network_identifier] = manager
 
         return manager
 
@@ -453,10 +453,7 @@ class RaidenService:
 
         self.leave_all_token_networks()
 
-        connection_managers = [
-            self.tokens_to_connectionmanagers[token_address]
-            for token_address in self.tokens_to_connectionmanagers
-        ]
+        connection_managers = [cm for cm in self.tokennetworkids_to_connectionmanagers.values()]
 
         if connection_managers:
             waiting.wait_for_settle_all_channels(

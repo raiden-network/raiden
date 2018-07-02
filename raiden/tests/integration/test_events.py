@@ -148,7 +148,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
         token_address,
     )
 
-    manager0 = app0.raiden.default_registry.manager_by_token(token_address)
+    manager0 = app0.raiden.default_registry.token_network_by_token(token_address)
 
     channelcount0 = views.total_token_network_channels(
         views.state_from_app(app0),
@@ -368,7 +368,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     channel.register_secret(channel_state2_1, secret, secrethash)
 
     # Close the channel
-    netting_channel_proxy = app2.raiden.chain.netting_channel(channel_state2_1.identifier)
+    netting_channel_proxy = app2.raiden.chain.payment_channel(channel_state2_1.identifier)
     netting_channel_proxy.channel_close(
         registry_address,
         channel_state2_1.partner_state.balance_proof,

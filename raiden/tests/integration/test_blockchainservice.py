@@ -51,16 +51,16 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
             token_amount // len(raiden_network),
         )
 
-    manager0 = registry.manager_by_token(token_address)
+    token_network0 = registry.token_network_by_token(token_address)
 
     # sanity
-    assert manager0.channels_addresses() == []
-    assert manager0.channels_by_participant(peer0_address) == []
-    assert manager0.channels_by_participant(peer1_address) == []
-    assert manager0.channels_by_participant(peer2_address) == []
+    assert token_network0.channels_addresses() == []
+    assert token_network0.channels_by_participant(peer0_address) == []
+    assert token_network0.channels_by_participant(peer1_address) == []
+    assert token_network0.channels_by_participant(peer2_address) == []
 
     # create one channel
-    netting_address_01 = manager0.new_netting_channel(
+    netting_address_01 = token_network0.new_netting_channel(
         peer1_address,
         settle_timeout,
     )
@@ -75,34 +75,40 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
         )
 
     # check contract state
-    netting_channel_01 = blockchain_service0.netting_channel(netting_address_01)
+    netting_channel_01 = blockchain_service0.payment_channel(
+        token_network0.address,
+        netting_address_01,
+    )
     assert netting_channel_01.can_transfer() is False
 
     # check channels
-    channel_list = manager0.channels_addresses()
+    channel_list = token_network0.channels_addresses()
     assert sorted(channel_list[0]) == sorted([peer0_address, peer1_address])
 
-    assert manager0.channels_by_participant(peer0_address) == [netting_address_01]
-    assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
-    assert manager0.channels_by_participant(peer2_address) == []
+    assert token_network0.channels_by_participant(peer0_address) == [netting_address_01]
+    assert token_network0.channels_by_participant(peer1_address) == [netting_address_01]
+    assert token_network0.channels_by_participant(peer2_address) == []
     # create a duplicated channel with same participants while previous channel
     #  is still open should throw an exception
     with pytest.raises(Exception):
-        manager0.new_netting_channel(
+        token_network0.new_netting_channel(
             peer1_address,
             settle_timeout,
         )
     # create other channel
-    netting_address_02 = manager0.new_netting_channel(
+    netting_address_02 = token_network0.new_netting_channel(
         peer2_address,
         settle_timeout,
     )
 
-    netting_channel_02 = blockchain_service0.netting_channel(netting_address_02)
+    netting_channel_02 = blockchain_service0.payment_channel(
+        token_network0.address,
+        netting_address_02,
+    )
 
     assert netting_channel_02.can_transfer() is False
 
-    channel_list = manager0.channels_addresses()
+    channel_list = token_network0.channels_addresses()
     expected_channels = [
         sorted([peer0_address, peer1_address]),
         sorted([peer0_address, peer2_address]),
@@ -111,11 +117,11 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     for channel in channel_list:
         assert sorted(channel) in expected_channels
 
-    result0 = sorted(manager0.channels_by_participant(peer0_address))
+    result0 = sorted(token_network0.channels_by_participant(peer0_address))
     result1 = sorted([netting_address_01, netting_address_02])
     assert result0 == result1
-    assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
-    assert manager0.channels_by_participant(peer2_address) == [netting_address_02]
+    assert token_network0.channels_by_participant(peer1_address) == [netting_address_01]
+    assert token_network0.channels_by_participant(peer2_address) == [netting_address_02]
 
     # deposit without approve should fail
     netting_channel_01.set_total_deposit(100)
@@ -143,7 +149,10 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail()['partner_balance'] == 0
 
     app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
-    app2.raiden.chain.netting_channel(netting_address_02).set_total_deposit(130)
+    app2.raiden.chain.payment_channel(
+        token_network0.address,
+        netting_address_02,
+    ).set_total_deposit(130)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
@@ -168,15 +177,18 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
         netting_channel_01.opened()
 
     # open channel with same peer again
-    netting_address_01_reopened = manager0.new_netting_channel(
+    netting_address_01_reopened = token_network0.new_netting_channel(
         peer1_address,
         settle_timeout,
     )
-    netting_channel_01_reopened = blockchain_service0.netting_channel(netting_address_01_reopened)
+    netting_channel_01_reopened = blockchain_service0.payment_channel(
+        token_network0.address,
+        netting_address_01_reopened,
+    )
 
     assert netting_channel_01_reopened.opened() != 0
-    assert netting_address_01_reopened in manager0.channels_by_participant(peer0_address)
-    assert netting_address_01 not in manager0.channels_by_participant(peer0_address)
+    assert netting_address_01_reopened in token_network0.channels_by_participant(peer0_address)
+    assert netting_address_01 not in token_network0.channels_by_participant(peer0_address)
 
     app0.raiden.chain.token(token_address).approve(netting_address_01_reopened, 100)
     netting_channel_01_reopened.set_total_deposit(100)
@@ -195,7 +207,7 @@ def test_channelmanager_graph_building(
     total_pairs = 0
     pairs = itertools.combinations(raiden_network, 2)
     for app0, app1 in pairs:
-        manager = app0.raiden.default_registry.manager_by_token(token_address)
+        manager = app0.raiden.default_registry.token_network_by_token(token_address)
         manager.new_netting_channel(
             app1.raiden.address,
             settle_timeout,
@@ -334,7 +346,7 @@ def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     )
     assert not current_chanels
 
-    graph0 = app0.raiden.default_registry.manager_by_token(token_address)
+    graph0 = app0.raiden.default_registry.token_network_by_token(token_address)
 
     with pytest.raises(SamePeerAddress) as excinfo:
         graph0.new_netting_channel(

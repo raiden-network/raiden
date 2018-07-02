@@ -157,7 +157,7 @@ def test_unlock(raiden_network, token_addresses, deposit):
     assert lock.expiration > alice_app.raiden.chain.block_number()
     assert lock.secrethash == sha3(secret)
 
-    nettingchannel_proxy = bob_app.raiden.chain.netting_channel(
+    nettingchannel_proxy = bob_app.raiden.chain.payment_channel(
         bob_alice_channel.identifier,
     )
     nettingchannel_proxy.unlock(unlock_proof)
@@ -254,7 +254,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
     # The direct transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
-    netting_channel = app1.raiden.chain.netting_channel(channelstate_0_1.identifier)
+    netting_channel = app1.raiden.chain.payment_channel(channelstate_0_1.identifier)
     with pytest.raises(Exception):
         netting_channel.unlock(UnlockProofState(unlock_proof, lock.encoded, secret))
 

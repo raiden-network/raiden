@@ -196,7 +196,7 @@ class RaidenAPI:
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
         registry = self.raiden.chain.registry(registry_address)
-        channel_manager = registry.manager_by_token(token_address)
+        channel_manager = registry.token_network_by_token(token_address)
         netcontract_address = channel_manager.new_netting_channel(
             partner_address,
             settle_timeout,
@@ -288,7 +288,11 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         netcontract_address = channel_state.identifier
-        channel_proxy = self.raiden.chain.netting_channel(netcontract_address)
+        token_network_proxy = self.raiden.chain.token_network_by_token(token_address)
+        channel_proxy = self.raiden.chain.payment_channel(
+            token_network_proxy.address,
+            netcontract_address,
+        )
 
         # If concurrent operations are happening on the channel, fail the request
         if not channel_proxy.channel_operations_lock.acquire(blocking=False):
@@ -384,7 +388,10 @@ class RaidenAPI:
             # Put all the locks in this outer context so that the netting channel functions
             # don't release the locks when their context goes out of scope
             for channel_state in channels_to_close:
-                channel = self.raiden.chain.netting_channel(channel_state.identifier)
+                channel = self.raiden.chain.payment_channel(
+                    token_network_identifier,
+                    channel_state.identifier,
+                )
 
                 # Check if we can acquire the lock. If we can't raise an exception, which
                 # will cause the ExitStack to exit, releasing all locks acquired so far

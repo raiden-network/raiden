@@ -134,6 +134,17 @@ def total_deposit_by_token_network(
     return total_deposit
 
 
+def get_token_network_registry_by_token_network_identifier(
+        node_state: NodeState,
+        token_network_identifier: typing.Address,
+) -> typing.Address:
+    for token_network in node_state.identifiers_to_paymentnetworks.values():
+        if token_network_identifier in token_network.tokenidentifiers_to_tokennetworks:
+            return token_network
+
+    return None
+
+
 def get_token_network_identifier_by_token_address(
         node_state: NodeState,
         payment_network_id: typing.Address,
@@ -148,6 +159,22 @@ def get_token_network_identifier_by_token_address(
     token_network_id = getattr(token_network, 'address', None)
 
     return token_network_id
+
+
+def get_token_network_identifiers(
+        node_state: NodeState,
+        payment_network_id: typing.PaymentNetworkID,
+) -> typing.List[typing.Address]:
+    """ Return the list of tokens registered with the given payment network. """
+    payment_network = node_state.identifiers_to_paymentnetworks.get(payment_network_id)
+
+    if payment_network is not None:
+        return [
+            token_network.address
+            for token_network in payment_network.tokenidentifiers_to_tokennetworks.values()
+        ]
+
+    return list()
 
 
 def get_token_network_addresses_for(

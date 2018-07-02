@@ -19,7 +19,6 @@ from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import PaymentChannel
-from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex, typing
 from raiden.utils.filters import (
     decode_event,
@@ -158,21 +157,6 @@ def get_all_secret_registry_events(
     )
 
 
-def get_channel_proxies(chain, node_address, channel_manager):
-    participating_channels = channel_manager.channels_by_participant(node_address)
-    netting_channels = []
-    for channel_identifier in participating_channels:
-        # FIXME: implement proper cleanup of self-killed channel after close+settle
-        try:
-            netting_channels.append(chain.netting_channel(channel_identifier))
-        except AddressWithoutCode:
-            log.debug(
-                'Settled channel found when starting raiden. Safely ignored',
-                channel_identifier=pex(channel_identifier),
-            )
-    return netting_channels
-
-
 def decode_event_to_internal(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data
@@ -297,27 +281,13 @@ class BlockchainEvents:
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         )
 
-    def add_netting_channel_listener(
-            self,
-            netting_channel_proxy,
-            from_block: typing.BlockSpecification = 'latest',
-    ):
-        raise RuntimeError()
-        # netting_channel_events = netting_channel_proxy.all_events_filter(from_block=from_block)
-        # channel_address = netting_channel_proxy.address
-        # self.add_event_listener(
-        #     'NettingChannel Event {}'.format(pex(channel_address)),
-        #     netting_channel_events,
-        #     CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-        # )
-
     def add_payment_channel_listener(
         self,
         payment_channel_proxy: PaymentChannel,
         from_block: typing.BlockSpecification = 'latest',
     ):
         payment_channel_filter = payment_channel_proxy.all_events_filter(from_block=from_block)
-        channel_identifier = payment_channel_proxy.channel_identifier()
+        channel_identifier = payment_channel_proxy.channel_identifier
 
         self.add_event_listener(
             f'PaymentChannel event {channel_identifier}',

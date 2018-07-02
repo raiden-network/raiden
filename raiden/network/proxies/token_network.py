@@ -393,7 +393,7 @@ class TokenNetwork:
 
         return self.detail_participant(participant1, participant2)['deposit'] > 0
 
-    def deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
+    def set_total_deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:

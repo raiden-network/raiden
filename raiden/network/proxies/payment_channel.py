@@ -21,7 +21,7 @@ class PaymentChannel:
         channel_identifier: typing.ChannelID,
     ):
         self.token_network = token_network
-        self.channel_id = channel_identifier
+        self.channel_identifier = channel_identifier
 
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
@@ -47,10 +47,6 @@ class PaymentChannel:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
-    def channel_identifier(self) -> typing.ChannelID:
-        """ Returns the channel identifier. """
-        return self.channel_id
-
     def detail(self) -> Dict:
         """ Returns the channel details. """
         return self.token_network.detail(self.participant1, self.participant2)
@@ -62,7 +58,7 @@ class PaymentChannel:
         # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=self.token_network.address,
-            channel_identifier=self.channel_identifier(),
+            channel_identifier=self.channel_identifier,
             event_name=EVENT_CHANNEL_OPENED,
         )
 
@@ -93,8 +89,8 @@ class PaymentChannel:
         """ Returns True if the channel is opened and the node has deposit in it. """
         return self.token_network.can_transfer(self.participant1, self.participant2)
 
-    def deposit(self, total_deposit: typing.TokenAmount):
-        self.token_network.deposit(total_deposit, self.participant2)
+    def set_total_deposit(self, total_deposit: typing.TokenAmount):
+        self.token_network.set_total_deposit(total_deposit, self.participant2)
 
     def close(
             self,
@@ -163,7 +159,7 @@ class PaymentChannel:
     ) -> Filter:
         args = get_filter_args_for_all_events_from_channel(
             token_network_address=self.token_network.address,
-            channel_identifier=self.channel_identifier(),
+            channel_identifier=self.channel_identifier,
             from_block=from_block,
             to_block=to_block,
         )
@@ -171,6 +167,6 @@ class PaymentChannel:
         return self.token_network.client.new_filter(
             contract_address=args['address'],
             topics=args['topics'],
-            from_block=args['fromBlock'],
-            to_block=args['toBlock'],
+            from_block=from_block,
+            to_block=to_block,
         )

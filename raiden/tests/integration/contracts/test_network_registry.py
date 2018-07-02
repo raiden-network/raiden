@@ -37,12 +37,12 @@ def test_network_registry(token_network_registry_proxy, deploy_token):
     )
 
     with pytest.raises(AddressWithoutCode):
-        token_network_registry_proxy.tokennetwork_by_token(bad_token_address)
+        token_network_registry_proxy.token_network_by_token(bad_token_address)
     with pytest.raises(InvalidAddress):
-        token_network_registry_proxy.tokennetwork_by_token(None)
+        token_network_registry_proxy.token_network_by_token(None)
     with pytest.raises(NoTokenManager):
-        token_network_registry_proxy.tokennetwork_by_token(token_network_address)
-    token_manager = token_network_registry_proxy.tokennetwork_by_token(
+        token_network_registry_proxy.token_network_by_token(token_network_address)
+    token_manager = token_network_registry_proxy.token_network_by_token(
         test_token_address,
     )
     assert token_manager is not None

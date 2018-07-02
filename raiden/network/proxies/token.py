@@ -40,7 +40,7 @@ class Token:
         # `NettingChannel` and keep this straight forward)
         transaction_hash = self.proxy.transact(
             'approve',
-            contract_address,
+            to_checksum_address(contract_address),
             allowance,
         )
 
