@@ -183,7 +183,13 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_refund_transfer_after_2nd_hop(raiden_chain, token_addresses, deposit, network_wait):
+def test_refund_transfer_after_2nd_hop(
+        raiden_chain,
+        token_addresses,
+        deposit,
+        network_wait,
+        skip_if_not_udp,
+):
     """Test the refund transfer sent due to failure after 2nd hop"""
     # Topology:
     #
