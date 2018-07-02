@@ -1060,9 +1060,9 @@ def handle_refundtransfer(
         channel_address = payer_transfer.balance_proof.channel_address
         payer_channel = channelidentifiers_to_channels[channel_address]
         is_valid, events, _ = channel.handle_refundtransfer(
-            payee_transfer,
-            payer_channel,
-            mediator_state_change,
+            received_transfer=payee_transfer,
+            channel_state=payer_channel,
+            refund=mediator_state_change,
         )
         if not is_valid:
             return TransitionResult(None, events)
