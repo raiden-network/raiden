@@ -20,7 +20,7 @@ from raiden.tests.utils.events import (
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [18])
 @pytest.mark.parametrize('settle_timeout', [64])
-def test_event_transfer_received_success(token_addresses, raiden_chain):
+def test_event_transfer_received_success(token_addresses, raiden_chain, skip_if_not_udp):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
 
