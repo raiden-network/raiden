@@ -29,7 +29,6 @@ from raiden.transfer.merkle_tree import (
     merkle_leaves_from_packed_data,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,
     MerkleTreeState,
@@ -115,7 +114,7 @@ def create_channel_from_models(our_model, partner_model):
         partner_model.balance,
     )
 
-    identifier = factories.make_address()
+    identifier = factories.make_channel_identifier()
     token_address = factories.make_address()
     token_network_identifier = factories.make_address()
     reveal_timeout = 10
@@ -127,7 +126,6 @@ def create_channel_from_models(our_model, partner_model):
     )
     closed_transaction = None
     settled_transaction = None
-    channel_state = CHANNEL_STATE_OPENED
 
     channel_state = NettingChannelState(
         identifier,
