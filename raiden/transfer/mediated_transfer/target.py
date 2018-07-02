@@ -240,10 +240,7 @@ def handle_block(target_state, channel_state, block_number):
         events = [failed]
 
     elif target_state.state != 'waiting_close':  # only emit the close event once
-        # TODO: to be removed
-        events = events_for_close(target_state, channel_state, block_number)
-
-        events.extend(events_for_onchain_secretreveal(target_state, channel_state, block_number))
+        events = events_for_onchain_secretreveal(target_state, channel_state, block_number)
     else:
         events = list()
 
