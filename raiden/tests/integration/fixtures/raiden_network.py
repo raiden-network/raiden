@@ -87,7 +87,7 @@ def raiden_chain(
     gevent.wait(greenlets)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
-    with gevent.Timeout(seconds=60, exception=exception):
+    with gevent.Timeout(seconds=30, exception=exception):
         wait_for_channels(
             app_channels,
             blockchain_services.deploy_registry.address,
