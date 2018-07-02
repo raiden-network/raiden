@@ -24,8 +24,8 @@ def transport_config():
 
 @pytest.fixture
 def skip_if_not_udp():
-    """Dummy fixture. Request it to run a test with udp only."""
-    return None
+    """Skip the test if not run with UDP transport"""
+    pytest.skip('This test works only with UDP transport')
 
 
 @pytest.fixture
