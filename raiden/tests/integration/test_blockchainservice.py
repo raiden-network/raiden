@@ -4,19 +4,16 @@ import gevent
 
 import pytest
 from eth_utils import to_canonical_address, is_address, is_same_address
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.blockchain.abi import (
-    CONTRACT_CHANNEL_MANAGER,
-    CONTRACT_MANAGER,
-    CONTRACT_REGISTRY,
-)
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.network.proxies import Token, Registry, ChannelManager
+from raiden.network.proxies import Token, TokenNetworkRegistry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path
@@ -219,10 +216,10 @@ def test_blockchain(
 ):
     # pylint: disable=too-many-locals
 
-    addresses = [
-        privatekey_to_address(priv)
-        for priv in private_keys
-    ]
+    # addresses = [
+    #     privatekey_to_address(priv)
+    #     for priv in private_keys
+    # ]
 
     privatekey = private_keys[0]
     address = privatekey_to_address(privatekey)
@@ -256,7 +253,7 @@ def test_blockchain(
         tuple(),
         contract_path=registry_path,
     )
-    registry_proxy = Registry(
+    registry_proxy = TokenNetworkRegistry(
         jsonrpc_client,
         to_canonical_address(registry_proxy.contract.address),
     )
@@ -292,35 +289,34 @@ def test_blockchain(
     channel_manager_address = to_canonical_address(channel_manager_address_encoded)
 
     log = log_list[0]
-    event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY), log)
+    event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY), log)
     event_args = event['args']
 
     assert channel_manager_address == to_canonical_address(event_args['channel_manager_address'])
     assert is_same_address(token_proxy.proxy.contract.address, event_args['token_address'])
 
-    channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-        channel_manager_address,
-    )
-    channel_manager_proxy = ChannelManager(
-        jsonrpc_client,
-        to_canonical_address(channel_manager_proxy.contract.address),
-    )
-
-    channel_address = channel_manager_proxy.new_netting_channel(
-        addresses[1],
-        10,
-    )
-    assert is_address(channel_address)
-
-    log_list = jsonrpc_client.web3.eth.getLogs(
-        {
-            'fromBlock': 0,
-            'toBlock': 'latest',
-            'topics': [],
-        },
-    )
-    assert len(log_list) == 2
+    raise RuntimeError()
+    # channel_manager_proxy = jsonrpc_client.new_contract_proxy(
+    #     CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
+    #     channel_manager_address,
+    # )
+    # channel_manager_proxy = ChannelManager(
+    #     jsonrpc_client,
+    #     to_canonical_address(channel_manager_proxy.contract.address),
+    # )
+    # channel_address = channel_manager_proxy.new_netting_channel(
+    #     addresses[1],
+    #     10,
+    # )
+    # assert is_address(channel_address)
+    # log_list = jsonrpc_client.web3.eth.getLogs(
+    #     {
+    #         'fromBlock': 0,
+    #         'toBlock': 'latest',
+    #         'topics': [],
+    #     },
+    # )
+    # assert len(log_list) == 2
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])

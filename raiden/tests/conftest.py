@@ -99,10 +99,10 @@ def logging_level(request):
     )
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope='session', autouse=False)
 def validate_solidity_compiler():
     """ Check the solc prior to running any test. """
-    from raiden.blockchain.abi import validate_solc
+    from raiden.utils.solc import validate_solc
     validate_solc()
 
 

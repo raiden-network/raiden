@@ -2,21 +2,21 @@ import gevent
 import pytest
 
 from eth_utils import to_normalized_address
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import (
+    EVENT_CHANNEL_CLOSED,
+    EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_DEPOSIT,
+    EVENT_CHANNEL_SETTLED,
+    EVENT_TOKEN_NETWORK_CREATED,
+)
 
 from raiden.api.python import RaidenAPI
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
-    EVENT_TOKEN_ADDED,
-    EVENT_CHANNEL_NEW,
-    EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_NEW_BALANCE,
-    EVENT_CHANNEL_SETTLED,
-)
 from raiden.blockchain.events import (
     ALL_EVENTS,
-    get_all_channel_manager_events,
     get_all_netting_channel_events,
-    get_all_registry_events,
+    get_token_network_events,
+    get_token_network_registry_events,
 )
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
@@ -156,7 +156,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
         token_address,
     )
 
-    events = get_all_registry_events(
+    events = get_token_network_registry_events(
         app0.raiden.chain,
         registry_address,
         events=ALL_EVENTS,
@@ -165,7 +165,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     assert len(events) == 1
-    assert events[0]['event'] == EVENT_TOKEN_ADDED
+    assert events[0]['event'] == EVENT_TOKEN_NETWORK_CREATED
     assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': to_normalized_address(registry_address),
         'channel_manager_address': to_normalized_address(manager0.address),
@@ -173,7 +173,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
         'block_number': 'ignore',
     })
 
-    events = get_all_registry_events(
+    events = get_token_network_registry_events(
         app0.raiden.chain,
         app0.raiden.default_registry.address,
         events=ALL_EVENTS,
@@ -190,7 +190,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
 
     gevent.sleep(retry_timeout * 2)
 
-    events = get_all_channel_manager_events(
+    events = get_token_network_events(
         app0.raiden.chain,
         manager0.address,
         events=ALL_EVENTS,
@@ -199,7 +199,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     assert len(events) == 1
-    assert events[0]['event'] == EVENT_CHANNEL_NEW
+    assert events[0]['event'] == EVENT_CHANNEL_OPENED
     assert event_dicts_are_equal(events[0]['args'], {
         'registry_address': to_normalized_address(registry_address),
         'settle_timeout': settle_timeout,
@@ -209,7 +209,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
         'block_number': 'ignore',
     })
 
-    events = get_all_channel_manager_events(
+    events = get_token_network_events(
         app0.raiden.chain,
         manager0.address,
         events=ALL_EVENTS,
@@ -251,13 +251,13 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     events = get_all_netting_channel_events(
         app0.raiden.chain,
         channel_address,
-        events=[CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW_BALANCE)],
+        events=[CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_DEPOSIT)],
     )
 
     assert len(all_netting_channel_events) == 1
     assert len(events) == 1
 
-    assert events[0]['event'] == EVENT_CHANNEL_NEW_BALANCE
+    assert events[0]['event'] == EVENT_CHANNEL_DEPOSIT
     new_balance_event = {
         'registry_address': to_normalized_address(registry_address),
         'token_address': to_normalized_address(token_address),

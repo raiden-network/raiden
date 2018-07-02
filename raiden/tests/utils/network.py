@@ -215,7 +215,7 @@ def create_sequential_channels(raiden_apps, channels_per_node):
 def create_apps(
         blockchain_services,
         endpoint_discovery_services,
-        registry_address,
+        token_network_registry_address,
         secret_registry_address,
         raiden_udp_ports,
         reveal_timeout,
@@ -285,7 +285,7 @@ def create_apps(
         config_copy = App.DEFAULT_CONFIG.copy()
         config_copy.update(config)
 
-        registry = blockchain.registry(registry_address)
+        registry = blockchain.token_network_registry(token_network_registry_address)
         secret_registry = blockchain.secret_registry(secret_registry_address)
 
         if use_matrix:
@@ -320,11 +320,11 @@ def jsonrpc_services(
         deploy_service,
         private_keys,
         secret_registry_address,
-        registry_address,
+        token_network_registry_address,
         web3=None,
 ):
     secret_registry = deploy_service.secret_registry(secret_registry_address)
-    deploy_registry = deploy_service.registry(registry_address)
+    deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
 
     host = '0.0.0.0'
     blockchain_services = list()

@@ -1,47 +1,37 @@
-import itertools
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 from typing import List, Dict
 
 import structlog
 from eth_utils import to_canonical_address
-from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
-import raiden_contracts.contract_manager
-
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
-    CONTRACT_CHANNEL_MANAGER,
-    CONTRACT_NETTING_CHANNEL,
-    CONTRACT_REGISTRY,
+from raiden_contracts.constants import (
+    CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
-    EVENT_TOKEN_ADDED,
-    EVENT_TOKEN_ADDED2,
-    EVENT_CHANNEL_NEW,
-    EVENT_CHANNEL_NEW2,
-    EVENT_CHANNEL_NEW_BALANCE,
-    EVENT_CHANNEL_NEW_BALANCE2,
-    EVENT_CHANNEL_WITHDRAW,
-    EVENT_CHANNEL_UNLOCK,
-    EVENT_BALANCE_PROOF_UPDATED,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
     EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_SETTLED,
-    EVENT_CHANNEL_SECRET_REVEALED,
+    EVENT_CHANNEL_DEPOSIT,
+    EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_WITHDRAW,
+    EVENT_SECRET_REVEALED,
+    EVENT_TOKEN_NETWORK_CREATED,
 )
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import PaymentChannel
 from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex, typing
-from raiden.utils.filters import decode_event
-from raiden.utils.typing import Address, BlockSpecification
+from raiden.utils.filters import (
+    decode_event,
+    get_filter_args_for_all_events_from_channel,
+)
+from raiden.utils.typing import Address, BlockSpecification, ChannelID
 
 EventListener = namedtuple(
     'EventListener',
     ('event_name', 'filter', 'abi'),
 )
 Proxies = namedtuple(
-    'Proxies',
-    ('registry', 'channel_managers', 'channelmanager_nettingchannels'),
-)
-Proxies2 = namedtuple(
     'Proxies',
     ('token_registry', 'token_networks'),
 )
@@ -82,9 +72,28 @@ def get_contract_events(
 # These helpers have a better descriptive name and provide the translator for
 # the caller.
 
-def get_all_channel_manager_events(
+
+def get_token_network_registry_events(
         chain: BlockChainService,
-        channel_manager_address: Address,
+        token_network_registry_address: Address,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    """ Helper to get all events of the Registry contract at `registry_address`. """
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        token_network_registry_address,
+        events,
+        from_block,
+        to_block,
+    )
+
+
+def get_token_network_events(
+        chain: BlockChainService,
+        token_network_address: Address,
         events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
@@ -93,26 +102,8 @@ def get_all_channel_manager_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-        channel_manager_address,
-        events,
-        from_block,
-        to_block,
-    )
-
-
-def get_all_registry_events(
-        chain: BlockChainService,
-        registry_address: Address,
-        events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = 'latest',
-) -> List[Dict]:
-    """ Helper to get all events of the Registry contract at `registry_address`. """
-    return get_contract_events(
-        chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
-        registry_address,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
         events,
         from_block,
         to_block,
@@ -121,18 +112,26 @@ def get_all_registry_events(
 
 def get_all_netting_channel_events(
         chain: BlockChainService,
-        netting_channel_address: Address,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
         events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of a NettingChannelContract. """
 
+    filter_args = get_filter_args_for_all_events_from_channel(
+        token_network_address=token_network_address,
+        channel_identifier=netting_channel_identifier,
+        from_block=from_block,
+        to_block=to_block,
+    )
+
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-        netting_channel_address,
-        events,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        netting_channel_identifier,
+        filter_args['topics'],
         from_block,
         to_block,
     )
@@ -149,7 +148,7 @@ def get_all_secret_registry_events(
 
     return get_contract_events(
         chain,
-        raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
+        CONTRACT_MANAGER.get_contract_abi(
             CONTRACT_SECRET_REGISTRY,
         ),
         secret_registry_address,
@@ -174,88 +173,26 @@ def get_channel_proxies(chain, node_address, channel_manager):
     return netting_channels
 
 
-def get_relevant_proxies(chain, node_address, registry_address):
-    registry = chain.registry(registry_address)
-
-    channel_managers = list()
-    manager_channels = defaultdict(list)
-
-    for channel_manager_address in registry.manager_addresses():
-        channel_manager = registry.manager(channel_manager_address)
-        channel_managers.append(channel_manager)
-
-        netting_channel_proxies = get_channel_proxies(chain, node_address, channel_manager)
-        manager_channels[channel_manager_address] = netting_channel_proxies
-
-    proxies = Proxies(
-        registry,
-        channel_managers,
-        manager_channels,
-    )
-
-    return proxies
-
-
 def decode_event_to_internal(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data
 
     # Note: All addresses inside the event_data must be decoded.
-    if data['event'] == EVENT_TOKEN_ADDED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['channel_manager_address'] = to_canonical_address(
-            data['args']['channel_manager_address'],
-        )
-        data['token_address'] = to_canonical_address(data['args']['token_address'])
-
-    elif data['event'] == EVENT_CHANNEL_NEW:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['participant1'] = to_canonical_address(data['args']['participant1'])
-        data['participant2'] = to_canonical_address(data['args']['participant2'])
-        data['netting_channel'] = to_canonical_address(data['args']['netting_channel'])
-
-    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['token_address'] = to_canonical_address(data['args']['token_address'])
-        data['participant'] = to_canonical_address(data['args']['participant'])
-
-    elif data['event'] == EVENT_CHANNEL_CLOSED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['closing_address'] = to_canonical_address(data['args']['closing_address'])
-
-    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['receiver_address'] = to_canonical_address(data['args']['receiver_address'])
-
-    elif data['event'] == EVENT_CHANNEL_SETTLED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-
-    return event
-
-
-def decode_event_to_internal2(event):
-    """ Enforce the binary encoding of address for internal usage. """
-    data = event.event_data
-
-    # Note: All addresses inside the event_data must be decoded.
-    if data['event'] == EVENT_TOKEN_ADDED2:
+    if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
         data['token_address'] = to_canonical_address(data['args']['token_address'])
 
-    elif data['event'] == EVENT_CHANNEL_NEW2:
+    elif data['event'] == EVENT_CHANNEL_OPENED:
         data['participant1'] = to_canonical_address(data['args']['participant1'])
         data['participant2'] = to_canonical_address(data['args']['participant2'])
 
-    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE2:
+    elif data['event'] == EVENT_CHANNEL_DEPOSIT:
         data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_WITHDRAW:
         data['participant'] = to_canonical_address(data['args']['participant'])
 
-    elif data['event'] == EVENT_CHANNEL_UNLOCK:
-        data['participant'] = to_canonical_address(data['args']['participant'])
-
-    elif data['event'] == EVENT_BALANCE_PROOF_UPDATED:
+    elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
@@ -332,32 +269,18 @@ class BlockchainEvents:
         )
         self.event_listeners.append(event)
 
-    def add_registry_listener(
+    def add_token_network_registry_listener(
             self,
-            registry_proxy,
+            token_network_registry_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        tokenadded = registry_proxy.tokenadded_filter(from_block)
-        registry_address = registry_proxy.address
+        token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
+        token_network_registry_address = token_network_registry_proxy.address
 
         self.add_event_listener(
-            'Registry {}'.format(pex(registry_address)),
-            tokenadded,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
-        )
-
-    def add_channel_manager_listener(
-            self,
-            channel_manager_proxy,
-            from_block: typing.BlockSpecification = 'latest',
-    ):
-        channelnew = channel_manager_proxy.channelnew_filter(from_block=from_block)
-        manager_address = channel_manager_proxy.address
-
-        self.add_event_listener(
-            'ChannelManager {}'.format(pex(manager_address)),
-            channelnew,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
+            'TokenNetwork {}'.format(pex(token_network_registry_address)),
+            token_new_filter,
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         )
 
     def add_token_network_listener(
@@ -379,14 +302,14 @@ class BlockchainEvents:
             netting_channel_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        netting_channel_events = netting_channel_proxy.all_events_filter(from_block=from_block)
-        channel_address = netting_channel_proxy.address
-
-        self.add_event_listener(
-            'NettingChannel Event {}'.format(pex(channel_address)),
-            netting_channel_events,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-        )
+        raise RuntimeError()
+        # netting_channel_events = netting_channel_proxy.all_events_filter(from_block=from_block)
+        # channel_address = netting_channel_proxy.address
+        # self.add_event_listener(
+        #     'NettingChannel Event {}'.format(pex(channel_address)),
+        #     netting_channel_events,
+        #     CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
+        # )
 
     def add_payment_channel_listener(
         self,
@@ -399,20 +322,7 @@ class BlockchainEvents:
         self.add_event_listener(
             f'PaymentChannel event {channel_identifier}',
             payment_channel_filter,
-            raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
+            CONTRACT_MANAGER.get_contract_abi(
                 CONTRACT_TOKEN_NETWORK,
             ),
         )
-
-    def add_proxies_listeners(self, proxies, from_block: typing.BlockSpecification = 'latest'):
-        self.add_registry_listener(proxies.registry, from_block)
-
-        for manager in proxies.channel_managers:
-            self.add_channel_manager_listener(manager, from_block)
-
-        all_netting_channels = itertools.chain(
-            *proxies.channelmanager_nettingchannels.values(),
-        )
-
-        for channel in all_netting_channels:
-            self.add_netting_channel_listener(channel, from_block)

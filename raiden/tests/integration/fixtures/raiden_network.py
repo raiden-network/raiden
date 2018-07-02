@@ -20,6 +20,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def raiden_chain(
         request,
         token_addresses,
+        token_network_registry_address,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -49,7 +50,7 @@ def raiden_chain(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
-        blockchain_services.deploy_registry.address,
+        token_network_registry_address,
         blockchain_services.secret_registry.address,
         raiden_udp_ports,
         reveal_timeout,
@@ -104,6 +105,7 @@ def raiden_chain(
 def raiden_network(
         request,
         token_addresses,
+        token_network_registry_address,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -125,7 +127,7 @@ def raiden_network(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
-        blockchain_services.deploy_registry.address,
+        token_network_registry_address,
         blockchain_services.secret_registry.address,
         raiden_udp_ports,
         reveal_timeout,

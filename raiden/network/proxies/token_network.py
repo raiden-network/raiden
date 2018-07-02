@@ -8,21 +8,22 @@ import structlog
 from web3.utils.filters import Filter
 from eth_utils import (
     encode_hex,
+    event_abi_to_log_topic,
     is_binary_address,
-    to_normalized_address,
     to_canonical_address,
     to_checksum_address,
+    to_normalized_address,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-
-from raiden.blockchain.abi import (
-    CONTRACT_TOKEN_NETWORK,
-    EVENT_CHANNEL_NEW2,
+from raiden_contracts.constants import (
+    CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_NONEXISTENT,
     CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    CONTRACT_TOKEN_NETWORK,
+    EVENT_CHANNEL_OPENED,
 )
+
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
@@ -827,7 +828,9 @@ class TokenNetwork:
         Return:
             The filter instance.
         """
-        topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW2)]
+        event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED)
+        event_id = encode_hex(event_abi_to_log_topic(event_abi))
+        topics = [event_id]
         return self.events_filter(topics, from_block, to_block)
 
     def all_events_filter(

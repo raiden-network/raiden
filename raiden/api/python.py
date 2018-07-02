@@ -6,9 +6,9 @@ from eth_utils import is_binary_address
 from raiden import waiting
 from raiden.blockchain.events import (
     ALL_EVENTS,
-    get_all_registry_events,
     get_all_netting_channel_events,
-    get_all_channel_manager_events,
+    get_token_network_events,
+    get_token_network_registry_events,
 )
 from raiden.transfer import views
 from raiden.transfer.events import (
@@ -568,7 +568,7 @@ class RaidenAPI:
         return async_result
 
     def get_network_events(self, registry_address, from_block, to_block):
-        return get_all_registry_events(
+        return get_token_network_registry_events(
             self.raiden.chain,
             registry_address,
             events=ALL_EVENTS,
@@ -576,15 +576,17 @@ class RaidenAPI:
             to_block=to_block,
         )
 
-    def get_channel_events(self, channel_address, from_block, to_block='latest'):
-        if not is_binary_address(channel_address):
-            raise InvalidAddress(
-                'Expected binary address format for channel in get_channel_events',
-            )
+    def get_channel_events(
+            self,
+            token_network_address,
+            channel_identifier,
+            from_block,
+            to_block='latest',
+    ):
         returned_events = get_all_netting_channel_events(
             self.raiden.chain,
-            channel_address,
-            events=ALL_EVENTS,
+            token_network_address,
+            channel_identifier,
             from_block=from_block,
             to_block=to_block,
         )
@@ -616,7 +618,7 @@ class RaidenAPI:
         if channel_manager_address is None:
             raise UnknownTokenAddress('Token address is not known.')
 
-        returned_events = get_all_channel_manager_events(
+        returned_events = get_token_network_events(
             self.raiden.chain,
             channel_manager_address,
             events=ALL_EVENTS,

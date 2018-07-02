@@ -1,5 +1,11 @@
 import pytest
 
+from raiden_contracts.constants import (
+    EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_DEPOSIT,
+    EVENT_CHANNEL_CLOSED,
+)
+
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.geth import wait_until_block
@@ -10,11 +16,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
-)
-from raiden.blockchain.abi import (
-    EVENT_CHANNEL_NEW,
-    EVENT_CHANNEL_NEW_BALANCE,
-    EVENT_CHANNEL_CLOSED,
 )
 from eth_utils import is_same_address, to_normalized_address
 
@@ -67,7 +68,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         token_address,
         channel12.open_transaction.finished_block_number,
     )
-    assert token_events[0]['event'] == EVENT_CHANNEL_NEW
+    assert token_events[0]['event'] == EVENT_CHANNEL_OPENED
 
     registry_address = api1.raiden.default_registry.address
     # Load the new state with the deposit
@@ -102,7 +103,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     )
     assert any(
         (
-            event['event'] == EVENT_CHANNEL_NEW_BALANCE and
+            event['event'] == EVENT_CHANNEL_DEPOSIT and
             is_same_address(
                 event['args']['registry_address'],
                 to_normalized_address(registry_address),

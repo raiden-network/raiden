@@ -13,8 +13,8 @@ from eth_utils import is_binary_address
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import (
-    Registry,
     SecretRegistry,
+    TokenNetworkRegistry,
 )
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
@@ -22,10 +22,7 @@ from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
-from raiden.blockchain.events import (
-    get_relevant_proxies,
-    BlockchainEvents,
-)
+from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
@@ -151,7 +148,7 @@ class RaidenService:
     def __init__(
             self,
             chain: BlockChainService,
-            default_registry: Registry,
+            default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             private_key_bin,
             transport,
@@ -410,16 +407,20 @@ class RaidenService:
 
         message.sign(self.private_key)
 
-    def install_and_query_payment_network_filters(self, payment_network_id, from_block=0):
-        proxies = get_relevant_proxies(
-            self.chain,
-            self.address,
-            payment_network_id,
-        )
+    def install_and_query_payment_network_filters(
+            self,
+            token_network_registry_address,
+            from_block=0,
+    ):
+        token_network_registry = self.chain.token_network_registry(token_network_registry_address)
 
         # Install the filters and then poll them and dispatch the events to the WAL
         with self.event_poll_lock:
-            self.blockchain_events.add_proxies_listeners(proxies, from_block)
+            self.blockchain_events.add_token_network_registry_listener(
+                token_network_registry,
+                from_block,
+            )
+
             for event in self.blockchain_events.poll_blockchain_events():
                 on_blockchain_event(self, event, event.event_data['block_number'])
 

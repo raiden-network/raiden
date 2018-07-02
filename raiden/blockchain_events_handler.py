@@ -1,9 +1,18 @@
 import gevent
 import structlog
 
-from eth_utils import to_canonical_address
+from raiden_contracts.constants import (
+    EVENT_TOKEN_NETWORK_CREATED,
+    EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_DEPOSIT,
+    EVENT_CHANNEL_WITHDRAW,
+    EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
+    EVENT_CHANNEL_CLOSED,
+    EVENT_CHANNEL_SETTLED,
+    EVENT_SECRET_REVEALED,
+)
 
-from raiden.blockchain.events import get_channel_proxies, decode_event_to_internal
+from raiden.blockchain.events import decode_event_to_internal
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
@@ -22,63 +31,11 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveRouteNew,
 )
-from raiden.blockchain.abi import (
-    EVENT_TOKEN_ADDED,
-    EVENT_TOKEN_ADDED2,
-    EVENT_CHANNEL_NEW,
-    EVENT_CHANNEL_NEW2,
-    EVENT_CHANNEL_NEW_BALANCE,
-    EVENT_CHANNEL_NEW_BALANCE2,
-    EVENT_CHANNEL_WITHDRAW,
-    EVENT_CHANNEL_UNLOCK,
-    EVENT_BALANCE_PROOF_UPDATED,
-    EVENT_TRANSFER_UPDATED,
-    EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_SETTLED,
-    EVENT_CHANNEL_SECRET_REVEALED,
-    EVENT_CHANNEL_SECRET_REVEALED2,
-)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def handle_tokennetwork_new(raiden, event, current_block_number):
-    data = event.event_data
-    manager_address = data['channel_manager_address']
-
-    registry_address = data['registry_address']
-    registry = raiden.chain.registry(registry_address)
-
-    manager_proxy = registry.manager(manager_address)
-    netting_channel_proxies = get_channel_proxies(raiden.chain, raiden.address, manager_proxy)
-
-    # Install the filters first to avoid missing changes, as a consequence
-    # some events might be applied twice.
-    raiden.blockchain_events.add_channel_manager_listener(
-        manager_proxy,
-        from_block=data['blockNumber'],
-    )
-    for channel_proxy in netting_channel_proxies:
-        raiden.blockchain_events.add_netting_channel_listener(
-            channel_proxy,
-            from_block=data['blockNumber'],
-        )
-
-    token_address = data_decoder(data['args']['token_address'])
-
-    token_network_state = TokenNetworkState(
-        manager_address,
-        token_address,
-    )
-
-    new_payment_network = ContractReceiveNewTokenNetwork(
-        event.originating_contract,
-        token_network_state,
-    )
-    raiden.handle_state_change(new_payment_network, current_block_number)
-
-
-def handle_tokennetwork_new2(raiden, event, current_block_number):
     """ Handles a `TokenNetworkCreated` event. """
     data = event.event_data
     token_network_address = data['token_network_address']
@@ -303,61 +260,6 @@ def handle_secret_revealed(raiden, event, current_block_number):
 
 
 def on_blockchain_event(raiden, event, current_block_number):
-    log.debug(
-        'EVENT',
-        node=pex(raiden.address),
-        chain_event=event,
-        block_number=current_block_number,
-    )
-
-    data = event.event_data
-
-    if data['event'] == EVENT_TOKEN_ADDED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['channel_manager_address'] = to_canonical_address(
-            data['args']['channel_manager_address'],
-        )
-        handle_tokennetwork_new(raiden, event, current_block_number)
-
-    elif data['event'] == EVENT_CHANNEL_NEW:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['participant1'] = to_canonical_address(data['args']['participant1'])
-        data['participant2'] = to_canonical_address(data['args']['participant2'])
-        handle_channel_new(raiden, event, current_block_number)
-
-    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['token_address'] = to_canonical_address(data['args']['token_address'])
-        data['participant'] = to_canonical_address(data['args']['participant'])
-        data['balance'] = data['args']['balance']
-        handle_channel_new_balance(raiden, event, current_block_number)
-
-    elif data['event'] == EVENT_CHANNEL_CLOSED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['closing_address'] = to_canonical_address(data['args']['closing_address'])
-        handle_channel_closed(raiden, event, current_block_number)
-
-    elif data['event'] == EVENT_CHANNEL_SETTLED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        handle_channel_settled(raiden, event, current_block_number)
-
-    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED:
-        data['registry_address'] = to_canonical_address(data['args']['registry_address'])
-        data['receiver_address'] = to_canonical_address(data['args']['receiver_address'])
-        data['secret'] = data['args']['secret']
-        handle_channel_unlock(raiden, event, current_block_number)
-
-    # fix for https://github.com/raiden-network/raiden/issues/1508
-    # balance proof updates are handled in the linked code, so no action is needed here
-    # https://github.com/raiden-network/raiden/blob/da54ef4b20fb006c126fcb091b18269314c2003b/raiden/transfer/channel.py#L1337-L1344  # noqa
-    elif data['event'] == EVENT_TRANSFER_UPDATED:
-        pass
-
-    else:
-        log.error('Unknown event type', event_name=data['event'], raiden_event=event)
-
-
-def on_blockchain_event2(raiden, event, current_block_number):
     log.debug('EVENT', node=pex(raiden.address), chain_event=event)
 
     event = decode_event_to_internal(event)
@@ -366,14 +268,14 @@ def on_blockchain_event2(raiden, event, current_block_number):
     if data['args'].get('channel_identifier'):
         data['channel_identifier'] = data['args'].get('channel_identifier')
 
-    if data['event'] == EVENT_TOKEN_ADDED2:
-        handle_tokennetwork_new2(raiden, event, current_block_number)
+    if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
+        handle_tokennetwork_new(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_NEW2:
+    elif data['event'] == EVENT_CHANNEL_OPENED:
         data['settle_timeout'] = data['args']['settle_timeout']
         handle_channel_new(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_NEW_BALANCE2:
+    elif data['event'] == EVENT_CHANNEL_DEPOSIT:
         data['deposit'] = data['args']['deposit']
         handle_channel_new_balance(raiden, event, current_block_number)
 
@@ -382,13 +284,7 @@ def on_blockchain_event2(raiden, event, current_block_number):
         # handle_channel_withdraw(raiden, event)
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
-    elif data['event'] == EVENT_CHANNEL_UNLOCK:
-        data['unlocked_amount'] = data['args']['unlocked_amount']
-        data['returned_tokens'] = data['args']['returned_tokens']
-        # handle_channel_unlock(raiden, event)
-        raise NotImplementedError('handle_channel_unlock not implemented yet')
-
-    elif data['event'] == EVENT_BALANCE_PROOF_UPDATED:
+    elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
         # balance proof updates are handled in the linked code, so no action is needed here
         # https://github.com/raiden-network/raiden/blob/da54ef4b20fb006c126fcb091b18269314c2003b/raiden/transfer/channel.py#L1337-L1344  # noqa
         pass
@@ -401,7 +297,7 @@ def on_blockchain_event2(raiden, event, current_block_number):
         data['participant2_amount'] = data['args']['participant2_amount']
         handle_channel_settled(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_SECRET_REVEALED2:
+    elif data['event'] == EVENT_SECRET_REVEALED:
         data['secrethash'] = data['args']['secrethash']
         data['secret'] = data['args']['secret']
         handle_secret_revealed(raiden, event, current_block_number)
