@@ -10,6 +10,7 @@ from raiden.tests.utils.events import (
     get_channel_events_for_token,
 )
 
+from raiden.utils import wait_until
 
 # pylint: disable=too-many-locals
 
@@ -20,7 +21,12 @@ from raiden.tests.utils.events import (
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [18])
 @pytest.mark.parametrize('settle_timeout', [64])
-def test_event_transfer_received_success(token_addresses, raiden_chain, skip_if_not_udp):
+def test_event_transfer_received_success(
+    token_addresses,
+    raiden_chain,
+    network_wait,
+    skip_if_not_udp,
+):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
 
@@ -39,24 +45,23 @@ def test_event_transfer_received_success(token_addresses, raiden_chain, skip_if_
 
     # sleep is for the receiver's node to have time to process all events
     gevent.sleep(1)
-    events = receiver_app.raiden.wal.storage.get_events_by_block(0, 'latest')
-    events = [e[1] for e in events]
 
-    assert must_contain_entry(
-        events,
-        EventTransferReceivedSuccess,
-        {'amount': 1, 'initiator': app0.raiden.address},
-    )
-    assert must_contain_entry(
-        events,
-        EventTransferReceivedSuccess,
-        {'amount': 2, 'initiator': app1.raiden.address},
-    )
-    assert must_contain_entry(
-        events,
-        EventTransferReceivedSuccess,
-        {'amount': 3, 'initiator': app2.raiden.address},
-    )
+    def test_events(amount, address):
+        events = receiver_app.raiden.wal.storage.get_events_by_block(0, 'latest')
+        events = [e[1] for e in events]
+        return must_contain_entry(
+            events,
+            EventTransferReceivedSuccess,
+            {'amount': amount, 'initiator': address},
+        )
+
+    amounts = [1, 2, 3]
+    addrs = [app0.raiden.address, app1.raiden.address, app2.raiden.address]
+    for amount, address in zip(amounts, addrs):
+        assert wait_until(
+            lambda: test_events(amount, address),
+            network_wait,
+        )
 
 
 # `RaidenAPI.get_channel_events` is not supported in tester
