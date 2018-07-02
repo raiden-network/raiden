@@ -84,7 +84,7 @@ _CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
 
 def _cachegetter(
         attr: str,
-        cachefactory: Callable[[], _CacheT]=WeakKeyDictionary,  # WeakKewDict best for properties
+        cachefactory: Callable[[], _CacheT] = WeakKeyDictionary,  # WeakKewDict best for properties
 ) -> Callable[[_CIT], _CacheT]:
     """Returns a safer attrgetter which constructs the missing object with cachefactory
 
