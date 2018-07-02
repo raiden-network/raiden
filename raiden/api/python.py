@@ -195,9 +195,9 @@ class RaidenAPI:
         if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
-        registry = self.raiden.chain.registry(registry_address)
-        channel_manager = registry.token_network_by_token(token_address)
-        netcontract_address = channel_manager.new_netting_channel(
+        registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network = registry.token_network_by_token(token_address)
+        netcontract_address = token_network.new_netting_channel(
             partner_address,
             settle_timeout,
         )

@@ -8,8 +8,6 @@ from raiden.network.proxies import (
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from eth_utils import to_canonical_address
-from raiden.utils import get_contract_path
-from raiden.utils.solc import compile_files_cwd
 
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -20,7 +18,7 @@ from raiden_contracts.constants import (
 
 
 @pytest.fixture
-def deploy_contract(blockchain_services, deploy_client):
+def deploy_contract(deploy_client):
     """Deploy a contract using raiden-contracts contract manager"""
     def f(contract_name: str, args=None):
         if args is None:
@@ -104,15 +102,15 @@ def token_proxy(deploy_client, token_contract):
 
 
 @pytest.fixture
-def deploy_token(blockchain_services, deploy_client):
+def deploy_token(deploy_client):
     def f(initial_amount, decimals, token_name, token_symbol):
         args = [initial_amount, token_name, decimals, token_symbol]
-        contract_path = get_contract_path('HumanStandardToken.sol')
-        compiled = compile_files_cwd([contract_path])
+        compiled = {
+            CONTRACT_HUMAN_STANDARD_TOKEN: CONTRACT_MANAGER.get_contract('HumanStandardToken'),
+        }
         return deploy_client.deploy_solidity_contract(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             compiled,
             constructor_parameters=args,
-            contract_path=contract_path,
         )
     return f
