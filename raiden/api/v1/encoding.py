@@ -14,8 +14,12 @@ from werkzeug.routing import (
     BaseConverter,
     ValidationError,
 )
-from eth_utils import is_checksum_address, to_checksum_address
-
+from eth_utils import (
+    is_checksum_address,
+    to_checksum_address,
+    is_hex,
+    to_hex,
+)
 
 from raiden.api.objects import (
     Address,
@@ -60,6 +64,28 @@ class HexAddressConverter(BaseConverter):
 
     def to_url(self, value):
         return to_checksum_address(value)
+
+
+class HexChannelIdConverter(BaseConverter):
+    def to_python(selfself, value):
+        if value[:2] != '0x':
+            raise ValidationError()
+
+        if not is_hex(value):
+            raise ValidationError()
+
+        try:
+            value = unhexlify(value[2:])
+        except TypeError:
+            raise ValidationError()
+
+        if len(value) != 32:
+            raise ValidationError()
+
+        return value
+
+    def to_url(self, value):
+        return to_hex(value)
 
 
 class AddressField(fields.Field):
