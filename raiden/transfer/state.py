@@ -970,6 +970,39 @@ class TransactionChannelNewBalance(State):
         return not self.__eq__(other)
 
 
+class MetricsState(State):
+    """ The state of all metrics. """
+
+    __slots__ = (
+        'num_of_payments',
+        'num_no_capacity_payments',
+    )
+
+    def __init__(
+            self,
+            num_of_payments,
+            num_no_capacity_payments,
+    ):
+        self.num_of_payments = num_of_payments
+        self.num_no_capacity_payments = num_no_capacity_payments
+
+    def __repr__(self):
+        return '<MetricsState num_of_payments: {} num_no_capacity_payments: {}>'.format(
+            self.num_of_payments,
+            self.num_no_capacity_payments,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MetricsState) and
+            self.num_of_payments == other.num_of_payments and
+            self.num_no_capacity_payments == other.num_no_capacity_payments
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 EMPTY_MERKLE_ROOT = b'\x00' * 32
 EMPTY_MERKLE_TREE = MerkleTreeState([
     [],                   # the leaves are empty

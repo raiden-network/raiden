@@ -196,3 +196,9 @@ class ConnectionsInfoResource(BaseResource):
         return self.rest_api.get_connection_managers_info(
             self.rest_api.raiden_api.raiden.default_registry.address,
         )
+
+
+class MetricsResource(BaseResource):
+
+    def get(self):
+        return self.rest_api.get_metrics()
