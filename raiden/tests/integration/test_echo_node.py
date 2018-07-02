@@ -25,7 +25,6 @@ def test_event_transfer_received_success(
     token_addresses,
     raiden_chain,
     network_wait,
-    skip_if_not_udp,
 ):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
