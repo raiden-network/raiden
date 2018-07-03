@@ -995,12 +995,6 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
     """
     assert state_change.block_number == block_number
 
-    close_events = events_for_close(
-        channelidentifiers_to_channels,
-        state.transfers_pair,
-        block_number,
-    )
-
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,
         state.transfers_pair,
@@ -1020,7 +1014,7 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
 
     iteration = TransitionResult(
         state,
-        close_events + unlock_fail_events + secret_reveal_events,
+        unlock_fail_events + secret_reveal_events,
     )
 
     return iteration
