@@ -241,11 +241,7 @@ def deploy_smoketest_contracts(client):
     )
 
     for contract_name in NEW_CONTRACTS_TO_DEPLOY:
-        contract_address = deploy_contract_web3(
-            contract_name,
-            10000,
-            client,
-        )
+        contract_address = deploy_contract_web3(contract_name, client)
         addresses[contract_name] = contract_address
     return addresses
 

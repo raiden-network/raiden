@@ -1,14 +1,15 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
-from binascii import hexlify
-import sys
-import os
-import tempfile
+import errno
 import json
-import signal
+import os
 import shutil
+import signal
+import sys
+import tempfile
 import traceback
+from binascii import hexlify
 from copy import deepcopy
 from itertools import count
 from pathlib import Path
@@ -16,32 +17,36 @@ from urllib.parse import urljoin
 
 import click
 import gevent
+import pytoml
 import requests
+import structlog
 from eth_utils import (
-    to_int,
     denoms,
-    to_checksum_address,
-    to_normalized_address,
     to_canonical_address,
+    to_checksum_address,
+    to_int,
+    to_normalized_address,
 )
-from requests.exceptions import RequestException
 from mirakuru import HTTPExecutor, ProcessExitedWithError
+from pytoml import TomlError
+from requests.exceptions import RequestException
 
 from raiden import constants
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.exceptions import (
-    EthNodeCommunicationError,
-    ContractVersionMismatch,
     APIServerPortInUseError,
+    ContractVersionMismatch,
+    EthNodeCommunicationError,
     RaidenServicePortInUseError,
 )
+from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.matrixtransport import MatrixTransport
-from raiden.network.transport.udp.udp_transport import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.sockfactory import SocketFactory
 from raiden.network.throttle import TokenBucket
+from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -58,20 +63,23 @@ from raiden.utils import (
     split_endpoint,
     typing,
 )
-from raiden.network.sockfactory import SocketFactory
-
 from raiden.utils.cli import (
     ADDRESS_TYPE,
-    command,
-    group,
+    LOG_LEVEL_CONFIG_TYPE,
     MatrixServerType,
     NATChoiceType,
     NetworkChoiceType,
+    PathRelativePath,
+    command,
+    group,
     option,
     option_group,
-    LOG_LEVEL_CONFIG_TYPE,
 )
-from raiden.log_config import configure_logging
+
+
+log = structlog.get_logger(__name__)
+
+LOG_CONFIG_OPTION_NAME = 'log_config'
 
 
 def check_json_rpc(blockchain_service: BlockChainService) -> None:
@@ -252,6 +260,19 @@ def options(func):
                 writable=True,
                 resolve_path=True,
                 allow_dash=False,
+            ),
+            show_default=True,
+        ),
+        option(
+            '--config-file',
+            help='Configuration file (TOML)',
+            default=os.path.join('${datadir}', 'config.toml'),
+            type=PathRelativePath(
+                file_okay=True,
+                dir_okay=False,
+                exists=False,
+                readable=True,
+                resolve_path=True,
             ),
             show_default=True,
         ),
@@ -512,6 +533,7 @@ def app(
         transport,
         matrix_server,
         network_id,
+        config_file,
         extra_config=None,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -564,11 +586,7 @@ def app(
         gas_price,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        rpc_client,
-        gas_price,
-    )
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
     # this assumes the eth node is already online
     check_json_rpc(blockchain_service)
@@ -616,7 +634,7 @@ def app(
         )
     except ContractVersionMismatch:
         print(
-            'Deployed registry contract version mismatch. '
+            'Deployed secret registry contract version mismatch. '
             'Please update your Raiden installation.',
         )
         sys.exit(1)
@@ -698,8 +716,10 @@ def prompt_account(address_hex, keystore_path, password_file):
 
     password = None
     if password_file:
-        password = password_file.read().splitlines()[0]
-    if password:
+        password = password_file.read()
+        if password != '':
+            password = password.splitlines()[0]
+    if password is not None:
         try:
             privatekey_bin = accmgr.get_privkey(address_hex, password)
         except ValueError:
@@ -742,15 +762,81 @@ def run(ctx, **kwargs):
         ctx.obj = kwargs
         return
 
-    print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
+    click.secho('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']), fg='green')
     from raiden.ui.console import Console
     from raiden.api.python import RaidenAPI
+
+    if kwargs['config_file']:
+        paramname_to_param = {param.name: param for param in run.params}
+        path_params = {param.name for param in run.params if isinstance(param.type, click.Path)}
+
+        config_file_path = Path(kwargs['config_file'])
+        config_file_values = dict()
+        try:
+            with config_file_path.open() as config_file:
+                config_file_values = pytoml.load(config_file)
+        except OSError as ex:
+            # Silently ignore if 'file not found' and the config file path is the default
+            config_file_param = paramname_to_param['config_file']
+            config_file_default_path = Path(
+                config_file_param.type.expand_default(config_file_param.get_default(ctx), kwargs),
+            )
+            default_config_missing = (
+                ex.errno == errno.ENOENT and
+                config_file_path.resolve() == config_file_default_path.resolve()
+            )
+            if default_config_missing:
+                kwargs['config_file'] = None
+            else:
+                click.secho(f"Error opening config file: {ex}", fg='red')
+                sys.exit(2)
+        except TomlError as ex:
+            click.secho(f'Error loading config file: {ex}', fg='red')
+            sys.exit(2)
+
+        for config_name, config_value in config_file_values.items():
+            config_name_int = config_name.replace('-', '_')
+
+            if config_name_int not in paramname_to_param:
+                click.secho(
+                    f"Unknown setting '{config_name}' found in config file - ignoring.",
+                    fg='yellow',
+                )
+                continue
+
+            if config_name_int in path_params:
+                # Allow users to use `~` in paths in the config file
+                config_value = os.path.expanduser(config_value)
+
+            if config_name_int == LOG_CONFIG_OPTION_NAME:
+                # Uppercase log level names
+                config_value = {k: v.upper() for k, v in config_value.items()}
+            else:
+                # Pipe config file values through cli converter to ensure correct types
+                # We exclude `log-config` because it already is a dict when loading from toml
+                try:
+                    config_value = paramname_to_param[config_name_int].type.convert(
+                        config_value,
+                        paramname_to_param[config_name_int],
+                        ctx,
+                    )
+                except click.BadParameter as ex:
+                    click.secho(f"Invalid config file setting '{config_name}': {ex}", fg='red')
+                    sys.exit(2)
+
+            # Use the config file value if the value from the command line is the default
+            if kwargs[config_name_int] == paramname_to_param[config_name_int].get_default(ctx):
+                kwargs[config_name_int] = config_value
 
     configure_logging(
         kwargs['log_config'],
         log_json=kwargs['log_json'],
         log_file=kwargs['log_file'],
     )
+
+    # Do this here so logging is configured
+    if kwargs['config_file']:
+        log.debug('Using config file', config_file=kwargs['config_file'])
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
@@ -879,13 +965,12 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     import binascii
+    from web3 import Web3, HTTPProvider
     from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
     from raiden.blockchain.abi import get_static_or_compile
     from raiden.network.proxies.registry import Registry
-    from raiden.tests.utils.blockchain import geth_wait_and_check
-    from raiden.tests.integration.fixtures.backend_geth import web3
-    from raiden.tests.integration.fixtures.blockchain import deploy_client
+    from raiden.tests.utils.geth import geth_wait_and_check
     from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
         TEST_PARTNER_ADDRESS,
@@ -948,14 +1033,20 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     print_step('Starting Ethereum node')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
     port = ethereum_config['rpc']
-    web3_client = web3([port])
+    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
     web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
     random_marker = binascii.hexlify(b'raiden').decode()
     privatekeys = []
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
     print_step('Deploying Raiden contracts')
-    client = deploy_client(None, ethereum_config['rpc'], get_private_key(), web3_client)
+    host = '0.0.0.0'
+    client = JSONRPCClient(
+        host,
+        ethereum_config['rpc'],
+        get_private_key(),
+        web3=web3_client,
+    )
     contract_addresses = deploy_smoketest_contracts(client)
 
     token_contract = deploy_token(None, client)

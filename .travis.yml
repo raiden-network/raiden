@@ -40,7 +40,6 @@ env:
   - SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=synapse'
   - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   - COVERALLS_PARALLEL=true
-
 cache:
   pip: true
   directories:
@@ -87,12 +86,12 @@ jobs:
         - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-#    - stage: integration
-#      <<: *job-template-integration
-#      env:
-#        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
-#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-#        - RUN_SYNAPSE=1
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
+        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+        - RUN_SYNAPSE=1
 
     - stage: integration
       <<: *job-template-integration
@@ -100,12 +99,12 @@ jobs:
         - TEST='raiden/tests/integration/transfer'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-#    - stage: integration
-#      <<: *job-template-integration
-#      env:
-#        - TEST='raiden/tests/integration/transfer'
-#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-#        - RUN_SYNAPSE=1
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/transfer'
+        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+        - RUN_SYNAPSE=1
 
     - stage: integration
       <<: *job-template-integration
@@ -113,12 +112,12 @@ jobs:
         - TEST='raiden/tests/integration/long_running'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-#    - stage: integration
-#      <<: *job-template-integration
-#      env:
-#        - TEST='raiden/tests/integration/long_running'
-#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-#        - RUN_SYNAPSE=1
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/long_running'
+        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+        - RUN_SYNAPSE=1
 
     - stage: integration
       <<: *job-template-integration
@@ -131,12 +130,12 @@ jobs:
         - TEST='raiden/tests/integration/api'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-#    - stage: integration
-#      <<: *job-template-integration
-#      env:
-#        - TEST='raiden/tests/integration/api'
-#        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-#        - RUN_SYNAPSE=1
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/api'
+        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+        - RUN_SYNAPSE=1
 
     - stage: deploy
       before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; .travis/before_install.sh

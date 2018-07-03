@@ -1,0 +1,52 @@
+#keystore-path =
+#datadir = "~/.raiden"
+
+## Ethereum address to use, must exist in `keystore-path`
+#address =
+#password-file =
+
+#secret-registry-contract-address = "0x7862eF1296EeF5Fa55ef056c0cB03FF8D4d49Cf8"
+#registry-contract-address = "0x66eea3159A01d134DD64Bfe36fde4bE9ED9c1695"
+#discovery-contract-address = "0x1E3941d8c05ffFA7466216480209240cc26ea577"
+
+#console = false
+
+## Transport system to use 'udp' or 'matrix'
+#transport = "udp"
+
+## Available networks:
+## mainnet: 1
+## ropsten: 3
+## rinkeby: 4
+## kovan: 42
+#network-id = 3
+
+#sync-check = true
+#gas-price =
+#eth-rpc-endpoint = "127.0.0.1:8545"
+#listen-address = "0.0.0.0:38647"
+#max-unresponsive-time = 30
+#send-ping-time = 60
+
+## Available nat methods:
+## auto - Try UPnP, then STUN, fallback to none
+## upnp - Try UPnP, fallback to none
+## stun - Try STUN, fallback to none
+## none - Use the local interface address
+# nat = "auto"
+
+## Valid values:
+## auto - automatically select a suitable homeserver
+## A URL pointing to a Raiden matrix homeserver
+#matrix-server = "auto"
+
+#log-file =
+#log-json = false
+
+#rpc = true
+#rpccorsdomain = "http://localhost:*/*"
+#api-address = "127.0.0.1:5001"
+#web-ui = true
+
+#[log-config]
+#"" = "INFO"

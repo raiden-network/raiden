@@ -193,9 +193,9 @@ def handle_transferrefundcancelroute(
         refund_transfer.lock.expiration <= maximum_expiration
     )
 
-    is_valid_refund = mediator.is_valid_refund(
-        original_transfer,
+    is_valid_refund = channel.refund_transfer_matches_received(
         refund_transfer,
+        original_transfer,
     )
 
     events = list()

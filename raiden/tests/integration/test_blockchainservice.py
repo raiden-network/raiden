@@ -17,7 +17,7 @@ from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.proxies import Token, Registry, ChannelManager
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import views
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.utils.filters import decode_event
@@ -213,11 +213,10 @@ def test_channelmanager_graph_building(
 )
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
-        init_blockchain,
         web3,
         blockchain_rpc_ports,
         private_keys,
-        poll_timeout):
+):
     # pylint: disable=too-many-locals
 
     addresses = [
@@ -245,7 +244,6 @@ def test_blockchain(
         list(),
         (total_token, 'raiden', 2, 'Rd'),
         contract_path=humantoken_path,
-        timeout=poll_timeout,
     )
     token_proxy = Token(jsonrpc_client, to_canonical_address(token_proxy.contract.address))
 
@@ -257,7 +255,6 @@ def test_blockchain(
         list(),
         tuple(),
         contract_path=registry_path,
-        timeout=poll_timeout,
     )
     registry_proxy = Registry(
         jsonrpc_client,

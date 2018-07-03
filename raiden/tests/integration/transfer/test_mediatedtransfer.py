@@ -3,6 +3,7 @@ import pytest
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
+    wait_assert,
     mediated_transfer,
 )
 from raiden.transfer import views
@@ -36,15 +37,19 @@ def test_mediated_transfer(
         timeout=network_wait * number_of_nodes,
     )
 
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app1, deposit - amount, [],
         app2, deposit + amount, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
 
 
@@ -81,13 +86,17 @@ def test_mediated_transfer_with_entire_deposit(
         timeout=network_wait,
     )
 
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app0, deposit * 2, [],
         app1, 0, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )
-    assert_synched_channel_state(
+    wait_assert(
         token_network_identifier,
         app1, deposit * 2, [],
         app2, 0, [],
+        func=assert_synched_channel_state,
+        timeout=network_wait,
     )

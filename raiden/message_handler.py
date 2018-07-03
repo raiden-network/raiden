@@ -88,9 +88,9 @@ def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer
         )
     else:
         state_change = ReceiveTransferRefund(
-            message.message_identifier,
             message.sender,
             from_transfer,
+            routes,
         )
 
     raiden.handle_state_change(state_change)
@@ -122,7 +122,7 @@ def handle_message_processed(raiden: RaidenService, message: Processed):
     raiden.handle_state_change(processed)
 
 
-def on_udp_message(raiden: RaidenService, message: Message):
+def on_message(raiden: RaidenService, message: Message):
     """ Return True if the message is known. """
     # pylint: disable=unidiomatic-typecheck
     if type(message) == SecretRequest:

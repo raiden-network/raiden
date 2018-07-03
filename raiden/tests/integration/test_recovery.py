@@ -4,7 +4,7 @@ from gevent import server
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.network.transport.udp.udp_transport import UDPTransport
+from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
@@ -131,7 +131,7 @@ def test_recovery_unhappy_case(
         token_addresses,
         network_wait,
         skip_if_not_udp,
-        events_poll_timeout,
+        retry_timeout,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -186,7 +186,7 @@ def test_recovery_unhappy_case(
         app1.raiden.default_registry.address,
         token_address,
         [channel01.identifier],
-        events_poll_timeout,
+        retry_timeout,
     )
 
     app0_restart = App(

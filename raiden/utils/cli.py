@@ -1,6 +1,7 @@
 import re
 from ipaddress import IPv4Address, AddressValueError
 from itertools import groupby
+from string import Template
 from typing import Callable, List
 
 import click
@@ -264,6 +265,40 @@ class MatrixServerType(click.Choice):
         if value.startswith('http'):
             return value
         return super().convert(value, param, ctx)
+
+
+class HypenTemplate(Template):
+    idpattern = r'(?-i:[_a-zA-Z-][_a-zA-Z0-9-]*)'
+
+
+class PathRelativePath(click.Path):
+    """
+    `click.Path` subclass that can default to a value depending on
+    another option of type `click.Path`.
+
+    Uses :ref:`string.Template` to expand the parameters default value.
+
+    Example::
+
+        @click.option('--some-dir', type=click.Path())
+        @click.option('--some-file', type=PathRelativePath(), default='${some-dir}/file.txt')
+    """
+
+    def convert(self, value, param, ctx):
+        if value == param.default:
+            try:
+                value = self.expand_default(value, ctx.params)
+            except KeyError as ex:
+                raise RuntimeError(
+                    'Subsitution parameter not found in context. '
+                    'Make sure it\'s defined with `is_eager=True`.'  # noqa: C812
+                ) from ex
+
+        return super().convert(value, param, ctx)
+
+    @staticmethod
+    def expand_default(default, params):
+        return HypenTemplate(default).substitute(params)
 
 
 ADDRESS_TYPE = AddressType()

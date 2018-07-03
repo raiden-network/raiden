@@ -6,23 +6,17 @@ from os import environ
 import gevent
 from gevent import server
 import structlog
-from eth_utils import decode_hex
-from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
 
 from raiden import waiting
 from raiden.app import App
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.matrixtransport import MatrixTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
-from raiden.network.transport.udp.udp_transport import UDPTransport
-from raiden.settings import GAS_PRICE
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.network.transport import MatrixTransport, UDPTransport
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
-    get_contract_path,
     privatekey_to_address,
 )
-from raiden.utils.solc import compile_files_cwd
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -323,70 +317,37 @@ def create_apps(
 
 
 def jsonrpc_services(
-        deploy_key,
-        deploy_client,
+        deploy_service,
         private_keys,
-        poll_timeout,
+        secret_registry_address,
+        registry_address,
         web3=None,
 ):
-    deploy_blockchain = BlockChainService(
-        deploy_key,
-        deploy_client,
-        GAS_PRICE,
-    )
-
-    secret_registry_address = deploy_contract_web3(
-        CONTRACT_SECRET_REGISTRY,
-        poll_timeout,
-        deploy_client,
-    )
-    secret_registry = deploy_blockchain.secret_registry(secret_registry_address)  # noqa
-
-    registry_path = get_contract_path('Registry.sol')
-    registry_contracts = compile_files_cwd([registry_path])
-
-    log.info('Deploying registry contract')
-    registry_proxy = deploy_client.deploy_solidity_contract(
-        'Registry',
-        registry_contracts,
-        dict(),
-        tuple(),
-        contract_path=registry_path,
-        timeout=poll_timeout,
-    )
-    registry_address = decode_hex(registry_proxy.contract.address)
-
-    # at this point the blockchain must be running, this will overwrite the
-    # method so even if the client is patched twice, it should work fine
-
-    deploy_registry = deploy_blockchain.registry(registry_address)
+    secret_registry = deploy_service.secret_registry(secret_registry_address)
+    deploy_registry = deploy_service.registry(registry_address)
 
     host = '0.0.0.0'
     blockchain_services = list()
     for privkey in private_keys:
         rpc_client = JSONRPCClient(
             host,
-            deploy_client.port,
+            deploy_service.client.port,
             privkey,
             web3=web3,
         )
 
-        blockchain = BlockChainService(
-            privkey,
-            rpc_client,
-            GAS_PRICE,
-        )
+        blockchain = BlockChainService(privkey, rpc_client)
         blockchain_services.append(blockchain)
 
     return BlockchainServices(
         deploy_registry,
         secret_registry,
-        deploy_blockchain,
+        deploy_service,
         blockchain_services,
     )
 
 
-def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
+def wait_for_alarm_start(raiden_apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
     """Wait until all Alarm tasks start & set up the last_block"""
     apps = list(raiden_apps)
 
@@ -394,7 +355,7 @@ def wait_for_alarm_start(raiden_apps, events_poll_timeout=0.5):
         app = apps[-1]
 
         if app.raiden.alarm.last_block_number is None:
-            gevent.sleep(events_poll_timeout)
+            gevent.sleep(retry_timeout)
         else:
             apps.pop()
 
@@ -406,7 +367,7 @@ def wait_for_usable_channel(
         token_address,
         our_deposit,
         partner_deposit,
-        events_poll_timeout=0.5,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
 ):
     """ Wait until the channel from app0 to app1 is usable.
 
@@ -418,7 +379,7 @@ def wait_for_usable_channel(
         registry_address,
         token_address,
         app1.raiden.address,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_participant_newbalance(
@@ -428,7 +389,7 @@ def wait_for_usable_channel(
         app1.raiden.address,
         app0.raiden.address,
         our_deposit,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_participant_newbalance(
@@ -438,13 +399,13 @@ def wait_for_usable_channel(
         app1.raiden.address,
         app1.raiden.address,
         partner_deposit,
-        events_poll_timeout,
+        retry_timeout,
     )
 
     waiting.wait_for_healthy(
         app0.raiden,
         app1.raiden.address,
-        events_poll_timeout,
+        retry_timeout,
     )
 
 
@@ -453,7 +414,7 @@ def wait_for_channels(
         registry_address,
         token_addresses,
         deposit,
-        events_poll_timeout=0.5,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
 ):
     """ Wait until all channels are usable from both directions. """
     for app0, app1 in app_channels:
@@ -465,7 +426,7 @@ def wait_for_channels(
                 token_address,
                 deposit,
                 deposit,
-                events_poll_timeout,
+                retry_timeout,
             )
             wait_for_usable_channel(
                 app1,
@@ -474,5 +435,5 @@ def wait_for_channels(
                 token_address,
                 deposit,
                 deposit,
-                events_poll_timeout,
+                retry_timeout,
             )

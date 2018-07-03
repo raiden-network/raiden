@@ -1,4 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from typing import List
+
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState
 from raiden.transfer.mediated_transfer.state import (
@@ -213,7 +215,7 @@ class ReceiveSecretReveal(StateChange):
 
 
 class ReceiveTransferRefundCancelRoute(StateChange):
-    """ A RefundTransfer message received by initiator will cancel the current
+    """ A RefundTransfer message received by the initiator will cancel the current
     route.
     """
 
@@ -252,13 +254,18 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
 
-    def __init__(self, message_identifier, sender, transfer: LockedTransferSignedState):
+    def __init__(
+            self,
+            sender: typing.Address,
+            transfer: LockedTransferSignedState,
+            routes: List[RouteState],
+    ):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
-        self.message_identifier = message_identifier
         self.sender = sender
         self.transfer = transfer
+        self.routes = routes
 
     def __repr__(self):
         return '<ReceiveTransferRefund sender:{} transfer:{}>'.format(
@@ -269,9 +276,9 @@ class ReceiveTransferRefund(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferRefund) and
-            self.message_identifier == other.message_identifier and
             self.sender == other.sender and
-            self.transfer == other.transfer
+            self.transfer == other.transfer and
+            self.routes == other.routes
         )
 
     def __ne__(self, other):

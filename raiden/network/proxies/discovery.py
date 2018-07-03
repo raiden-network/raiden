@@ -11,16 +11,17 @@ from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_ENDPOINT_REGISTRY,
 )
+from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
+    ContractVersionMismatch,
     TransactionThrew,
     UnknownAddress,
 )
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.settings import DEFAULT_POLL_TIMEOUT
-from raiden.constants import NULL_ADDRESS
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import pex
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.settings import EXPECTED_CONTRACTS_VERSION
+from raiden.utils import compare_versions, pex
 
 
 class Discovery:
@@ -33,28 +34,29 @@ class Discovery:
             self,
             jsonrpc_client,
             discovery_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         contract = jsonrpc_client.new_contract(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             to_normalized_address(discovery_address),
         )
-        self.proxy = ContractProxy(jsonrpc_client, contract)
+        proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
-        CONTRACT_MANAGER.check_contract_version(
-            self.version(),
-            CONTRACT_ENDPOINT_REGISTRY,
+        is_valid_version = compare_versions(
+            proxy.contract.functions.contract_version().call(),
+            EXPECTED_CONTRACTS_VERSION,
         )
+        if not is_valid_version:
+            raise ContractVersionMismatch('Incompatible ABI for Discovery')
 
         self.address = discovery_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.not_found_address = NULL_ADDRESS
+        self.proxy = proxy
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
@@ -65,10 +67,7 @@ class Discovery:
             endpoint,
         )
 
-        self.client.poll(
-            unhexlify(transaction_hash),
-            timeout=self.poll_timeout,
-        )
+        self.client.poll(unhexlify(transaction_hash))
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:

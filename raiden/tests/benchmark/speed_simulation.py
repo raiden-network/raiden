@@ -21,7 +21,6 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
-from raiden.settings import GAS_PRICE
 
 TRANSFER_AMOUNT = 1
 TOKEN_ADDRESS = sha3(b'tps')[:20]
@@ -103,11 +102,7 @@ def setup_tps(
         privatekey,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey,
-        rpc_client,
-        GAS_PRICE,
-    )
+    blockchain_service = BlockChainService(privatekey, rpc_client)
     blockchain_service.default_registry.add_token(token_address)
 
     with codecs.open(config_path, encoding='utf8') as handler:
@@ -170,11 +165,7 @@ def tps_run(
         privatekey,
     )
 
-    blockchain_service = BlockChainService(
-        privatekey,
-        rpc_client,
-        GAS_PRICE,
-    )
+    blockchain_service = BlockChainService(privatekey, rpc_client)
 
     discovery = Discovery()
     found_ouraddress = False

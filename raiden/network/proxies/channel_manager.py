@@ -30,9 +30,6 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     SamePeerAddress,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-)
 from raiden.utils import (
     pex,
     privatekey_to_address,
@@ -48,7 +45,6 @@ class ChannelManager:
             self,
             jsonrpc_client,
             manager_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
     ):
         # pylint: disable=too-many-arguments
         contract = jsonrpc_client.new_contract(
@@ -70,7 +66,6 @@ class ChannelManager:
 
         self.address = manager_address
         self.client = jsonrpc_client
-        self.poll_timeout = poll_timeout
         self.open_channel_transactions = dict()
 
     def token_address(self) -> Address:
@@ -162,7 +157,7 @@ class ChannelManager:
         if not transaction_hash:
             raise RuntimeError('open channel transaction failed')
 
-        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash))
 
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
