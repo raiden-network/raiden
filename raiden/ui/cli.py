@@ -31,6 +31,8 @@ from mirakuru import HTTPExecutor, ProcessExitedWithError
 from pytoml import TomlError
 from requests.exceptions import RequestException
 
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
+
 from raiden import constants
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -44,6 +46,7 @@ from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
@@ -968,8 +971,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     from web3 import Web3, HTTPProvider
     from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
-    from raiden.blockchain.abi import get_static_or_compile
-    from raiden.network.proxies.registry import Registry
     from raiden.tests.utils.geth import geth_wait_and_check
     from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
@@ -980,17 +981,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         load_smoketest_config,
         start_ethereum,
         run_smoketests,
-    )
-    from raiden.utils import get_contract_path
-
-    # Check the solidity compiler early in the smoketest.
-    #
-    # Binary distributions don't need the solidity compiler but source
-    # distributions do. Since this is checked by `get_static_or_compile`
-    # function, use it as a proxy for validating the setup.
-    get_static_or_compile(
-        get_contract_path('HumanStandardToken.sol'),
-        'HumanStandardToken',
     )
 
     report_file = tempfile.mktemp(suffix='.log')
@@ -1047,15 +1037,12 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         get_private_key(),
         web3=web3_client,
     )
-    contract_addresses = deploy_smoketest_contracts(client)
+    contract_addresses = deploy_smoketest_contracts(client, 123)  # FIXME
 
-    token_contract = deploy_token(None, client)
+    token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
 
-    registry = Registry(
-        client,
-        contract_addresses['Registry'],
-    )
+    registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
 
     registry.add_token(to_canonical_address(token.contract.address))
 

@@ -6,7 +6,11 @@ from raiden.network.proxies import (
     TokenNetwork,
 )
 
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import (
+    CONTRACT_MANAGER,
+    ContractManager,
+    CONTRACTS_SOURCE_DIRS,
+)
 from eth_utils import to_canonical_address
 
 from raiden_contracts.constants import (
@@ -15,6 +19,8 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_HUMAN_STANDARD_TOKEN,
 )
+
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 
 
 @pytest.fixture
@@ -104,13 +110,20 @@ def token_proxy(deploy_client, token_contract):
 @pytest.fixture
 def deploy_token(deploy_client):
     def f(initial_amount, decimals, token_name, token_symbol):
-        args = [initial_amount, token_name, decimals, token_symbol]
-        compiled = {
-            CONTRACT_HUMAN_STANDARD_TOKEN: CONTRACT_MANAGER.get_contract('HumanStandardToken'),
-        }
-        return deploy_client.deploy_solidity_contract(
+        token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
-            compiled,
-            constructor_parameters=args,
+            deploy_client,
+            initial_amount,
+            decimals,
+            token_name,
+            token_symbol,
         )
+
+        manager = ContractManager(CONTRACTS_SOURCE_DIRS)
+        contract_abi = manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
+        return deploy_client.new_contract_proxy(
+            contract_interface=contract_abi,
+            contract_address=token_address,
+        )
+
     return f
