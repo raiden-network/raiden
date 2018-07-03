@@ -39,7 +39,7 @@
     "primeng": "6.0.0",
     "rxjs": "^6.2.1",
     "rxjs-compat": "^6.0.0-tactical-rc.1",
-    "web3": "^1.0.0-beta2",
+    "web3": "0.20.4",
     "zone.js": "^0.8.19"
   },
   "devDependencies": {
