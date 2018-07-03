@@ -35,7 +35,7 @@ from raiden.utils.typing import Address, BlockSpecification
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'abi'),
+    ('event_name', 'filter', 'abi', 'first_run'),
 )
 Proxies = namedtuple(
     'Proxies',
@@ -294,13 +294,13 @@ class BlockchainEvents:
         # When we test with geth if the contracts have already been deployed
         # before the filter creation we need to use `get_all_entries` to make
         # sure we get all the events. With tester this is not required.
-        if self.first_run:
-            query_fn = 'get_all_entries'
-            self.first_run = False
-        else:
-            query_fn = 'get_new_entries'
 
         for event_listener in self.event_listeners:
+            query_fn = 'get_new_entries'
+            if event_listener.first_run is True:
+                query_fn = 'get_all_entries'
+                index = self.event_listeners.index(event_listener)
+                self.event_listeners[index] = event_listener._replace(first_run=False)
             for log_event in getattr(event_listener.filter, query_fn)():
                 decoded_event = dict(decode_event(
                     event_listener.abi,
@@ -329,6 +329,7 @@ class BlockchainEvents:
             event_name,
             eth_filter,
             abi,
+            True,
         )
         self.event_listeners.append(event)
 
