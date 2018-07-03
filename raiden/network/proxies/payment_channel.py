@@ -1,9 +1,10 @@
 from typing import Dict
 
 from eth_utils import decode_hex
-from web3.utils.filters import Filter
+from gevent.lock import RLock
 from raiden_contracts.constants import EVENT_CHANNEL_OPENED, CONTRACT_TOKEN_NETWORK
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from web3.utils.filters import Filter
 
 from raiden.utils import typing
 from raiden.utils.filters import (
@@ -20,9 +21,6 @@ class PaymentChannel:
         token_network: TokenNetwork,
         channel_identifier: typing.ChannelID,
     ):
-        self.token_network = token_network
-        self.channel_identifier = channel_identifier
-
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
             channel_identifier=channel_identifier,
@@ -34,14 +32,20 @@ class PaymentChannel:
             raise ValueError('Channel is non-existing.')
 
         event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
-        self.participant1 = decode_hex(event['args']['participant1'])
-        self.participant2 = decode_hex(event['args']['participant2'])
+        participant1 = decode_hex(event['args']['participant1'])
+        participant2 = decode_hex(event['args']['participant2'])
 
-        if token_network.node_address not in (self.participant1, self.participant2):
+        if token_network.node_address not in (participant1, participant2):
             raise ValueError('One participant must be the node address')
 
-        if token_network.node_address == self.participant2:
-            self.participant1, self.participant2 = self.participant2, self.participant1
+        if token_network.node_address == participant2:
+            participant1, participant2 = participant2, participant1
+
+        self.channel_identifier = channel_identifier
+        self.channel_operations_lock = RLock()
+        self.participant1 = participant1
+        self.participant2 = participant2
+        self.token_network = token_network
 
     def token_address(self) -> typing.Address:
         """ Returns the address of the token for the channel. """
