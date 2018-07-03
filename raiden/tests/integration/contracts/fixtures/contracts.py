@@ -18,6 +18,8 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_HUMAN_STANDARD_TOKEN,
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
 )
 
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
@@ -57,7 +59,12 @@ def secret_registry_proxy(deploy_client, secret_registry_contract):
 def token_network_registry_contract(chain_id, deploy_contract, secret_registry_contract):
     return deploy_contract(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
-        [secret_registry_contract.contract.address, chain_id],
+        [
+            secret_registry_contract.contract.address,
+            chain_id,
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
+        ],
     )
 
 
@@ -82,6 +89,8 @@ def token_network_contract(
             token_contract.contract.address,
             secret_registry_contract.contract.address,
             chain_id,
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
         ],
     )
 

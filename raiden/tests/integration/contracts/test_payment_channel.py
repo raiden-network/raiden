@@ -85,7 +85,7 @@ def test_payment_channel_proxy_basics(
     assert initial_balance_c2 == 0
 
     # actual deposit
-    channel_proxy_1.deposit(10)
+    channel_proxy_1.set_total_deposit(10)
 
     events = event_filter.get_all_entries()
     assert len(events) == 2  # ChannelOpened, ChannelNewDeposit

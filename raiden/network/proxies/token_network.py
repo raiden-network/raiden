@@ -454,7 +454,7 @@ class TokenNetwork:
                     total_deposit=total_deposit,
                 )
 
-                channel_opened = self.channel_is_opened(partner)
+                channel_opened = self.channel_is_opened(self.node_address, partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
                         'Channel is not in an opened state. A deposit cannot be made',
