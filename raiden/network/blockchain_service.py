@@ -1,12 +1,9 @@
-import os
-
 import gevent
 from cachetools.func import ttl_cache
 import structlog
 from eth_utils import (
     to_int,
     is_binary_address,
-    decode_hex,
 )
 
 from raiden.network.rpc.client import JSONRPCClient
@@ -19,7 +16,6 @@ from raiden.network.proxies import (
     PaymentChannel,
 )
 from raiden.utils import privatekey_to_address, ishash
-from raiden.utils.solc import compile_files_cwd
 from raiden.utils.typing import Address, ChannelID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -187,37 +183,6 @@ class BlockChainService:
             )
 
         return self.identifier_to_payment_channel[dict_key]
-
-    def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
-        contracts = compile_files_cwd([contract_path])
-
-        log.info('Deploying contract', path=os.path.basename(contract_path))
-
-        proxy = self.client.deploy_solidity_contract(
-            contract_name,
-            contracts,
-            list(),
-            constructor_parameters,
-            contract_path=contract_path,
-        )
-
-        return decode_hex(proxy.contract.address)
-
-    def deploy_and_register_token(
-            self,
-            registry,
-            contract_name,
-            contract_path,
-            constructor_parameters=None):
-
-        token_address = self.deploy_contract(
-            contract_name,
-            contract_path,
-            constructor_parameters,
-        )
-        registry.add_token(token_address)
-
-        return token_address
 
     @property
     @ttl_cache(ttl=10)

@@ -5,17 +5,21 @@ import pytest
 import grequests
 from flask import url_for
 from eth_utils import to_checksum_address, to_canonical_address
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
 from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
 )
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+from raiden.constants import (
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
+)
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
-from raiden.utils import get_contract_path
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -674,10 +678,10 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_register_token(api_backend, token_amount, token_addresses, raiden_network):
     app0 = raiden_network[0]
-    new_token_address = app0.raiden.chain.deploy_contract(
-        contract_name='HumanStandardToken',
-        contract_path=get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+    new_token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app0.raiden.chain.client,
+        token_amount, 2, 'raiden', 'Rd',
     )
 
     register_request = grequests.put(api_url_for(
