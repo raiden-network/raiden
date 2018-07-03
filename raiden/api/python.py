@@ -160,7 +160,7 @@ class RaidenAPI:
             token_address,
         )
 
-        return connection_manager.leave(only_receiving)
+        return connection_manager.leave(registry_address, only_receiving)
 
     def channel_open(
             self,
