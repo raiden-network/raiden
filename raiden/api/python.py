@@ -98,7 +98,7 @@ class RaidenAPI:
             raise AlreadyRegisteredTokenAddress('Token already registered')
 
         try:
-            registry = self.raiden.chain.registry(registry_address)
+            registry = self.raiden.chain.token_network_registry(registry_address)
 
             msg = 'After {} seconds the channel was not properly created.'.format(
                 poll_timeout,

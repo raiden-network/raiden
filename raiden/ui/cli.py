@@ -618,7 +618,7 @@ def app(
     )
 
     try:
-        registry = blockchain_service.registry(
+        registry = blockchain_service.token_network_registry(
             registry_contract_address,
         )
     except ContractVersionMismatch:

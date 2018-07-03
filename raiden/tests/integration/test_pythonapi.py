@@ -1,7 +1,10 @@
 import pytest
 import gevent
 
-from raiden_contracts.constants import EVENT_CHANNEL_DEPOSIT
+from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    EVENT_CHANNEL_DEPOSIT,
+)
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -16,8 +19,8 @@ from raiden.tests.utils.transfer import (
     direct_transfer,
     get_channelstate,
 )
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
-from raiden.utils import get_contract_path
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
@@ -36,10 +39,13 @@ def test_register_token(raiden_network, token_amount):
 
     registry_address = app1.raiden.default_registry.address
 
-    token_address = app1.raiden.chain.deploy_contract(
-        contract_name='HumanStandardToken',
-        contract_path=get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+    token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app1.raiden.chain.client,
+        token_amount,
+        2,
+        'raiden',
+        'Rd',
     )
 
     api1 = RaidenAPI(app1.raiden)
@@ -73,10 +79,13 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
     event_listeners = app1.raiden.blockchain_events.event_listeners
     app1.raiden.blockchain_events.event_listeners = list()
 
-    token_address = app1.raiden.chain.deploy_contract(
-        contract_name='HumanStandardToken',
-        contract_path=get_contract_path('HumanStandardToken.sol'),
-        constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+    token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app1.raiden.chain.client,
+        token_amount,
+        2,
+        'raiden',
+        'Rd',
     )
 
     gevent.sleep(1)
@@ -222,7 +231,11 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
 
     channel_0_1 = get_channelstate(app0, app1, token_network_identifier)
-    app0_events = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.identifier, 0)
+    app0_events = RaidenAPI(app0.raiden).get_channel_events(
+        token_network_identifier,
+        channel_0_1.identifier,
+        from_block=0,
+    )
 
     assert must_have_event(app0_events, {'event': EVENT_CHANNEL_DEPOSIT})
 
@@ -233,13 +246,18 @@ def test_api_channel_events(raiden_chain, token_addresses):
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
     max_block = max(event[0] for event in app0_events)
     results = RaidenAPI(app0.raiden).get_channel_events(
+        token_network_identifier,
         channel_0_1.identifier,
-        max_block + 1,
-        max_block + 100,
+        from_block=max_block + 1,
+        to_block=max_block + 100,
     )
     assert not results
 
-    app1_events = RaidenAPI(app1.raiden).get_channel_events(channel_0_1.identifier, 0)
+    app1_events = RaidenAPI(app1.raiden).get_channel_events(
+        token_network_identifier,
+        channel_0_1.identifier,
+        from_block=0,
+    )
     assert must_have_event(app1_events, {'event': EVENT_CHANNEL_DEPOSIT})
     assert must_have_event(app1_events, {'event': 'EventTransferReceivedSuccess'})
 

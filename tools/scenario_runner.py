@@ -106,7 +106,7 @@ def run(
         decode_hex(discovery_contract_address),
     )
 
-    registry = blockchain_service.registry(
+    registry = blockchain_service.token_network_registry(
         registry_contract_address,
     )
 
