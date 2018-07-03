@@ -1,11 +1,7 @@
-import random
-
 import pytest
 
-from raiden import waiting, message_handler
+from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import UINT64_MAX
-from raiden.messages import RevealSecret
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -271,55 +267,6 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
     assert token_proxy.balance_of(address0) == expected_balance0
     assert token_proxy.balance_of(address1) == expected_balance1
-
-
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [1])
-def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addresses):
-    app0, app1 = raiden_chain
-    token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
-    )
-
-    token_proxy = app0.raiden.chain.token(token_address)
-    initial_balance0 = token_proxy.balance_of(app0.raiden.address)
-    initial_balance1 = token_proxy.balance_of(app1.raiden.address)
-
-    amount = 100
-    identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_chain,
-        token_network_identifier,
-        amount,
-        identifier,
-    )
-
-    # Stop app0 to avoid sending the unlock
-    app0.raiden.transport.stop_and_wait()
-
-    reveal_secret = RevealSecret(
-        random.randint(0, UINT64_MAX),
-        secret,
-    )
-    app0.raiden.sign(reveal_secret)
-    message_handler.on_message(app1.raiden, reveal_secret)
-
-    channel_state = get_channelstate(app0, app1, token_network_identifier)
-    waiting.wait_for_settle(
-        app0.raiden,
-        app0.raiden.default_registry.address,
-        token_address,
-        [channel_state.identifier],
-        app0.raiden.alarm.wait_time,
-    )
-
-    expected_balance0 = initial_balance0 + deposit - amount
-    expected_balance1 = initial_balance1 + deposit + amount
-    assert token_proxy.balance_of(app0.raiden.address) == expected_balance0
-    assert token_proxy.balance_of(app1.raiden.address) == expected_balance1
 
 
 @pytest.mark.xfail(reason='test incomplete')
