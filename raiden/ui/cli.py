@@ -31,7 +31,11 @@ from mirakuru import HTTPExecutor, ProcessExitedWithError
 from pytoml import TomlError
 from requests.exceptions import RequestException
 
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+)
 
 from raiden import constants
 from raiden.accounts import AccountManager
@@ -621,7 +625,7 @@ def app(
     )
 
     try:
-        registry = blockchain_service.token_network_registry(
+        token_network_registry = blockchain_service.token_network_registry(
             registry_contract_address,
         )
     except ContractVersionMismatch:
@@ -673,7 +677,7 @@ def app(
     raiden_app = App(
         config,
         blockchain_service,
-        registry,
+        token_network_registry,
         secret_registry,
         transport,
         discovery,
@@ -1037,7 +1041,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         get_private_key(),
         web3=web3_client,
     )
-    contract_addresses = deploy_smoketest_contracts(client, 123)  # FIXME
+    contract_addresses = deploy_smoketest_contracts(client, 627)
 
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
@@ -1049,9 +1053,15 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     print_step('Setting up Raiden')
     # setup cli arguments for starting raiden
     args = dict(
-        discovery_contract_address=to_checksum_address(contract_addresses['EndpointRegistry']),
-        registry_contract_address=to_checksum_address(contract_addresses['Registry']),
-        secret_registry_contract_address=to_checksum_address(contract_addresses['SecretRegistry']),
+        discovery_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+        ),
+        registry_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+        ),
+        secret_registry_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_SECRET_REGISTRY],
+        ),
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
@@ -1091,24 +1101,24 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         api_server.start(api_host, api_port)
 
         raiden_api.channel_open(
-            contract_addresses['Registry'],
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
             to_canonical_address(token.contract.address),
             to_canonical_address(TEST_PARTNER_ADDRESS),
             None,
             None,
         )
         raiden_api.set_total_channel_deposit(
-            contract_addresses['Registry'],
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
             to_canonical_address(token.contract.address),
             to_canonical_address(TEST_PARTNER_ADDRESS),
             TEST_DEPOSIT_AMOUNT,
         )
 
         smoketest_config['contracts']['registry_address'] = to_checksum_address(
-            contract_addresses['Registry'],
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         )
         smoketest_config['contracts']['discovery_address'] = to_checksum_address(
-            contract_addresses['EndpointRegistry'],
+            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
         )
         smoketest_config['contracts']['token_address'] = to_checksum_address(
             token.contract.address,

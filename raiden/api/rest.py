@@ -225,8 +225,10 @@ class APIServer:
 
         restapi_setup_type_converters(
             flask_app,
-            {'hexaddress': HexAddressConverter},
-            {'keccak': KeccakConverter},
+            {
+                'hexaddress': HexAddressConverter,
+                'keccak': KeccakConverter,
+            },
         )
 
         restapi_setup_urls(
