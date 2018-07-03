@@ -245,13 +245,49 @@ def handle_contract_send_channelsettle(
     our_balance_proof = channel_settle_event.our_balance_proof
     partner_balance_proof = channel_settle_event.partner_balance_proof
 
+    if our_balance_proof:
+        our_transferred_amount = our_balance_proof.transferred_amount
+        our_locked_amount = our_balance_proof.locked_amount
+        our_locksroot = our_balance_proof.locksroot
+    else:
+        our_transferred_amount = 0
+        our_locked_amount = 0
+        our_locksroot = b''
+
+    if partner_balance_proof:
+        partner_transferred_amount = partner_balance_proof.transferred_amount
+        partner_locked_amount = partner_balance_proof.locked_amount
+        partner_locksroot = partner_balance_proof.locksroot
+    else:
+        partner_transferred_amount = 0
+        partner_locked_amount = 0
+        partner_locksroot = b''
+
+    # The smart contract requires the first balance proof to be the one with
+    # the smaller transferred_amount. This is used to simplify overflow checks
+    # in the smart contract.
+    if our_transferred_amount > partner_transferred_amount:
+        first_transferred_amount = partner_transferred_amount
+        first_locked_amount = partner_locked_amount
+        first_locksroot = partner_locksroot
+        second_transferred_amount = our_transferred_amount
+        second_locked_amount = our_locked_amount
+        second_locksroot = our_locksroot
+    else:
+        first_transferred_amount = our_transferred_amount
+        first_locked_amount = our_locked_amount
+        first_locksroot = our_locksroot
+        second_transferred_amount = partner_transferred_amount
+        second_locked_amount = partner_locked_amount
+        second_locksroot = partner_locksroot
+
     channel.settle(
-        our_balance_proof.transferred_amount,
-        our_balance_proof.locked_amount,
-        our_balance_proof.locksroot,
-        partner_balance_proof.transferred_amount,
-        partner_balance_proof.locked_amount,
-        partner_balance_proof.locksroot,
+        first_transferred_amount,
+        first_locked_amount,
+        first_locksroot,
+        second_transferred_amount,
+        second_locked_amount,
+        second_locksroot,
     )
 
 

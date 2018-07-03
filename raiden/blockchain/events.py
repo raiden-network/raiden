@@ -2,7 +2,11 @@ from collections import namedtuple
 from typing import List, Dict
 
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import (
+    encode_hex,
+    event_abi_to_log_topic,
+    to_canonical_address,
+)
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
@@ -11,6 +15,7 @@ from raiden_contracts.constants import (
     EVENT_CHANNEL_CLOSED,
     EVENT_CHANNEL_DEPOSIT,
     EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_SETTLED,
     EVENT_CHANNEL_WITHDRAW,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -129,8 +134,83 @@ def get_all_netting_channel_events(
     return get_contract_events(
         chain,
         CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        netting_channel_identifier,
+        token_network_address,
         filter_args['topics'],
+        from_block,
+        to_block,
+    )
+
+
+def get_netting_channel_closed_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    closed_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        EVENT_CHANNEL_CLOSED,
+    )
+    closed_event_id = encode_hex(event_abi_to_log_topic(closed_event_abi))
+    closed_topics = [closed_event_id]
+
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
+        closed_topics,
+        from_block,
+        to_block,
+    )
+
+
+def get_netting_channel_deposit_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    deposit_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        EVENT_CHANNEL_DEPOSIT,
+    )
+    deposit_event_id = encode_hex(event_abi_to_log_topic(deposit_event_abi))
+    deposit_topics = [deposit_event_id]
+
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
+        deposit_topics,
+        from_block,
+        to_block,
+    )
+
+
+def get_netting_channel_settled_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        events: List[str] = ALL_EVENTS,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    settled_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        EVENT_CHANNEL_SETTLED,
+    )
+    settled_event_id = encode_hex(event_abi_to_log_topic(settled_event_abi))
+    settled_topics = [settled_event_id]
+
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
+        settled_topics,
         from_block,
         to_block,
     )

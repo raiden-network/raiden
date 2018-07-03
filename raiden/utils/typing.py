@@ -4,6 +4,9 @@ from typing import NewType, Tuple, Optional, Union
 T_Address = bytes
 Address = NewType('Address', T_Address)
 
+T_AddressHex = str
+AddressHex = NewType('AddressHex', T_AddressHex)
+
 T_BlockExpiration = int
 BlockExpiration = NewType('BlockExpiration', T_BlockExpiration)
 

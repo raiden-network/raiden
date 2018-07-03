@@ -1,5 +1,6 @@
-import gevent
 from contextlib import ExitStack
+
+import gevent
 import structlog
 from eth_utils import is_binary_address
 
@@ -197,7 +198,7 @@ class RaidenAPI:
 
         registry = self.raiden.chain.token_network_registry(registry_address)
         token_network = registry.token_network_by_token(token_address)
-        netcontract_address = token_network.new_netting_channel(
+        channel_identifier = token_network.new_netting_channel(
             partner_address,
             settle_timeout,
         )
@@ -215,7 +216,7 @@ class RaidenAPI:
                 retry_timeout,
             )
 
-        return netcontract_address
+        return channel_identifier
 
     def set_total_channel_deposit(
             self,
@@ -288,7 +289,8 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         netcontract_address = channel_state.identifier
-        token_network_proxy = self.raiden.chain.token_network_by_token(token_address)
+        token_network_registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network_proxy = token_network_registry.token_network_by_token(token_address)
         channel_proxy = self.raiden.chain.payment_channel(
             token_network_proxy.address,
             netcontract_address,
@@ -302,7 +304,8 @@ class RaidenAPI:
             )
 
         with releasing(channel_proxy.channel_operations_lock):
-            token.approve(netcontract_address, addendum)
+            # set_total_deposit calls approve
+            # token.approve(netcontract_address, addendum)
             channel_proxy.set_total_deposit(total_deposit)
 
             msg = 'After {} seconds the deposit was not properly processed.'.format(

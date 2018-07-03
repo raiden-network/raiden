@@ -163,50 +163,38 @@ def handle_channel_new_balance(raiden, event, current_block_number):
 
 
 def handle_channel_closed(raiden, event, current_block_number):
-    registry_address = event.event_data['registry_address']
-    channel_identifier = event.originating_contract
+    token_network_identifier = event.originating_contract
     data = event.event_data
+    channel_identifier = data['channel_identifier']
 
-    channel_state = views.search_for_channel(
+    channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
-        registry_address,
+        token_network_identifier,
         channel_identifier,
     )
 
     if channel_state:
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(raiden),
-            registry_address,
-            channel_state.token_address,
-        )
-
         channel_closed = ContractReceiveChannelClosed(
             token_network_identifier,
             channel_identifier,
-            data['closing_address'],
+            data['closing_participant'],
             data['block_number'],
         )
         raiden.handle_state_change(channel_closed, current_block_number)
 
 
 def handle_channel_settled(raiden, event, current_block_number):
-    registry_address = event.event_data['registry_address']
     data = event.event_data
-    channel_identifier = event.originating_contract
+    token_network_identifier = event.originating_contract
+    channel_identifier = event.event_data['channel_identifier']
 
-    channel_state = views.search_for_channel(
+    channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
-        registry_address,
+        token_network_identifier,
         channel_identifier,
     )
 
     if channel_state:
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(raiden),
-            registry_address,
-            channel_state.token_address,
-        )
-
         channel_settled = ContractReceiveChannelSettled(
             token_network_identifier,
             channel_identifier,

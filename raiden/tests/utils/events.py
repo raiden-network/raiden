@@ -1,3 +1,5 @@
+from web3.utils.datastructures import AttributeDict
+
 from raiden.api.python import RaidenAPI
 
 NOVALUE = object()
@@ -48,7 +50,7 @@ def check_dict_nested_attrs(item, dict_data):
 
         item_value = item[key]
 
-        if isinstance(item_value, dict):
+        if isinstance(item_value, (AttributeDict, dict)):
             if not check_dict_nested_attrs(item_value, value):
                 return False
         elif item_value != value:
