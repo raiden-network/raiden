@@ -19,16 +19,17 @@ def test_cli_version():
 
 @pytest.mark.timeout(25)
 def test_cli_full_init(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -45,15 +46,16 @@ def test_cli_full_init(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_missing_keystore_path(blockchain_provider):
+    cli_args = ['--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('RuntimeError: No Ethereum accounts found in the user\'s system')
@@ -65,15 +67,16 @@ def test_cli_missing_keystore_path(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_missing_password_file_enter_password(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -94,15 +97,16 @@ def test_cli_missing_password_file_enter_password(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_missing_data_dir(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -119,15 +123,16 @@ def test_cli_missing_data_dir(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_missing_nat(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -144,15 +149,16 @@ def test_cli_missing_nat(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_wrong_rpc_endpoint(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'] + '0',
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'] + '0',
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -168,23 +174,25 @@ def test_cli_wrong_rpc_endpoint(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_wrong_network_id_try_mainnet(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', '1',
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', '1',
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
         child.expect('The following accounts were found in your machine:')
         child.expect('Select one of them by index to continue: ')
         child.sendline('0')
-        child.expect("The chosen ethereum network 'mainnet' differs from the ethereum client 'smoketest'")
+        child.expect("The chosen ethereum network 'mainnet' differs from the ethereum "
+                     "client 'smoketest'")
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -193,16 +201,18 @@ def test_cli_wrong_network_id_try_mainnet(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_malformed_registry_address(blockchain_provider):
+    malformed_registry_address = blockchain_provider['registry_contract_address'] + '0'
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', malformed_registry_address,
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'] + '0',
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Error: Invalid value for "--registry-contract-address"'
@@ -215,16 +225,17 @@ def test_cli_malformed_registry_address(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_swap_registry_address_with_discovery_address(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['discovery_contract_address'],
+                '--discovery-contract-address', blockchain_provider['registry_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['discovery_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['registry_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -232,7 +243,8 @@ def test_cli_swap_registry_address_with_discovery_address(blockchain_provider):
         child.expect('Select one of them by index to continue: ')
         child.sendline('0')
         child.expect('You are connected')
-        child.expect('web3.exceptions.BadFunctionCallOutput: Could not decode contract function call')
+        child.expect('web3.exceptions.BadFunctionCallOutput: Could not decode '
+                     'contract function call')
     except pexpect.TIMEOUT as e:
         print("Timed out at", e)
     finally:
@@ -241,17 +253,18 @@ def test_cli_swap_registry_address_with_discovery_address(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_registry_address_without_deployed_contract(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address',
+                to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address',
-                           to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -268,15 +281,16 @@ def test_cli_registry_address_without_deployed_contract(blockchain_provider):
 
 @pytest.mark.timeout(25)
 def test_cli_missing_discovery_contract_address(blockchain_provider):
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address']]
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address']],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -284,7 +298,7 @@ def test_cli_missing_discovery_contract_address(blockchain_provider):
         child.expect('Select one of them by index to continue: ')
         child.sendline('0')
         child.expect('You are connected')
-        child.expect('raiden.exceptions.AddressWithoutCode: \[Discovery\]')
+        child.expect('raiden.exceptions.AddressWithoutCode')
     except pexpect.TIMEOUT as e:
         print("Timed out at", e)
     finally:
@@ -292,7 +306,9 @@ def test_cli_missing_discovery_contract_address(blockchain_provider):
 
 
 @pytest.mark.timeout(25)
-def DISABLE_test_cli_eth_client_communication(blockchain_provider, deploy_client, blockchain_backend):
+def DISABLE_test_cli_eth_client_communication(blockchain_provider,
+                                              deploy_client,
+                                              blockchain_backend):
     """
     Test if --eth-client-communication displays dumped serialized communication data.
     This test case will fail after JSONRPCClient was moved from pyethapp to Raiden.
@@ -304,17 +320,18 @@ def DISABLE_test_cli_eth_client_communication(blockchain_provider, deploy_client
 
     Currently this functionality does not exist anymore and test times out.
     """
+    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
+                '--password-file', blockchain_provider['password_file_path'],
+                '--datadir', blockchain_provider['datadir_path'],
+                '--nat', 'none',
+                '--no-sync-check',
+                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
+                '--network-id', blockchain_provider['network_id'],
+                '--registry-contract-address', blockchain_provider['registry_contract_address'],
+                '--discovery-contract-address', blockchain_provider['discovery_contract_address'],
+                '--eth-client-communication']
     child = pexpect.spawn('raiden',
-                          ['--keystore-path', blockchain_provider['keystore_path'],
-                           '--password-file', blockchain_provider['password_file_path'],
-                           '--datadir', blockchain_provider['datadir_path'],
-                           '--nat', 'none',
-                           '--no-sync-check',
-                           '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                           '--network-id', blockchain_provider['network_id'],
-                           '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                           '--discovery-contract-address', blockchain_provider['discovery_contract_address'],
-                           '--eth-client-communication'],
+                          cli_args,
                           logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
@@ -329,7 +346,7 @@ def DISABLE_test_cli_eth_client_communication(blockchain_provider, deploy_client
             'from': to_checksum_address(deploy_client.sender),
             'to': to_checksum_address(inexisting_address),
             'data': b'',
-            'value': 0
+            'value': 0,
         }
         rpc_data = deploy_client.web3.eth.call(transaction)
         assert rpc_data == b''

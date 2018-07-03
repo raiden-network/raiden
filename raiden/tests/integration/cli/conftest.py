@@ -3,7 +3,7 @@ import pytest
 
 from raiden.tests.utils.smoketest import (
     load_smoketest_config,
-    start_ethereum
+    start_ethereum,
 )
 
 
