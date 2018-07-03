@@ -14,15 +14,19 @@ class ContractSendChannelClose(Event):
     on-chain.
     """
 
-    def __init__(self, channel_identifier, token_address, balance_proof):
+    def __init__(self, channel_identifier, token_address, token_network_identifier, balance_proof):
         self.channel_identifier = channel_identifier
         self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<ContractSendChannelClose channel:{} token:{} balance_proof:{}>'.format(
+        return (
+            '<ContractSendChannelClose channel:{} token:{} token_network:{} balance_proof:{}>'
+        ).format(
             pex(self.channel_identifier),
             pex(self.token_address),
+            pex(self.token_network_identifier),
             self.balance_proof,
         )
 
@@ -31,6 +35,7 @@ class ContractSendChannelClose(Event):
             isinstance(other, ContractSendChannelClose) and
             self.channel_identifier == other.channel_identifier and
             self.token_address == other.token_address and
+            self.token_network_identifier == other.token_network_identifier and
             self.balance_proof == other.balance_proof
         )
 
@@ -44,6 +49,7 @@ class ContractSendChannelSettle(Event):
     def __init__(
             self,
             channel_identifier: typing.ChannelID,
+            token_network_identifier: typing.TokenNetworkAddress,
             our_balance_proof: typing.Union[
                 BalanceProofSignedState,
                 BalanceProofUnsignedState,
@@ -58,6 +64,9 @@ class ContractSendChannelSettle(Event):
         if not isinstance(channel_identifier, typing.T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
+        if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
+            raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
+
         if our_balance_proof and not isinstance(
             our_balance_proof,
             (BalanceProofUnsignedState, BalanceProofSignedState),
@@ -71,18 +80,21 @@ class ContractSendChannelSettle(Event):
             raise ValueError('partner_balance_proof must be a BalanceProofSignedState instance')
 
         self.channel_identifier = channel_identifier
+        self.token_network_identifier = token_network_identifier
         self.our_balance_proof = our_balance_proof
         self.partner_balance_proof = partner_balance_proof
 
     def __repr__(self):
-        return '<ContractSendChannelSettle channel:{}>'.format(
+        return '<ContractSendChannelSettle channel:{} token_network:{}>'.format(
             pex(self.channel_identifier),
+            pex(self.token_network_identifier),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendChannelSettle) and
             self.channel_identifier == other.channel_identifier and
+            self.token_network_identifier == other.token_network_identifier and
             self.our_balance_proof == other.our_balance_proof and
             self.partner_balance_proof == other.partner_balance_proof
         )
@@ -94,13 +106,17 @@ class ContractSendChannelSettle(Event):
 class ContractSendChannelUpdateTransfer(Event):
     """ Event emitted if the netting channel balance proof must be updated. """
 
-    def __init__(self, channel_identifier, balance_proof):
+    def __init__(self, channel_identifier, token_network_identifier, balance_proof):
         self.channel_identifier = channel_identifier
+        self.token_network_identifier = token_network_identifier
         self.balance_proof = balance_proof
 
     def __repr__(self):
-        return '<ContractSendChannelUpdateTransfer channel:{} balance_proof:{}>'.format(
+        return (
+            '<ContractSendChannelUpdateTransfer channel:{} token_network:{} balance_proof:{}>'
+        ).format(
             pex(self.channel_identifier),
+            pex(self.token_network_identifier),
             self.balance_proof,
         )
 
@@ -108,6 +124,7 @@ class ContractSendChannelUpdateTransfer(Event):
         return (
             isinstance(other, ContractSendChannelUpdateTransfer) and
             self.channel_identifier == other.channel_identifier and
+            self.token_network_identifier == other.token_network_identifier and
             self.balance_proof == other.balance_proof
         )
 

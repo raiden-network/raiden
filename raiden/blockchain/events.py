@@ -27,14 +27,15 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_SECRET_REVEALED,
 )
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies import PaymentChannel
 from raiden.exceptions import AddressWithoutCode
 from raiden.utils import pex, typing
-from raiden.network.rpc.smartcontract_proxy import decode_event
+from raiden.utils.filters import decode_event
 from raiden.utils.typing import Address, BlockSpecification
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'abi', 'filter_creation_function'),
+    ('event_name', 'filter', 'abi'),
 )
 Proxies = namedtuple(
     'Proxies',
@@ -320,12 +321,14 @@ class BlockchainEvents:
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, eth_filter, abi, filter_creation_function):
+    def add_event_listener(self, event_name, eth_filter, abi):
+        existing_listeners = [x.event_name for x in self.event_listeners]
+        if event_name in existing_listeners:
+            return
         event = EventListener(
             event_name,
             eth_filter,
             abi,
-            filter_creation_function,
         )
         self.event_listeners.append(event)
 
@@ -341,7 +344,6 @@ class BlockchainEvents:
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_REGISTRY),
-            registry_proxy.tokenadded_filter,
         )
 
     def add_channel_manager_listener(
@@ -349,14 +351,13 @@ class BlockchainEvents:
             channel_manager_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        channelnew = channel_manager_proxy.channelnew_filter(from_block)
+        channelnew = channel_manager_proxy.channelnew_filter(from_block=from_block)
         manager_address = channel_manager_proxy.address
 
         self.add_event_listener(
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_CHANNEL_MANAGER),
-            channel_manager_proxy.channelnew_filter,
         )
 
     def add_token_network_listener(
@@ -371,7 +372,6 @@ class BlockchainEvents:
             'TokenNetwork {}'.format(pex(token_network_address)),
             channel_new_filter,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            token_network_proxy.channelnew_filter,
         )
 
     def add_netting_channel_listener(
@@ -379,14 +379,29 @@ class BlockchainEvents:
             netting_channel_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        netting_channel_events = netting_channel_proxy.all_events_filter(from_block)
+        netting_channel_events = netting_channel_proxy.all_events_filter(from_block=from_block)
         channel_address = netting_channel_proxy.address
 
         self.add_event_listener(
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_NETTING_CHANNEL),
-            netting_channel_proxy.all_events_filter,
+        )
+
+    def add_payment_channel_listener(
+        self,
+        payment_channel_proxy: PaymentChannel,
+        from_block: typing.BlockSpecification = 'latest',
+    ):
+        payment_channel_filter = payment_channel_proxy.all_events_filter(from_block=from_block)
+        channel_identifier = payment_channel_proxy.channel_identifier()
+
+        self.add_event_listener(
+            f'PaymentChannel event {channel_identifier}',
+            payment_channel_filter,
+            raiden_contracts.contract_manager.CONTRACT_MANAGER.get_contract_abi(
+                CONTRACT_TOKEN_NETWORK,
+            ),
         )
 
     def add_proxies_listeners(self, proxies, from_block: typing.BlockSpecification = 'latest'):
