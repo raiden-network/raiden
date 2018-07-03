@@ -51,7 +51,7 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
     }
 
     public convertToChecksum(): string {
-        return 'Not a checksum address, try\n"' + this.raidenService.toChecksumAddress(this.tokenAddress.value) + '" instead.';
+        return 'Not a checksum address, try \n"' + this.raidenService.toChecksumAddress(this.tokenAddress.value) + '" instead.';
     }
 
     public registerToken() {
