@@ -1,0 +1,31 @@
+1530601920.9085963
+Welcome to Raiden, version 0.3.1.dev555+g46321cee!
+1530601920.9296055
++console init
+-console init
+1530601921.0227618
+1530601921.023448
+[2m2018-07-03 07:12:01[0m [[33m[1mwarning  [0m] [1mUsing internal interface address. Connectivity issues are likely.[0m [[34m[1mraiden.network.sockfactory[0m] 
+[2m2018-07-03 07:12:01[0m [[32m[1minfo     [0m] [1mNetwork port opened           [0m [[34m[1mraiden.network.sockfactory[0m] [36mexternal[0m=[35m192.168.0.155:38647[0m [36minternal[0m=[35m192.168.0.155:38647[0m [36mmethod[0m=[35mnone[0m
+1530601921.0259762
+The following accounts were found in your machine:
+
+[  0] - 0x67a5E21E34A58eD8D47c719fE291dDD2ea825E12
+
+Select one of them by index to continue: 0
+0
+You are connected to the 'smoketest' network and the DB path is: /tmp/tmp2h16vbsv/netid_627/67a5e21e/log.db
+[2m2018-07-03 07:12:03[0m [[32m[1minfo     [0m] [1mregistered endpoint in discovery[0m [[34m[1mraiden.network.discovery[0m] [36mhost[0m=[35m192.168.0.155[0m [36mnode_address[0m=[35m67a5e21e[0m [36mport[0m=[35m38647[0m
+[2m2018-07-03 07:12:03[0m [[32m[1minfo     [0m] [1mLock 140612423915448 acquired on /tmp/tmp2h16vbsv/netid_627/67a5e21e/.lock[0m
+1530601923.4644337
+1530601923.4644732
+1530601923.4644957
+1530601923.4645064
+1530601923.4648623
+1530601923.47028
+1530601923.4703271
+1530601923.4708781
+The Raiden API RPC server is now running at http://127.0.0.1:5001/.
+
+See the Raiden documentation for all available endpoints at
+http://raiden-network.readthedocs.io/en/stable/rest_api.html

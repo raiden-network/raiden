@@ -89,6 +89,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
+        '--nat', 'none',
         '--verbosity', str(verbosity),
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),

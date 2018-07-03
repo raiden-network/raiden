@@ -758,17 +758,24 @@ def run(ctx, **kwargs):
         # Pass parsed args on to subcommands.
         ctx.obj = kwargs
         return
+    import time
+    print(time.time())
 
     print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
-    from raiden.ui.console import Console
-    from raiden.api.python import RaidenAPI
+    print(time.time())
 
+    print("+console init")
+    from raiden.ui.console import Console
+    print("-console init")
+
+    from raiden.api.python import RaidenAPI
+    print(time.time())
     configure_logging(
         kwargs['log_config'],
         log_json=kwargs['log_json'],
         log_file=kwargs['log_file']
     )
-
+    print(time.time())
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
@@ -776,8 +783,11 @@ def run(ctx, **kwargs):
     def _run_app():
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
+            print(time.time())
             app_ = ctx.invoke(app, **kwargs)
+            print(time.time())
         except EthNodeCommunicationError:
+            print(time.time())
             sys.exit(1)
 
         domain_list = []
@@ -787,19 +797,25 @@ def run(ctx, **kwargs):
                     domain_list.append(str(domain))
             else:
                 domain_list.append(str(kwargs['rpccorsdomain']))
-
+        print(time.time())
         api_server = None
         if ctx.params['rpc']:
+            print(time.time())
             raiden_api = RaidenAPI(app_.raiden)
+            print(time.time())
             rest_api = RestAPI(raiden_api)
+            print(time.time())
             api_server = APIServer(
                 rest_api,
                 cors_domain_list=domain_list,
                 web_ui=ctx.params['web_ui'],
                 eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
             )
+            print(time.time())
             (api_host, api_port) = split_endpoint(kwargs['api_address'])
+            print(time.time())
             api_server.start(api_host, api_port)
+            print(time.time())
 
             print(
                 'The Raiden API RPC server is now running at http://{}:{}/.\n\n'

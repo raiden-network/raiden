@@ -141,6 +141,7 @@ def blockchain_services(
     registry_address = None
 
     if blockchain_type == 'geth':
+        print("STARTING SERVICES")
         return _jsonrpc_services(
             deploy_key,
             deploy_client,
@@ -325,6 +326,7 @@ def _jsonrpc_services(
 
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
+    print("REGISTRY ADDRESS 1", registry_address)
     if registry_address is None:
         registry_path = get_contract_path('Registry.sol')
         registry_contracts = compile_files_cwd([registry_path])
@@ -339,7 +341,7 @@ def _jsonrpc_services(
             timeout=poll_timeout,
         )
         registry_address = decode_hex(registry_proxy.contract.address)
-
+        print("REGISTRY ADDRESS 2", registry_address)
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine
 
