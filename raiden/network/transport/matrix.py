@@ -205,8 +205,9 @@ class MatrixTransport:
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             self._update_address_presence(node_address)
-            assert self._get_room_for_address(node_address, allow_missing_peers=True),\
-                f'Could not get room for {node_address_hex!r}'
+            room = self._get_room_for_address(node_address, allow_missing_peers=True)
+            if not room:
+                self.log.warning('No room found or created for peer', peer=node_address_hex)
 
     def send_async(
         self,
@@ -590,9 +591,6 @@ class MatrixTransport:
             # no room with expected name => create one and invite peer
             address = to_normalized_address(receiver_address)
             candidates = self._client.search_user_directory(address)
-            if not candidates and not allow_missing_peers:
-                self.log.error('No peer candidates', peer_address=address)
-                return
 
             # filter candidates
             peers = [user for user in candidates if self._validate_userid_signature(user)]
@@ -601,14 +599,6 @@ class MatrixTransport:
                 return
 
             room = self._get_unlisted_room(room_name, invitees=[user.user_id for user in peers])
-
-            offline_peers = [
-                user for user in peers
-                if self._userid_to_presence.get(user.user_id, UserPresence.UNKNOWN) in
-                (UserPresence.OFFLINE, UserPresence.UNKNOWN)
-            ]
-            if offline_peers:
-                self.log.warning('Inviting offline peers', offline_peers=offline_peers, room=room)
 
         room.add_listener(self._handle_message, 'm.room.message')
         self.log.info(
