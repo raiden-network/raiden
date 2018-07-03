@@ -8,7 +8,7 @@ from raiden.tests.utils.network import (
     create_apps,
     create_network_channels,
     create_sequential_channels,
-    netting_channel_open_and_deposit,
+    payment_channel_open_and_deposit,
     wait_for_channels,
     wait_for_alarm_start,
 )
@@ -20,6 +20,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def raiden_chain(
         request,
         token_addresses,
+        token_network_registry_address,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -49,7 +50,7 @@ def raiden_chain(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
-        blockchain_services.deploy_registry.address,
+        token_network_registry_address,
         blockchain_services.secret_registry.address,
         raiden_udp_ports,
         reveal_timeout,
@@ -77,7 +78,7 @@ def raiden_chain(
     for token_address in token_addresses:
         for app_pair in app_channels:
             greenlets.append(gevent.spawn(
-                netting_channel_open_and_deposit,
+                payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
                 token_address,
@@ -104,6 +105,7 @@ def raiden_chain(
 def raiden_network(
         request,
         token_addresses,
+        token_network_registry_address,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -125,7 +127,7 @@ def raiden_network(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
-        blockchain_services.deploy_registry.address,
+        token_network_registry_address,
         blockchain_services.secret_registry.address,
         raiden_udp_ports,
         reveal_timeout,
@@ -150,7 +152,7 @@ def raiden_network(
     for token_address in token_addresses:
         for app_pair in app_channels:
             greenlets.append(gevent.spawn(
-                netting_channel_open_and_deposit,
+                payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
                 token_address,

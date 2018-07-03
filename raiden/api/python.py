@@ -6,9 +6,9 @@ from eth_utils import is_binary_address
 from raiden import waiting
 from raiden.blockchain.events import (
     ALL_EVENTS,
-    get_all_registry_events,
     get_all_netting_channel_events,
-    get_all_channel_manager_events,
+    get_token_network_events,
+    get_token_network_registry_events,
 )
 from raiden.transfer import views
 from raiden.transfer.events import (
@@ -195,9 +195,9 @@ class RaidenAPI:
         if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
-        registry = self.raiden.chain.registry(registry_address)
-        channel_manager = registry.manager_by_token(token_address)
-        netcontract_address = channel_manager.new_netting_channel(
+        registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network = registry.token_network_by_token(token_address)
+        netcontract_address = token_network.new_netting_channel(
             partner_address,
             settle_timeout,
         )
@@ -288,7 +288,11 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         netcontract_address = channel_state.identifier
-        channel_proxy = self.raiden.chain.netting_channel(netcontract_address)
+        token_network_proxy = self.raiden.chain.token_network_by_token(token_address)
+        channel_proxy = self.raiden.chain.payment_channel(
+            token_network_proxy.address,
+            netcontract_address,
+        )
 
         # If concurrent operations are happening on the channel, fail the request
         if not channel_proxy.channel_operations_lock.acquire(blocking=False):
@@ -384,7 +388,10 @@ class RaidenAPI:
             # Put all the locks in this outer context so that the netting channel functions
             # don't release the locks when their context goes out of scope
             for channel_state in channels_to_close:
-                channel = self.raiden.chain.netting_channel(channel_state.identifier)
+                channel = self.raiden.chain.payment_channel(
+                    token_network_identifier,
+                    channel_state.identifier,
+                )
 
                 # Check if we can acquire the lock. If we can't raise an exception, which
                 # will cause the ExitStack to exit, releasing all locks acquired so far
@@ -568,7 +575,7 @@ class RaidenAPI:
         return async_result
 
     def get_network_events(self, registry_address, from_block, to_block):
-        return get_all_registry_events(
+        return get_token_network_registry_events(
             self.raiden.chain,
             registry_address,
             events=ALL_EVENTS,
@@ -576,15 +583,17 @@ class RaidenAPI:
             to_block=to_block,
         )
 
-    def get_channel_events(self, channel_address, from_block, to_block='latest'):
-        if not is_binary_address(channel_address):
-            raise InvalidAddress(
-                'Expected binary address format for channel in get_channel_events',
-            )
+    def get_channel_events(
+            self,
+            token_network_address,
+            channel_identifier,
+            from_block,
+            to_block='latest',
+    ):
         returned_events = get_all_netting_channel_events(
             self.raiden.chain,
-            channel_address,
-            events=ALL_EVENTS,
+            token_network_address,
+            channel_identifier,
             from_block=from_block,
             to_block=to_block,
         )
@@ -616,7 +625,7 @@ class RaidenAPI:
         if channel_manager_address is None:
             raise UnknownTokenAddress('Token address is not known.')
 
-        returned_events = get_all_channel_manager_events(
+        returned_events = get_token_network_events(
             self.raiden.chain,
             channel_manager_address,
             events=ALL_EVENTS,

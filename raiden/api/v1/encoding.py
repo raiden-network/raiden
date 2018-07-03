@@ -67,7 +67,7 @@ class HexAddressConverter(BaseConverter):
 
 
 # do this to make testing easier
-def parse_hex_channel_id(value: str) -> bytes:
+def decode_keccak(value: str) -> bytes:
     if value[:2] != '0x':
         raise ValidationError("Channel Id is missing the '0x' prefix")
 
@@ -82,9 +82,9 @@ def parse_hex_channel_id(value: str) -> bytes:
     return value
 
 
-class HexChannelIdConverter(BaseConverter):
+class KeccakConverter(BaseConverter):
     def to_python(self, value: str):
-        return parse_hex_channel_id(value)
+        return decode_keccak(value)
 
     def to_url(self, value):
         return encode_hex(value)

@@ -47,11 +47,7 @@ def make_initiator_state(
         channelmap,
         pseudo_random_generator,
         block_number,
-        payment_network_identifier=None,
 ):
-
-    if payment_network_identifier is None:
-        payment_network_identifier = factories.make_address()
 
     init_state_change = ActionInitInitiator(
         transfer_description,

@@ -44,6 +44,7 @@ UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
 UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
 UNIT_CHANNEL_ADDRESS = b'channelchannelchanne'
+UNIT_CHANNEL_ID = sha3(UNIT_CHANNEL_ADDRESS)
 
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
@@ -78,6 +79,10 @@ ADDR = b'addraddraddraddraddr'
 
 def make_address():
     return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
+
+
+def make_channel_identifier():
+    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
 
 
 def make_privkey_address():
@@ -116,7 +121,7 @@ def make_channel(
         partner_address=None,
         token_address=None,
         token_network_identifier=None,
-        channel_address=None,
+        channel_identifier=None,
         reveal_timeout=10,
         settle_timeout=50,
 ):
@@ -125,7 +130,7 @@ def make_channel(
     partner_address = partner_address or make_address()
     token_address = token_address or make_address()
     token_network_identifier = token_network_identifier or make_address()
-    channel_address = channel_address or make_address()
+    channel_identifier = channel_identifier or make_channel_identifier()
 
     our_state = make_endstate(our_address, our_balance)
     partner_state = make_endstate(partner_address, partner_balance)
@@ -140,7 +145,7 @@ def make_channel(
     settle_transaction = None
 
     channel_state = NettingChannelState(
-        channel_address,
+        channel_identifier,
         token_address,
         token_network_identifier,
         reveal_timeout,
@@ -166,7 +171,7 @@ def make_transfer(
         transferred_amount=0,
         locked_amount=None,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
         locksroot=None,
         token=UNIT_TOKEN_ADDRESS,
 ):
@@ -217,7 +222,7 @@ def make_signed_transfer(
         transferred_amount=0,
         locked_amount=None,
         recipient=UNIT_TRANSFER_TARGET,
-        channel_identifier=UNIT_CHANNEL_ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
         token=UNIT_TOKEN_ADDRESS,
         pkey=UNIT_TRANSFER_PKEY,
         sender=UNIT_TRANSFER_SENDER,

@@ -1,9 +1,6 @@
 from binascii import unhexlify
 
-from eth_utils import (
-    remove_0x_prefix,
-    to_canonical_address,
-)
+from eth_utils import remove_0x_prefix
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
 
@@ -30,25 +27,15 @@ def deploy_tokens_and_fund_accounts(
     """
     result = list()
 
-    manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-    token_interface = manager.abi[CONTRACT_HUMAN_STANDARD_TOKEN]
-    web3 = deploy_service.client.web3
-    token = web3.eth.contract(
-        abi=token_interface['abi'],
-        bytecode=token_interface['bin'],
-    )
-
     for _ in range(number_of_tokens):
-        transaction = token.constructor(token_amount, 2, 'raiden', 'Rd').buildTransaction()
-        transaction['nonce'] = deploy_service.client.nonce()
-        signed_txn = web3.eth.account.signTransaction(
-            transaction,
-            deploy_service.client.privkey,
+        token_address = deploy_contract_web3(
+            CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_service.client,
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
         )
-        tx_hash = web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-        deploy_service.client.poll(tx_hash)
-        receipt = deploy_service.client.get_transaction_receipt(tx_hash)
-        token_address = unhexlify(remove_0x_prefix(receipt['contractAddress']))
 
         result.append(token_address)
 
@@ -69,16 +56,27 @@ def deploy_contract_web3(
         *args,
 ) -> typing.Address:
     manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-    contract_interface = manager.abi[contract_name]
+    contract_interface = manager.get_contract(contract_name)
 
-    tx_hash = deploy_client.send_transaction(
-        to=typing.Address(b''),
-        data=contract_interface['bin'],
+    contract = deploy_client.web3.eth.contract(
+        abi=contract_interface['abi'],
+        bytecode=contract_interface['bin'],
     )
-    tx_hash = unhexlify(tx_hash)
+
+    transaction = contract.constructor(*args).buildTransaction()
+    transaction['nonce'] = deploy_client.nonce()
+
+    signed_txn = deploy_client.web3.eth.account.signTransaction(
+        transaction,
+        deploy_client.privkey,
+    )
+    tx_hash = deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
 
     deploy_client.poll(tx_hash)
+
     receipt = deploy_client.get_transaction_receipt(tx_hash)
 
-    contract_address = receipt['contractAddress']
-    return to_canonical_address(contract_address)
+    if receipt.get('status', 0) == 0:
+        raise RuntimeError('contract was not sucessfully deployed')
+
+    return unhexlify(remove_0x_prefix(receipt['contractAddress']))

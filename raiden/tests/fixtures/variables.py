@@ -4,16 +4,16 @@ import random
 
 import pytest
 from eth_utils import to_normalized_address, remove_0x_prefix, denoms
-from raiden.network.utils import get_free_port
+from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, TEST_SETTLE_TIMEOUT_MAX
 
-from raiden.utils import privatekey_to_address
+from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_RETRY_TIMEOUT,
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
-from raiden.utils import sha3
+from raiden.utils import privatekey_to_address, sha3
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
@@ -31,6 +31,22 @@ def settle_timeout(number_of_nodes, reveal_timeout):
     too many blocks to be mined is very costly time-wise.
     """
     return number_of_nodes * (reveal_timeout + TRANSIT_BLOCKS)
+
+
+@pytest.fixture
+def chain_id():
+    # This value must be used in the `--networkid` option for the geth client
+    return 337
+
+
+@pytest.fixture
+def settle_timeout_min():
+    return TEST_SETTLE_TIMEOUT_MIN
+
+
+@pytest.fixture
+def settle_timeout_max():
+    return TEST_SETTLE_TIMEOUT_MAX
 
 
 @pytest.fixture

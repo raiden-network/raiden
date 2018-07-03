@@ -9,24 +9,24 @@ def get_channel_state(
         token_address,
         token_network_address,
         reveal_timeout,
-        netting_channel_proxy,
+        payment_channel_proxy,
 ):
-    channel_details = netting_channel_proxy.detail()
+    channel_details = payment_channel_proxy.detail()
 
     our_state = NettingChannelEndState(
         channel_details['our_address'],
-        channel_details['our_balance'],
+        channel_details['our_deposit'],
     )
     partner_state = NettingChannelEndState(
         channel_details['partner_address'],
-        channel_details['partner_balance'],
+        channel_details['partner_deposit'],
     )
 
-    identifier = netting_channel_proxy.address
-    settle_timeout = channel_details['settle_timeout']
+    identifier = payment_channel_proxy.channel_identifier
+    settle_timeout = payment_channel_proxy.settle_timeout()
 
-    opened_block_number = netting_channel_proxy.opened()
-    closed_block_number = netting_channel_proxy.closed()
+    opened_block_number = payment_channel_proxy.opened()
+    closed_block_number = payment_channel_proxy.closed()
 
     # ignore bad open block numbers
     if opened_block_number <= 0:

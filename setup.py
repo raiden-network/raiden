@@ -13,7 +13,6 @@ from distutils.spawn import find_executable
 class BuildPyCommand(build_py):
 
     def run(self):
-        self.run_command('compile_contracts')
         # ensure smoketest_config.json is generated
         from raiden.tests.utils.smoketest import load_or_create_smoketest_config
         load_or_create_smoketest_config()
@@ -32,22 +31,6 @@ class PyTest(TestCommand):
         import pytest
         errno = pytest.main(self.test_args)
         raise SystemExit(errno)
-
-
-class CompileContracts(Command):
-    description = 'compile contracts to json'
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        os.environ['STORE_PRECOMPILED'] = 'yes'
-        from raiden.blockchain.abi import CONTRACT_MANAGER
-        CONTRACT_MANAGER.instantiate()
 
 
 class CompileWebUI(Command):
@@ -115,7 +98,7 @@ install_requires_replacements = {
     ): 'raiden-libs',
     (
         'git+https://github.com/raiden-network/raiden-contracts.git'
-        '@8dc3bf0dac843ced74b67c70f0209320b633c7a6#egg=raiden-contracts'
+        '@a7eef449caa06db27e25425f77f09f12cc2f6c37#egg=raiden-contracts'
     ): 'raiden-contracts',
 }
 
@@ -150,7 +133,6 @@ setup(
     ],
     cmdclass={
         'test': PyTest,
-        'compile_contracts': CompileContracts,
         'compile_webui': CompileWebUI,
         'build_py': BuildPyCommand,
     },

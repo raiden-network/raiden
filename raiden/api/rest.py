@@ -33,11 +33,12 @@ from raiden.exceptions import (
     UnknownTokenAddress,
 )
 from raiden.api.v1.encoding import (
-    ChannelSchema,
-    ChannelListSchema,
     AddressListSchema,
-    PartnersPerTokenListSchema,
+    ChannelListSchema,
+    ChannelSchema,
     HexAddressConverter,
+    KeccakConverter,
+    PartnersPerTokenListSchema,
     TransferSchema,
 )
 from raiden.api.v1.resources import (
@@ -87,7 +88,10 @@ URLS_V1 = [
     ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
     ('/events/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
-    ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
+    (
+        '/events/channels/<hexaddress:token_network_address>/<keccak:channel_identifier>',
+        ChannelEventsResource,
+    ),
     (
         '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
         TransferToTargetResource,
@@ -222,6 +226,7 @@ class APIServer:
         restapi_setup_type_converters(
             flask_app,
             {'hexaddress': HexAddressConverter},
+            {'keccak': KeccakConverter},
         )
 
         restapi_setup_urls(
@@ -522,9 +527,12 @@ class RestAPI:
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
-    def get_channel_events(self, channel_address, from_block, to_block):
+    def get_channel_events(self, token_network_address, channel_identifier, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_events(
-            channel_address, from_block, to_block,
+            token_network_address,
+            channel_identifier,
+            from_block,
+            to_block,
         )
         return api_response(result=normalize_events_list(raiden_service_result))
 

@@ -2,6 +2,8 @@
 import string
 import random
 
+from eth_utils import keccak
+
 from raiden.constants import (
     UINT64_MAX,
     UINT256_MAX,
@@ -19,6 +21,7 @@ from raiden.messages import (
 
 
 PRIVKEY, ADDRESS = make_privkey_address()
+CHANNEL_ID = keccak(b'somechannel')
 INVALID_ADDRESSES = [
     b' ',
     b' ' * 19,
@@ -85,7 +88,7 @@ def make_refund_transfer(
         nonce=1,
         token_network_address=ADDRESS,
         token=ADDRESS,
-        channel=ADDRESS,
+        channel=CHANNEL_ID,
         transferred_amount=0,
         locked_amount=None,
         amount=1,
@@ -128,7 +131,7 @@ def make_mediated_transfer(
         nonce=1,
         registry_address=ADDRESS,
         token=ADDRESS,
-        channel=ADDRESS,
+        channel=CHANNEL_ID,
         transferred_amount=0,
         locked_amount=None,
         amount=1,
@@ -179,7 +182,7 @@ def make_direct_transfer(
         nonce=1,
         registry_address=ADDRESS,
         token=ADDRESS,
-        channel=ADDRESS,
+        channel=CHANNEL_ID,
         transferred_amount=0,
         locked_amount=0,
         recipient=ADDRESS,

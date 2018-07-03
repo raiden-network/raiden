@@ -347,7 +347,7 @@ class BalanceProofUnsignedState(State):
             locked_amount: typing.TokenAmount,
             locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
-            channel_address: typing.Address,
+            channel_address: typing.Address,  # FIXME: is this used anywhere
     ):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
@@ -379,8 +379,8 @@ class BalanceProofUnsignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if len(channel_address) != 20:
-            raise ValueError('channel is an invalid address')
+        if len(channel_address) != 32:
+            raise ValueError('channel id is invalid')
 
         self.nonce = nonce
         self.transferred_amount = transferred_amount
@@ -498,8 +498,8 @@ class BalanceProofSignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if len(channel_address) != 20:
-            raise ValueError('channel is an invalid address')
+        if len(channel_address) != 32:
+            raise ValueError('channel id is invalid')
 
         if len(message_hash) != 32:
             raise ValueError('message_hash is an invalid hash')

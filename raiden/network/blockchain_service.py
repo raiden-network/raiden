@@ -11,10 +11,7 @@ from eth_utils import (
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
-    ChannelManager,
     Discovery,
-    NettingChannel,
-    Registry,
     Token,
     TokenNetworkRegistry,
     TokenNetwork,
@@ -119,15 +116,6 @@ class BlockChainService:
 
         return self.address_to_token[token_address]
 
-    def channel_manager(self, channel_manager_address: Address) -> ChannelManager:
-        if channel_manager_address not in self.address_to_manager:
-            self.address_to_manager[channel_manager_address] = ChannelManager(
-                self.client,
-                channel_manager_address,
-            )
-
-        return self.address_to_manager[channel_manager_address]
-
     def discovery(self, discovery_address: Address) -> Discovery:
         """ Return a proxy to interact with the discovery. """
         if not is_binary_address(discovery_address):
@@ -140,32 +128,6 @@ class BlockChainService:
             )
 
         return self.address_to_discovery[discovery_address]
-
-    def netting_channel(self, netting_channel_address: Address) -> NettingChannel:
-        """ Return a proxy to interact with a NettingChannelContract. """
-        if not is_binary_address(netting_channel_address):
-            raise ValueError('netting_channel_address must be a valid address')
-
-        if netting_channel_address not in self.address_to_nettingchannel:
-            channel = NettingChannel(
-                self.client,
-                netting_channel_address,
-            )
-            self.address_to_nettingchannel[netting_channel_address] = channel
-
-        return self.address_to_nettingchannel[netting_channel_address]
-
-    def registry(self, registry_address: Address) -> Registry:
-        if not is_binary_address(registry_address):
-            raise ValueError('registry_address must be a valid address')
-
-        if registry_address not in self.address_to_registry:
-            self.address_to_registry[registry_address] = Registry(
-                self.client,
-                registry_address,
-            )
-
-        return self.address_to_registry[registry_address]
 
     def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
         if not is_binary_address(address):
