@@ -21,6 +21,12 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
 
     public tokenAddress: FormControl = new FormControl();
 
+    public notAChecksumAddress() {
+        if (this.tokenAddress.valid && this.tokenAddress.value.length > 0) {
+            return !this.raidenService.checkChecksumAddress(this.tokenAddress.value);
+        }
+    }
+
     constructor(private raidenService: RaidenService,
         private sharedService: SharedService) { }
 
@@ -44,17 +50,22 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
         this.visibleChange.emit(v);
     }
 
+    public convertToChecksum(): string {
+        return 'Not a checksum address, try \n"' + this.raidenService.toChecksumAddress(this.tokenAddress.value) + '" instead.';
+    }
+
     public registerToken() {
         if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
             this.raidenService.registerToken(this.tokenAddress.value)
-                .subscribe((userToken: Usertoken) => {
-                    this.tokensChange.emit(null);
-                    this.sharedService.msg({
-                        severity: 'success',
-                        summary: 'Token registered',
-                        detail: 'Your token was successfully registered: ' + userToken.address,
+                .subscribe(
+                    (userToken: Usertoken) => {
+                        this.tokensChange.emit(null);
+                        this.sharedService.msg({
+                            severity: 'success',
+                            summary: 'Token registered',
+                            detail: 'Your token was successfully registered: ' + userToken.address,
+                        });
                     });
-                });
         }
         this.visible = false;
     }
