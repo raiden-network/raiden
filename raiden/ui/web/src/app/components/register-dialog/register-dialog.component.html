@@ -7,8 +7,11 @@
     </div>
   </div>
   <p-footer>
+    <div *ngIf="notAChecksumAddress()" align="left">
+      <a style="color: red">{{convertToChecksum()}}</a>
+    </div>
     <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
-      <button type="button" pButton icon="fa-pencil" (click)="registerToken()" label="Register" [disabled]="tokenAddress.invalid"></button>
+      <button type="button" pButton icon="fa-pencil" (click)="registerToken()" label="Register" [disabled]="tokenAddress.invalid || notAChecksumAddress()"></button>
     </div>
   </p-footer>
 </p-dialog>
