@@ -1,4 +1,3 @@
-import os
 import itertools
 import gevent
 
@@ -207,10 +206,6 @@ def test_channelmanager_graph_building(
         assert total_pairs == len(manager.channels_addresses())
 
 
-@pytest.mark.skipif(
-    'TRAVIS' in os.environ,
-    reason='Flaky test due to mark.timeout not being scheduled. Issue #319',
-)
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
         web3,

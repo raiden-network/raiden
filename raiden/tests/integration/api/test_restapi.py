@@ -1,4 +1,3 @@
-import os
 from http import HTTPStatus
 
 import pytest
@@ -500,10 +499,6 @@ def test_api_channel_state_change_errors(
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
-@pytest.mark.skipif(
-    'TRAVIS' in os.environ,
-    reason='Flaky test on Travis. See issue #1552',
-)
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_api_tokens(api_backend, blockchain_services, token_addresses):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
