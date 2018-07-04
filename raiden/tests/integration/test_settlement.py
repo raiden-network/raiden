@@ -233,16 +233,12 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         amount,
         identifier,
     )
-    secrethash = sha3(secret)
 
-    # Compute the merkle proof for the pending transfer, and then unlock
+    # Save the merkle tree leaves from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
-    lock = channel.get_lock(channelstate_0_1.our_state, secrethash)
-    unlock_proof = channel.compute_proof_for_lock(
-        channelstate_0_1.our_state,
-        secret,
-        lock,
-    )
+    batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
+    assert batch_unlock
+
     claim_lock(raiden_network, identifier, token_network_identifier, secret)
 
     # Make a new transfer
@@ -253,16 +249,6 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         app0.raiden.address,
     )
 
-    # The direct transfer locksroot must not contain the unlocked lock, the
-    # unlock must fail.
-    netting_channel = app1.raiden.chain.payment_channel(
-        token_network_identifier,
-        channelstate_0_1.identifier,
-    )
-
-    with pytest.raises(Exception):
-        netting_channel.unlock(UnlockProofState(unlock_proof, lock.encoded, secret))
-
     waiting.wait_for_settle(
         app1.raiden,
         app1.raiden.default_registry.address,
@@ -270,6 +256,19 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         [channelstate_0_1.identifier],
         app1.raiden.alarm.wait_time,
     )
+
+    netting_channel = app1.raiden.chain.payment_channel(
+        token_network_identifier,
+        channelstate_0_1.identifier,
+    )
+
+    # The direct transfer locksroot must not contain the unlocked lock, the
+    # unlock must fail.
+    with pytest.raises(Exception):
+        netting_channel.unlock(
+            channelstate_0_1.partner_state.address,
+            batch_unlock,
+        )
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
     expected_balance1 = initial_balance1 + deposit1 + amount * 2

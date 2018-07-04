@@ -207,7 +207,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
             unlock_lock.balance_proof.locksroot,
             unlock_lock.secret,
         )
-        from_.raiden.sign(secret_message, NETWORKNAME_TO_ID[TESTS])
+        from_.raiden.sign(secret_message)
 
         balance_proof = balanceproof_from_envelope(secret_message)
         receive_unlock = ReceiveUnlock(
