@@ -588,6 +588,36 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         self.unlocked_amount = unlocked_amount
         self.returned_tokens = returned_tokens
 
+    def __repr__(self):
+        return (
+            '<ContractReceiveChannelBatchUnlock'
+            'paymentid:{} token:{} channelid:{} participant:{} unlocked:{} returned:{}'
+            '>'
+        ).format(
+            self.payment_network_identifier,
+            self.token_address,
+            self.channel_identifier,
+            self.merkle_tree_leaves,
+            self.participant,
+            self.unlocked_amount,
+            self.returned_tokens,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveChannelBatchUnlock) and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_address == other.token_address and
+            self.channel_identifier == other.channel_identifier and
+            self.merkle_tree_leaves == other.merkle_tree_leaves and
+            self.participant == other.participant and
+            self.unlocked_amount == other.unlocked_amount and
+            self.returned_tokens == other.returned_tokens
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractReceiveNewRoute(StateChange):
     """ New channel was created and this node is NOT a participant. """
@@ -740,7 +770,35 @@ class ReceiveDelivered(StateChange):
     def __init__(self, message_identifier: typing.MessageID):
         self.message_identifier = message_identifier
 
+    def __repr__(self):
+        return '<ReceiveDelivered msgid:{}>'.format(
+            self.message_identifier,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveDelivered) and
+            self.message_identifier == other.message_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ReceiveProcessed(StateChange):
     def __init__(self, message_identifier: typing.MessageID):
         self.message_identifier = message_identifier
+
+    def __repr__(self):
+        return '<ReceiveProcessed msgid:{}>'.format(
+            self.message_identifier,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveProcessed) and
+            self.message_identifier == other.message_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
