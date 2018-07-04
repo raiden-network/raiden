@@ -473,7 +473,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
-    assert token_proxy.balance_of(channel0.identifier) == 0
+    assert token_proxy.balance_of(token_network_identifier) == 0
     total0 = amount0_1 + amount0_2
     total1 = amount1_1
     expected_balance0 = initial_balance0 + deposit - total0 + total1

@@ -89,6 +89,6 @@ def signing_update_data(
         balance_proof.channel_address,
         balance_proof.token_network_identifier,
         chain_id,
-    ) + decode_hex(balance_proof.signature)
+    ) + balance_proof.signature
 
-    return encode_hex(sign_data(privkey, update_data))
+    return sign_data(encode_hex(privkey), update_data)
