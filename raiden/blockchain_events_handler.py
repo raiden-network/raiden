@@ -304,7 +304,7 @@ def handle_secret_revealed(raiden, event, current_block_number):
 
 def on_blockchain_event(raiden, event, current_block_number):
     log.debug(
-        'EVENT',
+        'BLOCKCHAIN EVENT',
         node=pex(raiden.address),
         chain_event=event,
         block_number=current_block_number,
@@ -358,7 +358,7 @@ def on_blockchain_event(raiden, event, current_block_number):
 
 
 def on_blockchain_event2(raiden, event, current_block_number):
-    log.debug('EVENT', node=pex(raiden.address), chain_event=event)
+    log.debug('BLOCKCHAIN EVENT', node=pex(raiden.address), chain_event=event)
 
     event = decode_event_to_internal(event)
     data = event.event_data
