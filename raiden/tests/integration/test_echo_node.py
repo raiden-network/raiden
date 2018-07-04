@@ -12,10 +12,7 @@ from raiden.tests.utils.events import (
 
 from raiden.utils import wait_until
 
-# pylint: disable=too-many-locals
 
-
-# `RaidenAPI.get_channel_events` is not supported in tester
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -63,14 +60,12 @@ def test_event_transfer_received_success(
         )
 
 
-# `RaidenAPI.get_channel_events` is not supported in tester
-@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [18])
 @pytest.mark.parametrize('settle_timeout', [64])
-def test_echo_node_response(token_addresses, raiden_chain):
+def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
@@ -79,7 +74,6 @@ def test_echo_node_response(token_addresses, raiden_chain):
     echo_node = EchoNode(echo_api, token_address)
     echo_node.ready.wait(timeout=30)
     assert echo_node.ready.is_set()
-
     expected = list()
 
     # Create some transfers
@@ -99,38 +93,41 @@ def test_echo_node_response(token_addresses, raiden_chain):
         gevent.sleep(.5)
 
     # Check that all transfers were handled correctly
-    for handled_transfer in echo_node.seen_transfers:
+    def test_events(handled_transfer):
         app = address_to_app[handled_transfer['initiator']]
         events = get_channel_events_for_token(
-            app.raiden.default_registry.address,
             app,
+            app.raiden.default_registry.address,
             token_address,
             0,
         )
-        received = {}
+        received = {
+            event['identifier']: event
+            for event in events
+            if event['event'] == 'EventTransferReceivedSuccess'
+        }
+        if len(received) != 1:
+            return
+        transfer = received.popitem()[1]
+        if (
+                transfer['initiator'] != echo_app.raiden.address or
+                transfer['identifier'] != handled_transfer['identifier'] + transfer['amount']
+        ):
+            return
+        return transfer
 
-        for event in events:
-            if event['event'] == 'EventTransferReceivedSuccess':
-                received[repr(event)] = event
-
-        assert len(received) == 1
-        transfer = list(received.values())[0]
-        assert transfer['initiator'] == echo_app.raiden.address
-        assert transfer['identifier'] == (
-            handled_transfer['identifier'] + transfer['amount']
-        )
+    for handled_transfer in echo_node.seen_transfers:
+        assert wait_until(lambda: test_events(handled_transfer), network_wait)
 
     echo_node.stop()
 
 
-# `RaidenAPI.get_channel_events` is not supported in tester
-@pytest.mark.skip()
 @pytest.mark.parametrize('number_of_nodes', [8])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [20])
 @pytest.mark.parametrize('settle_timeout', [120])
-def test_echo_node_lottery(token_addresses, raiden_chain):
+def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
@@ -188,22 +185,45 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     while echo_node.num_handled_transfers < len(expected):
         gevent.sleep(.5)
 
-    received = {}
-    # Check that payout was generated and pool_size_query answered
-    for handled_transfer in echo_node.seen_transfers:
-        app = address_to_app[handled_transfer['initiator']]
+    def get_echoed_transfer(sent_transfer):
+        """For a given transfer sent to echo node, get the corresponding echoed transfer"""
+        app = address_to_app[sent_transfer['initiator']]
         events = get_channel_events_for_token(
-            app.raiden.default_registry.address,
             app,
+            app.raiden.default_registry.address,
             token_address,
             0,
         )
+        received = {
+            event['identifier']: event
+            for event in events
+            if event['event'] == 'EventTransferReceivedSuccess'
+        }
+        if len(received) != 1:
+            return
+        transfer = received.popitem()[1]
+        if (
+                transfer['initiator'] != echo_app.raiden.address or
+                transfer['identifier'] != sent_transfer['identifier'] + transfer['amount']
+        ):
+            return
+        return transfer
 
-        for event in events:
-            if event['event'] == 'EventTransferReceivedSuccess':
-                received[repr(event)] = event
+    def received_is_of_size(size):
+        """Return transfers received from echo_node when there's size transfers"""
+        received = {}
+        # Check that payout was generated and pool_size_query answered
+        for handled_transfer in echo_node.seen_transfers:
+            event = get_echoed_transfer(handled_transfer)
+            if not event:
+                continue
+            received[event['identifier']] = event
+        if len(received) == size:
+            return received
 
-    assert len(received) == 2
+    # wait for the expected echoed transfers to be handled
+    received = wait_until(lambda: received_is_of_size(2), 2 * network_wait)
+    assert received
 
     received = sorted(received.values(), key=lambda transfer: transfer['amount'])
 

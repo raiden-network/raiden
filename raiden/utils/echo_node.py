@@ -245,8 +245,8 @@ class EchoNode:
                 num_handled_transfers=self.num_handled_transfers + 1,
             )
 
-            self.api.transfer_and_wait(
-                transfer.registry_address,
+            self.api.transfer(
+                self.api.raiden.default_registry.address,
                 self.token_address,
                 echo_amount,
                 transfer['initiator'],
