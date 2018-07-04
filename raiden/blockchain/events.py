@@ -286,10 +286,13 @@ class BlockchainEvents:
 
     def __init__(self):
         self.event_listeners = list()
-        self.first_run = True
 
     def reset(self):
-        self.first_run = True
+        listeners = [
+            event_listener._replace(first_run=False)
+            for event_listener in self.event_listeners
+        ]
+        self.event_listeners = listeners
 
     def poll_blockchain_events(self):
         # When we test with geth if the contracts have already been deployed
