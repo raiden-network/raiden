@@ -12,6 +12,10 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
     TransitionResult,
 )
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+    SendDirectTransfer,
+)
 from raiden.transfer.state import (
     NodeState,
     PaymentMappingState,
@@ -607,17 +611,25 @@ def handle_receive_secret_request(node_state, state_change):
 
 def handle_processed(node_state, state_change):
     # TODO: improve the complexity of this algorithm
+    events = list()
     for queue in node_state.queueids_to_queues.values():
         remove = []
 
+        # TODO: ensure Processed message came from the correct peer
         for pos, message in enumerate(queue):
             if message.message_identifier == state_change.message_identifier:
+                if type(message) == SendDirectTransfer:
+                    events.append(EventTransferSentSuccess(
+                        message.payment_identifier,
+                        message.balance_proof.transferred_amount,
+                        message.recipient,
+                    ))
                 remove.append(pos)
 
         for removepos in reversed(remove):
             queue.pop(removepos)
 
-    return TransitionResult(node_state, [])
+    return TransitionResult(node_state, events)
 
 
 def handle_receive_unlock(node_state, state_change):
