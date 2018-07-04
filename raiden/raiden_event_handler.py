@@ -270,7 +270,7 @@ def handle_contract_send_channelsettle(
     # The smart contract requires the first balance proof to be the one with
     # the smaller transferred_amount. This is used to simplify overflow checks
     # in the smart contract.
-    if our_transferred_amount > partner_transferred_amount:
+    if our_transferred_amount < partner_transferred_amount:
         first_transferred_amount = partner_transferred_amount
         first_locked_amount = partner_locked_amount
         first_locksroot = partner_locksroot
