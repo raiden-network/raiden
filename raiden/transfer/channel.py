@@ -1579,62 +1579,10 @@ def handle_channel_closed(
             )
             events.append(update)
 
-        unlock_proofs = get_known_unlocks(channel_state.partner_state)
-        if unlock_proofs:
-            onchain_unlock = ContractSendChannelBatchUnlock(
-                channel_state.identifier,
-                unlock_proofs,
-            )
-            events.append(onchain_unlock)
-
-    return TransitionResult(channel_state, events)
-
-
-def handle_channel_closed2(
-        channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelClosed,
-) -> TransitionResult:
-    events = list()
-
-    just_closed = (
-        state_change.channel_identifier == channel_state.identifier and
-        get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED
-    )
-
-    if just_closed:
-        set_closed(channel_state, state_change.closed_block_number)
-
-        balance_proof = channel_state.partner_state.balance_proof
-        call_update = (
-            state_change.closing_address != channel_state.our_state.address and
-            balance_proof
-        )
-        if call_update:
-            # The channel was closed by our partner, if there is a balance
-            # proof available update this node half of the state
-            update = ContractSendChannelUpdateTransfer(
-                channel_state.identifier,
-                channel_state.token_network_identifier,
-                balance_proof,
-            )
-            events.append(update)
-
     return TransitionResult(channel_state, events)
 
 
 def handle_channel_settled(
-        channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelSettled,
-) -> TransitionResult:
-    events: typing.List[Event] = list()
-
-    if state_change.channel_identifier == channel_state.identifier:
-        set_settled(channel_state, state_change.settle_block_number)
-
-    return TransitionResult(channel_state, events)
-
-
-def handle_channel_settled2(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelSettled,
 ) -> TransitionResult:
@@ -1749,33 +1697,48 @@ def state_transition(
     iteration = TransitionResult(channel_state, events)
 
     if type(state_change) == Block:
-        iteration = handle_block(channel_state, state_change, block_number)
-
+        iteration = handle_block(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ActionChannelClose:
-        iteration = handle_action_close(channel_state, state_change, block_number)
-
+        iteration = handle_action_close(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ActionTransferDirect:
         iteration = handle_send_directtransfer(
             channel_state,
             state_change,
             pseudo_random_generator,
         )
-
     elif type(state_change) == ContractReceiveChannelClosed:
-        iteration = handle_channel_closed(channel_state, state_change)
-        # iteration = handle_channel_closed2(channel_state, state_change)
-
+        iteration = handle_channel_closed(
+            channel_state,
+            state_change,
+        )
     elif type(state_change) == ContractReceiveChannelSettled:
-        iteration = handle_channel_settled(channel_state, state_change)
-        # iteration = handle_channel_settled2(channel_state, state_change)
-
+        iteration = handle_channel_settled(
+            channel_state,
+            state_change,
+        )
     elif type(state_change) == ContractReceiveChannelNewBalance:
-        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
-
+        iteration = handle_channel_newbalance(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ContractReceiveChannelUnlock:
-        iteration = handle_channel_unlock(channel_state, state_change)
-
+        iteration = handle_channel_unlock(
+            channel_state,
+            state_change,
+        )
     elif type(state_change) == ReceiveTransferDirect:
-        iteration = handle_receive_directtransfer(channel_state, state_change)
+        iteration = handle_receive_directtransfer(
+            channel_state,
+            state_change,
+        )
 
     return iteration
