@@ -1119,6 +1119,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         smoketest_config['contracts']['registry_address'] = to_checksum_address(
             contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         )
+        smoketest_config['contracts']['secret_registry_address'] = to_checksum_address(
+            contract_addresses[CONTRACT_SECRET_REGISTRY],
+        )
         smoketest_config['contracts']['discovery_address'] = to_checksum_address(
             contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
         )

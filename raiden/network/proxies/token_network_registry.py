@@ -204,3 +204,10 @@ class TokenNetworkRegistry:
             self.address_to_tokennetwork[token_network_address] = token_network
 
         return self.token_to_tokennetwork[token_address]
+
+    def filter_token_added_events(self):
+        filter = self.proxy.contract.events.TokenNetworkCreated.createFilter(fromBlock=0)
+        events = filter.get_all_entries()
+        self.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
+
+        return events
