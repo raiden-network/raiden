@@ -9,7 +9,6 @@ import structlog
 from cachetools import LRUCache, cached
 from operator import attrgetter
 
-from raiden_libs.utils import sign_data
 from raiden.constants import (
     UINT256_MAX,
     UINT64_MAX,
@@ -17,7 +16,7 @@ from raiden.constants import (
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
-from raiden.transfer.balance_proof import pack_signing_data, pack_signing_data2
+from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import (
@@ -204,7 +203,7 @@ class SignedMessage(Message):
         super().__init__()
         self.signature = b''
 
-    def data_to_sign(self) -> bytes:
+    def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
         packed = self.packed()
 
@@ -214,9 +213,9 @@ class SignedMessage(Message):
         # this slice must be from the end of the buffer
         return packed.data[:-field.size_bytes]
 
-    def sign(self, private_key):
+    def sign(self, private_key, chain_id):
         """ Sign message using `private_key`. """
-        message_data = self.data_to_sign()
+        message_data = self._data_to_sign()
         self.signature = signing.sign(message_data, private_key)
 
     @property
@@ -224,7 +223,7 @@ class SignedMessage(Message):
     def sender(self) -> Optional[Address]:
         if not self.signature:
             return None
-        data_that_was_signed = self.data_to_sign()
+        data_that_was_signed = self._data_to_sign()
         message_signature = self.signature
 
         address = signing.recover_address(data_that_was_signed, message_signature)
@@ -266,43 +265,23 @@ class EnvelopeMessage(SignedMessage):
 
         return message_hash
 
-    def data_to_sign(self):
-        """ Returns an encoded subset of the fields to sign """
-        packed = self.packed()
-        klass = type(packed)
-
-        field = klass.fields_spec[-1]
-        assert field.name == 'signature', 'signature is not the last field'
-
-        data = packed.data
-        return pack_signing_data(
-            klass.get_bytes_from(data, 'nonce'),
-            klass.get_bytes_from(data, 'transferred_amount'),
-            klass.get_bytes_from(data, 'locked_amount'),
-            klass.get_bytes_from(data, 'channel'),
-            klass.get_bytes_from(data, 'locksroot'),
-            self.message_hash,
-        )
-
-    def sign2(self, private_key, chain_id):
+    def sign(self, private_key, chain_id):
         """ Creates the signature to the balance proof. Will be used in the SC refactoring. """
         balance_hash = hash_balance_data(
             self.transferred_amount,
             self.locked_amount,
             self.locksroot,
         )
-        balance_proof_packed = pack_signing_data2(
+        balance_proof_packed = pack_signing_data(
             nonce=self.nonce,
             balance_hash=balance_hash,
-            additional_hash=self.message_hash.decode(),
+            additional_hash=self.message_hash,
             channel_identifier=self.channel,
-            token_network_address=self.token_network_address,
+            token_network_identifier=self.token_network_address,
             chain_id=chain_id,
         )
 
-        self.signature = encode_hex(
-            sign_data(self.privkey, balance_proof_packed),
-        )
+        self.signature = signing.sign(balance_proof_packed, private_key)
 
 
 class Processed(SignedMessage):
@@ -1006,6 +985,7 @@ class LockedTransferBase(EnvelopeMessage):
     [nonce, token, balance, recipient, locksroot, ...] along a merkle proof
     from locksroot to the not yet netted formerly locked amount.
     """
+
     def __init__(
             self,
             message_identifier,

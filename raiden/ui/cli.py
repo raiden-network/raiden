@@ -612,6 +612,8 @@ def app(
             ).format(network_id, net_id))
         sys.exit(1)
 
+    config['chain_id'] = network_id
+
     if sync_check:
         check_synced(blockchain_service)
 

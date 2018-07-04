@@ -231,6 +231,7 @@ def create_sequential_channels(raiden_apps, channels_per_node):
 
 
 def create_apps(
+        chain_id,
         blockchain_services,
         endpoint_discovery_services,
         token_network_registry_address,
@@ -263,6 +264,7 @@ def create_apps(
         discovery.register(nodeid, host, port)
 
         config = {
+            'chain_id': chain_id,
             'host': host,
             'port': port,
             'external_ip': host,

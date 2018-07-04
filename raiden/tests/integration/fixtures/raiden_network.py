@@ -24,6 +24,7 @@ def raiden_chain(
         channels_per_node,
         deposit,
         settle_timeout,
+        chain_id,
         blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
@@ -48,6 +49,7 @@ def raiden_chain(
     )
 
     raiden_apps = create_apps(
+        chain_id,
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
         token_network_registry_address,
@@ -109,6 +111,7 @@ def raiden_network(
         channels_per_node,
         deposit,
         settle_timeout,
+        chain_id,
         blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
@@ -125,6 +128,7 @@ def raiden_network(
 ):
 
     raiden_apps = create_apps(
+        chain_id,
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
         token_network_registry_address,

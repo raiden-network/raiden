@@ -405,7 +405,7 @@ class RaidenService:
         if not isinstance(message, SignedMessage):
             raise ValueError('{} is not signable.'.format(repr(message)))
 
-        message.sign(self.private_key)
+        message.sign(self.private_key, self.config['chain_id'])
 
     def install_and_query_payment_network_filters(
             self,
