@@ -34,12 +34,13 @@ from raiden.exceptions import (
 )
 from raiden.messages import (
     decode as message_from_bytes,
-    Delivered,
     from_dict as message_from_dict,
+    Delivered,
     Ping,
-    SignedMessage,
     Pong,
+    SignedMessage,
     Message,
+    Processed,
 )
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
@@ -235,10 +236,16 @@ class MatrixTransport:
         # Ignore duplicated messages
         message_id = message.message_identifier
         if message_id not in self._messageids_to_asyncresult:
-            async_result = self._messageids_to_asyncresult[message_id] = AsyncResult()
+            async_result = AsyncResult()
+            if isinstance(message, Processed):
+                async_result.set(True)  # processed messages shouldn't get a Delivered reply
+            else:
+                self._messageids_to_asyncresult[message_id] = async_result
             self._send_with_retry(receiver_address, async_result, json.dumps(message.to_dict()))
+        else:
+            async_result = self._messageids_to_asyncresult[message_id]
 
-        return self._messageids_to_asyncresult[message_id]
+        return async_result
 
     def stop_and_wait(self):
         if self._running:
@@ -492,7 +499,7 @@ class MatrixTransport:
         )
 
         try:
-            if on_message(self._raiden_service, message):
+            if on_message(self._raiden_service, message) and not isinstance(message, Processed):
                 # TODO: Maybe replace with Matrix read receipts.
                 #       Unfortunately those work on an 'up to' basis, not on individual messages
                 #       which means that message order is important which isn't guaranteed between
