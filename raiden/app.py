@@ -84,7 +84,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
-            discovery: Discovery=None,
+            discovery: Discovery = None,
     ):
         self.config = config
         self.discovery = discovery
