@@ -342,6 +342,7 @@ class RaidenAPI:
             registry_address,
             token_address,
             [partner_address],
+            poll_timeout,
             retry_timeout,
         )
 

@@ -1,7 +1,6 @@
 from binascii import unhexlify
 
 from eth_utils import (
-    encode_hex,
     is_binary_address,
     to_checksum_address,
     to_normalized_address,

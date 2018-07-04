@@ -1,4 +1,4 @@
-from eth_utils import encode_hex, decode_hex
+from eth_utils import encode_hex
 
 from raiden_libs.utils import (
     pack_data,
