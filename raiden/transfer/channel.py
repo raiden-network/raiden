@@ -1594,6 +1594,7 @@ def handle_channel_settled(
         unlock_proofs = get_batch_unlock(channel_state.partner_state)
         if unlock_proofs:
             onchain_unlock = ContractSendChannelBatchUnlock(
+                channel_state.token_network_identifier,
                 channel_state.identifier,
                 unlock_proofs,
             )

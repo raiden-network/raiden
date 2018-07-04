@@ -803,6 +803,7 @@ def events_for_unlock_if_closed(
                 lock,
             )
             unlock = ContractSendChannelBatchUnlock(
+                payer_channel.token_network_identifier,
                 payer_channel.identifier,
                 [unlock_proof],
             )

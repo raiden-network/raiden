@@ -354,7 +354,10 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     channel.register_secret(channel_state2_1, secret, secrethash)
 
     # Close the channel
-    netting_channel_proxy = app2.raiden.chain.payment_channel(channel_state2_1.identifier)
+    netting_channel_proxy = app2.raiden.chain.payment_channel(
+        token_network_identifier,
+        channel_state2_1.identifier,
+    )
     netting_channel_proxy.channel_close(
         registry_address,
         channel_state2_1.partner_state.balance_proof,

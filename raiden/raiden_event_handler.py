@@ -231,7 +231,10 @@ def handle_contract_send_channelunlock(
         raiden: RaidenService,
         channel_unlock_event: ContractSendChannelBatchUnlock,
 ):
-    channel = raiden.chain.payment_channel(channel_unlock_event.channel_identifier)
+    channel = raiden.chain.payment_channel(
+        channel_unlock_event.token_network_identifier,
+        channel_unlock_event.channel_identifier,
+    )
     channel.unlock(channel_unlock_event.unlock_proofs)
 
 
