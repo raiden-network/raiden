@@ -48,6 +48,14 @@ export class RaidenService {
             this.raidenConfig.web3.eth.getBlockNumber(this.zoneEncap(cb)))();
     }
 
+    public checkChecksumAddress(address: string): boolean {
+        return this.raidenConfig.web3.isChecksumAddress(address);
+    }
+
+    public toChecksumAddress(address: string): string {
+        return this.raidenConfig.web3.toChecksumAddress(address);
+    }
+
     public getRaidenAddress(): Observable<string> {
         return this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`)
             .map((data) => this.raidenAddress = data.our_address)
