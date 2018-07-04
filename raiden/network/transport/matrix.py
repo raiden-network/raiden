@@ -368,8 +368,9 @@ class MatrixTransport:
                         discovery=self._discovery_room_alias_full,
                     )
                     return
-                self._address_to_roomid[peer_address] = room.room_id
-                room.add_listener(self._handle_message)
+                if peer_address not in self._address_to_roomid:
+                    self._address_to_roomid[peer_address] = room.room_id
+                    room.add_listener(self._handle_message, 'm.room.message')
             self.log.debug(
                 'ROOM',
                 room_id=room_id,
@@ -395,8 +396,9 @@ class MatrixTransport:
             )
             room.leave()
             return
-        self._address_to_roomid[peer_address] = room.room_id
-        room.add_listener(self._handle_message, 'm.room.message')
+        if peer_address not in self._address_to_roomid:
+            self._address_to_roomid[peer_address] = room.room_id
+            room.add_listener(self._handle_message, 'm.room.message')
         self.log.debug(
             'Invited to a room',
             room_id=room_id,
@@ -607,13 +609,14 @@ class MatrixTransport:
 
             room = self._get_unlisted_room(room_name, invitees=[user.user_id for user in peers])
 
-        room.add_listener(self._handle_message, 'm.room.message')
+        if receiver_address not in self._address_to_roomid:
+            self._address_to_roomid[receiver_address] = room.room_id
+            room.add_listener(self._handle_message, 'm.room.message')
         self.log.info(
             'CHANNEL ROOM',
             peer_address=to_normalized_address(receiver_address),
             room=room,
         )
-        self._address_to_roomid[receiver_address] = room.room_id
         return room
 
     def _get_unlisted_room(self, room_name, invitees):
