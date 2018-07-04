@@ -59,6 +59,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
 
     event_list1 = api1.get_channel_events(
+        token_network_identifier,
         channel12.identifier,
         channel12.open_transaction.finished_block_number,
     )
@@ -98,6 +99,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     assert api2.get_node_network_state(api1.address) == NODE_NETWORK_REACHABLE
 
     event_list2 = api1.get_channel_events(
+        token_network_identifier,
         channel12.identifier,
         channel12.open_transaction.finished_block_number,
     )
@@ -122,6 +124,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     channel12 = get_channelstate(node1, node2, token_network_identifier)
 
     event_list3 = api1.get_channel_events(
+        token_network_identifier,
         channel12.identifier,
         channel12.open_transaction.finished_block_number,
     )
