@@ -553,11 +553,14 @@ class RestAPI:
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_channel(self, registry_address, token_address, partner_address):
-        channel_state = self.raiden_api.get_channel(
-            registry_address=registry_address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
+        try:
+            channel_state = self.raiden_api.get_channel(
+                registry_address=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
+            )
+        except ChannelNotFound:
+            return api_error('Channel not found.', HTTPStatus.NOT_FOUND)
         result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
         return api_response(result=checksummed_response_dict(result.data))
 
