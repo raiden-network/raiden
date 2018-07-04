@@ -3,11 +3,11 @@ import heapq
 from binascii import hexlify
 from collections import namedtuple
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import UINT256_MAX, NETWORKNAME_TO_ID
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.balance_proof import signing_data
+from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
@@ -71,8 +71,10 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
+from raiden.transfer.utils import hash_balance_data
 from raiden.utils import publickey_to_address, typing
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
@@ -181,13 +183,18 @@ def is_valid_signature(
         balance_proof: BalanceProofSignedState,
         sender_address: typing.Address,
 ) -> typing.SuccessOrError:
-    data_that_was_signed = signing_data(
-        balance_proof.nonce,
+    balance_hash = hash_balance_data(
         balance_proof.transferred_amount,
         balance_proof.locked_amount,
-        balance_proof.channel_address,
         balance_proof.locksroot,
-        balance_proof.message_hash,
+    )
+    data_that_was_signed = pack_signing_data(
+        nonce=balance_proof.nonce,
+        balance_hash=balance_hash,
+        additional_hash=balance_proof.message_hash,
+        channel_identifier=balance_proof.channel_address,
+        token_network_identifier=balance_proof.token_network_identifier,
+        chain_id=NETWORKNAME_TO_ID['tests'],
     )
 
     try:

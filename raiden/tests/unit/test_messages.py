@@ -10,14 +10,14 @@ from raiden.tests.utils.messages import (
     REFUND_TRANSFER_INVALID_VALUES,
     DIRECT_TRANSFER_INVALID_VALUES,
 )
-from raiden.tests.utils.factories import make_privkey_address
+from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID
 
 PRIVKEY, ADDRESS = make_privkey_address()
 
 
 def test_signature():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert ping.sender == ADDRESS
 
 

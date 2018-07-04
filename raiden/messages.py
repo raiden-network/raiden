@@ -36,6 +36,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.utils.typing import Optional, Address
+from raiden.constants import NETWORKNAME_TO_ID
 
 __all__ = (
     'Delivered',
@@ -203,7 +204,7 @@ class SignedMessage(Message):
         super().__init__()
         self.signature = b''
 
-    def _data_to_sign(self) -> bytes:
+    def _data_to_sign(self, chain_id) -> bytes:
         """ Return the binary data to be/which was signed """
         packed = self.packed()
 
@@ -215,15 +216,17 @@ class SignedMessage(Message):
 
     def sign(self, private_key, chain_id):
         """ Sign message using `private_key`. """
-        message_data = self._data_to_sign()
+        message_data = self._data_to_sign(chain_id)
         self.signature = signing.sign(message_data, private_key)
 
     @property
     @cached(_senders_cache, key=attrgetter('signature'))
     def sender(self) -> Optional[Address]:
+        # TODO: Add chain id as properties of all messages and remove this hack
+        chain_id = NETWORKNAME_TO_ID['tests']
         if not self.signature:
             return None
-        data_that_was_signed = self._data_to_sign()
+        data_that_was_signed = self._data_to_sign(chain_id)
         message_signature = self.signature
 
         address = signing.recover_address(data_that_was_signed, message_signature)
@@ -265,8 +268,7 @@ class EnvelopeMessage(SignedMessage):
 
         return message_hash
 
-    def sign(self, private_key, chain_id):
-        """ Creates the signature to the balance proof. Will be used in the SC refactoring. """
+    def _data_to_sign(self, chain_id) -> bytes:
         balance_hash = hash_balance_data(
             self.transferred_amount,
             self.locked_amount,
@@ -280,8 +282,7 @@ class EnvelopeMessage(SignedMessage):
             token_network_identifier=self.token_network_address,
             chain_id=chain_id,
         )
-
-        self.signature = signing.sign(balance_proof_packed, private_key)
+        return balance_proof_packed
 
 
 class Processed(SignedMessage):

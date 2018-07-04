@@ -14,20 +14,20 @@ from raiden.tests.utils.messages import (
     make_mediated_transfer,
     make_refund_transfer,
 )
-from raiden.tests.utils.factories import make_privkey_address
+from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID
 
 PRIVKEY, ADDRESS = make_privkey_address()
 
 
 def test_signature():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert ping.sender == ADDRESS
 
 
 def test_encoding():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, UNIT_CHAIN_ID)
     decoded_ping = decode(ping.encode())
     assert isinstance(decoded_ping, Ping)
     assert decoded_ping.sender == ADDRESS == ping.sender
@@ -39,7 +39,7 @@ def test_encoding():
 
 def test_hash():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, UNIT_CHAIN_ID)
     data = ping.encode()
     msghash = sha3(data)
     decoded_ping = decode(data)
@@ -49,7 +49,7 @@ def test_hash():
 def test_processed():
     message_identifier = random.randint(0, UINT64_MAX)
     processed_message = Processed(message_identifier)
-    processed_message.sign(PRIVKEY)
+    processed_message.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert processed_message.sender == ADDRESS
 
     assert processed_message.message_identifier == message_identifier
@@ -73,7 +73,7 @@ def test_direct_transfer_min_max(payment_identifier, nonce, transferred_amount):
         transferred_amount=transferred_amount,
     )
 
-    direct_transfer.sign(PRIVKEY)
+    direct_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert direct_transfer.sender == ADDRESS
     assert decode(direct_transfer.encode()) == direct_transfer
 
@@ -92,7 +92,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
         transferred_amount=transferred_amount,
     )
 
-    mediated_transfer.sign(PRIVKEY)
+    mediated_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert mediated_transfer.sender == ADDRESS
     assert decode(mediated_transfer.encode()) == mediated_transfer
 
@@ -109,6 +109,6 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
         transferred_amount=transferred_amount,
     )
 
-    refund_transfer.sign(PRIVKEY)
+    refund_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert refund_transfer.sender == ADDRESS
     assert decode(refund_transfer.encode()) == refund_transfer

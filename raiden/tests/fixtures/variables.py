@@ -14,6 +14,7 @@ from raiden.settings import (
 )
 from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import privatekey_to_address, sha3
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
@@ -36,7 +37,7 @@ def settle_timeout(number_of_nodes, reveal_timeout):
 @pytest.fixture
 def chain_id():
     # This value must be used in the `--networkid` option for the geth client
-    return 337
+    return UNIT_CHAIN_ID
 
 
 @pytest.fixture
