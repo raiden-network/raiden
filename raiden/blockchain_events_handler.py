@@ -82,6 +82,7 @@ def handle_channel_new(raiden, event, current_block_number):
             token_network_identifier,
             raiden.config['reveal_timeout'],
             channel_proxy,
+            event.event_data['block_number'],
         )
 
         new_channel = ContractReceiveChannelNew(

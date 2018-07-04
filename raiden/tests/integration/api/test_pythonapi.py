@@ -63,7 +63,20 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         channel12.identifier,
         channel12.open_transaction.finished_block_number,
     )
-    assert event_list1 == []
+    assert any(
+        (
+            event['event'] == EVENT_CHANNEL_OPENED and
+            is_same_address(
+                event['args']['participant1'],
+                to_normalized_address(api1.address),
+            ) and
+            is_same_address(
+                event['args']['participant2'],
+                to_normalized_address(api2.address),
+            )
+        )
+        for event in event_list1
+    )
 
     token_events = api1.get_token_network_events(
         token_address,
@@ -107,13 +120,10 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         (
             event['event'] == EVENT_CHANNEL_DEPOSIT and
             is_same_address(
-                event['args']['registry_address'],
-                to_normalized_address(registry_address),
-            ) and
-            is_same_address(
                 event['args']['participant'],
                 to_normalized_address(api1.address),
-            )
+            ) and
+            event['args']['total_deposit'] == deposit
         )
         for event in event_list2
     )
@@ -133,11 +143,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         (
             event['event'] == EVENT_CHANNEL_CLOSED and
             is_same_address(
-                event['args']['registry_address'],
-                to_normalized_address(registry_address),
-            ) and
-            is_same_address(
-                event['args']['closing_address'],
+                event['args']['closing_participant'],
                 to_normalized_address(api1.address),
             )
         )

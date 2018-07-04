@@ -10,6 +10,7 @@ def get_channel_state(
         token_network_address,
         reveal_timeout,
         payment_channel_proxy,
+        opened_block_number,
 ):
     channel_details = payment_channel_proxy.detail()
 
@@ -25,15 +26,10 @@ def get_channel_state(
     identifier = payment_channel_proxy.channel_identifier
     settle_timeout = payment_channel_proxy.settle_timeout()
 
-    opened_block_number = payment_channel_proxy.opened()
-    closed_block_number = payment_channel_proxy.closed()
+    closed_block_number = None
 
     # ignore bad open block numbers
     if opened_block_number <= 0:
-        return None
-
-    # ignore negative closed block numbers
-    if closed_block_number < 0:
         return None
 
     open_transaction = TransactionExecutionStatus(

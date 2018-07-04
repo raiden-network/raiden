@@ -623,7 +623,7 @@ class RaidenAPI:
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events',
             )
-        channel_manager_address = self.raiden.default_registry.manager_address_by_token(
+        channel_manager_address = self.raiden.default_registry.get_token_network(
             token_address,
         )
         if channel_manager_address is None:
