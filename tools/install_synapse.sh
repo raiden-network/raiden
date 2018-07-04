@@ -45,12 +45,12 @@ if [[ ! -x ${SYNAPSE} ]]; then
         "${SYNDIR}/app/homeserver.py"
     rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
-    ln -fs "${SYNAPSE}" "${SYNAPSE_LINK}"
 
     popd
     [[ -n ${RMBUILDDIR} ]] && rm -r "${BUILDDIR}"
 fi
 
+ln -fs "${SYNAPSE}" "${SYNAPSE_LINK}"
 cp "${BASEDIR}/raiden/tests/test_files/synapse-config.yaml" "${DESTDIR}/"
 "${SYNAPSE}" --server-name="${SYNAPSE_SERVER_NAME}" \
            --config-path="${DESTDIR}/synapse-config.yaml" \
@@ -59,11 +59,9 @@ cp "${BASEDIR}/raiden/tests/test_files/synapse-config.yaml" "${DESTDIR}/"
 cat > "${DESTDIR}/run_synapse.sh" << EOF
 #!/usr/bin/env bash
 SYNAPSEDIR=\$( dirname "\$0" )
-if [[ -z \${TRAVIS} ]]; then
-  LOG_FILE="\${SYNAPSEDIR}/homeserver.log"
-  [[ -f \${LOG_FILE} ]] && rm "\${LOG_FILE}"
-  LOGGING_OPTION="--log-file \${LOG_FILE}"
-fi
+LOG_FILE="\${SYNAPSEDIR}/homeserver.log"
+[[ -f \${LOG_FILE} ]] && rm "\${LOG_FILE}"
+LOGGING_OPTION="--log-file \${LOG_FILE}"
 exec "\${SYNAPSEDIR}/synapse" \
   --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
   --config-path="\${SYNAPSEDIR}/synapse-config.yaml" \
