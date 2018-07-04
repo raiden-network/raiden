@@ -17,7 +17,6 @@ from raiden.tests.utils.transfer import (
     pending_mediated_transfer,
 )
 from raiden.transfer import channel, views
-from raiden.transfer.merkle_tree import validate_proof, merkleroot
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -87,8 +86,8 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_unlock(raiden_network, token_addresses, deposit):
-    """Unlock can be called on a closed channel."""
+def test_batch_unlock(raiden_network, token_addresses, deposit):
+    """Batch unlock can be called on a settled channel."""
     alice_app, bob_app = raiden_network
     registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -119,7 +118,6 @@ def test_unlock(raiden_network, token_addresses, deposit):
     #    - protocol didn't continue
 
     alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     lock = channel.get_lock(alice_bob_channel.our_state, secrethash)
     assert lock
@@ -131,19 +129,7 @@ def test_unlock(raiden_network, token_addresses, deposit):
     )
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
-    unlock_proof = channel.compute_proof_for_lock(
-        alice_bob_channel.our_state,
-        secret,
-        lock,
-    )
-
-    assert validate_proof(
-        unlock_proof.merkle_proof,
-        merkleroot(bob_alice_channel.partner_state.merkletree),
-        sha3(lock.encoded),
-    )
-    assert unlock_proof.lock_encoded == lock.encoded
-    assert unlock_proof.secret == secret
+    batch_unlock = channel.get_batch_unlock(alice_bob_channel.our_state)
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
@@ -157,12 +143,6 @@ def test_unlock(raiden_network, token_addresses, deposit):
     assert lock.expiration > alice_app.raiden.chain.block_number()
     assert lock.secrethash == sha3(secret)
 
-    nettingchannel_proxy = bob_app.raiden.chain.payment_channel(
-        token_network_identifier,
-        alice_bob_channel.identifier,
-    )
-    nettingchannel_proxy.unlock(unlock_proof)
-
     waiting.wait_for_settle(
         alice_app.raiden,
         registry_address,
@@ -171,8 +151,16 @@ def test_unlock(raiden_network, token_addresses, deposit):
         alice_app.raiden.alarm.wait_time,
     )
 
+    nettingchannel_proxy = bob_app.raiden.chain.payment_channel(
+        token_network_identifier,
+        alice_bob_channel.identifier,
+    )
+    nettingchannel_proxy.unlock(
+        alice_bob_channel.partner_state.address,
+        batch_unlock,
+    )
+
     alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     alice_netted_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_netted_balance = bob_initial_balance + deposit + alice_to_bob_amount
@@ -187,7 +175,6 @@ def test_unlock(raiden_network, token_addresses, deposit):
     )
 
     alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
-    bob_alice_channel = get_channelstate(bob_app, alice_app, token_network_identifier)
 
     assert must_contain_entry(state_changes, ContractReceiveChannelUnlock, {
         'payment_network_identifier': registry_address,
