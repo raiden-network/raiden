@@ -14,7 +14,7 @@ coverage run \
     -Wd \
     --travis-fold=always \
     --log-config='raiden:DEBUG' \
-    --random \
+    -v \
     --blockchain-type=${BLOCKCHAIN_TYPE} \
     ${TRANSPORT_OPTIONS} \
     ${TEST}
