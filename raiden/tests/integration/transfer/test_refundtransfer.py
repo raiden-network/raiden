@@ -188,7 +188,6 @@ def test_refund_transfer_after_2nd_hop(
         token_addresses,
         deposit,
         network_wait,
-        skip_if_not_udp,
 ):
     """Test the refund transfer sent due to failure after 2nd hop"""
     # Topology:
