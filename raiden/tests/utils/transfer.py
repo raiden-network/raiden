@@ -5,11 +5,12 @@ import gevent
 import time
 from coincurve import PrivateKey
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import UINT64_MAX, NETWORKNAME_TO_ID, TESTS
 from raiden.messages import (
     LockedTransfer,
     Secret,
 )
+from raiden.message_handler import on_message
 from raiden.raiden_service import (
     initiator_init,
     mediator_init,
@@ -29,12 +30,11 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils import sha3
-from raiden.message_handler import on_message
 
 
 def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
-    message.sign(key)
+    message.sign(key, NETWORKNAME_TO_ID[TESTS])
     on_message(app.raiden, message)
 
 
@@ -207,7 +207,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
             unlock_lock.balance_proof.locksroot,
             unlock_lock.secret,
         )
-        from_.raiden.sign(secret_message)
+        from_.raiden.sign(secret_message, NETWORKNAME_TO_ID[TESTS])
 
         balance_proof = balanceproof_from_envelope(secret_message)
         receive_unlock = ReceiveUnlock(
@@ -366,7 +366,7 @@ def make_mediated_transfer(
     mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
     sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key)
+    mediated_transfer_msg.sign(sign_key, NETWORKNAME_TO_ID[TESTS])
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
