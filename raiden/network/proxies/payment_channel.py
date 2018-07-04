@@ -126,8 +126,8 @@ class PaymentChannel:
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
-            partner_signature=partner_signature,
-            signature=signature,
+            closing_signature=partner_signature,
+            non_closing_signature=signature,
         )
 
     def unlock(self, merkle_tree_leaves: bytes):

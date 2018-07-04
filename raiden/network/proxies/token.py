@@ -1,6 +1,10 @@
 from binascii import unhexlify
 
-from eth_utils import is_binary_address
+from eth_utils import (
+    is_binary_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
 
@@ -9,7 +13,6 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
-from eth_utils import to_checksum_address, to_normalized_address
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 
