@@ -53,6 +53,7 @@ from raiden.settings import (
     ETHERSCAN_API,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
+    DEFAULT_TRANSPORT_RETRY_INTERVAL,
 )
 from raiden.utils import (
     eth_endpoint_to_hostport,
@@ -663,6 +664,9 @@ def app(
             config['transport'],
         )
     elif transport == 'matrix':
+        # matrix gets spammed with the default retry-interval of 1s, wait a little more
+        if config['transport']['retry_interval'] == DEFAULT_TRANSPORT_RETRY_INTERVAL:
+            config['transport']['retry_interval'] *= 5
         transport = MatrixTransport(config['matrix'])
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
