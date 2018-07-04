@@ -41,6 +41,7 @@ from raiden.api.v1.encoding import (
     KeccakConverter,
     PartnersPerTokenListSchema,
     TransferSchema,
+    InvalidEndpoint,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -154,7 +155,10 @@ def handle_request_parsing_error(err):
 
 
 def endpoint_not_found(e):
-    return api_error('invalid endpoint', HTTPStatus.NOT_FOUND)
+    errors = ['invalid endpoint']
+    if isinstance(e, InvalidEndpoint):
+        errors.append(e.description)
+    return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
 def normalize_events_list(old_list):

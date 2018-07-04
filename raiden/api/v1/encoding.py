@@ -10,6 +10,7 @@ from marshmallow import (
     SchemaOpts,
 )
 from webargs import validate
+from werkzeug.exceptions import NotFound
 from werkzeug.routing import (
     BaseConverter,
     ValidationError,
@@ -44,21 +45,25 @@ from raiden.transfer.state import (
 from raiden.utils import data_encoder, data_decoder
 
 
+class InvalidEndpoint(NotFound):
+    """
+    Exception to be raised instead of ValidationError if we want to skip the remaining
+    endpoint matching rules and give a reason why the endpoint is invalid.
+    """
+
+
 class HexAddressConverter(BaseConverter):
     def to_python(self, value):
         if value[:2] != '0x':
-            raise ValidationError()
+            raise InvalidEndpoint('Not a valid hex address, 0x prefix missing.')
 
         if not is_checksum_address(value):
-            raise ValidationError()
+            raise InvalidEndpoint('Not a valid EIP55 encoded address.')
 
         try:
             value = unhexlify(value[2:])
         except TypeError:
-            raise ValidationError()
-
-        if len(value) != 20:
-            raise ValidationError()
+            raise InvalidEndpoint('Could not decode hex.')
 
         return value
 
