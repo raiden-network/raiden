@@ -1,5 +1,6 @@
 import structlog
 
+from raiden.exceptions import ChannelIncorrectStateError
 from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
@@ -281,14 +282,20 @@ def handle_contract_send_channelsettle(
         second_locked_amount = partner_locked_amount
         second_locksroot = partner_locksroot
 
-    channel.settle(
-        first_transferred_amount,
-        first_locked_amount,
-        first_locksroot,
-        second_transferred_amount,
-        second_locked_amount,
-        second_locksroot,
-    )
+    try:
+        channel.settle(
+            first_transferred_amount,
+            first_locked_amount,
+            first_locksroot,
+            second_transferred_amount,
+            second_locked_amount,
+            second_locksroot,
+        )
+    except ChannelIncorrectStateError:
+        # Ignoring the exception as there might
+        # be a race condition when both nodes try to settle
+        # at the same time.
+        pass
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):

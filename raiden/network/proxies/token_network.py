@@ -772,6 +772,13 @@ class TokenNetwork:
                     partner_locked_amount=partner_locked_amount,
                     partner_locksroot=encode_hex(partner_locksroot),
                 )
+
+                channel_exists = self.channel_exists(self.node_address, partner)
+                if not channel_exists:
+                    raise ChannelIncorrectStateError(
+                        'Channel already settled or non-existent',
+                    )
+
                 channel_closed = self.channel_is_closed(self.node_address, partner)
                 if channel_closed is False:
                     raise ChannelIncorrectStateError(
