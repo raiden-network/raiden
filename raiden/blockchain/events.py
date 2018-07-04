@@ -372,9 +372,10 @@ class BlockchainEvents:
     ):
         payment_channel_filter = payment_channel_proxy.all_events_filter(from_block=from_block)
         channel_identifier = payment_channel_proxy.channel_identifier
+        token_network_id = payment_channel_proxy.token_network.address
 
         self.add_event_listener(
-            f'PaymentChannel event {channel_identifier}',
+            f'PaymentChannel event {channel_identifier} {token_network_id}',
             payment_channel_filter,
             CONTRACT_MANAGER.get_contract_abi(
                 CONTRACT_TOKEN_NETWORK,
