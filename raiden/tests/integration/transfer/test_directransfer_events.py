@@ -36,7 +36,7 @@ def test_initiator_log_directransfer_success(raiden_chain, token_addresses, depo
         to_identifier='latest',
     )
     app0_all_events = [event for _, event in app0_events]
-    must_contain_entry(app0_all_events, EventTransferSentSuccess, {
+    assert must_contain_entry(app0_all_events, EventTransferSentSuccess, {
         'identifier': identifier,
         'amount': amount,
         'target': app1.raiden.address,
@@ -47,7 +47,7 @@ def test_initiator_log_directransfer_success(raiden_chain, token_addresses, depo
         to_identifier='latest',
     )
     app1_all_events = [event for _, event in app1_state_events]
-    must_contain_entry(app1_all_events, EventTransferReceivedSuccess, {
+    assert must_contain_entry(app1_all_events, EventTransferReceivedSuccess, {
         'identifier': identifier,
         'amount': amount,
         'initiator': app0.raiden.address,
