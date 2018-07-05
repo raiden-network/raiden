@@ -126,6 +126,8 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
     assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_payload_with_address_without_prefix(api_backend):
     """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -145,6 +147,8 @@ def test_payload_with_address_without_prefix(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_payload_with_address_invalid_chars(api_backend):
     """ Addresses cannot have invalid characters in it. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
@@ -164,6 +168,8 @@ def test_payload_with_address_invalid_chars(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_payload_with_address_invalid_length(api_backend):
     """ Encoded addresses must have the right length. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
@@ -183,6 +189,8 @@ def test_payload_with_address_invalid_length(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_payload_with_address_not_eip55(api_backend):
     """ Provided addresses must be EIP55 encoded. """
     invalid_address = '0xf696209d2ca35e6c88e5b99b7cda3abf316bed69'
@@ -202,6 +210,8 @@ def test_payload_with_address_not_eip55(api_backend):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_query_our_address(api_backend):
     request = grequests.get(
         api_url_for(api_backend, 'addressresource'),
@@ -214,6 +224,8 @@ def test_api_query_our_address(api_backend):
     assert response.json() == {'our_address': to_checksum_address(our_address)}
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_and_deposit_channel(
         api_backend,
         token_addresses,
@@ -331,6 +343,8 @@ def test_api_open_and_deposit_channel(
     assert response == expected_response
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_close_and_settle_channel(
         api_backend,
         token_addresses,
@@ -392,6 +406,8 @@ def test_api_open_close_and_settle_channel(
     assert response.json() == expected_response
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_channel_invalid_input(
         api_backend,
         token_addresses,
@@ -428,6 +444,8 @@ def test_api_open_channel_invalid_input(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_channel_state_change_errors(
         api_backend,
         token_addresses,
@@ -520,6 +538,8 @@ def test_api_channel_state_change_errors(
     'TRAVIS' in os.environ,
     reason='Flaky test on Travis. See issue #1552',
 )
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
 def test_api_tokens(api_backend, blockchain_services, token_addresses):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
@@ -576,6 +596,8 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     assert set(response) == set(expected_response)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_query_partners_by_token(api_backend, blockchain_services, token_addresses):
     first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
@@ -715,9 +737,10 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-def test_get_connection_managers_info(raiden_network, api_backend, token_addresses):
+def test_get_connection_managers_info(api_backend, token_addresses):
     # check that there are no registered tokens
     request = grequests.get(
         api_url_for(api_backend, 'connectionsinforesource'),
@@ -781,6 +804,8 @@ def test_get_connection_managers_info(raiden_network, api_backend, token_address
     assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
 
 
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_token_events_errors_for_unregistered_token(api_backend):
     request = grequests.get(
         api_url_for(
