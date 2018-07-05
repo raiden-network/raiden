@@ -50,9 +50,10 @@ def test_write_read_log():
     block = Block(block_number)
     unlocked_amount = 10
     returned_amount = 5
+    channel_identifier = factories.make_address()
     contract_receive_unlock = ContractReceiveChannelBatchUnlock(
         factories.make_address(),
-        factories.make_address(),
+        channel_identifier,
         factories.ADDR,
         unlocked_amount,
         returned_amount,
@@ -86,9 +87,7 @@ def test_write_read_log():
     assert isinstance(result1, Block)
     assert result1.block_number == block_number
     assert isinstance(result2, ContractReceiveChannelBatchUnlock)
-    assert result2.channel_identifier == factories.ADDR
-    assert result2.secret == factories.UNIT_SECRET
-    assert result2.receiver == factories.HOP1
+    assert result2.channel_identifier == channel_identifier
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
