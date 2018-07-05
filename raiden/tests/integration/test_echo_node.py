@@ -11,6 +11,9 @@ from raiden.tests.utils.events import (
 )
 
 from raiden.utils import wait_until
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 @pytest.mark.parametrize('number_of_nodes', [4])
@@ -197,17 +200,13 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         received = {
             event['identifier']: event
             for event in events
-            if event['event'] == 'EventTransferReceivedSuccess'
+            if event['event'] == 'EventTransferReceivedSuccess' and
+            event['initiator'] == echo_app.raiden.address and
+            event['identifier'] == sent_transfer['identifier'] + event['amount']
         }
         if len(received) != 1:
             return
-        transfer = received.popitem()[1]
-        if (
-                transfer['initiator'] != echo_app.raiden.address or
-                transfer['identifier'] != sent_transfer['identifier'] + transfer['amount']
-        ):
-            return
-        return transfer
+        return received.popitem()[1]
 
     def received_is_of_size(size):
         """Return transfers received from echo_node when there's size transfers"""
