@@ -29,6 +29,8 @@ library NettingChannelLibrary {
 
         // A mapping to keep track of locks that have been withdrawn.
         mapping(bytes32 => bool) withdrawn_locks;
+        // A mapping to keep track of locks that have been unwithdrawn.
+        mapping(bytes32=>bool) unwithdrawn_locks;
     }
 
     struct Data {
@@ -225,7 +227,57 @@ library NettingChannelLibrary {
         (r, s, v) = signatureSplit(signature);
         return ecrecover(signed_hash, v, r, s);
     }
+    function recoverAddressFromRawData(bytes rawdata,bytes signature)  constant
+        internal
+        returns (address) 
+    {
+        bytes32 signed_hash;
 
+        require(signature.length == 65);
+
+        signed_hash = keccak256(rawdata);
+
+        var (r, s, v) = signatureSplit(signature);
+        return ecrecover(signed_hash, v, r, s);
+    }
+    /// @notice unwithdraw a locked transfer
+    /// @dev unwithdraw a locked transfer
+    /// @param locked_encoded The lock
+    /// @param signature of the lock
+    function unwithdraw(
+        Data storage self,
+        bytes locked_encoded,
+        bytes signature
+    )
+        isClosed(self)
+        public
+    {
+        uint amount;
+        uint8 index;
+        uint64 expiration;
+        bytes32 hashlock;
+        address partner_address;
+
+        // Check if msg.sender is a participant and select the partner (for
+        // third party unlock see #541)
+        index = 1 - index_or_throw(self, msg.sender);
+        Participant storage counterparty = self.participants[index];
+
+        (expiration, amount, hashlock) = decodeLock(locked_encoded);
+        //negative amount is not allowed.
+        require(amount>0);
+
+        // this hashlock must have been withdrawed by 
+        require(counterparty.withdrawn_locks[hashlock] == true);
+        //this hashlock must have not been unwithdrawed.
+        require(counterparty.unwithdrawn_locks[hashlock] == false);
+        counterparty.unwithdrawn_locks[hashlock] = true;
+
+        partner_address = recoverAddressFromRawData(locked_encoded,signature);
+        require(partner_address==counterparty.node_address);
+        //get the tokens back, what about punishment? set mine transferred_amount to 0?
+        counterparty.transferred_amount += amount;
+    }
     /// @notice Unlock a locked transfer
     /// @dev Unlock a locked transfer
     /// @param locked_encoded The lock
