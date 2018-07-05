@@ -2,15 +2,15 @@ import gevent
 import structlog
 
 from raiden_contracts.constants import (
-    EVENT_TOKEN_NETWORK_CREATED,
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_DEPOSIT,
-    EVENT_CHANNEL_WITHDRAW,
     EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
     EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_UNLOCKED,
+    EVENT_CHANNEL_DEPOSIT,
+    EVENT_CHANNEL_OPENED,
     EVENT_CHANNEL_SETTLED,
+    EVENT_CHANNEL_UNLOCKED,
+    EVENT_CHANNEL_WITHDRAW,
     EVENT_SECRET_REVEALED,
+    EVENT_TOKEN_NETWORK_CREATED,
 )
 
 from raiden.blockchain.events import decode_event_to_internal
@@ -27,6 +27,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveNewTokenNetwork,
     ContractReceiveSecretReveal,
     ContractReceiveRouteNew,
@@ -204,31 +205,20 @@ def handle_channel_settled(raiden, event, current_block_number):
         raiden.handle_state_change(channel_settled, current_block_number)
 
 
-def handle_channel_unlock(raiden, event, current_block_number):
-    # FIXME
-    pass
-    # token_network_address = event.originating_contract
-    # channel_identifier = event.event_data['args']['channel_identifier']
-    # participant = event.event_data['args']['participant']
-    # unlocked_amount = event.event_data['args']['unlocked_amount']
-    # returned_tokens = event.event_data['args']['returned_tokens']
-    #
-    # channel_state = views.search_for_channel(
-    #     views.state_from_raiden(raiden),
-    #     registry_address,
-    #     channel_identifier,
-    # )
-    #
-    # if channel_state:
-    #     unlock_state_change = ContractReceiveChannelUnlock(
-    #         registry_address,
-    #         channel_state.token_address,
-    #         channel_identifier,
-    #         data['secret'],
-    #         data['receiver_address'],
-    #     )
-    #
-    #     raiden.handle_state_change(unlock_state_change, current_block_number)
+def handle_channel_batch_unlock(raiden, event, current_block_number):
+    token_network_identifier = event.originating_contract
+    data = event.event_data
+    channel_identifier = data['channel_identifier']
+
+    unlock_state_change = ContractReceiveChannelBatchUnlock(
+        token_network_identifier,
+        channel_identifier,
+        data['participant'],
+        data['unlocked_amount'],
+        data['returned_tokens'],
+    )
+
+    raiden.handle_state_change(unlock_state_change, current_block_number)
 
 
 def handle_secret_revealed(raiden, event, current_block_number):
@@ -250,22 +240,16 @@ def on_blockchain_event(raiden, event, current_block_number):
     event = decode_event_to_internal(event)
     data = event.event_data
 
-    if data['args'].get('channel_identifier'):
-        data['channel_identifier'] = data['args'].get('channel_identifier')
-
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         handle_tokennetwork_new(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_OPENED:
-        data['settle_timeout'] = data['args']['settle_timeout']
         handle_channel_new(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_DEPOSIT:
-        data['deposit'] = data['args']['total_deposit']
         handle_channel_new_balance(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_WITHDRAW:
-        data['withdrawn_amount'] = data['args']['withdrawn_amount']
         # handle_channel_withdraw(raiden, event)
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
@@ -278,17 +262,13 @@ def on_blockchain_event(raiden, event, current_block_number):
         handle_channel_closed(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_SETTLED:
-        data['participant1_amount'] = data['args']['participant1_amount']
-        data['participant2_amount'] = data['args']['participant2_amount']
         handle_channel_settled(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_UNLOCKED:
-        handle_channel_unlock(raiden, event, current_block_number)
-
     elif data['event'] == EVENT_SECRET_REVEALED:
-        data['secrethash'] = data['args']['secrethash']
-        data['secret'] = data['args']['secret']
         handle_secret_revealed(raiden, event, current_block_number)
+
+    elif data['event'] == EVENT_CHANNEL_UNLOCKED:
+        handle_channel_batch_unlock(raiden, event, current_block_number)
 
     else:
         log.error('Unknown event type', event_name=data['event'], raiden_event=event)

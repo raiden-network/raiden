@@ -14,7 +14,7 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.state_change import (
     Block,
-    ContractReceiveChannelUnlock,
+    ContractReceiveChannelBatchUnlock,
 )
 
 
@@ -48,12 +48,14 @@ def test_write_read_log():
 
     block_number = 1337
     block = Block(block_number)
-    contract_receive_unlock = ContractReceiveChannelUnlock(
+    unlocked_amount = 10
+    returned_amount = 5
+    contract_receive_unlock = ContractReceiveChannelBatchUnlock(
         factories.make_address(),
         factories.make_address(),
         factories.ADDR,
-        factories.UNIT_SECRET,
-        factories.HOP1,
+        unlocked_amount,
+        returned_amount,
     )
 
     state_changes1 = wal.storage.get_statechanges_by_identifier(
@@ -83,7 +85,7 @@ def test_write_read_log():
     result1, result2 = state_changes3[-2:]
     assert isinstance(result1, Block)
     assert result1.block_number == block_number
-    assert isinstance(result2, ContractReceiveChannelUnlock)
+    assert isinstance(result2, ContractReceiveChannelBatchUnlock)
     assert result2.channel_identifier == factories.ADDR
     assert result2.secret == factories.UNIT_SECRET
     assert result2.receiver == factories.HOP1

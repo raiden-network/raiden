@@ -658,6 +658,15 @@ class TokenNetwork:
             )
 
     def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
+        if merkle_tree_leaves is None or len(merkle_tree_leaves) == 0:
+            log.info(
+                'skipping unlock, tree is empty',
+                token_network=pex(self.address),
+                node=pex(self.node_address),
+                partner=pex(partner),
+            )
+            return
+
         log.info(
             'unlock called',
             token_network=pex(self.address),
@@ -665,13 +674,13 @@ class TokenNetwork:
             partner=pex(partner),
         )
 
-        # TODO see if we need to do any checks for the unlock_proof
+        leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         transaction_hash = self.proxy.transact(
             'unlock',
             self.node_address,
             partner,
-            merkle_tree_leaves,
+            leaves_packed,
         )
 
         self.client.poll(unhexlify(transaction_hash))

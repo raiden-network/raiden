@@ -343,17 +343,14 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
 
     gevent.sleep(.1)  # wait for the messages
 
+    # The secret hasn't been revealed yet
     channel_state2_1 = get_channelstate(app2, app1, token_network_identifier)
-
-    # the secret hasn't been revealed yet (through messages)
-
     assert len(channel_state2_1.our_state.secrethashes_to_lockedlocks) == 1
-    proofs = list(channel.get_known_unlocks(channel_state2_1.our_state))
-    assert not proofs
 
     channel.register_secret(channel_state2_1, secret, secrethash)
 
     # Close the channel
+    # This needs to register the secrets on chain
     netting_channel_proxy = app2.raiden.chain.payment_channel(
         token_network_identifier,
         channel_state2_1.identifier,
@@ -362,11 +359,6 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
         registry_address,
         channel_state2_1.partner_state.balance_proof,
     )
-
-    # Reveal the secret through the blockchain (this needs to emit the
-    # SecretRevealed event)
-    for unlock_proof in channel.get_known_unlocks(channel_state2_1.partner_state):
-        netting_channel_proxy.unlock(unlock_proof)
 
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout
     wait_until_block(app0.raiden.chain, settle_expiration)

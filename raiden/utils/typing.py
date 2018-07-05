@@ -1,5 +1,6 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import NewType, Tuple, Optional, Union
+from typing import NewType, Tuple, Optional, Union, List
+
 
 T_Address = bytes
 Address = NewType('Address', T_Address)
@@ -37,7 +38,7 @@ Locksroot = NewType('Locksroot', T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType('LockHash', T_LockHash)
 
-T_MerkleTreeLeaves = bytes
+T_MerkleTreeLeaves = List['HashTimeLockState']
 MerkleTreeLeaves = NewType('MerkleTreeLeaves', T_MerkleTreeLeaves)
 
 T_MessageID = Union[int, Tuple[str, int, bytes]]

@@ -34,11 +34,9 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     Block,
-    ContractReceiveChannelUnlock,
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-from raiden.utils import sha3
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:
 # The payee could reveal the secret on it's lock expiration block, the lock
@@ -52,21 +50,18 @@ TRANSIT_BLOCKS = 2  # TODO: make this a configuration variable
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
-    'payee_refund_unlock',
     'payee_contract_unlock',
     'payee_balance_proof',
 
     'payer_secret_revealed',
     'payer_waiting_close',
     'payer_waiting_unlock',
-    'payer_contract_unlock',
     'payer_balance_proof',
 )
 STATE_TRANSFER_PAID = (
     'payee_contract_unlock',
     'payee_balance_proof',
 
-    'payer_contract_unlock',
     'payer_balance_proof',
 )
 # TODO: fix expired state, it is not final
@@ -75,7 +70,6 @@ STATE_TRANSFER_FINAL = (
     'payee_balance_proof',
     'payee_expired',
 
-    'payer_contract_unlock',
     'payer_balance_proof',
     'payer_expired',
 )
@@ -1146,76 +1140,6 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_contractunlock(
-        state,
-        state_change,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
-        block_number,
-):
-    """ Handle a NettingChannelUnlock state change. """
-    assert sha3(state.secret) == state.secrethash, 'secret must be validated by the smart contract'
-
-    # For all but the last pair in transfer pair a refund transfer ocurred,
-    # meaning the same channel was used twice, once when this node sent the
-    # mediated transfer and once when the refund transfer was received. A
-    # ContractReceiveChannelUnlock state change may be used for each.
-
-    events = list()
-
-    # This node withdrew the refund
-    if state_change.receiver == state.our_address:
-        for previous_pos, pair in enumerate(state.transfers_pair, -1):
-            payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
-            if payer_channel.identifier == state_change.channel_identifier:
-                # always set the contract_unlock regardless of the previous
-                # state (even expired)
-                pair.payer_state = 'payer_contract_unlock'
-
-                unlock = EventUnlockClaimSuccess(
-                    pair.payer_transfer.payment_identifier,
-                    pair.payer_transfer.lock.secrethash,
-                )
-                events.append(unlock)
-
-                # if the current pair is backed by a refund set the sent
-                # mediated transfer to a 'secret known' state
-                if previous_pos > -1:
-                    previous_pair = state.transfers_pair[previous_pos]
-
-                    if previous_pair.payee_state not in STATE_TRANSFER_FINAL:
-                        previous_pair.payee_state = 'payee_refund_unlock'
-
-    # A partner withdrew the mediated transfer
-    else:
-        for pair in state.transfers_pair:
-            payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
-            if payee_channel.identifier == state_change.channel_identifier:
-                unlock = EventUnlockSuccess(
-                    pair.payee_transfer.payment_identifier,
-                    pair.payee_transfer.lock.secrethash,
-                )
-                events.append(unlock)
-
-                pair.payee_state = 'payee_contract_unlock'
-
-    iteration = secret_learned(
-        state,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
-        block_number,
-        state_change.secret,
-        state_change.secrethash,
-        state_change.receiver,
-        'payee_contract_unlock',
-        False,
-    )
-
-    iteration.events.extend(events)
-
-    return iteration
-
-
 def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
     """ Handle a ReceiveUnlock state change. """
     events = list()
@@ -1307,15 +1231,6 @@ def state_transition(
 
     elif isinstance(state_change, ContractReceiveSecretReveal):
         iteration = handle_secretreveal(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
-            block_number,
-        )
-
-    elif isinstance(state_change, ContractReceiveChannelUnlock):
-        iteration = handle_contractunlock(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,

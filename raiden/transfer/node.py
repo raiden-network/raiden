@@ -29,7 +29,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelUnlock,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
@@ -501,15 +501,16 @@ def handle_tokenadded(node_state, state_change):
     return TransitionResult(node_state, events)
 
 
-def handle_channel_unlock(node_state, state_change):
-    token_address = state_change.token_address
-    payment_network_state, token_network_state = get_networks(
+def handle_channel_batch_unlock(
+        node_state: NodeState,
+        state_change: ContractReceiveChannelBatchUnlock,
+) -> TransitionResult:
+    token_network_identifier = state_change.token_network_identifier
+    token_network_state = views.get_token_network_by_identifier(
         node_state,
-        state_change.payment_network_identifier,
-        state_change.token_address,
+        token_network_identifier,
     )
 
-    # first dispatch the unlock claim to update the channel
     events = []
     if token_network_state:
         pseudo_random_generator = node_state.pseudo_random_generator
@@ -522,16 +523,15 @@ def handle_channel_unlock(node_state, state_change):
         events.extend(sub_iteration.events)
 
         if sub_iteration.new_state is None:
-            del payment_network_state.tokenaddresses_to_tokennetworks[token_address]
+            payment_network_state = views.get_payment_network_by_identifier(
+                node_state,
+                token_network_state.address,
+            )
 
-    # second emulate a secret reveal, to register the secret with all the other
-    # channels and proceed with the protocol
-    state_change = ReceiveSecretReveal(state_change.secret, None)
-    sub_iteration_secret_reveal = handle_secret_reveal(
-        node_state,
-        state_change,
-    )
-    events.extend(sub_iteration_secret_reveal.events)
+            del payment_network_state.tokenaddresses_to_tokennetworks[
+                token_network_state.token_address
+            ]
+            del payment_network_state.tokenidentifiers_to_tokennetworks[token_network_identifier]
 
     return TransitionResult(node_state, events)
 
@@ -687,8 +687,8 @@ def state_transition(node_state, state_change):
             node_state,
             state_change,
         )
-    elif type(state_change) == ContractReceiveChannelUnlock:
-        iteration = handle_channel_unlock(
+    elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        iteration = handle_channel_batch_unlock(
             node_state,
             state_change,
         )

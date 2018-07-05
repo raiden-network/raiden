@@ -16,6 +16,7 @@ from raiden_contracts.constants import (
     EVENT_CHANNEL_DEPOSIT,
     EVENT_CHANNEL_OPENED,
     EVENT_CHANNEL_SETTLED,
+    EVENT_CHANNEL_UNLOCKED,
     EVENT_CHANNEL_WITHDRAW,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -241,6 +242,9 @@ def decode_event_to_internal(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data
 
+    if data['args'].get('channel_identifier'):
+        data['channel_identifier'] = data['args'].get('channel_identifier')
+
     # Note: All addresses inside the event_data must be decoded.
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
@@ -249,11 +253,14 @@ def decode_event_to_internal(event):
     elif data['event'] == EVENT_CHANNEL_OPENED:
         data['participant1'] = to_canonical_address(data['args']['participant1'])
         data['participant2'] = to_canonical_address(data['args']['participant2'])
+        data['settle_timeout'] = data['args']['settle_timeout']
 
     elif data['event'] == EVENT_CHANNEL_DEPOSIT:
+        data['deposit'] = data['args']['total_deposit']
         data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_WITHDRAW:
+        data['withdrawn_amount'] = data['args']['withdrawn_amount']
         data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
@@ -261,6 +268,15 @@ def decode_event_to_internal(event):
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+
+    elif data['event'] == EVENT_CHANNEL_SETTLED:
+        data['participant1_amount'] = data['args']['participant1_amount']
+        data['participant2_amount'] = data['args']['participant2_amount']
+
+    elif data['event'] == EVENT_CHANNEL_UNLOCKED:
+        data['unlocked_amount'] = data['args']['unlocked_amount']
+        data['returned_tokens'] = data['args']['returned_tokens']
+        data['participant'] = to_canonical_address(data['args']['participant'])
 
     elif data['event'] == EVENT_SECRET_REVEALED:
         data['secrethash'] = data['args']['secrethash']

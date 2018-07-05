@@ -2,10 +2,11 @@ from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
-    NODE_NETWORK_UNKNOWN,
     NettingChannelState,
+    NODE_NETWORK_UNKNOWN,
     NodeState,
     PaymentMappingState,
+    PaymentNetworkState,
     TokenNetworkState,
 )
 from raiden.utils import typing
@@ -132,6 +133,13 @@ def total_deposit_by_token_network(
             total_deposit += channel_state.our_state.contract_balance
 
     return total_deposit
+
+
+def get_payment_network_by_identifier(
+        node_state: NodeState,
+        payment_network_identifier: typing.Address,
+) -> typing.Optional[PaymentNetworkState]:
+    return node_state.identifiers_to_paymentnetworks.get(payment_network_identifier)
 
 
 def get_token_network_registry_by_token_network_identifier(

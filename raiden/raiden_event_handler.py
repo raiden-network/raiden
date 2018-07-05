@@ -235,7 +235,7 @@ def handle_contract_send_channelunlock(
         channel_unlock_event.token_network_identifier,
         channel_unlock_event.channel_identifier,
     )
-    channel.unlock(channel_unlock_event.unlock_proofs)
+    channel.unlock(channel_unlock_event.merkle_treee_leaves)
 
 
 def handle_contract_send_channelsettle(

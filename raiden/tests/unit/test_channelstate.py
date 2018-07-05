@@ -44,7 +44,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelUnlock,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -281,7 +280,6 @@ def test_new_end_state():
     assert channel.is_lock_locked(end_state, lock_secrethash) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
-    assert not channel.get_known_unlocks(end_state)
     assert merkleroot(end_state.merkletree) == EMPTY_MERKLE_ROOT
 
     assert not end_state.secrethashes_to_lockedlocks
@@ -1236,10 +1234,11 @@ def test_channelstate_get_unlock_proof():
     end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
 
     unlock_proof = channel.get_batch_unlock(end_state)
-    assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES]) * 96
+    assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES])
+    leaves_packed = b''.join(lock.encoded for lock in unlock_proof)
 
     recomputed_merkle_tree = MerkleTreeState(compute_layers(
-        merkle_leaves_from_packed_data(unlock_proof),
+        merkle_leaves_from_packed_data(leaves_packed),
     ))
     assert len(recomputed_merkle_tree.layers[LEAVES]) == len(end_state.merkletree.layers[LEAVES])
 
@@ -1299,62 +1298,3 @@ def test_channelstate_unlock():
     )
     iteration = channel.handle_channel_settled(channel_state, settle_state_change)
     assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
-
-
-def test_channel_unlock_must_not_change_merkletree():
-    our_model1, _ = create_model(70)
-    partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-    payment_network_identifier = factories.make_address()
-
-    lock_amount = 10
-    lock_expiration = 100
-    lock_secret = sha3(b'test_channelstate_lockedtransfer_overspent')
-    lock_secrethash = sha3(lock_secret)
-    lock = HashTimeLockState(
-        lock_amount,
-        lock_expiration,
-        lock_secrethash,
-    )
-
-    nonce = 1
-    transferred_amount = 0
-    receive_lockedtransfer = make_receive_transfer_mediated(
-        channel_state,
-        privkey2,
-        nonce,
-        transferred_amount,
-        lock,
-    )
-
-    is_valid, _, msg = channel.handle_receive_lockedtransfer(
-        channel_state,
-        receive_lockedtransfer,
-    )
-    assert is_valid, msg
-
-    assert merkleroot(channel_state.partner_state.merkletree) == lock.lockhash
-    assert channel.is_lock_pending(channel_state.partner_state, lock.secrethash)
-
-    closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
-    state_change = ContractReceiveChannelClosed(
-        channel_state.token_network_identifier,
-        channel_state.identifier,
-        partner_model1.participant_address,
-        closed_block_number,
-    )
-    iteration = channel.handle_channel_closed(channel_state, state_change)
-
-    new_channel = iteration.new_state
-    unlock = ContractReceiveChannelUnlock(
-        payment_network_identifier,
-        channel_state.token_address,
-        channel_state.identifier,
-        lock_secret,
-        channel_state.our_state.address,
-    )
-    iteration = channel.handle_channel_unlock(new_channel, unlock)
-
-    new_channel = iteration.new_state
-    assert merkleroot(new_channel.partner_state.merkletree) == lock.lockhash
-    assert not channel.is_lock_pending(new_channel.partner_state, lock.secrethash)
