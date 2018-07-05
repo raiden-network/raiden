@@ -19,7 +19,9 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
+from raiden.transfer.utils import calculate_channel_identifier
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.utils import data_encoder
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -242,10 +244,11 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
-    # can't know the channel address beforehand but make sure we get one
-    assert 'channel_address' in response
-    first_channel_address = response['channel_address']
-    expected_response['channel_address'] = response['channel_address']
+    first_channel_identifier = data_encoder(calculate_channel_identifier(
+        api_backend[1].raiden_api.raiden.address,
+        to_canonical_address(first_partner_address),
+    ))
+    expected_response['channel_identifier'] = first_channel_identifier
     assert response == expected_response
 
     # now let's open a channel and make a deposit too
@@ -272,18 +275,20 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
-    # can't know the channel address beforehand but make sure we get one
-    assert 'channel_address' in response
-    expected_response['channel_address'] = response['channel_address']
-    second_channel_address = response['channel_address']
+    second_channel_identifier = data_encoder(calculate_channel_identifier(
+        api_backend[1].raiden_api.raiden.address,
+        to_canonical_address(second_partner_address),
+    ))
+    expected_response['channel_identifier'] = second_channel_identifier
     assert response == expected_response
 
     # let's deposit on the first channel
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=first_channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=first_partner_address,
         ),
         json={'total_deposit': balance},
     )
@@ -291,7 +296,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_address': first_channel_address,
+        'channel_identifier': first_channel_identifier,
         'partner_address': first_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -305,8 +310,9 @@ def test_api_open_and_deposit_channel(
     request = grequests.get(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=second_channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=second_partner_address,
         ),
     )
 
@@ -314,7 +320,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_address': second_channel_address,
+        'channel_identifier': second_channel_identifier,
         'partner_address': second_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,

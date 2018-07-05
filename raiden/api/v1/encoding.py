@@ -239,7 +239,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 
 class ChannelSchema(BaseSchema):
-    channel_address = AddressField()
+    channel_identifier = KeccakField()
     token_address = AddressField()
     partner_address = AddressField()
     settle_timeout = fields.Integer()

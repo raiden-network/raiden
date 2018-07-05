@@ -56,7 +56,7 @@ class ChannelsResource(BaseResource):
         )
 
 
-class ChannelsResourceByChannelAddress(BaseResource):
+class ChannelsResourceByTokenAndPartnerAddress(BaseResource):
 
     patch_schema = ChannelPatchSchema
 
