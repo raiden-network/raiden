@@ -26,6 +26,24 @@ def test_secret_registry(secret_registry_proxy):
     assert 0 == secret_registry_proxy.get_register_block_for_secrethash(b'\x11' * 32)
 
 
+def test_secret_registry_register_batch(secret_registry_proxy):
+    secrets = [get_random_bytes(32) for i in range(4)]
+    secrethashes = [keccak(secret) for secret in secrets]
+
+    event_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registry_proxy.register_secret_batch(secrets)
+
+    logs = event_filter.get_all_entries()
+    assert len(logs) == 4
+
+    block = secret_registry_proxy.get_register_block_for_secrethash(secrethashes[0])
+    decoded_events = [secret_registry_proxy.proxy.decode_event(log) for log in logs]
+    assert all(event['blockNumber'] == block for event in decoded_events)
+
+    recovered_hashes = [event['args']['secrethash'] for event in decoded_events]
+    assert all(secrethash in recovered_hashes for secrethash in secrethashes)
+
+
 @pytest.fixture
 def secret_registry_proxy_patched(secret_registry_proxy):
     secret_registry_patched = SecretRegistry(
