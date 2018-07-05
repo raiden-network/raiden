@@ -27,6 +27,22 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 
 
+def wait_for_batch_unlock(app, channel_id, token_network_id):
+    unlock_event = None
+    while not unlock_event:
+        gevent.sleep(1)
+
+        state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
+            from_identifier=0,
+            to_identifier='latest',
+        )
+
+        unlock_event = must_contain_entry(state_changes, ContractReceiveChannelBatchUnlock, {
+            'channel_identifier': channel_id,
+            'token_network_identifier': token_network_id,
+        })
+
+
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settle_is_automatically_called(raiden_network, token_addresses, deposit):
     """Settle is automatically called by one of the nodes."""
@@ -151,21 +167,15 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app.raiden.alarm.wait_time,
     )
 
+    wait_for_batch_unlock(alice_app)
+
     # wait for the node to call batch unlock
     with gevent.Timeout(10):
-        unlock_event = None
-        while not unlock_event:
-            gevent.sleep(1)
-
-            state_changes = alice_app.raiden.wal.storage.get_statechanges_by_identifier(
-                from_identifier=0,
-                to_identifier='latest',
-            )
-
-            unlock_event = must_contain_entry(state_changes, ContractReceiveChannelBatchUnlock, {
-                'channel_identifier': alice_bob_channel_state.identifier,
-                'token_network_identifier': token_network_identifier,
-            })
+        wait_for_batch_unlock(
+            alice_app,
+            alice_bob_channel_state.identifier,
+            token_network_identifier,
+        )
 
     alice_new_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_new_balance = bob_initial_balance + deposit + alice_to_bob_amount
@@ -178,7 +188,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, deposit):
     """ Any transfer following a secret revealed must update the locksroot, so
-    that an attacker cannot reuse a secret to double claim a lock."""
+    hat an attacker cannot reuse a secret to double claim a lock."""
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -294,6 +304,14 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
         [channel_state.identifier],
         app0.raiden.alarm.wait_time,
     )
+
+    # wait for the node to call batch unlock
+    with gevent.Timeout(10):
+        wait_for_batch_unlock(
+            app0,
+            channel_state.identifier,
+            token_network_identifier,
+        )
 
     expected_balance0 = initial_balance0 + deposit - amount
     expected_balance1 = initial_balance1 + deposit + amount
