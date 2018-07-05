@@ -53,10 +53,6 @@ from raiden.tests.utils.factories import (
     UNIT_REGISTRY_IDENTIFIER,
     HOP1,
     make_secret,
-    UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_TARGET,
-    UNIT_SECRET,
-    UNIT_TRANSFER_SENDER,
 )
 from raiden.tests.utils.events import must_contain_entry
 from raiden.utils import (
