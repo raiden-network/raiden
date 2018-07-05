@@ -31,6 +31,7 @@ from raiden.exceptions import (
     SamePeerAddress,
     TransactionThrew,
     UnknownTokenAddress,
+    DepositOverLimit,
 )
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -77,6 +78,7 @@ ERROR_STATUS_CODES = [
     HTTPStatus.PAYMENT_REQUIRED,
     HTTPStatus.BAD_REQUEST,
     HTTPStatus.NOT_FOUND,
+    HTTPStatus.EXPECTATION_FAILED,
 ]
 
 URLS_V1 = [
@@ -386,6 +388,11 @@ class RestAPI:
                     errors=str(e),
                     status_code=HTTPStatus.PAYMENT_REQUIRED,
                 )
+            except DepositOverLimit as e:
+                return api_error(
+                    errors=str(e),
+                    status_code=HTTPStatus.EXPECTATION_FAILED,
+                )
 
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(self.raiden_api.raiden),
@@ -647,6 +654,11 @@ class RestAPI:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
+        except DepositOverLimit as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.EXPECTATION_FAILED,
             )
 
         updated_channel_state = self.raiden_api.get_channel(

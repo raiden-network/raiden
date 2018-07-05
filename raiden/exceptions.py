@@ -36,6 +36,15 @@ class InsufficientFunds(RaidenError):
     pass
 
 
+class DepositOverLimit(RaidenError):
+    """ Raised when the requested deposit is over the limit
+
+    Used when a *user* tries to deposit a given amount of token in a channel,
+    but the amount is over the testing limit.
+    """
+    pass
+
+
 class InvalidAddress(RaidenError):
     """ Raised when the user provided value is not a valid address. """
     pass
