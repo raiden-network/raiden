@@ -3,6 +3,7 @@ import os
 
 import pytest
 from eth_utils import decode_hex, to_checksum_address
+from pkg_resources import DistributionNotFound
 
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
@@ -10,13 +11,15 @@ from raiden.utils.solc import compile_files_cwd
 
 try:
     from evm.exceptions import ValidationError
-except ModuleNotFoundError:
-    ValidationError = Exception()
+except (ModuleNotFoundError, DistributionNotFound):
+    class ValidationError(Exception):
+        pass
 
 try:
     from eth_tester.exceptions import TransactionFailed
-except ModuleNotFoundError:
-    TransactionFailed = Exception()
+except (ModuleNotFoundError, DistributionNotFound):
+    class TransactionFailed(Exception):
+        pass
 
 # pylint: disable=unused-argument,protected-access
 

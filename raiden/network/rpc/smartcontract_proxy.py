@@ -5,14 +5,16 @@ from eth_utils import (
     decode_hex,
     to_checksum_address,
 )
+from pkg_resources import DistributionNotFound
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 from web3.utils.abi import get_abi_input_types
 from web3.contract import Contract
 from raiden.utils.filters import decode_event
 try:
     from eth_tester.exceptions import TransactionFailed
-except ModuleNotFoundError:
-    TransactionFailed = Exception()
+except (ModuleNotFoundError, DistributionNotFound):
+    class TransactionFailed(Exception):
+        pass
 
 
 class ContractProxy:

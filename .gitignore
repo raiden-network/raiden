@@ -83,3 +83,4 @@ raiden/raidenwebui/node_modules/
 .idea
 .vscode
 .synapse
+raiden/smart_contracts/contracts.json

@@ -6,7 +6,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.exceptions import TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
@@ -23,7 +23,7 @@ class Token:
             token_address,
     ):
         contract = jsonrpc_client.new_contract(
-            ContractManager(CONTRACTS_SOURCE_DIRS).get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
+            CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
