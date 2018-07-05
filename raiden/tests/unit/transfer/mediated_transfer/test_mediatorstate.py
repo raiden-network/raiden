@@ -218,7 +218,7 @@ def test_is_channel_close_needed_unpaid():
 
     # even if the secret is known by the payee, the transfer is paid only if a
     # unlock on-chain happened or if the mediator has sent a balance proof
-    for unpaid_state in ('payee_pending', 'payee_secret_revealed', 'payee_refund_unlock'):
+    for unpaid_state in ('payee_pending', 'payee_secret_revealed'):
         unpaid_pair = make_transfer_pair(
             payee=HOP2,
             initiator=HOP3,
@@ -786,7 +786,6 @@ def test_events_for_revealsecret_all_states():
     """
     payee_secret_known = (
         'payee_secret_revealed',
-        'payee_refund_unlock',
         'payee_contract_unlock',
         'payee_balance_proof',
     )

@@ -224,7 +224,7 @@ def channelstate_to_api_dict(channel_state):
         channel_state.partner_state,
     )
     return {
-        'channel_address': channel_state.identifier,
+        'channel_identifier': channel_state.identifier,
         'token_address': channel_state.token_address,
         'partner_address': channel_state.partner_state.address,
         'settle_timeout': channel_state.settle_timeout,

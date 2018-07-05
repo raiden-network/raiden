@@ -56,7 +56,7 @@ class ChannelsResource(BaseResource):
         )
 
 
-class ChannelsResourceByChannelAddress(BaseResource):
+class ChannelsResourceByTokenAndPartnerAddress(BaseResource):
 
     patch_schema = ChannelPatchSchema
 
@@ -125,9 +125,10 @@ class ChannelEventsResource(BaseResource):
     get_schema = EventRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, channel_address, from_block, to_block):
+    def get(self, token_network_address, channel_identifier, from_block, to_block):
         return self.rest_api.get_channel_events(
-            channel_address=channel_address,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
             from_block=from_block,
             to_block=to_block,
         )

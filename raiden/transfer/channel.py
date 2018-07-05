@@ -4,16 +4,16 @@ from binascii import hexlify
 from collections import namedtuple
 from typing import Union
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import UINT256_MAX, NETWORKNAME_TO_ID
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.balance_proof import signing_data
+from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.events import (
+    ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelBatchUnlock,
     EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
@@ -66,15 +66,17 @@ from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionTransferDirect,
     Block,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelUnlock,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
+from raiden.transfer.utils import hash_balance_data
 from raiden.utils import publickey_to_address, typing
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
@@ -183,13 +185,18 @@ def is_valid_signature(
         balance_proof: BalanceProofSignedState,
         sender_address: typing.Address,
 ) -> typing.SuccessOrError:
-    data_that_was_signed = signing_data(
-        balance_proof.nonce,
+    balance_hash = hash_balance_data(
         balance_proof.transferred_amount,
         balance_proof.locked_amount,
-        balance_proof.channel_address,
         balance_proof.locksroot,
-        balance_proof.message_hash,
+    )
+    data_that_was_signed = pack_signing_data(
+        nonce=balance_proof.nonce,
+        balance_hash=balance_hash,
+        additional_hash=balance_proof.message_hash,
+        channel_identifier=balance_proof.channel_address,
+        token_network_identifier=balance_proof.token_network_identifier,
+        chain_id=NETWORKNAME_TO_ID['tests'],
     )
 
     try:
@@ -771,30 +778,6 @@ def get_distributable(
     return min(overflow_limit, distributable)
 
 
-def get_known_unlocks(end_state: NettingChannelEndState) -> typing.List[UnlockProofState]:
-    """Generate unlocking proofs for the known secrets."""
-
-    unlocked_locks_proofs = [
-        compute_proof_for_lock(
-            end_state,
-            partialproof.secret,
-            partialproof.lock,
-        )
-        for partialproof in end_state.secrethashes_to_unlockedlocks.values()
-    ]
-
-    unlocked_locks_proofs.extend([
-        compute_proof_for_lock(
-            end_state,
-            partialproof.secret,
-            partialproof.lock,
-        )
-        for partialproof in end_state.secrethashes_to_onchain_unlockedlocks.values()
-    ])
-
-    return unlocked_locks_proofs
-
-
 def get_batch_unlock(
         end_state: NettingChannelEndState,
 ) -> typing.Optional[typing.MerkleTreeLeaves]:
@@ -821,11 +804,12 @@ def get_batch_unlock(
         for secrethash, proof in end_state.secrethashes_to_onchain_unlockedlocks.items()
     })
 
-    all_locks_packed = b''.join(
-        lockhashes_to_locks[lockhash].encoded for lockhash in end_state.merkletree.layers[LEAVES]
-    )
+    ordered_locks = [
+        lockhashes_to_locks[lockhash]
+        for lockhash in end_state.merkletree.layers[LEAVES]
+    ]
 
-    return all_locks_packed
+    return ordered_locks
 
 
 def get_lock(
@@ -1684,77 +1668,39 @@ def handle_channel_closed(
             )
             events.append(update)
 
-        unlock_proofs = get_known_unlocks(channel_state.partner_state)
-        if unlock_proofs:
-            onchain_unlock = ContractSendChannelBatchUnlock(
-                channel_state.identifier,
-                unlock_proofs,
-            )
-            events.append(onchain_unlock)
-
-    return TransitionResult(channel_state, events)
-
-
-def handle_channel_closed2(
-        channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelClosed,
-) -> TransitionResult:
-    events = list()
-
-    just_closed = (
-        state_change.channel_identifier == channel_state.identifier and
-        get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED
-    )
-
-    if just_closed:
-        set_closed(channel_state, state_change.closed_block_number)
-
-        balance_proof = channel_state.partner_state.balance_proof
-        call_update = (
-            state_change.closing_address != channel_state.our_state.address and
-            balance_proof
-        )
-        if call_update:
-            # The channel was closed by our partner, if there is a balance
-            # proof available update this node half of the state
-            update = ContractSendChannelUpdateTransfer(
-                channel_state.identifier,
-                channel_state.token_network_identifier,
-                balance_proof,
-            )
-            events.append(update)
-
     return TransitionResult(channel_state, events)
 
 
 def handle_channel_settled(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelSettled,
+        block_number: typing.BlockNumber,
 ) -> TransitionResult:
     events: typing.List[Event] = list()
 
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.settle_block_number)
 
-    return TransitionResult(channel_state, events)
-
-
-def handle_channel_settled2(
-        channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelSettled,
-) -> TransitionResult:
-    events: typing.List[Event] = list()
-
-    if state_change.channel_identifier == channel_state.identifier:
-        set_settled(channel_state, state_change.settle_block_number)
-
-        unlock_proofs = get_batch_unlock(channel_state.partner_state)
-        if unlock_proofs:
+        # At the moment each participant unlocks it's receiving half of the
+        # channel automatically
+        merkle_treee_leaves = get_batch_unlock(channel_state.partner_state)
+        if merkle_treee_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
+                channel_state.token_network_identifier,
                 channel_state.identifier,
-                unlock_proofs,
+                merkle_treee_leaves,
             )
             events.append(onchain_unlock)
+
+            channel_state.our_unlock_transaction = TransactionExecutionStatus(
+                block_number,
+                None,
+                None,
+            )
+        else:
+            # we don't need to wait for the unlock to be sucessfull, the
+            # channel can be cleaned now
+            channel_state = None
 
     return TransitionResult(channel_state, events)
 
@@ -1800,44 +1746,19 @@ def apply_channel_newbalance(
         channel_state.partner_state.contract_balance = new_balance
 
 
-def handle_channel_unlock(
+def handle_channel_batch_unlock(
         channel_state: NettingChannelState,
-        state_change: ContractReceiveChannelUnlock,
+        state_change: ContractReceiveChannelBatchUnlock,
 ) -> TransitionResult:
     events = list()
 
-    # Unlock is allowed by the smart contract only on a closed channel.
+    # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(channel_state) == CHANNEL_STATE_CLOSED:
-        our_state = channel_state.our_state
-        partner_state = channel_state.partner_state
+    if get_status(channel_state) == CHANNEL_STATE_SETTLED:
 
-        secrethash = state_change.secrethash
-        secret = state_change.secret
-
-        our_unlock = (
-            state_change.receiver == our_state.address and
-            is_lock_pending(partner_state, secrethash)
-        )
-        if our_unlock:
-            _del_lock(partner_state, secrethash)
-
-        partner_unlock = (
-            state_change.receiver == partner_state.address and
-            is_lock_pending(our_state, secrethash)
-        )
-        if partner_unlock:
-            _del_lock(our_state, secrethash)
-
-        # Unlock is required if there was a refund in this channel, and the
-        # secret is learned from the unlock event.
-        if is_lock_pending(our_state, secrethash):
-            lock = get_lock(our_state, secrethash)
-            proof = compute_proof_for_lock(our_state, secret, lock)
-            unlock = ContractSendChannelBatchUnlock(channel_state.identifier, [proof])
-            events.append(unlock)
-
-        register_secret(channel_state, secret, secrethash)
+        # Once our half of the channel is unlocked we can clean-up the channel
+        if state_change.participant == channel_state.our_state.address:
+            channel_state = None
 
     return TransitionResult(channel_state, events)
 
@@ -1854,33 +1775,49 @@ def state_transition(
     iteration = TransitionResult(channel_state, events)
 
     if type(state_change) == Block:
-        iteration = handle_block(channel_state, state_change, block_number)
-
+        iteration = handle_block(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ActionChannelClose:
-        iteration = handle_action_close(channel_state, state_change, block_number)
-
+        iteration = handle_action_close(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ActionTransferDirect:
         iteration = handle_send_directtransfer(
             channel_state,
             state_change,
             pseudo_random_generator,
         )
-
     elif type(state_change) == ContractReceiveChannelClosed:
-        iteration = handle_channel_closed(channel_state, state_change)
-        # iteration = handle_channel_closed2(channel_state, state_change)
-
+        iteration = handle_channel_closed(
+            channel_state,
+            state_change,
+        )
     elif type(state_change) == ContractReceiveChannelSettled:
-        iteration = handle_channel_settled(channel_state, state_change)
-        # iteration = handle_channel_settled2(channel_state, state_change)
-
+        iteration = handle_channel_settled(
+            channel_state,
+            state_change,
+            block_number,
+        )
     elif type(state_change) == ContractReceiveChannelNewBalance:
-        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
-
-    elif type(state_change) == ContractReceiveChannelUnlock:
-        iteration = handle_channel_unlock(channel_state, state_change)
-
+        iteration = handle_channel_newbalance(
+            channel_state,
+            state_change,
+            block_number,
+        )
+    elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        iteration = handle_channel_batch_unlock(
+            channel_state,
+            state_change,
+        )
     elif type(state_change) == ReceiveTransferDirect:
-        iteration = handle_receive_directtransfer(channel_state, state_change)
+        iteration = handle_receive_directtransfer(
+            channel_state,
+            state_change,
+        )
 
     return iteration

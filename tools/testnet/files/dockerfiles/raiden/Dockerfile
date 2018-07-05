@@ -32,7 +32,6 @@ RUN \
 WORKDIR /app
 
 RUN \
-    python setup.py compile_contracts && \
     python setup.py compile_webui && \
     rm -rf /root/.npm/_cacache
 

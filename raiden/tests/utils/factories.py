@@ -5,7 +5,7 @@ import string
 
 from coincurve import PrivateKey
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import UINT64_MAX, NETWORKNAME_TO_ID
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     LockedTransferUnsignedState,
 )
+from raiden.transfer.utils import hash_balance_data
 
 # prefixing with UNIT_ to differ from the default globals
 UNIT_SETTLE_TIMEOUT = 50
@@ -44,6 +45,7 @@ UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
 UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
 UNIT_CHANNEL_ADDRESS = b'channelchannelchanne'
+UNIT_CHANNEL_ID = sha3(UNIT_CHANNEL_ADDRESS)
 
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
@@ -72,12 +74,17 @@ HOP3 = privatekey_to_address(b'33333333333333333333333333333333')
 HOP4 = privatekey_to_address(b'44444444444444444444444444444444')
 HOP5 = privatekey_to_address(b'55555555555555555555555555555555')
 HOP6 = privatekey_to_address(b'66666666666666666666666666666666')
+UNIT_CHAIN_ID = 337
 
 ADDR = b'addraddraddraddraddr'
 
 
 def make_address():
     return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
+
+
+def make_channel_identifier():
+    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
 
 
 def make_privkey_address():
@@ -116,7 +123,7 @@ def make_channel(
         partner_address=None,
         token_address=None,
         token_network_identifier=None,
-        channel_address=None,
+        channel_identifier=None,
         reveal_timeout=10,
         settle_timeout=50,
 ):
@@ -125,7 +132,7 @@ def make_channel(
     partner_address = partner_address or make_address()
     token_address = token_address or make_address()
     token_network_identifier = token_network_identifier or make_address()
-    channel_address = channel_address or make_address()
+    channel_identifier = channel_identifier or make_channel_identifier()
 
     our_state = make_endstate(our_address, our_balance)
     partner_state = make_endstate(partner_address, partner_balance)
@@ -140,7 +147,7 @@ def make_channel(
     settle_transaction = None
 
     channel_state = NettingChannelState(
-        channel_address,
+        channel_identifier,
         token_address,
         token_network_identifier,
         reveal_timeout,
@@ -166,7 +173,7 @@ def make_transfer(
         transferred_amount=0,
         locked_amount=None,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
         locksroot=None,
         token=UNIT_TOKEN_ADDRESS,
 ):
@@ -217,7 +224,7 @@ def make_signed_transfer(
         transferred_amount=0,
         locked_amount=None,
         recipient=UNIT_TRANSFER_TARGET,
-        channel_identifier=UNIT_CHANNEL_ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
         token=UNIT_TOKEN_ADDRESS,
         pkey=UNIT_TRANSFER_PKEY,
         sender=UNIT_TRANSFER_SENDER,
@@ -253,7 +260,7 @@ def make_signed_transfer(
         target,
         initiator,
     )
-    transfer.sign(pkey)
+    transfer.sign(pkey, UNIT_CHAIN_ID)
     assert transfer.sender == sender
 
     return lockedtransfersigned_from_message(transfer)
@@ -279,6 +286,21 @@ def make_signed_balance_proof(
         locksroot,
         extra_hash,
     )
+
+    balance_hash = hash_balance_data(
+        transferred_amount,
+        locked_amount,
+        locksroot,
+    )
+    data_to_sign = balance_proof.pack_signing_data(
+        nonce=nonce,
+        balance_hash=balance_hash,
+        additional_hash=extra_hash,
+        channel_identifier=channel_address,
+        token_network_identifier=token_network_address,
+        chain_id=NETWORKNAME_TO_ID['tests'],
+    )
+
     signature = signing.sign(data_to_sign, private_key)
 
     signed_balance_proof = BalanceProofSignedState(

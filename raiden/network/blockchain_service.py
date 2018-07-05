@@ -1,20 +1,14 @@
-import os
-
 import gevent
 from cachetools.func import ttl_cache
 import structlog
 from eth_utils import (
     to_int,
     is_binary_address,
-    decode_hex,
 )
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
-    ChannelManager,
     Discovery,
-    NettingChannel,
-    Registry,
     Token,
     TokenNetworkRegistry,
     TokenNetwork,
@@ -22,7 +16,6 @@ from raiden.network.proxies import (
     PaymentChannel,
 )
 from raiden.utils import privatekey_to_address, ishash
-from raiden.utils.solc import compile_files_cwd
 from raiden.utils.typing import Address, ChannelID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -119,15 +112,6 @@ class BlockChainService:
 
         return self.address_to_token[token_address]
 
-    def channel_manager(self, channel_manager_address: Address) -> ChannelManager:
-        if channel_manager_address not in self.address_to_manager:
-            self.address_to_manager[channel_manager_address] = ChannelManager(
-                self.client,
-                channel_manager_address,
-            )
-
-        return self.address_to_manager[channel_manager_address]
-
     def discovery(self, discovery_address: Address) -> Discovery:
         """ Return a proxy to interact with the discovery. """
         if not is_binary_address(discovery_address):
@@ -140,32 +124,6 @@ class BlockChainService:
             )
 
         return self.address_to_discovery[discovery_address]
-
-    def netting_channel(self, netting_channel_address: Address) -> NettingChannel:
-        """ Return a proxy to interact with a NettingChannelContract. """
-        if not is_binary_address(netting_channel_address):
-            raise ValueError('netting_channel_address must be a valid address')
-
-        if netting_channel_address not in self.address_to_nettingchannel:
-            channel = NettingChannel(
-                self.client,
-                netting_channel_address,
-            )
-            self.address_to_nettingchannel[netting_channel_address] = channel
-
-        return self.address_to_nettingchannel[netting_channel_address]
-
-    def registry(self, registry_address: Address) -> Registry:
-        if not is_binary_address(registry_address):
-            raise ValueError('registry_address must be a valid address')
-
-        if registry_address not in self.address_to_registry:
-            self.address_to_registry[registry_address] = Registry(
-                self.client,
-                registry_address,
-            )
-
-        return self.address_to_registry[registry_address]
 
     def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
         if not is_binary_address(address):
@@ -225,37 +183,6 @@ class BlockChainService:
             )
 
         return self.identifier_to_payment_channel[dict_key]
-
-    def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
-        contracts = compile_files_cwd([contract_path])
-
-        log.info('Deploying contract', path=os.path.basename(contract_path))
-
-        proxy = self.client.deploy_solidity_contract(
-            contract_name,
-            contracts,
-            list(),
-            constructor_parameters,
-            contract_path=contract_path,
-        )
-
-        return decode_hex(proxy.contract.address)
-
-    def deploy_and_register_token(
-            self,
-            registry,
-            contract_name,
-            contract_path,
-            constructor_parameters=None):
-
-        token_address = self.deploy_contract(
-            contract_name,
-            contract_path,
-            constructor_parameters,
-        )
-        registry.add_token(token_address)
-
-        return token_address
 
     @property
     @ttl_cache(ttl=10)

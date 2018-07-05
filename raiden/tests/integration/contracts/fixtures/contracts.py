@@ -6,21 +6,27 @@ from raiden.network.proxies import (
     TokenNetwork,
 )
 
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import (
+    CONTRACT_MANAGER,
+    ContractManager,
+    CONTRACTS_SOURCE_DIRS,
+)
 from eth_utils import to_canonical_address
-from raiden.utils import get_contract_path
-from raiden.utils.solc import compile_files_cwd
 
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_HUMAN_STANDARD_TOKEN,
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
 )
+
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 
 
 @pytest.fixture
-def deploy_contract(blockchain_services, deploy_client):
+def deploy_contract(deploy_client):
     """Deploy a contract using raiden-contracts contract manager"""
     def f(contract_name: str, args=None):
         if args is None:
@@ -53,7 +59,12 @@ def secret_registry_proxy(deploy_client, secret_registry_contract):
 def token_network_registry_contract(chain_id, deploy_contract, secret_registry_contract):
     return deploy_contract(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
-        [secret_registry_contract.contract.address, chain_id],
+        [
+            secret_registry_contract.contract.address,
+            chain_id,
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
+        ],
     )
 
 
@@ -78,6 +89,8 @@ def token_network_contract(
             token_contract.contract.address,
             secret_registry_contract.contract.address,
             chain_id,
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
         ],
     )
 
@@ -104,15 +117,22 @@ def token_proxy(deploy_client, token_contract):
 
 
 @pytest.fixture
-def deploy_token(blockchain_services, deploy_client):
+def deploy_token(deploy_client):
     def f(initial_amount, decimals, token_name, token_symbol):
-        args = [initial_amount, token_name, decimals, token_symbol]
-        contract_path = get_contract_path('HumanStandardToken.sol')
-        compiled = compile_files_cwd([contract_path])
-        return deploy_client.deploy_solidity_contract(
+        token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
-            compiled,
-            constructor_parameters=args,
-            contract_path=contract_path,
+            deploy_client,
+            initial_amount,
+            decimals,
+            token_name,
+            token_symbol,
         )
+
+        manager = ContractManager(CONTRACTS_SOURCE_DIRS)
+        contract_abi = manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
+        return deploy_client.new_contract_proxy(
+            contract_interface=contract_abi,
+            contract_address=token_address,
+        )
+
     return f

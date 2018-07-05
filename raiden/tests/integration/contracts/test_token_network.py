@@ -94,7 +94,7 @@ def test_token_network_proxy_basics(
     # channel is open.
     # deposit with no balance
     with pytest.raises(ValueError):
-        c1_token_network_proxy.deposit(
+        c1_token_network_proxy.set_total_deposit(
             10,
             c2_client.sender,
         )
@@ -107,12 +107,12 @@ def test_token_network_proxy_basics(
     assert initial_balance_c2 == 0
     # no negative deposit
     with pytest.raises(ValueError):
-        c1_token_network_proxy.deposit(
+        c1_token_network_proxy.set_total_deposit(
             -1,
             c2_client.sender,
         )
     # actual deposit
-    c1_token_network_proxy.deposit(
+    c1_token_network_proxy.set_total_deposit(
         10,
         c2_client.sender,
     )
@@ -217,11 +217,11 @@ def test_token_network_proxy_update_transfer(
     assert initial_balance_c1 == initial_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
     assert initial_balance_c2 == initial_balance
-    c1_token_network_proxy.deposit(
+    c1_token_network_proxy.set_total_deposit(
         10,
         c2_client.sender,
     )
-    c2_token_network_proxy.deposit(
+    c2_token_network_proxy.set_total_deposit(
         10,
         c1_client.sender,
     )

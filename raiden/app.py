@@ -27,7 +27,7 @@ from raiden.utils import (
     privatekey_to_address,
 )
 from raiden.network.proxies import (
-    Registry,
+    TokenNetworkRegistry,
     SecretRegistry,
     Discovery,
 )
@@ -81,7 +81,7 @@ class App:  # pylint: disable=too-few-public-methods
             self,
             config: Dict,
             chain: BlockChainService,
-            default_registry: Registry,
+            default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
             discovery: Discovery = None,

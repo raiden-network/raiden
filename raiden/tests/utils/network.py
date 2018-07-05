@@ -32,9 +32,22 @@ BlockchainServices = namedtuple(
 )
 
 
-def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_amount):
-    netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
-    netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
+def check_channel(
+        app1,
+        app2,
+        token_network_identifier,
+        netting_channel_address,
+        settle_timeout,
+        deposit_amount,
+):
+    netcontract1 = app1.raiden.chain.payment_channel(
+        token_network_identifier,
+        netting_channel_address,
+    )
+    netcontract2 = app2.raiden.chain.payment_channel(
+        token_network_identifier,
+        netting_channel_address,
+    )
 
     # Check a valid settle timeout was used, the netting contract has an
     # enforced minimum and maximum
@@ -51,21 +64,21 @@ def check_channel(app1, app2, netting_channel_address, settle_timeout, deposit_a
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
 
-    assert app1_details['our_balance'] == app2_details['partner_balance']
-    assert app1_details['partner_balance'] == app2_details['our_balance']
+    assert app1_details['our_deposit'] == app2_details['partner_deposit']
+    assert app1_details['partner_deposit'] == app2_details['our_deposit']
 
-    assert app1_details['our_balance'] == deposit_amount
-    assert app1_details['partner_balance'] == deposit_amount
-    assert app2_details['our_balance'] == deposit_amount
-    assert app2_details['partner_balance'] == deposit_amount
+    assert app1_details['our_deposit'] == deposit_amount
+    assert app1_details['partner_deposit'] == deposit_amount
+    assert app2_details['our_deposit'] == deposit_amount
+    assert app2_details['partner_deposit'] == deposit_amount
 
 
-def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
+def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    manager = app0.raiden.default_registry.manager_by_token(token_address)
-    netcontract_address = manager.new_netting_channel(
+    token_network_proxy = app0.raiden.default_registry.token_network_by_token(token_address)
+    netcontract_address = token_network_proxy.new_netting_channel(
         app1.raiden.address,
         settle_timeout,
     )
@@ -74,15 +87,19 @@ def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     for app in [app0, app1]:
         # Use each app's own chain because of the private key / local signing
         token = app.raiden.chain.token(token_address)
-        netting_channel = app.raiden.chain.netting_channel(netcontract_address)
+        payment_channel_proxy = app.raiden.chain.payment_channel(
+            token_network_proxy.address,
+            netcontract_address,
+        )
 
         # This check can succeed and the deposit still fail, if channels are
         # openned in parallel
         previous_balance = token.balance_of(app.raiden.address)
         assert previous_balance >= deposit
 
-        token.approve(netcontract_address, deposit)
-        netting_channel.set_total_deposit(deposit)
+        # the payment channel proxy will call approve
+        # token.approve(token_network_proxy.address, deposit)
+        payment_channel_proxy.set_total_deposit(deposit)
 
         # Balance must decrease by at least but not exactly `deposit` amount,
         # because channels can be openned in parallel
@@ -92,6 +109,7 @@ def netting_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     check_channel(
         app0,
         app1,
+        token_network_proxy.address,
         netcontract_address,
         settle_timeout,
         deposit,
@@ -213,9 +231,10 @@ def create_sequential_channels(raiden_apps, channels_per_node):
 
 
 def create_apps(
+        chain_id,
         blockchain_services,
         endpoint_discovery_services,
-        registry_address,
+        token_network_registry_address,
         secret_registry_address,
         raiden_udp_ports,
         reveal_timeout,
@@ -245,6 +264,7 @@ def create_apps(
         discovery.register(nodeid, host, port)
 
         config = {
+            'chain_id': chain_id,
             'host': host,
             'port': port,
             'external_ip': host,
@@ -285,7 +305,7 @@ def create_apps(
         config_copy = App.DEFAULT_CONFIG.copy()
         config_copy.update(config)
 
-        registry = blockchain.registry(registry_address)
+        registry = blockchain.token_network_registry(token_network_registry_address)
         secret_registry = blockchain.secret_registry(secret_registry_address)
 
         if use_matrix:
@@ -320,11 +340,11 @@ def jsonrpc_services(
         deploy_service,
         private_keys,
         secret_registry_address,
-        registry_address,
+        token_network_registry_address,
         web3=None,
 ):
     secret_registry = deploy_service.secret_registry(secret_registry_address)
-    deploy_registry = deploy_service.registry(registry_address)
+    deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
 
     host = '0.0.0.0'
     blockchain_services = list()

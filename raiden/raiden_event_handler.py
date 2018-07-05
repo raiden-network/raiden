@@ -1,9 +1,7 @@
 import structlog
 
-from raiden.messages import (
-    message_from_sendevent,
-    Lock,
-)
+from raiden.exceptions import ChannelIncorrectStateError
+from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
     ContractSendSecretReveal,
@@ -179,40 +177,6 @@ def handle_contract_send_channelclose(
 
     if balance_proof:
         nonce = balance_proof.nonce
-        transferred_amount = balance_proof.transferred_amount
-        locked_amount = balance_proof.locked_amount
-        locksroot = balance_proof.locksroot
-        signature = balance_proof.signature
-        message_hash = balance_proof.message_hash
-
-    else:
-        nonce = 0
-        transferred_amount = 0
-        locked_amount = 0
-        locksroot = b''
-        signature = b''
-        message_hash = b''
-
-    channel = raiden.chain.netting_channel(channel_close_event.channel_identifier)
-
-    channel.close(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        message_hash,
-        signature,
-    )
-
-
-def handle_contract_send_channelclose2(
-        raiden: RaidenService,
-        channel_close_event: ContractSendChannelClose,
-):
-    balance_proof = channel_close_event.balance_proof
-
-    if balance_proof:
-        nonce = balance_proof.nonce
         balance_hash = balance_proof.balance_hash
         signature = balance_proof.signature
         message_hash = balance_proof.message_hash
@@ -243,24 +207,6 @@ def handle_contract_send_channelupdate(
     balance_proof = channel_update_event.balance_proof
 
     if balance_proof:
-        channel = raiden.chain.netting_channel(channel_update_event.channel_identifier)
-        channel.update_transfer(
-            balance_proof.nonce,
-            balance_proof.transferred_amount,
-            balance_proof.locked_amount,
-            balance_proof.locksroot,
-            balance_proof.message_hash,
-            balance_proof.signature,
-        )
-
-
-def handle_contract_send_channelupdate2(
-        raiden: RaidenService,
-        channel_update_event: ContractSendChannelUpdateTransfer,
-):
-    balance_proof = channel_update_event.balance_proof
-
-    if balance_proof:
         channel = raiden.chain.payment_channel(
             token_network_address=channel_update_event.token_network_identifier,
             channel_id=channel_update_event.channel_identifier,
@@ -285,36 +231,14 @@ def handle_contract_send_channelunlock(
         raiden: RaidenService,
         channel_unlock_event: ContractSendChannelBatchUnlock,
 ):
-    channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
-    block_number = raiden.get_block_number()
-
-    for unlock_proof in channel_unlock_event.unlock_proofs:
-        lock = Lock.from_bytes(unlock_proof.lock_encoded)
-
-        if lock.expiration < block_number:
-            log.error('Lock has expired!', lock=lock)
-        else:
-            channel.unlock(unlock_proof)
-
-
-def handle_contract_send_channelunlock2(
-        raiden: RaidenService,
-        channel_unlock_event: ContractSendChannelBatchUnlock,
-):
-    channel = raiden.chain.netting_channel(channel_unlock_event.channel_identifier)
-
-    channel.unlock(channel_unlock_event.unlock_proofs)
+    channel = raiden.chain.payment_channel(
+        channel_unlock_event.token_network_identifier,
+        channel_unlock_event.channel_identifier,
+    )
+    channel.unlock(channel_unlock_event.merkle_treee_leaves)
 
 
 def handle_contract_send_channelsettle(
-        raiden: RaidenService,
-        channel_settle_event: ContractSendChannelSettle,
-):
-    channel = raiden.chain.netting_channel(channel_settle_event.channel_identifier)
-    channel.settle()
-
-
-def handle_contract_send_channelsettle2(
         raiden: RaidenService,
         channel_settle_event: ContractSendChannelSettle,
 ):
@@ -325,14 +249,56 @@ def handle_contract_send_channelsettle2(
     our_balance_proof = channel_settle_event.our_balance_proof
     partner_balance_proof = channel_settle_event.partner_balance_proof
 
-    channel.settle(
-        our_balance_proof.transferred_amount,
-        our_balance_proof.locked_amount,
-        our_balance_proof.locksroot,
-        partner_balance_proof.transferred_amount,
-        partner_balance_proof.locked_amount,
-        partner_balance_proof.locksroot,
-    )
+    if our_balance_proof:
+        our_transferred_amount = our_balance_proof.transferred_amount
+        our_locked_amount = our_balance_proof.locked_amount
+        our_locksroot = our_balance_proof.locksroot
+    else:
+        our_transferred_amount = 0
+        our_locked_amount = 0
+        our_locksroot = b''
+
+    if partner_balance_proof:
+        partner_transferred_amount = partner_balance_proof.transferred_amount
+        partner_locked_amount = partner_balance_proof.locked_amount
+        partner_locksroot = partner_balance_proof.locksroot
+    else:
+        partner_transferred_amount = 0
+        partner_locked_amount = 0
+        partner_locksroot = b''
+
+    # The smart contract requires the first balance proof to be the one with
+    # the smaller transferred_amount. This is used to simplify overflow checks
+    # in the smart contract.
+    if our_transferred_amount < partner_transferred_amount:
+        first_transferred_amount = partner_transferred_amount
+        first_locked_amount = partner_locked_amount
+        first_locksroot = partner_locksroot
+        second_transferred_amount = our_transferred_amount
+        second_locked_amount = our_locked_amount
+        second_locksroot = our_locksroot
+    else:
+        first_transferred_amount = our_transferred_amount
+        first_locked_amount = our_locked_amount
+        first_locksroot = our_locksroot
+        second_transferred_amount = partner_transferred_amount
+        second_locked_amount = partner_locked_amount
+        second_locksroot = partner_locksroot
+
+    try:
+        channel.settle(
+            first_transferred_amount,
+            first_locked_amount,
+            first_locksroot,
+            second_transferred_amount,
+            second_locked_amount,
+            second_locksroot,
+        )
+    except ChannelIncorrectStateError:
+        # Ignoring the exception as there might
+        # be a race condition when both nodes try to settle
+        # at the same time.
+        pass
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):
@@ -362,15 +328,12 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         handle_contract_send_secretreveal(raiden, event)
     elif type(event) == ContractSendChannelClose:
         handle_contract_send_channelclose(raiden, event)
-        # handle_contract_send_channelclose2(raiden, event)
     elif type(event) == ContractSendChannelUpdateTransfer:
         handle_contract_send_channelupdate(raiden, event)
-        # handle_contract_send_channelupdate2(raiden, event)
     elif type(event) == ContractSendChannelBatchUnlock:
         handle_contract_send_channelunlock(raiden, event)
     elif type(event) == ContractSendChannelSettle:
         handle_contract_send_channelsettle(raiden, event)
-        # handle_contract_send_channelsettle2(raiden, event)
     elif type(event) in UNEVENTFUL_EVENTS:
         pass
     else:

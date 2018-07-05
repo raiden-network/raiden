@@ -497,61 +497,6 @@ class ContractReceiveSecretReveal(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelUnlock(StateChange):
-    """ A lock was claimed via the blockchain.
-    Used when a hash time lock was unlocked and a log ChannelSecretRevealed is
-    emitted by the netting channel.
-    Note:
-        For this state change the contract caller is not important but only the
-        receiving address. `receiver` is the address to which the lock's token
-        was transferred, this may be either of the channel participants.
-        If the channel was used for a mediated transfer that was refunded, this
-        event must be used twice, once for each receiver.
-    """
-
-    def __init__(
-            self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-            channel_identifier: typing.ChannelID,
-            secret: typing.Secret,
-            receiver: typing.Address,
-    ):
-
-        if not isinstance(receiver, typing.T_Address):
-            raise ValueError('receiver must be of type address')
-
-        secrethash: typing.SecretHash = typing.SecretHash(sha3(secret))
-
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
-        self.channel_identifier = channel_identifier
-        self.secret = secret
-        self.secrethash = secrethash
-        self.receiver = receiver
-
-    def __repr__(self):
-        return '<ContractReceiveChannelUnlock channel:{} receive:{} secrethash:{}>'.format(
-            pex(self.channel_identifier),
-            pex(self.receiver),
-            pex(self.secrethash),
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ContractReceiveChannelUnlock) and
-            self.payment_network_identifier == other.payment_network_identifier and
-            self.token_address == other.token_address and
-            self.channel_identifier == other.channel_identifier and
-            self.secret == other.secret and
-            self.secrethash == other.secrethash and
-            self.receiver == other.receiver
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class ContractReceiveChannelBatchUnlock(StateChange):
     """ All the locks were claimed via the blockchain.
 
@@ -565,25 +510,21 @@ class ContractReceiveChannelBatchUnlock(StateChange):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+            token_network_identifier: typing.PaymentNetworkID,
             channel_identifier: typing.ChannelID,
-            merkle_tree_leaves: typing.MerkleTreeLeaves,
             participant: typing.Address,
             unlocked_amount: typing.TokenAmount,
             returned_tokens: typing.TokenAmount,
     ):
 
-        if not isinstance(payment_network_identifier, typing.T_PaymentNetworkID):
+        if not isinstance(token_network_identifier, typing.T_PaymentNetworkID):
             raise ValueError('payment_network_identifier must be of type PaymentNetworkID')
 
         if not isinstance(participant, typing.T_Address):
             raise ValueError('participant must be of type address')
 
-        self.payment_network_identifier = payment_network_identifier
-        self.token_address = token_address
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.merkle_tree_leaves = merkle_tree_leaves
         self.participant = participant
         self.unlocked_amount = unlocked_amount
         self.returned_tokens = returned_tokens

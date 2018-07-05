@@ -14,10 +14,11 @@ from gevent.event import Event
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
-from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden import waiting
+from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils import get_contract_path, safe_address_decode
+from raiden.utils import get_contract_path, safe_address_decode, typing
 from raiden.utils.solc import compile_files_cwd
 
 ENTER_CONSOLE_TIMEOUT = 3
@@ -340,10 +341,10 @@ class ConsoleTools:
 
     def register_token(
             self,
-            registry_address_hex,
-            token_address_hex,
-            retry_timeout=DEFAULT_RETRY_TIMEOUT,
-    ):
+            registry_address_hex: typing.AddressHex,
+            token_address_hex: typing.AddressHex,
+            retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+    ) -> TokenNetwork:
         """ Register a token with the raiden token manager.
 
         Args:
@@ -351,17 +352,14 @@ class ConsoleTools:
             token_address_hex (string): a hex encoded token address.
 
         Returns:
-            channel_manager: the channel_manager contract_proxy.
+
+            The token network proxy.
         """
-
-        registry = self._raiden.chain.registry(registry_address_hex)
-
-        # Add the ERC20 token to the raiden registry
+        registry_address = safe_address_decode(registry_address_hex)
         token_address = safe_address_decode(token_address_hex)
-        registry.add_token(token_address)
 
-        # Obtain the channel manager for the token
-        channel_manager = registry.manager_by_token(token_address)
+        registry = self._raiden.chain.token_network_registry(registry_address)
+        token_network_address = registry.add_token(token_address)
 
         # Register the channel manager with the raiden registry
         waiting.wait_for_payment_network(
@@ -371,7 +369,7 @@ class ConsoleTools:
             retry_timeout,
         )
 
-        return channel_manager
+        return self._raiden.chain.token_network(token_network_address)
 
     def open_channel_with_funding(
             self,

@@ -15,7 +15,7 @@ from raiden.tests.integration.fixtures.raiden_network import (
     wait_for_channels,
 )
 from raiden.tests.integration.fixtures.transport import TransportProtocol
-from raiden.tests.utils.network import netting_channel_open_and_deposit
+from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendRevealSecret
@@ -59,7 +59,7 @@ def test_regression_unfiltered_routes(
     greenlets = []
     for first_app, second_app in app_channels:
         greenlets.append(gevent.spawn(
-            netting_channel_open_and_deposit,
+            payment_channel_open_and_deposit,
             first_app,
             second_app,
             token,

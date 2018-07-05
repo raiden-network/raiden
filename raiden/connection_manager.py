@@ -20,10 +20,11 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def log_open_channels(raiden, registry_address, token_address, funds):
+    node_state = views.state_from_raiden(raiden)
     open_channels = views.get_channelstate_open(
-        views.state_from_raiden(raiden),
-        registry_address,
-        token_address,
+        node_state=node_state,
+        payment_network_id=registry_address,
+        token_address=token_address,
     )
 
     if open_channels:
@@ -55,7 +56,17 @@ class ConnectionManager:
     BOOTSTRAP_ADDR_HEX = b'2' * 40
     BOOTSTRAP_ADDR = unhexlify(BOOTSTRAP_ADDR_HEX)
 
-    def __init__(self, raiden, registry_address, token_address):
+    def __init__(self, raiden, token_network_identifier):
+        node_state = views.state_from_raiden(raiden)
+        token_network_state = views.get_token_network_by_identifier(
+            node_state,
+            token_network_identifier,
+        )
+        token_network_registry = views.get_token_network_registry_by_token_network_identifier(
+            node_state,
+            token_network_identifier,
+        )
+
         # TODO:
         # - Add timeout for transaction polling, used to overwrite the RaidenAPI
         # defaults
@@ -65,8 +76,9 @@ class ConnectionManager:
         self.joinable_funds_target = 0
 
         self.raiden = raiden
-        self.registry_address = registry_address
-        self.token_address = token_address
+        self.registry_address = token_network_registry.address
+        self.token_network_identifier = token_network_identifier
+        self.token_address = token_network_state.token_address
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
         self.api = RaidenAPI(raiden)
@@ -117,7 +129,7 @@ class ConnectionManager:
                     self.BOOTSTRAP_ADDR,
                 )
             else:
-                self._open_channels(self.registry_address)
+                self._open_channels()
 
     def leave_async(self, only_receiving=True):
         """ Async version of `leave()` """
@@ -152,9 +164,9 @@ class ConnectionManager:
                 )
             else:
                 channels_to_close = views.get_channelstate_open(
-                    views.state_from_raiden(self.raiden),
-                    registry_address,
-                    self.token_address,
+                    node_state=views.state_from_raiden(self.raiden),
+                    payment_network_id=registry_address,
+                    token_address=self.token_address,
                 )
 
             partner_addresses = [
@@ -182,7 +194,7 @@ class ConnectionManager:
 
         return channels_to_close
 
-    def join_channel(self, registry_address, partner_address, partner_deposit):
+    def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
         node. It will fund the channel with up to the partners deposit, but
         not more than remaining funds or the initial funding per channel.
@@ -199,7 +211,7 @@ class ConnectionManager:
                 return
 
             self.api.set_total_channel_deposit(
-                registry_address,
+                self.registry_address,
                 self.token_address,
                 partner_address,
                 joining_funds,
@@ -211,7 +223,7 @@ class ConnectionManager:
                 partner=pex(partner_address),
             )
 
-    def retry_connect(self, registry_address):
+    def retry_connect(self):
         """Will be called when new channels in the token network are detected.
         If the minimum number of channels was not yet established, it will try
         to open new channels.
@@ -223,14 +235,14 @@ class ConnectionManager:
                 return
 
             open_channels = views.get_channelstate_open(
-                views.state_from_raiden(self.raiden),
-                registry_address,
-                self.token_address,
+                node_state=views.state_from_raiden(self.raiden),
+                payment_network_id=self.registry_address,
+                token_address=self.token_address,
             )
             if len(open_channels) >= self.initial_channel_target:
                 return
 
-            self._open_channels(registry_address)
+            self._open_channels()
 
     def find_new_partners(self, number: int):
         """Search the token network for potential channel partners.
@@ -239,9 +251,9 @@ class ConnectionManager:
             number: number of partners to return
         """
         open_channels = views.get_channelstate_open(
-            views.state_from_raiden(self.raiden),
-            self.registry_address,
-            self.token_address,
+            node_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
         )
         known = set(channel_state.partner_state.address for channel_state in open_channels)
         known.add(self.BOOTSTRAP_ADDR)
@@ -260,7 +272,7 @@ class ConnectionManager:
 
         return new_partners
 
-    def _open_channels(self, registry_address):
+    def _open_channels(self):
         """ Open channels until there are `self.initial_channel_target`
         channels open. Do nothing if there are enough channels open already.
 
@@ -268,9 +280,9 @@ class ConnectionManager:
             - This method must be called with the lock held.
         """
         open_channels = views.get_channelstate_open(
-            views.state_from_raiden(self.raiden),
-            registry_address,
-            self.token_address,
+            node_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
         )
 
         qty_channels_to_open = self.initial_channel_target - len(open_channels)
@@ -280,8 +292,7 @@ class ConnectionManager:
         for partner in self.find_new_partners(qty_channels_to_open):
             try:
                 self.api.channel_open(
-                    registry_address,
-                    self.token_address,
+                    self.token_network_identifier,
                     partner,
                 )
             except DuplicatedChannelError:
@@ -291,8 +302,7 @@ class ConnectionManager:
 
             try:
                 self.api.set_total_channel_deposit(
-                    registry_address,
-                    self.token_address,
+                    self.token_network_identifier,
                     partner,
                     self._initial_funding_per_partner,
                 )

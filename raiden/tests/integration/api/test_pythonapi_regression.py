@@ -1,4 +1,5 @@
 import pytest
+import gevent
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -27,7 +28,22 @@ def test_close_regression(raiden_network, deposit, token_addresses):
 
     # Initialize app2 balance proof and close the channel
     amount = 10
-    assert api1.transfer(registry_address, token_address, amount, api2.address)
+    identifier = 42
+    assert api1.transfer(
+        registry_address,
+        token_address,
+        amount,
+        api2.address,
+        identifier=identifier,
+    )
+    exception = ValueError('Waiting for transfer received success in the WAL timed out')
+    with gevent.Timeout(seconds=5, exception=exception):
+        waiting.wait_for_transfer_success(
+            app1.raiden,
+            identifier,
+            amount,
+            app1.raiden.alarm.wait_time,
+        )
 
     api2.channel_close(registry_address, token_address, api1.address)
 

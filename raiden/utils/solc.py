@@ -1,7 +1,13 @@
-from solc import compile_files
 import os
 import re
+import subprocess
+
 from eth_utils import decode_hex
+from solc import compile_files, get_solc_version
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+
+from raiden.constants import MIN_REQUIRED_SOLC
 
 
 def solidity_resolve_address(hex_code, library_symbol, library_address):
@@ -94,3 +100,47 @@ def compile_files_cwd(*args, **kwargs):
     finally:
         os.chdir(cwd)
     return compiled_contracts
+
+
+def validate_solc():
+    if get_solc_version() is None:
+        raise RuntimeError(
+            "Couldn't find the solc in the current $PATH.\n"
+            "Make sure the solidity compiler is installed and available on your $PATH.",
+        )
+
+    try:
+        compile_files(
+            [CONTRACT_MANAGER.get_contract_path(CONTRACT_HUMAN_STANDARD_TOKEN)],
+            'HumanStandardToken',
+            optimize=False,
+        )
+    except subprocess.CalledProcessError as e:
+        msg = (
+            'The solidity compiler failed to execute. Please make sure that you\n'
+            'are using the binary version of the compiler (solc-js is not compatible)\n'
+            'and that the version is >= {}'.format(MIN_REQUIRED_SOLC)
+        )
+
+        if e.output:
+            msg += (
+                '\n'
+                'Output: ' + e.output
+            )
+
+        raise RuntimeError(msg)
+
+    except OSError as e:
+        msg = (
+            'The solidity compiler failed to execute. Please make sure the\n'
+            'binary is compatible with your architecture and you can execute it.'
+        )
+
+        child_traceback = getattr(e, 'child_traceback', None)
+        if child_traceback:
+            msg += (
+                '\n'
+                'Traceback: ' + child_traceback
+            )
+
+        raise RuntimeError(msg)

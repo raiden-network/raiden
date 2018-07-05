@@ -67,7 +67,7 @@ class HexAddressConverter(BaseConverter):
 
 
 # do this to make testing easier
-def parse_hex_channel_id(value: str) -> bytes:
+def decode_keccak(value: str) -> bytes:
     if value[:2] != '0x':
         raise ValidationError("Channel Id is missing the '0x' prefix")
 
@@ -82,9 +82,9 @@ def parse_hex_channel_id(value: str) -> bytes:
     return value
 
 
-class HexChannelIdConverter(BaseConverter):
+class KeccakConverter(BaseConverter):
     def to_python(self, value: str):
-        return parse_hex_channel_id(value)
+        return decode_keccak(value)
 
     def to_url(self, value):
         return encode_hex(value)
@@ -110,6 +110,31 @@ class AddressField(fields.Field):
 
         try:
             value = unhexlify(value[2:])
+        except binascii.Error:
+            self.fail('invalid_data')
+
+        if len(value) != 20:
+            self.fail('invalid_size')
+
+        return value
+
+
+class KeccakField(fields.Field):
+    default_error_messages = {
+        'missing_prefix': 'Not a valid hex encoded, must be 0x prefixed.',
+        'invalid_data': 'Not a valid hex encoded hash, contains invalid characters.',
+        'invalid_size': 'Not a valid hex encoded hash, decoded has is not 20 bytes long.',
+    }
+
+    def _serialize(self, value, attr, obj):
+        return encode_hex(value)
+
+    def _deserialize(self, value, attr, data):
+        if value[:2] != '0x':
+            self.fail('missing_prefix')
+
+        try:
+            value = decode_hex(value)
         except binascii.Error:
             self.fail('invalid_data')
 
@@ -214,7 +239,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 
 class ChannelSchema(BaseSchema):
-    channel_address = AddressField()
+    channel_identifier = KeccakField()
     token_address = AddressField()
     partner_address = AddressField()
     settle_timeout = fields.Integer()
@@ -232,7 +257,7 @@ class ChannelSchema(BaseSchema):
 
 
 class ChannelStateSchema(BaseSchema):
-    channel_address = AddressField(attribute='identifier')
+    channel_identifier = KeccakField(attribute='identifier')
     token_address = AddressField()
     partner_address = fields.Method('get_partner_address')
     settle_timeout = fields.Integer()

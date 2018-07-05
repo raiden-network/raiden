@@ -1,4 +1,3 @@
-from binascii import hexlify
 from binascii import unhexlify
 from http import HTTPStatus
 from string import Template
@@ -12,8 +11,18 @@ import subprocess
 import tempfile
 import time
 import traceback
+import gevent
+from typing import Dict
 
 from eth_utils import to_checksum_address, to_canonical_address
+
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
+)
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
@@ -22,7 +31,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import get_project_root
-from raiden.utils.deployment import deploy_contracts, NEW_CONTRACTS_TO_DEPLOY
+from raiden.raiden_service import RaidenService
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -94,22 +103,21 @@ TEST_ACCOUNT_PASSWORD = 'password'
 TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44'
 
 
-def run_restapi_smoketests(raiden_service, test_config):
+def run_restapi_smoketests():
     """Test if REST api works. """
     url = 'http://localhost:{port}/api/1/channels'.format(port=5001)
 
     response = requests.get(url)
-
     assert response.status_code == HTTPStatus.OK
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            '0x' + hexlify(ConnectionManager.BOOTSTRAP_ADDR).decode())
+            to_checksum_address(ConnectionManager.BOOTSTRAP_ADDR))
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
 
-def run_smoketests(raiden_service, test_config, debug=False):
+def run_smoketests(raiden_service: RaidenService, test_config: Dict, debug: bool = False):
     """ Test that the assembled raiden_service correctly reflects the configuration from the
     smoketest_genesis. """
     try:
@@ -119,9 +127,15 @@ def run_smoketests(raiden_service, test_config, debug=False):
             to_canonical_address(test_config['contracts']['registry_address'])
         )
         assert (
-            raiden_service.default_registry.token_addresses() ==
-            [to_canonical_address(test_config['contracts']['token_address'])]
+            raiden_service.default_secret_registry.address ==
+            to_canonical_address(test_config['contracts']['secret_registry_address'])
         )
+
+        token_network_added_events = raiden_service.default_registry.filter_token_added_events()
+        token_addresses = [event['args']['token_address'] for event in token_network_added_events]
+
+        assert token_addresses == [test_config['contracts']['token_address']]
+
         if test_config.get('transport') == 'udp':
             assert len(chain.address_to_discovery.keys()) == 1, repr(chain.address_to_discovery)
             assert (
@@ -151,7 +165,9 @@ def run_smoketests(raiden_service, test_config, debug=False):
         assert distributable == TEST_DEPOSIT_AMOUNT
         assert distributable == channel_state.our_state.contract_balance
         assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
-        run_restapi_smoketests(raiden_service, test_config)
+
+        # Run API test
+        run_restapi_smoketests()
     except Exception:
         error = traceback.format_exc()
         if debug:
@@ -164,11 +180,9 @@ def load_smoketest_config():
     smoketest_config_path = os.path.join(get_project_root(), 'smoketest_config.json')
 
     # try to load the existing smoketest genesis config
-    smoketest_config = dict()
     if os.path.exists(smoketest_config_path):
         with open(smoketest_config_path) as handler:
-            smoketest_config = json.load(handler)
-            return smoketest_config
+            return json.load(handler)
 
     return None
 
@@ -232,17 +246,39 @@ def start_ethereum(smoketest_genesis):
     return ethereum_node, ethereum_config
 
 
-def deploy_smoketest_contracts(client):
-    addresses = deploy_contracts(client)
-
+def deploy_smoketest_contracts(client, chain_id):
     client.web3.personal.unlockAccount(
         client.web3.eth.accounts[0],
         TEST_ACCOUNT_PASSWORD,
     )
 
-    for contract_name in NEW_CONTRACTS_TO_DEPLOY:
-        contract_address = deploy_contract_web3(contract_name, client)
-        addresses[contract_name] = contract_address
+    endpoint_registry_address = deploy_contract_web3(
+        CONTRACT_ENDPOINT_REGISTRY,
+        client,
+    )
+
+    secret_registry_address = deploy_contract_web3(
+        CONTRACT_SECRET_REGISTRY,
+        client,
+    )
+
+    gevent.sleep(1)  # FIXME: properly wait for block
+
+    token_network_registry_address = deploy_contract_web3(
+        CONTRACT_TOKEN_NETWORK_REGISTRY,
+        client,
+
+        to_checksum_address(secret_registry_address),
+        chain_id,
+        TEST_SETTLE_TIMEOUT_MIN,
+        TEST_SETTLE_TIMEOUT_MAX,
+    )
+
+    addresses = {
+        CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
+        CONTRACT_SECRET_REGISTRY: secret_registry_address,
+        CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
+    }
     return addresses
 
 

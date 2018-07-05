@@ -135,21 +135,24 @@ class ContractSendChannelUpdateTransfer(Event):
 class ContractSendChannelBatchUnlock(Event):
     """ Event emitted when the lock must be claimed on-chain. """
 
-    def __init__(self, channel_identifier, unlock_proofs):
+    def __init__(self, token_network_identifier, channel_identifier, merkle_treee_leaves):
+        self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.unlock_proofs = unlock_proofs
+        self.merkle_treee_leaves = merkle_treee_leaves
 
     def __repr__(self):
-        return '<ContractSendChannelBatchUnlock channel:{} unlock_proofs:{}>'.format(
+        return '<ContractSendChannelBatchUnlock channel:{} merkle_treee_leaves:{}>'.format(
+            pex(self.token_network_identifier),
             pex(self.channel_identifier),
-            self.unlock_proofs,
+            self.merkle_treee_leaves,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendChannelBatchUnlock) and
+            self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.unlock_proofs == other.unlock_proofs
+            self.merkle_treee_leaves == other.merkle_treee_leaves
         )
 
     def __ne__(self, other):

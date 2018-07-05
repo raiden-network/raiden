@@ -1,17 +1,18 @@
 from binascii import unhexlify
 
-from eth_utils import is_binary_address
-
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
-    CONTRACT_HUMAN_STANDARD_TOKEN,
+from eth_utils import (
+    is_binary_address,
+    to_checksum_address,
+    to_normalized_address,
 )
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
+
 from raiden.exceptions import TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
-from eth_utils import to_checksum_address, to_normalized_address
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 
 
@@ -22,7 +23,7 @@ class Token:
             token_address,
     ):
         contract = jsonrpc_client.new_contract(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
+            ContractManager(CONTRACTS_SOURCE_DIRS).get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),
         )
         self.proxy = ContractProxy(jsonrpc_client, contract)
@@ -42,7 +43,7 @@ class Token:
         # `NettingChannel` and keep this straight forward)
         transaction_hash = self.proxy.transact(
             'approve',
-            contract_address,
+            to_checksum_address(contract_address),
             allowance,
         )
 

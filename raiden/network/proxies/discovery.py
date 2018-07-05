@@ -6,11 +6,9 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
 )
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
-from raiden.blockchain.abi import (
-    CONTRACT_MANAGER,
-    CONTRACT_ENDPOINT_REGISTRY,
-)
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
     ContractVersionMismatch,

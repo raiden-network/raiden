@@ -67,7 +67,12 @@ def geth_clique_extradata(extra_vanity, extra_seal):
     )
 
 
-def geth_to_cmd(node: typing.Dict, datadir: str, verbosity: int) -> typing.List[str]:
+def geth_to_cmd(
+        node: typing.Dict,
+        datadir: str,
+        chain_id: int,
+        verbosity: int,
+) -> typing.List[str]:
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
@@ -101,7 +106,7 @@ def geth_to_cmd(node: typing.Dict, datadir: str, verbosity: int) -> typing.List[
         '--rpc',
         '--rpcapi', 'eth,net,web3',
         '--rpcaddr', '0.0.0.0',
-        '--networkid', '627',
+        '--networkid', str(chain_id),
         '--verbosity', str(verbosity),
         '--datadir', datadir,
         '--password', os.path.join(datadir, 'pw'),
@@ -293,6 +298,7 @@ def geth_run_nodes(
         nodes_configuration,
         base_datadir,
         genesis_file,
+        chain_id,
         verbosity,
         logdir,
 ):
@@ -306,7 +312,7 @@ def geth_run_nodes(
         if 'unlock' in config:
             geth_create_account(datadir, node.private_key)
 
-        commandline = geth_to_cmd(config, datadir, verbosity)
+        commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
         cmds.append(commandline)
 
     stdout = None
@@ -349,6 +355,7 @@ def geth_run_private_blockchain(
         accounts_to_fund: typing.List[bytes],
         geth_nodes: typing.List[GethNodeDescription],
         base_datadir: str,
+        chain_id: int,
         verbosity: str,
         random_marker: str,
 ):
@@ -403,6 +410,7 @@ def geth_run_private_blockchain(
         nodes_configuration,
         base_datadir,
         genesis_path,
+        chain_id,
         verbosity,
         logdir,
     )

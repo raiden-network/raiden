@@ -34,11 +34,6 @@ def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
     ]
 
 
-@pytest.fixture
-def chain_id(blockchain_services, deploy_client):
-    return int(deploy_client.web3.version.network)
-
-
 @pytest.fixture(scope='session')
 def ethereum_tester(
     patch_genesis_gas_limit,
@@ -61,6 +56,7 @@ def web3(
         request,
         tmpdir,
         ethereum_tester,
+        chain_id,
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
@@ -96,6 +92,7 @@ def web3(
             accounts_to_fund,
             geth_nodes,
             str(tmpdir),
+            chain_id,
             request.config.option.verbose,
             random_marker,
         )
@@ -149,13 +146,13 @@ def blockchain_services(
         deploy_service,
         private_keys,
         secret_registry_address,
-        registry_address,
+        token_network_registry_address,
         web3,
 ):
     return jsonrpc_services(
         deploy_service,
         private_keys,
         secret_registry_address,
-        registry_address,
+        token_network_registry_address,
         web3=web3,
     )

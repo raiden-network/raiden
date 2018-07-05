@@ -13,8 +13,8 @@ from eth_utils import is_binary_address
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import (
-    Registry,
     SecretRegistry,
+    TokenNetworkRegistry,
 )
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
@@ -22,10 +22,7 @@ from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
-from raiden.blockchain.events import (
-    get_relevant_proxies,
-    BlockchainEvents,
-)
+from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
@@ -151,7 +148,7 @@ class RaidenService:
     def __init__(
             self,
             chain: BlockChainService,
-            default_registry: Registry,
+            default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             private_key_bin,
             transport,
@@ -170,7 +167,7 @@ class RaidenService:
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
             ))
 
-        self.tokens_to_connectionmanagers = dict()
+        self.tokennetworkids_to_connectionmanagers = dict()
         self.identifier_to_results = defaultdict(list)
 
         self.chain: BlockChainService = chain
@@ -408,38 +405,42 @@ class RaidenService:
         if not isinstance(message, SignedMessage):
             raise ValueError('{} is not signable.'.format(repr(message)))
 
-        message.sign(self.private_key)
+        message.sign(self.private_key, self.config['chain_id'])
 
-    def install_and_query_payment_network_filters(self, payment_network_id, from_block=0):
-        proxies = get_relevant_proxies(
-            self.chain,
-            self.address,
-            payment_network_id,
-        )
+    def install_and_query_payment_network_filters(
+            self,
+            token_network_registry_address,
+            from_block=0,
+    ):
+        token_network_registry = self.chain.token_network_registry(token_network_registry_address)
 
         # Install the filters and then poll them and dispatch the events to the WAL
         with self.event_poll_lock:
-            self.blockchain_events.add_proxies_listeners(proxies, from_block)
+            self.blockchain_events.add_token_network_registry_listener(
+                token_network_registry,
+                from_block,
+            )
+
             for event in self.blockchain_events.poll_blockchain_events():
                 on_blockchain_event(self, event, event.event_data['block_number'])
 
-    def connection_manager_for_token(self, registry_address, token_address):
-        if not is_binary_address(token_address):
+    def connection_manager_for_token_network(self, token_network_identifier):
+        if not is_binary_address(token_network_identifier):
             raise InvalidAddress('token address is not valid.')
 
-        known_token_networks = views.get_token_network_addresses_for(
-            self.wal.state_manager.current_state,
-            registry_address,
+        known_token_networks = views.get_token_network_identifiers(
+            views.state_from_raiden(self),
+            self.default_registry.address,
         )
 
-        if token_address not in known_token_networks:
+        if token_network_identifier not in known_token_networks:
             raise InvalidAddress('token is not registered.')
 
-        manager = self.tokens_to_connectionmanagers.get(token_address)
+        manager = self.tokennetworkids_to_connectionmanagers.get(token_network_identifier)
 
         if manager is None:
-            manager = ConnectionManager(self, registry_address, token_address)
-            self.tokens_to_connectionmanagers[token_address] = manager
+            manager = ConnectionManager(self, token_network_identifier)
+            self.tokennetworkids_to_connectionmanagers[token_network_identifier] = manager
 
         return manager
 
@@ -452,10 +453,7 @@ class RaidenService:
 
         self.leave_all_token_networks()
 
-        connection_managers = [
-            self.tokens_to_connectionmanagers[token_address]
-            for token_address in self.tokens_to_connectionmanagers
-        ]
+        connection_managers = [cm for cm in self.tokennetworkids_to_connectionmanagers.values()]
 
         if connection_managers:
             waiting.wait_for_settle_all_channels(

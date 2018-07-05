@@ -8,21 +8,22 @@ import structlog
 from web3.utils.filters import Filter
 from eth_utils import (
     encode_hex,
+    event_abi_to_log_topic,
     is_binary_address,
-    to_normalized_address,
     to_canonical_address,
     to_checksum_address,
+    to_normalized_address,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-
-from raiden.blockchain.abi import (
-    CONTRACT_TOKEN_NETWORK,
-    EVENT_CHANNEL_NEW2,
+from raiden_contracts.constants import (
+    CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_NONEXISTENT,
     CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    CONTRACT_TOKEN_NETWORK,
+    EVENT_CHANNEL_OPENED,
 )
+
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
@@ -172,7 +173,7 @@ class TokenNetwork:
             'new_netting_channel called',
             peer1=pex(self.node_address),
             peer2=pex(partner),
-            channel_identifier=channel_identifier,
+            channel_identifier=encode_hex(channel_identifier),
         )
 
         return channel_identifier
@@ -392,7 +393,7 @@ class TokenNetwork:
 
         return self.detail_participant(participant1, participant2)['deposit'] > 0
 
-    def deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
+    def set_total_deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
@@ -453,7 +454,7 @@ class TokenNetwork:
                     total_deposit=total_deposit,
                 )
 
-                channel_opened = self.channel_is_opened(partner)
+                channel_opened = self.channel_is_opened(self.node_address, partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
                         'Channel is not in an opened state. A deposit cannot be made',
@@ -657,6 +658,15 @@ class TokenNetwork:
             )
 
     def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
+        if merkle_tree_leaves is None or len(merkle_tree_leaves) == 0:
+            log.info(
+                'skipping unlock, tree is empty',
+                token_network=pex(self.address),
+                node=pex(self.node_address),
+                partner=pex(partner),
+            )
+            return
+
         log.info(
             'unlock called',
             token_network=pex(self.address),
@@ -664,13 +674,13 @@ class TokenNetwork:
             partner=pex(partner),
         )
 
-        # TODO see if we need to do any checks for the unlock_proof
+        leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         transaction_hash = self.proxy.transact(
             'unlock',
             self.node_address,
             partner,
-            merkle_tree_leaves,
+            leaves_packed,
         )
 
         self.client.poll(unhexlify(transaction_hash))
@@ -771,6 +781,13 @@ class TokenNetwork:
                     partner_locked_amount=partner_locked_amount,
                     partner_locksroot=encode_hex(partner_locksroot),
                 )
+
+                channel_exists = self.channel_exists(self.node_address, partner)
+                if not channel_exists:
+                    raise ChannelIncorrectStateError(
+                        'Channel already settled or non-existent',
+                    )
+
                 channel_closed = self.channel_is_closed(self.node_address, partner)
                 if channel_closed is False:
                     raise ChannelIncorrectStateError(
@@ -827,7 +844,9 @@ class TokenNetwork:
         Return:
             The filter instance.
         """
-        topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW2)]
+        event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED)
+        event_id = encode_hex(event_abi_to_log_topic(event_abi))
+        topics = [event_id]
         return self.events_filter(topics, from_block, to_block)
 
     def all_events_filter(
