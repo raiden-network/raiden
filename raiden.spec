@@ -8,8 +8,6 @@ from raiden.utils import get_system_spec
 
 """
 PyInstaller spec file to build single file or dir distributions
-
-Currently only tested on macOS
 """
 
 # Set to false to produce an exploded single-dir
@@ -67,7 +65,8 @@ sys.modules['FixTk'] = None
 
 executable_name = 'raiden-{}-{}'.format(
     get_system_spec()['raiden'],
-    'macos' if platform.system() == 'Darwin' else platform.system().lower())
+    'macOS' if platform.system() == 'Darwin' else platform.system().lower()
+)
 
 a = Entrypoint(
     'raiden',
@@ -75,11 +74,12 @@ a = Entrypoint(
     'raiden',
     hookspath=['tools/pyinstaller_hooks'],
     runtime_hooks=[
+        'tools/pyinstaller_hooks/runtime_gevent_monkey.py',
         'tools/pyinstaller_hooks/runtime_encoding.py',
+        'tools/pyinstaller_hooks/runtime_raiden_contracts.py',
     ],
-    hiddenimports=['scrypt'],
+    hiddenimports=['scrypt', 'eth_tester'],
     datas=[
-        ('raiden/smart_contracts/*.sol*', 'raiden/smart_contracts'),
         ('raiden/smoketest_config.json', 'raiden'),
     ],
     excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
@@ -96,7 +96,7 @@ if ONEFILE:
         a.datas,
         name=executable_name,
         debug=False,
-        strip=False,
+        strip=True,
         upx=False,
         runtime_tmpdir=None,
         console=True
@@ -107,7 +107,7 @@ else:
         a.scripts,
         exclude_binaries=True,
         name=executable_name,
-        debug=False,
+        debug=True,
         strip=False,
         upx=False,
         console=True

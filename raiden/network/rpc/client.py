@@ -6,6 +6,7 @@ from binascii import unhexlify
 from typing import List, Dict
 from json.decoder import JSONDecodeError
 
+from pkg_resources import DistributionNotFound
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
@@ -45,8 +46,9 @@ from raiden.constants import NULL_ADDRESS
 
 try:
     from eth_tester.exceptions import BlockNotFound
-except ModuleNotFoundError:
-    BlockNotFound = Exception()
+except (ModuleNotFoundError, DistributionNotFound):
+    class BlockNotFound(Exception):
+        pass
 
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

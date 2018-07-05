@@ -26,7 +26,6 @@ def deploy_tokens_and_fund_accounts(
         participants (list(address)): participant addresses that will receive tokens
     """
     result = list()
-
     for _ in range(number_of_tokens):
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
