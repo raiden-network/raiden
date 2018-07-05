@@ -117,6 +117,7 @@ class SocketFactory:
             )
             if result is not None:
                 self.storage['router'] = router
+                self.storage['external_port'] = result[1]
                 return PortMappedSocket(self.socket, 'UPnP', result[0], result[1],
                                         router_location=location)
         except socket.error as e:
@@ -125,7 +126,7 @@ class SocketFactory:
             raise
 
     def unmap_upnp(self):
-        upnpsock.release_port(self.storage['router'], self.source_port)
+        upnpsock.release_port(self.storage['router'], self.storage['external_port'])
 
     def map_stun(self):
         try:
