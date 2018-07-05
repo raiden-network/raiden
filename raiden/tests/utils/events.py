@@ -1,5 +1,6 @@
 from web3.utils.datastructures import AttributeDict
 
+from raiden.transfer import views
 from raiden.api.python import RaidenAPI
 
 NOVALUE = object()
@@ -82,7 +83,12 @@ def get_channel_events_for_token(app, registry_address, token_address, start_blo
         registry_address=registry_address,
         token_address=token_address,
     )
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app),
+        app.raiden.default_registry.address,
+        token_address,
+    )
     for channel in channels:
-        events = api.get_channel_events(channel.identifier, start_block)
+        events = api.get_channel_events(token_network_identifier, channel.identifier, start_block)
         result.extend(events)
     return result
