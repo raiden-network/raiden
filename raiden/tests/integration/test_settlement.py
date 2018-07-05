@@ -167,8 +167,6 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app.raiden.alarm.wait_time,
     )
 
-    wait_for_batch_unlock(alice_app)
-
     # wait for the node to call batch unlock
     with gevent.Timeout(10):
         wait_for_batch_unlock(
