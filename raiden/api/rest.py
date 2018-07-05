@@ -467,18 +467,23 @@ class RestAPI:
         connection_managers = dict()
 
         for token in self.raiden_api.get_tokens_list(registry_address):
+            token_network_identifier = views.get_token_network_identifier_by_token_address(
+                views.state_from_raiden(self.raiden_api.raiden),
+                payment_network_id=registry_address,
+                token_address=token,
+            )
+
             try:
-                connection_manager = self.raiden_api.raiden.connection_manager_for_token(
-                    registry_address,
-                    token,
+                connection_manager = self.raiden_api.raiden.connection_manager_for_token_network(
+                    token_network_identifier,
                 )
             except InvalidAddress:
                 connection_manager = None
 
             open_channels = views.get_channelstate_open(
-                views.state_from_raiden(self.raiden_api.raiden),
-                registry_address,
-                token,
+                node_state=views.state_from_raiden(self.raiden_api.raiden),
+                payment_network_id=registry_address,
+                token_address=token,
             )
             if connection_manager is not None and open_channels:
                 connection_managers[to_checksum_address(connection_manager.token_address)] = {
@@ -674,7 +679,8 @@ class RestAPI:
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address,
-            channel_state.identifier,
+            channel_state.token_address,
+            channel_state.partner_state.address,
         )
 
         result = self.channel_schema.dump(channelstate_to_api_dict(updated_channel_state))

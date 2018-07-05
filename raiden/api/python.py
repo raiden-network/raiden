@@ -142,9 +142,14 @@ class RaidenAPI:
         if not is_binary_address(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
 
-        connection_manager = self.raiden.connection_manager_for_token(
-            registry_address,
-            token_address,
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
+            token_address=token_address,
+        )
+
+        connection_manager = self.raiden.connection_manager_for_token_network(
+            token_network_identifier,
         )
 
         connection_manager.connect(
@@ -161,9 +166,14 @@ class RaidenAPI:
         if token_address not in self.get_tokens_list(registry_address):
             raise UnknownTokenAddress('token_address unknown')
 
-        connection_manager = self.raiden.connection_manager_for_token(
-            registry_address,
-            token_address,
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
+            token_address=token_address,
+        )
+
+        connection_manager = self.raiden.connection_manager_for_token_network(
+            token_network_identifier,
         )
 
         return connection_manager.leave(only_receiving)

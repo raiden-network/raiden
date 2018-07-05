@@ -22,9 +22,9 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def log_open_channels(raiden, registry_address, token_address, funds):
     node_state = views.state_from_raiden(raiden)
     open_channels = views.get_channelstate_open(
-        node_state,
-        registry_address,
-        token_address,
+        node_state=node_state,
+        payment_network_id=registry_address,
+        token_address=token_address,
     )
 
     if open_channels:
@@ -164,9 +164,9 @@ class ConnectionManager:
                 )
             else:
                 channels_to_close = views.get_channelstate_open(
-                    views.state_from_raiden(self.raiden),
-                    registry_address,
-                    self.token_address,
+                    node_state=views.state_from_raiden(self.raiden),
+                    payment_network_id=registry_address,
+                    token_address=self.token_address,
                 )
 
             partner_addresses = [
@@ -235,8 +235,9 @@ class ConnectionManager:
                 return
 
             open_channels = views.get_channelstate_open(
-                views.state_from_raiden(self.raiden),
-                self.token_network_identifier,
+                node_state=views.state_from_raiden(self.raiden),
+                payment_network_id=self.registry_address,
+                token_address=self.token_address,
             )
             if len(open_channels) >= self.initial_channel_target:
                 return
@@ -250,9 +251,9 @@ class ConnectionManager:
             number: number of partners to return
         """
         open_channels = views.get_channelstate_open(
-            views.state_from_raiden(self.raiden),
-            self.registry_address,
-            self.token_address,
+            node_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
         )
         known = set(channel_state.partner_state.address for channel_state in open_channels)
         known.add(self.BOOTSTRAP_ADDR)
@@ -279,8 +280,9 @@ class ConnectionManager:
             - This method must be called with the lock held.
         """
         open_channels = views.get_channelstate_open(
-            views.state_from_raiden(self.raiden),
-            self.token_network_identifier,
+            node_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
         )
 
         qty_channels_to_open = self.initial_channel_target - len(open_channels)

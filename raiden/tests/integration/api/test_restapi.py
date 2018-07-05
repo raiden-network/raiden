@@ -361,25 +361,27 @@ def test_api_open_close_and_settle_channel(
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
-    # can't know the channel address beforehand but make sure we get one
-    assert 'channel_address' in response
-    channel_address = response['channel_address']
-    expected_response['channel_address'] = response['channel_address']
+    channel_identifier = data_encoder(calculate_channel_identifier(
+        api_backend[1].raiden_api.raiden.address,
+        to_canonical_address(partner_address),
+    ))
+    expected_response['channel_identifier'] = channel_identifier
     assert response == expected_response
 
     # let's close the channel
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
         json={'state': CHANNEL_STATE_CLOSED},
     )
     response = request.send().response
     assert_proper_response(response)
     expected_response = {
-        'channel_address': channel_address,
+        'channel_identifier': channel_identifier,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -450,14 +452,14 @@ def test_api_channel_state_change_errors(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
-    channel_address = response['channel_address']
 
     # let's try to set a random state
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
         json=dict(state='inlimbo'),
     )
@@ -467,8 +469,9 @@ def test_api_channel_state_change_errors(
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
         json=dict(state=CHANNEL_STATE_CLOSED, total_deposit=200),
     )
@@ -478,8 +481,9 @@ def test_api_channel_state_change_errors(
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
     )
     response = request.send().response
@@ -489,8 +493,9 @@ def test_api_channel_state_change_errors(
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
         json=dict(state=CHANNEL_STATE_CLOSED),
     )
@@ -501,8 +506,9 @@ def test_api_channel_state_change_errors(
     request = grequests.patch(
         api_url_for(
             api_backend,
-            'channelsresourcebychanneladdress',
-            channel_address=channel_address,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
         ),
         json=dict(total_deposit=500),
     )
@@ -590,7 +596,6 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
-    first_channel_address = response['channel_address']
 
     channel_data_obj['partner_address'] = second_partner_address
     request = grequests.put(
@@ -603,7 +608,6 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
-    second_channel_address = response['channel_address']
 
     # and a channel for another token
     channel_data_obj['partner_address'] = '0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E'
@@ -632,13 +636,15 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     expected_response = [
         {
             'partner_address': first_partner_address,
-            'channel': '/api/1/channels/{}'.format(
-                first_channel_address,
+            'channel': '/api/1/channels/{}/{}'.format(
+                to_checksum_address(token_address),
+                to_checksum_address(first_partner_address),
             ),
         }, {
             'partner_address': second_partner_address,
-            'channel': '/api/1/channels/{}'.format(
-                second_channel_address,
+            'channel': '/api/1/channels/{}/{}'.format(
+                to_checksum_address(token_address),
+                to_checksum_address(second_partner_address),
             ),
         },
     ]
