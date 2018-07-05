@@ -4,7 +4,7 @@ import pytest
 import grequests
 from flask import url_for
 from eth_utils import to_checksum_address, to_canonical_address
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, MAX_TOKENS_DEPLOY
 
 from raiden.api.v1.encoding import (
     AddressField,
@@ -813,3 +813,69 @@ def test_token_events_errors_for_unregistered_token(api_backend):
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('deposit', [50000])
+def test_api_deposit_limit(
+        api_backend,
+        token_addresses,
+        reveal_timeout,
+):
+    # let's create a new channel and deposit exactly the limit amount
+    first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+    token_address = token_addresses[0]
+    settle_timeout = 1650
+    balance_working = MAX_TOKENS_DEPLOY * (10 ** 2)  # token has two digits
+    channel_data_obj = {
+        'partner_address': first_partner_address,
+        'token_address': to_checksum_address(token_address),
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
+        'balance': balance_working,
+    }
+
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+
+    assert_proper_response(response, HTTPStatus.CREATED)
+    response = response.json()
+    expected_response = channel_data_obj
+    expected_response['balance'] = balance_working
+    expected_response['state'] = CHANNEL_STATE_OPENED
+    first_channel_identifier = data_encoder(calculate_channel_identifier(
+        api_backend[1].raiden_api.raiden.address,
+        to_canonical_address(first_partner_address),
+    ))
+    expected_response['channel_identifier'] = first_channel_identifier
+    assert response == expected_response
+
+    # now let's open a channel and deposit a bit more than the limit
+    second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
+    balance_failing = balance_working + 1  # token has two digits
+    channel_data_obj = {
+        'partner_address': second_partner_address,
+        'token_address': to_checksum_address(token_address),
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
+        'balance': balance_failing,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+
+    assert_proper_response(response, HTTPStatus.EXPECTATION_FAILED)
+    response = response.json()
+    assert response['errors'] == 'The deposit of 10001 is bigger than the current limit of 10000'

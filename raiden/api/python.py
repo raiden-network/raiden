@@ -29,6 +29,7 @@ from raiden.exceptions import (
     InvalidAmount,
     InvalidSettleTimeout,
     UnknownTokenAddress,
+    DepositOverLimit,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -257,6 +258,7 @@ class RaidenAPI:
                   the deposit call.
             AddressWithoutCode: The channel was settled during the deposit
             execution.
+            DepositOverLimit: The total deposit amount is higher than the limit.
         """
         node_state = views.state_from_raiden(self.raiden)
 
@@ -284,7 +286,24 @@ class RaidenAPI:
             raise InvalidAddress('No channel with partner_address for the given token')
 
         token = self.raiden.chain.token(token_address)
+        netcontract_address = channel_state.identifier
+        token_network_registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network_proxy = token_network_registry.token_network_by_token(token_address)
+        channel_proxy = self.raiden.chain.payment_channel(
+            token_network_proxy.address,
+            netcontract_address,
+        )
+
         balance = token.balance_of(self.raiden.address)
+
+        deposit_limit = token_network_proxy.proxy.contract.functions.deposit_limit().call()
+        if total_deposit > deposit_limit:
+            raise DepositOverLimit(
+                'The deposit of {} is bigger than the current limit of {}'.format(
+                    total_deposit,
+                    deposit_limit,
+                ),
+            )
 
         if total_deposit <= channel_state.our_state.contract_balance:
             # no action required
@@ -302,14 +321,6 @@ class RaidenAPI:
                 addendum,
             )
             raise InsufficientFunds(msg)
-
-        netcontract_address = channel_state.identifier
-        token_network_registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network_proxy = token_network_registry.token_network_by_token(token_address)
-        channel_proxy = self.raiden.chain.payment_channel(
-            token_network_proxy.address,
-            netcontract_address,
-        )
 
         # If concurrent operations are happening on the channel, fail the request
         if not channel_proxy.channel_operations_lock.acquire(blocking=False):
