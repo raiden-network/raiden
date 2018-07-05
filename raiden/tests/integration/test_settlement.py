@@ -117,9 +117,9 @@ def test_batch_unlock(raiden_network, token_addresses, deposit):
     #    B -> A SecretRequest
     #    - protocol didn't continue
 
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
 
-    lock = channel.get_lock(alice_bob_channel.our_state, secrethash)
+    lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
     assert lock
 
     assert_synched_channel_state(
@@ -129,7 +129,7 @@ def test_batch_unlock(raiden_network, token_addresses, deposit):
     )
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
-    batch_unlock = channel.get_batch_unlock(alice_bob_channel.our_state)
+    batch_unlock = channel.get_batch_unlock(alice_bob_channel_state.our_state)
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
@@ -147,20 +147,17 @@ def test_batch_unlock(raiden_network, token_addresses, deposit):
         alice_app.raiden,
         registry_address,
         token_address,
-        [alice_bob_channel.identifier],
+        [alice_bob_channel_state.identifier],
         alice_app.raiden.alarm.wait_time,
     )
 
-    nettingchannel_proxy = bob_app.raiden.chain.payment_channel(
+    payment_channel_proxy = alice_app.raiden.chain.payment_channel(
         token_network_identifier,
-        alice_bob_channel.identifier,
+        alice_bob_channel_state.identifier,
     )
-    nettingchannel_proxy.unlock(
-        alice_bob_channel.partner_state.address,
+    payment_channel_proxy.unlock(
         batch_unlock,
     )
-
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
 
     alice_netted_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_netted_balance = bob_initial_balance + deposit + alice_to_bob_amount
@@ -174,12 +171,12 @@ def test_batch_unlock(raiden_network, token_addresses, deposit):
         to_identifier='latest',
     )
 
-    alice_bob_channel = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
 
     assert must_contain_entry(state_changes, ContractReceiveChannelUnlock, {
         'payment_network_identifier': registry_address,
         'token_address': token_address,
-        'channel_identifier': alice_bob_channel.identifier,
+        'channel_identifier': alice_bob_channel_state.identifier,
         'secrethash': secrethash,
         'secret': secret,
         'receiver': bob_app.raiden.address,
