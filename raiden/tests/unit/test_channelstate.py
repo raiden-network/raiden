@@ -1296,5 +1296,9 @@ def test_channelstate_unlock():
         channel_state.identifier,
         settle_block_number,
     )
-    iteration = channel.handle_channel_settled(channel_state, settle_state_change)
+    iteration = channel.handle_channel_settled(
+        channel_state,
+        settle_state_change,
+        settle_block_number,
+    )
     assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
