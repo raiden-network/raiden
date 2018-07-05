@@ -105,6 +105,7 @@ class EchoNode:
                     received_transfers = list()
                     for channel_state in channels:
                         channel_events = self.api.get_channel_events(
+                            channel_state.token_network_identifier,
                             channel_state.identifier,
                             self.last_poll_block,
                         )
