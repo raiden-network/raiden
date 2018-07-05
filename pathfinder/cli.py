@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Console script for pathfinder."""
 from gevent import monkey  # isort:skip # noqa
 monkey.patch_all()  # isort:skip # noqa

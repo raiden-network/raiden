@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """Tests for `pathfinder` package."""
 
 from click.testing import CliRunner

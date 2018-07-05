@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 The test in this module uses the mocked raiden client to create blockchain events and
 processes them. Additionally, it mocks the transport layer directly. It tests the

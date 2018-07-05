@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The tests in this module mock events creation by using a mock blockchain listener.
 

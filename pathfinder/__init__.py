@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Top-level package for Pathfinder."""
 
 __author__ = """Brainbot Labs Est."""
