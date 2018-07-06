@@ -64,7 +64,7 @@ class TokenNetwork:
         if not is_binary_address(manager_address):
             raise InvalidAddress('Expected binary address format for token nework')
 
-        check_address_has_code(jsonrpc_client, manager_address, 'Channel Manager')
+        check_address_has_code(jsonrpc_client, manager_address, CONTRACT_TOKEN_NETWORK)
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
