@@ -229,6 +229,60 @@ def test_api_query_our_address(api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
+def test_api_get_channel_list(
+        api_backend,
+        token_addresses,
+        reveal_timeout,
+):
+        partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+
+        request = grequests.get(
+            api_url_for(
+                api_backend,
+                'channelsresource',
+            ),
+        )
+        response = request.send().response
+        assert_proper_response(response, HTTPStatus.OK)
+        assert response.json() == []
+
+        # let's create a new channel
+        token_address = token_addresses[0]
+        settle_timeout = 1650
+        channel_data_obj = {
+            'partner_address': partner_address,
+            'token_address': to_checksum_address(token_address),
+            'settle_timeout': settle_timeout,
+            'reveal_timeout': reveal_timeout,
+        }
+
+        request = grequests.put(
+            api_url_for(
+                api_backend,
+                'channelsresource',
+            ),
+            json=channel_data_obj,
+        )
+        response = request.send().response
+
+        assert_proper_response(response, HTTPStatus.CREATED)
+
+        request = grequests.get(
+            api_url_for(
+                api_backend,
+                'channelsresource',
+            ),
+        )
+        response = request.send().response
+        assert_proper_response(response, HTTPStatus.OK)
+        channel_info = response.json()[0]
+        assert channel_info['partner_address'] == partner_address
+        assert channel_info['token_address'] == to_checksum_address(token_address)
+        assert 'token_network_identifier' in channel_info
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_channel_status_channel_nonexistant(
         api_backend,
         token_addresses,
