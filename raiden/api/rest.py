@@ -333,7 +333,7 @@ class RestAPI:
 
     def register_token(self, registry_address, token_address):
         try:
-            manager_address = self.raiden_api.token_network_register(
+            token_network_address = self.raiden_api.token_network_register(
                 registry_address,
                 token_address,
             )
@@ -344,7 +344,7 @@ class RestAPI:
             )
 
         return api_response(
-            result=dict(channel_manager_address=to_checksum_address(manager_address)),
+            result=dict(token_network_address=to_checksum_address(token_network_address)),
             status_code=HTTPStatus.CREATED,
         )
 
