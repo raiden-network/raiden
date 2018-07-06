@@ -198,6 +198,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
         )
 
         secret_message = Secret(
+            unlock_lock.balance_proof.chain_id,
             unlock_lock.message_identifier,
             unlock_lock.payment_identifier,
             unlock_lock.balance_proof.nonce,

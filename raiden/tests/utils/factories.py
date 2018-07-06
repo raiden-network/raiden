@@ -199,6 +199,7 @@ def make_transfer(
         locksroot,
         token_network_identifier,
         channel_identifier,
+        UNIT_CHAIN_ID,
     )
 
     transfer_state = LockedTransferUnsignedState(
@@ -314,6 +315,7 @@ def make_signed_balance_proof(
         extra_hash,
         signature,
         sender_address,
+        UNIT_CHAIN_ID,
     )
 
     return signed_balance_proof

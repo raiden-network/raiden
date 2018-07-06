@@ -18,6 +18,7 @@ from raiden.tests.utils.factories import (
 from raiden.transfer import views
 from raiden.tests.utils.messages import make_refund_transfer
 from raiden.tests.utils.transfer import sign_and_inject
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -52,6 +53,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     sign_and_inject(refund_transfer_message, other_key, other_address, app0)
 
     secret = Secret(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
         nonce=1,
