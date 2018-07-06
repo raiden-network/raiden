@@ -2,7 +2,7 @@ from contextlib import ExitStack
 
 import gevent
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_checksum_address
 
 from raiden import waiting
 from raiden.blockchain.events import (
@@ -74,7 +74,12 @@ class RaidenAPI:
             if channel.identifier == channel_identifer:
                 return channel
 
-        raise ChannelNotFound()
+        raise ChannelNotFound(
+            "Channel with partner '{}' for token '{}' could not be found.".format(
+                to_checksum_address(partner_address),
+                to_checksum_address(token_address),
+            ),
+        )
 
     def token_network_register(
             self,
