@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import os
 import random
-import sys
 from collections import defaultdict
 
 import filelock
@@ -123,22 +122,6 @@ def target_init(transfer: LockedTransfer):
     return init_target_statechange
 
 
-def endpoint_registry_exception_handler(greenlet):
-    try:
-        greenlet.get()
-    except Exception as e:  # pylint: disable=broad-except
-        rpc_unreachable = (
-            e.args[0] == 'timeout when polling for transaction'
-        )
-
-        if rpc_unreachable:
-            log.exception('Endpoint registry failed. Ethereum RPC API might be unreachable.')
-        else:
-            log.exception('Endpoint registry failed.')
-
-        sys.exit(1)
-
-
 class RaidenService:
     """ A Raiden node. """
 
@@ -167,15 +150,6 @@ class RaidenService:
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
         self.discovery = discovery
-
-        if config['transport_type'] == 'udp':
-            endpoint_registration_event = gevent.spawn(
-                discovery.register,
-                self.address,
-                config['external_ip'],
-                config['external_port'],
-            )
-            endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
@@ -206,23 +180,25 @@ class RaidenService:
             self.serialization_file = None
             self.db_lock = None
 
-        if config['transport_type'] == 'udp':
-            # If the endpoint registration fails the node will quit, this must
-            # finish before starting the transport
-            endpoint_registration_event.join()
-
         self.event_poll_lock = gevent.lock.Semaphore()
 
-        self.start()
-
-    def start(self):
-        """ Start the node. """
-        if self.stop_event and self.stop_event.is_set():
-            self.stop_event.clear()
+    def start_async(self) -> Event:
+        """ Start the node asynchronously. """
+        self.start_event.clear()
+        self.stop_event.clear()
 
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked
+
+        # start the registration early to speed up the start
+        if self.config['transport_type'] == 'udp':
+            endpoint_registration_greenlet = gevent.spawn(
+                self.discovery.register,
+                self.address,
+                self.config['external_ip'],
+                self.config['external_port'],
+            )
 
         # The database may be :memory:
         storage = sqlite.SQLiteStorage(self.database_path, serialize.PickleSerializer())
@@ -287,7 +263,19 @@ class RaidenService:
         for event in unapplied_events:
             on_raiden_event(self, event)
 
-        self.start_event.set()
+        if self.config['transport_type'] == 'udp':
+            def set_start_on_registration(_):
+                self.start_event.set()
+
+            endpoint_registration_greenlet.link(set_start_on_registration)
+        else:
+            self.start_event.set()
+
+        return self.start_event
+
+    def start(self) -> Event:
+        """ Start the node. """
+        self.start_async().wait()
 
     def start_neighbours_healthcheck(self):
         for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):

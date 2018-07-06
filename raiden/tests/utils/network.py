@@ -260,11 +260,8 @@ def create_apps(
     for idx, (blockchain, discovery) in enumerate(services):
         port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
-        nodeid = privatekey_to_address(private_key)
 
         host = '127.0.0.1'
-
-        discovery.register(nodeid, host, port)
 
         config = {
             'chain_id': chain_id,
