@@ -26,7 +26,7 @@ class Token:
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),
         )
-        self.proxy = ContractProxy(jsonrpc_client, contract)
+        proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
@@ -35,6 +35,13 @@ class Token:
 
         self.address = token_address
         self.client = jsonrpc_client
+        self.proxy = proxy
+
+    def allowance(self, owner, spender):
+        return self.proxy.contract.functions.allowance(
+            to_checksum_address(owner),
+            to_checksum_address(spender),
+        ).call()
 
     def approve(self, contract_address, allowance):
         """ Aprove `contract_address` to transfer up to `deposit` amount of token. """
