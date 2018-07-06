@@ -247,6 +247,7 @@ class RaidenService:
             state_change = ActionInitNode(
                 random.Random(),
                 block_number,
+                self.chain.network_id()
             )
             self.wal.log_and_dispatch(state_change, block_number)
             payment_network = PaymentNetworkState(

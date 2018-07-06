@@ -87,24 +87,35 @@ class NodeState(State):
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
         'payment_mapping',
+        'chain_id'
     )
 
-    def __init__(self, pseudo_random_generator: random.Random, block_number: typing.BlockNumber):
+    def __init__(
+            self,
+            pseudo_random_generator: random.Random,
+            block_number: typing.BlockNumber,
+            chain_id: typing.ChainId,
+    ):
         if not isinstance(block_number, typing.T_BlockNumber):
-            raise ValueError('block_number must be a block_number')
+            raise ValueError('block_number must be of BlockNumber type')
+
+        if not isinstance(chain_id, typing.T_ChainID):
+            raise ValueError('chain_id must be of ChainID type')
 
         self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
+        self.chain_id = chain_id
         self.queueids_to_queues = dict()
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
         self.payment_mapping = PaymentMappingState()
 
     def __repr__(self):
-        return '<NodeState block:{} networks:{} qtd_transfers:{}>'.format(
+        return '<NodeState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
             self.block_number,
             lpex(self.identifiers_to_paymentnetworks.keys()),
             len(self.payment_mapping.secrethashes_to_task),
+            self.chain_id,
         )
 
     def __eq__(self, other):
@@ -115,7 +126,8 @@ class NodeState(State):
             self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
-            self.payment_mapping == other.payment_mapping
+            self.payment_mapping == other.payment_mapping and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):
