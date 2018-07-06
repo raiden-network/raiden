@@ -40,7 +40,7 @@ from raiden.utils import (
     releasing,
     typing,
 )
-from raiden.api.rest import fix_hex_bytes_values, encode_byte_values
+from raiden.api.rest import hexbytes_to_str, encode_byte_values
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -677,7 +677,7 @@ class RaidenAPI:
                 # the channel_identifier is a hash
                 encode_byte_values(event['args'])
 
-            fix_hex_bytes_values(event)
+            hexbytes_to_str(event)
 
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,
