@@ -35,8 +35,18 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.utils.typing import Optional, Address
-from raiden.constants import NETWORKNAME_TO_ID
+from raiden.utils.typing import (
+    Optional,
+    Address,
+    ChainID,
+    MessageID,
+    SecretHash,
+    PaymentID,
+    Secret,
+    ChannelID,
+    Locksroot,
+    HashTimeLockState,
+)
 
 __all__ = (
     'Delivered',
@@ -200,11 +210,12 @@ class SignedMessage(Message):
     # signing is a bit problematic, we need to pack the data to sign, but the
     # current API assumes that signing is called before, this can be improved
     # by changing the order to packing then signing
-    def __init__(self):
+    def __init__(self, chain_id: ChainID):
         super().__init__()
         self.signature = b''
+        self.chain_id = chain_id
 
-    def _data_to_sign(self, chain_id) -> bytes:
+    def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
         packed = self.packed()
 
@@ -214,19 +225,17 @@ class SignedMessage(Message):
         # this slice must be from the end of the buffer
         return packed.data[:-field.size_bytes]
 
-    def sign(self, private_key, chain_id):
+    def sign(self, private_key):
         """ Sign message using `private_key`. """
-        message_data = self._data_to_sign(chain_id)
+        message_data = self._data_to_sign()
         self.signature = signing.sign(message_data, private_key)
 
     @property
     @cached(_senders_cache, key=attrgetter('signature'))
     def sender(self) -> Optional[Address]:
-        # TODO: Add chain id as properties of all messages and remove this hack
-        chain_id = NETWORKNAME_TO_ID['tests']
         if not self.signature:
             return None
-        data_that_was_signed = self._data_to_sign(chain_id)
+        data_that_was_signed = self._data_to_sign()
         message_signature = self.signature
 
         address = signing.recover_address(data_that_was_signed, message_signature)
@@ -245,8 +254,8 @@ class SignedMessage(Message):
 
 
 class EnvelopeMessage(SignedMessage):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, chain_id: ChainID):
+        super().__init__(chain_id)
         self.nonce = 0
         self.transferred_amount = 0
         self.locked_amount = 0
@@ -268,7 +277,7 @@ class EnvelopeMessage(SignedMessage):
 
         return message_hash
 
-    def _data_to_sign(self, chain_id) -> bytes:
+    def _data_to_sign(self) -> bytes:
         balance_hash = hash_balance_data(
             self.transferred_amount,
             self.locked_amount,
@@ -280,7 +289,7 @@ class EnvelopeMessage(SignedMessage):
             additional_hash=self.message_hash,
             channel_identifier=self.channel,
             token_network_identifier=self.token_network_address,
-            chain_id=chain_id,
+            chain_id=self.chain_id,
         )
         return balance_proof_packed
 
@@ -294,8 +303,8 @@ class Processed(SignedMessage):
     """
     cmdid = messages.PROCESSED
 
-    def __init__(self, message_identifier):
-        super().__init__()
+    def __init__(self, chain_id: ChainID, message_identifier: MessageID):
+        super().__init__(chain_id)
         self.message_identifier = message_identifier
 
     @classmethod
@@ -312,7 +321,7 @@ class Processed(SignedMessage):
 
     @classmethod
     def from_event(cls, event):
-        return cls(message_identifier=event.message_identifier)
+        return cls(chain_id=event.chain_id, message_identifier=event.message_identifier)
 
     def __repr__(self):
         return '<{} [msgid:{}]>'.format(
@@ -343,8 +352,8 @@ class Delivered(SignedMessage):
     """
     cmdid = messages.DELIVERED
 
-    def __init__(self, delivered_message_identifier):
-        super().__init__()
+    def __init__(self, chain_id: ChainID, delivered_message_identifier: MessageID):
+        super().__init__(chain_id)
         self.delivered_message_identifier = delivered_message_identifier
 
     @classmethod
@@ -386,8 +395,8 @@ class Pong(SignedMessage):
     """ Response to a Ping message. """
     cmdid = messages.PONG
 
-    def __init__(self, nonce):
-        super().__init__()
+    def __init__(self, chain_id: ChainID, nonce: int):
+        super().__init__(chain_id)
         self.nonce = nonce
 
     @staticmethod
@@ -405,8 +414,8 @@ class Ping(SignedMessage):
     """ Healthcheck message. """
     cmdid = messages.PING
 
-    def __init__(self, nonce):
-        super().__init__()
+    def __init__(self, chain_id: ChainID, nonce: int):
+        super().__init__(chain_id)
         self.nonce = nonce
 
     @classmethod
@@ -424,8 +433,15 @@ class SecretRequest(SignedMessage):
     """ Requests the secret which unlocks a secrethash. """
     cmdid = messages.SECRETREQUEST
 
-    def __init__(self, message_identifier, payment_identifier, secrethash, amount):
-        super().__init__()
+    def __init__(
+            self,
+            chain_id: ChainID,
+            message_identifier: MessageID,
+            payment_identifier: PaymentID,
+            secrethash: SecretHash,
+            amount: int,
+    ):
+        super().__init__(chain_id)
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.secrethash = secrethash
@@ -462,6 +478,7 @@ class SecretRequest(SignedMessage):
     @classmethod
     def from_event(cls, event):
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             secrethash=event.secrethash,
@@ -502,21 +519,22 @@ class Secret(EnvelopeMessage):
 
     def __init__(
             self,
-            message_identifier,
-            payment_identifier,
-            nonce,
-            token_network_address,
-            channel,
-            transferred_amount,
-            locked_amount,
-            locksroot,
-            secret,
+            chain_id: ChainID,
+            message_identifier: MessageID,
+            payment_identifier: PaymentID,
+            nonce: int,
+            token_network_address: Address,
+            channel_identifier: ChannelID,
+            transferred_amount: int,
+            locked_amount: int,
+            locksroot: Locksroot,
+            secret: Secret,
     ):
-        super().__init__()
+        super().__init__(chain_id)
 
         assert_envelope_values(
             nonce,
-            channel,
+            channel_identifier,
             transferred_amount,
             locked_amount,
             locksroot,
@@ -536,7 +554,7 @@ class Secret(EnvelopeMessage):
         self.secret = secret
         self.nonce = nonce
         self.token_network_address = token_network_address
-        self.channel = channel
+        self.channel = channel_identifier
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
@@ -598,6 +616,7 @@ class Secret(EnvelopeMessage):
     def from_event(cls, event):
         balance_proof = event.balance_proof
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
@@ -652,8 +671,8 @@ class RevealSecret(SignedMessage):
     """
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, message_identifier, secret):
-        super().__init__()
+    def __init__(self, chain_id: ChainID, message_identifier: MessageID, secret: Secret):
+        super().__init__(chain_id)
         self.message_identifier = message_identifier
         self.secret = secret
 
@@ -687,6 +706,7 @@ class RevealSecret(SignedMessage):
     @classmethod
     def from_event(cls, event):
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             secret=event.secret,
         )
@@ -739,34 +759,35 @@ class DirectTransfer(EnvelopeMessage):
 
     def __init__(
             self,
-            message_identifier,
-            payment_identifier,
-            nonce,
-            token_network_address,
-            token,
-            channel,
-            transferred_amount,
-            locked_amount,
-            recipient,
-            locksroot,
+            chain_id: ChainID,
+            message_identifier: MessageID,
+            payment_identifier: PaymentID,
+            nonce: int,
+            token_network_address: Address,
+            token: Address,
+            channel_identifier: ChannelID,
+            transferred_amount: int,
+            locked_amount: int,
+            recipient: Address,
+            locksroot: Locksroot,
     ):
 
         assert_envelope_values(
             nonce,
-            channel,
+            channel_identifier,
             transferred_amount,
             locked_amount,
             locksroot,
         )
         assert_transfer_values(payment_identifier, token, recipient)
 
-        super().__init__()
+        super().__init__(chain_id)
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.nonce = nonce
         self.token_network_address = token_network_address
         self.token = token
-        self.channel = channel
+        self.channel = channel_identifier
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
         self.locked_amount = locked_amount  #: total amount of token locked in the merkle tree
         self.recipient = recipient  #: partner's address
@@ -808,6 +829,7 @@ class DirectTransfer(EnvelopeMessage):
         balance_proof = event.balance_proof
 
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
@@ -989,22 +1011,24 @@ class LockedTransferBase(EnvelopeMessage):
 
     def __init__(
             self,
-            message_identifier,
-            payment_identifier,
-            nonce,
-            token_network_address,
-            token,
-            channel,
-            transferred_amount,
-            locked_amount,
-            recipient,
-            locksroot,
-            lock):
-        super().__init__()
+            chain_id: ChainID,
+            message_identifier: MessageID,
+            payment_identifier: PaymentID,
+            nonce: int,
+            token_network_address: Address,
+            token: Address,
+            channel_identifier: ChannelID,
+            transferred_amount: int,
+            locked_amount: int,
+            recipient: Address,
+            locksroot: Locksroot,
+            lock: HashTimeLockState,
+    ):
+        super().__init__(chain_id)
 
         assert_envelope_values(
             nonce,
-            channel,
+            channel_identifier,
             transferred_amount,
             locked_amount,
             locksroot,
@@ -1017,7 +1041,7 @@ class LockedTransferBase(EnvelopeMessage):
         self.nonce = nonce
         self.token_network_address = token_network_address
         self.token = token
-        self.channel = channel
+        self.channel = channel_identifier
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.recipient = recipient
@@ -1092,20 +1116,22 @@ class LockedTransfer(LockedTransferBase):
 
     def __init__(
             self,
-            message_identifier,
-            payment_identifier,
-            nonce,
-            token_network_address,
-            token,
-            channel,
-            transferred_amount,
-            locked_amount,
-            recipient,
-            locksroot,
-            lock,
-            target,
-            initiator,
-            fee=0):
+            chain_id: ChainID,
+            message_identifier: MessageID,
+            payment_identifier: PaymentID,
+            nonce: int,
+            token_network_address: Address,
+            token: Address,
+            channel_identifier: ChannelID,
+            transferred_amount: int,
+            locked_amount: int,
+            recipient: Address,
+            locksroot: Locksroot,
+            lock: HashTimeLockState,
+            target: Address,
+            initiator: Address,
+            fee: int = 0,
+    ):
 
         if len(target) != 20:
             raise ValueError('target is an invalid address')
@@ -1117,12 +1143,13 @@ class LockedTransfer(LockedTransferBase):
             raise ValueError('fee is too large')
 
         super().__init__(
+            chain_id,
             message_identifier,
             payment_identifier,
             nonce,
             token_network_address,
             token,
-            channel,
+            channel_identifier,
             transferred_amount,
             locked_amount,
             recipient,
@@ -1220,6 +1247,7 @@ class LockedTransfer(LockedTransferBase):
         fee = 0
 
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
@@ -1323,6 +1351,7 @@ class RefundTransfer(LockedTransfer):
         fee = 0
 
         return cls(
+            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
