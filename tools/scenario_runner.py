@@ -135,6 +135,7 @@ def run(
         transport=transport,
         discovery=discovery,
     )
+    app.start()
 
     app.discovery.register(
         app.raiden.address,

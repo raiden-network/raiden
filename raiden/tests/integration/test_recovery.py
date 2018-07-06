@@ -73,6 +73,8 @@ def test_recovery_happy_case(
     app0.stop()
     del app0  # from here on the app0_restart should be used
 
+    app0_restart.start()
+
     assert_synched_channel_state(
         token_network_identifier,
         app0_restart, deposit - spent_amount, [],
@@ -202,6 +204,7 @@ def test_recovery_unhappy_case(
         discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
+    app0_restart.start()
 
     assert_synched_channel_state(
         token_network_identifier,

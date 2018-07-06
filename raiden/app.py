@@ -1,11 +1,15 @@
-import filelock
-import sys
-import structlog
 from binascii import unhexlify
-from eth_utils import to_normalized_address, to_checksum_address
-from raiden.utils import typing
 
+import structlog
+from eth_utils import to_checksum_address
+
+from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies import (
+    TokenNetworkRegistry,
+    SecretRegistry,
+    Discovery,
+)
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -20,17 +24,9 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
-from raiden.utils import (
-    pex,
-    privatekey_to_address,
-)
-from raiden.network.proxies import (
-    TokenNetworkRegistry,
-    SecretRegistry,
-    Discovery,
-)
-from raiden.exceptions import InvalidSettleTimeout
+from raiden.utils import pex
 from raiden.utils.gevent_utils import configure_gevent
+from raiden.utils import typing
 
 
 log = structlog.get_logger(__name__)
@@ -86,8 +82,16 @@ class App:  # pylint: disable=too-few-public-methods
             transport,
             discovery: Discovery = None,
     ):
-        self.config = config
-        self.discovery = discovery
+        raiden = RaidenService(
+            chain=chain,
+            query_start_block=query_start_block,
+            default_registry=default_registry,
+            default_secret_registry=default_secret_registry,
+            private_key_bin=unhexlify(config['privatekey_hex']),
+            transport=transport,
+            config=config,
+            discovery=discovery,
+        )
 
         # check that the settlement timeout fits the limits of the contract
         invalid_timeout = (
@@ -107,26 +111,14 @@ class App:  # pylint: disable=too-few-public-methods
                 ),
             )
 
-        try:
-            self.raiden = RaidenService(
-                chain=chain,
-                query_start_block=query_start_block,
-                default_registry=default_registry,
-                default_secret_registry=default_secret_registry,
-                private_key_bin=unhexlify(config['privatekey_hex']),
-                transport=transport,
-                config=config,
-                discovery=discovery,
-            )
-        except filelock.Timeout:
-            pubkey = to_normalized_address(
-                privatekey_to_address(unhexlify(self.config['privatekey_hex'])),
-            )
-            print(
-                f'FATAL: Another Raiden instance already running for account {pubkey} on '
-                f'network id {chain.network_id}',
-            )
-            sys.exit(1)
+        self.config = config
+        self.discovery = discovery
+        self.raiden = raiden
+        self.start_console = self.config['console']
+
+        # raiden.ui.console:Console assumes that a services
+        # attribute is available for auto-registration
+        self.services = dict()
 
     def __repr__(self):
         return '<{} {}>'.format(
@@ -134,9 +126,12 @@ class App:  # pylint: disable=too-few-public-methods
             pex(self.raiden.address),
         )
 
+    def start(self):
+        """ Start the raiden app. """
+        self.raiden.start()
+
     def stop(self, leave_channels: bool = False):
-        """
-        Stop the raiden app.
+        """ Stop the raiden app.
 
         Args:
             leave_channels: if True, also close and settle all channels before stopping

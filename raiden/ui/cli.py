@@ -18,6 +18,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin
 
 import click
+import filelock
 import gevent
 import requests
 import structlog
@@ -134,6 +135,7 @@ def check_discovery_registration_gas(
     discovery_tx_cost = blockchain_service.client.gasprice() * constants.DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
+    # pylint: disable=no-member
     if discovery_tx_cost > account_balance:
         print(
             'Account has insufficient funds for discovery registration.\n'
@@ -727,6 +729,15 @@ def run_app(
         )
     except RaidenError as e:
         click.secho(f'FATAL: {e}', fg='red')
+        sys.exit(1)
+
+    try:
+        raiden_app.start()
+    except filelock.Timeout:
+        print(
+            f'FATAL: Another Raiden instance already running for account {address_hex} on '
+            f'network id {network_id}',
+        )
         sys.exit(1)
 
     return raiden_app

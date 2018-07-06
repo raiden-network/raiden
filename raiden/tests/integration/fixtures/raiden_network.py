@@ -67,6 +67,9 @@ def raiden_chain(
         local_matrix_server,
     )
 
+    start_events = [app.raiden.start_async() for app in raiden_apps]
+    gevent.wait(start_events)
+
     from_block = 0
     for app in raiden_apps:
         app.raiden.install_all_blockchain_filters(
@@ -80,10 +83,10 @@ def raiden_chain(
         channels_per_node,
     )
 
-    greenlets = []
+    channel_greenlets = []
     for token_address in token_addresses:
         for app_pair in app_channels:
-            greenlets.append(gevent.spawn(
+            channel_greenlets.append(gevent.spawn(
                 payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
@@ -91,7 +94,7 @@ def raiden_chain(
                 deposit,
                 settle_timeout,
             ))
-    gevent.wait(greenlets)
+    gevent.wait(channel_greenlets)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
@@ -149,6 +152,9 @@ def raiden_network(
         nat_keepalive_timeout,
         local_matrix_server,
     )
+
+    start_events = [app.raiden.start_async() for app in raiden_apps]
+    gevent.wait(start_events)
 
     app_channels = create_network_channels(
         raiden_apps,
