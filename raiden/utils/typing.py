@@ -62,6 +62,9 @@ PaymentAmount = NewType('PaymentAmount', T_PaymentAmount)
 T_PaymentNetworkID = bytes
 PaymentNetworkID = NewType('PaymentNetworkID', T_PaymentNetworkID)
 
+T_ChainID = int
+ChainID = NewType('ChainID', T_ChainID)
+
 T_Keccak256 = bytes
 Keccak256 = NewType('Keccak256', T_Keccak256)
 

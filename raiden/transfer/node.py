@@ -390,6 +390,7 @@ def handle_node_init(node_state, state_change):
     node_state = NodeState(
         state_change.pseudo_random_generator,
         state_change.block_number,
+        state_change.chain_id,
     )
     events = list()
     return TransitionResult(node_state, events)

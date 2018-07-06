@@ -231,21 +231,30 @@ class ActionInitNode(StateChange):
             self,
             pseudo_random_generator,
             block_number: typing.BlockNumber,
+            chain_id: typing.ChainID
     ):
         if not isinstance(block_number, int):
             raise ValueError('block_number must be int')
 
+        if not isinstance(chain_id, int):
+            raise ValueError('chain_id must be int')
+
         self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
+        self.chain_id = chain_id
 
     def __repr__(self):
-        return '<ActionInitNode block_number:{}>'.format(self.block_number)
+        return '<ActionInitNode block_number:{} chain_id:{}>'.format(
+            self.block_number,
+            self.chain_id,
+        )
 
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitNode) and
             self.pseudo_random_generator == other.pseudo_random_generator and
-            self.block_number == other.block_number
+            self.block_number == other.block_number and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):
