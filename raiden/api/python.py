@@ -38,6 +38,7 @@ from raiden.settings import (
 from raiden.utils import (
     pex,
     releasing,
+    typing,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -81,7 +82,7 @@ class RaidenAPI:
             token_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT,
             retry_timeout=DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> typing.TokenNetworkAddress:
         """Register the `token_address` in the blockchain. If the address is already
            registered but the event has not been processed this function will block
            until the next block to make sure the event is processed.

@@ -3,7 +3,11 @@ from http import HTTPStatus
 import pytest
 import grequests
 from flask import url_for
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import (
+    to_checksum_address,
+    to_canonical_address,
+    is_checksum_address,
+)
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, MAX_TOKENS_DEPLOY
 
 from raiden.api.v1.encoding import (
@@ -720,7 +724,9 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     ))
     register_response = register_request.send().response
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
-    assert 'channel_manager_address' in register_response.json()
+    response_json = register_response.json()
+    assert 'token_network_address' in response_json
+    assert is_checksum_address(response_json['token_network_address'])
 
     # now try to reregister it and get the error
     conflict_request = grequests.put(api_url_for(

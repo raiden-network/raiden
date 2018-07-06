@@ -101,7 +101,7 @@ Deploying
 
 .. http:put:: /api/(version)/tokens/(token_address)
 
-   Registers a token. If a token is not registered yet (i.e.: A channel manager for that token does not exist in the network), we need to register it by deploying a channel manager contract for that token.
+   Registers a token. If a token is not registered yet (i.e.: A token network for that token does not exist in the registry), we need to register it by deploying a token network contract for that token.
 
    **Example Request**:
 
@@ -118,15 +118,15 @@ Deploying
       Content-Type: application/json
 
       {
-          "channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
+          "token_network_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
       }
 
-   :statuscode 201: A channel manager for the token has been successfully created.
+   :statuscode 201: A token network for the token has been successfully created.
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
     - The token was already registered before, or
     - The registering transaction failed.
-   :resjson address channel_manager_address: The deployed channel manager's address.
+   :resjson address token_network_address: The deployed token networks address.
 
 Querying Information About Channels and Tokens
 ===============================================
