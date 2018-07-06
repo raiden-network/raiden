@@ -40,6 +40,7 @@ from raiden.utils import (
     releasing,
     typing,
 )
+from raiden.api.rest import fix_hex_bytes_values, encode_byte_values
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -655,19 +656,28 @@ class RaidenAPI:
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events',
             )
-        channel_manager_address = self.raiden.default_registry.get_token_network(
+        token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
         )
-        if channel_manager_address is None:
+        if token_network_address is None:
             raise UnknownTokenAddress('Token address is not known.')
 
         returned_events = get_token_network_events(
             self.raiden.chain,
-            channel_manager_address,
+            token_network_address,
             events=ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
         )
+
+        for event in returned_events:
+            if event.get('args'):
+                event['args'] = dict(event['args'])
+
+                # the channel_identifier is a hash
+                encode_byte_values(event['args'])
+
+            fix_hex_bytes_values(event)
 
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,

@@ -171,6 +171,13 @@ def fix_hex_bytes_values(map: Dict) -> Dict:
             map[k] = encode_hex(v)
 
 
+def encode_byte_values(map: Dict) -> Dict:
+    """ Converts values that are of type `bytes` to strings. """
+    for k, v in map.items():
+        if isinstance(v, bytes):
+            map[k] = encode_hex(v)
+
+
 def normalize_events_list(old_list):
     """Internally the `event_type` key is prefixed with underscore but the API
     returns an object without that prefix"""
