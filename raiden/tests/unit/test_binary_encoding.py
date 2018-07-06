@@ -48,7 +48,7 @@ def test_hash():
 
 def test_processed():
     message_identifier = random.randint(0, UINT64_MAX)
-    processed_message = Processed(UNIT_CHAIN_ID, message_identifier)
+    processed_message = Processed(message_identifier)
     processed_message.sign(PRIVKEY, UNIT_CHAIN_ID)
     assert processed_message.sender == ADDRESS
 
