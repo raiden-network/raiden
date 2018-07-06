@@ -58,30 +58,3 @@ import 'core-js/es7/reflect';
  * Zone JS is required by default for Angular itself.
  */
 import 'zone.js/dist/zone';  // Included with Angular CLI.
-
-
-
-/***************************************************************************************************
- * APPLICATION IMPORTS
- */
-
-// RxJS imports
-import 'rxjs/add/observable/throw';
-import 'rxjs/add/observable/interval';
-import 'rxjs/add/observable/timer';
-import 'rxjs/add/observable/of';
-import 'rxjs/add/observable/zip';
-import 'rxjs/add/observable/bindNodeCallback';
-
-import 'rxjs/add/operator/first';
-import 'rxjs/add/operator/timeout';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/do';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/switchMap';
-import 'rxjs/add/operator/scan';
-import 'rxjs/add/operator/finally';
-import 'rxjs/add/operator/share';
-import 'rxjs/add/operator/distinctUntilChanged';
-import 'rxjs/add/operator/withLatestFrom';
-import 'rxjs/add/operator/combineLatest';

@@ -1,6 +1,7 @@
+import { BehaviorSubject } from 'rxjs';
+import { scan } from 'rxjs/operators';
 import { Injectable } from '@angular/core';
 import { HttpRequest } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Message } from 'primeng/primeng';
 
 import { Channel } from '../models/channel';
@@ -13,8 +14,9 @@ export class SharedService {
     public messages: Message[] = [];
 
     private requestsSubject = new BehaviorSubject<number>(0);
-    public readonly requests$ = this.requestsSubject.asObservable()
-        .scan((acc, value) => Math.max(acc + value, 0), 0);
+    public readonly requests$ = this.requestsSubject.asObservable().pipe(
+        scan((acc, value) => Math.max(acc + value, 0), 0),
+    );
 
     public msg(message: Message) {
         this.messages = [...this.messages, message];

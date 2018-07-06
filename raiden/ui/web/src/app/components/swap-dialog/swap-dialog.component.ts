@@ -1,7 +1,7 @@
+import { Observable, Subscription } from 'rxjs';
+import { distinctUntilChanged, combineLatest, map, share } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { FormControl, FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Observable } from 'rxjs/Observable';
-import { Subscription } from 'rxjs/Subscription';
 import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -40,9 +40,10 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokens()
-            .map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens))
-            .share();
+        this.tokenAddressMapping$ = this.raidenService.getTokens().pipe(
+            map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens)),
+            share(),
+        );
 
         this.form = this.fb.group({
             partner_address: [null, (control) =>
@@ -55,9 +56,9 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
             receiving_amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
         });
 
-        this.formString$ = this.form.valueChanges
-            .combineLatest(this.form.statusChanges)
-            .map(([value, status]) => {
+        this.formString$ = this.form.valueChanges.pipe(
+            combineLatest(this.form.statusChanges),
+            map(([value, status]) => {
                 if (!value || status !== 'VALID' || value['role'] !== 'maker' ||
                     this.form.pristine) {
                     return null;
@@ -73,11 +74,12 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
                 ].join(DIV);
                 const hash = this.raidenService.sha3(data);
                 return data + DIV + hash.slice(-2);
-            })
-            .distinctUntilChanged();
+            }),
+            distinctUntilChanged(),
+        );
 
-        this.showTakerString$ = this.form.valueChanges
-            .map((value) => {
+        this.showTakerString$ = this.form.valueChanges.pipe(
+            map((value) => {
                 if (value.role !== 'taker') {
                     return false;
                 }
@@ -87,7 +89,8 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
                     }
                 }
                 return true;
-            });
+            }),
+        );
 
         this.subs.push(this.takerStringFC.valueChanges
             .subscribe((value) => this.parseFormString(value)));
