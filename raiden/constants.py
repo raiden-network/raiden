@@ -37,7 +37,6 @@ ROPSTEN = 'ropsten'
 RINKEBY = 'rinkeby'
 KOVAN = 'kovan'
 SMOKETEST = 'smoketest'
-TESTS = 'tests'
 
 ID_TO_NETWORKNAME = {
     1: MAINNET,
@@ -45,7 +44,6 @@ ID_TO_NETWORKNAME = {
     4: RINKEBY,
     42: KOVAN,
     627: SMOKETEST,
-    337: TESTS,  # TEMPORARY
 }
 
 NETWORKNAME_TO_ID = {
