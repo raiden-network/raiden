@@ -148,7 +148,7 @@ def handle_channel_new_balance(raiden, event, current_block_number):
         )
         raiden.handle_state_change(newbalance_statechange, current_block_number)
 
-        if balance_was_zero:
+        if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(
                 token_network_identifier,
             )

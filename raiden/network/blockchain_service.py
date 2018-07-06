@@ -78,13 +78,13 @@ class BlockChainService:
         else:
             interval = last_block_number - oldest
         assert interval > 0
-        last_timestamp = int(self.get_block_header(last_block_number)['timestamp'], 16)
-        first_timestamp = int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
+        last_timestamp = self.get_block_header(last_block_number)['timestamp']
+        first_timestamp = self.get_block_header(last_block_number - interval)['timestamp']
         delta = last_timestamp - first_timestamp
         return delta / interval
 
     def get_block_header(self, block_number: int):
-        return self.client.web3.getBlock(block_number, False)
+        return self.client.web3.eth.getBlock(block_number, False)
 
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1

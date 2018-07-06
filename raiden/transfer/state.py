@@ -1003,6 +1003,13 @@ class TransactionChannelNewBalance(State):
             self.deposit_block_number == other.deposit_block_number
         )
 
+    def __lt__(self, other):
+        return (
+            self.participant_address < other.participant_address and
+            self.contract_balance < other.contract_balance and
+            self.deposit_block_number < other.deposit_block_number
+        )
+
     def __ne__(self, other):
         return not self.__eq__(other)
 

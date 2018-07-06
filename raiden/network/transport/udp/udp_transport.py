@@ -549,6 +549,7 @@ class UDPTransport:
             log.debug(
                 'PONG RECEIVED',
                 node=pex(self.raiden.address),
+                sender=pex(pong.sender),
                 message_id=pong.nonce,
             )
 
