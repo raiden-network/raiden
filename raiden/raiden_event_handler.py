@@ -267,23 +267,25 @@ def handle_contract_send_channelsettle(
         partner_locked_amount = 0
         partner_locksroot = b''
 
-    # The smart contract requires the first balance proof to be the one with
-    # the smaller transferred_amount. This is used to simplify overflow checks
-    # in the smart contract.
-    if our_transferred_amount < partner_transferred_amount:
-        first_transferred_amount = partner_transferred_amount
-        first_locked_amount = partner_locked_amount
-        first_locksroot = partner_locksroot
-        second_transferred_amount = our_transferred_amount
-        second_locked_amount = our_locked_amount
-        second_locksroot = our_locksroot
-    else:
+    our_max_transferred = our_transferred_amount + our_locked_amount
+    partner_max_transferred = partner_transferred_amount + partner_locked_amount
+
+    # The smart contract requires the max transferred of the /first/ balance
+    # proof to be /smaller/.
+    if our_max_transferred < partner_max_transferred:
         first_transferred_amount = our_transferred_amount
         first_locked_amount = our_locked_amount
         first_locksroot = our_locksroot
         second_transferred_amount = partner_transferred_amount
         second_locked_amount = partner_locked_amount
         second_locksroot = partner_locksroot
+    else:
+        first_transferred_amount = partner_transferred_amount
+        first_locked_amount = partner_locked_amount
+        first_locksroot = partner_locksroot
+        second_transferred_amount = our_transferred_amount
+        second_locked_amount = our_locked_amount
+        second_locksroot = our_locksroot
 
     try:
         channel.settle(
