@@ -19,7 +19,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
         choices=['geth', 'tester'],
-        default='tester',
+        default='geth',
     )
 
     parser.addoption(
