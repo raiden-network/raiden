@@ -41,6 +41,7 @@ from raiden.api.v1.encoding import (
     KeccakConverter,
     PartnersPerTokenListSchema,
     TransferSchema,
+    InvalidEndpoint,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -154,7 +155,10 @@ def handle_request_parsing_error(err):
 
 
 def endpoint_not_found(e):
-    return api_error('invalid endpoint', HTTPStatus.NOT_FOUND)
+    errors = ['invalid endpoint']
+    if isinstance(e, InvalidEndpoint):
+        errors.append(e.description)
+    return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
 def normalize_events_list(old_list):
@@ -553,11 +557,14 @@ class RestAPI:
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_channel(self, registry_address, token_address, partner_address):
-        channel_state = self.raiden_api.get_channel(
-            registry_address=registry_address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
+        try:
+            channel_state = self.raiden_api.get_channel(
+                registry_address=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
+            )
+        except ChannelNotFound:
+            return api_error('Channel not found.', HTTPStatus.NOT_FOUND)
         result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
         return api_response(result=checksummed_response_dict(result.data))
 
