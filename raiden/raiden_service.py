@@ -358,7 +358,7 @@ class RaidenService:
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
-    def _callback_new_block(self, current_block_number):
+    def _callback_new_block(self, current_block_number, chain_id):
         """Called once a new block is detected by the alarm task.
 
         Note:
@@ -386,7 +386,7 @@ class RaidenService:
             for event in self.blockchain_events.poll_blockchain_events():
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the NodeState's block_number.
-                on_blockchain_event(self, event, current_block_number)
+                on_blockchain_event(self, event, current_block_number, chain_id)
 
             # On restart the Raiden node will re-create the filters with the
             # ethereum node. These filters will have the from_block set to the
@@ -423,7 +423,11 @@ class RaidenService:
             )
 
             for event in self.blockchain_events.poll_blockchain_events():
-                on_blockchain_event(self, event, event.event_data['block_number'])
+                on_blockchain_event(
+                    self,
+                    event, event.event_data['block_number'],
+                    self.chain.network_id(),
+                )
 
     def connection_manager_for_token_network(self, token_network_identifier):
         if not is_binary_address(token_network_identifier):

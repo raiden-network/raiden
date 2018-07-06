@@ -147,6 +147,7 @@ def make_channel(
     settle_transaction = None
 
     channel_state = NettingChannelState(
+        UNIT_CHAIN_ID,
         channel_identifier,
         token_address,
         token_network_identifier,

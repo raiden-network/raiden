@@ -11,6 +11,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
 from raiden.utils import sha3
+from raiden.test.utils.factories import UNIT_CHAIN_ID
 
 
 ADDRESS = sha3(b'foo')[:20]
@@ -107,9 +108,9 @@ def test_message_operators():
     message_identifier = 10
     message_identifier2 = 11
 
-    a = Processed(message_identifier)
-    b = Processed(message_identifier)
-    c = Processed(message_identifier2)
+    a = Processed(UNIT_CHAIN_ID, message_identifier)
+    b = Processed(UNIT_CHAIN_ID, message_identifier)
+    c = Processed(UNIT_CHAIN_ID, message_identifier2)
 
     # pylint: disable=unneeded-not
     assert a == b

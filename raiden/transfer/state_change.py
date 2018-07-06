@@ -685,6 +685,7 @@ class ReceiveUnlock(StateChange):
             message_identifier: typing.MessageID,
             secret: typing.Secret,
             balance_proof: BalanceProofSignedState,
+            chain_id: typing.ChainID,
     ):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
@@ -695,6 +696,7 @@ class ReceiveUnlock(StateChange):
         self.secret = secret
         self.secrethash = secrethash
         self.balance_proof = balance_proof
+        self.chain_id = chain_id
 
     def __repr__(self):
         return '<ReceiveUnlock msgid:{} secrethash:{} balance_proof:{}>'.format(
@@ -709,7 +711,8 @@ class ReceiveUnlock(StateChange):
             self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):

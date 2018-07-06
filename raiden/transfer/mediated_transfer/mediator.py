@@ -1105,7 +1105,7 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
+def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifiers_to_channels):
     """ Handle a ReceiveUnlock state change. """
     events = list()
     balance_proof_sender = state_change.balance_proof.sender
@@ -1130,6 +1130,7 @@ def handle_unlock(mediator_state, state_change, channelidentifiers_to_channels):
                     events.append(unlock)
 
                     send_processed = SendProcessed(
+                        state_change.chain_id,
                         balance_proof_sender,
                         b'global',
                         state_change.message_identifier,

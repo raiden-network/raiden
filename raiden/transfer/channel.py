@@ -1485,6 +1485,7 @@ def handle_receive_directtransfer(
             channel_state.partner_state.address,
         )
         send_processed = SendProcessed(
+            direct_transfer.chain_id,
             direct_transfer.balance_proof.sender,
             b'global',
             direct_transfer.message_identifier,
@@ -1520,6 +1521,7 @@ def handle_refundtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
+            refund.transfer.chain_id,
             refund.transfer.balance_proof.sender,
             b'global',
             refund.transfer.message_identifier,
@@ -1557,6 +1559,7 @@ def handle_receive_lockedtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
+            mediated_transfer.chain_id,
             mediated_transfer.balance_proof.sender,
             b'global',
             mediated_transfer.message_identifier,
@@ -1591,6 +1594,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
         send_processed = SendProcessed(
+            unlock.chain_id,
             unlock.balance_proof.sender,
             b'global',
             unlock.message_identifier,
