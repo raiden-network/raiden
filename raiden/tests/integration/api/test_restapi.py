@@ -229,6 +229,33 @@ def test_api_query_our_address(api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
+def test_api_channel_status_channel_nonexistant(
+        api_backend,
+        token_addresses,
+):
+        partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+        token_address = token_addresses[0]
+
+        request = grequests.get(
+            api_url_for(
+                api_backend,
+                'channelsresourcebytokenandpartneraddress',
+                token_address=token_address,
+                partner_address=partner_address,
+            ),
+        )
+        response = request.send().response
+        assert_proper_response(response, HTTPStatus.NOT_FOUND)
+        assert response.json()['errors'] == (
+            "Channel with partner '{}' for token '{}' could not be found.".format(
+                to_checksum_address(partner_address),
+                to_checksum_address(token_address),
+            )
+        )
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_and_deposit_channel(
         api_backend,
         token_addresses,

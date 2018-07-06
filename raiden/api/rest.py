@@ -563,10 +563,13 @@ class RestAPI:
                 token_address=token_address,
                 partner_address=partner_address,
             )
-        except ChannelNotFound:
-            return api_error('Channel not found.', HTTPStatus.NOT_FOUND)
-        result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
-        return api_response(result=checksummed_response_dict(result.data))
+            result = self.channel_schema.dump(channelstate_to_api_dict(channel_state))
+            return api_response(result=checksummed_response_dict(result.data))
+        except ChannelNotFound as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.NOT_FOUND,
+            )
 
     def get_partners_by_token(self, registry_address, token_address):
         return_list = []
