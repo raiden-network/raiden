@@ -5,6 +5,7 @@ import logging
 import socket
 import structlog
 import sys
+from typing import Dict
 
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
@@ -14,6 +15,8 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from gevent.pywsgi import WSGIServer
 from eth_utils import is_address, to_checksum_address
+from hexbytes import HexBytes
+from eth_utils import encode_hex
 
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -161,19 +164,30 @@ def endpoint_not_found(e):
     return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
+def fix_hex_bytes_values(map: Dict) -> Dict:
+    """ Converts values that are of type `HexBytes` to strings. """
+    for k, v in map.items():
+        if isinstance(v, HexBytes):
+            map[k] = encode_hex(v)
+
+
 def normalize_events_list(old_list):
     """Internally the `event_type` key is prefixed with underscore but the API
     returns an object without that prefix"""
     new_list = []
     for _event in old_list:
         new_event = dict(_event)
-        new_event['event'] = new_event.pop('event').decode()
+        if new_event.get('args'):
+            new_event['args'] = dict(new_event['args'])
+
+        # the events contain HexBytes values, convert those to strings
+        fix_hex_bytes_values(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
         if new_event['event'] == 'EventTransferReceivedSuccess':
-            new_event['initiator'] = to_checksum_address(new_event['initiator'])[2:]
+            new_event['initiator'] = to_checksum_address(new_event['initiator'])
         if new_event['event'] == 'EventTransferSentSuccess':
-            new_event['target'] = to_checksum_address(new_event['target'])[2:]
+            new_event['target'] = to_checksum_address(new_event['target'])
         new_list.append(new_event)
     return new_list
 

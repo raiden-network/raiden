@@ -888,6 +888,41 @@ def test_get_connection_managers_info(api_backend, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
+def test_network_events(api_backend, token_addresses):
+    # let's create a new channel
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+    token_address = token_addresses[0]
+    settle_timeout = 1650
+    channel_data_obj = {
+        'partner_address': partner_address,
+        'token_address': to_checksum_address(token_address),
+        'settle_timeout': settle_timeout,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
+
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'networkeventsresource',
+            from_block=0,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert len(response.json()) > 0
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_token_events_errors_for_unregistered_token(api_backend):
     request = grequests.get(
         api_url_for(
