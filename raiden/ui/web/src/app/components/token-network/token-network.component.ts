@@ -1,7 +1,7 @@
+import { Observable, BehaviorSubject } from 'rxjs';
+import { map, switchMap, tap } from 'rxjs/operators';
 import { Component, OnInit, Input } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs/Observable';
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { MenuItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -37,17 +37,18 @@ export class TokenNetworkComponent implements OnInit {
         private confirmationService: ConfirmationService) { }
 
     ngOnInit() {
-        this.tokensBalances$ = this.tokensSubject
-            .do(() => this.refreshing = true)
-            .switchMap(() => this.raidenService.getTokens(true))
-            .map((userTokens) => userTokens.map((userToken) =>
+        this.tokensBalances$ = this.tokensSubject.pipe(
+            tap(() => this.refreshing = true),
+            switchMap(() => this.raidenService.getTokens(true)),
+            map((userTokens) => userTokens.map((userToken) =>
                 Object.assign(
                     userToken,
                     { menu: this.menuFor(userToken) }
                 ) as WithMenu<Usertoken>
-            ))
-            .do(() => this.refreshing = false,
-                () => this.refreshing = false);
+            )),
+            tap(() => this.refreshing = false,
+                () => this.refreshing = false),
+        );
     }
 
     private menuFor(userToken: Usertoken): MenuItem[] {

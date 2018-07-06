@@ -1,7 +1,7 @@
+import { Observable, Subscription } from 'rxjs';
+import { share, map } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { FormControl, FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Observable } from 'rxjs/Observable';
-import { Subscription } from 'rxjs/Subscription';
 import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -41,9 +41,10 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
             amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
-        this.tokenAddressMapping$ = this.raidenService.getTokens()
-            .map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens))
-            .share();
+        this.tokenAddressMapping$ = this.raidenService.getTokens().pipe(
+            map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens)),
+            share(),
+        );
     }
 
     ngOnDestroy() {

@@ -1,6 +1,6 @@
+import { of, Observable ,  BehaviorSubject } from 'rxjs';
+import {scan, map, switchMap, tap} from 'rxjs/operators';
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
@@ -30,12 +30,12 @@ export class EventListComponent implements OnInit {
         let first = true;
         const data_excl = ['event_type', 'block_number', 'timestamp'];
         const firerSub: BehaviorSubject<void> = new BehaviorSubject(null);
-        this.events$ = firerSub
-            .do(() => this.loading = true)
-            .switchMap(() => this.raidenService.getBlockNumber())
-            .switchMap((latestBlock) => {
+        this.events$ = firerSub.pipe(
+            tap(() => this.loading = true),
+            switchMap(() => this.raidenService.getBlockNumber()),
+            switchMap((latestBlock) => {
                 if (fromBlock > latestBlock) {
-                    return Observable.of([]);
+                    return of([]);
                 }
                 const obs = this.raidenService.getEvents(
                     this.eventsParam,
@@ -43,8 +43,8 @@ export class EventListComponent implements OnInit {
                     latestBlock);
                 fromBlock = latestBlock + 1;
                 return obs;
-            })
-            .map((events) => events.map((event) =>
+            }),
+            map((events) => events.map((event) =>
                 <Event>Object.assign(event,
                     {
                         data: JSON.stringify(Object.keys(event)
@@ -52,14 +52,14 @@ export class EventListComponent implements OnInit {
                             .reduce((o, k) => (o[k] = event[k], o), {}))
                     }
                 ))
-            )
-            .do((newEvents) => {
+            ),
+            tap((newEvents) => {
                 if (newEvents.length > 0 && !first) {
                     this.activity.emit();
                 }
                 first = false;
-            })
-            .scan((oldEvents, newEvents) => {
+            }),
+            scan((oldEvents, newEvents) => {
                 // this scan/reducer agregates new events (since next_block) with old ones,
                 // updating next_block if needed. If no next_block previously,
                 // it means it fetched all events, so use only newEvents
@@ -73,8 +73,9 @@ export class EventListComponent implements OnInit {
                     }
                 }
                 return events;
-            }, [])
-            .do(() => setTimeout(() => firerSub.next(null), this.raidenConfig.config.poll_interval))
-            .do(() => this.loading = false);
+            }, []),
+            tap(() => setTimeout(() => firerSub.next(null), this.raidenConfig.config.poll_interval)),
+            tap(() => this.loading = false),
+        );
     }
 }

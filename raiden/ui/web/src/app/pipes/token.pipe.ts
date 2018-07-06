@@ -1,5 +1,6 @@
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Pipe, PipeTransform } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
 import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../services/raiden.service';
@@ -39,8 +40,9 @@ export class TokenPipe implements PipeTransform {
   }
 
   transform(address: string, args?: any): Observable<string> {
-    return this.raidenService.getUsertoken(address, false)
-      .map((token) => this.tokenToString(token));
+    return this.raidenService.getUsertoken(address, false).pipe(
+      map((token) => this.tokenToString(token)),
+    );
   }
 
 }
