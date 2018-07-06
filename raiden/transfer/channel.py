@@ -1024,6 +1024,7 @@ def create_senddirecttransfer(
         locksroot,
         channel_state.token_network_identifier,
         channel_state.identifier,
+        channel_state.chain_id,
     )
 
     queue_name = channel_state.identifier
@@ -1094,6 +1095,7 @@ def create_sendlockedtransfer(
         locksroot,
         channel_state.token_network_identifier,
         channel_state.identifier,
+        channel_state.chain_id,
     )
 
     locked_transfer = LockedTransferUnsignedState(
@@ -1155,6 +1157,7 @@ def create_unlock(
         locksroot,
         channel_state.token_network_identifier,
         channel_state.identifier,
+        channel_state.chain_id,
     )
 
     queue_name = channel_state.identifier

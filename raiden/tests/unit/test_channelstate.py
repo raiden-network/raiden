@@ -654,6 +654,7 @@ def test_channelstate_receive_lockedtransfer():
     message_identifier = random.randint(0, UINT64_MAX)
     token_network_identifier = channel_state.token_network_identifier
     secret_message = Secret(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
@@ -1031,6 +1032,7 @@ def test_interwoven_transfers():
 
             message_identifier = random.randint(0, UINT64_MAX)
             secret_message = Secret(
+                chain_id=UNIT_CHAIN_ID,
                 message_identifier=message_identifier,
                 payment_identifier=nonce,
                 nonce=nonce,

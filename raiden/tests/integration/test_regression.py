@@ -17,6 +17,7 @@ from raiden.tests.integration.fixtures.raiden_network import (
 from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -211,6 +212,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
 
     token_network_identifier = channelstate_0_1.token_network_identifier
     secret = Secret(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,

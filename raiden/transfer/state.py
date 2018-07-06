@@ -59,6 +59,7 @@ def balanceproof_from_envelope(envelope_message):
         envelope_message.message_hash,
         envelope_message.signature,
         envelope_message.sender,
+        envelope_message.chain_id,
     )
 
 
@@ -350,6 +351,7 @@ class BalanceProofUnsignedState(State):
         'locksroot',
         'token_network_identifier',
         'channel_address',
+        'chain_id',
     )
 
     def __init__(
@@ -360,6 +362,7 @@ class BalanceProofUnsignedState(State):
             locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
             channel_address: typing.Address,  # FIXME: is this used anywhere
+            chain_id: typing.ChainID,
     ):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
@@ -375,6 +378,9 @@ class BalanceProofUnsignedState(State):
 
         if not isinstance(channel_address, typing.T_Address):
             raise ValueError('channel_address must be an address instance')
+
+        if not isinstance(chain_id, typing.T_ChainID):
+            raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
@@ -400,12 +406,13 @@ class BalanceProofUnsignedState(State):
         self.locksroot = locksroot
         self.token_network_identifier = token_network_identifier
         self.channel_address = channel_address
+        self.chain_id = chain_id
 
     def __repr__(self):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} token_network:{} channel_address:{}'
+            'locked_amount:{} locksroot:{} token_network:{} channel_address:{} chain_id: {}'
             '>'
         ).format(
             self.nonce,
@@ -414,6 +421,7 @@ class BalanceProofUnsignedState(State):
             pex(self.locksroot),
             pex(self.token_network_identifier),
             pex(self.channel_address),
+            self.chain_id,
         )
 
     def __eq__(self, other):
@@ -424,7 +432,8 @@ class BalanceProofUnsignedState(State):
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
             self.token_network_identifier == other.token_network_identifier and
-            self.channel_address == other.channel_address
+            self.channel_address == other.channel_address and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):
@@ -454,6 +463,7 @@ class BalanceProofSignedState(State):
         'message_hash',
         'signature',
         'sender',
+        'chain_id',
     )
 
     def __init__(
@@ -467,6 +477,7 @@ class BalanceProofSignedState(State):
             message_hash: typing.Keccak256,
             signature: typing.Signature,
             sender: typing.Address,
+            chain_id: typing.ChainID,
     ):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
@@ -494,6 +505,9 @@ class BalanceProofSignedState(State):
 
         if not isinstance(sender, typing.T_Address):
             raise ValueError('sender must be an address instance')
+
+        if not isinstance(chain_id, typing.T_ChainID):
+            raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
@@ -528,13 +542,14 @@ class BalanceProofSignedState(State):
         self.message_hash = message_hash
         self.signature = signature
         self.sender = sender
+        self.chain_id = chain_id
 
     def __repr__(self):
         return (
             '<'
             'BalanceProofSignedState nonce:{} transferred_amount:{} '
             'locked_amount:{} locksroot:{} token_network:{} channel_address:{} '
-            'message_hash:{} signature:{} sender:{}'
+            'message_hash:{} signature:{} sender:{} chain_id:{}'
             '>'
         ).format(
             self.nonce,
@@ -546,6 +561,7 @@ class BalanceProofSignedState(State):
             pex(self.message_hash),
             pex(self.signature),
             pex(self.sender),
+            self.chain_id,
         )
 
     def __eq__(self, other):
@@ -559,7 +575,8 @@ class BalanceProofSignedState(State):
             self.channel_address == other.channel_address and
             self.message_hash == other.message_hash and
             self.signature == other.signature and
-            self.sender == other.sender
+            self.sender == other.sender and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):
