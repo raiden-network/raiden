@@ -63,8 +63,13 @@ def handle_channelnew(token_network_state, state_change):
         partner_address,
     )
 
-    token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
-    token_network_state.partneraddresses_to_channels[partner_address] = channel_state
+    # Ignore duplicated channelnew events. For this to work properly on channel
+    # reopens the blockchain events ChannelSettled and ChannelOpened must be
+    # processed in correct order, this should be guaranteed by the filters in
+    # the ethereum node
+    if channel_id not in token_network_state.channelidentifiers_to_channels:
+        token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
+        token_network_state.partneraddresses_to_channels[partner_address] = channel_state
 
     return TransitionResult(token_network_state, events)
 
