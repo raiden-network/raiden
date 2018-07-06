@@ -42,7 +42,7 @@ class SecretRegistry:
         if not is_binary_address(secret_registry_address):
             raise InvalidAddress('Expected binary address format for secret registry')
 
-        check_address_has_code(jsonrpc_client, secret_registry_address, 'Registry')
+        check_address_has_code(jsonrpc_client, secret_registry_address, CONTRACT_SECRET_REGISTRY)
 
         proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_SECRET_REGISTRY),
