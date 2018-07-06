@@ -1,11 +1,7 @@
 from binascii import unhexlify
-from gevent.lock import RLock
-from gevent.event import AsyncResult
 from typing import List, Dict, Optional
-from raiden.utils import typing, compare_versions
 
 import structlog
-from web3.utils.filters import Filter
 from eth_utils import (
     encode_hex,
     event_abi_to_log_topic,
@@ -14,7 +10,8 @@ from eth_utils import (
     to_checksum_address,
     to_normalized_address,
 )
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from gevent.event import AsyncResult
+from gevent.lock import RLock
 from raiden_contracts.constants import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_NONEXISTENT,
@@ -23,13 +20,15 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     EVENT_CHANNEL_OPENED,
 )
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from web3.utils.filters import Filter
 
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
+from raiden.network.proxies import Token
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.proxies.token import Token
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
@@ -47,9 +46,11 @@ from raiden.settings import (
     EXPECTED_CONTRACTS_VERSION,
 )
 from raiden.utils import (
+    compare_versions,
     pex,
     privatekey_to_address,
     releasing,
+    typing,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -81,9 +82,12 @@ class TokenNetwork:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
-        # Prevents concurrent deposit, withdraw, close, or settle operations on the same channel
-        self.channel_operations_lock = dict()
         self.open_channel_transactions = dict()
+
+        # Forbids concurrent operations on the same channel
+        self.channel_operations_lock = dict()
+        # Serializes concurent deposits on this token network
+        self.deposit_lock = RLock()
 
     def _call_and_check_result(self, function_name: str, *args):
         fn = getattr(self.proxy.contract.functions, function_name)
@@ -404,55 +408,97 @@ class TokenNetwork:
             raise ValueError('total_deposit needs to be an integral number.')
 
         token_address = self.token_address()
-
         token = Token(self.client, token_address)
-        current_balance = token.balance_of(self.node_address)
-        current_deposit = self.detail_participant(self.node_address, partner)['deposit']
-        amount_to_deposit = total_deposit - current_deposit
-
-        if amount_to_deposit <= 0:
-            raise ValueError('deposit [{}] must be greater than 0.'.format(
-                amount_to_deposit,
-            ))
-
-        if current_balance < amount_to_deposit:
-            raise ValueError(
-                f'deposit {amount_to_deposit} can not be larger than the '
-                f'available balance {current_balance}, '
-                f'for token at address {pex(token_address)}',
-            )
-
-        log.info(
-            'deposit called',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-            total_deposit=total_deposit,
-            amount_to_deposit=amount_to_deposit,
-        )
-        token.approve(self.address, amount_to_deposit)
 
         self._check_channel_lock(partner)
 
-        with releasing(self.channel_operations_lock[partner]):
+        with releasing(self.channel_operations_lock[partner]), self.deposit_lock:
+
+            # setTotalDeposit requires a monotonically increasing value, this
+            # is used to handle concurrent actions:
+            #
+            #  - The deposits will be done in order, i.e. the monotonic
+            #  property is preserved by the caller
+            #  - The race of two deposits will be resolved with the larger
+            #  deposit winning
+            #  - Retries wont have effect
+            #
+            # This check is serialized with channel_operations_lock to avoid
+            # sending invalid transactions on-chain (decreasing total deposit).
+            #
+            current_deposit = self.detail_participant(self.node_address, partner)['deposit']
+            amount_to_deposit = total_deposit - current_deposit
+            if amount_to_deposit <= 0:
+                raise ValueError(f'deposit {amount_to_deposit} must be greater than 0.')
+
+            # A node may be setting up multiple channels for the same token
+            # concurrently, because each deposit changes the user balance this
+            # check must be serialized with the operation locks.
+            #
+            # This check is merely informational, used to avoid sending
+            # transactions which are known to fail.
+            #
+            # This check is serialized with channel_operations_lock to avoid
+            # sending invalid transactions on-chain (account without balance).
+            #
+            current_balance = token.balance_of(self.node_address)
+            if current_balance < amount_to_deposit:
+                raise ValueError(
+                    f'deposit {amount_to_deposit} can not be larger than the '
+                    f'available balance {current_balance}, '
+                    f'for token at address {pex(token_address)}',
+                )
+
+            # If there are channels being set up concurrenlty either the
+            # allowance must be accumulated *or* the calls to `approve` and
+            # `setTotalDeposit` must be serialized, this is necessary otherwise
+            # the deposit will fail.
+            #
+            # Calls to approve and setTotalDeposit are serialized with
+            # channel_operations_lock to avoid transaction failure, because
+            # with two concurrent deposits, may have the transactions executed
+            # in the following order
+            #
+            # - approve
+            # - approve
+            # - setTotalDeposit
+            # - setTotalDeposit
+            #
+            # Were the second `approve` will overwrite the first, and the first
+            # `setTotalDeposit` will consume the alowance, making the second
+            # deposit fail.
+            token.approve(self.address, amount_to_deposit)
+
+            log_details = {
+                'token_network': pex(self.address),
+                'node': pex(self.node_address),
+                'partner': pex(partner),
+                'total_deposit': total_deposit,
+                'amount_to_deposit': amount_to_deposit,
+                'id': id(self),
+            }
+            log.info('deposit called', **log_details)
+
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
                 self.node_address,
                 total_deposit,
                 partner,
             )
-
             self.client.poll(unhexlify(transaction_hash))
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
             if receipt_or_none:
-                log.critical(
-                    'deposit failed',
-                    token_network=pex(self.address),
-                    node=pex(self.node_address),
-                    partner=pex(partner),
-                    total_deposit=total_deposit,
-                )
+                if token.allowance(self.node_address, self.address) != amount_to_deposit:
+                    log_msg = (
+                        'deposit failed and allowance was consumed, check concurrent deposits '
+                        'for the same token network but different proxies'
+                    )
+                else:
+                    log_msg = 'deposit failed'
+
+                log.critical(log_msg, **log_details)
 
                 channel_opened = self.channel_is_opened(self.node_address, partner)
                 if channel_opened is False:
@@ -461,13 +507,7 @@ class TokenNetwork:
                     )
                 raise TransactionThrew('Deposit', receipt_or_none)
 
-            log.info(
-                'deposit successful',
-                token_network=pex(self.address),
-                node=pex(self.node_address),
-                partner=pex(partner),
-                total_deposit=total_deposit,
-            )
+            log.info('deposit successful', **log_details)
 
     def close(
             self,
