@@ -208,7 +208,6 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
             )
 
             send_processed = SendProcessed(
-                state_change.chain_id,
                 balance_proof_sender,
                 b'global',
                 state_change.message_identifier,
