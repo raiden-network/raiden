@@ -164,7 +164,7 @@ def endpoint_not_found(e):
     return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
-def fix_hex_bytes_values(map: Dict) -> Dict:
+def hexbytes_to_str(map: Dict) -> Dict:
     """ Converts values that are of type `HexBytes` to strings. """
     for k, v in map.items():
         if isinstance(v, HexBytes):
@@ -188,7 +188,7 @@ def normalize_events_list(old_list):
             new_event['args'] = dict(new_event['args'])
 
         # the events contain HexBytes values, convert those to strings
-        fix_hex_bytes_values(new_event)
+        hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
         if new_event['event'] == 'EventTransferReceivedSuccess':
