@@ -844,6 +844,7 @@ class NettingChannelState(State):
 
     __slots__ = (
         'identifier',
+        'chain_id',
         'our_state',
         'partner_state',
         'token_address',
@@ -860,6 +861,7 @@ class NettingChannelState(State):
     def __init__(
             self,
             identifier,
+            chain_id: typing.ChainID,
             token_address: typing.Address,
             token_network_identifier: typing.Address,
             reveal_timeout: typing.BlockNumber,
@@ -916,6 +918,7 @@ class NettingChannelState(State):
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
         self.our_unlock_transaction = None
+        self.chain_id = chain_id
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
@@ -938,7 +941,8 @@ class NettingChannelState(State):
             self.deposit_transaction_queue == other.deposit_transaction_queue and
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
-            self.settle_transaction == other.settle_transaction
+            self.settle_transaction == other.settle_transaction and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):

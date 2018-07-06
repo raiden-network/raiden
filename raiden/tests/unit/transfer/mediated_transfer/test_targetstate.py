@@ -25,6 +25,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
+    UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
     UNIT_SECRET,
     UNIT_TRANSFER_PKEY,
@@ -332,6 +333,7 @@ def test_handle_block():
         from_channel,
         pseudo_random_generator,
         new_block.block_number,
+        UNIT_CHAIN_ID,
     )
     assert iteration.new_state
     assert not iteration.events
@@ -359,6 +361,7 @@ def test_handle_block_equal_block_number():
         from_channel,
         pseudo_random_generator,
         new_block.block_number,
+        UNIT_CHAIN_ID,
     )
     assert iteration.new_state
     assert not iteration.events
@@ -386,6 +389,7 @@ def test_handle_block_lower_block_number():
         from_channel,
         pseudo_random_generator,
         new_block.block_number,
+        UNIT_CHAIN_ID,
     )
     assert iteration.new_state
     assert not iteration.events
@@ -431,6 +435,7 @@ def test_state_transition():
         from_channel,
         pseudo_random_generator,
         block_number,
+        UNIT_CHAIN_ID,
     )
     assert init_transition.new_state is not None
     assert init_transition.new_state.route == from_route
@@ -443,6 +448,7 @@ def test_state_transition():
         from_channel,
         pseudo_random_generator,
         first_new_block.block_number,
+        UNIT_CHAIN_ID,
     )
 
     secret_reveal = ReceiveSecretReveal(factories.UNIT_SECRET, initiator)
@@ -452,6 +458,7 @@ def test_state_transition():
         from_channel,
         pseudo_random_generator,
         first_new_block,
+        UNIT_CHAIN_ID,
     )
     assert reveal_iteration.events
 
@@ -462,6 +469,7 @@ def test_state_transition():
         from_channel,
         pseudo_random_generator,
         second_new_block.block_number,
+        UNIT_CHAIN_ID,
     )
     assert not iteration.events
 
@@ -487,6 +495,7 @@ def test_state_transition():
         random.randint(0, UINT64_MAX),
         UNIT_SECRET,
         balance_proof,
+        UNIT_CHAIN_ID,
     )
 
     proof_iteration = target.state_transition(
@@ -495,6 +504,7 @@ def test_state_transition():
         from_channel,
         pseudo_random_generator,
         block_number + 2,
+        UNIT_CHAIN_ID,
     )
     assert proof_iteration.new_state is None
 

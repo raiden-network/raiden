@@ -80,7 +80,8 @@ class Event:
 
 
 class SendMessageEvent(Event):
-    def __init__(self, recipient, queue_name, message_identifier):
+    def __init__(self, chain_id, recipient, queue_name, message_identifier):
+        self.chain_id = chain_id
         self.recipient = recipient
         self.queue_name = queue_name
         self.message_identifier = message_identifier

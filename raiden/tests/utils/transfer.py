@@ -18,6 +18,7 @@ from raiden.raiden_service import (
 )
 
 from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
@@ -214,6 +215,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
             random.randint(0, UINT64_MAX),
             unlock_lock.secret,
             balance_proof,
+            UNIT_CHAIN_ID,
         )
 
         is_valid, _, msg = channel.handle_unlock(

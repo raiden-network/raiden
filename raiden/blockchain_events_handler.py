@@ -65,7 +65,7 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
     raiden.handle_state_change(new_token_network, current_block_number)
 
 
-def handle_channel_new(raiden, event, current_block_number):
+def handle_channel_new(raiden, event, current_block_number, chain_id):
     data = event.event_data
     token_network_identifier = event.originating_contract
     participant1 = data['participant1']
@@ -84,6 +84,7 @@ def handle_channel_new(raiden, event, current_block_number):
             raiden.config['reveal_timeout'],
             channel_proxy,
             event.event_data['block_number'],
+            chain_id,
         )
 
         new_channel = ContractReceiveChannelNew(
@@ -234,7 +235,7 @@ def handle_secret_revealed(raiden, event, current_block_number):
     raiden.handle_state_change(registeredsecret_state_change, current_block_number)
 
 
-def on_blockchain_event(raiden, event, current_block_number):
+def on_blockchain_event(raiden, event, current_block_number, chain_id):
     log.debug('BLOCKCHAIN EVENT', node=pex(raiden.address), chain_event=event)
 
     event = decode_event_to_internal(event)
@@ -244,7 +245,7 @@ def on_blockchain_event(raiden, event, current_block_number):
         handle_tokennetwork_new(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_CHANNEL_OPENED:
-        handle_channel_new(raiden, event, current_block_number)
+        handle_channel_new(raiden, event, current_block_number, chain_id)
 
     elif data['event'] == EVENT_CHANNEL_DEPOSIT:
         handle_channel_new_balance(raiden, event, current_block_number)

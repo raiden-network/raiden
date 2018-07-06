@@ -55,6 +55,7 @@ def handle_message_secret(raiden: RaidenService, message: Secret):
         message.message_identifier,
         message.secret,
         balance_proof,
+        message.chain_id,
     )
     raiden.handle_state_change(state_change)
 

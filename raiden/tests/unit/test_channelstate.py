@@ -134,6 +134,7 @@ def create_channel_from_models(our_model, partner_model):
 
     channel_state = NettingChannelState(
         identifier,
+        UNIT_CHAIN_ID,
         token_address,
         token_network_identifier,
         reveal_timeout,
@@ -670,6 +671,7 @@ def test_channelstate_receive_lockedtransfer():
         random.randint(0, UINT64_MAX),
         lock_secret,
         balance_proof,
+        UNIT_CHAIN_ID,
     )
 
     is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
@@ -877,6 +879,7 @@ def test_invalid_timeouts():
 
         NettingChannelState(
             identifier,
+            UNIT_CHAIN_ID,
             token_address,
             token_network_identifier,
             large_reveal_timeout,
@@ -893,6 +896,7 @@ def test_invalid_timeouts():
         with pytest.raises(ValueError):
             NettingChannelState(
                 identifier,
+                UNIT_CHAIN_ID,
                 token_address,
                 token_network_identifier,
                 invalid_value,
@@ -907,6 +911,7 @@ def test_invalid_timeouts():
         with pytest.raises(ValueError):
             NettingChannelState(
                 identifier,
+                UNIT_CHAIN_ID,
                 token_address,
                 token_network_identifier,
                 reveal_timeout,
@@ -1043,6 +1048,7 @@ def test_interwoven_transfers():
                 random.randint(0, UINT64_MAX),
                 lock_secret,
                 balance_proof,
+                UNIT_CHAIN_ID,
             )
 
             is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)

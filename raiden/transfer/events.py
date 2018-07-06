@@ -372,17 +372,19 @@ class SendDirectTransfer(SendMessageEvent):
 class SendProcessed(SendMessageEvent):
     def __repr__(self):
         return (
-            '<SendProcessed confirmed_msgid:{} recipient:{}>'
+            '<SendProcessed confirmed_msgid:{} recipient:{} chain_id:{}>'
         ).format(
             self.message_identifier,
             pex(self.recipient),
+            self.chain_id,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, SendProcessed) and
             self.message_identifier == other.message_identifier and
-            self.recipient == other.recipient
+            self.recipient == other.recipient and
+            self.chain_id == other.chain_id
         )
 
     def __ne__(self, other):

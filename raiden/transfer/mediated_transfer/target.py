@@ -183,7 +183,7 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_unlock(target_state, state_change, channel_state):
+def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
     """ Handles a ReceiveUnlock state change. """
     iteration = TransitionResult(target_state, list())
     balance_proof_sender = state_change.balance_proof.sender
@@ -208,6 +208,7 @@ def handle_unlock(target_state, state_change, channel_state):
             )
 
             send_processed = SendProcessed(
+                state_change.chain_id,
                 balance_proof_sender,
                 b'global',
                 state_change.message_identifier,
@@ -254,6 +255,7 @@ def state_transition(
         channel_state,
         pseudo_random_generator,
         block_number,
+        chain_id,
 ):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
