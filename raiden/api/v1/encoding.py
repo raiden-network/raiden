@@ -263,6 +263,7 @@ class ChannelSchema(BaseSchema):
 
 class ChannelStateSchema(BaseSchema):
     channel_identifier = KeccakField(attribute='identifier')
+    token_network_identifier = AddressField()
     token_address = AddressField()
     partner_address = fields.Method('get_partner_address')
     settle_timeout = fields.Integer()
