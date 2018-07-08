@@ -32,7 +32,7 @@
     "core-js": "^2.4.1",
     "font-awesome": "4.7.0",
     "jasmine": "^2.8.0",
-    "jquery": "^1.9.1",
+    "jquery": "^3.0.0",
     "ng-sidebar": "7.2.0",
     "ngx-clipboard": "11.1.1",
     "popper.js": "^1.14.3",
