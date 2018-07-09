@@ -91,7 +91,7 @@ class AlarmTask(gevent.Greenlet):
             self.last_block_number = current_block
             remove = list()
             for callback in self.callbacks:
-                result = callback(current_block, self.chain.network_id())
+                result = callback(current_block, self.chain.network_id)
                 if result is REMOVE_CALLBACK:
                     remove.append(callback)
 
