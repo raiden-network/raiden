@@ -81,7 +81,7 @@ def enable_greenlet_debugger(request):
 
         # Do not run pdb again if an exception hits top-level for a second
         # greenlet and the previous pdb session is still running
-        enabled = {}
+        enabled = False
         hub = gevent.get_hub()
 
         def debugger(context, type, value, tb):
@@ -92,10 +92,11 @@ def enable_greenlet_debugger(request):
             # corner cases.
             hub.print_exception(context, type, value, tb)
 
+            nonlocal enabled
             if not enabled:
-                enabled[1] = 1
+                enabled = True
                 pdb.post_mortem()
-                del enabled[1]
+                enabled = False
 
         # Hooking the debugger on the hub error handler. Exceptions that are
         # not handled on a given greenlet are forwarded to the
