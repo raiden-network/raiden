@@ -9,6 +9,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.factories import (
+    UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
     make_address,
     make_privkey_address,
@@ -67,6 +68,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
     invalid_token_address = make_address()
     channel_identifier = channel0.identifier
     direct_transfer_message = DirectTransfer(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         nonce=1,
@@ -114,6 +116,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
     message_identifier = random.randint(0, UINT64_MAX)
 
     direct_transfer_message = DirectTransfer(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         nonce=1,
@@ -157,6 +160,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
     message_identifier = random.randint(0, UINT64_MAX)
 
     direct_transfer_message = DirectTransfer(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1,
@@ -220,6 +224,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
     message_identifier = random.randint(0, UINT64_MAX)
 
     invalid_direct_transfer_message = DirectTransfer(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=same_payment_identifier,
         nonce=1,
@@ -274,6 +279,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     # Now receive one direct transfer for the closed channel
     message_identifier = random.randint(0, UINT64_MAX)
     direct_transfer_message = DirectTransfer(
+        chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=1,

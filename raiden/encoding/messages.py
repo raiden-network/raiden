@@ -42,6 +42,7 @@ log = structlog.get_logger(__name__)
 
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
+chain_id = make_field('chain_id', 8, '8s', integer(0, UINT64_MAX))
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
 delivered_message_identifier = make_field(
     'delivered_message_identifier',
@@ -128,6 +129,7 @@ Secret = namedbuffer(
     [
         cmdid(SECRET),
         pad(3),
+        chain_id,
         message_identifier,
         payment_identifier,
         token_network_address,
@@ -158,6 +160,7 @@ DirectTransfer = namedbuffer(
         cmdid(DIRECTTRANSFER),
         pad(3),
         nonce,
+        chain_id,
         message_identifier,
         payment_identifier,
         token_network_address,

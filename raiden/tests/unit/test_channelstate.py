@@ -181,16 +181,17 @@ def make_receive_transfer_direct(
     message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = nonce
     mediated_transfer_msg = DirectTransfer(
-        message_identifier,
-        payment_identifier,
-        nonce,
-        channel_state.token_network_identifier,
-        channel_state.token_address,
-        channel_state.identifier,
-        transferred_amount,
-        locked_amount,
-        channel_state.partner_state.address,
-        locksroot,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=channel_state.token_network_identifier,
+        token=channel_state.token_address,
+        channel_identifier=channel_state.identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=channel_state.partner_state.address,
+        locksroot=locksroot,
     )
     mediated_transfer_msg.sign(privkey, UNIT_CHAIN_ID)
 
