@@ -67,6 +67,45 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.fixture(scope='session', autouse=True)
+def enable_greenlet_debugger(request):
+    """ Enable the pdb debugger for gevent's greenlets.
+
+    This extends the flag `--pdb` from pytest to enable debugging of greenlets
+    which have raised an exception to the top-level. Without this hook the
+    exception raised in a greenlet is printed, and the thread state is
+    discarded. Making it impossible to execute a post_mortem
+    """
+    if request.config.option.usepdb:
+        import pdb
+
+        # Do not run pdb again if an exception hits top-level for a second
+        # greenlet and the previous pdb session is still running
+        enabled = {}
+        hub = gevent.get_hub()
+
+        def debugger(context, type, value, tb):
+            # Always print the exception, because once the pdb REPL is started
+            # we cannot retrieve it with `sys.exc_info()`.
+            #
+            # Using gevent's hub print_exception because it properly handles
+            # corner cases.
+            hub.print_exception(context, type, value, tb)
+
+            if not enabled:
+                enabled[1] = 1
+                pdb.post_mortem()
+                del enabled[1]
+
+        # Hooking the debugger on the hub error handler. Exceptions that are
+        # not handled on a given greenlet are forwarded to the
+        # parent.handle_error, until the hub is reached.
+        #
+        # Note: for this to work properly, it's really important to use
+        # gevent's spawn function.
+        hub.handle_error = debugger
+
+
 @pytest.fixture(autouse=True, scope='session')
 def logging_level(request):
     """ Configure the structlog level.
