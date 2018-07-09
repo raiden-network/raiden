@@ -2,7 +2,7 @@ from binascii import unhexlify
 
 from eth_utils import remove_0x_prefix
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -58,8 +58,7 @@ def deploy_contract_web3(
         num_confirmations: int = None,
         constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
-    manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-    contract_interface = manager.get_contract(contract_name)
+    contract_interface = CONTRACT_MANAGER.get_contract(contract_name)
 
     contract = deploy_client.web3.eth.contract(
         abi=contract_interface['abi'],
