@@ -675,15 +675,14 @@ class RevealSecret(SignedMessage):
     """
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, chain_id: ChainID, message_identifier: MessageID, secret: Secret):
-        super().__init__(chain_id)
+    def __init__(self, message_identifier: MessageID, secret: Secret):
+        super().__init__()
         self.message_identifier = message_identifier
         self.secret = secret
 
     def __repr__(self):
-        return '<{} [chainid:{} msgid:{} secrethash:{} hash:{}]>'.format(
+        return '<{} [msgid:{} secrethash:{} hash:{}]>'.format(
             self.__class__.__name__,
-            self.chain_id,
             self.message_identifier,
             pex(self.secrethash),
             pex(self.hash),
@@ -697,7 +696,6 @@ class RevealSecret(SignedMessage):
     @classmethod
     def unpack(cls, packed):
         reveal_secret = RevealSecret(
-            chain_id=packed.chain_id,
             message_identifier=packed.message_identifier,
             secret=packed.secret,
         )
@@ -705,7 +703,6 @@ class RevealSecret(SignedMessage):
         return reveal_secret
 
     def pack(self, packed):
-        packed.chain_id = self.chain_id
         packed.message_identifier = self.message_identifier
         packed.secret = self.secret
         packed.signature = self.signature
@@ -713,7 +710,6 @@ class RevealSecret(SignedMessage):
     @classmethod
     def from_event(cls, event):
         return cls(
-            chain_id=event.chain_id,
             message_identifier=event.message_identifier,
             secret=event.secret,
         )
@@ -721,7 +717,6 @@ class RevealSecret(SignedMessage):
     def to_dict(self):
         return {
             'type': self.__class__.__name__,
-            'chain_id': self.chain_id,
             'message_identifier': self.message_identifier,
             'secret': encode_hex(self.secret),
             'signature': encode_hex(self.signature),
@@ -731,7 +726,6 @@ class RevealSecret(SignedMessage):
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
         reveal_secret = cls(
-            chain_id=data['chain_id'],
             message_identifier=data['message_identifier'],
             secret=decode_hex(data['secret']),
         )
@@ -840,7 +834,7 @@ class DirectTransfer(EnvelopeMessage):
         balance_proof = event.balance_proof
 
         return cls(
-            chain_id=event.chain_id,
+            chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,

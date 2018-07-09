@@ -10,7 +10,7 @@ from raiden.constants import (
 )
 from raiden.utils import sha3
 from raiden.tests.utils.tests import fixture_all_combinations
-from raiden.tests.utils.factories import make_privkey_address
+from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.messages import (
     DirectTransfer,
@@ -193,6 +193,7 @@ def make_direct_transfer(
         message_identifier = random.randint(0, UINT64_MAX)
 
     return DirectTransfer(
+        UNIT_CHAIN_ID,
         message_identifier,
         payment_identifier,
         nonce,
