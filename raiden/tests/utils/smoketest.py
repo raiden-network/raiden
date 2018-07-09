@@ -257,16 +257,19 @@ def deploy_smoketest_contracts(client, chain_id):
         client,
     )
 
+
     secret_registry_address = deploy_contract_web3(
         CONTRACT_SECRET_REGISTRY,
         client,
+        num_confirmations=1,
     )
 
-    gevent.sleep(1)  # FIXME: properly wait for block
+
 
     token_network_registry_address = deploy_contract_web3(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         client,
+        None,
 
         to_checksum_address(secret_registry_address),
         chain_id,

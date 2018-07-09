@@ -75,6 +75,7 @@ def token_network_registry_address(
     address = deploy_contract_web3(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client,
+        None,
 
         to_checksum_address(secret_registry_address),
         chain_id,
