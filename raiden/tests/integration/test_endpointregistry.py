@@ -1,11 +1,14 @@
-import pytest
+from binascii import unhexlify
 
+import pytest
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
+
+from raiden.constants import DISCOVERY_TX_GAS_LIMIT
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, host_port_to_endpoint
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -47,21 +50,17 @@ def test_endpointregistry(private_keys, blockchain_services):
         contract_discovery.get(unregistered_address)
 
 
-@pytest.mark.parametrize('number_of_nodes', [5])
-def test_endpointregistry_gas(private_keys, blockchain_services):
-    chain = blockchain_services.blockchain_services[0]
+@pytest.mark.parametrize('number_of_nodes', [1])
+def test_endpointregistry_gas(endpoint_discovery_services):
+    """ DISCOVERY_TX_GAS_LIMIT value must be equal to the gas requried to call
+    registerEndpoint.
+    """
+    contract_discovery = endpoint_discovery_services[0]
+    discovery_proxy = contract_discovery.discovery_proxy
+    endpoint = host_port_to_endpoint('127.0.0.1', 44444)
 
-    endpointregistry_address = deploy_contract_web3(
-        CONTRACT_ENDPOINT_REGISTRY,
-        chain.client,
-        num_confirmations=None,
-    )
+    transaction_hash = discovery_proxy.proxy.transact('registerEndpoint', endpoint)
+    discovery_proxy.client.poll(unhexlify(transaction_hash))
 
-    for i in range(len(private_keys)):
-        chain = blockchain_services.blockchain_services[i]
-        discovery_proxy = chain.discovery(endpointregistry_address)
-
-        my_address = privatekey_to_address(private_keys[i])
-        contract_discovery = ContractDiscovery(my_address, discovery_proxy)
-        contract_discovery.register(my_address, '127.0.0.{}'.format(i + 1), 44444)
-        chain.next_block()
+    receipt = discovery_proxy.client.web3.eth.getTransactionReceipt(transaction_hash)
+    assert receipt['gasUsed'] <= DISCOVERY_TX_GAS_LIMIT
