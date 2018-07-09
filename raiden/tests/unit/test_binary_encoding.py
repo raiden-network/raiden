@@ -14,7 +14,7 @@ from raiden.tests.utils.messages import (
     make_mediated_transfer,
     make_refund_transfer,
 )
-from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID
+from raiden.tests.utils.factories import make_privkey_address
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

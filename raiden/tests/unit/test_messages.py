@@ -10,7 +10,7 @@ from raiden.tests.utils.messages import (
     REFUND_TRANSFER_INVALID_VALUES,
     DIRECT_TRANSFER_INVALID_VALUES,
 )
-from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID
+from raiden.tests.utils.factories import make_privkey_address
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

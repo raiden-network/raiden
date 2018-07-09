@@ -5,7 +5,7 @@ import string
 
 from coincurve import PrivateKey
 
-from raiden.constants import UINT64_MAX, NETWORKNAME_TO_ID
+from raiden.constants import UINT64_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,

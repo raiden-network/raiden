@@ -88,7 +88,7 @@ class NodeState(State):
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
         'payment_mapping',
-        'chain_id'
+        'chain_id',
     )
 
     def __init__(
