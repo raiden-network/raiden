@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import json
 import os
 
 import click
@@ -23,9 +23,10 @@ $ python ../../tools/join-contracts.py SomeContractWithImports.sol joined.sol
 
 
 class ContractJoiner:
-    def __init__(self):
+    def __init__(self, import_map=None):
         self.have_pragma = False
         self.seen = set()
+        self.import_map = import_map if import_map else {}
 
     def join(self, contract_file):
         out = []
@@ -47,6 +48,9 @@ class ContractJoiner:
                 match = IMPORT_RE.match(stripped_line)
                 if match:
                     next_file = match.groupdict().get('contract')
+                    for prefix, path in self.import_map.items():
+                        if next_file.startswith(prefix):
+                            next_file = next_file.replace(prefix, path)
                     if next_file and os.path.exists(next_file):
                         with open(next_file) as next_contract:
                             out.extend(self.join(next_contract))
@@ -56,10 +60,12 @@ class ContractJoiner:
 
 
 @click.command()
+@click.option('--import-map', default='', help='JSON mapping {"path-prefix": "/file/system/path"}')
 @click.argument('contract', type=File())
 @click.argument('output', type=File('w'))
-def main(contract, output):
-    output.write("\n".join(ContractJoiner().join(contract)))
+def main(contract, output, import_map):
+    import_map = json.loads(import_map)
+    output.write("\n".join(ContractJoiner(import_map).join(contract)))
 
 
 if __name__ == '__main__':
