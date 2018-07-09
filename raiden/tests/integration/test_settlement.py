@@ -294,6 +294,12 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     app0.raiden.sign(reveal_secret)
     message_handler.on_message(app1.raiden, reveal_secret)
 
+    RaidenAPI(app0.raiden).channel_close(
+        app0.raiden.default_registry.address,
+        token_address,
+        app1.raiden.address,
+    )
+
     channel_state = get_channelstate(app0, app1, token_network_identifier)
     waiting.wait_for_settle(
         app0.raiden,
