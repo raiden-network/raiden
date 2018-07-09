@@ -242,19 +242,20 @@ def make_receive_transfer_mediated(
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
     mediated_transfer_msg = LockedTransfer(
-        random.randint(0, UINT64_MAX),
-        payment_identifier,
-        nonce,
-        token_network_address,
-        channel_state.token_address,
-        channel_state.identifier,
-        transferred_amount,
-        locked_amount,
-        channel_state.partner_state.address,
-        locksroot,
-        lock,
-        transfer_target,
-        transfer_initiator,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=token_network_address,
+        token=channel_state.token_address,
+        channel_identifier=channel_state.identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=channel_state.partner_state.address,
+        locksroot=locksroot,
+        lock=lock,
+        target=transfer_target,
+        initiator=transfer_initiator,
     )
     mediated_transfer_msg.sign(privkey, UNIT_CHAIN_ID)
 

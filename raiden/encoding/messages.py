@@ -180,6 +180,7 @@ LockedTransfer = namedbuffer(
         cmdid(LOCKEDTRANSFER),
         pad(3),
         nonce,
+        chain_id,
         message_identifier,
         payment_identifier,
         expiration,
