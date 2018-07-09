@@ -10,6 +10,7 @@ from raiden_contracts.constants import (
     EVENT_TOKEN_NETWORK_CREATED,
 )
 
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.blockchain.events import (
     ALL_EVENTS,
@@ -32,22 +33,56 @@ from raiden.transfer import views, channel
 from raiden.utils import sha3
 
 
-def event_dicts_are_equal(dict1, dict2):
-    for k, v in dict1.items():
-        if k not in dict2:
-            return False
-        if k == 'block_number':
-            continue
+def wait_both_channel_open(
+        app0,
+        app1,
+        registry_address,
+        token_address,
+        retry_timeout,
+):
+    waiting.wait_for_newchannel(
+        app1.raiden,
+        registry_address,
+        token_address,
+        app0.raiden.address,
+        retry_timeout,
+    )
+    waiting.wait_for_newchannel(
+        app0.raiden,
+        registry_address,
+        token_address,
+        app1.raiden.address,
+        retry_timeout,
+    )
 
-        v2 = dict2[k]
-        if isinstance(v2, str) and v2.startswith('0x'):
-            v2 = v2[2:].lower()
-        if isinstance(v, str) and v.startswith('0x'):
-            v = v[2:].lower()
-        if v2 != v:
-            return False
 
-    return True
+def wait_both_channel_deposit(
+        app_deposit,
+        app_partner,
+        registry_address,
+        token_address,
+        total_deposit,
+        retry_timeout,
+):
+    waiting.wait_for_participant_newbalance(
+        app_deposit.raiden,
+        registry_address,
+        token_address,
+        app_partner.raiden.address,
+        app_deposit.raiden.address,
+        total_deposit,
+        retry_timeout,
+    )
+
+    waiting.wait_for_participant_newbalance(
+        app_partner.raiden,
+        registry_address,
+        token_address,
+        app_deposit.raiden.address,
+        app_deposit.raiden.address,
+        total_deposit,
+        retry_timeout,
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -69,7 +104,7 @@ def test_channel_new(raiden_chain, retry_timeout, token_addresses):
         app1.raiden.address,
     )
 
-    gevent.sleep(retry_timeout)
+    wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     # The channel is created but without funds
     channelcount1 = views.total_token_network_channels(
@@ -99,8 +134,13 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     assert channel0 is None
     assert channel1 is None
 
-    RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
-    gevent.sleep(retry_timeout)
+    RaidenAPI(app0.raiden).channel_open(
+        registry_address,
+        token_address,
+        app1.raiden.address,
+    )
+
+    wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -115,7 +155,14 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         deposit,
     )
 
-    gevent.sleep(retry_timeout)
+    wait_both_channel_deposit(
+        app0,
+        app1,
+        registry_address,
+        token_address,
+        deposit,
+        retry_timeout,
+    )
 
     assert_synched_channel_state(
         token_network_identifier,
@@ -130,7 +177,14 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         deposit,
     )
 
-    gevent.sleep(retry_timeout)
+    wait_both_channel_deposit(
+        app1,
+        app0,
+        registry_address,
+        token_address,
+        deposit,
+        retry_timeout,
+    )
 
     assert_synched_channel_state(
         token_network_identifier,
