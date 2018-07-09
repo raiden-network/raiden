@@ -247,7 +247,7 @@ class RaidenService:
             state_change = ActionInitNode(
                 random.Random(),
                 block_number,
-                self.chain.network_id(),
+                self.chain.network_id,
             )
             self.wal.log_and_dispatch(state_change, block_number)
             payment_network = PaymentNetworkState(
@@ -426,7 +426,7 @@ class RaidenService:
                 on_blockchain_event(
                     self,
                     event, event.event_data['block_number'],
-                    self.chain.network_id(),
+                    self.chain.network_id,
                 )
 
     def connection_manager_for_token_network(self, token_network_identifier):
