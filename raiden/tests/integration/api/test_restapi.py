@@ -796,7 +796,6 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.chain.client,
         None,
-        
         token_amount, 2, 'raiden', 'Rd',
     )
 

@@ -11,7 +11,6 @@ import subprocess
 import tempfile
 import time
 import traceback
-import gevent
 from typing import Dict
 
 from eth_utils import to_checksum_address, to_canonical_address
@@ -257,20 +256,16 @@ def deploy_smoketest_contracts(client, chain_id):
         client,
     )
 
-
     secret_registry_address = deploy_contract_web3(
         CONTRACT_SECRET_REGISTRY,
         client,
         num_confirmations=1,
     )
 
-
-
     token_network_registry_address = deploy_contract_web3(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         client,
         None,
-
         to_checksum_address(secret_registry_address),
         chain_id,
         TEST_SETTLE_TIMEOUT_MIN,

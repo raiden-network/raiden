@@ -85,7 +85,6 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app1.raiden.chain.client,
         None,
-        
         token_amount,
         2,
         'raiden',
