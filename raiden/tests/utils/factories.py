@@ -147,17 +147,17 @@ def make_channel(
     settle_transaction = None
 
     channel_state = NettingChannelState(
-        UNIT_CHAIN_ID,
-        channel_identifier,
-        token_address,
-        token_network_identifier,
-        reveal_timeout,
-        settle_timeout,
-        our_state,
-        partner_state,
-        open_transaction,
-        close_transaction,
-        settle_transaction,
+        identifier=channel_identifier,
+        chain_id=UNIT_CHAIN_ID,
+        token_address=token_address,
+        token_network_identifier=token_network_identifier,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=settle_timeout,
+        our_state=our_state,
+        partner_state=partner_state,
+        open_transaction=open_transaction,
+        close_transaction=close_transaction,
+        settle_transaction=settle_transaction,
     )
 
     return channel_state
@@ -193,13 +193,13 @@ def make_transfer(
         assert locked_amount
 
     unsigned_balance_proof = BalanceProofUnsignedState(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        token_network_identifier,
-        channel_identifier,
-        UNIT_CHAIN_ID,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        token_network_identifier=token_network_identifier,
+        channel_address=channel_identifier,
+        chain_id=UNIT_CHAIN_ID,
     )
 
     transfer_state = LockedTransferUnsignedState(
@@ -267,7 +267,7 @@ def make_signed_transfer(
         target=target,
         initiator=initiator,
     )
-    transfer.sign(pkey, UNIT_CHAIN_ID)
+    transfer.sign(pkey)
     assert transfer.sender == sender
 
     return lockedtransfersigned_from_message(transfer)
@@ -305,7 +305,7 @@ def make_signed_balance_proof(
         additional_hash=extra_hash,
         channel_identifier=channel_address,
         token_network_identifier=token_network_address,
-        chain_id=NETWORKNAME_TO_ID['tests'],
+        chain_id=UNIT_CHAIN_ID,
     )
 
     signature = signing.sign(data_to_sign, private_key)

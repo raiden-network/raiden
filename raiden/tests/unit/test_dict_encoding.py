@@ -26,7 +26,7 @@ def test_direct_transfer_min_max(payment_identifier, nonce, transferred_amount):
         transferred_amount=transferred_amount,
     )
 
-    direct_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
+    direct_transfer.sign(PRIVKEY)
     assert DirectTransfer.from_dict(direct_transfer.to_dict()) == direct_transfer
 
 
@@ -44,7 +44,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
         transferred_amount=transferred_amount,
     )
 
-    mediated_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
+    mediated_transfer.sign(PRIVKEY)
     assert LockedTransfer.from_dict(mediated_transfer.to_dict()) == mediated_transfer
 
 
@@ -60,5 +60,5 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
         transferred_amount=transferred_amount,
     )
 
-    refund_transfer.sign(PRIVKEY, UNIT_CHAIN_ID)
+    refund_transfer.sign(PRIVKEY)
     assert RefundTransfer.from_dict(refund_transfer.to_dict()) == refund_transfer

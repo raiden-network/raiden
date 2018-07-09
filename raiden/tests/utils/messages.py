@@ -119,7 +119,7 @@ def make_refund_transfer(
         locked_amount=locked_amount,
         recipient=recipient,
         locksroot=locksroot,
-        lokc=make_lock(amount=amount, secrethash=secrethash),
+        lock=make_lock(amount=amount, secrethash=secrethash),
         target=target,
         initiator=initiator,
         fee=fee,
