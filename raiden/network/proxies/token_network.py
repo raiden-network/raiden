@@ -414,7 +414,7 @@ class TokenNetwork:
 
         with releasing(self.channel_operations_lock[partner]), self.deposit_lock:
 
-            # setTotalDeposit requires a monotonically increasing value, this
+            # setTotalDeposit requires a monotonically increasing value. This
             # is used to handle concurrent actions:
             #
             #  - The deposits will be done in order, i.e. the monotonic
@@ -423,7 +423,7 @@ class TokenNetwork:
             #  deposit winning
             #  - Retries wont have effect
             #
-            # This check is serialized with channel_operations_lock to avoid
+            # This check is serialized with the channel_operations_lock to avoid
             # sending invalid transactions on-chain (decreasing total deposit).
             #
             current_deposit = self.detail_participant(self.node_address, partner)['deposit']
@@ -432,13 +432,13 @@ class TokenNetwork:
                 raise ValueError(f'deposit {amount_to_deposit} must be greater than 0.')
 
             # A node may be setting up multiple channels for the same token
-            # concurrently, because each deposit changes the user balance this
+            # concurrently. Because each deposit changes the user balance this
             # check must be serialized with the operation locks.
             #
             # This check is merely informational, used to avoid sending
             # transactions which are known to fail.
             #
-            # This check is serialized with channel_operations_lock to avoid
+            # It is serialized with the channel_operations_lock to avoid
             # sending invalid transactions on-chain (account without balance).
             #
             current_balance = token.balance_of(self.node_address)
@@ -451,22 +451,22 @@ class TokenNetwork:
 
             # If there are channels being set up concurrenlty either the
             # allowance must be accumulated *or* the calls to `approve` and
-            # `setTotalDeposit` must be serialized, this is necessary otherwise
+            # `setTotalDeposit` must be serialized. This is necessary otherwise
             # the deposit will fail.
             #
-            # Calls to approve and setTotalDeposit are serialized with
+            # Calls to approve and setTotalDeposit are serialized with the
             # channel_operations_lock to avoid transaction failure, because
-            # with two concurrent deposits, may have the transactions executed
-            # in the following order
+            # with two concurrent deposits, we may have the transactions
+            # executed in the following order
             #
             # - approve
             # - approve
             # - setTotalDeposit
             # - setTotalDeposit
             #
-            # Were the second `approve` will overwrite the first, and the first
-            # `setTotalDeposit` will consume the alowance, making the second
-            # deposit fail.
+            # in which case  the second `approve` will overwrite the first,
+            # and the first `setTotalDeposit` will consume the allowance,
+            #  making the second deposit fail.
             token.approve(self.address, amount_to_deposit)
 
             log_details = {
@@ -492,8 +492,8 @@ class TokenNetwork:
             if receipt_or_none:
                 if token.allowance(self.node_address, self.address) != amount_to_deposit:
                     log_msg = (
-                        'deposit failed and allowance was consumed, check concurrent deposits '
-                        'for the same token network but different proxies'
+                        'Deposit failed and allowance was consumed. Check concurrent deposits '
+                        'for the same token network but different proxies.'
                     )
                 else:
                     log_msg = 'deposit failed'
