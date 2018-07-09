@@ -6,11 +6,7 @@ from raiden.network.proxies import (
     TokenNetwork,
 )
 
-from raiden_contracts.contract_manager import (
-    CONTRACT_MANAGER,
-    ContractManager,
-    CONTRACTS_SOURCE_DIRS,
-)
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from eth_utils import to_canonical_address
 
 from raiden_contracts.constants import (
@@ -131,8 +127,7 @@ def deploy_token(deploy_client):
             ),
         )
 
-        manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-        contract_abi = manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
+        contract_abi = CONTRACT_MANAGER.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
         return deploy_client.new_contract_proxy(
             contract_interface=contract_abi,
             contract_address=token_address,
