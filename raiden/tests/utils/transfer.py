@@ -35,7 +35,7 @@ from raiden.utils import sha3
 
 def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
-    message.sign(key, NETWORKNAME_TO_ID[TESTS])
+    message.sign(key)
     on_message(app.raiden, message)
 
 
@@ -369,7 +369,7 @@ def make_mediated_transfer(
     mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
     sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key, NETWORKNAME_TO_ID[TESTS])
+    mediated_transfer_msg.sign(sign_key)
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)

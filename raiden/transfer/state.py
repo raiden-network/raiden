@@ -95,7 +95,7 @@ class NodeState(State):
             self,
             pseudo_random_generator: random.Random,
             block_number: typing.BlockNumber,
-            chain_id: typing.ChainId,
+            chain_id: typing.ChainID,
     ):
         if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be of BlockNumber type')

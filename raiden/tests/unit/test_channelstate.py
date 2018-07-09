@@ -133,17 +133,17 @@ def create_channel_from_models(our_model, partner_model):
     settled_transaction = None
 
     channel_state = NettingChannelState(
-        identifier,
-        UNIT_CHAIN_ID,
-        token_address,
-        token_network_identifier,
-        reveal_timeout,
-        settle_timeout,
-        our_state,
-        partner_state,
-        opened_transaction,
-        closed_transaction,
-        settled_transaction,
+        identifier=identifier,
+        chain_id=UNIT_CHAIN_ID,
+        token_address=token_address,
+        token_network_identifier=token_network_identifier,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=settle_timeout,
+        our_state=our_state,
+        partner_state=partner_state,
+        open_transaction=opened_transaction,
+        close_transaction=closed_transaction,
+        settle_transaction=settled_transaction,
     )
 
     assert_partner_state(
@@ -193,7 +193,7 @@ def make_receive_transfer_direct(
         recipient=channel_state.partner_state.address,
         locksroot=locksroot,
     )
-    mediated_transfer_msg.sign(privkey, UNIT_CHAIN_ID)
+    mediated_transfer_msg.sign(privkey)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
@@ -257,7 +257,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         initiator=transfer_initiator,
     )
-    mediated_transfer_msg.sign(privkey, UNIT_CHAIN_ID)
+    mediated_transfer_msg.sign(privkey)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
@@ -661,13 +661,13 @@ def test_channelstate_receive_lockedtransfer():
         payment_identifier=1,
         nonce=2,
         token_network_address=token_network_identifier,
-        channel=channel_state.identifier,
+        channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    secret_message.sign(privkey2, UNIT_CHAIN_ID)
+    secret_message.sign(privkey2)
 
     balance_proof = balanceproof_from_envelope(secret_message)
     unlock_state_change = ReceiveUnlock(
@@ -881,49 +881,49 @@ def test_invalid_timeouts():
         small_settle_timeout = 49
 
         NettingChannelState(
-            identifier,
-            UNIT_CHAIN_ID,
-            token_address,
-            token_network_identifier,
-            large_reveal_timeout,
-            small_settle_timeout,
-            our_state,
-            partner_state,
-            opened_transaction,
-            closed_transaction,
-            settled_transaction,
+            identifier=identifier,
+            chain_id=UNIT_CHAIN_ID,
+            token_address=token_address,
+            token_network_identifier=token_network_identifier,
+            reveal_timeout=large_reveal_timeout,
+            settle_timeout=small_settle_timeout,
+            our_state=our_state,
+            partner_state=partner_state,
+            open_transaction=opened_transaction,
+            close_transaction=closed_transaction,
+            settle_transaction=settled_transaction,
         )
 
     # TypeError: 'a', [], {}
     for invalid_value in (-1, 0, 1.1, 1.0):
         with pytest.raises(ValueError):
             NettingChannelState(
-                identifier,
-                UNIT_CHAIN_ID,
-                token_address,
-                token_network_identifier,
-                invalid_value,
-                settle_timeout,
-                our_state,
-                partner_state,
-                opened_transaction,
-                closed_transaction,
-                settled_transaction,
+                identifier=identifier,
+                chain_id=UNIT_CHAIN_ID,
+                token_address=token_address,
+                token_network_identifier=token_network_identifier,
+                reveal_timeout=invalid_value,
+                settle_timeout=settle_timeout,
+                our_state=our_state,
+                partner_state=partner_state,
+                open_transaction=opened_transaction,
+                close_transaction=closed_transaction,
+                settle_transaction=settled_transaction,
             )
 
         with pytest.raises(ValueError):
             NettingChannelState(
-                identifier,
-                UNIT_CHAIN_ID,
-                token_address,
-                token_network_identifier,
-                reveal_timeout,
-                invalid_value,
-                our_state,
-                partner_state,
-                opened_transaction,
-                closed_transaction,
-                settled_transaction,
+                identifier=identifier,
+                chain_id=UNIT_CHAIN_ID,
+                token_address=token_address,
+                token_network_identifier=token_network_identifier,
+                reveal_timeout=reveal_timeout,
+                settle_timeout=invalid_value,
+                our_state=our_state,
+                partner_state=partner_state,
+                open_transaction=opened_transaction,
+                close_transaction=closed_transaction,
+                settle_transaction=settled_transaction,
             )
 
 
@@ -1039,13 +1039,13 @@ def test_interwoven_transfers():
                 payment_identifier=nonce,
                 nonce=nonce,
                 token_network_address=token_network_address,
-                channel=channel_state.identifier,
+                channel_identifier=channel_state.identifier,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
                 locksroot=locksroot,
                 secret=lock_secret,
             )
-            secret_message.sign(privkey2, UNIT_CHAIN_ID)
+            secret_message.sign(privkey2)
 
             balance_proof = balanceproof_from_envelope(secret_message)
             unlock_state_change = ReceiveUnlock(

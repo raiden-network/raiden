@@ -53,17 +53,17 @@ def get_channel_state(
     settle_transaction = None
 
     channel = NettingChannelState(
-        identifier,
-        chain_id,
-        token_address,
-        token_network_address,
-        reveal_timeout,
-        settle_timeout,
-        our_state,
-        partner_state,
-        open_transaction,
-        close_transaction,
-        settle_transaction,
+        identifier=identifier,
+        chain_id=chain_id,
+        token_address=token_address,
+        token_network_identifier=token_network_address,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=settle_timeout,
+        our_state=our_state,
+        partner_state=partner_state,
+        open_transaction=open_transaction,
+        close_transaction=close_transaction,
+        settle_transaction=settle_transaction,
     )
 
     return channel

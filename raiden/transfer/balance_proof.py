@@ -79,7 +79,6 @@ def pack_signing_data(
 
 def signing_update_data(
         balance_proof: BalanceProofSignedState,
-        chain_id: int,
         privkey: bytes,
 ) -> typing.Signature:
     update_data = pack_signing_data(
@@ -88,7 +87,7 @@ def signing_update_data(
         balance_proof.message_hash,
         balance_proof.channel_address,
         balance_proof.token_network_identifier,
-        chain_id,
+        balance_proof.chain_id,
     ) + balance_proof.signature
 
     return sign_data(encode_hex(privkey), update_data)

@@ -196,7 +196,7 @@ def is_valid_signature(
         additional_hash=balance_proof.message_hash,
         channel_identifier=balance_proof.channel_address,
         token_network_identifier=balance_proof.token_network_identifier,
-        chain_id=NETWORKNAME_TO_ID['tests'],
+        chain_id=balance_proof.chain_id,
     )
 
     try:
@@ -1018,13 +1018,13 @@ def create_senddirecttransfer(
     locked_amount = get_amount_locked(our_state)
 
     balance_proof = BalanceProofUnsignedState(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        channel_state.token_network_identifier,
-        channel_state.identifier,
-        channel_state.chain_id,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_address=channel_state.identifier,
+        chain_id=channel_state.chain_id,
     )
 
     queue_name = channel_state.identifier
@@ -1089,13 +1089,13 @@ def create_sendlockedtransfer(
     locked_amount = get_amount_locked(our_state) + amount  # the new lock is not registered yet
 
     balance_proof = BalanceProofUnsignedState(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        channel_state.token_network_identifier,
-        channel_state.identifier,
-        channel_state.chain_id,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_address=channel_state.identifier,
+        chain_id=channel_state.chain_id,
     )
 
     locked_transfer = LockedTransferUnsignedState(
@@ -1151,13 +1151,13 @@ def create_unlock(
     locked_amount = get_amount_locked(our_state) - lock.amount  # the lock is still registered
 
     balance_proof = BalanceProofUnsignedState(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        channel_state.token_network_identifier,
-        channel_state.identifier,
-        channel_state.chain_id,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_address=channel_state.identifier,
+        chain_id=channel_state.chain_id,
     )
 
     queue_name = channel_state.identifier
