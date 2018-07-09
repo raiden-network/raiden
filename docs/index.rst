@@ -22,6 +22,7 @@ Contents
   webui_tutorial
   spec
   smart_contracts
+  config_file
   changelog
   glossary
   Raiden Codebase Documentation <./_build/generated/modules>
