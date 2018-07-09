@@ -108,20 +108,21 @@ def make_refund_transfer(
         assert locked_amount >= amount
 
     return RefundTransfer(
-        message_identifier,
-        payment_identifier,
-        nonce,
-        token_network_address,
-        token,
-        channel,
-        transferred_amount,
-        locked_amount,
-        recipient,
-        locksroot,
-        make_lock(amount=amount, secrethash=secrethash),
-        target,
-        initiator,
-        fee,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=token_network_address,
+        token=token,
+        channel_identifier=channel,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=recipient,
+        locksroot=locksroot,
+        lokc=make_lock(amount=amount, secrethash=secrethash),
+        target=target,
+        initiator=initiator,
+        fee=fee,
     )
 
 

@@ -206,6 +206,7 @@ RefundTransfer = namedbuffer(
         cmdid(REFUNDTRANSFER),
         pad(3),
         nonce,
+        chain_id,
         message_identifier,
         payment_identifier,
         expiration,
