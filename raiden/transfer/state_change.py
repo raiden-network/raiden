@@ -231,7 +231,7 @@ class ActionInitNode(StateChange):
             self,
             pseudo_random_generator,
             block_number: typing.BlockNumber,
-            chain_id: typing.ChainID
+            chain_id: typing.ChainID,
     ):
         if not isinstance(block_number, int):
             raise ValueError('block_number must be int')

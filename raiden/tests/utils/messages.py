@@ -97,7 +97,8 @@ def make_refund_transfer(
         target=ADDRESS,
         initiator=ADDRESS,
         fee=0,
-        secrethash=VALID_SECRETHASHES[0]):
+        secrethash=VALID_SECRETHASHES[0],
+):
 
     if message_identifier is None:
         message_identifier = random.randint(0, UINT64_MAX)
@@ -141,7 +142,7 @@ def make_mediated_transfer(
         recipient=ADDRESS,
         target=ADDRESS,
         initiator=ADDRESS,
-        fee=0
+        fee=0,
 ):
 
     if message_identifier is None:

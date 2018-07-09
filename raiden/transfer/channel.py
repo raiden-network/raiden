@@ -4,7 +4,7 @@ from binascii import hexlify
 from collections import namedtuple
 from typing import Union
 
-from raiden.constants import UINT256_MAX, NETWORKNAME_TO_ID
+from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult

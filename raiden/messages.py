@@ -849,8 +849,8 @@ class DirectTransfer(EnvelopeMessage):
     def __repr__(self):
         representation = (
             '<{} ['
-            'chainid:{} msgid:{} paymentid:{} token_network:{} channel:{} nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} hash:{}'
+            'chainid:{} msgid:{} paymentid:{} token_network:{} channel:{} nonce:{} '
+            'transferred_amount:{} locked_amount:{} locksroot:{} hash:{}'
             ']>'
         ).format(
             self.__class__.__name__,
