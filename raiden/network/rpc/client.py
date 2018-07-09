@@ -11,7 +11,6 @@ from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
 from eth_utils import (
-    to_int,
     encode_hex,
     to_checksum_address,
     to_canonical_address,

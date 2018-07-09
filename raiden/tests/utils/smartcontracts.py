@@ -52,7 +52,7 @@ def deploy_tokens_and_fund_accounts(
 def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
-        num_confirmations: typing.Optional[int] = None,
+        num_confirmations: int = None,
         *args,
 ) -> typing.Address:
     manager = ContractManager(CONTRACTS_SOURCE_DIRS)
@@ -71,7 +71,6 @@ def deploy_contract_web3(
         deploy_client.privkey,
     )
     tx_hash = deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-
 
     deploy_client.poll(transaction_hash=tx_hash, confirmations=num_confirmations)
 
