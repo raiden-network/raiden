@@ -129,7 +129,7 @@ def make_mediated_transfer(
         message_identifier=None,
         payment_identifier=0,
         nonce=1,
-        registry_address=ADDRESS,
+        token_network_addresss=ADDRESS,
         token=ADDRESS,
         channel=CHANNEL_ID,
         transferred_amount=0,
@@ -140,7 +140,8 @@ def make_mediated_transfer(
         recipient=ADDRESS,
         target=ADDRESS,
         initiator=ADDRESS,
-        fee=0):
+        fee=0
+):
 
     if message_identifier is None:
         message_identifier = random.randint(0, UINT64_MAX)
@@ -159,20 +160,21 @@ def make_mediated_transfer(
         assert locked_amount >= amount
 
     return LockedTransfer(
-        message_identifier,
-        payment_identifier,
-        nonce,
-        registry_address,
-        token,
-        channel,
-        transferred_amount,
-        locked_amount,
-        recipient,
-        locksroot,
-        lock,
-        target,
-        initiator,
-        fee,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=token_network_addresss,
+        token=token,
+        channel_identifier=channel,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=recipient,
+        locksroot=locksroot,
+        lock=lock,
+        target=target,
+        initiator=initiator,
+        fee=fee,
     )
 
 

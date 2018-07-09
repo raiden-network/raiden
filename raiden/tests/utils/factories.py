@@ -24,7 +24,7 @@ from raiden.transfer.state import (
     RouteState,
     TransactionExecutionStatus,
 )
-from raiden.transfer.state import BalanceProofUnsignedState
+from raiden.transfer.state import BalanceProofUnsignedState, EMPTY_MERKLE_ROOT
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfersigned_from_message,
     HashTimeLockState,
@@ -225,6 +225,7 @@ def make_signed_transfer(
         nonce=1,
         transferred_amount=0,
         locked_amount=None,
+        locksroot=EMPTY_MERKLE_ROOT,
         recipient=UNIT_TRANSFER_TARGET,
         channel_identifier=UNIT_CHANNEL_ID,
         token=UNIT_TOKEN_ADDRESS,
@@ -242,25 +243,29 @@ def make_signed_transfer(
         secrethash,
     )
 
+    if locksroot == EMPTY_MERKLE_ROOT:
+        locksroot = sha3(lock.as_bytes)
+
     if locked_amount is None:
         locked_amount = amount
     else:
         assert locked_amount >= amount
 
     transfer = LockedTransfer(
-        message_identifier,
-        payment_identifier,
-        nonce,
-        UNIT_REGISTRY_IDENTIFIER,
-        token,
-        channel_identifier,
-        transferred_amount,
-        locked_amount,
-        recipient,
-        lock.lockhash,
-        lock,
-        target,
-        initiator,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
+        token=token,
+        channel_identifier=channel_identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=recipient,
+        locksroot=locksroot,
+        lock=lock,
+        target=target,
+        initiator=initiator,
     )
     transfer.sign(pkey, UNIT_CHAIN_ID)
     assert transfer.sender == sender
