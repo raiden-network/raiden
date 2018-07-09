@@ -547,7 +547,7 @@ class JSONRPCClient:
 
         if confirmations:
             # this will wait for both APPLIED and REVERTED transactions
-            transaction_block = to_int(hexstr=transaction['blockNumber'])
+            transaction_block = transaction['blockNumber']
             confirmation_block = transaction_block + confirmations
 
             block_number = self.block_number()

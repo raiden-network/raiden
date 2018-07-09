@@ -122,6 +122,7 @@ def deploy_token(deploy_client):
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_client,
+            None,
             initial_amount,
             decimals,
             token_name,

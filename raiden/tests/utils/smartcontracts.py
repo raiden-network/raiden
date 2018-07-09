@@ -52,6 +52,7 @@ def deploy_tokens_and_fund_accounts(
 def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
+        num_confirmations: typing.Optional[int] = None,
         *args,
 ) -> typing.Address:
     manager = ContractManager(CONTRACTS_SOURCE_DIRS)
@@ -71,7 +72,8 @@ def deploy_contract_web3(
     )
     tx_hash = deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
 
-    deploy_client.poll(tx_hash)
+
+    deploy_client.poll(transaction_hash=tx_hash, confirmations=num_confirmations)
 
     receipt = deploy_client.get_transaction_receipt(tx_hash)
 
