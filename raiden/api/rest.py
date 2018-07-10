@@ -513,7 +513,7 @@ class RestAPI:
                 connection_manager = None
 
             open_channels = views.get_channelstate_open(
-                node_state=views.state_from_raiden(self.raiden_api.raiden),
+                chain_state=views.state_from_raiden(self.raiden_api.raiden),
                 payment_network_id=registry_address,
                 token_address=token,
             )

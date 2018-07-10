@@ -33,7 +33,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionInitNode,
+    ActionInitChain,
     ActionLeaveAllNetworks,
     ActionTransferDirect,
     Block,
@@ -244,7 +244,7 @@ class RaidenService:
         if self.wal.state_manager.current_state is None:
             block_number = self.chain.block_number()
 
-            state_change = ActionInitNode(
+            state_change = ActionInitChain(
                 random.Random(),
                 block_number,
                 self.chain.network_id,
@@ -385,7 +385,7 @@ class RaidenService:
         with self.event_poll_lock:
             for event in self.blockchain_events.poll_blockchain_events():
                 # These state changes will be procesed with a block_number
-                # which is /larger/ than the NodeState's block_number.
+                # which is /larger/ than the ChainState's block_number.
                 on_blockchain_event(self, event, current_block_number, chain_id)
 
             # On restart the Raiden node will re-create the filters with the

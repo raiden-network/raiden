@@ -32,10 +32,10 @@ def test_failsfast_directtransfer_exceeding_distributable(
 
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
-    node_state = views.state_from_app(alice_app)
+    chain_state = views.state_from_app(alice_app)
     payment_network_id = alice_app.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        node_state,
+        chain_state,
         payment_network_id,
         token_address,
     )

@@ -7,7 +7,7 @@ from eth_utils import is_binary_address
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
-    NodeState,
+    ChainState,
     CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
@@ -76,7 +76,7 @@ def get_ordered_partners(
 
 
 def get_best_routes(
-        node_state: NodeState,
+        chain_state: ChainState,
         token_network_id: typing.Address,
         from_address: typing.Address,
         to_address: typing.Address,
@@ -95,11 +95,11 @@ def get_best_routes(
     available_routes = list()
 
     token_network = views.get_token_network_by_identifier(
-        node_state,
+        chain_state,
         token_network_id,
     )
 
-    network_statuses = views.get_networkstatuses(node_state)
+    network_statuses = views.get_networkstatuses(chain_state)
 
     neighbors_heap = get_ordered_partners(
         token_network.network_graph.network,
@@ -116,7 +116,7 @@ def get_best_routes(
         _, partner_address = heappop(neighbors_heap)
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            node_state,
+            chain_state,
             token_network_id,
             partner_address,
         )

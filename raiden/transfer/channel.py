@@ -1232,7 +1232,7 @@ def send_refundtransfer(
         expiration: typing.BlockExpiration,
         secrethash: typing.SecretHash,
 ) -> SendRefundTransfer:
-    msg = 'Refunds are only valid for *know and pending* transfers'
+    msg = 'Refunds are only valid for *known and pending* transfers'
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     send_mediated_transfer, merkletree = create_sendlockedtransfer(

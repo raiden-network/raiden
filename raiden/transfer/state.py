@@ -75,10 +75,12 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
-class NodeState(State):
-    """ Umbrella object that stores all the node state.
+class ChainState(State):
+    """ Umbrella object that stores the per blockchain state.
     For each registry smart contract there must be a payment network. Within the
     payment network the existing token networks and channels are registered.
+
+    TODO: Split the node specific attributes to a "NodeState" class
     """
 
     __slots__ = (
@@ -112,7 +114,7 @@ class NodeState(State):
         self.payment_mapping = PaymentMappingState()
 
     def __repr__(self):
-        return '<NodeState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
+        return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
             self.block_number,
             lpex(self.identifiers_to_paymentnetworks.keys()),
             len(self.payment_mapping.secrethashes_to_task),
@@ -121,7 +123,7 @@ class NodeState(State):
 
     def __eq__(self, other):
         return (
-            isinstance(other, NodeState) and
+            isinstance(other, ChainState) and
             self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.queueids_to_queues == other.queueids_to_queues and
