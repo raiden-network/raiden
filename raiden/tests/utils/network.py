@@ -15,7 +15,6 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
