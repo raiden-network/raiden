@@ -671,10 +671,9 @@ def test_channelstate_receive_lockedtransfer():
 
     balance_proof = balanceproof_from_envelope(secret_message)
     unlock_state_change = ReceiveUnlock(
-        random.randint(0, UINT64_MAX),
-        lock_secret,
-        balance_proof,
-        UNIT_CHAIN_ID,
+        message_identifier=random.randint(0, UINT64_MAX),
+        secret=lock_secret,
+        balance_proof=balance_proof,
     )
 
     is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
@@ -1049,10 +1048,9 @@ def test_interwoven_transfers():
 
             balance_proof = balanceproof_from_envelope(secret_message)
             unlock_state_change = ReceiveUnlock(
-                random.randint(0, UINT64_MAX),
-                lock_secret,
-                balance_proof,
-                UNIT_CHAIN_ID,
+                message_identifier=random.randint(0, UINT64_MAX),
+                secret=lock_secret,
+                balance_proof=balance_proof,
             )
 
             is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)

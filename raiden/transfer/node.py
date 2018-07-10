@@ -107,7 +107,6 @@ def subdispatch_to_all_lockedtransfers(node_state, state_change):
 
 def subdispatch_to_paymenttask(node_state, state_change, secrethash):
     block_number = node_state.block_number
-    chain_id = node_state.chain_id
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events = list()
     sub_iteration = None
@@ -170,7 +169,6 @@ def subdispatch_to_paymenttask(node_state, state_change, secrethash):
                     channel_state,
                     pseudo_random_generator,
                     block_number,
-                    chain_id,
                 )
                 events = sub_iteration.events
 
@@ -291,7 +289,6 @@ def subdispatch_targettask(
 ):
 
     block_number = node_state.block_number
-    chain_id = node_state.chain_id
     sub_task = node_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
@@ -324,7 +321,6 @@ def subdispatch_targettask(
             channel_state,
             pseudo_random_generator,
             block_number,
-            chain_id,
         )
         events = iteration.events
 

@@ -38,6 +38,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.utils.typing import (
     Optional,
     Address,
+    BlockExpiration,
     ChainID,
     MessageID,
     SecretHash,
@@ -45,6 +46,7 @@ from raiden.utils.typing import (
     Secret,
     ChannelID,
     Locksroot,
+    TokenAmount,
 )
 
 __all__ = (
@@ -69,7 +71,13 @@ _hashes_cache = LRUCache(maxsize=128)
 _lock_bytes_cache = LRUCache(maxsize=128)
 
 
-def assert_envelope_values(nonce, channel, transferred_amount, locked_amount, locksroot):
+def assert_envelope_values(
+        nonce: int,
+        channel: ChannelID,
+        transferred_amount: TokenAmount,
+        locked_amount: TokenAmount,
+        locksroot: Locksroot,
+):
     if nonce <= 0:
         raise ValueError('nonce cannot be zero or negative')
 
@@ -522,8 +530,8 @@ class Secret(EnvelopeMessage):
             nonce: int,
             token_network_address: Address,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             locksroot: Locksroot,
             secret: Secret,
     ):
@@ -768,8 +776,8 @@ class DirectTransfer(EnvelopeMessage):
             token_network_address: Address,
             token: Address,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             recipient: Address,
             locksroot: Locksroot,
     ):
@@ -917,7 +925,7 @@ class Lock:
     # Lock is not a message, it is a serializable structure that is reused in
     # some messages
 
-    def __init__(self, amount, expiration, secrethash):
+    def __init__(self, amount: TokenAmount, expiration: BlockExpiration, secrethash: SecretHash):
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if amount < 0:
@@ -1025,8 +1033,8 @@ class LockedTransferBase(EnvelopeMessage):
             token_network_address: Address,
             token: Address,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             recipient: Address,
             locksroot: Locksroot,
             lock: HashTimeLockState,
@@ -1132,8 +1140,8 @@ class LockedTransfer(LockedTransferBase):
             token_network_address: Address,
             token: Address,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             recipient: Address,
             locksroot: Locksroot,
             lock: HashTimeLockState,
