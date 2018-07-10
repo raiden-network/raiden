@@ -18,8 +18,8 @@ def wait_blocks(web3: Web3, blocks: int):
 
 
 def dicts_are_equal(a: dict, b: dict) -> bool:
-    """Compare dicts, but allows ignoring specific values through the
-    dicts_are_equal.IGNORE_VALUE identifier"""
+    """Compares dicts, but allows ignoring specific values through the
+    dicts_are_equal.IGNORE_VALUE object"""
     if set(a.keys()) != set(b.keys()):
         return False
     for k in a.keys():
