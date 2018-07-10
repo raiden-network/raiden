@@ -254,6 +254,7 @@ def deploy_smoketest_contracts(client, chain_id):
     endpoint_registry_address = deploy_contract_web3(
         CONTRACT_ENDPOINT_REGISTRY,
         client,
+        num_confirmations=None,
     )
 
     secret_registry_address = deploy_contract_web3(
@@ -265,11 +266,13 @@ def deploy_smoketest_contracts(client, chain_id):
     token_network_registry_address = deploy_contract_web3(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         client,
-        None,
-        to_checksum_address(secret_registry_address),
-        chain_id,
-        TEST_SETTLE_TIMEOUT_MIN,
-        TEST_SETTLE_TIMEOUT_MAX,
+        num_confirmations=None,
+        constructor_arguments=(
+            to_checksum_address(secret_registry_address),
+            chain_id,
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
+        ),
     )
 
     addresses = {

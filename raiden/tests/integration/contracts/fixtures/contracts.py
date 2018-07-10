@@ -122,11 +122,13 @@ def deploy_token(deploy_client):
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_client,
-            None,
-            initial_amount,
-            decimals,
-            token_name,
-            token_symbol,
+            num_confirmations=None,
+            constructor_arguments=(
+                initial_amount,
+                decimals,
+                token_name,
+                token_symbol,
+            ),
         )
 
         manager = ContractManager(CONTRACTS_SOURCE_DIRS)

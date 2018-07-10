@@ -795,8 +795,13 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.chain.client,
-        None,
-        token_amount, 2, 'raiden', 'Rd',
+        num_confirmations=None,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
     )
 
     register_request = grequests.put(api_url_for(
