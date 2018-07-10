@@ -422,11 +422,12 @@ class RaidenService:
                 from_block,
             )
 
+            chain_id = self.chain.network_id
             for event in self.blockchain_events.poll_blockchain_events():
                 on_blockchain_event(
                     self,
                     event, event.event_data['block_number'],
-                    self.chain.network_id,
+                    chain_id,
                 )
 
     def connection_manager_for_token_network(self, token_network_identifier):

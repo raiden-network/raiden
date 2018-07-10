@@ -254,7 +254,6 @@ def state_transition(
         channel_state,
         pseudo_random_generator,
         block_number,
-        chain_id,
 ):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck

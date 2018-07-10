@@ -42,7 +42,7 @@ log = structlog.get_logger(__name__)
 
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
-chain_id = make_field('chain_id', 8, '8s', integer(0, UINT64_MAX))
+chain_id = make_field('chain_id', 32, '32s', integer(0, UINT256_MAX))
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
 delivered_message_identifier = make_field(
     'delivered_message_identifier',

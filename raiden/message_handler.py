@@ -52,10 +52,9 @@ def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret):
 def handle_message_secret(raiden: RaidenService, message: Secret):
     balance_proof = balanceproof_from_envelope(message)
     state_change = ReceiveUnlock(
-        message.message_identifier,
-        message.secret,
-        balance_proof,
-        message.chain_id,
+        message_identifier=message.message_identifier,
+        secret=message.secret,
+        balance_proof=balance_proof,
     )
     raiden.handle_state_change(state_change)
 
