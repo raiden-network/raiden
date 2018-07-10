@@ -123,6 +123,7 @@ class MatrixTransport:
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 
     def __init__(self, config: dict):
+        self._bound_logger = None
         self._raiden_service: RaidenService = None
         self._server_url: str = self._select_server(config)
         self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
@@ -145,7 +146,6 @@ class MatrixTransport:
         self._login_retry_wait = config.get('login_retry_wait', 0.5)
         self._logout_timeout = config.get('logout_timeout', 10)
 
-        self._bound_logger = None
         self._running = False
         self._health_semaphore = gevent.lock.Semaphore()
 
