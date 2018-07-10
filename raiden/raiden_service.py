@@ -18,10 +18,6 @@ from raiden.network.proxies import (
 )
 from raiden import routing, waiting
 from raiden.blockchain_events_handler import on_blockchain_event
-from raiden.constants import (
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-)
 from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.tasks import AlarmTask
@@ -157,15 +153,6 @@ class RaidenService:
     ):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
-
-        invalid_timeout = (
-            config['settle_timeout'] < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
-            config['settle_timeout'] > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-        )
-        if invalid_timeout:
-            raise ValueError('settle_timeout must be in range [{}, {}]'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-            ))
 
         self.tokennetworkids_to_connectionmanagers = dict()
         self.identifier_to_results = defaultdict(list)

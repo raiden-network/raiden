@@ -211,3 +211,11 @@ class TokenNetworkRegistry:
         self.proxy.contract.web3.eth.uninstallFilter(filter.filter_id)
 
         return events
+
+    def settlement_timeout_min(self) -> int:
+        """ Returns the minimal settlement timeout for the token network registry. """
+        return self.proxy.contract.functions.settlement_timeout_min().call()
+
+    def settlement_timeout_max(self) -> int:
+        """ Returns the maximal settlement timeout for the token network registry. """
+        return self.proxy.contract.functions.settlement_timeout_max().call()

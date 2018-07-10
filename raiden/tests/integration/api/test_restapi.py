@@ -8,15 +8,16 @@ from eth_utils import (
     to_canonical_address,
     is_checksum_address,
 )
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, MAX_TOKENS_DEPLOY
+from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    MAX_TOKENS_DEPLOY,
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
+)
 
 from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
-)
-from raiden.constants import (
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -486,7 +487,7 @@ def test_api_open_channel_invalid_input(
 ):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
-    settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
+    settle_timeout = TEST_SETTLE_TIMEOUT_MIN - 1
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
@@ -503,7 +504,7 @@ def test_api_open_channel_invalid_input(
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
-    channel_data_obj['settle_timeout'] = NETTINGCHANNEL_SETTLE_TIMEOUT_MAX + 1
+    channel_data_obj['settle_timeout'] = TEST_SETTLE_TIMEOUT_MAX + 1
     request = grequests.put(
         api_url_for(
             api_backend,

@@ -23,10 +23,6 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
-from raiden.constants import (
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-)
 from raiden.network.proxies import Token
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
@@ -35,12 +31,12 @@ from raiden.network.rpc.transactions import (
 from raiden.exceptions import (
     DuplicatedChannelError,
     ChannelIncorrectStateError,
-    InvalidSettleTimeout,
     SamePeerAddress,
     ChannelBusyError,
     TransactionThrew,
     InvalidAddress,
     ContractVersionMismatch,
+    InvalidSettleTimeout,
 )
 from raiden.settings import (
     EXPECTED_CONTRACTS_VERSION,
@@ -132,12 +128,14 @@ class TokenNetwork:
             raise InvalidAddress('Expected binary address format for channel partner')
 
         invalid_timeout = (
-            settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
-            settle_timeout > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+            settle_timeout < self.settlement_timeout_min() or
+            settle_timeout > self.settlement_timeout_max()
         )
         if invalid_timeout:
-            raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}]'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
+            raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}], is {}'.format(
+                self.settlement_timeout_min(),
+                self.settlement_timeout_max(),
+                settle_timeout,
             ))
 
         if self.node_address == partner:
@@ -302,6 +300,14 @@ class TokenNetwork:
             **channel_data,
             **participants_data,
         }
+
+    def settlement_timeout_min(self) -> int:
+        """ Returns the minimal settlement timeout for the token network. """
+        return self.proxy.contract.functions.settlement_timeout_min().call()
+
+    def settlement_timeout_max(self) -> int:
+        """ Returns the maximal settlement timeout for the token network. """
+        return self.proxy.contract.functions.settlement_timeout_max().call()
 
     def locked_amount_by_locksroot(
             self,

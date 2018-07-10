@@ -5,13 +5,14 @@ from eth_utils import (
     decode_hex,
     to_checksum_address,
 )
+from raiden_contracts.constants import (
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
+)
+
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import TokenNetwork
-from raiden.constants import (
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
-    EMPTY_HASH,
-)
+from raiden.constants import EMPTY_HASH
 from raiden.exceptions import (
     InvalidSettleTimeout,
     SamePeerAddress,
@@ -32,6 +33,10 @@ def test_token_network_proxy_basics(
     chain_id,
     web3,
 ):
+    # check settlement timeouts
+    assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
+    assert token_network_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
+
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(
@@ -63,30 +68,30 @@ def test_token_network_proxy_basics(
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
             c2_client.sender,
-            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1,
+            TEST_SETTLE_TIMEOUT_MIN - 1,
         )
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
             c2_client.sender,
-            NETTINGCHANNEL_SETTLE_TIMEOUT_MAX + 1,
+            TEST_SETTLE_TIMEOUT_MAX + 1,
         )
     # channel to self
     with pytest.raises(SamePeerAddress):
         c1_token_network_proxy.new_netting_channel(
             c1_client.sender,
-            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MIN,
         )
     # actually create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
-        NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+        TEST_SETTLE_TIMEOUT_MIN,
     )
     assert channel_identifier is not None
     # multiple channels with the same peer are not allowed
     with pytest.raises(DuplicatedChannelError):
         c1_token_network_proxy.new_netting_channel(
             c2_client.sender,
-            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MIN,
         )
     assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is True
     assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is True
@@ -157,7 +162,7 @@ def test_token_network_proxy_basics(
             decode_hex(balance_proof.signature),
         )
     # update transfer
-    wait_blocks(c1_client.web3, NETTINGCHANNEL_SETTLE_TIMEOUT_MIN)
+    wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     c2_token_network_proxy.settle(
         0,
@@ -207,7 +212,7 @@ def test_token_network_proxy_update_transfer(
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
-        NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+        TEST_SETTLE_TIMEOUT_MIN,
     )
     # deposit to the channel
     initial_balance = 100
@@ -288,7 +293,7 @@ def test_token_network_proxy_update_transfer(
         decode_hex(balance_proof_c1.signature),
         non_closing_signature,
     )
-    wait_blocks(c1_client.web3, NETTINGCHANNEL_SETTLE_TIMEOUT_MIN)
+    wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # settling with an invalid amount
     with pytest.raises(TransactionThrew):

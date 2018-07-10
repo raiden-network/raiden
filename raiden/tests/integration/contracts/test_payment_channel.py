@@ -6,13 +6,11 @@ from eth_utils import (
 )
 from raiden_libs.utils.signing import sign_data
 from raiden_libs.messages import BalanceProof
+from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import TokenNetwork, PaymentChannel
-from raiden.constants import (
-    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
-    EMPTY_HASH,
-)
+from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import wait_blocks
 
 
@@ -50,7 +48,7 @@ def test_payment_channel_proxy_basics(
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
-        NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+        TEST_SETTLE_TIMEOUT_MIN,
     )
     assert channel_identifier is not None
 
@@ -71,7 +69,7 @@ def test_payment_channel_proxy_basics(
 
     # check the settlement timeouts
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
-    assert channel_proxy_1.settle_timeout() == NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+    assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
     events = event_filter.get_all_entries()
     assert len(events) == 1  # ChannelOpened
@@ -118,10 +116,10 @@ def test_payment_channel_proxy_basics(
 
     # check the settlement timeouts again
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
-    assert channel_proxy_1.settle_timeout() == NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+    assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
     # update transfer
-    wait_blocks(c1_client.web3, NETTINGCHANNEL_SETTLE_TIMEOUT_MIN)
+    wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     c2_token_network_proxy.settle(
         0,

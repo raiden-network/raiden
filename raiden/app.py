@@ -2,7 +2,7 @@ import filelock
 import sys
 import structlog
 from binascii import unhexlify
-from eth_utils import to_normalized_address
+from eth_utils import to_normalized_address, to_checksum_address
 from typing import Dict
 
 import gevent
@@ -89,6 +89,25 @@ class App:  # pylint: disable=too-few-public-methods
         self.config = config
         self.discovery = discovery
 
+        # check that the settlement timeout fits the limits of the contract
+        invalid_timeout = (
+            config['settle_timeout'] < default_registry.settlement_timeout_min() or
+            config['settle_timeout'] > default_registry.settlement_timeout_max()
+        )
+        if invalid_timeout:
+            print(
+                (
+                    'FATAL: Settlement timeout for Registry contract {} must '
+                    'be in range [{}, {}], is {}'
+                ).format(
+                    to_checksum_address(default_registry.address),
+                    default_registry.settlement_timeout_min(),
+                    default_registry.settlement_timeout_max(),
+                    config['settle_timeout'],
+                ),
+            )
+            sys.exit(1)
+
         try:
             self.raiden = RaidenService(
                 chain,
@@ -120,12 +139,12 @@ class App:  # pylint: disable=too-few-public-methods
             pex(self.raiden.address),
         )
 
-    def stop(self, leave_channels=False):
+    def stop(self, leave_channels: bool = False):
         """
         Stop the raiden app.
 
         Args:
-            leave_channels (bool): if True, also close and settle all channels before stopping
+            leave_channels: if True, also close and settle all channels before stopping
         """
         if leave_channels:
             self.raiden.close_and_settle()
