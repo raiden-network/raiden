@@ -9,6 +9,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelBatchUnlock,
+    EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventTransferSentFailed,
     EventTransferSentSuccess,
@@ -33,6 +34,7 @@ RaidenService = 'RaidenService'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
+    EventTransferReceivedInvalidDirectTransfer,
     EventTransferReceivedSuccess,
     EventUnlockSuccess,
     EventUnlockClaimFailed,
