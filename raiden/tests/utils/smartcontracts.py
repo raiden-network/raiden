@@ -30,6 +30,7 @@ def deploy_tokens_and_fund_accounts(
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_service.client,
+            None,
             token_amount,
             2,
             'raiden',
