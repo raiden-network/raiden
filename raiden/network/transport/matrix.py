@@ -264,7 +264,7 @@ class MatrixTransport:
     def log(self):
         if self._bound_logger:
             return self._bound_logger
-        if not getattr(self._client, 'user_id', None):
+        if not getattr(self, '_client', None) or not getattr(self._client, 'user_id', None):
             return log
         self._bound_logger = log.bind(current_user=self._client.user_id)
         return self._bound_logger
