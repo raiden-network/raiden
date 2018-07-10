@@ -22,9 +22,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
-from raiden.transfer.utils import calculate_channel_identifier
+from raiden.tests.utils import dicts_are_equal
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.utils import data_encoder
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -340,12 +339,8 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
-    first_channel_identifier = data_encoder(calculate_channel_identifier(
-        api_backend[1].raiden_api.raiden.address,
-        to_canonical_address(first_partner_address),
-    ))
-    expected_response['channel_identifier'] = first_channel_identifier
-    assert response == expected_response
+    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    assert dicts_are_equal(response, expected_response)
 
     # now let's open a channel and make a deposit too
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
@@ -371,12 +366,8 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
-    second_channel_identifier = data_encoder(calculate_channel_identifier(
-        api_backend[1].raiden_api.raiden.address,
-        to_canonical_address(second_partner_address),
-    ))
-    expected_response['channel_identifier'] = second_channel_identifier
-    assert response == expected_response
+    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    assert dicts_are_equal(response, expected_response)
 
     # let's deposit on the first channel
     request = grequests.patch(
@@ -392,7 +383,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': first_channel_identifier,
+        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
         'partner_address': first_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -400,7 +391,7 @@ def test_api_open_and_deposit_channel(
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
     }
-    assert response == expected_response
+    assert dicts_are_equal(response, expected_response)
 
     # finally let's try querying for the second channel
     request = grequests.get(
@@ -416,7 +407,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': second_channel_identifier,
+        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
         'partner_address': second_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -424,7 +415,7 @@ def test_api_open_and_deposit_channel(
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
     }
-    assert response == expected_response
+    assert dicts_are_equal(response, expected_response)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -459,12 +450,8 @@ def test_api_open_close_and_settle_channel(
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
-    channel_identifier = data_encoder(calculate_channel_identifier(
-        api_backend[1].raiden_api.raiden.address,
-        to_canonical_address(partner_address),
-    ))
-    expected_response['channel_identifier'] = channel_identifier
-    assert response == expected_response
+    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    assert dicts_are_equal(response, expected_response)
 
     # let's close the channel
     request = grequests.patch(
@@ -479,7 +466,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
     assert_proper_response(response)
     expected_response = {
-        'channel_identifier': channel_identifier,
+        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -487,7 +474,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_CLOSED,
         'balance': balance,
     }
-    assert response.json() == expected_response
+    assert dicts_are_equal(response.json(), expected_response)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -1014,12 +1001,8 @@ def test_api_deposit_limit(
     expected_response = channel_data_obj
     expected_response['balance'] = balance_working
     expected_response['state'] = CHANNEL_STATE_OPENED
-    first_channel_identifier = data_encoder(calculate_channel_identifier(
-        api_backend[1].raiden_api.raiden.address,
-        to_canonical_address(first_partner_address),
-    ))
-    expected_response['channel_identifier'] = first_channel_identifier
-    assert response == expected_response
+    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    assert dicts_are_equal(response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'

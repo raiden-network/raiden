@@ -18,7 +18,6 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.transfer.utils import calculate_channel_identifier
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelBusyError,
@@ -68,19 +67,18 @@ class RaidenAPI:
         if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel')
 
-        channel_identifer = calculate_channel_identifier(self.raiden.address, partner_address)
-
         channel_list = self.get_channel_list(registry_address, token_address, partner_address)
-        for channel in channel_list:
-            if channel.identifier == channel_identifer:
-                return channel
+        assert len(channel_list) <= 1
 
-        raise ChannelNotFound(
-            "Channel with partner '{}' for token '{}' could not be found.".format(
-                to_checksum_address(partner_address),
-                to_checksum_address(token_address),
-            ),
-        )
+        if not channel_list:
+            raise ChannelNotFound(
+                "Channel with partner '{}' for token '{}' could not be found.".format(
+                    to_checksum_address(partner_address),
+                    to_checksum_address(token_address),
+                ),
+            )
+
+        return channel_list[0]
 
     def token_network_register(
             self,
