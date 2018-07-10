@@ -197,9 +197,9 @@ def wait_for_settle_all_channels(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    node_state = views.state_from_raiden(raiden)
+    chain_state = views.state_from_raiden(raiden)
 
-    id_paymentnetworkstate = node_state.identifiers_to_paymentnetworks.items()
+    id_paymentnetworkstate = chain_state.identifiers_to_paymentnetworks.items()
     for payment_network_id, payment_network_state in id_paymentnetworkstate:
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()

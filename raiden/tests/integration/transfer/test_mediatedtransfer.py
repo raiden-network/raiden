@@ -20,10 +20,10 @@ def test_mediated_transfer(
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
-    node_state = views.state_from_app(app0)
+    chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        node_state,
+        chain_state,
         payment_network_id,
         token_address,
     )
@@ -63,10 +63,10 @@ def test_mediated_transfer_with_entire_deposit(
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
-    node_state = views.state_from_app(app0)
+    chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        node_state,
+        chain_state,
         payment_network_id,
         token_address,
     )

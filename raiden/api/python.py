@@ -265,14 +265,14 @@ class RaidenAPI:
             execution.
             DepositOverLimit: The total deposit amount is higher than the limit.
         """
-        node_state = views.state_from_raiden(self.raiden)
+        chain_state = views.state_from_raiden(self.raiden)
 
         token_networks = views.get_token_network_addresses_for(
-            node_state,
+            chain_state,
             registry_address,
         )
         channel_state = views.get_channelstate_for(
-            node_state,
+            chain_state,
             registry_address,
             token_address,
             partner_address,
@@ -404,9 +404,9 @@ class RaidenAPI:
         if token_address not in valid_tokens:
             raise UnknownTokenAddress('Token address is not known.')
 
-        node_state = views.state_from_raiden(self.raiden)
+        chain_state = views.state_from_raiden(self.raiden)
         channels_to_close = views.filter_channels_by_partneraddress(
-            node_state,
+            chain_state,
             registry_address,
             token_address,
             partner_addresses,

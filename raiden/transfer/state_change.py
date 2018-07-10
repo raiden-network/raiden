@@ -226,7 +226,7 @@ class ContractReceiveChannelClosed(StateChange):
         return not self.__eq__(other)
 
 
-class ActionInitNode(StateChange):
+class ActionInitChain(StateChange):
     def __init__(
             self,
             pseudo_random_generator,
@@ -244,14 +244,14 @@ class ActionInitNode(StateChange):
         self.chain_id = chain_id
 
     def __repr__(self):
-        return '<ActionInitNode block_number:{} chain_id:{}>'.format(
+        return '<ActionInitChain block_number:{} chain_id:{}>'.format(
             self.block_number,
             self.chain_id,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, ActionInitNode) and
+            isinstance(other, ActionInitChain) and
             self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.chain_id == other.chain_id

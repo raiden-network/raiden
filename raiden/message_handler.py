@@ -62,10 +62,10 @@ def handle_message_secret(raiden: RaidenService, message: Secret):
 def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer):
     token_network_address = message.token_network_address
     from_transfer = lockedtransfersigned_from_message(message)
-    node_state = views.state_from_raiden(raiden)
+    chain_state = views.state_from_raiden(raiden)
 
     routes = get_best_routes(
-        node_state,
+        chain_state,
         token_network_address,
         raiden.address,
         from_transfer.target,
@@ -74,7 +74,7 @@ def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer
     )
 
     role = views.get_transfer_role(
-        node_state,
+        chain_state,
         from_transfer.lock.secrethash,
     )
 
