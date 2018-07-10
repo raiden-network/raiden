@@ -56,7 +56,7 @@ def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
         num_confirmations: int = None,
-        constructor_arguments: typing.Tuple[typing.Any] = (),
+        constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
     manager = ContractManager(CONTRACTS_SOURCE_DIRS)
     contract_interface = manager.get_contract(contract_name)
@@ -82,4 +82,6 @@ def deploy_contract_web3(
     if receipt.get('status', 0) == 0:
         raise RuntimeError('contract was not sucessfully deployed')
 
-    return unhexlify(remove_0x_prefix(receipt['contractAddress']))
+    return typing.Address(
+        unhexlify(remove_0x_prefix(receipt['contractAddress'])),
+    )
