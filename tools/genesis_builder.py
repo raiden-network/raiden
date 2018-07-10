@@ -5,17 +5,19 @@ from eth_utils import denoms, encode_hex
 from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.genesis import GENESIS_STUB
 
-CLUSTER_NAME = 'raiden'
+CLUSTER_NAME = b'raiden'
 
 
 def generate_accounts(seeds):
     """Create private keys and addresses for all seeds.
     """
     return {
-        seed: dict(
-            privatekey=encode_hex(sha3(seed)),
-            address=encode_hex(privatekey_to_address(sha3(seed))),
-        ) for seed in seeds}
+        seed: {
+            'privatekey': encode_hex(sha3(seed)),
+            'address': encode_hex(privatekey_to_address(sha3(seed))),
+        }
+        for seed in seeds
+    }
 
 
 def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
@@ -27,7 +29,7 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     :return: genesis dict
     """
     genesis = GENESIS_STUB.copy()
-    genesis['extraData'] = '0x' + hexlify(CLUSTER_NAME)
+    genesis['extraData'] = '0x' + hexlify(CLUSTER_NAME).decode()
     genesis['alloc'].update({
         account: {
             'balance': str(initial_alloc),
