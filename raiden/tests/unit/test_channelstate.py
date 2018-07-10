@@ -169,6 +169,7 @@ def make_receive_transfer_direct(
         locksroot=EMPTY_MERKLE_ROOT,
         token_network_identifier=UNIT_REGISTRY_IDENTIFIER,
         locked_amount=None,
+        chain_id=UNIT_CHAIN_ID,
 ):
 
     address = privatekey_to_address(privkey.secret)
@@ -181,7 +182,7 @@ def make_receive_transfer_direct(
     message_identifier = random.randint(0, UINT64_MAX)
     payment_identifier = nonce
     mediated_transfer_msg = DirectTransfer(
-        chain_id=UNIT_CHAIN_ID,
+        chain_id=chain_id,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         nonce=nonce,
@@ -216,6 +217,7 @@ def make_receive_transfer_mediated(
         merkletree_leaves=None,
         token_network_address=UNIT_REGISTRY_IDENTIFIER,
         locked_amount=None,
+        chain_id=UNIT_CHAIN_ID,
 ):
 
     if not isinstance(lock, HashTimeLockState):
@@ -242,7 +244,7 @@ def make_receive_transfer_mediated(
     transfer_target = factories.make_address()
     transfer_initiator = factories.make_address()
     mediated_transfer_msg = LockedTransfer(
-        chain_id=UNIT_CHAIN_ID,
+        chain_id=chain_id,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=nonce,
@@ -668,12 +670,39 @@ def test_channelstate_receive_lockedtransfer():
         secret=lock_secret,
     )
     secret_message.sign(privkey2)
+    # Let's also create an invalid secret to test unlock with invalid chain id
+    invalid_secret_message = Secret(
+        chain_id=UNIT_CHAIN_ID + 1,
+        message_identifier=message_identifier,
+        payment_identifier=1,
+        nonce=2,
+        token_network_address=token_network_identifier,
+        channel_identifier=channel_state.identifier,
+        transferred_amount=transferred_amount + lock_amount,
+        locked_amount=0,
+        locksroot=EMPTY_MERKLE_ROOT,
+        secret=lock_secret,
+    )
+    invalid_secret_message.sign(privkey2)
 
     balance_proof = balanceproof_from_envelope(secret_message)
     unlock_state_change = ReceiveUnlock(
         message_identifier=random.randint(0, UINT64_MAX),
         secret=lock_secret,
         balance_proof=balance_proof,
+    )
+
+    # First test that unlock with invalid chain_id fails
+    invalid_balance_proof = balanceproof_from_envelope(invalid_secret_message)
+    invalid_unlock_state_change = ReceiveUnlock(
+        message_identifier=random.randint(0, UINT64_MAX),
+        secret=lock_secret,
+        balance_proof=invalid_balance_proof,
+    )
+    is_valid, _, _ = channel.handle_unlock(channel_state, invalid_unlock_state_change)
+    assert not is_valid, (
+        "Unlock message with chain_id different than the "
+        "channel's should fail"
     )
 
     is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
@@ -731,6 +760,46 @@ def test_channelstate_directtransfer_overspent():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
 
 
+def test_channelstate_directtransfer_invalid_chainid():
+    """Receiving a direct transfer with a chain_id different than the channel's
+    chain_id should be ignored
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
+
+    nonce = 1
+    transferred_amount = distributable - 1
+    receive_lockedtransfer = make_receive_transfer_direct(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        chain_id=UNIT_CHAIN_ID + 2,
+    )
+
+    is_valid, _ = channel.is_valid_directtransfer(
+        receive_lockedtransfer,
+        channel_state,
+        channel_state.partner_state,
+        channel_state.our_state,
+    )
+    assert not is_valid, (
+        'message is invalid because it contains different chain id than the channel'
+    )
+
+    iteration = channel.handle_receive_directtransfer(
+        channel_state,
+        receive_lockedtransfer,
+    )
+
+    assert must_contain_entry(iteration.events, EventTransferReceivedInvalidDirectTransfer, {})
+    assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
+    assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
+
+
 def test_channelstate_lockedtransfer_overspent():
     """Receiving a lock with an amount large than distributable must be
     ignored.
@@ -765,6 +834,48 @@ def test_channelstate_lockedtransfer_overspent():
         receive_lockedtransfer,
     )
     assert not is_valid, 'message is invalid because it is spending more than the distributable'
+
+    assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
+    assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
+
+
+def test_channelstate_lockedtransfer_invalid_chainid():
+    """Receiving a locked transfer with chain_id different from the channel's
+    chain_id should be ignored
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
+
+    lock_amount = distributable - 1
+    lock_expiration = 10
+    lock_secrethash = sha3(b'test_channelstate_lockedtransfer_overspent')
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state,
+        privkey2,
+        nonce,
+        transferred_amount,
+        lock,
+        chain_id=UNIT_CHAIN_ID + 1,
+    )
+
+    is_valid, _, _ = channel.handle_receive_lockedtransfer(
+        channel_state,
+        receive_lockedtransfer,
+    )
+    assert not is_valid, (
+        'message is invalid because it uses different chain_id than the channel'
+    )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
