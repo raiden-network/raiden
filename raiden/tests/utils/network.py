@@ -15,9 +15,7 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import (
-    privatekey_to_address,
-)
+from raiden.utils import privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -81,18 +79,18 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     assert token_address
 
     token_network_proxy = app0.raiden.default_registry.token_network_by_token(token_address)
-    netcontract_address = token_network_proxy.new_netting_channel(
+    channel_identifier = token_network_proxy.new_netting_channel(
         app1.raiden.address,
         settle_timeout,
     )
-    assert netcontract_address
+    assert channel_identifier
 
     for app in [app0, app1]:
         # Use each app's own chain because of the private key / local signing
         token = app.raiden.chain.token(token_address)
         payment_channel_proxy = app.raiden.chain.payment_channel(
             token_network_proxy.address,
-            netcontract_address,
+            channel_identifier,
         )
 
         # This check can succeed and the deposit still fail, if channels are
@@ -113,7 +111,7 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         app0,
         app1,
         token_network_proxy.address,
-        netcontract_address,
+        channel_identifier,
         settle_timeout,
         deposit,
     )

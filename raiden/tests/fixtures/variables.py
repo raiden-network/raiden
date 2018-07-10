@@ -4,7 +4,10 @@ import random
 
 import pytest
 from eth_utils import to_normalized_address, remove_0x_prefix, denoms
-from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, TEST_SETTLE_TIMEOUT_MAX
+from raiden_contracts.constants import (
+    TEST_SETTLE_TIMEOUT_MIN,
+    TEST_SETTLE_TIMEOUT_MAX,
+)
 
 from raiden.network.utils import get_free_port
 from raiden.settings import (

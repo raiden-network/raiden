@@ -15,16 +15,6 @@ ROPSTEN_SECRET_REGISTRY_ADDRESS = '0xD1B506A716B50069Ac3C990e86253C645b61633D'
 # 52100 gas is how much registerEndpoint() costs. Rounding to 60k for safety.
 DISCOVERY_TX_GAS_LIMIT = 60000
 
-MINUTE_SEC = 60
-MINUTE_MS = 60 * 1000
-
-NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
-# The maximum settle timeout is chosen as something above
-# 1 year with the assumption of very fast block times of 12 seconds.
-# There is a maximum to avoidpotential overflows as described here:
-# https://github.com/raiden-network/raiden/issues/1038
-NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
-
 ETH_RPC_DEFAULT_PORT = 8545
 HTTP_PORT = 80
 HTTPS_PORT = 443
