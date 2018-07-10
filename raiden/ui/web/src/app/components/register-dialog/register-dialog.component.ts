@@ -50,7 +50,7 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
         this._visible = v;
         this.visibleChange.emit(v);
     }
-
+ 
     public convertToChecksum(): string {
         return 'Not a checksum address, try \n"' + this.raidenService.toChecksumAddress(this.tokenAddress.value) + '" instead.';
     }

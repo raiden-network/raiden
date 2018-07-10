@@ -23,6 +23,7 @@ Contents
   spec
   smart_contracts
   config_file
+  private_chain
   changelog
   glossary
   Raiden Codebase Documentation <./_build/generated/modules>
