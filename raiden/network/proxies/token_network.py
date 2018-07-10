@@ -295,8 +295,10 @@ class TokenNetwork:
 
         channel_data = self.detail_channel(participant1, participant2)
         participants_data = self.detail_participants(participant1, participant2)
+        chain_id = self.proxy.contract.functions.chain_id().call()
 
         return {
+            'chain_id': chain_id,
             **channel_data,
             **participants_data,
         }

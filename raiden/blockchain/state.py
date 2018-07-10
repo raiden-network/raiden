@@ -11,7 +11,6 @@ def get_channel_state(
         reveal_timeout,
         payment_channel_proxy,
         opened_block_number,
-        chain_id,
 ):
     channel_details = payment_channel_proxy.detail()
 
@@ -54,7 +53,7 @@ def get_channel_state(
 
     channel = NettingChannelState(
         identifier=identifier,
-        chain_id=chain_id,
+        chain_id=channel_details['chain_id'],
         token_address=token_address,
         token_network_identifier=token_network_address,
         reveal_timeout=reveal_timeout,
