@@ -1,5 +1,4 @@
 import pytest
-import structlog
 from eth_tester import EthereumTester, PyEVMBackend
 from web3 import Web3, HTTPProvider
 from web3.providers.eth_tester import EthereumTesterProvider
@@ -20,8 +19,6 @@ from raiden.tests.utils.tester import (
 from raiden.utils import (
     privatekey_to_address,
 )
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -74,12 +71,17 @@ def web3(
         assert len(blockchain_private_keys) == len(blockchain_p2p_ports)
 
         geth_nodes = [
-            GethNodeDescription(key, rpc, p2p)
-            for key, rpc, p2p in zip(
+            GethNodeDescription(
+                key,
+                rpc,
+                p2p,
+                miner=(pos == 0),
+            )
+            for pos, (key, rpc, p2p) in enumerate(zip(
                 blockchain_private_keys,
                 blockchain_rpc_ports,
                 blockchain_p2p_ports,
-            )
+            ))
         ]
 
         accounts_to_fund = [
