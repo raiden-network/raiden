@@ -625,7 +625,7 @@ class Secret(EnvelopeMessage):
     def from_event(cls, event):
         balance_proof = event.balance_proof
         return cls(
-            chain_id=event.chain_id,
+            chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,
@@ -1268,7 +1268,7 @@ class LockedTransfer(LockedTransferBase):
         fee = 0
 
         return cls(
-            chain_id=event.chain_id,
+            chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
@@ -1375,7 +1375,7 @@ class RefundTransfer(LockedTransfer):
         fee = 0
 
         return cls(
-            chain_id=event.chain_id,
+            chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
             nonce=balance_proof.nonce,

@@ -216,7 +216,6 @@ def handle_contract_send_channelupdate(
 
         our_signature = signing_update_data(
             balance_proof,
-            balance_proof.chain_id,
             raiden.privkey,
         )
 

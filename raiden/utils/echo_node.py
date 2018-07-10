@@ -71,7 +71,7 @@ class EchoNode:
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
 
-    def echo_node_alarm_callback(self, block_number):
+    def echo_node_alarm_callback(self, block_number, chain_id):
         """ This can be registered with the raiden AlarmTask.
         If `EchoNode.stop()` is called, it will give the return signal to be removed from
         the AlarmTask callbacks.
