@@ -260,6 +260,16 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
+    elif received_balance_proof.chain_id != channel_state.chain_id:
+        msg = (
+            "Invalid DirectTransfer message. chain_id does not match channel's "
+            "chain_id. expected: {} got: {}."
+        ).format(
+            channel_state.chain_id,
+            received_balance_proof.chain_id,
+        )
+        result = (False, msg)
+
     elif received_balance_proof.nonce != expected_nonce:
         # The nonces must increase sequentially, otherwise there is a
         # synchronization problem.
@@ -417,6 +427,18 @@ def valid_lockedtransfer_check(
             # The signature must be valid, otherwise the balance proof cannot be
             # used onchain
             msg = 'Invalid {} message. {}'.format(message_name, signature_msg)
+
+            result = (False, msg, None)
+
+        elif received_balance_proof.chain_id != channel_state.chain_id:
+            msg = (
+                "Invalid {} message. "
+                "Chain id does not match channel's chain_id, expected: {} got: {}."
+            ).format(
+                message_name,
+                channel_state.chain_id,
+                received_balance_proof.chain_id,
+            )
 
             result = (False, msg, None)
 
@@ -612,6 +634,16 @@ def is_valid_unlock(
             hexlify(unlock.secrethash).decode(),
         )
 
+        result = (False, msg, None)
+
+    elif received_balance_proof.chain_id != channel_state.chain_id:
+        msg = (
+            "Invalid Unlock message. Received message chain_id does not match "
+            "channel's chain_id. Expected: {} Got: {}."
+        ).format(
+            channel_state.chain_id,
+            received_balance_proof.chain_id,
+        )
         result = (False, msg, None)
 
     elif lock is None:
