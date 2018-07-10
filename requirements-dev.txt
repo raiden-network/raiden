@@ -20,11 +20,11 @@ coverage==4.5.1
 
 # Documentation
 sphinx==1.6.7
-sphinx_rtd_theme==0.3.1
-sphinxcontrib-httpdomain==1.6.1
-sphinxcontrib-httpexample==0.8.0
+sphinx_rtd_theme==0.4.0
+sphinxcontrib-httpdomain==1.7.0
+sphinxcontrib-httpexample==0.8.1
 sphinxcontrib-images==0.7.0
-releases==1.5.0
+releases==1.6.1
 
 # Release
 bump2version==0.5.8
