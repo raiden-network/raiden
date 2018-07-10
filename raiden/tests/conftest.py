@@ -78,6 +78,7 @@ def enable_greenlet_debugger(request):
     """
     if request.config.option.usepdb:
         import pdb
+        import bdb
 
         # Do not run pdb again if an exception hits top-level for a second
         # greenlet and the previous pdb session is still running
@@ -92,8 +93,10 @@ def enable_greenlet_debugger(request):
             # corner cases.
             hub.print_exception(context, type, value, tb)
 
+            # Don't enter nested sessions, and ignore execptions used to quit
+            # the debugger
             nonlocal enabled
-            if not enabled:
+            if not enabled and type is not bdb.BdbQuit:
                 enabled = True
                 pdb.post_mortem()
                 enabled = False
