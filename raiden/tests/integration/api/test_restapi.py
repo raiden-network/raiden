@@ -278,7 +278,6 @@ def test_api_get_channel_list(
         channel_info = response.json()[0]
         assert channel_info['partner_address'] == partner_address
         assert channel_info['token_address'] == to_checksum_address(token_address)
-        assert 'token_network_identifier' in channel_info
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
