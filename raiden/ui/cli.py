@@ -781,7 +781,11 @@ def run(ctx, **kwargs):
 
     if kwargs['config_file']:
         paramname_to_param = {param.name: param for param in run.params}
-        path_params = {param.name for param in run.params if isinstance(param.type, click.Path)}
+        path_params = {
+            param.name
+            for param in run.params
+            if isinstance(param.type, (click.Path, click.File))
+        }
 
         config_file_path = Path(kwargs['config_file'])
         config_file_values = dict()
