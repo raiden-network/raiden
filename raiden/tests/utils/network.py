@@ -14,6 +14,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import (
     privatekey_to_address,
 )
@@ -66,11 +67,13 @@ def check_channel(
 
     assert app1_details['our_deposit'] == app2_details['partner_deposit']
     assert app1_details['partner_deposit'] == app2_details['our_deposit']
+    assert app1_details['chain_id'] == app2_details['chain_id']
 
     assert app1_details['our_deposit'] == deposit_amount
     assert app1_details['partner_deposit'] == deposit_amount
     assert app2_details['our_deposit'] == deposit_amount
     assert app2_details['partner_deposit'] == deposit_amount
+    assert app2_details['chain_id'] == UNIT_CHAIN_ID
 
 
 def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
