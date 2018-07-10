@@ -223,12 +223,12 @@ def total_token_network_channels(
 def get_token_network_by_token_address(
         node_state: NodeState,
         payment_network_id: typing.PaymentNetworkID,
-        token_network_id: typing.Address,
+        token_address: typing.Address,
 ) -> typing.Optional[TokenNetworkState]:
 
     payment_network = node_state.identifiers_to_paymentnetworks.get(payment_network_id)
     if payment_network is not None:
-        return payment_network.tokenaddresses_to_tokennetworks.get(token_network_id)
+        return payment_network.tokenaddresses_to_tokennetworks.get(token_address)
 
     return None
 
