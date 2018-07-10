@@ -734,9 +734,10 @@ def run_app(
     try:
         raiden_app.start()
     except filelock.Timeout:
+        name_or_id = constants.ID_TO_NETWORKNAME.get(network_id, network_id)
         print(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
-            f'network id {network_id}',
+            f'network id {name_or_id}',
         )
         sys.exit(1)
 
