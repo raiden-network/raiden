@@ -51,6 +51,7 @@ def endpoint_registry_address(deploy_client) -> typing.Address:
     address = deploy_contract_web3(
         CONTRACT_ENDPOINT_REGISTRY,
         deploy_client,
+        num_confirmations=None,
     )
     return address
 
@@ -60,6 +61,7 @@ def secret_registry_address(deploy_client) -> typing.Address:
     address = deploy_contract_web3(
         CONTRACT_SECRET_REGISTRY,
         deploy_client,
+        num_confirmations=None,
     )
     return address
 
@@ -75,11 +77,12 @@ def token_network_registry_address(
     address = deploy_contract_web3(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client,
-        None,
-
-        to_checksum_address(secret_registry_address),
-        chain_id,
-        settle_timeout_min,
-        settle_timeout_max,
+        num_confirmations=None,
+        constructor_arguments=(
+            to_checksum_address(secret_registry_address),
+            chain_id,
+            settle_timeout_min,
+            settle_timeout_max,
+        ),
     )
     return address

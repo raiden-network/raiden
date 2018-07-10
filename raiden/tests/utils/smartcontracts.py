@@ -30,11 +30,13 @@ def deploy_tokens_and_fund_accounts(
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_service.client,
-            None,
-            token_amount,
-            2,
-            'raiden',
-            'Rd',
+            num_confirmations=None,
+            constructor_arguments=(
+                token_amount,
+                2,
+                'raiden',
+                'Rd',
+            ),
         )
 
         result.append(token_address)
@@ -54,7 +56,7 @@ def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
         num_confirmations: int = None,
-        *args,
+        constructor_arguments=(),
 ) -> typing.Address:
     manager = ContractManager(CONTRACTS_SOURCE_DIRS)
     contract_interface = manager.get_contract(contract_name)
@@ -64,7 +66,7 @@ def deploy_contract_web3(
         bytecode=contract_interface['bin'],
     )
 
-    transaction = contract.constructor(*args).buildTransaction()
+    transaction = contract.constructor(*constructor_arguments).buildTransaction()
     transaction['nonce'] = deploy_client.nonce()
 
     signed_txn = deploy_client.web3.eth.account.signTransaction(

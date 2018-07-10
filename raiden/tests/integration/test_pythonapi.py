@@ -42,12 +42,13 @@ def test_register_token(raiden_network, token_amount):
     token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app1.raiden.chain.client,
-        None,
-
-        token_amount,
-        2,
-        'raiden',
-        'Rd',
+        num_confirmations=None,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
     )
 
     api1 = RaidenAPI(app1.raiden)
@@ -84,11 +85,13 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
     token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app1.raiden.chain.client,
-        None,
-        token_amount,
-        2,
-        'raiden',
-        'Rd',
+        num_confirmations=None,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
     )
 
     gevent.sleep(1)

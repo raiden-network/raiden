@@ -16,6 +16,7 @@ def test_endpointregistry(private_keys, blockchain_services):
     endpointregistry_address = deploy_contract_web3(
         CONTRACT_ENDPOINT_REGISTRY,
         chain.client,
+        num_confirmations=None,
     )
     discovery_proxy = chain.discovery(endpointregistry_address)
 
@@ -53,6 +54,7 @@ def test_endpointregistry_gas(private_keys, blockchain_services):
     endpointregistry_address = deploy_contract_web3(
         CONTRACT_ENDPOINT_REGISTRY,
         chain.client,
+        num_confirmations=None,
     )
 
     for i in range(len(private_keys)):
