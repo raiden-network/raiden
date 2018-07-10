@@ -2,7 +2,7 @@ from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
 from flask import Blueprint
 from raiden.api.v1.encoding import (
-    ChannelRequestSchema,
+    ChannelPutSchema,
     ChannelPatchSchema,
     EventRequestSchema,
     TransferSchema,
@@ -36,9 +36,7 @@ class AddressResource(BaseResource):
 
 class ChannelsResource(BaseResource):
 
-    put_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'state'),
-    )
+    put_schema = ChannelPutSchema
 
     def get(self):
         """

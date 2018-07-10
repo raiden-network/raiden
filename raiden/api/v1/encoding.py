@@ -1,5 +1,4 @@
-import binascii
-from binascii import unhexlify
+from binascii import Error as DecodeError
 
 from marshmallow import (
     fields,
@@ -18,6 +17,7 @@ from werkzeug.routing import (
 from eth_utils import (
     is_checksum_address,
     to_checksum_address,
+    to_canonical_address,
     decode_hex,
     encode_hex,
 )
@@ -25,8 +25,6 @@ from eth_utils import (
 from raiden.api.objects import (
     Address,
     AddressList,
-    Channel,
-    ChannelList,
     PartnersPerToken,
     PartnersPerTokenList,
 )
@@ -61,8 +59,8 @@ class HexAddressConverter(BaseConverter):
             raise InvalidEndpoint('Not a valid EIP55 encoded address.')
 
         try:
-            value = unhexlify(value[2:])
-        except TypeError:
+            value = to_canonical_address(value)
+        except ValueError:
             raise InvalidEndpoint('Could not decode hex.')
 
         return value
@@ -78,7 +76,7 @@ def decode_keccak(value: str) -> bytes:
 
     try:
         value = decode_hex(value)
-    except binascii.Error:
+    except DecodeError:
         raise ValidationError('Channel Id is not a valid hexadecimal value')
 
     if len(value) != 32:
@@ -114,8 +112,8 @@ class AddressField(fields.Field):
             self.fail('invalid_checksum')
 
         try:
-            value = unhexlify(value[2:])
-        except binascii.Error:
+            value = to_canonical_address(value)
+        except ValueError:
             self.fail('invalid_data')
 
         if len(value) != 20:
@@ -140,7 +138,7 @@ class KeccakField(fields.Field):
 
         try:
             value = decode_hex(value)
-        except binascii.Error:
+        except DecodeError:
             self.fail('invalid_data')
 
         if len(value) != 20:
@@ -243,25 +241,6 @@ class PartnersPerTokenListSchema(BaseListSchema):
         decoding_class = PartnersPerTokenList
 
 
-class ChannelSchema(BaseSchema):
-    token_network_identifier = AddressField()
-    channel_identifier = KeccakField()
-    token_address = AddressField()
-    partner_address = AddressField()
-    settle_timeout = fields.Integer()
-    reveal_timeout = fields.Integer()
-    balance = fields.Integer()
-    state = fields.String(validate=validate.OneOf([
-        CHANNEL_STATE_CLOSED,
-        CHANNEL_STATE_OPENED,
-        CHANNEL_STATE_SETTLED,
-    ]))
-
-    class Meta:
-        strict = True
-        decoding_class = Channel
-
-
 class ChannelStateSchema(BaseSchema):
     channel_identifier = KeccakField(attribute='identifier')
     token_network_identifier = AddressField()
@@ -286,25 +265,15 @@ class ChannelStateSchema(BaseSchema):
 
     class Meta:
         strict = True
-        decoding_class = Channel
+        decoding_class = dict
 
 
-class ChannelRequestSchema(BaseSchema):
-    channel_address = AddressField(missing=None)
+class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
     reveal_timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
     balance = fields.Integer(default=None, missing=None)
-    state = fields.String(
-        default=None,
-        missing=None,
-        validate=validate.OneOf([
-            CHANNEL_STATE_CLOSED,
-            CHANNEL_STATE_OPENED,
-            CHANNEL_STATE_SETTLED,
-        ]),
-    )
 
     class Meta:
         strict = True
@@ -328,14 +297,6 @@ class ChannelPatchSchema(BaseSchema):
         strict = True
         # decoding to a dict is required by the @use_kwargs decorator from webargs:
         decoding_class = dict
-
-
-class ChannelListSchema(BaseListSchema):
-    data = fields.Nested(ChannelStateSchema, many=True)
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelList
 
 
 class TransferSchema(BaseSchema):
