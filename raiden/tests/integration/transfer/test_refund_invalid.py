@@ -57,7 +57,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
         nonce=1,
-        channel=channel_address,
+        channel_identifier=channel_address,
         token_network_address=token_network_identifier,
         transferred_amount=amount,
         locked_amount=0,

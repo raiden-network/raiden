@@ -180,19 +180,20 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     nonce = 1
     transferred_amount = 0
     mediated_transfer = LockedTransfer(
-        random.randint(0, UINT64_MAX),
-        payment_identifier,
-        nonce,
-        app0.raiden.default_registry.address,
-        token,
-        channelstate_0_1.identifier,
-        transferred_amount,
-        lock_amount,
-        app1.raiden.address,
-        lock.secrethash,
-        lock,
-        app1.raiden.address,
-        app0.raiden.address,
+        chain_id=UNIT_CHAIN_ID,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=app0.raiden.default_registry.address,
+        token=token,
+        channel_identifier=channelstate_0_1.identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=lock_amount,
+        recipient=app1.raiden.address,
+        locksroot=lock.secrethash,
+        lock=lock,
+        target=app1.raiden.address,
+        initiator=app0.raiden.address,
     )
     app0.raiden.sign(mediated_transfer)
 
@@ -217,7 +218,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
         token_network_address=token_network_identifier,
-        channel=channelstate_0_1.identifier,
+        channel_identifier=channelstate_0_1.identifier,
         transferred_amount=lock_amount,
         locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
