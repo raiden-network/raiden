@@ -129,41 +129,7 @@ Deploying
    :resjson address token_network_address: The deployed token networks address.
 
 Querying Information About Channels and Tokens
-===============================================
-
-.. http:get:: /api/(version)/channels/(channel_address)
-
-   Query information about one of your channels, if you know its address.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      GET /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
-      Host: localhost:5001
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
-          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 35000000,
-          "state": "open",
-          "settle_timeout": 100,
-          "reveal_timeout": 30
-      }
-
-   :statuscode 200: Successful query
-   :statuscode 404:
-    - Given channel address is not a valid eip55-encoded Ethereum address or
-    - Channel does not exist
-   :statuscode 500: Internal Raiden node error
+==============================================
 
 .. http:get:: /api/(version)/channels
 
@@ -196,6 +162,40 @@ Querying Information About Channels and Tokens
       ]
 
    :statuscode 200: Successful query
+   :statuscode 500: Internal Raiden node error
+
+.. http:get:: /api/(version)/channels/(token_address)/(partner_address)
+
+   Query information about one of your channels. The channel is specified by the address of the token and the partner's address.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "balance": 35000000,
+          "state": "open",
+          "settle_timeout": 100,
+          "reveal_timeout": 30
+      }
+
+   :statuscode 200: Successful query
+   :statuscode 404:
+    - Given channel address is not a valid eip55-encoded Ethereum address or
+    - Channel does not exist
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/tokens
@@ -309,7 +309,7 @@ Channel Management
    :statuscode 409: Invalid input, e. g. too low a settle timeout
    :statuscode 500: Internal Raiden node error
 
-.. http:patch:: /api/(version)/channels/(channel_address)
+.. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
 
    This request is used to close a channel or to increase the deposit in it.
 
@@ -317,7 +317,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+      PATCH /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -329,7 +329,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+      PATCH /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -370,7 +370,46 @@ Channel Management
    :statuscode 500: Internal Raiden node error
 
 Connection Management
-======================
+=====================
+
+.. http:get:: /api/(version)/connections
+
+   Query details of all joined token networks.
+
+   The request will return a JSON object where each key is a token address for which you have open channels.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/1/connections HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
+              "funds": 100,
+              "sum_deposits": 67,
+              "channels": 3
+          },
+          "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
+              "funds": 49
+              "sum_deposits": 31,
+              "channels": 1
+          }
+      }
+
+   :resjsonarr int funds: Funds from last connect request
+   :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
+   :resjsonarr int channels: Number of channels currently open for that token
+   :statuscode 200: For a successful query
+   :statuscode 500: Internal Raiden node error
 
 .. http:put:: /api/(version)/connections/(token_address)
 
@@ -438,45 +477,6 @@ Connection Management
       The default behavior to close and settle only receiving channels is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
 
       If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
-
-.. http:get:: /api/(version)/connections
-
-   Query details of all previously joined token networks.
-
-   The request will return a JSON object where each key is a token address for which you have open channels.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      GET /api/1/connections HTTP/1.1
-      Host: localhost:5001
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-          "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
-              "funds": 100,
-              "sum_deposits": 67,
-              "channels": 3
-          },
-          "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": 49
-              "sum_deposits": 31,
-              "channels": 1
-          }
-      }
-
-   :resjsonarr int funds: Funds from last connect request
-   :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
-   :resjsonarr int channels: Number of channels currently open for that token
-   :statuscode 200: For a successful query
-   :statuscode 500: Internal Raiden node error
 
 Transfers
 =========
