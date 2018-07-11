@@ -6,7 +6,7 @@ import { MenuItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
-import { Usertoken } from '../../models/usertoken';
+import { UserToken } from '../../models/usertoken';
 import { Message, ConfirmationService } from 'primeng/primeng';
 import { EventsParam } from '../../models/event';
 import { WithMenu } from '../../models/withmenu';
@@ -21,8 +21,8 @@ export class TokenNetworkComponent implements OnInit {
     @Input() raidenAddress: string;
 
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
-    public tokensBalances$: Observable<Array<WithMenu<Usertoken>>>;
-    public selectedToken: Usertoken;
+    public tokensBalances$: Observable<Array<WithMenu<UserToken>>>;
+    public selectedToken: UserToken;
     public refreshing = true;
     public watchEvents: EventsParam[] = [{}];
     public tabIndex = 0;
@@ -44,14 +44,14 @@ export class TokenNetworkComponent implements OnInit {
                 Object.assign(
                     userToken,
                     { menu: this.menuFor(userToken) }
-                ) as WithMenu<Usertoken>
+                ) as WithMenu<UserToken>
             )),
             tap(() => this.refreshing = false,
                 () => this.refreshing = false),
         );
     }
 
-    private menuFor(userToken: Usertoken): MenuItem[] {
+    private menuFor(userToken: UserToken): MenuItem[] {
         return [
             {
                 label: 'Join Network',
@@ -90,17 +90,17 @@ export class TokenNetworkComponent implements OnInit {
         this.tokensSubject.next(null);
     }
 
-    public showJoinDialog(userToken: Usertoken, show: boolean = true) {
+    public showJoinDialog(userToken: UserToken, show: boolean = true) {
         this.selectedToken = userToken;
         this.displayJoinDialog = show;
     }
 
-    public showTransferDialog(userToken: Usertoken, show: boolean = true) {
+    public showTransferDialog(userToken: UserToken, show: boolean = true) {
         this.selectedToken = userToken;
         this.displayTransferDialog = show;
     }
 
-    public showLeaveDialog(userToken: Usertoken) {
+    public showLeaveDialog(userToken: UserToken) {
         this.confirmationService.confirm({
             header: 'Leave Token Network',
             message: `Are you sure that you want to close and settle all channels for token
@@ -119,7 +119,7 @@ export class TokenNetworkComponent implements OnInit {
         });
     }
 
-    public watchTokenEvents(token: Usertoken) {
+    public watchTokenEvents(token: UserToken) {
         let index = this.watchEvents
             .map((event) => event.token)
             .indexOf(token.address);

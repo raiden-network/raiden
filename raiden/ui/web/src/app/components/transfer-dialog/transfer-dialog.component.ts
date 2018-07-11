@@ -69,23 +69,23 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
         this.raidenService.initiateTransfer(
             value['token_address'],
             value['target_address'],
-            value['amount'])
-            .subscribe((response) => {
-                if ('target_address' in response && 'identifier' in response) {
-                    this.sharedService.msg({
-                        severity: 'success',
-                        summary: 'Transfer successful',
-                        detail: `${value.amount} of {value.token_address} tokens
-                            where transfered to ${value.target_address}`,
-                    });
-                } else {
-                    this.sharedService.msg({
-                        severity: 'error',
-                        summary: 'Transfer error',
-                        detail: JSON.stringify(response),
-                    });
-                }
-            });
+            value['amount'],
+        ).subscribe((response) => {
+            if ('target_address' in response && 'identifier' in response) {
+                this.sharedService.msg({
+                    severity: 'success',
+                    summary: 'Transfer successful',
+                    detail: `${value.amount} of {value.token_address} tokens
+                        where transfered to ${value.target_address}`,
+                });
+            } else {
+                this.sharedService.msg({
+                    severity: 'error',
+                    summary: 'Transfer error',
+                    detail: JSON.stringify(response),
+                });
+            }
+        });
         this.visible = false;
     }
 

@@ -47,7 +47,7 @@ export class ChannelTableComponent implements OnInit {
                 // improve *ngFor change detection on data table
                 for (const newchannel of newChannels) {
                     const oldchannel: WithMenu<Channel> = oldChannels.find((c) =>
-                        c.channel_address === newchannel.channel_address);
+                        c.channel_identifier === newchannel.channel_identifier);
                     if (oldchannel) {
                         Object.assign(oldchannel, newchannel, { menu: oldchannel.menu });
                     } else {
@@ -61,7 +61,7 @@ export class ChannelTableComponent implements OnInit {
                 }
                 return oldChannels.filter((oldchannel) =>
                     newChannels.find((c) =>
-                        c.channel_address === oldchannel.channel_address)
+                        c.channel_identifier === oldchannel.channel_identifier)
                 );
             }, []),
             tap(() =>
@@ -106,30 +106,36 @@ export class ChannelTableComponent implements OnInit {
         this.displayDialog = false;
         switch (this.action) {
             case 'transfer':
-                console.log('Inside Manage Channel TRansfer');
                 this.raidenService.initiateTransfer(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
-                    this.amount
+                    this.amount,
                 ).pipe(
                     finalize(() => this.channelsSubject.next(null)),
                 ).subscribe((response) => this.showMessage(response));
                 break;
             case 'deposit':
                 this.raidenService.depositToChannel(
-                        this.tempChannel.channel_address,
-                        this.amount
+                        this.tempChannel.token_address,
+                        this.tempChannel.partner_address,
+                        this.amount,
                     ).pipe(
                         finalize(() => this.channelsSubject.next(null)),
                     ).subscribe((response) => this.showMessage(response));
                 break;
             case 'close':
-                this.raidenService.closeChannel(this.tempChannel.channel_address).pipe(
+                this.raidenService.closeChannel(
+                    this.tempChannel.token_address,
+                    this.tempChannel.partner_address,
+                ).pipe(
                     finalize(() => this.channelsSubject.next(null)),
                 ).subscribe((response) => this.showMessage(response));
                 break;
             case 'settle':
-                this.raidenService.settleChannel(this.tempChannel.channel_address).pipe(
+                this.raidenService.settleChannel(
+                    this.tempChannel.token_address,
+                    this.tempChannel.partner_address,
+                ).pipe(
                     finalize(() => this.channelsSubject.next(null)),
                 ).subscribe((response) => this.showMessage(response));
                 break;
@@ -157,7 +163,7 @@ export class ChannelTableComponent implements OnInit {
                 if ('balance' in response && 'state' in response) {
                     this.sharedService.msg({
                         severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_address} has been modified with a deposit of ${response.balance}`
+                        detail: `The channel ${response.channel_identifier} has been modified with a deposit of ${response.balance}`
                     });
                 } else {
                     this.sharedService.msg({
@@ -170,7 +176,7 @@ export class ChannelTableComponent implements OnInit {
                 if ('state' in response && response.state === 'closed') {
                     this.sharedService.msg({
                         severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_address} with partner
+                        detail: `The channel ${response.channel_identifier} with partner
                     ${response.partner_address} has been closed successfully`
                     });
                 } else {
@@ -184,7 +190,7 @@ export class ChannelTableComponent implements OnInit {
                 if ('state' in response && response.state === 'settled') {
                     this.sharedService.msg({
                         severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_address} with partner
+                        detail: `The channel ${response.channel_identifier} with partner
                     ${response.partner_address} has been settled successfully`
                     });
                 } else {
@@ -237,9 +243,9 @@ export class ChannelTableComponent implements OnInit {
     public watchChannelEvents(channel: Channel) {
         let index = this.watchEvents
             .map((event) => event.channel)
-            .indexOf(channel.channel_address);
+            .indexOf(channel);
         if (index < 0) {
-            this.watchEvents = [...this.watchEvents, { channel: channel.channel_address }];
+            this.watchEvents = [...this.watchEvents, { channel }];
             index = this.watchEvents.length - 1;
         }
         setTimeout(() => this.tabIndex = index + 1, 100);

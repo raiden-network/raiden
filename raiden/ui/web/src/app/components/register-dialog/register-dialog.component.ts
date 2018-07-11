@@ -4,7 +4,7 @@ import { FormControl } from '@angular/forms';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
-import { Usertoken } from '../../models/usertoken';
+import { UserToken } from '../../models/usertoken';
 
 @Component({
     selector: 'app-register-dialog',
@@ -26,8 +26,10 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
         }
     }
 
-    constructor(private raidenService: RaidenService,
-        private sharedService: SharedService) { }
+    constructor(
+        private raidenService: RaidenService,
+        private sharedService: SharedService,
+    ) { }
 
     ngOnInit() {
     }
@@ -55,16 +57,16 @@ export class RegisterDialogComponent implements OnInit, OnDestroy {
 
     public registerToken() {
         if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
-            this.raidenService.registerToken(this.tokenAddress.value)
-                .subscribe(
-                    (userToken: Usertoken) => {
-                        this.tokensChange.emit(null);
-                        this.sharedService.msg({
-                            severity: 'success',
-                            summary: 'Token registered',
-                            detail: 'Your token was successfully registered: ' + userToken.address,
-                        });
-                    });
+            this.raidenService.registerToken(
+                this.tokenAddress.value,
+            ).subscribe((userToken: UserToken) => {
+                this.tokensChange.emit(null);
+                this.sharedService.msg({
+                    severity: 'success',
+                    summary: 'Token registered',
+                    detail: 'Your token was successfully registered: ' + userToken.address,
+                });
+            });
         }
         this.visible = false;
     }

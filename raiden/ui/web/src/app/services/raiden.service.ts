@@ -7,7 +7,7 @@ import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
 
-import { Usertoken } from '../models/usertoken';
+import { UserToken } from '../models/usertoken';
 import { Channel } from '../models/channel';
 import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
@@ -20,7 +20,7 @@ export class RaidenService {
 
     public tokenContract: any;
     public raidenAddress: string;
-    private userTokens: { [id: string]: Usertoken |null} = {};
+    private userTokens: { [id: string]: UserToken | null} = {};
 
     constructor(
         private http: HttpClient,
@@ -69,23 +69,22 @@ export class RaidenService {
         );
     }
 
-    public getTokens(refresh: boolean = false): Observable<Array<Usertoken>> {
+    public getTokens(refresh: boolean = false): Observable<Array<UserToken>> {
         return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`).pipe(
             combineLatest(refresh ?
                 this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
                 of(null)
             ),
-            map(([tokenArray, connections]): Array<Observable<Usertoken>> =>
-                tokenArray
-                    .map((token) =>
-                        this.getUsertoken(token, refresh).pipe(
-                            map((userToken) => userToken && connections ?
-                                Object.assign(
-                                    userToken,
-                                    { connected: connections[token] }
-                                ) : userToken
-                            ))
-                    )
+            map(([tokenArray, connections]): Array<Observable<UserToken>> =>
+                tokenArray.map((token) =>
+                    this.getUserToken(token, refresh).pipe(
+                        map((userToken) => userToken && connections ?
+                            Object.assign(
+                                userToken,
+                                { connected: connections[token] }
+                            ) : userToken
+                        ))
+                )
             ),
             switchMap((obsArray) => obsArray && obsArray.length ?
                 zip(...obsArray).pipe(first()) :
@@ -96,17 +95,26 @@ export class RaidenService {
         );
     }
 
+    public getChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
+        return this.http.get<Channel>(
+            `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
+        ).pipe(
+            catchError((error) => this.handleError(error)),
+        );
+    }
+
     public openChannel(
-        partnerAddress: string,
         tokenAddress: string,
+        partnerAddress: string,
+        settleTimeout: number,
         balance: number,
-        settleTimeout: number): Observable<Channel> {
+    ): Observable<Channel> {
         console.log('Inside the open channel service');
         const data = {
-            'partner_address': partnerAddress,
             'token_address': tokenAddress,
+            'partner_address': partnerAddress,
+            'settle_timeout': settleTimeout,
             'balance': balance,
-            'settle_timeout': settleTimeout
         };
         return this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data).pipe(
             catchError((error) => this.handleError(error)),
@@ -115,63 +123,71 @@ export class RaidenService {
 
     public initiateTransfer(
         tokenAddress: string,
+        targetAddress: string,
+        amount: number,
+    ): Observable<any> {
+        return this.http.post(
+            `${this.raidenConfig.api}/transfers/${tokenAddress}/${targetAddress}`,
+            { amount, identifier: this.identifier },
+        ).pipe(
+            catchError((error) => this.handleError(error)),
+        );
+    }
+
+    public depositToChannel(
+        tokenAddress: string,
         partnerAddress: string,
-        amount: number): Observable<any> {
-        const data = {
-            'amount': amount,
-            'identifier': this.identifier
-        };
-        console.log(`${this.raidenConfig.api}/transfers/${tokenAddress}/${partnerAddress}`);
-        return this.http.post(`${this.raidenConfig.api}/transfers/${tokenAddress}/${partnerAddress}`, data).pipe(
+        amount: number,
+    ): Observable<Channel> {
+        return this.getChannel(tokenAddress, partnerAddress).pipe(
+            switchMap((channel) => this.http.patch<Channel>(
+                `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
+                { total_deposit: channel.balance + amount },
+            )),
             catchError((error) => this.handleError(error)),
         );
     }
 
-    public depositToChannel(channelAddress: string, balance: number): Observable<any> {
-        const data = {
-            'balance': balance
-        };
-        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data).pipe(
+    public closeChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
+        return this.http.patch<Channel>(
+            `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
+            { state: 'closed' },
+        ).pipe(
             catchError((error) => this.handleError(error)),
         );
     }
 
-    public closeChannel(channelAddress: string): Observable<any> {
-        const data = {
-            'state': 'closed'
-        };
-        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data).pipe(
+    public settleChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
+        return this.http.patch<Channel>(
+            `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
+            { state: 'settled' },
+        ).pipe(
             catchError((error) => this.handleError(error)),
         );
     }
 
-    public settleChannel(channelAddress: string): Observable<any> {
-        const data = {
-            'state': 'settled'
-        };
-        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data).pipe(
-            catchError((error) => this.handleError(error)),
-        );
-    }
-
-    public registerToken(tokenAddress: string): Observable<Usertoken> {
-        return this.http.put(`${this.raidenConfig.api}/tokens/${tokenAddress}`, {}).pipe(
-            switchMap(() => this.getUsertoken(tokenAddress).pipe(
+    public registerToken(tokenAddress: string): Observable<UserToken> {
+        return this.http.put(
+            `${this.raidenConfig.api}/tokens/${tokenAddress}`,
+            {},
+        ).pipe(
+            switchMap(() => this.getUserToken(tokenAddress).pipe(
                 map((userToken) => {
                     if (userToken === null) {
                         throw new Error(`No contract on address: ${tokenAddress}`);
                     }
                     return userToken;
-                }))
-            ),
-            catchError((error) => this.handleError(error)),);
+                }),
+            )),
+            catchError((error) => this.handleError(error)),
+        );
     }
 
     public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
-        const data = {
-            'funds': funds
-        };
-        return this.http.put(`${this.raidenConfig.api}/connections/${tokenAddress}`, data).pipe(
+        return this.http.put(
+            `${this.raidenConfig.api}/connections/${tokenAddress}`,
+            { funds },
+        ).pipe(
             catchError((error) => this.handleError(error)),
         );
     }
@@ -185,10 +201,11 @@ export class RaidenService {
     public getEvents(
         eventsParam: EventsParam,
         fromBlock?: number,
-        toBlock?: number): Observable<Array<Event>> {
+        toBlock?: number,
+    ): Observable<Array<Event>> {
         let path: string;
         if (eventsParam.channel) {
-            path = `channels/${eventsParam.channel}`;
+            path = `channels/${eventsParam.channel.token_address}/${eventsParam.channel.channel_identifier}`;
         } else if (eventsParam.token) {
             path = `tokens/${eventsParam.token}`;
         } else {
@@ -240,12 +257,12 @@ export class RaidenService {
         );
     }
 
-    public getUsertoken(
+    public getUserToken(
         tokenAddress: string,
-        refresh: boolean = true
-    ): Observable<Usertoken | null> {
+        refresh: boolean = true,
+    ): Observable<UserToken | null> {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
-        const userToken: Usertoken |null | undefined = this.userTokens[tokenAddress];
+        const userToken: UserToken | null | undefined = this.userTokens[tokenAddress];
         if (userToken === undefined) {
             return bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
@@ -264,7 +281,7 @@ export class RaidenService {
                         catchError((error) => of(null)),
                     ),
                 ),
-                map(([symbol, name, balance]): Usertoken => {
+                map(([symbol, name, balance]): UserToken => {
                     if (balance === null) {
                         return null;
                     }
