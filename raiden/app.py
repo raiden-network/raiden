@@ -31,6 +31,7 @@ from raiden.network.proxies import (
     SecretRegistry,
     Discovery,
 )
+from raiden.exceptions import InvalidSettleTimeout
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -95,9 +96,9 @@ class App:  # pylint: disable=too-few-public-methods
             config['settle_timeout'] > default_registry.settlement_timeout_max()
         )
         if invalid_timeout:
-            print(
+            raise InvalidSettleTimeout(
                 (
-                    'FATAL: Settlement timeout for Registry contract {} must '
+                    'Settlement timeout for Registry contract {} must '
                     'be in range [{}, {}], is {}'
                 ).format(
                     to_checksum_address(default_registry.address),
@@ -106,7 +107,6 @@ class App:  # pylint: disable=too-few-public-methods
                     config['settle_timeout'],
                 ),
             )
-            sys.exit(1)
 
         try:
             self.raiden = RaidenService(
