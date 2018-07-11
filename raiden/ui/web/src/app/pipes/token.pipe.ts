@@ -4,7 +4,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../services/raiden.service';
-import { Usertoken } from '../models/usertoken';
+import { UserToken } from '../models/usertoken';
 
 @Pipe({
   name: 'token'
@@ -13,7 +13,7 @@ export class TokenPipe implements PipeTransform {
 
   constructor(private raidenService: RaidenService) {}
 
-  tokenToString(token: Usertoken): string {
+  tokenToString(token: UserToken): string {
     let text = '';
     if (!token) {
       return '';
@@ -32,7 +32,7 @@ export class TokenPipe implements PipeTransform {
     return text;
   }
 
-  tokensToSelectItems(tokens: Array<Usertoken>): Array<SelectItem> {
+  tokensToSelectItems(tokens: Array<UserToken>): Array<SelectItem> {
     return tokens.map((token) => ({
       value: token.address,
       label: this.tokenToString(token)
@@ -40,7 +40,7 @@ export class TokenPipe implements PipeTransform {
   }
 
   transform(address: string, args?: any): Observable<string> {
-    return this.raidenService.getUsertoken(address, false).pipe(
+    return this.raidenService.getUserToken(address, false).pipe(
       map((token) => this.tokenToString(token)),
     );
   }

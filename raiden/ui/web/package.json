@@ -1,11 +1,11 @@
 {
   "name": "raidenwebui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "scripts": {
     "ng": "ng",
     "start": "npm run serve",
-    "serve": "ng serve --proxy-config proxy.config.json --base-href /ui/ --deploy-url /ui/ --delete-output-path false",
+    "serve": "ng serve --proxy-config proxy.config.json --base-href /ui/ --deploy-url /ui/",
     "build": "npm run build:prod",
     "build:dev": "ng build",
     "build:prod": "ng build --prod --aot",

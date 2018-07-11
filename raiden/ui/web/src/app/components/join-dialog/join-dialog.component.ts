@@ -46,15 +46,15 @@ export class JoinDialogComponent implements OnInit, OnDestroy {
     public joinTokenNetwork() {
         this.raidenService.connectTokenNetwork(
             this.funds.value,
-            this.tokenAddress)
-            .subscribe((response) =>
-                this.sharedService.msg({
-                    severity: 'success',
-                    summary: 'Joined Token Network',
-                    detail: 'You have successfully Joined the Network' +
-                    ' of Token ' + this.tokenAddress
-                })
-            );
+            this.tokenAddress,
+        ).subscribe((response) =>
+            this.sharedService.msg({
+                severity: 'success',
+                summary: 'Joined Token Network',
+                detail: 'You have successfully Joined the Network' +
+                ' of Token ' + this.tokenAddress
+            })
+        );
         this.visible = false;
     }
 

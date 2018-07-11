@@ -1,3 +1,5 @@
+import { Channel } from './channel';
+
 export interface Event {
     event_type: string;
     block_number: number;
@@ -15,7 +17,7 @@ export interface Event {
 }
 
 export interface EventsParam {
-    channel?: string;
+    channel?: Channel;
     token?: string;
     activity?: boolean;
 }
