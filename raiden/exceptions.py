@@ -199,3 +199,8 @@ class UnhandledExceptionInGreenlet(RaidenError):
 
     def __init__(self, exception):
         super().__init__(f'{type(exception)} ({str(exception) or "-"})')
+
+
+class TooManyPendingTransfers(RaidenError):
+    """Raised when MAXIMUM_PENDING_TRANSFERS is reached and a new
+    mediated transfer is requested."""
