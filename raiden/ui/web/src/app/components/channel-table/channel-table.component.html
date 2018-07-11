@@ -3,7 +3,7 @@
     <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
       <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
-      <button pButton type="button" (click)="showOpenChannelDialog()" icon="fa-external-link-square" label="Open Channel"></button>
+      <button pButton type="button" (click)="showOpenChannelDialog()" icon="fa fa-external-link-square" label="Open Channel"></button>
     </div>
     <p-dataTable [value]="channels" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
       <p-column field="channel_address" header="Channel" [sortable]="true">
@@ -28,13 +28,13 @@
       <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
         <ng-template let-channel="rowData" pTemplate="body">
           <p-menu #menu popup="popup" [model]="channel.menu" appendTo="body"></p-menu>
-          <button pButton #menuButton type="button" icon="fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
+          <button pButton #menuButton type="button" icon="fa fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>
     </p-dataTable>
   </p-tabPanel>
 
-  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="'Channel Events: '+eventsParam.channel" [closable]="true" [leftIcon]="eventsParam.activity ? 'fa-bell' : ''">
+  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="'Channel Events: '+eventsParam.channel" [closable]="true" [leftIcon]="eventsParam.activity ? 'fa fa-bell' : ''">
     <app-event-list [eventsParam]="eventsParam" (activity)="handleActivity(eventsParam)"></app-event-list>
   </p-tabPanel>
 </p-tabView>
@@ -50,7 +50,7 @@
   </div>
   <p-footer>
     <div class="ui-dialog-buttonpane ui-helper-clearfix">
-      <button type="button" pButton icon="fa-exchange" (click)="manageChannel()" label="{{action| uppercase}}"></button>
+      <button type="button" pButton icon="fa fa-exchange" (click)="manageChannel()" label="{{action| uppercase}}"></button>
     </div>
   </p-footer>
 </p-dialog>

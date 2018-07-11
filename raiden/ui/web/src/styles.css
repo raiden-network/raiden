@@ -37,3 +37,12 @@ html, body, .my-content {
 .ui-tabview .ui-tabview-panel {
     border-width: 1px;
 }
+
+.ui-widget-header > button {
+  margin-left: 4px;
+}
+
+.pi.pi-times:before {
+  content: "\f00d";
+  font-family: FontAwesome;
+}

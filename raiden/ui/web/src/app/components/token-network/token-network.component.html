@@ -3,9 +3,9 @@
     <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
       <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
-      <button type="button" pButton icon="fa-plus-circle" (click)="showRegisterDialog()" label="Register New Token"></button>
-      <button type="button" pButton icon="fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button>
-      <button type="button" pButton icon="fa-refresh" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
+      <button type="button" pButton icon="fa fa-plus-circle" (click)="showRegisterDialog()" label="Register New Token"></button>
+      <button type="button" pButton icon="fa fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button>
+      <button type="button" pButton icon="fa fa-refresh" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
     </div>
     <p-dataTable [value]="tokens" dataKey="address" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
       <p-column field="symbol" header="Symbol" [style]="{'width':'7em', 'text-align': 'center'}" [sortable]="true"></p-column>
@@ -19,13 +19,13 @@
       <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
         <ng-template let-token="rowData" pTemplate="body">
           <p-menu #menu popup="popup" [model]="token.menu" appendTo="body"></p-menu>
-          <button pButton #menuButton type="button" icon="fa-ellipsis-v" [ngClass]="token.connected ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
+          <button pButton #menuButton type="button" icon="fa fa-ellipsis-v" [ngClass]="token.connected ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>
     </p-dataTable>
   </p-tabPanel>
 
-  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="eventsParam.token ? 'Token Events: '+eventsParam.token : 'Network Events'" [closable]="!!eventsParam.token" [leftIcon]="eventsParam.activity ? 'fa-bell' : ''">
+  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="eventsParam.token ? 'Token Events: '+eventsParam.token : 'Network Events'" [closable]="!!eventsParam.token" [leftIcon]="eventsParam.activity ? 'fa fa-bell' : ''">
     <app-event-list [eventsParam]="eventsParam" (activity)="handleActivity(eventsParam)"></app-event-list>
   </p-tabPanel>
 </p-tabView>

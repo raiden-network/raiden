@@ -10,10 +10,10 @@
       <span [title]="data[col.field] | date:'medium'">{{ data[col.field] | date:'y-MM-dd HH:mm:ss' }}</span>
     </ng-template>
   </p-column>
-  <p-column field="event_type" header="Event Type" [style]="{'width': '15%'}" sortable="true"></p-column>
+  <p-column field="event" header="Event Type" [style]="{'width': '15%'}" sortable="true"></p-column>
   <p-column field="data" header="Data">
     <ng-template let-col let-data="rowData" pTemplate="body">
-      <span>{{ data['data'] }}</span>
+      <span [title]="data['data']">{{ data['data'] }}</span>
     </ng-template>
   </p-column>
   <ng-template let-event pTemplate="rowexpansion">
@@ -26,7 +26,7 @@
           <div class="ui-grid ui-grid-responsive ui-fluid">
             <div *ngFor="let key of event | subset:null:'event_type,block_number,timestamp,data' | keys" class="ui-grid-row">
               <div class="ui-grid-col-2"><strong>{{ key }}:</strong></div>
-              <div class="ui-grid-col-10">{{ event[key] }}</div>
+              <div class="ui-grid-col-10" [title]="event[key] | json">{{ event[key] | json }}</div>
             </div>
           </div>
         </div>

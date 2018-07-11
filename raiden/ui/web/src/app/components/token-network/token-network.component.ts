@@ -55,24 +55,24 @@ export class TokenNetworkComponent implements OnInit {
         return [
             {
                 label: 'Join Network',
-                icon: 'fa-sign-in',
+                icon: 'fa fa-sign-in',
                 command: () => this.showJoinDialog(userToken),
             },
             {
                 label: 'Leave Network',
-                icon: 'fa-sign-out',
+                icon: 'fa fa-sign-out',
                 disabled: !(userToken.connected),
                 command: () => this.showLeaveDialog(userToken),
             },
             {
                 label: 'Transfer',
-                icon: 'fa-exchange',
+                icon: 'fa fa-exchange',
                 disabled: !(userToken.connected && userToken.connected.sum_deposits > 0),
                 command: () => this.showTransferDialog(userToken),
             },
             {
                 label: 'Watch Events',
-                icon: 'fa-clock-o',
+                icon: 'fa fa-clock-o',
                 command: () => this.watchTokenEvents(userToken)
             },
         ];
