@@ -45,6 +45,7 @@ from raiden.exceptions import (
     ContractVersionMismatch,
     EthNodeCommunicationError,
     RaidenServicePortInUseError,
+    InvalidDBData,
     InvalidSettleTimeout,
 )
 from raiden.log_config import configure_logging
@@ -690,7 +691,7 @@ def app(
             transport,
             discovery,
         )
-    except InvalidSettleTimeout as e:
+    except (InvalidSettleTimeout, InvalidDBData) as e:
         print(f'FATAL: {str(e)}')
         sys.exit(1)
 
