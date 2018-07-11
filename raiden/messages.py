@@ -260,14 +260,30 @@ class SignedMessage(Message):
 
 
 class EnvelopeMessage(SignedMessage):
-    def __init__(self, chain_id: ChainID):
+    def __init__(
+            self,
+            chain_id: ChainID,
+            nonce: None = 0,
+            transferred_amount: TokenAmount = 0,
+            locked_amount: TokenAmount = 0,
+            locksroot: Locksroot = EMPTY_MERKLE_ROOT,
+            channel_identifier: ChannelID = b'',
+            token_network_address: Address = b'',
+    ):
         super().__init__()
-        self.nonce = 0
-        self.transferred_amount = 0
-        self.locked_amount = 0
-        self.locksroot = EMPTY_MERKLE_ROOT
-        self.channel = b''
-        self.token_network_address = b''
+        assert_envelope_values(
+            nonce,
+            channel_identifier,
+            transferred_amount,
+            locked_amount,
+            locksroot,
+        )
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
+        self.locksroot = locksroot
+        self.channel = channel_identifier
+        self.token_network_address = token_network_address
         self.chain_id = chain_id
 
     @property
@@ -535,14 +551,14 @@ class Secret(EnvelopeMessage):
             locksroot: Locksroot,
             secret: Secret,
     ):
-        super().__init__(chain_id)
-
-        assert_envelope_values(
-            nonce,
-            channel_identifier,
-            transferred_amount,
-            locked_amount,
-            locksroot,
+        super().__init__(
+            chain_id=chain_id,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            locksroot=locksroot,
+            channel_identifier=channel_identifier,
+            token_network_address=token_network_address,
         )
 
         if payment_identifier < 0:
@@ -557,12 +573,6 @@ class Secret(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.secret = secret
-        self.nonce = nonce
-        self.token_network_address = token_network_address
-        self.channel = channel_identifier
-        self.transferred_amount = transferred_amount
-        self.locked_amount = locked_amount
-        self.locksroot = locksroot
 
     def __repr__(self):
         return (
@@ -782,26 +792,20 @@ class DirectTransfer(EnvelopeMessage):
             locksroot: Locksroot,
     ):
 
-        assert_envelope_values(
-            nonce,
-            channel_identifier,
-            transferred_amount,
-            locked_amount,
-            locksroot,
+        super().__init__(
+            chain_id=chain_id,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            locksroot=locksroot,
+            channel_identifier=channel_identifier,
+            token_network_address=token_network_address,
         )
         assert_transfer_values(payment_identifier, token, recipient)
-
-        super().__init__(chain_id)
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
-        self.nonce = nonce
-        self.token_network_address = token_network_address
         self.token = token
-        self.channel = channel_identifier
-        self.transferred_amount = transferred_amount  #: total amount of token sent to partner
-        self.locked_amount = locked_amount  #: total amount of token locked in the merkle tree
         self.recipient = recipient  #: partner's address
-        self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
 
     @classmethod
     def unpack(cls, packed):
@@ -1039,28 +1043,21 @@ class LockedTransferBase(EnvelopeMessage):
             locksroot: Locksroot,
             lock: HashTimeLockState,
     ):
-        super().__init__(chain_id)
-
-        assert_envelope_values(
-            nonce,
-            channel_identifier,
-            transferred_amount,
-            locked_amount,
-            locksroot,
+        super().__init__(
+            chain_id=chain_id,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            locksroot=locksroot,
+            channel_identifier=channel_identifier,
+            token_network_address=token_network_address,
         )
-
         assert_transfer_values(payment_identifier, token, recipient)
 
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
-        self.nonce = nonce
-        self.token_network_address = token_network_address
         self.token = token
-        self.channel = channel_identifier
-        self.transferred_amount = transferred_amount
-        self.locked_amount = locked_amount
         self.recipient = recipient
-        self.locksroot = locksroot
         self.lock = lock
 
     @classmethod
