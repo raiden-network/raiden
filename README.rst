@@ -28,12 +28,10 @@ Ropsten testnet
 
 These are the currently deployed raiden contract addresses for the Ropsten testnet:
 
-* Netting Channel Library: 0xad5cb8fa8813f3106f3ab216176b6457ab08eb75_
-* Channel Manager Library: 0xdb3a4dbae2b761ed2751f867ce197c531911382a_
-* Registry Contract: 0x68e1b6ed7d2670e2211a585d68acfa8b60ccb828_
-* Discovery Contract: 0x1e3941d8c05fffa7466216480209240cc26ea577_
+* Token Network Registry: 0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584_
+* Secret Registry Contract: 0xD1B506A716B50069Ac3C990e86253C645b61633D_
+* Endpoint Registry Contract: 0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368_
 
-.. _0xad5cb8fa8813f3106f3ab216176b6457ab08eb75: https://ropsten.etherscan.io/address/0xad5cb8fa8813f3106f3ab216176b6457ab08eb75#code
-.. _0xdb3a4dbae2b761ed2751f867ce197c531911382a: https://ropsten.etherscan.io/address/0xdb3a4dbae2b761ed2751f867ce197c531911382a#code
-.. _0x68e1b6ed7d2670e2211a585d68acfa8b60ccb828: https://ropsten.etherscan.io/address/0x68e1b6ed7d2670e2211a585d68acfa8b60ccb828#code
-.. _0x1e3941d8c05fffa7466216480209240cc26ea577: https://ropsten.etherscan.io/address/0x1e3941d8c05fffa7466216480209240cc26ea577#code
+.. _0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584: https://ropsten.etherscan.io/address/0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584#code
+.. _0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368: https://ropsten.etherscan.io/address/0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368#code
+.. _0xD1B506A716B50069Ac3C990e86253C645b61633D: https://ropsten.etherscan.io/address/0xD1B506A716B50069Ac3C990e86253C645b61633D#code
