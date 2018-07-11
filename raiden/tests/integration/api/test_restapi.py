@@ -341,7 +341,10 @@ def test_api_open_and_deposit_channel(
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
     assert dicts_are_equal(response, expected_response)
+
+    token_network_identifier = response['token_network_identifier']
 
     # now let's open a channel and make a deposit too
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
@@ -368,6 +371,7 @@ def test_api_open_and_deposit_channel(
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = token_network_identifier
     assert dicts_are_equal(response, expected_response)
 
     # let's deposit on the first channel
@@ -391,6 +395,7 @@ def test_api_open_and_deposit_channel(
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
+        'token_network_identifier': token_network_identifier,
     }
     assert dicts_are_equal(response, expected_response)
 
@@ -415,6 +420,7 @@ def test_api_open_and_deposit_channel(
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
+        'token_network_identifier': token_network_identifier,
     }
     assert dicts_are_equal(response, expected_response)
 
@@ -452,7 +458,10 @@ def test_api_open_close_and_settle_channel(
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
     expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
     assert dicts_are_equal(response, expected_response)
+
+    token_network_identifier = response['token_network_identifier']
 
     # let's close the channel
     request = grequests.patch(
@@ -467,6 +476,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
     assert_proper_response(response)
     expected_response = {
+        'token_network_identifier': token_network_identifier,
         'channel_identifier': dicts_are_equal.IGNORE_VALUE,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
@@ -541,7 +551,6 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
-    response = response.json()
 
     # let's try to set a random state
     request = grequests.patch(
@@ -1003,6 +1012,7 @@ def test_api_deposit_limit(
     expected_response['balance'] = balance_working
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
     assert dicts_are_equal(response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit

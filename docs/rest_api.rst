@@ -151,7 +151,8 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 35000000,
@@ -183,7 +184,8 @@ Querying Information About Channels and Tokens
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
@@ -194,7 +196,7 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 404:
-    - Given channel address is not a valid eip55-encoded Ethereum address or
+    - The given token and partner addresses are not valid eip55-encoded Ethereum addresses or
     - Channel does not exist
    :statuscode 500: Internal Raiden node error
 

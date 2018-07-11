@@ -244,6 +244,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 
 class ChannelSchema(BaseSchema):
+    token_network_identifier = AddressField()
     channel_identifier = KeccakField()
     token_address = AddressField()
     partner_address = AddressField()
