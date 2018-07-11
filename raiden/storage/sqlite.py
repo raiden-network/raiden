@@ -1,5 +1,6 @@
 import sqlite3
 import threading
+from raiden.exceptions import InvalidDBData
 from typing import (
     Any,
     Optional,
@@ -149,10 +150,17 @@ class SQLiteStorage:
                 'BETWEEN ? AND ?', (from_identifier, to_identifier),
             )
 
-        result = [
-            self.serializer.deserialize(entry[0])
-            for entry in cursor.fetchall()
-        ]
+        try:
+            result = [
+                self.serializer.deserialize(entry[0])
+                for entry in cursor.fetchall()
+            ]
+        except AttributeError:
+            raise InvalidDBData(
+                'Invalid DB Data. Please use the removedb command and start '
+                'with a fresh database.',
+            )
+
         return result
 
     def get_events_by_identifier(self, from_identifier, to_identifier):

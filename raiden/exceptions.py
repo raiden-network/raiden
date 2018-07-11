@@ -156,3 +156,7 @@ class APIServerPortInUseError(RaidenError):
 
 class RaidenServicePortInUseError(RaidenError):
     """Raised when Raiden service port is already in use"""
+
+
+class InvalidDBData(RaidenError):
+    """Raised when the data of the WAL are in an unexpected format"""
