@@ -28,7 +28,7 @@ from raiden.utils import sha3
 
 @pytest.mark.parametrize('number_of_nodes', [5])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('settle_timeout', [32])  # default settlement is too low for 3 hops
+@pytest.mark.parametrize('settle_timeout', [64])  # default settlement is too low for 3 hops
 def test_regression_unfiltered_routes(
         raiden_network,
         token_addresses,
