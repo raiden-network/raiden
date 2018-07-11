@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 import os
 import random
+from itertools import chain
 
 import filelock
 import gevent
@@ -13,7 +14,7 @@ from gevent.lock import Semaphore
 from raiden import constants, routing, waiting
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_BLOCK_COUNT
-from raiden.exceptions import InvalidAddress, RaidenShuttingDown
+from raiden.exceptions import InvalidAddress, RaidenShuttingDown, TooManyPendingTransfers
 from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import (
@@ -21,6 +22,7 @@ from raiden.network.proxies import (
     TokenNetworkRegistry,
 )
 from raiden.blockchain_events_handler import on_blockchain_event
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
 from raiden.storage import wal, serialize, sqlite
@@ -167,6 +169,11 @@ class RaidenService:
         self.stop_event = RaidenGreenletEvent()
         self.start_event = RaidenGreenletEvent()
         self.chain.client.inject_stop_event(self.stop_event)
+
+        self._maximum_pending_transfers = config.get(
+            'maximum_pending_transfers',
+            MAXIMUM_PENDING_TRANSFERS,
+        )
 
         self.wal = None
         self.snapshot_group = 0
@@ -344,6 +351,11 @@ class RaidenService:
 
         if self.db_lock is not None:
             self.db_lock.release()
+
+    @property
+    def _pending_transfers(self):
+        results = chain(*self.identifier_to_results.values())
+        return len([result for result in results if not result.ready()])
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -583,6 +595,9 @@ class RaidenService:
             target,
             identifier,
     ):
+
+        if self._pending_transfers >= self._maximum_pending_transfers:
+            raise TooManyPendingTransfers()
 
         self.start_health_check_for(target)
 
