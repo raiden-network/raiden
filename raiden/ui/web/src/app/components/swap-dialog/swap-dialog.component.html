@@ -52,7 +52,7 @@
         <div class="ui-grid-col-8">
           <div class="ui-inputgroup">
             <input pInputText type="text" id="taker_string" [value]="formString" readonly class="ui-inputtext ui-corner-all ui-state-default" (focus)="$event.target.select()" (mouseup)="$event.preventDefault()" />
-            <button pButton type="button" icon="fa-clipboard" [ngClass]="copied ? 'ui-button-success' : 'ui-button-secondary'" ngxClipboard [cbContent]="formString" (cbOnSuccess)="copied = true" title="Copy to Clipboard"></button>
+            <button pButton type="button" icon="fa fa-clipboard" [ngClass]="copied ? 'ui-button-success' : 'ui-button-secondary'" ngxClipboard [cbContent]="formString" (cbOnSuccess)="copied = true" title="Copy to Clipboard"></button>
           </div>
         </div>
       </div>
@@ -68,8 +68,8 @@
       </div>
     </div>
     <div class="ui-dialog-buttonpane ui-helper-clearfix">
-      <button type="button" pButton class="ui-button-success" icon="fa-retweet" (click)="accept()" label="Swap" [disabled]="form.invalid"></button>
-      <button type="button" pButton class="ui-button-danger" icon="fa-eraser" (click)="reset()" label="Reset" [disabled]="form.pristine && takerStringFC.pristine"></button>
+      <button type="button" pButton class="ui-button-success" icon="fa fa-retweet" (click)="accept()" label="Swap" [disabled]="form.invalid"></button>
+      <button type="button" pButton class="ui-button-danger" icon="fa fa-eraser" (click)="reset()" label="Reset" [disabled]="form.pristine && takerStringFC.pristine"></button>
     </div>
   </p-footer>
 </p-dialog>

@@ -30,7 +30,7 @@
     "angular": "^1.7.2",
     "bootstrap": "^4.1.1",
     "core-js": "^2.4.1",
-    "font-awesome": "4.7.0",
+    "font-awesome": "^4.7.0",
     "jasmine": "^2.8.0",
     "jquery": "^3.0.0",
     "ng-sidebar": "7.2.0",

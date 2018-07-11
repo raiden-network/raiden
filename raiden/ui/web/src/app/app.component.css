@@ -134,6 +134,9 @@ body {
     text-decoration: none;
     font-size: 17px;
 }
+.topnav .pull-right {
+    float: right !important;
+}
 
 .topnav a.busy {
     padding: 9px;

@@ -28,7 +28,7 @@ export class EventListComponent implements OnInit {
     ngOnInit() {
         let fromBlock: number = this.raidenConfig.config.block_start;
         let first = true;
-        const data_excl = ['event_type', 'block_number', 'timestamp'];
+        const data_excl = ['event', 'block_number', 'timestamp'];
         const firerSub: BehaviorSubject<void> = new BehaviorSubject(null);
         this.events$ = firerSub.pipe(
             tap(() => this.loading = true),
@@ -47,9 +47,11 @@ export class EventListComponent implements OnInit {
             map((events) => events.map((event) =>
                 <Event>Object.assign(event,
                     {
-                        data: JSON.stringify(Object.keys(event)
-                            .filter((k) => data_excl.indexOf(k) < 0)
-                            .reduce((o, k) => (o[k] = event[k], o), {}))
+                        data: JSON.stringify(
+                            Object.keys(event)
+                                .filter((k) => data_excl.indexOf(k) < 0)
+                                .reduce((o, k) => (o[k] = event[k], o), {})
+                        )
                     }
                 ))
             ),
