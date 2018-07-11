@@ -30,7 +30,6 @@ from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.transfer import views, channel
 from raiden.utils import sha3
-from raiden.utils.netting_channel import channel_identifier
 
 
 def event_dicts_are_equal(dict1, dict2):
@@ -198,8 +197,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
         events=ALL_EVENTS,
     )
 
-    channel_id = channel_identifier(app0.raiden.address, app1.raiden.address)
-    assert must_have_event(
+    _event = must_have_event(
         events,
         {
             'event': EVENT_CHANNEL_OPENED,
@@ -207,10 +205,11 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
                 'participant1': to_checksum_address(app0.raiden.address),
                 'participant2': to_checksum_address(app1.raiden.address),
                 'settle_timeout': settle_timeout,
-                'channel_identifier': channel_id,
             },
         },
     )
+    assert _event
+    channel_id = _event['args']['channel_identifier']
 
     events = get_token_network_events(
         app0.raiden.chain,
