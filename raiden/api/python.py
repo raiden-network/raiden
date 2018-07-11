@@ -620,11 +620,18 @@ class RaidenAPI:
 
     def get_channel_events(
             self,
-            token_network_address,
+            token_address,
             channel_identifier,
             from_block,
             to_block='latest',
     ):
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_channel_events',
+            )
+        token_network_address = self.raiden.default_registry.get_token_network(
+            token_address,
+        )
         returned_events = get_all_netting_channel_events(
             self.raiden.chain,
             token_network_address,

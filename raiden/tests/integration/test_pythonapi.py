@@ -238,7 +238,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
     channel_0_1 = get_channelstate(app0, app1, token_network_identifier)
     app0_events = RaidenAPI(app0.raiden).get_channel_events(
-        token_network_identifier,
+        token_address,
         channel_0_1.identifier,
         from_block=0,
     )
@@ -252,7 +252,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
     max_block = max(event[0] for event in app0_events)
     results = RaidenAPI(app0.raiden).get_channel_events(
-        token_network_identifier,
+        token_address,
         channel_0_1.identifier,
         from_block=max_block + 1,
         to_block=max_block + 100,
@@ -260,7 +260,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     assert not results
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events(
-        token_network_identifier,
+        token_address,
         channel_0_1.identifier,
         from_block=0,
     )
