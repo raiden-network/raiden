@@ -339,10 +339,8 @@ Known Issues
 Below are some of the open issues of the current version of raiden and our work towards solving them.
 
 - `Secure from interception of RevealSecret <https://github.com/raiden-network/raiden/issues/473>`_
-- `Add PROCESSED authentication <https://github.com/raiden-network/raiden/issues/44>`_
 - `Prevent replay attacks from different registries or Ethereum networks <https://github.com/raiden-network/raiden/issues/292>`_
 - `Whitelist for smart contract code <https://github.com/raiden-network/raiden/issues/344>`_
 - `Handle blockchain congestion <https://github.com/raiden-network/raiden/issues/383>`_
-- `Allow third parties to updateTransfer <https://github.com/raiden-network/raiden/issues/293>`_
 - `Cooperative channel closing <https://github.com/raiden-network/raiden/issues/217>`_
 
