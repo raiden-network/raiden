@@ -45,6 +45,7 @@ from raiden.exceptions import (
     ContractVersionMismatch,
     EthNodeCommunicationError,
     RaidenServicePortInUseError,
+    InvalidSettleTimeout,
 )
 from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
@@ -680,14 +681,18 @@ def app(
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
-    raiden_app = App(
-        config,
-        blockchain_service,
-        token_network_registry,
-        secret_registry,
-        transport,
-        discovery,
-    )
+    try:
+        raiden_app = App(
+            config,
+            blockchain_service,
+            token_network_registry,
+            secret_registry,
+            transport,
+            discovery,
+        )
+    except InvalidSettleTimeout as e:
+        print(f'FATAL: {str(e)}')
+        sys.exit(1)
 
     return raiden_app
 
