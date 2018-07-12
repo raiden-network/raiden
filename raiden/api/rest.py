@@ -323,7 +323,7 @@ class RestAPI:
 
     def __init__(self, raiden_api):
         self.raiden_api = raiden_api
-        self.channel_schema = ChannelStateSchema(exclude=('token_network_identifier',))
+        self.channel_schema = ChannelStateSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()

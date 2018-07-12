@@ -17,21 +17,20 @@ def wait_blocks(web3: Web3, blocks: int):
         gevent.sleep(0.5)
 
 
-def dicts_are_equal(a: dict, b: dict) -> bool:
+def assert_dicts_are_equal(a: dict, b: dict) -> bool:
     """Compares dicts, but allows ignoring specific values through the
-    dicts_are_equal.IGNORE_VALUE object"""
-    if set(a.keys()) != set(b.keys()):
-        return False
+    assert_dicts_are_equal.IGNORE_VALUE object"""
+    assert a.keys() == b.keys(), \
+        f'Only in a: {a.keys()-b.keys()!r}, only in b: {b.keys()-a.keys()!r}'
     for k in a.keys():
         va, vb = a[k], b[k]
-        if dicts_are_equal.IGNORE_VALUE in (va, vb):
+        if assert_dicts_are_equal.IGNORE_VALUE in (va, vb):
             continue
         elif isinstance(va, dict) and isinstance(vb, dict):
-            if not dicts_are_equal(va, vb):
-                return False
-        elif va != vb:
-            return False
+            assert assert_dicts_are_equal(va, vb)
+        else:
+            assert va == vb, f'{va} != {vb}'
     return True
 
 
-dicts_are_equal.IGNORE_VALUE = object()
+assert_dicts_are_equal.IGNORE_VALUE = object()
