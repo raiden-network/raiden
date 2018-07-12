@@ -541,7 +541,7 @@ Querying Events
 ===============
 
 Events are kept by the node. Once an event endpoint is queried the relevant events
-from either the beginning of time or the given block are returned.
+from either the beginning of time or the given block are returned. Events are returned in a sorted list with the most recent events on the top of the list.
 
 Events are queried by two different endpoints depending on whether they are related
 to a specific channel or not.
