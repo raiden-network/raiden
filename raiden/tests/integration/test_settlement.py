@@ -315,8 +315,9 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     with gevent.Timeout(10):
         wait_for_batch_unlock(
             app0,
-            channel_state.identifier,
             token_network_identifier,
+            channel_state.partner_state.address,
+            channel_state.our_state.address,
         )
 
     expected_balance0 = initial_balance0 + deposit - amount
