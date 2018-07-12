@@ -205,7 +205,7 @@ export class RaidenService {
     ): Observable<Array<Event>> {
         let path: string;
         if (eventsParam.channel) {
-            path = `channels/${eventsParam.channel.token_address}/${eventsParam.channel.channel_identifier}`;
+            path = `channels/${eventsParam.channel.token_address}/${eventsParam.channel.partner_address}`;
         } else if (eventsParam.token) {
             path = `tokens/${eventsParam.token}`;
         } else {

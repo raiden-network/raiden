@@ -610,39 +610,44 @@ class RaidenAPI:
         return async_result
 
     def get_network_events(self, registry_address, from_block, to_block):
-        return get_token_network_registry_events(
+        return sorted(get_token_network_registry_events(
             self.raiden.chain,
             registry_address,
             events=ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
-        )
+        ), key=lambda evt: evt.get('block_number'), reverse=True)
 
     def get_channel_events(
             self,
-            token_address,
-            channel_identifier,
-            from_block,
-            to_block='latest',
+            token_address: typing.Address,
+            partner_address: typing.Address=None,
+            from_block: typing.BlockSpecification=0,
+            to_block: typing.BlockSpecification='latest',
     ):
-        if not is_binary_address(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_channel_events',
-            )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
         )
-        returned_events = get_all_netting_channel_events(
-            self.raiden.chain,
-            token_network_address,
-            channel_identifier,
-            from_block=from_block,
-            to_block=to_block,
+        channel_list = self.get_channel_list(
+            registry_address=self.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=partner_address,
         )
+        returned_events = []
+        for channel in channel_list:
+            returned_events.extend(get_all_netting_channel_events(
+                self.raiden.chain,
+                token_network_address,
+                channel.identifier,
+                from_block=from_block,
+                to_block=to_block,
+            ))
+
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,
             to_block=to_block,
         )
+
         # Here choose which raiden internal events we want to expose to the end user
         for block_number, event in raiden_events:
             if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
@@ -653,6 +658,7 @@ class RaidenAPI:
                 new_event.update(event.__dict__)
                 returned_events.append(new_event)
 
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
     def get_token_network_events(self, token_address, from_block, to_block='latest'):
@@ -699,6 +705,7 @@ class RaidenAPI:
                 new_event.update(event.__dict__)
                 returned_events.append(new_event)
 
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
     transfer = transfer_and_wait

@@ -1,7 +1,5 @@
 from web3.utils.datastructures import AttributeDict
 
-from raiden.api.python import RaidenAPI
-
 NOVALUE = object()
 
 
@@ -72,17 +70,3 @@ def must_have_event(event_list, dict_data):
         if isinstance(item, dict) and check_dict_nested_attrs(item, dict_data):
             return item
     return None
-
-
-def get_channel_events_for_token(app, registry_address, token_address, start_block=0):
-    """ Collect all events from all channels for a given `token_address` and `app` """
-    result = list()
-    api = RaidenAPI(app.raiden)
-    channels = api.get_channel_list(
-        registry_address=registry_address,
-        token_address=token_address,
-    )
-    for channel in channels:
-        events = api.get_channel_events(token_address, channel.identifier, start_block)
-        result.extend(events)
-    return result

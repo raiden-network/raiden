@@ -7,7 +7,6 @@ from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.events import (
     must_contain_entry,
-    get_channel_events_for_token,
 )
 
 from raiden.utils import wait_until
@@ -98,12 +97,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     # Check that all transfers were handled correctly
     def test_events(handled_transfer):
         app = address_to_app[handled_transfer['initiator']]
-        events = get_channel_events_for_token(
-            app,
-            app.raiden.default_registry.address,
-            token_address,
-            0,
-        )
+        events = RaidenAPI(app.raiden).get_channel_events(token_address)
         received = {
             event['identifier']: event
             for event in events
@@ -191,12 +185,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     def get_echoed_transfer(sent_transfer):
         """For a given transfer sent to echo node, get the corresponding echoed transfer"""
         app = address_to_app[sent_transfer['initiator']]
-        events = get_channel_events_for_token(
-            app,
-            app.raiden.default_registry.address,
-            token_address,
-            0,
-        )
+        events = RaidenAPI(app.raiden).get_channel_events(token_address)
         received = {
             event['identifier']: event
             for event in events

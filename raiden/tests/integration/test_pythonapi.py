@@ -236,10 +236,9 @@ def test_api_channel_events(raiden_chain, token_addresses):
         identifier=1,
     )
 
-    channel_0_1 = get_channelstate(app0, app1, token_network_identifier)
     app0_events = RaidenAPI(app0.raiden).get_channel_events(
         token_address,
-        channel_0_1.identifier,
+        app1.raiden.address,
         from_block=0,
     )
 
@@ -253,7 +252,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     max_block = max(event[0] for event in app0_events)
     results = RaidenAPI(app0.raiden).get_channel_events(
         token_address,
-        channel_0_1.identifier,
+        app1.raiden.address,
         from_block=max_block + 1,
         to_block=max_block + 100,
     )
@@ -261,7 +260,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events(
         token_address,
-        channel_0_1.identifier,
+        app0.raiden.address,
         from_block=0,
     )
     assert must_have_event(app1_events, {'event': EVENT_CHANNEL_DEPOSIT})

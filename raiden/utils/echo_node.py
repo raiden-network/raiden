@@ -98,21 +98,14 @@ class EchoNode:
                 if not locked:
                     return
                 else:
-                    channels = self.api.get_channel_list(
-                        registry_address=self.api.raiden.default_registry.address,
-                        token_address=self.token_address,
+                    received_transfers = self.api.get_channel_events(
+                        self.token_address,
+                        from_block=self.last_poll_block,
                     )
-                    received_transfers = list()
-                    for channel_state in channels:
-                        channel_events = self.api.get_channel_events(
-                            self.token_address,
-                            channel_state.identifier,
-                            self.last_poll_block,
-                        )
-                        received_transfers.extend([
-                            event for event in channel_events
-                            if event['event'] == 'EventTransferReceivedSuccess'
-                        ])
+                    received_transfers = [
+                        event for event in received_transfers
+                        if event['event'] == 'EventTransferReceivedSuccess'
+                    ]
                     for event in received_transfers:
                         transfer = event.copy()
                         transfer.pop('block_number')
