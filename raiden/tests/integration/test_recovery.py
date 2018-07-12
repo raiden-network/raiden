@@ -59,12 +59,13 @@ def test_recovery_happy_case(
     )
 
     app0_restart = App(
-        app0.config,
-        app0.raiden.chain,
-        app0.raiden.default_registry,
-        app0.raiden.default_secret_registry,
-        new_transport,
-        app0.raiden.discovery,
+        config=app0.config,
+        chain=app0.raiden.chain,
+        query_start_block=0,
+        default_registry=app0.raiden.default_registry,
+        default_secret_registry=app0.raiden.default_secret_registry,
+        transport=new_transport,
+        discovery=app0.raiden.discovery,
     )
 
     app0.stop()
@@ -190,12 +191,13 @@ def test_recovery_unhappy_case(
     )
 
     app0_restart = App(
-        app0.config,
-        app0.raiden.chain,
-        app0.raiden.default_registry,
-        app0.raiden.default_secret_registry,
-        new_transport,
-        app0.raiden.discovery,
+        config=app0.config,
+        chain=app0.raiden.chain,
+        query_start_block=0,
+        default_registry=app0.raiden.default_registry,
+        default_secret_registry=app0.raiden.default_secret_registry,
+        transport=new_transport,
+        discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
 

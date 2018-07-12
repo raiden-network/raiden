@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 UINT64_MAX = 2 ** 64 - 1
 UINT64_MIN = 0
 
@@ -34,6 +36,10 @@ ID_TO_NETWORKNAME = {
     42: KOVAN,
     627: SMOKETEST,
 }
+
+ID_TO_QUERY_BLOCK = defaultdict(int, {
+    3: 3622000,  # 52 blocks before token network registry deployment
+})
 
 NETWORKNAME_TO_ID = {
     name: id

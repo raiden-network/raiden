@@ -100,7 +100,7 @@ class NetworkEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, from_block, to_block):
-        from_block = from_block or 0
+        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
         return self.rest_api.get_network_events(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
@@ -115,7 +115,7 @@ class TokenEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, from_block, to_block):
-        from_block = from_block or 0
+        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
         return self.rest_api.get_token_network_events(
             token_address=token_address,
@@ -130,7 +130,7 @@ class ChannelEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_network_address, channel_identifier, from_block, to_block):
-        from_block = from_block or 0
+        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
         return self.rest_api.get_channel_events(
             token_network_address=token_network_address,

@@ -3,7 +3,7 @@ import sys
 import structlog
 from binascii import unhexlify
 from eth_utils import to_normalized_address, to_checksum_address
-from typing import Dict
+from raiden.utils import typing
 
 import gevent
 
@@ -80,8 +80,9 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
             self,
-            config: Dict,
+            config: typing.Dict,
             chain: BlockChainService,
+            query_start_block: typing.BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
@@ -110,13 +111,14 @@ class App:  # pylint: disable=too-few-public-methods
 
         try:
             self.raiden = RaidenService(
-                chain,
-                default_registry,
-                default_secret_registry,
-                unhexlify(config['privatekey_hex']),
-                transport,
-                config,
-                discovery,
+                chain=chain,
+                query_start_block=query_start_block,
+                default_registry=default_registry,
+                default_secret_registry=default_secret_registry,
+                private_key_bin=unhexlify(config['privatekey_hex']),
+                transport=transport,
+                config=config,
+                discovery=discovery,
             )
         except filelock.Timeout:
             pubkey = to_normalized_address(
