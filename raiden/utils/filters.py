@@ -12,7 +12,7 @@ from pkg_resources import DistributionNotFound
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED
 
-from raiden.utils.typing import Address, ChannelID, BlockSpecification, List, Dict
+from raiden.utils.typing import Address, ChannelID, BlockSpecification, Dict
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -106,31 +106,29 @@ class StatelessFilter(LogFilter):
         self.filter_params = filter_params
 
     def get_new_entries(self):
+        filter_params = self.filter_params.copy()
+        filter_params['fromBlock'] = max(
+            filter_params.get('fromBlock', 0),
+            self._last_block + 1,
+        )
+        if self.filter_params.get('toBlock') in ('latest', 'pending'):
+            filter_params['toBlock'] = self.web3.eth.blockNumber
+        self._update_last_block(filter_params.get('toBlock', -1))
         try:
-            logs = self.web3.eth.getLogs(dict(
-                self.filter_params,
-                fromBlock=max(
-                    self.filter_params.get('fromBlock', 0),
-                    self._last_block + 1,
-                ),
-            ))
-            self._update_last_block(logs)
-            return logs
+            return self.web3.eth.getLogs(filter_params)
         except BlockNotFound:
             return []
 
     def get_all_entries(self):
+        filter_params = self.filter_params.copy()
+        if self.filter_params.get('toBlock') in ('latest', 'pending'):
+            filter_params['toBlock'] = self.web3.eth.blockNumber
+        self._update_last_block(filter_params.get('toBlock', -1))
         try:
-            logs = self.web3.eth.getLogs(self.filter_params)
-            self._update_last_block(logs)
-            return logs
+            return self.web3.eth.getLogs(filter_params)
         except BlockNotFound:
             return []
 
-    def _update_last_block(self, logs: List[Dict]=None):
-        if not logs or self.filter_params.get('toBlock') in ('latest', 'pending'):
-            block_number = self.web3.eth.blockNumber
-        else:
-            block_number = max(event.get('blockNumber', 0) for event in logs)
+    def _update_last_block(self, block_number: int):
         if block_number and block_number > self._last_block:
             self._last_block = block_number
