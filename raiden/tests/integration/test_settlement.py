@@ -27,7 +27,7 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 
 
-def wait_for_batch_unlock(app, channel_id, token_network_id):
+def wait_for_batch_unlock(app, token_network_id, participant, partner):
     unlock_event = None
     while not unlock_event:
         gevent.sleep(1)
@@ -38,8 +38,9 @@ def wait_for_batch_unlock(app, channel_id, token_network_id):
         )
 
         unlock_event = must_contain_entry(state_changes, ContractReceiveChannelBatchUnlock, {
-            'channel_identifier': channel_id,
             'token_network_identifier': token_network_id,
+            'participant': participant,
+            'partner': partner,
         })
 
 
@@ -171,8 +172,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     with gevent.Timeout(10):
         wait_for_batch_unlock(
             alice_app,
-            alice_bob_channel_state.identifier,
             token_network_identifier,
+            alice_bob_channel_state.partner_state.address,
+            alice_bob_channel_state.our_state.address,
         )
 
     alice_new_balance = alice_initial_balance + deposit - alice_to_bob_amount

@@ -713,22 +713,18 @@ class TokenNetwork:
             )
 
     def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'merkle_tree_leaves': merkle_tree_leaves,
+        }
+
         if merkle_tree_leaves is None or len(merkle_tree_leaves) == 0:
-            log.info(
-                'skipping unlock, tree is empty',
-                token_network=pex(self.address),
-                node=pex(self.node_address),
-                partner=pex(partner),
-            )
+            log.info('skipping unlock, tree is empty', **log_details)
             return
 
-        log.info(
-            'unlock called',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-        )
-
+        log.info('unlock called', **log_details)
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         transaction_hash = self.proxy.transact(
@@ -742,25 +738,18 @@ class TokenNetwork:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            log.critical(
-                'unlock failed',
-                token_network=pex(self.address),
-                node=pex(self.node_address),
-                partner=pex(partner),
-            )
             channel_settled = self.channel_is_settled(self.node_address, partner)
+
             if channel_settled is False:
+                log.critical('unlock failed. Channel is not in a settled state', **log_details)
                 raise ChannelIncorrectStateError(
                     'Channel is not in a settled state. An unlock cannot be made',
                 )
+
+            log.critical('unlock failed', **log_details)
             raise TransactionThrew('Unlock', receipt_or_none)
 
-        log.info(
-            'unlock successful',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-        )
+        log.info('unlock successful', **log_details)
 
     def settle(
             self,
@@ -777,18 +766,18 @@ class TokenNetwork:
         Raises:
             ChannelBusyError: If the channel is busy with another operation
         """
-        log.info(
-            'settle called',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=encode_hex(locksroot),
-            partner_transferred_amount=partner_transferred_amount,
-            partner_locked_amount=partner_locked_amount,
-            partner_locksroot=encode_hex(partner_locksroot),
-        )
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'transferred_amount': transferred_amount,
+            'locked_amount': locked_amount,
+            'locksroot': encode_hex(locksroot),
+            'partner_transferred_amount': partner_transferred_amount,
+            'partner_locked_amount': partner_locked_amount,
+            'partner_locksroot': encode_hex(partner_locksroot),
+        }
+        log.info('settle called', **log_details)
 
         self._check_channel_lock(partner)
 
@@ -824,30 +813,22 @@ class TokenNetwork:
             self.client.poll(unhexlify(transaction_hash))
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.info(
-                    'settle failed',
-                    token_network=pex(self.address),
-                    node=pex(self.node_address),
-                    partner=pex(partner),
-                    transferred_amount=transferred_amount,
-                    locked_amount=locked_amount,
-                    locksroot=encode_hex(locksroot),
-                    partner_transferred_amount=partner_transferred_amount,
-                    partner_locked_amount=partner_locked_amount,
-                    partner_locksroot=encode_hex(partner_locksroot),
-                )
-
                 channel_exists = self.channel_exists(self.node_address, partner)
+
                 if not channel_exists:
+                    log.info('settle failed, channel already settled', **log_details)
                     raise ChannelIncorrectStateError(
                         'Channel already settled or non-existent',
                     )
 
                 channel_closed = self.channel_is_closed(self.node_address, partner)
                 if channel_closed is False:
+                    log.info('settle failed, channel is not closed', **log_details)
                     raise ChannelIncorrectStateError(
                         'Channel is not in a closed state. It cannot be settled',
                     )
+
+                log.info('settle failed', **log_details)
                 raise TransactionThrew('Settle', receipt_or_none)
 
             log.info(

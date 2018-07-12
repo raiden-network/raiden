@@ -56,7 +56,7 @@ def test_payment_channel_proxy_basics(
     channel_proxy_1 = PaymentChannel(c1_token_network_proxy, channel_identifier)
     channel_proxy_2 = PaymentChannel(c2_token_network_proxy, channel_identifier)
 
-    event_filter = channel_proxy_1.all_events_filter(
+    channel_filter, unlock_filter = channel_proxy_1.all_events_filter(
         from_block=web3.eth.blockNumber,
         to_block='latest',
     )
@@ -71,7 +71,7 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
-    events = event_filter.get_all_entries()
+    events = channel_filter.get_all_entries()
     assert len(events) == 1  # ChannelOpened
 
     # test deposits
@@ -85,7 +85,7 @@ def test_payment_channel_proxy_basics(
     # actual deposit
     channel_proxy_1.set_total_deposit(10)
 
-    events = event_filter.get_all_entries()
+    events = channel_filter.get_all_entries()
     assert len(events) == 2  # ChannelOpened, ChannelNewDeposit
 
     # balance proof by c2
@@ -111,7 +111,7 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.closed() is True
     assert channel_proxy_2.closed() is True
 
-    events = event_filter.get_all_entries()
+    events = channel_filter.get_all_entries()
     assert len(events) == 3  # ChannelOpened, ChannelNewDeposit, ChannelClosed
 
     # check the settlement timeouts again
@@ -133,6 +133,6 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.settled() is True
     assert channel_proxy_2.settled() is True
 
-    events = event_filter.get_all_entries()
+    events = channel_filter.get_all_entries()
 
     assert len(events) == 4  # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled

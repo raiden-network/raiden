@@ -1480,3 +1480,67 @@ def test_refund_transfer_does_not_match_received():
     )
     # target cannot refund
     assert not channel.refund_transfer_matches_received(refund_from_target, transfer)
+
+
+def test_settle_transaction_must_be_sent_only_once():
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    lock_amount = 30
+    lock_expiration = 10
+    lock_secret = sha3(b'test_settle_transaction_must_be_sent_only_once')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state,
+        privkey2,
+        nonce,
+        transferred_amount,
+        lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state,
+        receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    channel.register_secret(channel_state, lock_secret, lock_secrethash)
+
+    closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
+    close_state_change = ContractReceiveChannelClosed(
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        partner_model1.participant_address,
+        closed_block_number,
+    )
+    iteration = channel.handle_channel_closed(channel_state, close_state_change)
+
+    settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
+    settle_state_change = ContractReceiveChannelSettled(
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        settle_block_number,
+    )
+    iteration = channel.handle_channel_settled(
+        channel_state,
+        settle_state_change,
+        settle_block_number,
+    )
+    assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
+
+    iteration = channel.handle_channel_settled(
+        channel_state,
+        settle_state_change,
+        settle_block_number,
+    )
+    msg = 'BatchUnlock must be sent only once, the second transaction will always fail'
+    assert not must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {}), msg

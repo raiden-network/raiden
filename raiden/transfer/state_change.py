@@ -520,8 +520,9 @@ class ContractReceiveChannelBatchUnlock(StateChange):
     def __init__(
             self,
             token_network_identifier: typing.PaymentNetworkID,
-            channel_identifier: typing.ChannelID,
             participant: typing.Address,
+            partner: typing.Address,
+            locksroot: typing.Locksroot,
             unlocked_amount: typing.TokenAmount,
             returned_tokens: typing.TokenAmount,
     ):
@@ -532,9 +533,13 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         if not isinstance(participant, typing.T_Address):
             raise ValueError('participant must be of type address')
 
+        if not isinstance(partner, typing.T_Address):
+            raise ValueError('partner must be of type address')
+
         self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
         self.participant = participant
+        self.partner = partner
+        self.locksroot = locksroot
         self.unlocked_amount = unlocked_amount
         self.returned_tokens = returned_tokens
 

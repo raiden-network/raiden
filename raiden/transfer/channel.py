@@ -1713,13 +1713,15 @@ def handle_channel_settled(
 ) -> TransitionResult:
     events: typing.List[Event] = list()
 
+    # At the moment each participant unlocks its receiving half of the
+    # channel automatically
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.settle_block_number)
 
-        # At the moment each participant unlocks it's receiving half of the
-        # channel automatically
+        is_settle_pending = channel_state.our_unlock_transaction is not None
         merkle_treee_leaves = get_batch_unlock(channel_state.partner_state)
-        if merkle_treee_leaves:
+
+        if not is_settle_pending and merkle_treee_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
                 channel_state.token_network_identifier,
                 channel_state.identifier,
