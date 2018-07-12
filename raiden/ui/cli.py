@@ -785,17 +785,17 @@ def run(ctx, **kwargs):
     click.secho('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']), fg='green')
     click.secho(
         '''
----------------------------------------------------------------------
-| This is an Alpha version of experimental open source software     |
-| released under an MIT license and may contain errors and/or bugs, |
-| Use of the software is at your own risk and discretion. No        |
-| guarantee whatsoever is made regarding its suitability for your   |
-| intended purposes and its compliance with applicable law and      |
-| regulations. It is up to the user to determine the software´s     |
-| quality and suitability and whether its use is compliant with its |
-| respective regulatory regime, especially in the case that you are |
-| operating in a commercial context.                                |
----------------------------------------------------------------------''',
+----------------------------------------------------------------------
+| This is an Alpha version of experimental open source software      |
+| released under the MIT license and may contain errors and/or bugs. |
+| Use of the software is at your own risk and discretion. No         |
+| guarantee whatsoever is made regarding its suitability for your    |
+| intended purposes and its compliance with applicable law and       |
+| regulations. It is up to the user to determine the software´s      |
+| quality and suitability and whether its use is compliant with its  |
+| respective regulatory regime, especially in the case that you are  |
+| operating in a commercial context.                                 |
+----------------------------------------------------------------------''',
         fg='yellow',
     )
     from raiden.ui.console import Console
@@ -962,7 +962,6 @@ def run(ctx, **kwargs):
             )
             sys.exit(1)
     elif kwargs['transport'] == 'matrix':
-        print('WARNING: The Matrix transport is experimental')
         kwargs['mapped_socket'] = None
         app_ = _run_app()
     else:
@@ -1188,7 +1187,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             args['mapped_socket'] = mapped_socket
             success = _run_smoketest()
     elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
-        print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
         print_step('Starting Matrix transport')
         try:
@@ -1213,7 +1211,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             )
             success = False
     elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
-        print('WARNING: The Matrix transport is experimental')
         args['mapped_socket'] = None
         success = _run_smoketest()
     else:
