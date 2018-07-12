@@ -8,6 +8,7 @@ from web3.utils.events import get_event_data
 from eth_utils import to_checksum_address
 from web3.utils.filters import construct_event_filter_params, LogFilter
 from pkg_resources import DistributionNotFound
+from gevent.lock import Semaphore
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED
@@ -104,30 +105,33 @@ class StatelessFilter(LogFilter):
     def __init__(self, web3: Web3, filter_params: dict):
         super().__init__(web3, filter_id=None)
         self.filter_params = filter_params
+        self._lock = Semaphore()
 
     def get_new_entries(self):
-        filter_params = self.filter_params.copy()
-        filter_params['fromBlock'] = max(
-            filter_params.get('fromBlock', 0),
-            self._last_block + 1,
-        )
-        if self.filter_params.get('toBlock') in ('latest', 'pending'):
-            filter_params['toBlock'] = self.web3.eth.blockNumber
-        self._update_last_block(filter_params.get('toBlock', -1))
-        try:
-            return self.web3.eth.getLogs(filter_params)
-        except BlockNotFound:
-            return []
+        with self._lock:
+            filter_params = self.filter_params.copy()
+            filter_params['fromBlock'] = max(
+                filter_params.get('fromBlock', 0),
+                self._last_block + 1,
+            )
+            if self.filter_params.get('toBlock') in ('latest', 'pending'):
+                filter_params['toBlock'] = self.web3.eth.blockNumber
+            self._update_last_block(filter_params.get('toBlock', -1))
+            try:
+                return self.web3.eth.getLogs(filter_params)
+            except BlockNotFound:
+                return []
 
     def get_all_entries(self):
-        filter_params = self.filter_params.copy()
-        if self.filter_params.get('toBlock') in ('latest', 'pending'):
-            filter_params['toBlock'] = self.web3.eth.blockNumber
-        self._update_last_block(filter_params.get('toBlock', -1))
-        try:
-            return self.web3.eth.getLogs(filter_params)
-        except BlockNotFound:
-            return []
+        with self._lock:
+            filter_params = self.filter_params.copy()
+            if self.filter_params.get('toBlock') in ('latest', 'pending'):
+                filter_params['toBlock'] = self.web3.eth.blockNumber
+            self._update_last_block(filter_params.get('toBlock', -1))
+            try:
+                return self.web3.eth.getLogs(filter_params)
+            except BlockNotFound:
+                return []
 
     def _update_last_block(self, block_number: int):
         if block_number and block_number > self._last_block:
