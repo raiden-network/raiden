@@ -218,7 +218,7 @@ class MatrixTransport:
     ) -> AsyncResult:
         if not self._running:
             return
-        self.log.debug(
+        self.log.info(
             'SEND ASYNC',
             receiver_address=to_normalized_address(receiver_address),
             message=message,
