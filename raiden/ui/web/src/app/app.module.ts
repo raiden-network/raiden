@@ -17,6 +17,7 @@ import { ChannelTableComponent } from './components/channel-table/channel-table.
 import { EventListComponent } from './components/event-list/event-list.component';
 import { TokenNetworkComponent } from './components/token-network/token-network.component';
 import { HomeComponent } from './components/home/home.component';
+import { LicenseComponent } from './components/license/license.component';
 import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
 import { TransferDialogComponent } from './components/transfer-dialog/transfer-dialog.component';
 import { JoinDialogComponent } from './components/join-dialog/join-dialog.component';
@@ -34,6 +35,7 @@ import { TokenPipe } from './pipes/token.pipe';
 const appRoutes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
     { path: 'home', component: HomeComponent },
+    { path: 'license', component: LicenseComponent },
     { path: 'tokens', component: TokenNetworkComponent },
     { path: 'channels', component: ChannelTableComponent },
 ];
@@ -50,6 +52,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         EventListComponent,
         TokenNetworkComponent,
         HomeComponent,
+        LicenseComponent,
         SwapDialogComponent,
         TransferDialogComponent,
         JoinDialogComponent,
