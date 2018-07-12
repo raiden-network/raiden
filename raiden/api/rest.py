@@ -94,7 +94,11 @@ URLS_V1 = [
     ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
     ('/events/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
-    ('/events/channels/<hexaddress:token_address>', ChannelEventsResource),
+    (
+        '/events/channels/<hexaddress:token_address>',
+        ChannelEventsResource,
+        'tokenchanneleventsresource',
+    ),
     (
         '/events/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
         ChannelEventsResource,
@@ -183,11 +187,19 @@ def normalize_events_list(old_list):
 
 
 def restapi_setup_urls(flask_api_context, rest_api, urls):
-    for route, resource_cls in urls:
+    for url_tuple in urls:
+        if len(url_tuple) == 2:
+            route, resource_cls = url_tuple
+            endpoint = resource_cls.__name__.lower()
+        elif len(url_tuple) == 3:
+            route, resource_cls, endpoint = url_tuple
+        else:
+            raise ValueError(f'Invalid URL format: {url_tuple!r}')
         flask_api_context.add_resource(
             resource_cls,
             route,
             resource_class_kwargs={'rest_api_object': rest_api},
+            endpoint=endpoint,
         )
 
 
