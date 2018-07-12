@@ -1,14 +1,21 @@
 from typing import Dict
 
-from eth_utils import decode_hex
+from eth_abi import encode_single
+from eth_utils import encode_hex, decode_hex
 from gevent.lock import RLock
-from raiden_contracts.constants import EVENT_CHANNEL_OPENED, CONTRACT_TOKEN_NETWORK
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK,
+    EVENT_CHANNEL_OPENED,
+    EVENT_CHANNEL_UNLOCKED,
+)
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from web3.utils.filters import Filter
+from web3.utils.filters import (
+    Filter,
+    construct_event_topic_set,
+)
 
 from raiden.utils import typing
 from raiden.utils.filters import (
-    get_filter_args_for_all_events_from_channel,
     get_filter_args_for_specific_event_from_channel,
     decode_event,
 )
@@ -161,16 +168,63 @@ class PaymentChannel:
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
     ) -> Filter:
-        args = get_filter_args_for_all_events_from_channel(
-            token_network_address=self.token_network.address,
-            channel_identifier=self.channel_identifier,
+        locksroot = None
+        unlocked_amount = None
+        returned_amount = None
+
+        event_unlock_abi = CONTRACT_MANAGER.get_event_abi(
+            CONTRACT_TOKEN_NETWORK,
+            EVENT_CHANNEL_UNLOCKED,
+        )
+
+        channelid_topic = [
+            None,
+            encode_hex(encode_single('bytes32', self.channel_identifier)),
+        ]
+        channel_topics = [channelid_topic]
+
+        # This will match the events:
+        # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,
+        # NonClosingBalanceProofUpdated, ChannelSettled
+        channel_filter = self.token_network.client.new_filter(
+            contract_address=self.token_network.address,
+            topics=channel_topics,
             from_block=from_block,
             to_block=to_block,
         )
 
-        return self.token_network.client.new_filter(
-            contract_address=args['address'],
-            topics=args['topics'],
+        # This will match the events:
+        # ChannelUnlocked
+        #
+        # These topics must not be joined with the channel_filter, otherwise
+        # the filter ChannelSettled wont match (observed with get
+        # 1.8.11-stable-dea1ce05)
+        unlock_topic1 = construct_event_topic_set(
+            event_unlock_abi,
+            [
+                self.participant1,
+                self.participant2,
+                locksroot,
+                unlocked_amount,
+                returned_amount,
+            ],
+        )
+        unlock_topic2 = construct_event_topic_set(
+            event_unlock_abi,
+            [
+                self.participant2,
+                self.participant1,
+                locksroot,
+                unlocked_amount,
+                returned_amount,
+            ],
+        )
+        unlock_topics = unlock_topic1
+        unlock_topics.extend(unlock_topic2)
+        unlock_filter = self.token_network.client.new_filter(
+            contract_address=self.token_network.address,
+            topics=unlock_topics,
             from_block=from_block,
             to_block=to_block,
         )
+        return channel_filter, unlock_filter

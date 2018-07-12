@@ -204,12 +204,12 @@ def handle_channel_settled(raiden, event, current_block_number):
 def handle_channel_batch_unlock(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
-    channel_identifier = data['channel_identifier']
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         token_network_identifier,
-        channel_identifier,
         data['participant'],
+        data['partner'],
+        data['locksroot'],
         data['unlocked_amount'],
         data['returned_tokens'],
     )

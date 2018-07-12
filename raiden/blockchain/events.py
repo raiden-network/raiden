@@ -277,6 +277,8 @@ def decode_event_to_internal(event):
         data['unlocked_amount'] = data['args']['unlocked_amount']
         data['returned_tokens'] = data['args']['returned_tokens']
         data['participant'] = to_canonical_address(data['args']['participant'])
+        data['partner'] = to_canonical_address(data['args']['partner'])
+        data['locksroot'] = data['args']['locksroot']
 
     elif data['event'] == EVENT_SECRET_REVEALED:
         data['secrethash'] = data['args']['secrethash']
@@ -386,14 +388,20 @@ class BlockchainEvents:
         payment_channel_proxy: PaymentChannel,
         from_block: typing.BlockSpecification = 'latest',
     ):
-        payment_channel_filter = payment_channel_proxy.all_events_filter(from_block=from_block)
+        payment_channel_filter, unlock_filter = payment_channel_proxy.all_events_filter(
+            from_block=from_block,
+        )
         channel_identifier = payment_channel_proxy.channel_identifier
         token_network_id = payment_channel_proxy.token_network.address
+        token_network_abi = CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK)
 
         self.add_event_listener(
             f'PaymentChannel event {channel_identifier} {token_network_id}',
             payment_channel_filter,
-            CONTRACT_MANAGER.get_contract_abi(
-                CONTRACT_TOKEN_NETWORK,
-            ),
+            token_network_abi,
+        )
+        self.add_event_listener(
+            f'PaymentChannel unlock event {channel_identifier} {token_network_id}',
+            unlock_filter,
+            token_network_abi,
         )
