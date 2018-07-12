@@ -35,6 +35,7 @@ from raiden.utils import (
     quantity_encoder,
 )
 from raiden.utils.typing import Address
+from raiden.utils.filters import StatelessFilter
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.solc import (
     solidity_unresolved_symbols,
@@ -563,12 +564,15 @@ class JSONRPCClient:
             to_block: typing.BlockSpecification = 'latest',
     ) -> Filter:
         """ Create a filter in the ethereum node. """
-        return self.web3.eth.filter({
-            'fromBlock': from_block,
-            'toBlock': to_block,
-            'address': to_normalized_address(contract_address),
-            'topics': topics,
-        })
+        return StatelessFilter(
+            self.web3,
+            {
+                'fromBlock': from_block,
+                'toBlock': to_block,
+                'address': to_normalized_address(contract_address),
+                'topics': topics,
+            },
+        )
 
     def get_filter_events(
             self,

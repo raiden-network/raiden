@@ -158,7 +158,8 @@ class TokenNetworkRegistry:
     def filter_token_added_events(self):
         filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(fromBlock=0)
         events = filter_.get_all_entries()
-        self.proxy.contract.web3.eth.uninstallFilter(filter_.filter_id)
+        if filter_.filter_id:
+            self.proxy.contract.web3.eth.uninstallFilter(filter_.filter_id)
 
         return events
 
