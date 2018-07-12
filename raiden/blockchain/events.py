@@ -352,7 +352,8 @@ class BlockchainEvents:
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
-            listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
+            if listener.filter.filter_id:
+                listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
 
         self.event_listeners = list()
 

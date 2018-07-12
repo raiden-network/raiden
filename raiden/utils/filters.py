@@ -1,17 +1,24 @@
-from typing import Dict
-
 from eth_utils import (
     decode_hex,
     event_abi_to_log_topic,
 )
+from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
 from eth_utils import to_checksum_address
-from web3.utils.filters import construct_event_filter_params
+from web3.utils.filters import construct_event_filter_params, LogFilter
+from pkg_resources import DistributionNotFound
+
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED
 
-from raiden.utils.typing import Address, ChannelID, BlockSpecification
+from raiden.utils.typing import Address, ChannelID, BlockSpecification, List, Dict
+
+try:
+    from eth_tester.exceptions import BlockNotFound
+except (ModuleNotFoundError, DistributionNotFound):
+    class BlockNotFound(Exception):
+        pass
 
 
 def get_filter_args_for_specific_event_from_channel(
@@ -89,3 +96,41 @@ def decode_event(abi: Dict, log: Dict):
     }
     event_abi = topic_to_event_abi[event_id]
     return get_event_data(event_abi, log)
+
+
+class StatelessFilter(LogFilter):
+    _last_block: int = -1
+
+    def __init__(self, web3: Web3, filter_params: dict):
+        super().__init__(web3, filter_id=None)
+        self.filter_params = filter_params
+
+    def get_new_entries(self):
+        try:
+            logs = self.web3.eth.getLogs(dict(
+                self.filter_params,
+                fromBlock=max(
+                    self.filter_params.get('fromBlock', 0),
+                    self._last_block + 1,
+                ),
+            ))
+            self._update_last_block(logs)
+            return logs
+        except BlockNotFound:
+            return []
+
+    def get_all_entries(self):
+        try:
+            logs = self.web3.eth.getLogs(self.filter_params)
+            self._update_last_block(logs)
+            return logs
+        except BlockNotFound:
+            return []
+
+    def _update_last_block(self, logs: List[Dict]=None):
+        if not logs or self.filter_params.get('toBlock') in ('latest', 'pending'):
+            block_number = self.web3.eth.blockNumber
+        else:
+            block_number = max(event.get('blockNumber', 0) for event in logs)
+        if block_number and block_number > self._last_block:
+            self._last_block = block_number
