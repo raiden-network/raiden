@@ -28,7 +28,7 @@ Ropsten testnet
 
 These are the currently deployed raiden contract addresses for the Ropsten testnet:
 
-* Token Network Registry: 0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584_
+* Token Network Registry Contract: 0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584_
 * Secret Registry Contract: 0xD1B506A716B50069Ac3C990e86253C645b61633D_
 * Endpoint Registry Contract: 0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368_
 
