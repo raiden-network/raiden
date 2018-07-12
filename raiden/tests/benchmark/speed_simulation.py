@@ -81,6 +81,7 @@ def setup_tps(
         config_path,
         privatekey,
         registry_address,
+        secret_registry_address,
         token_address,
         deposit,
         settle_timeout):
@@ -140,6 +141,7 @@ def tps_run(
         privatekey,
         rpc_server,
         registry_address,
+        secret_registry_address,
         token_address,
         transfer_amount,
         parallel):
@@ -193,13 +195,14 @@ def tps_run(
         config['protocol'],
     )
 
-    # FIXME: This is missing the registry
-    # FIXME: This is missing the secret registry
     app = App(
-        config,
-        blockchain_service,
-        transport,
-        discovery,
+        config=config,
+        chain=blockchain_service,
+        query_start_block=0,
+        default_registry=registry_address,
+        default_secret_registry=secret_registry_address,
+        transport=transport,
+        discovery=discovery,
     )
 
     for _ in range(parallel):
@@ -264,6 +267,7 @@ def main():
             unhexlify(args.privatekey),
             args.rpc_server,
             args.registry_address,
+            args.secret_registry_address,
             TOKEN_ADDRESS,
             TRANSFER_AMOUNT,
             args.parallel,
@@ -275,6 +279,7 @@ def main():
             args.config,
             unhexlify(args.privatekey),
             args.registry_address,
+            args.secret_registry_address,
             TOKEN_ADDRESS,
             deposit,
             DEFAULT_SETTLE_TIMEOUT,

@@ -48,6 +48,7 @@ from raiden.utils import (
     privatekey_to_address,
     random_secret,
     create_default_identifier,
+    typing,
 )
 from raiden.storage import wal, serialize, sqlite
 
@@ -144,6 +145,7 @@ class RaidenService:
     def __init__(
             self,
             chain: BlockChainService,
+            query_start_block: typing.BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             private_key_bin,
@@ -159,6 +161,7 @@ class RaidenService:
 
         self.chain: BlockChainService = chain
         self.default_registry = default_registry
+        self.query_start_block = query_start_block
         self.default_secret_registry = default_secret_registry
         self.config = config
         self.privkey = private_key_bin

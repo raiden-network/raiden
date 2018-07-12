@@ -684,12 +684,13 @@ def app(
 
     try:
         raiden_app = App(
-            config,
-            blockchain_service,
-            token_network_registry,
-            secret_registry,
-            transport,
-            discovery,
+            config=config,
+            chain=blockchain_service,
+            query_start_block=constants.ID_TO_QUERY_BLOCK[net_id],
+            default_registry=token_network_registry,
+            default_secret_registry=secret_registry,
+            transport=transport,
+            discovery=discovery,
         )
     except (InvalidSettleTimeout, InvalidDBData) as e:
         print(f'FATAL: {str(e)}')

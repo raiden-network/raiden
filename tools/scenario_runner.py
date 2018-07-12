@@ -127,12 +127,13 @@ def run(
     )
 
     app = App(
-        config,
-        blockchain_service,
-        registry,
-        secret_registry,
-        transport,
-        discovery,
+        config=config,
+        chain=blockchain_service,
+        query_start_block=0,
+        default_registry=registry,
+        default_secret_registry=secret_registry,
+        transport=transport,
+        discovery=discovery,
     )
 
     app.discovery.register(

@@ -325,12 +325,13 @@ def create_apps(
             )
 
         app = App(
-            config_copy,
-            blockchain,
-            registry,
-            secret_registry,
-            transport,
-            discovery,
+            config=config_copy,
+            chain=blockchain,
+            query_start_block=0,
+            default_registry=registry,
+            default_secret_registry=secret_registry,
+            transport=transport,
+            discovery=discovery,
         )
         apps.append(app)
 
