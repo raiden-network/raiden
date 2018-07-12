@@ -100,39 +100,47 @@ def decode_event(abi: Dict, log: Dict):
 
 
 class StatelessFilter(LogFilter):
-    _last_block: int = -1
+    """ Like LogFilter, but uses eth_getLogs instead of installed filter
+
+    Pass latest block_number to get_(new|all)_entries to avoid querying it
+    """
 
     def __init__(self, web3: Web3, filter_params: dict):
         super().__init__(web3, filter_id=None)
         self.filter_params = filter_params
+        self._last_block: int = -1
         self._lock = Semaphore()
 
-    def get_new_entries(self):
+    def get_new_entries(self, block_number: int=None):
         with self._lock:
             filter_params = self.filter_params.copy()
             filter_params['fromBlock'] = max(
                 filter_params.get('fromBlock', 0),
                 self._last_block + 1,
             )
+            # This logic may contain a race condition. It's possible that after
+            # `web.eth.blockNumber` and before `web3.eth.getLogs` a new block is mined.
+            # This is okay because any new logs on this new block will be fetched on the
+            # next call to `get_new_entries`
+            if block_number is None:
+                block_number = self.web3.eth.blockNumber
             if self.filter_params.get('toBlock') in ('latest', 'pending'):
-                filter_params['toBlock'] = self.web3.eth.blockNumber
-            self._update_last_block(filter_params.get('toBlock', -1))
+                filter_params['toBlock'] = block_number
+            self._last_block = filter_params.get('toBlock') or block_number
             try:
                 return self.web3.eth.getLogs(filter_params)
             except BlockNotFound:
                 return []
 
-    def get_all_entries(self):
+    def get_all_entries(self, block_number: int=None):
         with self._lock:
             filter_params = self.filter_params.copy()
+            if block_number is None:
+                block_number = self.web3.eth.blockNumber
             if self.filter_params.get('toBlock') in ('latest', 'pending'):
-                filter_params['toBlock'] = self.web3.eth.blockNumber
-            self._update_last_block(filter_params.get('toBlock', -1))
+                filter_params['toBlock'] = block_number
+            self._last_block = filter_params.get('toBlock') or block_number
             try:
                 return self.web3.eth.getLogs(filter_params)
             except BlockNotFound:
                 return []
-
-    def _update_last_block(self, block_number: int):
-        if block_number and block_number > self._last_block:
-            self._last_block = block_number

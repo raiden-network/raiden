@@ -373,7 +373,7 @@ class RaidenService:
         # expected side-effects are properly applied (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
-            for event in self.blockchain_events.poll_blockchain_events():
+            for event in self.blockchain_events.poll_blockchain_events(current_block_number):
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the ChainState's block_number.
                 on_blockchain_event(self, event, current_block_number, chain_id)
@@ -413,7 +413,9 @@ class RaidenService:
             )
 
             chain_id = self.chain.network_id
-            for event in self.blockchain_events.poll_blockchain_events():
+            for event in self.blockchain_events.poll_blockchain_events(
+                self.get_block_number(),
+            ):
                 on_blockchain_event(
                     self,
                     event, event.event_data['block_number'],

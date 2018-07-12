@@ -31,6 +31,7 @@ from raiden.utils import pex, typing
 from raiden.utils.filters import (
     decode_event,
     get_filter_args_for_all_events_from_channel,
+    StatelessFilter,
 )
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
 
@@ -325,18 +326,22 @@ class BlockchainEvents:
         ]
         self.event_listeners = listeners
 
-    def poll_blockchain_events(self):
+    def poll_blockchain_events(self, block_number: int=None):
         # When we test with geth if the contracts have already been deployed
         # before the filter creation we need to use `get_all_entries` to make
         # sure we get all the events. With tester this is not required.
 
         for event_listener in self.event_listeners:
-            query_fn = 'get_new_entries'
-            if event_listener.first_run is True:
-                query_fn = 'get_all_entries'
+            if isinstance(event_listener.filter, StatelessFilter):
+                events = event_listener.filter.get_new_entries(block_number)
+            elif event_listener.first_run is True:
+                events = event_listener.filter.get_all_entries()
                 index = self.event_listeners.index(event_listener)
                 self.event_listeners[index] = event_listener._replace(first_run=False)
-            for log_event in getattr(event_listener.filter, query_fn)():
+            else:
+                events = event_listener.filter.get_new_entries()
+
+            for log_event in events:
                 decoded_event = dict(decode_event(
                     event_listener.abi,
                     log_event,
