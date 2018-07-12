@@ -21,12 +21,13 @@ Channel Object
 ::
 
     {
-       "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+       "token_network_identifier": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
        "balance": 35000000,
        "state": "opened",
-       "settle_timeout": 100,
+       "settle_timeout": 500,
        "reveal_timeout": 40
     }
 
@@ -34,14 +35,17 @@ Channel Object
 
 A channel object consists of a
 
-- ``channel_address`` should be a ``string`` containing the hexadecimal address of the
-  channel
+- ``channel_identifier`` should be a ``string`` containing the hexadecimal identifier of the
+  channel.
 
-- ``partner_address`` should be a ``string`` containing the hexadecimal address of the
-  partner with whom we have opened a channel
+- ``partner_address`` should be a ``string`` containing the EIP55-encoded address of the
+  partner with whom we have opened a channel.
 
-- ``token_address`` should be a ``string`` containing the hexadecimal address of the
+- ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
   token we are trading in the channel.
+
+- ``token_network_identifier`` should be a ``string`` containing the EIP55-encoded address of the
+  token network the channel is part of.
 
 - ``balance`` should be an integer of the amount of the ``token_address`` token we have available for transferring.
 
@@ -279,7 +283,7 @@ Channel Management
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
-          "settle_timeout": 100
+          "settle_timeout": 500
       }
 
    :reqjson int balance: Initial deposit to make to the channel.
@@ -303,7 +307,7 @@ Channel Management
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "state": "open",
-          "settle_timeout": 100,
+          "settle_timeout": 500,
           "reveal_timeout": 30
       }
 
@@ -607,13 +611,13 @@ be rejected.
       [
           {
               "event_type": "ChannelNew",
-              "settle_timeout": 10,
+              "settle_timeout": 500,
               "netting_channel": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949",
               "participant1": "0x4894A542053248E0c504e3dEF2048c08f73E1CA6",
               "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A"
           }, {
               "event_type": "ChannelNew",
-              "settle_timeout": 15,
+              "settle_timeout": 1500,
               "netting_channel": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "participant1": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "participant2": "0xc7262f1447FCB2f75AB14B2A28DeEd6006eEA95B"
