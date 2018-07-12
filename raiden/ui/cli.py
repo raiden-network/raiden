@@ -783,6 +783,21 @@ def run(ctx, **kwargs):
         return
 
     click.secho('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']), fg='green')
+    click.secho(
+        '''
+---------------------------------------------------------------------
+| This is an Alpha version of experimental open source software     |
+| released under an MIT license and may contain errors and/or bugs, |
+| Use of the software is at your own risk and discretion. No        |
+| guarantee whatsoever is made regarding its suitability for your   |
+| intended purposes and its compliance with applicable law and      |
+| regulations. It is up to the user to determine the software´s     |
+| quality and suitability and whether its use is compliant with its |
+| respective regulatory regime, especially in the case that you are |
+| operating in a commercial context.                                |
+---------------------------------------------------------------------''',
+        fg='yellow',
+    )
     from raiden.ui.console import Console
     from raiden.api.python import RaidenAPI
 
