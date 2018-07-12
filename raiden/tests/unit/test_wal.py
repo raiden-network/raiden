@@ -16,6 +16,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
 )
+from raiden.utils import sha3
 
 
 def state_transition_noop(state, state_change):  # pylint: disable=unused-argument
@@ -50,11 +51,14 @@ def test_write_read_log():
     block = Block(block_number)
     unlocked_amount = 10
     returned_amount = 5
-    channel_identifier = factories.make_address()
+    participant = factories.make_address()
+    partner = factories.make_address()
+    locksroot = sha3(b'test_write_read_log')
     contract_receive_unlock = ContractReceiveChannelBatchUnlock(
         factories.make_address(),
-        channel_identifier,
-        factories.ADDR,
+        participant,
+        partner,
+        locksroot,
         unlocked_amount,
         returned_amount,
     )
@@ -86,8 +90,13 @@ def test_write_read_log():
     result1, result2 = state_changes3[-2:]
     assert isinstance(result1, Block)
     assert result1.block_number == block_number
+
     assert isinstance(result2, ContractReceiveChannelBatchUnlock)
-    assert result2.channel_identifier == channel_identifier
+    assert result2.participant == participant
+    assert result2.partner == partner
+    assert result2.locksroot == locksroot
+    assert result2.unlocked_amount == unlocked_amount
+    assert result2.returned_tokens == returned_amount
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
