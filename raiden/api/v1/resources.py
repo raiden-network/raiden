@@ -127,12 +127,12 @@ class ChannelEventsResource(BaseResource):
     get_schema = EventRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address, channel_identifier, from_block, to_block):
+    def get(self, token_address, partner_address=None, from_block=None, to_block=None):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
         return self.rest_api.get_channel_events(
             token_address=token_address,
-            channel_identifier=channel_identifier,
+            partner_address=partner_address,
             from_block=from_block,
             to_block=to_block,
         )

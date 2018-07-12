@@ -94,8 +94,9 @@ URLS_V1 = [
     ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
     ('/events/network', NetworkEventsResource),
     ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
+    ('/events/channels/<hexaddress:token_address>', ChannelEventsResource),
     (
-        '/events/channels/<hexaddress:token_address>/<keccak:channel_identifier>',
+        '/events/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
         ChannelEventsResource,
     ),
     (
@@ -551,10 +552,16 @@ class RestAPI:
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
-    def get_channel_events(self, token_address, channel_identifier, from_block, to_block):
+    def get_channel_events(
+            self,
+            token_address,
+            partner_address=None,
+            from_block=None,
+            to_block=None,
+    ):
         raiden_service_result = self.raiden_api.get_channel_events(
             token_address,
-            channel_identifier,
+            partner_address,
             from_block,
             to_block,
         )
