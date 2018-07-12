@@ -23,7 +23,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
-from raiden.tests.utils import dicts_are_equal
+from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
@@ -278,6 +278,7 @@ def test_api_get_channel_list(
         channel_info = response.json()[0]
         assert channel_info['partner_address'] == partner_address
         assert channel_info['token_address'] == to_checksum_address(token_address)
+        assert 'token_network_identifier' in channel_info
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -339,9 +340,9 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
-    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
-    assert dicts_are_equal(response, expected_response)
+    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    assert_dicts_are_equal(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
 
@@ -369,9 +370,9 @@ def test_api_open_and_deposit_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
     expected_response['token_network_identifier'] = token_network_identifier
-    assert dicts_are_equal(response, expected_response)
+    assert_dicts_are_equal(response, expected_response)
 
     # let's deposit on the first channel
     request = grequests.patch(
@@ -387,7 +388,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
         'partner_address': first_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -396,7 +397,7 @@ def test_api_open_and_deposit_channel(
         'balance': balance,
         'token_network_identifier': token_network_identifier,
     }
-    assert dicts_are_equal(response, expected_response)
+    assert_dicts_are_equal(response, expected_response)
 
     # finally let's try querying for the second channel
     request = grequests.get(
@@ -412,7 +413,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
         'partner_address': second_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -421,7 +422,7 @@ def test_api_open_and_deposit_channel(
         'balance': balance,
         'token_network_identifier': token_network_identifier,
     }
-    assert dicts_are_equal(response, expected_response)
+    assert_dicts_are_equal(response, expected_response)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -456,9 +457,9 @@ def test_api_open_close_and_settle_channel(
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
-    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
-    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
-    assert dicts_are_equal(response, expected_response)
+    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    assert_dicts_are_equal(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
 
@@ -476,7 +477,7 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response)
     expected_response = {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -484,7 +485,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_CLOSED,
         'balance': balance,
     }
-    assert dicts_are_equal(response.json(), expected_response)
+    assert_dicts_are_equal(response.json(), expected_response)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -1010,9 +1011,9 @@ def test_api_deposit_limit(
     expected_response = channel_data_obj
     expected_response['balance'] = balance_working
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = dicts_are_equal.IGNORE_VALUE
-    expected_response['token_network_identifier'] = dicts_are_equal.IGNORE_VALUE
-    assert dicts_are_equal(response, expected_response)
+    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    assert_dicts_are_equal(response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
