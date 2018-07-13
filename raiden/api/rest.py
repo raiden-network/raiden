@@ -151,14 +151,14 @@ def endpoint_not_found(e):
     return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
-def hexbytes_to_str(map: Dict) -> Dict:
+def hexbytes_to_str(map: Dict):
     """ Converts values that are of type `HexBytes` to strings. """
     for k, v in map.items():
         if isinstance(v, HexBytes):
             map[k] = encode_hex(v)
 
 
-def encode_byte_values(map: Dict) -> Dict:
+def encode_byte_values(map: Dict):
     """ Converts values that are of type `bytes` to strings. """
     for k, v in map.items():
         if isinstance(v, bytes):
@@ -173,6 +173,7 @@ def normalize_events_list(old_list):
         new_event = dict(_event)
         if new_event.get('args'):
             new_event['args'] = dict(new_event['args'])
+            encode_byte_values(new_event['args'])
 
         # the events contain HexBytes values, convert those to strings
         hexbytes_to_str(new_event)
