@@ -31,6 +31,7 @@ import { RaidenService } from './services/raiden.service';
 import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
 import { TokenPipe } from './pipes/token.pipe';
+import { EllipsisPipe } from './pipes/ellipsis.pipe';
 
 const appRoutes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -61,6 +62,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         KeysPipe,
         SubsetPipe,
         TokenPipe,
+        EllipsisPipe,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
