@@ -94,7 +94,7 @@ def enable_greenlet_debugger(request):
             hub.print_exception(context, type, value, tb)
 
             # Don't enter nested sessions
-            # Ignore execptions used to quit the debugger / interpreter
+            # Ignore exceptions used to quit the debugger / interpreter
             nonlocal enabled
             if not enabled and type not in (bdb.BdbQuit, KeyboardInterrupt):
                 enabled = True
