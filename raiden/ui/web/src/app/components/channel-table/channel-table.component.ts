@@ -210,31 +210,31 @@ export class ChannelTableComponent implements OnInit {
         return [
             {
                 label: 'Transfer',
-                icon: 'fa-exchange',
+                icon: 'fa fa-exchange',
                 disabled: !(channel.state === 'opened' && channel.balance > 0),
                 command: () => this.onTransfer(channel)
             },
             {
                 label: 'Deposit',
-                icon: 'fa-money',
+                icon: 'fa fa-money',
                 disabled: channel.state !== 'opened',
                 command: () => this.onDeposit(channel)
             },
             {
                 label: 'Close',
-                icon: 'fa-close',
+                icon: 'fa fa-close',
                 disabled: channel.state !== 'opened',
                 command: () => this.onClose(channel)
             },
             {
                 label: 'Settle',
-                icon: 'fa-book',
+                icon: 'fa fa-book',
                 disabled: channel.state !== 'closed',
                 command: () => this.onSettle(channel)
             },
             {
                 label: 'Watch Events',
-                icon: 'fa-clock-o',
+                icon: 'fa fa-clock-o',
                 command: () => this.watchChannelEvents(channel)
             },
         ];
