@@ -226,12 +226,12 @@ export class ChannelTableComponent implements OnInit {
                 disabled: channel.state !== 'opened',
                 command: () => this.onClose(channel)
             },
-            {
-                label: 'Settle',
-                icon: 'fa fa-book',
-                disabled: channel.state !== 'closed',
-                command: () => this.onSettle(channel)
-            },
+            // {
+            //     label: 'Settle',
+            //     icon: 'fa fa-book',
+            //     disabled: channel.state !== 'closed',
+            //     command: () => this.onSettle(channel)
+            // },
             {
                 label: 'Watch Events',
                 icon: 'fa fa-clock-o',
