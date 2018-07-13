@@ -83,8 +83,6 @@ class ConnectionManager:
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
         self.api = RaidenAPI(raiden)
 
-        self.channel_sync_state_timeout = 5
-
     def connect(
             self,
             funds: int,
@@ -302,16 +300,6 @@ class ConnectionManager:
                 # This can fail because of a race condition, where the channel
                 # partner opens first.
                 log.info('partner opened channel first')
-
-            exception = BaseException('Internal state did not sync an existing channel')
-            with gevent.Timeout(self.channel_sync_state_timeout, exception=exception):
-                waiting.wait_for_newchannel(
-                    self.raiden,
-                    self.registry_address,
-                    self.token_address,
-                    partner,
-                    self.raiden.alarm.wait_time,
-                )
 
             try:
                 self.api.set_total_channel_deposit(

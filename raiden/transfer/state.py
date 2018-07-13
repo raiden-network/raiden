@@ -2,6 +2,7 @@
 import random
 from binascii import hexlify
 from collections import namedtuple
+from functools import total_ordering
 
 import networkx
 
@@ -968,6 +969,7 @@ class NettingChannelState(State):
         return not self.__eq__(other)
 
 
+@total_ordering
 class TransactionChannelNewBalance(State):
     def __init__(
             self,
@@ -996,22 +998,22 @@ class TransactionChannelNewBalance(State):
         )
 
     def __eq__(self, other):
+        if not isinstance(other, TransactionChannelNewBalance):
+            return NotImplemented
         return (
-            isinstance(other, TransactionChannelNewBalance) and
             self.participant_address == other.participant_address and
             self.contract_balance == other.contract_balance and
             self.deposit_block_number == other.deposit_block_number
         )
 
     def __lt__(self, other):
+        if not isinstance(other, TransactionChannelNewBalance):
+            return NotImplemented
         return (
             self.participant_address < other.participant_address and
             self.contract_balance < other.contract_balance and
             self.deposit_block_number < other.deposit_block_number
         )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
 
 EMPTY_MERKLE_ROOT = b'\x00' * 32

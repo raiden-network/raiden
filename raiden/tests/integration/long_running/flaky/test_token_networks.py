@@ -6,21 +6,10 @@ import gevent
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import views
-from raiden.transfer.state import NODE_NETWORK_REACHABLE
 from raiden import routing
+from raiden import waiting
 
 log = structlog.get_logger(__name__)
-
-
-def wait_for_reachable_node(sender, receiver):
-    """Wait until a node is reachable"""
-    while True:
-        state = RaidenAPI(sender).get_node_network_state(
-            receiver.address,
-        )
-        if state == NODE_NETWORK_REACHABLE:
-            return
-        gevent.sleep(1)
 
 
 def wait_for_transaction(
@@ -36,10 +25,12 @@ def wait_for_transaction(
             token_address=token_address,
             partner_address=sender_address,
         )
-        if(
+        transaction_received = (
             len(receiver_channel) == 1 and
             receiver_channel[0].partner_state.balance_proof is not None
-        ):
+        )
+
+        if transaction_received:
             break
         gevent.sleep(0.1)
 
@@ -91,13 +82,6 @@ def test_participant_selection(raiden_network, token_addresses):
     ]
     gevent.wait(connect_greenlets)
 
-    # wait some blocks to let the network connect
-    for app in raiden_network:
-        wait_until_block(
-            app.raiden.chain,
-            app.raiden.chain.block_number() + 1,
-        )
-
     token_network_registry_address = views.get_token_network_identifier_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
         payment_network_id=registry_address,
@@ -117,7 +101,7 @@ def test_participant_selection(raiden_network, token_addresses):
         ) for app in raiden_network
     ]
 
-    assert all([x() for x in open_channel_views])
+    assert all(x() for x in open_channel_views)
 
     chain = raiden_network[-1].raiden.chain
     max_wait_blocks = 12
@@ -195,7 +179,7 @@ def test_participant_selection(raiden_network, token_addresses):
 
     exception = ValueError('partner not reachable')
     with gevent.Timeout(30, exception=exception):
-        wait_for_reachable_node(sender, receiver)
+        waiting.wait_for_healthy(sender, receiver.address, 1)
 
     amount = 1
     RaidenAPI(sender).transfer_and_wait(

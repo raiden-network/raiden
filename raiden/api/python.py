@@ -29,6 +29,7 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     UnknownTokenAddress,
     DepositOverLimit,
+    DuplicatedChannelError,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -217,14 +218,29 @@ class RaidenAPI:
         if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
-        registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network_address = registry.get_token_network(token_address)
-        token_network = self.raiden.chain.token_network(token_network_address)
-
-        channel_identifier = token_network.new_netting_channel(
+        chain_state = views.state_from_raiden(self.raiden)
+        channel_state = views.get_channelstate_for(
+            chain_state,
+            registry_address,
+            token_address,
             partner_address,
-            settle_timeout,
         )
+
+        if channel_state:
+            raise DuplicatedChannelError('Channel with given partner address already exists')
+
+        registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network = self.raiden.chain.token_network(
+            registry.get_token_network(token_address),
+        )
+
+        try:
+            token_network.new_netting_channel(
+                partner_address,
+                settle_timeout,
+            )
+        except DuplicatedChannelError:
+            log.info('partner opened channel first')
 
         msg = 'After {} seconds the channel was not properly created.'.format(
             poll_timeout,
@@ -238,8 +254,15 @@ class RaidenAPI:
                 partner_address,
                 retry_timeout,
             )
+        chain_state = views.state_from_raiden(self.raiden)
+        channel_state = views.get_channelstate_for(
+            chain_state,
+            registry_address,
+            token_address,
+            partner_address,
+        )
 
-        return channel_identifier
+        return channel_state.identifier
 
     def set_total_channel_deposit(
             self,
