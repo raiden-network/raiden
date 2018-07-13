@@ -38,7 +38,7 @@ ID_TO_NETWORKNAME = {
 }
 
 ID_TO_QUERY_BLOCK = defaultdict(int, {
-    3: 3622000,  # 52 blocks before token network registry deployment
+    3: 3604000,  # 924 blocks before token network registry deployment
 })
 
 NETWORKNAME_TO_ID = {
