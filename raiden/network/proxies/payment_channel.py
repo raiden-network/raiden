@@ -167,7 +167,7 @@ class PaymentChannel:
             self,
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
-    ) -> Filter:
+    ) -> typing.Tuple[Filter, Filter]:
         locksroot = None
         unlocked_amount = None
         returned_amount = None
@@ -197,7 +197,7 @@ class PaymentChannel:
         # ChannelUnlocked
         #
         # These topics must not be joined with the channel_filter, otherwise
-        # the filter ChannelSettled wont match (observed with get
+        # the filter ChannelSettled wont match (observed with geth
         # 1.8.11-stable-dea1ce05)
         unlock_topic1 = construct_event_topic_set(
             event_unlock_abi,
