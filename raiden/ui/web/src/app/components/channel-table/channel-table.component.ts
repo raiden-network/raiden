@@ -30,7 +30,8 @@ export class ChannelTableComponent implements OnInit {
     constructor(
         private raidenConfig: RaidenConfig,
         private raidenService: RaidenService,
-        private sharedService: SharedService) { }
+        private sharedService: SharedService,
+    ) { }
 
     ngOnInit() {
         let timeout;
@@ -48,21 +49,16 @@ export class ChannelTableComponent implements OnInit {
                 for (const newchannel of newChannels) {
                     const oldchannel: WithMenu<Channel> = oldChannels.find((c) =>
                         c.channel_identifier === newchannel.channel_identifier);
-                    if (oldchannel) {
-                        Object.assign(oldchannel, newchannel, { menu: oldchannel.menu });
+                    if (oldchannel && oldchannel.state == newchannel.state) {
+                        Object.assign(newchannel, { menu: oldchannel.menu });
                     } else {
-                        oldChannels.push(
-                            Object.assign(
-                                newchannel,
-                                { menu: this.menuFor(newchannel) }
-                            ) as WithMenu<Channel>
+                        Object.assign(
+                            newchannel,
+                            { menu: this.menuFor(newchannel) }
                         );
                     }
                 }
-                return oldChannels.filter((oldchannel) =>
-                    newChannels.find((c) =>
-                        c.channel_identifier === oldchannel.channel_identifier)
-                );
+                return newChannels;
             }, []),
             tap(() =>
                 timeout = setTimeout(
