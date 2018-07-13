@@ -621,9 +621,9 @@ class RaidenAPI:
     def get_channel_events(
             self,
             token_address: typing.Address,
-            partner_address: typing.Address=None,
-            from_block: typing.BlockSpecification=0,
-            to_block: typing.BlockSpecification='latest',
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,

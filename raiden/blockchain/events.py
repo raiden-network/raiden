@@ -23,6 +23,8 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
+from raiden.constants import UINT64_MAX
+from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import PaymentChannel
 from raiden.utils import pex, typing
@@ -31,6 +33,15 @@ from raiden.utils.filters import (
     get_filter_args_for_all_events_from_channel,
 )
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
+
+
+def verify_block_number(number: typing.BlockSpecification, argname: str):
+    if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
+        raise InvalidBlockNumberInput(
+            'Provided block number {} for {} is invalid. Has to be in the range '
+            'of [0, UINT64_MAX]'.format(number, argname),
+        )
+
 
 EventListener = namedtuple(
     'EventListener',
@@ -58,6 +69,8 @@ def get_contract_events(
     `contract_address` that match the filters `topics`, `from_block`, and
     `to_block`.
     """
+    verify_block_number(from_block, 'from_block')
+    verify_block_number(to_block, 'to_block')
     events = chain.client.get_filter_events(
         contract_address,
         topics=topics,

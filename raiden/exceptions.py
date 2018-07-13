@@ -160,3 +160,7 @@ class RaidenServicePortInUseError(RaidenError):
 
 class InvalidDBData(RaidenError):
     """Raised when the data of the WAL are in an unexpected format"""
+
+
+class InvalidBlockNumberInput(RaidenError):
+    """Raised when the user provided a block number that is  < 0 or > UINT64_MAX"""

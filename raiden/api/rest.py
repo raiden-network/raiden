@@ -28,6 +28,7 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     InsufficientFunds,
     InvalidAddress,
+    InvalidBlockNumberInput,
     InvalidAmount,
     InvalidSettleTimeout,
     NoTokenManager,
@@ -547,11 +548,15 @@ class RestAPI:
         return api_response(result=result.data)
 
     def get_network_events(self, registry_address, from_block, to_block):
-        raiden_service_result = self.raiden_api.get_network_events(
-            registry_address,
-            from_block,
-            to_block,
-        )
+        try:
+            raiden_service_result = self.raiden_api.get_network_events(
+                registry_address,
+                from_block,
+                to_block,
+            )
+        except InvalidBlockNumberInput as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_token_network_events(self, token_address, from_block, to_block):
@@ -564,6 +569,8 @@ class RestAPI:
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
+        except InvalidBlockNumberInput as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_channel_events(
             self,
@@ -572,12 +579,16 @@ class RestAPI:
             from_block=None,
             to_block=None,
     ):
-        raiden_service_result = self.raiden_api.get_channel_events(
-            token_address,
-            partner_address,
-            from_block,
-            to_block,
-        )
+        try:
+            raiden_service_result = self.raiden_api.get_channel_events(
+                token_address,
+                partner_address,
+                from_block,
+                to_block,
+            )
+        except InvalidBlockNumberInput as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_channel(self, registry_address, token_address, partner_address):
