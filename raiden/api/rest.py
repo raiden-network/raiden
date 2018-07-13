@@ -30,7 +30,6 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
     InvalidSettleTimeout,
-    NoTokenManager,
     SamePeerAddress,
     TransactionThrew,
     UnknownTokenAddress,
@@ -383,7 +382,7 @@ class RestAPI:
                 reveal_timeout,
             )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
-                AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
+                AddressWithoutCode, DuplicatedChannelError) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,

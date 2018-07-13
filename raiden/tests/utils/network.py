@@ -78,7 +78,9 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    token_network_proxy = app0.raiden.default_registry.token_network_by_token(token_address)
+    token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    token_network_proxy = app0.raiden.chain.token_network(token_network_address)
+
     channel_identifier = token_network_proxy.new_netting_channel(
         app1.raiden.address,
         settle_timeout,

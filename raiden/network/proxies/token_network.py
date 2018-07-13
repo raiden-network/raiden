@@ -11,7 +11,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from gevent.event import AsyncResult
-from gevent.lock import RLock
+from gevent.lock import RLock, Semaphore
 from raiden_contracts.constants import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_NONEXISTENT,
@@ -82,8 +82,11 @@ class TokenNetwork:
 
         # Forbids concurrent operations on the same channel
         self.channel_operations_lock = dict()
-        # Serializes concurent deposits on this token network
-        self.deposit_lock = RLock()
+
+        # Serializes concurent deposits on this token network. This must be an
+        # exclusive lock, since we need to coordinate the approve and
+        # setTotalDeposit calls.
+        self.deposit_lock = Semaphore()
 
     def _call_and_check_result(self, function_name: str, *args):
         fn = getattr(self.proxy.contract.functions, function_name)
@@ -446,8 +449,10 @@ class TokenNetwork:
             # This check is merely informational, used to avoid sending
             # transactions which are known to fail.
             #
-            # It is serialized with the channel_operations_lock to avoid
-            # sending invalid transactions on-chain (account without balance).
+            # It is serialized with the deposit_lock to avoid sending invalid
+            # transactions on-chain (account without balance). The lock
+            # channel_operations_lock is not sufficient, as it allows two
+            # concurrent deposits for different channels.
             #
             current_balance = token.balance_of(self.node_address)
             if current_balance < amount_to_deposit:
@@ -463,9 +468,9 @@ class TokenNetwork:
             # the deposit will fail.
             #
             # Calls to approve and setTotalDeposit are serialized with the
-            # channel_operations_lock to avoid transaction failure, because
-            # with two concurrent deposits, we may have the transactions
-            # executed in the following order
+            # deposit_lock to avoid transaction failure, because with two
+            # concurrent deposits, we may have the transactions executed in the
+            # following order
             #
             # - approve
             # - approve
@@ -500,9 +505,11 @@ class TokenNetwork:
             if receipt_or_none:
                 if token.allowance(self.node_address, self.address) != amount_to_deposit:
                     log_msg = (
-                        'Deposit failed and allowance was consumed. Check concurrent deposits '
+                        'deposit failed. The allowance is insufficient, check concurrent deposits '
                         'for the same token network but different proxies.'
                     )
+                if token.balance_of(self.node_address) < amount_to_deposit:
+                    log_msg = 'deposit failed. The address doesnt have funds'
                 else:
                     log_msg = 'deposit failed'
 
