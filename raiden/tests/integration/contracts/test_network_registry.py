@@ -5,12 +5,7 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
 )
 
-from raiden.exceptions import (
-    TransactionThrew,
-    InvalidAddress,
-    AddressWithoutCode,
-    NoTokenManager,
-)
+from raiden.exceptions import TransactionThrew
 from raiden.tests.utils.factories import make_address
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 
@@ -46,13 +41,9 @@ def test_network_registry(token_network_registry_proxy: TokenNetworkRegistry, de
         token_network_address,
     )
 
-    with pytest.raises(AddressWithoutCode):
-        token_network_registry_proxy.token_network_by_token(bad_token_address)
-    with pytest.raises(InvalidAddress):
-        token_network_registry_proxy.token_network_by_token(None)
-    with pytest.raises(NoTokenManager):
-        token_network_registry_proxy.token_network_by_token(token_network_address)
-    token_manager = token_network_registry_proxy.token_network_by_token(
-        test_token_address,
-    )
-    assert token_manager is not None
+    with pytest.raises(ValueError):
+        assert token_network_registry_proxy.get_token_network(None) is None
+
+    assert token_network_registry_proxy.get_token_network(bad_token_address) is None
+    assert token_network_registry_proxy.get_token_network(token_network_address) is None
+    assert token_network_registry_proxy.get_token_network(test_token_address) is not None

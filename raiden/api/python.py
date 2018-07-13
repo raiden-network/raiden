@@ -218,7 +218,9 @@ class RaidenAPI:
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
         registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network = registry.token_network_by_token(token_address)
+        token_network_address = registry.get_token_network(token_address)
+        token_network = self.raiden.chain.token_network(token_network_address)
+
         channel_identifier = token_network.new_netting_channel(
             partner_address,
             settle_timeout,
@@ -293,7 +295,8 @@ class RaidenAPI:
         token = self.raiden.chain.token(token_address)
         netcontract_address = channel_state.identifier
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network_proxy = token_network_registry.token_network_by_token(token_address)
+        token_network_address = token_network_registry.get_token_network(token_address)
+        token_network_proxy = self.raiden.chain.token_network(token_network_address)
         channel_proxy = self.raiden.chain.payment_channel(
             token_network_proxy.address,
             netcontract_address,
@@ -621,9 +624,9 @@ class RaidenAPI:
     def get_channel_events(
             self,
             token_address: typing.Address,
-            partner_address: typing.Address=None,
-            from_block: typing.BlockSpecification=0,
-            to_block: typing.BlockSpecification='latest',
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,

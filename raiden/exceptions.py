@@ -114,10 +114,6 @@ class AddressWithoutCode(RaidenError):
     pass
 
 
-class NoTokenManager(RaidenError):
-    """Manager for a given token does not exist."""
-
-
 class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
 

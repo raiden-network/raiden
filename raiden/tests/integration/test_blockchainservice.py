@@ -19,7 +19,8 @@ def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     )
     assert not current_chanels
 
-    token_network0 = app0.raiden.default_registry.token_network_by_token(token_address)
+    token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    token_network0 = app0.raiden.chain.token_network(token_network_address)
 
     with pytest.raises(SamePeerAddress) as excinfo:
         token_network0.new_netting_channel(
