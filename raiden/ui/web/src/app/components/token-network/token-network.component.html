@@ -4,7 +4,7 @@
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
       <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
       <button type="button" pButton icon="fa fa-plus-circle" (click)="showRegisterDialog()" label="Register New Token"></button>
-      <button type="button" pButton icon="fa fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button>
+      <!-- <button type="button" pButton icon="fa fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button> -->
       <button type="button" pButton icon="fa fa-refresh" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
     </div>
     <p-dataTable [value]="tokens" dataKey="address" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
