@@ -537,7 +537,9 @@ Events are queried by two different endpoints depending on whether they are rela
 to a specific channel or not.
 
 All events can be filtered down by providing the query string arguments ``from_block``
-and/or ``to_block`` to query only a events from a limited range of blocks.
+and/or ``to_block`` to query only a events from a limited range of blocks. The block number 
+argument needs to be in the range of 0 to UINT64_MAX. Any blocknumber outside this range will
+be rejected.
 
 .. http:get:: /api/(version)/events/network
 
@@ -575,6 +577,7 @@ and/or ``to_block`` to query only a events from a limited range of blocks.
 
    :statuscode 200: For successful query
    :statuscode 400: If the provided query string is malformed
+   :statuscode 409: If the given block number argument is invalid
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/events/tokens/(token_address)
@@ -614,6 +617,7 @@ and/or ``to_block`` to query only a events from a limited range of blocks.
    :statuscode 200: For successful query
    :statuscode 400: If the provided query string is malformed
    :statuscode 404: If the token does not exist
+   :statuscode 409: If the given block number argument is invalid
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/events/channels/(channel_address)
@@ -656,4 +660,5 @@ and/or ``to_block`` to query only a events from a limited range of blocks.
   :statuscode 200: For successful query
   :statuscode 400: If the provided query string is malformed
   :statuscode 404: If the channel does not exist
+  :statuscode 409: If the given block number argument is invalid
   :statuscode 500: Internal Raiden node error
