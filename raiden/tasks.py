@@ -1,15 +1,31 @@
 import time
-import structlog
+import threading
+from pkg_resources import parse_version, require
 
 import gevent
 from gevent.event import AsyncResult
-from gevent.queue import (
-    Queue,
-)
+from gevent.queue import Queue
+import structlog
+
 from raiden.exceptions import RaidenShuttingDown
 
+CHECK_VERSION_INTERVAL = 60 * 5
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def check_version():
+    """Check every 3 hours for a new release"""
+    app_version = parse_version(require('raiden')[0].version)
+    while True:
+        content = grequests.get('https://api.github.com/repos/raiden-network/raiden/releases/latest').json()
+        # getting the latest release version
+        latest_release = parse_version(content['tag_name'])
+        # comparing it to the user's application
+        if app_version < latest_release:
+            print('\033[94m' + '\n\tYou are running an old version.\nPlease update your client!')
+        # repeat the process once every 3h
+        gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
 class AlarmTask(gevent.Greenlet):
