@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Dict
 
 from eth_abi import encode_single
@@ -24,9 +25,9 @@ from raiden.network.proxies import TokenNetwork
 
 class PaymentChannel:
     def __init__(
-        self,
-        token_network: TokenNetwork,
-        channel_identifier: typing.ChannelID,
+            self,
+            token_network: TokenNetwork,
+            channel_identifier: typing.ChannelID,
     ):
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
@@ -53,6 +54,11 @@ class PaymentChannel:
         self.participant1 = participant1
         self.participant2 = participant2
         self.token_network = token_network
+
+    @contextmanager
+    def lock_or_raise(self):
+        with self.token_network.lock_or_raise(self.participant2):
+            yield
 
     def token_address(self) -> typing.Address:
         """ Returns the address of the token for the channel. """

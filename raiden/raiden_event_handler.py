@@ -189,17 +189,30 @@ def handle_contract_send_channelclose(
         signature = b''
         message_hash = b''
 
-    channel = raiden.chain.payment_channel(
+    channel_proxy = raiden.chain.payment_channel(
         token_network_address=channel_close_event.token_network_identifier,
         channel_id=channel_close_event.channel_identifier,
     )
 
-    channel.close(
-        nonce,
-        balance_hash,
-        message_hash,
-        signature,
-    )
+    try:
+        channel_proxy.close(
+            nonce,
+            balance_hash,
+            message_hash,
+            signature,
+        )
+    except ChannelIncorrectStateError:
+        # This may happen for two reasons:
+        # - The channel was also closed by the partner and this transaction
+        # lost the race
+        # - The ActionCloseChannel was processed in a previous run, and the the
+        # node was restarted, so the channel is already closed but the
+        # blockchain event to update the local state was not processed yet
+        msg = 'Channel with {partner_address} for token {token_address} is already closed'.format(
+            partner_address=pex(channel_proxy.participant2),
+            token_address=pex(channel_proxy.token_address()),
+        )
+        log.info(msg)
 
 
 def handle_contract_send_channelupdate(
