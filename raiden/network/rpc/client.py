@@ -2,6 +2,7 @@ import warnings
 import time
 import os
 import copy
+import json
 from binascii import unhexlify
 from typing import List, Dict
 from json.decoder import JSONDecodeError
@@ -27,6 +28,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
     RaidenShuttingDown,
+    InsufficientFunds,
 )
 from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
@@ -473,7 +475,20 @@ class JSONRPCClient:
 
         signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
-        result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+        try:
+            result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+        except ValueError as e:
+            try:
+                error = json.loads(str(e))
+            except json.JSONDecodeError:
+                raise e
+
+            if error['code'] == -32000 and 'insufficient funds' in error['message']:
+                raise InsufficientFunds('Insufficient ETH to send the transaction')
+
+            # else just reraise the value error
+            raise e
+
         encoded_result = encode_hex(result)
         return remove_0x_prefix(encoded_result)
 
