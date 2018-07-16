@@ -20,7 +20,6 @@ from raiden.transfer.events import (
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
-    ChannelBusyError,
     ChannelNotFound,
     EthNodeCommunicationError,
     InsufficientFunds,
@@ -37,7 +36,6 @@ from raiden.settings import (
 )
 from raiden.utils import (
     pex,
-    releasing,
     typing,
 )
 from raiden.api.rest import hexbytes_to_str, encode_byte_values
@@ -354,13 +352,7 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         # If concurrent operations are happening on the channel, fail the request
-        if not channel_proxy.channel_operations_lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel with id {channel_state.identifier} is '
-                f'busy with another ongoing operation',
-            )
-
-        with releasing(channel_proxy.channel_operations_lock):
+        with channel_proxy.lock_or_raise():
             # set_total_deposit calls approve
             # token.approve(netcontract_address, addendum)
             channel_proxy.set_total_deposit(total_deposit)
@@ -453,16 +445,7 @@ class RaidenAPI:
                     token_network_identifier,
                     channel_state.identifier,
                 )
-
-                # Check if we can acquire the lock. If we can't raise an exception, which
-                # will cause the ExitStack to exit, releasing all locks acquired so far
-                if not channel.channel_operations_lock.acquire(blocking=False):
-                    raise ChannelBusyError(
-                        f'Channel with id {channel_state.identifier} is '
-                        f'busy with another ongoing operation.',
-                    )
-
-                stack.push(channel.channel_operations_lock)
+                stack.enter_context(channel.lock_or_raise())
 
             for channel_state in channels_to_close:
                 channel_close = ActionChannelClose(

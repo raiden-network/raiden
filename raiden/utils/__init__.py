@@ -267,21 +267,6 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     return zip_longest(iterator, iterator)
 
 
-class releasing:
-    """context manager inspired by closing that will call release on __exit__
-    blocks, useful to release acquired locks.
-    """
-
-    def __init__(self, obj):
-        self.obj = obj
-
-    def __enter__(self):
-        return self.obj
-
-    def __exit__(self, *exc_info):  # pylint: disable=unused-argument
-        self.obj.release()
-
-
 def compare_versions(deployed_version, current_version):
     """Compare version strings of a contract"""
     assert isinstance(deployed_version, str)
