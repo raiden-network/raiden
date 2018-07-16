@@ -935,7 +935,7 @@ def run(ctx, **kwargs):
             console = Console(app_)
             console.start()
 
-        #
+        # spawning a thread to handle the version checking
         gevent.spawn(check_version)
 
         # wait for interrupt
