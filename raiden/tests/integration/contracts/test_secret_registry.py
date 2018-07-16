@@ -50,16 +50,17 @@ def secret_registry_proxy_patched(secret_registry_proxy):
         secret_registry_proxy.client,
         secret_registry_proxy.address,
     )
-    _register_secret = secret_registry_patched._register_secret
+    _register_secret_batch = secret_registry_patched._register_secret_batch
 
-    def register_secret_patched(self, secret):
+    def register_secret_batch_patched(self, secrets):
         """Make sure the transaction is sent only once per secret"""
-        assert secret not in self.trigger
-        self.trigger[secret] = True
-        return _register_secret(secret)
+        for secret in secrets:
+            assert secret not in self.trigger
+            self.trigger[secret] = True
+        return _register_secret_batch(secrets)
 
-    secret_registry_patched._register_secret = types.MethodType(
-        register_secret_patched,
+    secret_registry_patched._register_secret_batch = types.MethodType(
+        register_secret_batch_patched,
         secret_registry_patched,
     )
     secret_registry_patched.trigger = dict()
@@ -72,7 +73,7 @@ def test_concurrent_access(
     """Test if multiple greenlets actually send only one transaction
     when registering a secret.
     This is done by patchin secret_registry_proxy to forbid more than
-    one call to `_register_secret`.
+    one call to `_register_secret_batch`.
     """
     secret = get_random_bytes(32)
     # Spawn multiple greenlets registrering a single secret
