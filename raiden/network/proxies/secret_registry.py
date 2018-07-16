@@ -63,82 +63,25 @@ class SecretRegistry:
         self.open_secret_transactions = dict()
 
     def register_secret(self, secret: typing.Secret):
-        if self._check_and_log_registered(secret):
-            return
-
-        log.info(
-            'registerSecret called',
-            node=pex(self.node_address),
-            contract=pex(self.address),
-        )
-
-        if secret not in self.open_secret_transactions:
-            secret_registry_transaction = AsyncResult()
-            self.open_secret_transactions[secret] = secret_registry_transaction
-            try:
-                transaction_hash = self._register_secret(secret)
-            except Exception as e:
-                secret_registry_transaction.set_exception(e)
-                raise
-            else:
-                secret_registry_transaction.set(transaction_hash)
-            finally:
-                self.open_secret_transactions.pop(secret, None)
-        else:
-            transaction_hash = self.open_secret_transactions[secret].get()
-
-    def _register_secret(self, secret: typing.Secret):
-        """Attempts to register a secret on-chain"""
-        transaction_hash = self.proxy.transact(
-            'registerSecret',
-            secret,
-        )
-
-        self.client.poll(unhexlify(transaction_hash))
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-        if receipt_or_none:
-            log.critical(
-                'registerSecret failed',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                secret=secret,
-            )
-            raise TransactionThrew('registerSecret', receipt_or_none)
-
-        log.info(
-            'registerSecret successful',
-            node=pex(self.node_address),
-            contract=pex(self.address),
-            secret=secret,
-        )
-        return transaction_hash
-
-    def _check_and_log_registered(self, secret: typing.Secret):
-        secrethash = sha3(secret)
-        is_registered = self.check_registered(secrethash)
-
-        if is_registered:
-            log.info(
-                'secret already registered',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                secrethash=encode_hex(secrethash),
-            )
-
-        return is_registered
+        self.register_secret_batch([secret])
 
     def register_secret_batch(self, secrets: List[typing.Secret]):
         secret_batch = list()
         secret_registry_transaction = AsyncResult()
 
         for secret in secrets:
-            if (
-                    not self._check_and_log_registered(secret) and
-                    secret not in self.open_secret_transactions
-            ):
-                secret_batch.append(secret)
-                self.open_secret_transactions[secret] = secret_registry_transaction
+            secrethash = sha3(secret)
+            if not self.check_registered(secrethash):
+                if secret not in self.open_secret_transactions:
+                    secret_batch.append(secret)
+                    self.open_secret_transactions[secret] = secret_registry_transaction
+            else:
+                log.info(
+                    'secret already registered',
+                    node=pex(self.node_address),
+                    contract=pex(self.address),
+                    secrethash=encode_hex(secrethash),
+                )
 
         if not secret_batch:
             return
