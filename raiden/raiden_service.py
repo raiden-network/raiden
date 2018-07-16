@@ -413,6 +413,9 @@ class RaidenService:
             )
 
             chain_id = self.chain.network_id
+            # We need to query the events at this point in order to obtain an up to
+            # date view of the blockchain right before the node starts its transport
+            # and starts receiving messages.
             for event in self.blockchain_events.poll_blockchain_events(
                 self.get_block_number(),
             ):
