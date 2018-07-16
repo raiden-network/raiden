@@ -65,6 +65,7 @@ from raiden.settings import (
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
     DEFAULT_TRANSPORT_RETRY_INTERVAL,
 )
+from raiden.tasks import check_version
 from raiden.utils import (
     eth_endpoint_to_hostport,
     get_system_spec,
@@ -933,6 +934,9 @@ def run(ctx, **kwargs):
         if ctx.params['console']:
             console = Console(app_)
             console.start()
+
+        #
+        gevent.spawn(check_version)
 
         # wait for interrupt
         event = gevent.event.Event()
