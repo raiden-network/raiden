@@ -195,7 +195,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout):
+def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, retry_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -245,6 +245,8 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout):
         token_address,
         app1.raiden.address,
     )
+
+    wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     events = get_token_network_events(
         app0.raiden.chain,
