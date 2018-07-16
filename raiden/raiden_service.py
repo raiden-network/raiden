@@ -348,6 +348,25 @@ class RaidenService:
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
+    def _poll_blockchain_events(self):
+        """Polls blockchain events and calls on_blockchain_event
+
+        On every call, also schedules itself to be run 20s after no call to it
+        was made.
+        """
+        with self.event_poll_lock:
+            # if called not from the spawn_later timer, cancels it
+            timer = getattr(self, '_poll_blockchain_timer', None)
+            if timer and timer is not gevent.getcurrent():
+                timer.kill()
+
+            chain_id = self.chain.network_id
+            for event in self.blockchain_events.poll_blockchain_events():
+                on_blockchain_event(self, event, event.event_data['block_number'], chain_id)
+
+            # ... and then schedules a new run for 20s in the future
+            self._poll_blockchain_timer = gevent.spawn_later(20, self._poll_blockchain_events)
+
     def _callback_new_block(self, current_block_number, chain_id):
         """Called once a new block is detected by the alarm task.
 
@@ -372,12 +391,12 @@ class RaidenService:
         # API and the AlarmTask. The following lock is necessary, to ensure the
         # expected side-effects are properly applied (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
-        with self.event_poll_lock:
-            for event in self.blockchain_events.poll_blockchain_events():
-                # These state changes will be procesed with a block_number
-                # which is /larger/ than the ChainState's block_number.
-                on_blockchain_event(self, event, current_block_number, chain_id)
 
+        # These state changes will be procesed with a block_number
+        # which is possibly /larger/ than the ChainState's block_number.
+        self._poll_blockchain_events()
+
+        with self.event_poll_lock:
             # On restart the Raiden node will re-create the filters with the
             # ethereum node. These filters will have the from_block set to the
             # value of the latest Block state change. To avoid missing events
@@ -412,13 +431,7 @@ class RaidenService:
                 from_block,
             )
 
-            chain_id = self.chain.network_id
-            for event in self.blockchain_events.poll_blockchain_events():
-                on_blockchain_event(
-                    self,
-                    event, event.event_data['block_number'],
-                    chain_id,
-                )
+        self._poll_blockchain_events()
 
     def connection_manager_for_token_network(self, token_network_identifier):
         if not is_binary_address(token_network_identifier):
