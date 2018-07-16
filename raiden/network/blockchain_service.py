@@ -1,10 +1,7 @@
 import gevent
 from cachetools.func import ttl_cache
 import structlog
-from eth_utils import (
-    to_int,
-    is_binary_address,
-)
+from eth_utils import is_binary_address
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import (
@@ -57,7 +54,7 @@ class BlockChainService:
             return True
 
         current_block = self.block_number()
-        highest_block = to_int(hexstr=result['highestBlock'])
+        highest_block = result['highestBlock']
 
         if highest_block - current_block > 2:
             return False
