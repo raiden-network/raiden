@@ -42,7 +42,7 @@ from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
 )
-from raiden.constants import NULL_ADDRESS
+from raiden.constants import NULL_ADDRESS, TESTNET_GASPRICE_MULTIPLIER
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -310,7 +310,7 @@ class JSONRPCClient:
         if self.given_gas_price:
             return self.given_gas_price
 
-        return self.web3.eth.gasPrice
+        return round(TESTNET_GASPRICE_MULTIPLIER * self.web3.eth.gasPrice)
 
     def check_startgas(self, startgas):
         if not startgas:
