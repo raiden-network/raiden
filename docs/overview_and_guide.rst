@@ -107,6 +107,9 @@ Please refer to the :ref:`detailed step-by-step guide <macos_development_setup>`
 Firing it up
 =============
 
+In order to use Raiden it is required to have a specific ethereum account dedicated to Raiden. Create an account for Raiden and fill it up with ETH and some tokens you want to have in payment channels and let the Raiden client manage it.
+**Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result to undefined behaviour**.
+
 Using geth
 **********
 
