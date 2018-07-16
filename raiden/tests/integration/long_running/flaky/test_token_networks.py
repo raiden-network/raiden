@@ -52,6 +52,7 @@ def saturated_count(connection_managers, open_channel_views):
 #   raiden_network fixture.
 
 
+@pytest.mark.xfail(reason='Some issues in this test, see raiden #691')
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
