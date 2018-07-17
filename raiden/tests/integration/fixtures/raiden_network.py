@@ -69,7 +69,7 @@ def raiden_chain(
     )
 
     for app in raiden_apps:
-        app.raiden.install_and_query_payment_network_filters(app.raiden.default_registry.address)
+        app.raiden.install_and_query_all_blockchain_filters(app.raiden.default_registry.address)
 
     app_channels = create_sequential_channels(
         raiden_apps,
