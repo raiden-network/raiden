@@ -142,6 +142,10 @@ class TransactionThrew(RaidenError):
         )
 
 
+class TransactionValueError(RaidenError):
+    """Raised when a transaction submit into the blockchain fails"""
+
+
 class InvalidProtocolMessage(RaidenError):
     """Raised on an invalid or an unknown Raiden protocol message"""
 
