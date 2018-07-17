@@ -25,6 +25,7 @@ class ClienErrorInspectResult(Enum):
     """Represents the action to follow after inspecting a client exception"""
     PROPAGATE_ERROR = 1
     INSUFFICIENT_FUNDS = 2
+    ALWAYS_FAIL = 3
 
 
 def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspectResult:
@@ -35,19 +36,16 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspec
     except json.JSONDecodeError:
         return ClienErrorInspectResult.PROPAGATE_ERROR
 
-    insufficient_funds_geth = (
-        error['code'] == -32000 and
-        eth_node == EthClient.GETH and
-        'insufficient funds' in error['message']
-    )
-    insufficient_funds_parity = (
-        error['code'] == -32010 and
-        eth_node == EthClient.PARITY and
-        'Insufficient funds' in error['message']
-    )
+    if eth_node == EthClient.GETH:
+        if error['code'] == -32000:
+            if 'insufficient funds' in error['message']:
+                return ClienErrorInspectResult.INSUFFICIENT_FUNDS
+            elif 'always failing transaction' in error['message']:
+                return ClienErrorInspectResult.ALWAYS_FAIL
 
-    if insufficient_funds_geth or insufficient_funds_parity:
-        return ClienErrorInspectResult.INSUFFICIENT_FUNDS
+    elif eth_node == EthClient.PARITY:
+        if error['code'] == -32010 and 'insufficient funds' in error['message']:
+            return ClienErrorInspectResult.INSUFFICIENT_FUNDS
 
     return ClienErrorInspectResult.PROPAGATE_ERROR
 
@@ -129,7 +127,11 @@ class ContractProxy:
             return fn(*args).estimateGas({'from': to_checksum_address(self.jsonrpc_client.sender)})
         except ValueError as err:
             action = inspect_client_error(err, self.jsonrpc_client.eth_node)
-            if action == ClienErrorInspectResult.INSUFFICIENT_FUNDS:
+            will_fail = action in (
+                ClienErrorInspectResult.INSUFFICIENT_FUNDS,
+                ClienErrorInspectResult.ALWAYS_FAIL,
+            )
+            if will_fail:
                 return None
 
             raise err
