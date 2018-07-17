@@ -157,7 +157,7 @@ class ConnectionManager:
             self.initial_channel_target = 0
 
             if only_receiving:
-                channels_to_close = views.get_channestate_for_receiving(
+                channels_to_close = views.get_channelstate_for_receiving(
                     views.state_from_raiden(self.raiden),
                     registry_address,
                     self.token_address,

@@ -297,7 +297,29 @@ def get_channelstate_by_id(
     return channel_state
 
 
-def get_channestate_for_receiving(
+def get_channelstate_filter(
+        chain_state: ChainState,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        filter_fn: typing.Callable,
+) -> typing.List[NettingChannelState]:
+    """Return the state of channels that had received any transfers in this
+    token network.
+    """
+    token_network = get_token_network_by_token_address(
+        chain_state,
+        payment_network_id,
+        token_address,
+    )
+
+    result = []
+    for channel_state in token_network.channelidentifiers_to_channels.values():
+        if filter_fn(channel_state):
+            result.append(channel_state)
+    return result
+
+
+def get_channelstate_for_receiving(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,

@@ -546,15 +546,13 @@ class ContractReceiveChannelBatchUnlock(StateChange):
     def __repr__(self):
         return (
             '<ContractReceiveChannelBatchUnlock'
-            'tokennetworkid:{} token:{} channelid:{} merkle_leaves:{} '
-            'participant:{} unlocked:{} returned:{}'
+            'token_network:{} participant:{} partner:{} locksroot:{} unlocked:{} returned:{}'
             '>'
         ).format(
             self.token_network_identifier,
-            self.token_address,
-            self.channel_identifier,
-            self.merkle_tree_leaves,
             self.participant,
+            self.partner,
+            self.locksroot,
             self.unlocked_amount,
             self.returned_tokens,
         )
@@ -563,10 +561,9 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
             self.token_network_identifier == other.token_network_identifier and
-            self.token_address == other.token_address and
-            self.channel_identifier == other.channel_identifier and
-            self.merkle_tree_leaves == other.merkle_tree_leaves and
             self.participant == other.participant and
+            self.partner == other.partner and
+            self.locksroot == other.locksroot and
             self.unlocked_amount == other.unlocked_amount and
             self.returned_tokens == other.returned_tokens
         )

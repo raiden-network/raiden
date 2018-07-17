@@ -1,15 +1,12 @@
-import structlog
-
 import pytest
 import gevent
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.geth import wait_until_block
-from raiden.transfer import views
+from raiden.transfer import views, channel
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden import routing
 from raiden import waiting
-
-log = structlog.get_logger(__name__)
 
 
 def wait_for_transaction(
@@ -35,13 +32,59 @@ def wait_for_transaction(
         gevent.sleep(0.1)
 
 
-def saturated_count(connection_managers, open_channel_views):
+def wait_for_saturated(
+    connection_managers,
+    registry_address,
+    token_address,
+    max_wait_blocks=80,
+):
+    chain = connection_managers[0].raiden.chain
+
+    while max_wait_blocks > 0:
+        saturated = saturated_count(
+            connection_managers,
+            registry_address,
+            token_address,
+        )
+        if saturated >= len(connection_managers):
+            break
+        wait_until_block(chain, chain.block_number() + 1)
+        max_wait_blocks -= 1
+    return max_wait_blocks != 0
+
+
+def is_channel_open_and_funded(channel_state):
+    return (
+        channel.get_status(channel_state) == CHANNEL_STATE_OPENED and
+        channel_state.our_state.contract_balance > 0 and
+        channel_state.partner_state.contract_balance > 0
+    )
+
+
+def is_manager_saturated(connection_manager, registry_address, token_address):
+    raiden = connection_manager.raiden
+    open_channels = views.get_channelstate_filter(
+        views.state_from_raiden(raiden),
+        registry_address,
+        token_address,
+        lambda channel_state:
+        (
+            is_channel_open_and_funded(channel_state) and
+            (
+                channel_state.our_state.address == raiden.address or
+                channel_state.partner_state.address == raiden.address
+            )
+        ),
+    )
+    return len(open_channels) >= connection_manager.initial_channel_target
+
+
+def saturated_count(connection_managers, registry_address, token_address):
     """Return count of nodes with count of open channels exceeding initial channel target"""
-    return len([
-        len(open_channel_view()) >= connection_manager.initial_channel_target
-        for connection_manager, open_channel_view
-        in zip(connection_managers, open_channel_views)
-    ])
+    return [
+        is_manager_saturated(manager, registry_address, token_address)
+        for manager in connection_managers
+    ].count(True)
 
 
 # TODO: add test scenarios for
@@ -50,14 +93,11 @@ def saturated_count(connection_managers, open_channel_views):
 # - Check if this test needs to be adapted for the matrix transport
 #   layer when activating it again. It might as it depends on the
 #   raiden_network fixture.
-
-
-@pytest.mark.xfail(reason='Some issues in this test, see raiden #691')
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(raiden_network, token_addresses):
+def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
     registry_address = raiden_network[0].raiden.default_registry.address
 
     # pylint: disable=too-many-locals
@@ -93,28 +133,18 @@ def test_participant_selection(raiden_network, token_addresses):
             token_network_registry_address,
         ) for app in raiden_network
     ]
-    open_channel_views = [
-        lambda:
-        views.get_channelstate_open(
-            views.state_from_raiden(app.raiden),
-            registry_address,
-            token_address,
-        ) for app in raiden_network
-    ]
 
-    assert all(x() for x in open_channel_views)
+    assert wait_for_saturated(
+        connection_managers,
+        registry_address,
+        token_address,
+    ) is True
 
-    chain = raiden_network[-1].raiden.chain
-    max_wait_blocks = 12
-
-    while (
-        saturated_count(connection_managers, open_channel_views) < len(connection_managers) and
-        max_wait_blocks > 0
-    ):
-        wait_until_block(chain, chain.block_number() + 1)
-        max_wait_blocks -= 1
-
-    assert saturated_count(connection_managers, open_channel_views) == len(connection_managers)
+    assert saturated_count(
+        connection_managers,
+        registry_address,
+        token_address,
+    ) == len(connection_managers)
 
     # ensure unpartitioned network
     for app in raiden_network:
@@ -137,23 +167,6 @@ def test_participant_selection(raiden_network, token_addresses):
                 None,
             )
             assert routes is not None
-
-    # average channel count
-    acc = (
-        sum(len(x()) for x in open_channel_views) /
-        len(connection_managers)
-    )
-
-    try:
-        # FIXME: depending on the number of channels, this will fail, due to weak
-        # selection algorithm
-        # https://github.com/raiden-network/raiden/issues/576
-        assert not any(
-            len(x()) > 2 * acc
-            for x in open_channel_views
-        )
-    except AssertionError:
-        pass
 
     # create a transfer to the leaving node, so we have a channel to settle
     sender = raiden_network[-1].raiden
