@@ -71,7 +71,7 @@ class EchoNode:
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         log.info('Echo node started')
 
-    def echo_node_alarm_callback(self, block_number, chain_id):
+    def echo_node_alarm_callback(self, block_number):
         """ This can be registered with the raiden AlarmTask.
         If `EchoNode.stop()` is called, it will give the return signal to be removed from
         the AlarmTask callbacks.
@@ -100,7 +100,6 @@ class EchoNode:
                 else:
                     received_transfers = self.api.get_payment_history_for_token(
                         self.token_address,
-                        from_block=self.last_poll_block,
                     )
 
                     # received transfer is a tuple of (block_number, event)

@@ -166,7 +166,6 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
     )
     events = initiator_app.raiden.wal.log_and_dispatch(
         init_initiator_statechange,
-        initiator_app.raiden.get_block_number(),
     )
     send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
     transfermessage = LockedTransfer.from_event(send_transfermessage)
@@ -176,7 +175,6 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
         mediator_init_statechange = mediator_init(mediator_app.raiden, transfermessage)
         events = mediator_app.raiden.wal.log_and_dispatch(
             mediator_init_statechange,
-            mediator_app.raiden.get_block_number(),
         )
         send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
         transfermessage = LockedTransfer.from_event(send_transfermessage)
@@ -186,7 +184,6 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
     mediator_init_statechange = target_init(transfermessage)
     events = target_app.raiden.wal.log_and_dispatch(
         mediator_init_statechange,
-        target_app.raiden.get_block_number(),
     )
     return secret
 

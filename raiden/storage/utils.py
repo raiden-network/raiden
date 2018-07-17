@@ -25,7 +25,6 @@ DB_CREATE_STATE_EVENTS = '''
 CREATE TABLE IF NOT EXISTS state_events (
     identifier INTEGER PRIMARY KEY,
     source_statechange_id INTEGER NOT NULL,
-    block_number INTEGER NOT NULL,
     data BINARY,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
 );

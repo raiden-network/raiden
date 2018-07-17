@@ -39,7 +39,7 @@ class WriteAheadLog:
         self.state_change_id = None
         self.storage = storage
 
-    def log_and_dispatch(self, state_change, block_number):
+    def log_and_dispatch(self, state_change):
         """ Log and apply a state change.
 
         This function will first write the state change to the write-ahead-log,
@@ -53,7 +53,7 @@ class WriteAheadLog:
         events = self.state_manager.dispatch(state_change)
 
         self.state_change_id = state_change_id
-        self.storage.write_events(state_change_id, block_number, events)
+        self.storage.write_events(state_change_id, events)
 
         return events
 

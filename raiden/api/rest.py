@@ -726,20 +726,14 @@ class RestAPI:
     def get_token_network_events_blockchain(
             self,
             token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification,
-            to_block: typing.BlockSpecification,
     ):
         log.debug(
             'Getting token network blockchain events',
-            token_address=to_checksum_address(token_address),
-            from_block=from_block,
-            to_block=to_block,
+            token_address=token_address,
         )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_blockchain(
                 token_address,
-                from_block,
-                to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
@@ -793,20 +787,14 @@ class RestAPI:
     def get_token_network_events_raiden(
             self,
             token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification,
-            to_block: typing.BlockSpecification,
     ):
         log.debug(
             'Getting token network internal events',
-            token_address=to_checksum_address(token_address),
-            from_block=from_block,
-            to_block=to_block,
+            token_address=token_address,
         )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_raiden(
                 token_address,
-                from_block,
-                to_block,
             )
             raiden_service_result = convert_to_serializable(raiden_service_result)
             return api_response(result=normalize_events_list(raiden_service_result))
@@ -817,22 +805,16 @@ class RestAPI:
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None,
     ):
         log.debug(
             'Getting channel blockchain events',
-            token_address=to_checksum_address(token_address),
-            partner_address=optional_address_to_string(partner_address),
-            from_block=from_block,
-            to_block=to_block,
+            token_address=token_address,
+            partner_address=partner_address,
         )
         try:
             raiden_service_result = self.raiden_api.get_channel_events_blockchain(
                 token_address,
                 partner_address,
-                from_block,
-                to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except (InvalidBlockNumberInput, InvalidAddress) as e:

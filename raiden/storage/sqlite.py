@@ -93,24 +93,23 @@ class SQLiteStorage:
 
         return last_id
 
-    def write_events(self, state_change_id, block_number, events):
+    def write_events(self, state_change_id, events):
         """ Save events.
 
         Args:
             state_change_id: Id of the state change that generate these events.
-            block_number: Block number at which the state change was applied.
             events: List of Event objects.
         """
         events_data = [
-            (None, state_change_id, block_number, self.serializer.serialize(event))
+            (None, state_change_id, self.serializer.serialize(event))
             for event in events
         ]
 
         with self.write_lock, self.conn:
             self.conn.executemany(
                 'INSERT INTO state_events('
-                '   identifier, source_statechange_id, block_number, data'
-                ') VALUES(?, ?, ?, ?)',
+                '   identifier, source_statechange_id, data'
+                ') VALUES(?, ?, ?)',
                 events_data,
             )
 
@@ -189,54 +188,17 @@ class SQLiteStorage:
 
         if to_identifier == 'latest':
             cursor.execute(
-                'SELECT block_number, data FROM state_events WHERE identifier >= ?',
+                'SELECT data FROM state_events WHERE identifier >= ?',
                 (from_identifier,),
             )
         else:
             cursor.execute(
-                'SELECT block_number, data FROM state_events WHERE identifier '
+                'SELECT data FROM state_events WHERE identifier '
                 'BETWEEN ? AND ?', (from_identifier, to_identifier),
             )
 
         result = [
-            (entry[0], self.serializer.deserialize(entry[1]))
-            for entry in cursor.fetchall()
-        ]
-        return result
-
-    def get_events_by_block(self, from_block, to_block):
-        if not (from_block == 'latest' or isinstance(from_block, int)):
-            raise ValueError("from_block must be an integer or 'latest'")
-
-        if not (to_block == 'latest' or isinstance(to_block, int)):
-            raise ValueError("to_block must be an integer or 'latest'")
-
-        cursor = self.conn.cursor()
-
-        if from_block is None:
-            from_block = 0
-
-        if from_block == 'latest':
-            assert to_block is None
-
-            cursor.execute(
-                'SELECT block_number FROM state_events ORDER BY block_number DESC LIMIT 1',
-            )
-            from_block = cursor.fetchone()
-
-        if to_block == 'latest':
-            cursor.execute(
-                'SELECT block_number, data FROM state_events WHERE block_number >= ?',
-                (from_block, ),
-            )
-        else:
-            cursor.execute(
-                'SELECT block_number, data FROM state_events WHERE block_number '
-                'BETWEEN ? AND ?', (from_block, to_block),
-            )
-
-        result = [
-            (entry[0], self.serializer.deserialize(entry[1]))
+            self.serializer.deserialize(entry[0])
             for entry in cursor.fetchall()
         ]
         return result
