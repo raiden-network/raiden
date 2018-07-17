@@ -28,8 +28,10 @@ class ClienErrorInspectResult(Enum):
 
 
 def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspectResult:
+    # both clients return invalid json. They use single quotes while json needs double ones.
+    json_response = str(val_err).replace("'", '"')
     try:
-        error = json.loads(str(val_err))
+        error = json.loads(json_response)
     except json.JSONDecodeError:
         return ClienErrorInspectResult.PROPAGATE_ERROR
 
