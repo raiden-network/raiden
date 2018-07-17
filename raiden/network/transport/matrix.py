@@ -11,6 +11,7 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
     to_canonical_address,
+    to_checksum_address,
     encode_hex,
     decode_hex,
 )
@@ -22,7 +23,7 @@ from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 from cachetools import cachedmethod
 from operator import attrgetter
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
@@ -153,44 +154,48 @@ class MatrixTransport:
         self._discovery_room: Room = None
 
         self._messageids_to_asyncresult: Dict[Address, AsyncResult] = dict()
+        # partner need to be in this dict to be listened on
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_presence: Dict[Address, UserPresence] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
-        self._address_to_roomid: Dict[Address, str] = dict()
 
         self._discovery_room_alias = None
         self._discovery_room_alias_full = None
-        self._room_alias_re = None
         self._login_retry_wait = config.get('login_retry_wait', 0.5)
         self._logout_timeout = config.get('logout_timeout', 10)
 
         self._running = False
         self._health_semaphore = gevent.lock.Semaphore()
 
+        self._client.add_invite_listener(self._handle_invite)
+        self._client.add_presence_listener(self._handle_presence_change)
+
     def start(
         self,
         raiden_service: RaidenService,
         queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
+        self._running = True
         self._raiden_service = raiden_service
-        room_alias_re = self._make_room_alias(
-            '(?P<peer1>0x[a-zA-Z0-9]{40})',
-            '(?P<peer2>0x[a-zA-Z0-9]{40})',
-        )
-        self._room_alias_re = re.compile(f'^#{room_alias_re}:(?P<server_name>.*)$')
+        config = raiden_service.config['matrix']
 
-        discovery_cfg = self._raiden_service.config['matrix']['discovery_room']
-        self._discovery_room_alias = self._make_room_alias(discovery_cfg['alias_fragment'])
+        self._discovery_room_alias = self._make_room_alias(
+            config['discovery_room']['alias_fragment'],
+        )
         self._discovery_room_alias_full = (
-            f'#{self._discovery_room_alias}:{discovery_cfg["server"]}'
+            f'#{self._discovery_room_alias}:{config["discovery_room"]["server"]}'
         )
 
         self._login_or_register()
-        self._running = True
         self._inventory_rooms()
 
-        self._client.add_invite_listener(self._handle_invite)
-        self._client.add_presence_listener(self._handle_presence_change)
+        self._join_discovery_room()
+        if not self._discovery_room.listeners:
+            self._discovery_room.add_listener(
+                self._handle_discovery_membership_event,
+                'm.room.member',
+            )
+
         # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
         self._client.sync_thread.link_exception(self._client_exception_handler)
@@ -199,35 +204,27 @@ class MatrixTransport:
         # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        # Important: Join the discovery room last to ensure we can react to invites
-        self._join_discovery_room()
-        self._discovery_room.add_listener(self._handle_discovery_membership_event, 'm.room.member')
-
-        gevent.spawn_later(1, self._inventory_rooms)
-        gevent.spawn_later(2, self._ensure_room_peers)
-        gevent.spawn_later(1, self._send_queued_messages, queueids_to_queues)
+        gevent.spawn_later(1, self._ensure_room_peers)
+        gevent.spawn_later(2, self._send_queued_messages, queueids_to_queues)
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
         if not self._running:
             return
-        self.log.debug('HEALTHCHECK', peer_address=pex(node_address))
         node_address_hex = to_normalized_address(node_address)
+        self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
         with self._health_semaphore:
             user_ids = {
                 user.user_id
                 for user
                 in self._client.search_user_directory(node_address_hex)
-                if self._validate_userid_signature(user)
+                if self._validate_userid_signature(user) == node_address
             }
             self._address_to_userids[node_address].update(user_ids)
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             self._update_address_presence(node_address)
-            room = self._get_room_for_address(node_address, allow_missing_peers=True)
-            if not room:
-                self.log.warning('No room found or created for peer', peer=node_address_hex)
 
     def send_async(
         self,
@@ -262,20 +259,21 @@ class MatrixTransport:
             self._send_with_retry(receiver_address, async_result, json.dumps(message.to_dict()))
 
     def stop_and_wait(self):
-        if self._running:
-            self._running = False
-            self._client.set_presence_state(UserPresence.OFFLINE.value)
-            self._client.stop_listener_thread()
+        if not self._running:
+            return
+        self._running = False
+        self._client.set_presence_state(UserPresence.OFFLINE.value)
+        self._client.stop_listener_thread()
 
-            # Set all the pending results to False, this will also
-            # cause pending retries to be aborted
-            for async_result in self._messageids_to_asyncresult.values():
-                async_result.set(False)
+        # Set all the pending results to False, this will also
+        # cause pending retries to be aborted
+        for async_result in self._messageids_to_asyncresult.values():
+            async_result.set(False)
 
-            try:
-                self._client.join_and_logout(self.greenlets, timeout=self._logout_timeout)
-            except RuntimeError as error:
-                self.log.critical(str(error))
+        try:
+            self._client.join_and_logout(self.greenlets, timeout=self._logout_timeout)
+        except RuntimeError as error:
+            self.log.critical(str(error))
 
     @property
     def log(self):
@@ -307,6 +305,7 @@ class MatrixTransport:
                 username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
 
             try:
+                self._client.sync_token = None
                 self._client.login(username, password)
                 self.log.info(
                     'LOGIN',
@@ -342,7 +341,7 @@ class MatrixTransport:
             raise ValueError('Could not register or login!')
         # TODO: persist access_token, to avoid generating a new login every time
         name = encode_hex(self._sign(self._client.user_id.encode()))
-        self._client.get_user(self._client.user_id).set_display_name(name)
+        self._get_user(self._client.user_id).set_display_name(name)
 
     def _join_discovery_room(self):
         discovery_cfg = self._raiden_service.config['matrix']['discovery_room']
@@ -363,60 +362,51 @@ class MatrixTransport:
         self._discovery_room.get_joined_members()
 
     def _inventory_rooms(self):
-        # Iterate over a copy so we can modify the room list
-        for room_id, room in list(self._client.rooms.items()):
-            if not room.canonical_alias:
-                # Leave any rooms that don't have a canonical alias as they are not part of the
-                # protocol
-                self.log.warning('Leaving room without canonical alias', room=room)
-                room.leave()
+        for room in self._client.rooms.values():
+            if any(self._discovery_room_alias in alias for alias in room.aliases):
                 continue
-            # Don't listen for messages in the discovery room
-            should_listen = room.canonical_alias != self._discovery_room_alias_full
-            if should_listen:
-                peer_address = self._get_peer_address_from_room(room.canonical_alias)
-                if not peer_address:
-                    self.log.warning(
-                        "Member of a room we're not supposed to be a member of - ignoring",
-                        room=room,
-                        discovery=self._discovery_room_alias_full,
-                    )
-                    return
-                if peer_address not in self._address_to_roomid:
-                    self._address_to_roomid[peer_address] = room.room_id
-                    room.add_listener(self._handle_message, 'm.room.message')
+            # we add listener for all valid rooms, _handle_message should ignore them
+            # if msg sender weren't start_health_check'ed yet
+            if not room.listeners:
+                room.add_listener(self._handle_message, 'm.room.message')
             self.log.debug(
                 'ROOM',
-                room_id=room_id,
+                room=room,
                 aliases=room.aliases,
-                listening=should_listen,
             )
 
     def _handle_invite(self, room_id: str, state: dict):
         """ Join all invited rooms """
         if not self._running:
             return
-        # one must join to be able to fetch room alias
-        room = self._client.join_room(room_id)
-        if not room.canonical_alias:
-            self.log.warning('Got invited to a room without canonical alias - ignoring', room=room)
-            room.leave()
+        invite_event = [
+            event
+            for event in state['events']
+            if event['type'] == 'm.room.member' and
+            event['content'].get('membership') == 'invite'
+        ]
+        if not invite_event:
             return
-        peer_address = self._get_peer_address_from_room(room.canonical_alias)
+        invite_event = invite_event[0]
+        user = self._get_user(invite_event['sender'])
+        peer_address = self._validate_userid_signature(user)
         if not peer_address:
             self.log.warning(
-                'Got invited to a room we\'re not supposed to be a member of - ignoring',
-                room=room,
+                'Got invited to a room by invalid signed user - ignoring',
+                room_id=room_id,
+                user=user,
             )
-            room.leave()
             return
-        if peer_address not in self._address_to_roomid:
-            self._address_to_roomid[peer_address] = room.room_id
+        # one must join to be able to fetch room alias
+        room = self._client.join_room(room_id)
+        if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
+        self._set_room_id_for_address(peer_address, room_id)
         self.log.debug(
-            'Invited to a room',
+            'Invited and joined a room',
             room_id=room_id,
             aliases=room.aliases,
+            peer=to_checksum_address(peer_address),
         )
 
     def _handle_message(self, room, event):
@@ -435,15 +425,24 @@ class MatrixTransport:
             # Ignore our own messages
             return
 
-        user = self._client.get_user(sender_id)
+        user = self._get_user(sender_id)
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            self.log.debug(
-                'INVALID SIGNATURE',
-                user=user,
-                name=user.get_display_name(),
-            )
+            # invalid user displayName signature
             return
+        if peer_address not in self._address_to_userids:
+            # user not start_health_check'ed
+            return
+        old_room = self._get_room_id_for_address(peer_address)
+        if old_room != room.room_id:
+            self.log.debug(
+                'received message triggered new room for peer',
+                peer_user=user.user_id,
+                peer_address=to_checksum_address(peer_address),
+                old_room=old_room,
+                room=room,
+            )
+            self._set_room_id_for_address(peer_address, room.room_id)
 
         data = event['content']['body']
         if data.startswith('0x'):
@@ -584,14 +583,12 @@ class MatrixTransport:
     ) -> Optional[Room]:
         if not self._running:
             return
-        room_id = self._address_to_roomid.get(receiver_address)
+        assert receiver_address and receiver_address in self._address_to_userids,\
+            f'address not health checked: {self._client.user_id} => ' +\
+            f'{to_checksum_address(receiver_address)}'
+        room_id = self._get_room_id_for_address(receiver_address)
         if room_id:
-            room = self._client.rooms.get(room_id)
-            if room:
-                return room
-            else:
-                # Room is gone - remove from cache
-                self._address_to_roomid.pop(receiver_address)
+            return self._client.rooms[room_id]
 
         # The addresses are being sorted to ensure the same channel is used for both directions
         # of communication.
@@ -602,27 +599,30 @@ class MatrixTransport:
         ])
         room_name = self._make_room_alias(*address_pair)
 
-        room_candidates = self._client.search_room_directory(room_name)
-        if room_candidates:
-            room = room_candidates[0]
-            if room.room_id not in self._client.rooms:
-                room = self._client.join_room(room.room_id)
-        else:
-            # no room with expected name => create one and invite peer
-            address = to_normalized_address(receiver_address)
-            candidates = self._client.search_user_directory(address)
+        # no room with expected name => create one and invite peer
+        address = to_normalized_address(receiver_address)
+        candidates = self._client.search_user_directory(address)
 
-            # filter candidates
-            peers = [user for user in candidates if self._validate_userid_signature(user)]
-            if not peers and not allow_missing_peers:
-                self.log.error('No valid peer found', peer_address=address)
-                return
+        # filter candidates
+        peers = [
+            user for user in candidates
+            if self._validate_userid_signature(user) == receiver_address
+        ]
+        if not peers and not allow_missing_peers:
+            self.log.error('No valid peer found', peer_address=address)
+            return
 
-            room = self._get_unlisted_room(room_name, invitees=[user.user_id for user in peers])
+        self._address_to_userids[receiver_address].update({user.user_id for user in peers})
 
-        if receiver_address not in self._address_to_roomid:
-            self._address_to_roomid[receiver_address] = room.room_id
+        room = self._get_unlisted_room(room_name, invitees=peers)
+        self._set_room_id_for_address(receiver_address, room.room_id)
+
+        for user in peers:
+            self._maybe_invite_user(user)
+
+        if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
+
         self.log.info(
             'CHANNEL ROOM',
             peer_address=to_normalized_address(receiver_address),
@@ -640,7 +640,7 @@ class MatrixTransport:
                 try:
                     room = self._client.create_room(
                         room_name,
-                        invitees=invitees,
+                        invitees=[user.user_id for user in invitees],
                         is_public=True,  # FIXME: debug only
                     )
                 except MatrixRequestError as error:
@@ -652,24 +652,37 @@ class MatrixTransport:
                                   f'Retrying to join...')
                     room_not_found = False
                 else:
-                    self.log.info(f'Room {room_name} created successfully.')
+                    self.log.info('Room created successfully', room=room, invitees=invitees)
                     return room
             else:
                 try:
                     room = self._client.join_room(room_name_full)
                 except MatrixRequestError as error:
                     if error.code == 404:
-                        self.log.info(f'Room {room_name} not found, trying to create it.')
+                        self.log.info(
+                            f'Room {room_name_full} not found, trying to create it.',
+                            error=error,
+                        )
                         room_not_found = True
                     else:
                         self.log.info(f'Error joining room {room_name}: '
                                       f'{error.content} {error.code}')
                 else:
-                    self.log.info(f'Room {room_name} joined successfully.')
+                    self.log.info('Room joined successfully', room=room)
                     return room
             gevent.sleep(self._login_retry_wait)
 
-        raise RuntimeError(f'Could not join or create room {room_name}.')
+        room = self._client.create_room(
+            None,
+            invitees=[user.user_id for user in invitees],
+            is_public=True,  # FIXME: debug only
+        )
+        log.warning(
+            'Could not create nor join a named room. Successfuly created an unnamed one',
+            room=room,
+            invitees=invitees,
+        )
+        return room
 
     def _make_room_alias(self, *parts):
         return self._room_sep.join([self._room_prefix, self._network_name, *parts])
@@ -687,7 +700,7 @@ class MatrixTransport:
         if event['type'] != 'm.presence' or user_id == self._client.user_id:
             return
 
-        user = self._client.get_user(user_id)
+        user = self._get_user(user_id)
         address = self._validate_userid_signature(user)
         if not address:
             # Malformed address - skip
@@ -697,19 +710,14 @@ class MatrixTransport:
         if address not in self._address_to_userids:
             return
         self._address_to_userids[address].add(user_id)
+        # maybe inviting user used to also possibly invite user's from discovery presence changes
+        self._maybe_invite_user(user)
 
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
             return
 
-        self.log.debug(
-            'Changing user presence state',
-            user_id=user_id,
-            prev_state=self._userid_to_presence.get(user_id),
-            state=new_state,
-        )
         self._userid_to_presence[user_id] = new_state
-
         self._update_address_presence(address)
 
     def _get_user_presence(self, user_id: str) -> UserPresence:
@@ -721,8 +729,6 @@ class MatrixTransport:
 
     def _update_address_presence(self, address):
         """ Update synthesized address presence state from user presence state """
-        self.log.debug('Address to userids', address_to_userids=self._address_to_userids)
-
         composite_presence = {
             self._get_user_presence(uid)
             for uid
@@ -745,8 +751,6 @@ class MatrixTransport:
             state=new_state,
         )
         self._address_to_presence[address] = new_state
-        if new_state is None:
-            return
 
         if new_state is UserPresence.UNKNOWN:
             reachability = NODE_NETWORK_UNKNOWN
@@ -765,11 +769,11 @@ class MatrixTransport:
             return
 
         state = event['content']['membership']
-        user_id = event['state_key']
-        self.log.debug('discovery member change', state=state, user_id=user_id)
         if state != 'join':
             return
-        self._maybe_invite_user(self._client.get_user(user_id))
+        user_id = event['sender']
+        self.log.debug('discovery member change', state=state, user_id=user_id)
+        self._maybe_invite_user(self._get_user(user_id))
 
     def _ensure_room_peers(self):
         """ Check all members of discovery channel for matches to existing rooms """
@@ -781,17 +785,12 @@ class MatrixTransport:
         if not address:
             return
 
-        room_id = self._address_to_roomid.get(address)
+        room_id = self._get_room_id_for_address(address)
         if not room_id:
             return
-        if room_id not in self._client.rooms:
-            self._address_to_roomid.pop(address)
-            return
 
-        room = self._client.rooms.get(room_id)
-        # Refresh members
-        room.get_joined_members()
-        if user.user_id not in room._members.keys():
+        room = self._client.rooms[room_id]
+        if user.user_id not in room._members:
             self.log.debug('INVITE', user=user, room=room)
             room.invite_user(user.user_id)
 
@@ -858,18 +857,6 @@ class MatrixTransport:
             hasher=eth_sign_sha3,
         )
 
-    def _get_peer_address_from_room(self, room_alias) -> Optional[Address]:
-        """ Given a room name/alias which contains our address on it, return the other address """
-        match = self._room_alias_re.match(room_alias)
-        if match:
-            addresses = {
-                to_canonical_address(address)
-                for address in (match.group('peer1', 'peer2'))
-            }
-            addresses = addresses - {self._raiden_service.address}
-            if len(addresses) == 1:
-                return addresses.pop()
-
     @staticmethod
     @cachedmethod(_cachegetter('__address_cache', dict), key=attrgetter('user_id', 'displayname'))
     def _validate_userid_signature(user: User) -> Optional[Address]:
@@ -890,6 +877,32 @@ class MatrixTransport:
         except (DecodeError, TypeError):
             return
         return address
+
+    @cachedmethod(_cachegetter('__users_cache', WeakValueDictionary), key=lambda _, uid: uid)
+    def _get_user(self, user_id) -> User:
+        user = self._client.get_user(user_id)
+        user.get_display_name()
+        return user
+
+    def _set_room_id_for_address(self, address: Address, room_id: Optional[str]):
+        """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms """
+        address_hex = to_checksum_address(address)
+        _address_to_room_id = self._client.account_data.get('network.raiden.rooms', {})
+        if room_id != _address_to_room_id.get(address_hex):
+            if room_id:
+                _address_to_room_id[address_hex] = room_id
+            else:
+                _address_to_room_id.pop(address_hex, None)
+            self._client.set_account_data('network.raiden.rooms', _address_to_room_id)
+
+    def _get_room_id_for_address(self, address: Address) -> Optional[str]:
+        """ Uses GMatrixClient.get_account_data to get updated mapping of addresses->rooms """
+        address_hex = to_checksum_address(address)
+        room_id = self._client.account_data.get('network.raiden.rooms', {}).get(address_hex)
+        if room_id and room_id not in self._client.rooms:
+            self._set_room_id_for_address(address, None)
+            return None
+        return room_id
 
 
 def _event_to_message(event, node_address):
