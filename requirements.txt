@@ -17,7 +17,7 @@ psutil==5.4.5
 pycryptodome==3.6.1
 # raiden-libs==???
 # FIXME: replace with released version before merge
-git+https://github.com/raiden-network/raiden-libs.git@00b7c0023bedd3dc00f0ca3401839eaf4aed082c#egg=raiden-libs
+git+https://github.com/raiden-network/raiden-libs.git@588f62700685cac09882a8f2f13c12ebc90640d0#egg=raiden-libs
 git+https://github.com/raiden-network/raiden-contracts.git@2ab91aa4b062d88a124ce050551e2f4b8cb0da57#egg=raiden-contracts
 webargs==1.8.1
 eth-keyfile==0.5.1
