@@ -280,5 +280,8 @@ def test_recovery_blockchain_events(
         app0_restart.raiden.address,
         network_wait,
     )
-    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
+    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
+        0,
+        'latest',
+    )
     assert must_contain_entry(restarted_state_changes, ContractReceiveChannelClosed, {})

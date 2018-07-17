@@ -259,6 +259,7 @@ class RaidenService:
 
         self.install_and_query_all_blockchain_filters(
             self.default_registry.address,
+            self.default_secret_registry.address,
             last_log_block_number,
         )
 
@@ -401,9 +402,11 @@ class RaidenService:
     def install_and_query_all_blockchain_filters(
             self,
             token_network_registry_address,
+            secret_registry_address,
             from_block=0,
     ):
         token_network_registry = self.chain.token_network_registry(token_network_registry_address)
+        secret_registry = self.chain.secret_registry(secret_registry_address)
         channels = views.list_all_channelstate(
             views.state_from_raiden(self),
         )
@@ -418,6 +421,10 @@ class RaidenService:
                 token_network_registry,
                 from_block,
             )
+            self.blockchain_events.add_secret_registry_listener(
+                secret_registry,
+                from_block,
+            )
 
             for token_network in token_networks:
                 token_network_proxy = self.chain.token_network(token_network)
@@ -429,7 +436,7 @@ class RaidenService:
             for channel_state in channels:
                 channel_proxy = self.chain.payment_channel(
                     channel_state.token_network_identifier,
-                    channel_state.identifier
+                    channel_state.identifier,
                 )
                 self.blockchain_events.add_payment_channel_listener(
                     channel_proxy,
