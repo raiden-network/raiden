@@ -68,7 +68,6 @@ from raiden.utils import (
     eth_endpoint_to_hostport,
     get_system_spec,
     is_minified_address,
-    is_supported_client,
     merge_dict,
     split_endpoint,
     typing,
@@ -94,7 +93,7 @@ LOG_CONFIG_OPTION_NAME = 'log_config'
 
 def check_json_rpc(blockchain_service: BlockChainService) -> None:
     try:
-        client_version = blockchain_service.client.web3.version.node
+        blockchain_service.client.web3.version.node
     except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             '\n'
@@ -106,10 +105,6 @@ def check_json_rpc(blockchain_service: BlockChainService) -> None:
             'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n',
         )
         sys.exit(1)
-    else:
-        if not is_supported_client(client_version):
-            print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
-            sys.exit(1)
 
 
 def check_synced(blockchain_service: BlockChainService) -> None:

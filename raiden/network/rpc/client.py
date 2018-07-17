@@ -1,7 +1,8 @@
-import warnings
-import time
-import os
 import copy
+import os
+import sys
+import time
+import warnings
 from binascii import unhexlify
 from typing import List, Dict
 from json.decoder import JSONDecodeError
@@ -31,6 +32,7 @@ from raiden.exceptions import (
 from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
     data_encoder,
+    is_supported_client,
     privatekey_to_address,
 )
 from raiden.utils.typing import Address
@@ -42,7 +44,6 @@ from raiden.utils.solc import (
     solidity_resolve_symbols,
 )
 from raiden.constants import (
-    EthClient,
     NULL_ADDRESS,
     TESTNET_GASPRICE_MULTIPLIER,
 )
@@ -225,13 +226,11 @@ class JSONRPCClient:
             # scoped web3 instance is used for all clients
             pass
 
-        client_version = self.web3.version.node
-        if 'Geth' in client_version:
-            self.eth_node = EthClient.GETH
-        elif 'Parity' in client_version:
-            self.eth_node = EthClient.PARITY
-        else:
-            raise RuntimeError('Should never get here. Only parity or geth permitted')
+        supported, self.eth_node = is_supported_client(self.web3.version.node)
+
+        if not supported:
+            print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
+            sys.exit(1)
 
         # create the connection test middleware (but only for non-tester chain)
         if not hasattr(web3, 'testing'):
