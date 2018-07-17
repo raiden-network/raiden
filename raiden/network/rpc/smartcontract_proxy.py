@@ -1,3 +1,5 @@
+import json
+from enum import Enum
 from typing import Dict, List
 
 from eth_utils import (
@@ -9,12 +11,37 @@ from pkg_resources import DistributionNotFound
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 from web3.utils.abi import get_abi_input_types
 from web3.contract import Contract
+from raiden.constants import EthClient
+from raiden.exceptions import InsufficientFunds
 from raiden.utils.filters import decode_event
 try:
     from eth_tester.exceptions import TransactionFailed
 except (ModuleNotFoundError, DistributionNotFound):
     class TransactionFailed(Exception):
         pass
+
+
+class ClienErrorInspectResult(Enum):
+    """Represents the action to follow after inspecting a client exception"""
+    PROPAGATE_ERROR = 1
+    INSUFFICIENT_FUNDS = 2
+
+
+def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspectResult:
+    try:
+        error = json.loads(str(val_err))
+    except json.JSONDecodeError:
+        return ClienErrorInspectResult.PROPAGATE_ERROR
+
+    insufficient_funds = (
+        (error['code'] == -32000 and eth_node == EthClient.GETH) or
+        (error['code'] == -32015 and eth_node == EthClient.PARITY)
+    )
+
+    if insufficient_funds:
+        return ClienErrorInspectResult.INSUFFICIENT_FUNDS
+
+    return ClienErrorInspectResult.PROPAGATE_ERROR
 
 
 class ContractProxy:
@@ -33,12 +60,19 @@ class ContractProxy:
     def transact(self, function_name: str, *args, **kargs):
         data = ContractProxy.get_transaction_data(self.contract.abi, function_name, args)
 
-        txhash = self.jsonrpc_client.send_transaction(
-            to=self.contract.address,
-            value=kargs.pop('value', 0),
-            data=decode_hex(data),
-            **kargs,
-        )
+        try:
+            txhash = self.jsonrpc_client.send_transaction(
+                to=self.contract.address,
+                value=kargs.pop('value', 0),
+                data=decode_hex(data),
+                **kargs,
+            )
+        except ValueError as e:
+            action = inspect_client_error(e, self.jsonrpc_client.eth_node)
+            if action == ClienErrorInspectResult.INSUFFICIENT_FUNDS:
+                raise InsufficientFunds('Insufficient ETH for transaction')
+
+            raise e
 
         return txhash
 
@@ -86,14 +120,11 @@ class ContractProxy:
         try:
             return fn(*args).estimateGas({'from': to_checksum_address(self.jsonrpc_client.sender)})
         except ValueError as err:
-            tx_would_fail = (
-                '-32015' in str(err) or
-                '-32000' in str(err)
-            )
-            if tx_would_fail:  # -32015 is parity and -32000 is geth
+            action = inspect_client_error(err, self.jsonrpc_client.eth_node)
+            if action == ClienErrorInspectResult.INSUFFICIENT_FUNDS:
                 return None
-            else:
-                raise err
+
+            raise err
         except TransactionFailed:
             return None
 
