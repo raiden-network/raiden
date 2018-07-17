@@ -497,12 +497,12 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
             if receipt_or_none:
-                if token.allowance(self.node_address, self.address) != amount_to_deposit:
+                if token.allowance(self.node_address, self.address) < amount_to_deposit:
                     log_msg = (
                         'deposit failed. The allowance is insufficient, check concurrent deposits '
                         'for the same token network but different proxies.'
                     )
-                if token.balance_of(self.node_address) < amount_to_deposit:
+                elif token.balance_of(self.node_address) < amount_to_deposit:
                     log_msg = 'deposit failed. The address doesnt have funds'
                 else:
                     log_msg = 'deposit failed'
