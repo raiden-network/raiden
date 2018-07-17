@@ -443,7 +443,6 @@ def test_api_open_and_deposit_channel(
         json=channel_data_obj,
     )
     response = request.send().response
-
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     response = response.json()
     assert 'Insufficient ETH' in response['errors']
@@ -510,6 +509,58 @@ def test_api_open_close_and_settle_channel(
         'balance': balance,
     }
     assert_dicts_are_equal(response.json(), expected_response)
+
+
+def test_api_close_insufficient_eth(
+        api_backend,
+        token_addresses,
+        reveal_timeout,
+):
+    # let's create a new channel
+    partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
+    token_address = token_addresses[0]
+    settle_timeout = 1650
+    channel_data_obj = {
+        'partner_address': partner_address,
+        'token_address': to_checksum_address(token_address),
+        'settle_timeout': settle_timeout,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+
+    balance = 0
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
+    response = response.json()
+    expected_response = channel_data_obj
+    expected_response['balance'] = balance
+    expected_response['state'] = CHANNEL_STATE_OPENED
+    expected_response['reveal_timeout'] = reveal_timeout
+    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    assert_dicts_are_equal(response, expected_response)
+
+    # let's burn all eth and try to close the channel
+    api_server, _ = api_backend
+    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    request = grequests.patch(
+        api_url_for(
+            api_backend,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json={'state': CHANNEL_STATE_CLOSED},
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
+    response = response.json()
+    assert 'Insufficient ETH' in response['errors']
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])

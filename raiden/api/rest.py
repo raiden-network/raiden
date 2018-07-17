@@ -735,6 +735,11 @@ class RestAPI:
                 result='',
                 status_code=HTTPStatus.ACCEPTED,
             )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address,
