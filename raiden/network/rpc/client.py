@@ -27,6 +27,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
     RaidenShuttingDown,
+    TransactionValueError,
 )
 from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
 from raiden.utils import (
@@ -494,9 +495,12 @@ class JSONRPCClient:
 
         signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
-        result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-        encoded_result = encode_hex(result)
-        return remove_0x_prefix(encoded_result)
+        try:
+            result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+            encoded_result = encode_hex(result)
+            return remove_0x_prefix(encoded_result)
+        except ValueError as e:
+            raise TransactionValueError() from e
 
     def poll(self, transaction_hash: bytes, confirmations: int = None):
         """ Wait until the `transaction_hash` is applied or rejected.
