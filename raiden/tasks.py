@@ -1,7 +1,8 @@
 import time
-import threading
+import requests
 from pkg_resources import parse_version, require
 
+import click
 import gevent
 from gevent.event import AsyncResult
 from gevent.queue import Queue
@@ -9,23 +10,41 @@ import structlog
 
 from raiden.exceptions import RaidenShuttingDown
 
-CHECK_VERSION_INTERVAL = 60 * 5
+CHECK_VERSION_INTERVAL = 3 * 60 * 60
+LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
+RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
+
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def check_version():
-    """Check every 3 hours for a new release"""
+    """Check every 3h for a new release"""
     app_version = parse_version(require('raiden')[0].version)
+    print(app_version)
     while True:
-        content = grequests.get('https://api.github.com/repos/raiden-network/raiden/releases/latest').json()
-        # getting the latest release version
-        latest_release = parse_version(content['tag_name'])
-        # comparing it to the user's application
-        if app_version < latest_release:
-            print('\033[94m' + '\n\tYou are running an old version.\nPlease update your client!')
-        # repeat the process once every 3h
-        gevent.sleep(CHECK_VERSION_INTERVAL)
+        try:
+            content = requests.get(LATEST).json()
+            # getting the latest release version
+            latest_release = parse_version(content['tag_name'])
+            # comparing it to the user's application
+            if app_version > latest_release:
+                click.secho('You\'re running version {}. The latest version is {}'
+                            .format(app_version,
+                                    latest_release,
+                                    ),
+                            fg='red',
+                            )
+                click.secho('It\'s time to update! Releases: {}'.format(RELEASE_PAGE), fg='red')
+        except requests.exceptions.HTTPError as herr:
+            click.secho('Error while checking for version', fg='red')
+            print(herr)
+        except ValueError as verr:
+            click.secho('Error while checking the version', fg='red')
+            print(verr)
+        finally:
+            # repeat the process once every 3h
+            gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
 class AlarmTask(gevent.Greenlet):
