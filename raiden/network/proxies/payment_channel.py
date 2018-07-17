@@ -57,7 +57,7 @@ class PaymentChannel:
 
     @contextmanager
     def lock_or_raise(self):
-        with self.token_network.lock_or_raise(self.participant2):
+        with self.token_network.channel_operations_lock[self.participant2]:
             yield
 
     def token_address(self) -> typing.Address:
