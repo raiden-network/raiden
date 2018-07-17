@@ -13,8 +13,8 @@ from eth_utils import remove_0x_prefix, keccak, is_checksum_address
 
 import raiden
 from raiden import constants
-from raiden.utils import typing
 from raiden.exceptions import InvalidAddress
+from raiden.utils import typing
 
 
 def safe_address_decode(address):
@@ -53,21 +53,23 @@ def is_minified_address(addr):
     return re.compile('(0x)?[a-f0-9]{6,8}').match(addr)
 
 
-def is_supported_client(client_version):
+def is_supported_client(
+        client_version: str,
+) -> typing.Tuple[bool, typing.Optional[constants.EthClient]]:
     if client_version.startswith('Parity'):
         major, minor, patch = [
             int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
         ]
         if (major, minor, patch) >= (1, 7, 6):
-            return True
+            return True, constants.EthClient.PARITY
     elif client_version.startswith('Geth'):
         major, minor, patch = [
             int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
         ]
         if (major, minor, patch) >= (1, 7, 2):
-            return True
+            return True, constants.EthClient.GETH
 
-    return False
+    return False, None
 
 
 def address_checksum_and_decode(addr: str) -> typing.Address:
