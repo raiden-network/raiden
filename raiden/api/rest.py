@@ -353,6 +353,11 @@ class RestAPI:
                 registry_address,
                 token_address,
             )
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
+            )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(
                 errors=str(e),
@@ -382,6 +387,11 @@ class RestAPI:
                 settle_timeout,
                 reveal_timeout,
             )
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
+            )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
                 AddressWithoutCode, DuplicatedChannelError) as e:
             return api_error(
@@ -398,10 +408,10 @@ class RestAPI:
                     partner_address,
                     balance,
                 )
-            except EthNodeCommunicationError as e:
-                return api_error(
-                    errors=str(e),
-                    status_code=HTTPStatus.REQUEST_TIMEOUT,
+            except EthNodeCommunicationError:
+                return api_response(
+                    result='',
+                    status_code=HTTPStatus.ACCEPTED,
                 )
             except InsufficientFunds as e:
                 return api_error(
@@ -435,6 +445,11 @@ class RestAPI:
                 token_address,
                 partner_address,
             )
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
+            )
         except ChannelBusyError as e:
             return api_error(
                 errors=str(e),
@@ -461,10 +476,10 @@ class RestAPI:
                 initial_channel_target,
                 joinable_funds_target,
             )
-        except EthNodeCommunicationError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.REQUEST_TIMEOUT,
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
             )
         except InsufficientFunds as e:
             return api_error(
@@ -688,6 +703,11 @@ class RestAPI:
                 channel_state.token_address,
                 channel_state.partner_state.address,
                 total_deposit,
+            )
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
             )
         except ChannelBusyError as e:
             return api_error(

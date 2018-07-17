@@ -122,6 +122,7 @@ Deploying
       }
 
    :statuscode 201: A token network for the token has been successfully created.
+   :statuscode 202: Creation of the token network for the token has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
     - The token was already registered before, or
@@ -306,6 +307,7 @@ Channel Management
       }
 
    :statuscode 201: Channel created successfully
+   :statuscode 202: Creation of the channel has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 400: Provided JSON is in some way malformed
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409: Invalid input, e. g. too low a settle timeout
@@ -360,6 +362,7 @@ Channel Management
       }
 
    :statuscode 200: Success
+   :statuscode 202: The requested action has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 400:
     - The provided JSON is in some way malformed, or
     - there is nothing to do since neither ``state`` nor ``total_deposit`` have been given, or
@@ -433,6 +436,7 @@ Connection Management
    :reqjson int funds: amount of funding you want to put into the network
    :reqjson int initial_channel_target: number of channels to open proactively
    :reqjson float joinable_funds_target: fraction of funds that will be used to join channels opened by other participants
+   :statuscode 202: The joining of the token network for the token has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 204: For a successful connection creation
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance
    :statuscode 408: If a timeout happened during any of the transactions
