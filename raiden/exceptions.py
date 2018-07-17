@@ -155,3 +155,7 @@ class InvalidBlockNumberInput(RaidenError):
 
 class TransportError(RaidenError):
     """ Raised when a transport encounters an unexpected error """
+
+
+class ReplacementTransactionUnderpriced(RaidenError):
+    """Raised when a replacement transaction is rejected by the blockchain"""

@@ -12,7 +12,7 @@ from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 from web3.utils.abi import get_abi_input_types
 from web3.contract import Contract
 from raiden.constants import EthClient
-from raiden.exceptions import InsufficientFunds
+from raiden.exceptions import InsufficientFunds, ReplacementTransactionUnderpriced
 from raiden.utils.filters import decode_event
 try:
     from eth_tester.exceptions import TransactionFailed
@@ -25,7 +25,8 @@ class ClientErrorInspectResult(Enum):
     """Represents the action to follow after inspecting a client exception"""
     PROPAGATE_ERROR = 1
     INSUFFICIENT_FUNDS = 2
-    ALWAYS_FAIL = 3
+    TRANSACTION_UNDERPRICED = 3
+    ALWAYS_FAIL = 4
 
 
 def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspectResult:
@@ -77,6 +78,8 @@ class ContractProxy:
             action = inspect_client_error(e, self.jsonrpc_client.eth_node)
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
                 raise InsufficientFunds('Insufficient ETH for transaction')
+            elif action == ClienErrorInspectResult.TRANSACTION_UNDERPRICED:
+                raise ReplacementTransactionUnderpriced()
 
             raise e
 
