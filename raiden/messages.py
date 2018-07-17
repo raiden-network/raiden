@@ -975,16 +975,6 @@ class Lock:
             secrethash=packed.secrethash,
         )
 
-    @classmethod
-    def from_state(cls, state):
-        lock = cls(
-            amount=state.amount,
-            expiration=state.expiration,
-            secrethash=state.secrethash,
-        )
-
-        return lock
-
     def __eq__(self, other):
         if isinstance(other, Lock):
             return self.as_bytes == other.as_bytes

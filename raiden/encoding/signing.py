@@ -51,7 +51,3 @@ def sign(messagedata, private_key, hasher=sha3):
         raise ValueError('invalid signature')
 
     return signature[:-1] + chr(signature[-1] + 27).encode()
-
-
-def address_from_key(key):
-    return sha3(key[1:])[-20:]
