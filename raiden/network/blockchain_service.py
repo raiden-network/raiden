@@ -27,16 +27,11 @@ class BlockChainService:
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
     ):
-        self.address_to_token = dict()
         self.address_to_discovery = dict()
-        self.address_to_nettingchannel = dict()
-        self.address_to_registry = dict()
-        self.address_to_manager = dict()
-
-        self.address_to_token_network_registry = dict()
-        self.address_to_token_network = dict()
         self.address_to_secret_registry = dict()
-
+        self.address_to_token = dict()
+        self.address_to_token_network = dict()
+        self.address_to_token_network_registry = dict()
         self.identifier_to_payment_channel = dict()
 
         self.client = jsonrpc_client

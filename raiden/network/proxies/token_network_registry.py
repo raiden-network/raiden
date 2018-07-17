@@ -68,9 +68,6 @@ class TokenNetworkRegistry:
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
 
-        self.address_to_tokennetwork = dict()
-        self.token_to_tokennetwork = dict()
-
     def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
