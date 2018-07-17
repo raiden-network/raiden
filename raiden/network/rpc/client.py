@@ -461,6 +461,7 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
+            gasprice: int = None,
     ):
         """ Helper to send signed messages.
 
@@ -473,7 +474,7 @@ class JSONRPCClient:
 
         transaction = dict(
             nonce=self.nonce(),
-            gasPrice=self.gasprice(),
+            gasPrice=gasprice or self.gasprice(),
             gas=self.check_startgas(startgas),
             value=value,
             data=data,
