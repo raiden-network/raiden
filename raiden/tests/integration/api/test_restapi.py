@@ -907,7 +907,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     conflict_response = conflict_request.send().response
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
-    # Lose all the eth and then make sure we get the appropriate API error
+    # Burn all the eth and then make sure we get the appropriate API error
     burn_all_eth(app0.raiden)
     poor_request = grequests.put(api_url_for(
         api_backend,
@@ -983,6 +983,33 @@ def test_get_connection_managers_info(api_backend, token_addresses):
     assert token_address2 in result
     assert isinstance(result[token_address2], dict)
     assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_tokens', [2])
+def test_connect_insufficient_eth(api_backend, token_addresses):
+
+    # Burn all eth and then try to connect to a token network
+    api_server, _ = api_backend
+    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    funds = 100
+    token_address1 = to_checksum_address(token_addresses[0])
+    connect_data_obj = {
+        'funds': funds,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'connectionsresource',
+            token_address=token_address1,
+        ),
+        json=connect_data_obj,
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
+    response = response.json()
+    assert 'Insufficient ETH' in response['errors']
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
