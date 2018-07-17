@@ -590,17 +590,17 @@ class TokenNetwork:
             closing_signature: typing.Signature,
             non_closing_signature: typing.Signature,
     ):
-        log.info(
-            'updateNonClosingBalanceProof called',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-            nonce=nonce,
-            balance_hash=encode_hex(balance_hash),
-            additional_hash=encode_hex(additional_hash),
-            closing_signature=encode_hex(closing_signature),
-            non_closing_signature=encode_hex(non_closing_signature),
-        )
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'nonce': nonce,
+            'balance_hash': encode_hex(balance_hash),
+            'additional_hash': encode_hex(additional_hash),
+            'closing_signature': encode_hex(closing_signature),
+            'non_closing_signature': encode_hex(non_closing_signature),
+        }
+        log.info('updateNonClosingBalanceProof called', **log_details)
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
@@ -617,33 +617,13 @@ class TokenNetwork:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical(
-                'updateNonClosingBalanceProof failed',
-                token_network=pex(self.address),
-                node=pex(self.node_address),
-                partner=pex(partner),
-                nonce=nonce,
-                balance_hash=encode_hex(balance_hash),
-                additional_hash=encode_hex(additional_hash),
-                closing_signature=encode_hex(closing_signature),
-                non_closing_signature=encode_hex(non_closing_signature),
-            )
+            log.critical('updateNonClosingBalanceProof failed', **log_details)
             channel_closed = self.channel_is_closed(self.node_address, partner)
             if channel_closed is False:
                 raise ChannelIncorrectStateError('Channel is not in a closed state')
             raise TransactionThrew('Update NonClosing balance proof', receipt_or_none)
 
-        log.info(
-            'updateNonClosingBalanceProof successful',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-            nonce=nonce,
-            balance_hash=encode_hex(balance_hash),
-            additional_hash=encode_hex(additional_hash),
-            closing_signature=encode_hex(closing_signature),
-            non_closing_signature=encode_hex(non_closing_signature),
-        )
+        log.info('updateNonClosingBalanceProof successful', **log_details)
 
     def withdraw(
             self,
@@ -652,13 +632,15 @@ class TokenNetwork:
             partner_signature: typing.Address,
             signature: typing.Signature,
     ):
-        log.info(
-            'withdraw called',
-            token_network=pex(self.address),
-            node=pex(self.node_address),
-            partner=pex(partner),
-            total_withdraw=total_withdraw,
-        )
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'total_withdraw': total_withdraw,
+            'partner_signature': encode_hex(partner_signature),
+            'signature': encode_hex(signature),
+        }
+        log.info('withdraw called', **log_details)
 
         with self.lock_or_raise(partner):
             transaction_hash = self.proxy.transact(
@@ -673,15 +655,7 @@ class TokenNetwork:
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.critical(
-                    'withdraw failed',
-                    token_network=pex(self.address),
-                    node=pex(self.node_address),
-                    partner=pex(partner),
-                    total_withdraw=total_withdraw,
-                    partner_signature=encode_hex(partner_signature),
-                    signature=encode_hex(signature),
-                )
+                log.critical('withdraw failed', **log_details)
                 channel_opened = self.channel_is_opened(self.node_address, partner)
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
@@ -689,15 +663,7 @@ class TokenNetwork:
                     )
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
-            log.info(
-                'withdraw successful',
-                token_network=pex(self.address),
-                node=pex(self.node_address),
-                partner=pex(partner),
-                total_withdraw=total_withdraw,
-                partner_signature=encode_hex(partner_signature),
-                signature=encode_hex(signature),
-            )
+            log.info('withdraw successful', **log_details)
 
     def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
         log_details = {
