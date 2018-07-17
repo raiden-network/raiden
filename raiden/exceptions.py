@@ -114,11 +114,6 @@ class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
 
 
-class ChannelBusyError(RaidenError):
-    """Raised if someone tries to perform an operation on a channel that
-    conflicts with an ongoing operation."""
-
-
 class ChannelIncorrectStateError(RaidenError):
     """Raised if someone tries to perform an operation on a channel that
     is in an incompatible state."""

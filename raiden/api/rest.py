@@ -22,7 +22,6 @@ from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
     APIServerPortInUseError,
-    ChannelBusyError,
     ChannelNotFound,
     DuplicatedChannelError,
     EthNodeCommunicationError,
@@ -438,27 +437,6 @@ class RestAPI:
             status_code=HTTPStatus.CREATED,
         )
 
-    def close(self, registry_address, token_address, partner_address):
-        try:
-            raiden_service_result = self.raiden_api.channel_close(
-                registry_address,
-                token_address,
-                partner_address,
-            )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
-            )
-        except ChannelBusyError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        result = self.channel_schema.dump(raiden_service_result)
-        return api_response(result=result.data)
-
     def connect(
             self,
             registry_address,
@@ -709,11 +687,6 @@ class RestAPI:
                 result='',
                 status_code=HTTPStatus.ACCEPTED,
             )
-        except ChannelBusyError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
@@ -747,10 +720,10 @@ class RestAPI:
                 channel_state.token_address,
                 channel_state.partner_state.address,
             )
-        except ChannelBusyError as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
+        except EthNodeCommunicationError:
+            return api_response(
+                result='',
+                status_code=HTTPStatus.ACCEPTED,
             )
 
         updated_channel_state = self.raiden_api.get_channel(
