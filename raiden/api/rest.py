@@ -402,6 +402,11 @@ class RestAPI:
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
             )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
 
         if balance:
             # make initial deposit
