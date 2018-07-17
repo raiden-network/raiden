@@ -13,10 +13,6 @@ class FlatList(list):
         return '<{}: {}>'.format(self.__class__.__name__, list(self))
 
 
-class ChannelList(FlatList):
-    pass
-
-
 class AddressList(FlatList):
     pass
 
