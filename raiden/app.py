@@ -129,11 +129,6 @@ class App:  # pylint: disable=too-few-public-methods
                 f'network id {chain.network_id}',
             )
             sys.exit(1)
-        self.start_console = self.config['console']
-
-        # raiden.ui.console:Console assumes that a services
-        # attribute is available for auto-registration
-        self.services = dict()
 
     def __repr__(self):
         return '<{} {}>'.format(

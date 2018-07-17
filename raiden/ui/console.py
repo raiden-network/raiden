@@ -1,16 +1,11 @@
 from binascii import hexlify
-import errno
 import io
 import logging
-import os
-import select
-import signal
 import sys
 import time
 
-from eth_utils import denoms, to_checksum_address
+from eth_utils import to_checksum_address
 import gevent
-from gevent.event import Event
 import IPython
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
@@ -21,18 +16,13 @@ from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import get_contract_path, safe_address_decode, typing
 from raiden.utils.solc import compile_files_cwd
 
-ENTER_CONSOLE_TIMEOUT = 3
 GUI_GEVENT = 'gevent'
 
 # ansi escape code for typesetting
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
 OKGREEN = '\033[92m'
-WARNING = '\033[91m'
-FAIL = '\033[91m'
 ENDC = '\033[0m'
-BOLD = '\033[1m'
-UNDERLINE = '\033[4m'
 
 # ipython needs to accept "--gui gevent" option
 IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
@@ -93,147 +83,17 @@ class GeventInputHook:
         self.manager.clear_inputhook()
 
 
-class SigINTHandler:
-
-    def __init__(self, event):
-        self.event = event
-        self.installed = None
-        self.installed_force = None
-        self.install_handler()
-
-    def install_handler(self):
-        if self.installed_force:
-            self.installed_force.cancel()
-            self.installed_force = None
-        self.installed = gevent.signal(signal.SIGINT, self.handle_int)
-
-    def install_handler_force(self):
-        if self.installed:
-            self.installed.cancel()
-            self.installed = None
-        self.installed_force = gevent.signal(signal.SIGINT, self.handle_force)
-
-    def handle_int(self):
-        self.install_handler_force()
-
-        gevent.spawn(self._confirm_enter_console)
-
-    def handle_force(self):  # pylint: disable=no-self-use
-        """ User pressed ^C a second time. Send SIGTERM to ourself. """
-        os.kill(os.getpid(), signal.SIGTERM)
-
-    def _confirm_enter_console(self):
-        start = time.time()
-        sys.stdout.write('\n')
-        enter_console = False
-        while time.time() - start < ENTER_CONSOLE_TIMEOUT:
-            prompt = (
-                '\r{}{}Hit [ENTER], to launch console; [Ctrl+C] again to quit! [{:1.0f}s]{}'
-            ).format(
-                OKGREEN,
-                BOLD,
-                ENTER_CONSOLE_TIMEOUT - (time.time() - start),
-                ENDC,
-            )
-
-            sys.stdout.write(prompt)
-            sys.stdout.flush()
-
-            try:
-                r, _, _ = select.select([sys.stdin], [], [], .5)
-            except select.error as ex:
-                sys.stdout.write('\n')
-                # "Interrupted system call" means the user pressed ^C again
-                if ex.args[0] == errno.EINTR:
-                    self.handle_force()
-                    return
-                else:
-                    raise
-            if r:
-                sys.stdin.readline()
-                enter_console = True
-                break
-        if enter_console:
-            sys.stdout.write('\n')
-            self.installed_force.cancel()
-            self.event.set()
-        else:
-            msg = '\n{}{}No answer after {}s. Resuming.{}\n'.format(
-                WARNING,
-                BOLD,
-                ENTER_CONSOLE_TIMEOUT,
-                ENDC,
-            )
-
-            sys.stdout.write(msg)
-            sys.stdout.flush()
-            # Restore regular handler
-            self.install_handler()
-
-
-class BaseService(gevent.Greenlet):
-    def __init__(self, app):
-        gevent.Greenlet.__init__(self)
-        self.is_stopped = False
-        self.app = app
-        self.config = app.config
-
-    def start(self):
-        self.is_stopped = False
-        gevent.Greenlet.start(self)
-
-    def stop(self):
-        self.is_stopped = True
-        gevent.Greenlet.kill(self)
-
-
-class Console(BaseService):
+class Console(gevent.Greenlet):
     """ A service starting an interactive ipython session when receiving the
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """
 
     def __init__(self, app):
-        super().__init__(app)
-        self.interrupt = Event()
-        self.console_locals = {}
-        if app.start_console:
-            self.start()
-            self.interrupt.set()
-        else:
-            SigINTHandler(self.interrupt)
-
-    def start(self):
-        # start console service
-        super().start()
-
-        class Raiden:
-            def __init__(self, app):
-                self.app = app
-
-        self.console_locals = dict(
-            _raiden=Raiden(self.app),
-            raiden=self.app.raiden,
-            chain=self.app.raiden.chain,
-            discovery=self.app.discovery,
-            tools=ConsoleTools(
-                self.app.raiden,
-                self.app.discovery,
-                self.app.config['settle_timeout'],
-                self.app.config['reveal_timeout'],
-            ),
-            denoms=denoms,
-            true=True,
-            false=False,
-            usage=print_usage,
-        )
+        super().__init__()
+        self.app = app
+        self.console_locals = None
 
     def _run(self):  # pylint: disable=method-hidden
-        self.interrupt.wait()
-        print('\n' * 2)
-        print('Entering Console' + OKGREEN)
-        print('Tip:' + OKBLUE)
-        print_usage()
-
         # Remove handlers that log to stderr
         root = logging.getLogger()
         for handler in root.handlers[:]:
@@ -244,6 +104,8 @@ class Console(BaseService):
         handler = logging.StreamHandler(stream=stream)
         handler.formatter = logging.Formatter(u'%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
+        err = io.StringIO()
+        sys.stderr = err
 
         def lastlog(n=10, prefix=None, level=None):
             """ Print the last `n` log lines to stdout.
@@ -267,20 +129,34 @@ class Console(BaseService):
             for line in lines[-n:]:
                 print(line)
 
-        self.console_locals['lastlog'] = lastlog
-
-        err = io.StringIO()
-        sys.stderr = err
-
         def lasterr(n=1):
             """ Print the last `n` entries of stderr to stdout. """
             for line in (err.getvalue().strip().split('\n') or [])[-n:]:
                 print(line)
 
-        self.console_locals['lasterr'] = lasterr
+        tools = ConsoleTools(
+            self.app.raiden,
+            self.app.discovery,
+            self.app.config['settle_timeout'],
+            self.app.config['reveal_timeout'],
+        )
 
+        self.console_locals = {
+            'app': self.app,
+            'raiden': self.app.raiden,
+            'chain': self.app.raiden.chain,
+            'discovery': self.app.discovery,
+            'tools': tools,
+            'lasterr': lasterr,
+            'lastlog': lastlog,
+            'usage': print_usage,
+        }
+
+        print('\n' * 2)
+        print('Entering Console' + OKGREEN)
+        print('Tip:' + OKBLUE)
+        print_usage()
         IPython.start_ipython(argv=['--gui', 'gevent'], user_ns=self.console_locals)
-        self.interrupt.clear()
 
         sys.exit(0)
 
@@ -302,7 +178,8 @@ class ConsoleTools:
             symbol='RDT',
             decimals=2,
             timeout=60,
-            auto_register=True):
+            auto_register=True,
+    ):
         """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
         Per default it will be registered with 'raiden'.
@@ -401,7 +278,7 @@ class ConsoleTools:
             self._discovery.get(peer_address)
         except KeyError:
             print('Error: peer {} not found in discovery'.format(peer_address_hex))
-            return
+            return None
 
         self._api.channel_open(
             registry_address,
@@ -435,7 +312,7 @@ class ConsoleTools:
         )
 
         current_time = time.time()
-        while len(result) == 0:
+        while not result:
             if timeout and start_time + timeout > current_time:
                 return False
 
