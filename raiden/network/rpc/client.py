@@ -18,8 +18,8 @@ from eth_utils import (
     to_normalized_address,
 )
 import gevent
-import cachetools
 from gevent.lock import Semaphore
+import cachetools
 import structlog
 
 from raiden.utils import typing
@@ -28,11 +28,10 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenShuttingDown,
 )
-from raiden.settings import GAS_PRICE, GAS_LIMIT, RPC_CACHE_TTL
+from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
     data_encoder,
     privatekey_to_address,
-    quantity_encoder,
 )
 from raiden.utils.typing import Address
 from raiden.utils.filters import StatelessFilter
@@ -151,26 +150,6 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
     order.reverse()
     return order
-
-
-def format_data_for_rpccall(
-        sender: Address = b'',
-        to: Address = b'',
-        value: int = 0,
-        data: bytes = b'',
-        startgas: int = GAS_LIMIT,
-        gasprice: int = GAS_PRICE,
-):
-    """ Helper to format the transaction data. """
-
-    return {
-        'from': to_checksum_address(sender),
-        'to': to_checksum_address(to),
-        'value': quantity_encoder(value),
-        'gasPrice': quantity_encoder(gasprice),
-        'gas': quantity_encoder(startgas),
-        'data': data_encoder(data),
-    }
 
 
 class JSONRPCClient:
