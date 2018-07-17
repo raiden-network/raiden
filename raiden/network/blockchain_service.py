@@ -82,10 +82,10 @@ class BlockChainService:
         return self.client.web3.eth.getBlock(block_number, False)
 
     def next_block(self) -> int:
-        target_block_number = self.block_number() + 1
-        current_block = target_block_number
+        current_block = self.block_number()
+        target_block_number = current_block + 1
 
-        while not current_block >= target_block_number:
+        while current_block < target_block_number:
             current_block = self.block_number()
             gevent.sleep(0.5)
 
