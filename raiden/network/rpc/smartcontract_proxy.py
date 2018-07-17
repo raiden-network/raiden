@@ -21,33 +21,33 @@ except (ModuleNotFoundError, DistributionNotFound):
         pass
 
 
-class ClienErrorInspectResult(Enum):
+class ClientErrorInspectResult(Enum):
     """Represents the action to follow after inspecting a client exception"""
     PROPAGATE_ERROR = 1
     INSUFFICIENT_FUNDS = 2
     ALWAYS_FAIL = 3
 
 
-def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspectResult:
+def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspectResult:
     # both clients return invalid json. They use single quotes while json needs double ones.
     json_response = str(val_err).replace("'", '"')
     try:
         error = json.loads(json_response)
     except json.JSONDecodeError:
-        return ClienErrorInspectResult.PROPAGATE_ERROR
+        return ClientErrorInspectResult.PROPAGATE_ERROR
 
     if eth_node == EthClient.GETH:
         if error['code'] == -32000:
             if 'insufficient funds' in error['message']:
-                return ClienErrorInspectResult.INSUFFICIENT_FUNDS
+                return ClientErrorInspectResult.INSUFFICIENT_FUNDS
             elif 'always failing transaction' in error['message']:
-                return ClienErrorInspectResult.ALWAYS_FAIL
+                return ClientErrorInspectResult.ALWAYS_FAIL
 
     elif eth_node == EthClient.PARITY:
         if error['code'] == -32010 and 'insufficient funds' in error['message']:
-            return ClienErrorInspectResult.INSUFFICIENT_FUNDS
+            return ClientErrorInspectResult.INSUFFICIENT_FUNDS
 
-    return ClienErrorInspectResult.PROPAGATE_ERROR
+    return ClientErrorInspectResult.PROPAGATE_ERROR
 
 
 class ContractProxy:
@@ -75,7 +75,7 @@ class ContractProxy:
             )
         except ValueError as e:
             action = inspect_client_error(e, self.jsonrpc_client.eth_node)
-            if action == ClienErrorInspectResult.INSUFFICIENT_FUNDS:
+            if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
                 raise InsufficientFunds('Insufficient ETH for transaction')
 
             raise e
@@ -128,8 +128,8 @@ class ContractProxy:
         except ValueError as err:
             action = inspect_client_error(err, self.jsonrpc_client.eth_node)
             will_fail = action in (
-                ClienErrorInspectResult.INSUFFICIENT_FUNDS,
-                ClienErrorInspectResult.ALWAYS_FAIL,
+                ClientErrorInspectResult.INSUFFICIENT_FUNDS,
+                ClientErrorInspectResult.ALWAYS_FAIL,
             )
             if will_fail:
                 return None
