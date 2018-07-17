@@ -24,6 +24,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
 )
 from raiden.tests.utils import assert_dicts_are_equal
+from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
@@ -399,7 +400,7 @@ def test_api_open_and_deposit_channel(
     }
     assert_dicts_are_equal(response, expected_response)
 
-    # finally let's try querying for the second channel
+    # let's try querying for the second channel
     request = grequests.get(
         api_url_for(
             api_backend,
@@ -423,6 +424,29 @@ def test_api_open_and_deposit_channel(
         'token_network_identifier': token_network_identifier,
     }
     assert_dicts_are_equal(response, expected_response)
+
+    # finally let's burn all eth and try to open another channel
+    api_server, _ = api_backend
+    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    channel_data_obj = {
+        'partner_address': '0xf3AF96F89b3d7CdcBE0C083690A28185Feb0b3CE',
+        'token_address': to_checksum_address(token_address),
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
+        'balance': 1,
+    }
+    request = grequests.put(
+        api_url_for(
+            api_backend,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+
+    assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
+    response = response.json()
+    assert 'Insufficient ETH' in response['errors']
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
