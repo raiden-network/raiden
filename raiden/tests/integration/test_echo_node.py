@@ -21,9 +21,9 @@ log = structlog.get_logger(__name__)
 @pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
 def test_event_transfer_received_success(
-    token_addresses,
-    raiden_chain,
-    network_wait,
+        token_addresses,
+        raiden_chain,
+        network_wait,
 ):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
@@ -45,10 +45,8 @@ def test_event_transfer_received_success(
     gevent.sleep(1)
 
     def test_events(amount, address):
-        events = receiver_app.raiden.wal.storage.get_events_by_block(0, 'latest')
-        events = [e[1] for e in events]
         return must_contain_entry(
-            events,
+            receiver_app.raiden.wal.storage.get_events_by_identifier(0, 'latest'),
             EventPaymentReceivedSuccess,
             {'amount': amount, 'initiator': address},
         )

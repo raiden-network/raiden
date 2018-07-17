@@ -32,7 +32,7 @@ from raiden.transfer.state_change import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def handle_tokennetwork_new(raiden, event, current_block_number):
+def handle_tokennetwork_new(raiden, event):
     """ Handles a `TokenNetworkCreated` event. """
     data = event.event_data
     token_network_address = data['token_network_address']
@@ -58,10 +58,10 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
         event.originating_contract,
         token_network_state,
     )
-    raiden.handle_state_change(new_token_network, current_block_number)
+    raiden.handle_state_change(new_token_network)
 
 
-def handle_channel_new(raiden, event, current_block_number):
+def handle_channel_new(raiden, event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     transaction_hash = event.event_data['transactionHash']
@@ -92,7 +92,8 @@ def handle_channel_new(raiden, event, current_block_number):
             token_network_identifier,
             channel_state,
         )
-        raiden.handle_state_change(new_channel, current_block_number)
+        raiden.handle_state_change(new_channel)
+
         partner_address = channel_state.partner_state.address
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
@@ -107,7 +108,7 @@ def handle_channel_new(raiden, event, current_block_number):
             participant1,
             participant2,
         )
-        raiden.handle_state_change(new_route, current_block_number)
+        raiden.handle_state_change(new_route)
 
     # A new channel is available, run the connection manager in case more
     # connections are needed
@@ -115,7 +116,7 @@ def handle_channel_new(raiden, event, current_block_number):
     gevent.spawn(connection_manager.retry_connect)
 
 
-def handle_channel_new_balance(raiden, event, current_block_number):
+def handle_channel_new_balance(raiden, event):
     data = event.event_data
     channel_identifier = data['channel_identifier']
     token_network_identifier = event.originating_contract
@@ -150,7 +151,7 @@ def handle_channel_new_balance(raiden, event, current_block_number):
             channel_identifier,
             deposit_transaction,
         )
-        raiden.handle_state_change(newbalance_statechange, current_block_number)
+        raiden.handle_state_change(newbalance_statechange)
 
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(
@@ -164,7 +165,7 @@ def handle_channel_new_balance(raiden, event, current_block_number):
             )
 
 
-def handle_channel_closed(raiden, event, current_block_number):
+def handle_channel_closed(raiden, event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
@@ -187,7 +188,7 @@ def handle_channel_closed(raiden, event, current_block_number):
             channel_identifier=channel_identifier,
             closed_block_number=data['block_number'],
         )
-        raiden.handle_state_change(channel_closed, current_block_number)
+        raiden.handle_state_change(channel_closed)
     else:
         # This is a channel close event of a channel we're not a participant of
         channel_closed = ContractReceiveRouteClosed(
@@ -195,10 +196,10 @@ def handle_channel_closed(raiden, event, current_block_number):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
         )
-        raiden.handle_state_change(channel_closed, current_block_number)
+        raiden.handle_state_change(channel_closed)
 
 
-def handle_channel_update_transfer(raiden, event, current_block_number):
+def handle_channel_update_transfer(raiden, event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
@@ -218,10 +219,10 @@ def handle_channel_update_transfer(raiden, event, current_block_number):
             channel_identifier=channel_identifier,
             nonce=data['args']['nonce'],
         )
-        raiden.handle_state_change(channel_transfer_updated, current_block_number)
+        raiden.handle_state_change(channel_transfer_updated)
 
 
-def handle_channel_settled(raiden, event, current_block_number):
+def handle_channel_settled(raiden, event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     channel_identifier = event.event_data['channel_identifier']
@@ -242,10 +243,10 @@ def handle_channel_settled(raiden, event, current_block_number):
             channel_identifier,
             data['block_number'],
         )
-        raiden.handle_state_change(channel_settled, current_block_number)
+        raiden.handle_state_change(channel_settled)
 
 
-def handle_channel_batch_unlock(raiden, event, current_block_number):
+def handle_channel_batch_unlock(raiden, event):
     token_network_identifier = event.originating_contract
     data = event.event_data
 
@@ -262,10 +263,10 @@ def handle_channel_batch_unlock(raiden, event, current_block_number):
         data['returned_tokens'],
     )
 
-    raiden.handle_state_change(unlock_state_change, current_block_number)
+    raiden.handle_state_change(unlock_state_change)
 
 
-def handle_secret_revealed(raiden, event, current_block_number):
+def handle_secret_revealed(raiden, event):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
@@ -279,42 +280,42 @@ def handle_secret_revealed(raiden, event, current_block_number):
         data['secret'],
     )
 
-    raiden.handle_state_change(registeredsecret_state_change, current_block_number)
+    raiden.handle_state_change(registeredsecret_state_change)
 
 
-def on_blockchain_event(raiden, event, current_block_number, chain_id):
+def on_blockchain_event(raiden, event):
     log.debug('BLOCKCHAIN EVENT', node=pex(raiden.address), chain_event=event)
 
     event = decode_event_to_internal(event)
     data = event.event_data
 
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
-        handle_tokennetwork_new(raiden, event, current_block_number)
+        handle_tokennetwork_new(raiden, event)
 
     elif data['event'] == ChannelEvent.OPENED:
-        handle_channel_new(raiden, event, current_block_number)
+        handle_channel_new(raiden, event)
 
     elif data['event'] == ChannelEvent.DEPOSIT:
-        handle_channel_new_balance(raiden, event, current_block_number)
+        handle_channel_new_balance(raiden, event)
 
     elif data['event'] == ChannelEvent.WITHDRAW:
         # handle_channel_withdraw(raiden, event)
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
     elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
-        handle_channel_update_transfer(raiden, event, current_block_number)
+        handle_channel_update_transfer(raiden, event)
 
     elif data['event'] == ChannelEvent.CLOSED:
-        handle_channel_closed(raiden, event, current_block_number)
+        handle_channel_closed(raiden, event)
 
     elif data['event'] == ChannelEvent.SETTLED:
-        handle_channel_settled(raiden, event, current_block_number)
+        handle_channel_settled(raiden, event)
 
     elif data['event'] == EVENT_SECRET_REVEALED:
-        handle_secret_revealed(raiden, event, current_block_number)
+        handle_secret_revealed(raiden, event)
 
     elif data['event'] == ChannelEvent.UNLOCKED:
-        handle_channel_batch_unlock(raiden, event, current_block_number)
+        handle_channel_batch_unlock(raiden, event)
 
     else:
         log.error('Unknown event type', event_name=data['event'], raiden_event=event)

@@ -58,7 +58,6 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     event_list1 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
-        channel12.open_transaction.finished_block_number,
     )
     assert any(
         (
@@ -112,7 +111,6 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     event_list2 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
-        channel12.open_transaction.finished_block_number,
     )
     assert any(
         (
@@ -134,7 +132,6 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     event_list3 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
-        channel12.open_transaction.finished_block_number,
     )
     assert len(event_list3) > len(event_list2)
     assert any(

@@ -89,7 +89,7 @@ def test_write_read_log():
     )
     count1 = len(state_changes1)
 
-    wal.log_and_dispatch(block, block_number)
+    wal.log_and_dispatch(block)
 
     state_changes2 = wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
@@ -98,7 +98,7 @@ def test_write_read_log():
     count2 = len(state_changes2)
     assert count1 + 1 == count2
 
-    wal.log_and_dispatch(contract_receive_unlock, block_number)
+    wal.log_and_dispatch(contract_receive_unlock)
 
     state_changes3 = wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
@@ -137,13 +137,11 @@ def test_write_read_events():
 
     event = EventPaymentSentFailed(2, 3, 1, 'address', 'whatever')
     event_list = [event]
-    block_number = 10
 
     with pytest.raises(sqlite3.IntegrityError):
         unexisting_state_change_id = 1
         wal.storage.write_events(
             unexisting_state_change_id,
-            block_number,
             event_list,
         )
 
@@ -155,7 +153,6 @@ def test_write_read_events():
     state_change_id = wal.storage.write_state_change('statechangedata')
     wal.storage.write_events(
         state_change_id,
-        block_number,
         event_list,
     )
 
@@ -166,16 +163,15 @@ def test_write_read_events():
     assert len(previous_events) + 1 == len(new_events)
 
     latest_event = new_events[-1]
-    assert latest_event[0] == block_number
-    assert isinstance(latest_event[1], EventPaymentSentFailed)
+    assert isinstance(latest_event, EventPaymentSentFailed)
 
 
 def test_restore_without_snapshot():
     wal = new_wal()
 
-    wal.log_and_dispatch(Block(5), 5)
-    wal.log_and_dispatch(Block(7), 7)
-    wal.log_and_dispatch(Block(8), 8)
+    wal.log_and_dispatch(Block(5))
+    wal.log_and_dispatch(Block(7))
+    wal.log_and_dispatch(Block(8))
 
     newwal = restore_from_latest_snapshot(
         state_transtion_acc,

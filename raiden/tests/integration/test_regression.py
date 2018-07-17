@@ -15,6 +15,7 @@ from raiden.tests.integration.fixtures.raiden_network import (
     wait_for_channels,
 )
 from raiden.tests.integration.fixtures.transport import TransportProtocol
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
@@ -115,10 +116,11 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     )
     assert transfer.wait()
 
-    event = None
-    for _, event in app1.raiden.wal.storage.get_events_by_block(0, 'latest'):
-        if isinstance(event, SendRevealSecret):
-            break
+    event = must_contain_entry(
+        app1.raiden.wal.storage.get_events_by_identifier(0, 'latest'),
+        SendRevealSecret,
+        {},
+    )
     assert event
 
     message_identifier = random.randint(0, UINT64_MAX)
@@ -132,7 +134,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
         reveal_data = reveal_secret.encode()
         app1.raiden.transport.receive(reveal_data)
     elif transport_config.protocol is TransportProtocol.MATRIX:
-        app1.raiden.transport._receive_message(reveal_secret)
+        app1.raiden.transport._receive_message(reveal_secret)  # pylint: disable=protected-access
     else:
         raise TypeError('Unknown TransportProtocol')
 

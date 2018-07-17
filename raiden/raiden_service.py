@@ -229,7 +229,7 @@ class RaidenService:
                 self.chain.node_address,
                 self.chain.network_id,
             )
-            self.wal.log_and_dispatch(state_change, block_number)
+            self.wal.log_and_dispatch(state_change)
             payment_network = PaymentNetworkState(
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
@@ -351,7 +351,7 @@ class RaidenService:
     def get_block_number(self):
         return views.block_number(self.wal.state_manager.current_state)
 
-    def handle_state_change(self, state_change, block_number=None):
+    def handle_state_change(self, state_change):
         log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
 
         if block_number is None:
@@ -367,7 +367,7 @@ class RaidenService:
             self.wal.snapshot()
             self.snapshot_group = new_snapshot_group
 
-        event_list = self.wal.log_and_dispatch(state_change, block_number)
+        event_list = self.wal.log_and_dispatch(state_change)
 
         if self.dispatch_events_lock.locked():
             return []
@@ -381,12 +381,12 @@ class RaidenService:
 
     def set_node_network_state(self, node_address, network_state):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.wal.log_and_dispatch(state_change, self.get_block_number())
+        self.wal.log_and_dispatch(state_change)
 
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
-    def _callback_new_block(self, current_block_number, chain_id):
+    def _callback_new_block(self, current_block_number):
         """Called once a new block is detected by the alarm task.
 
         Note:
@@ -414,7 +414,7 @@ class RaidenService:
             for event in self.blockchain_events.poll_blockchain_events(current_block_number):
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the ChainState's block_number.
-                on_blockchain_event(self, event, current_block_number, chain_id)
+                on_blockchain_event(self, event)
 
             # On restart the Raiden node will re-create the filters with the
             # ethereum node. These filters will have the from_block set to the
@@ -427,7 +427,7 @@ class RaidenService:
             # been processed but the Block state change has not been
             # dispatched.
             state_change = Block(current_block_number)
-            self.handle_state_change(state_change, current_block_number)
+            self.handle_state_change(state_change)
 
     def sign(self, message):
         """ Sign message inplace. """
@@ -487,7 +487,7 @@ class RaidenService:
 
     def leave_all_token_networks(self):
         state_change = ActionLeaveAllNetworks()
-        self.wal.log_and_dispatch(state_change, self.get_block_number())
+        self.wal.log_and_dispatch(state_change)
 
     def close_and_settle(self):
         log.info('raiden will close and settle all channels now')

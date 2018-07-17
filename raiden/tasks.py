@@ -152,7 +152,7 @@ class AlarmTask(gevent.Greenlet):
                         current_block=current_block,
                     )
 
-                self.run_callbacks(current_block, chain_id)
+                self.run_callbacks(current_block)
 
     def first_run(self):
         # callbacks must be executed during the first run to update the node state
@@ -163,13 +163,13 @@ class AlarmTask(gevent.Greenlet):
 
         log.debug('starting at block number', current_block=current_block)
 
-        self.run_callbacks(current_block, chain_id)
+        self.run_callbacks(current_block)
         self.chain_id = chain_id
 
-    def run_callbacks(self, current_block, chain_id):
+    def run_callbacks(self, current_block):
         remove = list()
         for callback in self.callbacks:
-            result = callback(current_block, chain_id)
+            result = callback(current_block)
             if result is REMOVE_CALLBACK:
                 remove.append(callback)
 
