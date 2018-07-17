@@ -1,4 +1,5 @@
 from binascii import unhexlify
+from collections import defaultdict
 from contextlib import contextmanager
 from typing import List, Dict, Optional
 
@@ -81,7 +82,7 @@ class TokenNetwork:
         self.open_channel_transactions = dict()
 
         # Forbids concurrent operations on the same channel
-        self.channel_operations_lock = dict()
+        self.channel_operations_lock = defaultdict(RLock)
 
         # Serializes concurent deposits on this token network. This must be an
         # exclusive lock, since we need to coordinate the approve and
@@ -99,11 +100,7 @@ class TokenNetwork:
 
     @contextmanager
     def lock_or_raise(self, partner):
-        lock = self.channel_operations_lock.get(partner)
-
-        if lock is None:
-            lock = RLock()
-            self.channel_operations_lock[partner] = lock
+        lock = self.channel_operations_lock[partner]
 
         # __enter__ will call aquire with blocking=True
         with lock:
