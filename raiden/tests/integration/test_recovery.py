@@ -5,12 +5,14 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.network.transport import UDPTransport
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
     mediated_transfer,
 )
 from raiden.transfer import views
+from raiden.transfer.state_change import ContractReceiveChannelClosed
 
 
 @pytest.mark.parametrize('in_memory_database', [False])
@@ -211,3 +213,72 @@ def test_recovery_unhappy_case(
         app1, deposit - spent_amount, [],
         app2, deposit + spent_amount, [],
     )
+
+
+@pytest.mark.parametrize('in_memory_database', [False])
+@pytest.mark.parametrize('deposit', [10])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_recovery_blockchain_events(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+        skip_if_not_udp,
+):
+    """ Close one of the two raiden apps that have a channel between them,
+    have the counterparty close the channel and then make sure the restarted
+    app sees the change
+    """
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+
+    app0.raiden.stop()
+    host_port = (app0.raiden.config['host'], app0.raiden.config['port'])
+    socket = server._udp_socket(host_port)
+
+    new_transport = UDPTransport(
+        app0.discovery,
+        socket,
+        app0.raiden.transport.throttle_policy,
+        app0.raiden.config['transport'],
+    )
+
+    app1_api = RaidenAPI(app1.raiden)
+    app1_api.channel_close(
+        registry_address=app0.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=app0.raiden.address,
+    )
+
+    app0.stop()
+
+    import gevent
+    gevent.sleep(1)
+
+    app0_restart = App(
+        config=app0.config,
+        chain=app0.raiden.chain,
+        query_start_block=0,
+        default_registry=app0.raiden.default_registry,
+        default_secret_registry=app0.raiden.default_secret_registry,
+        transport=new_transport,
+        discovery=app0.raiden.discovery,
+    )
+
+    del app0  # from here on the app0_restart should be used
+
+    # wait for the nodes' healthcheck to update the network statuses
+    waiting.wait_for_healthy(
+        app0_restart.raiden,
+        app1.raiden.address,
+        network_wait,
+    )
+    waiting.wait_for_healthy(
+        app1.raiden,
+        app0_restart.raiden.address,
+        network_wait,
+    )
+    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
+    assert must_contain_entry(restarted_state_changes, ContractReceiveChannelClosed, {})
