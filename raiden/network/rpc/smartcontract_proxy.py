@@ -35,12 +35,18 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClienErrorInspec
     except json.JSONDecodeError:
         return ClienErrorInspectResult.PROPAGATE_ERROR
 
-    insufficient_funds = (
-        (error['code'] == -32000 and eth_node == EthClient.GETH) or
-        (error['code'] == -32015 and eth_node == EthClient.PARITY)
+    insufficient_funds_geth = (
+        error['code'] == -32000 and
+        eth_node == EthClient.GETH and
+        'insufficient funds' in error['message']
+    )
+    insufficient_funds_parity = (
+        error['code'] == -32010 and
+        eth_node == EthClient.PARITY and
+        'Insufficient funds' in error['message']
     )
 
-    if insufficient_funds:
+    if insufficient_funds_geth or insufficient_funds_parity:
         return ClienErrorInspectResult.INSUFFICIENT_FUNDS
 
     return ClienErrorInspectResult.PROPAGATE_ERROR
