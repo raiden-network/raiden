@@ -1,7 +1,6 @@
 from binascii import hexlify, unhexlify
 import os
 import re
-import string
 import sys
 import time
 import random
@@ -16,9 +15,6 @@ import raiden
 from raiden import constants
 from raiden.utils import typing
 from raiden.exceptions import InvalidAddress
-
-
-LETTERS = string.printable
 
 
 def safe_address_decode(address):
@@ -116,11 +112,6 @@ def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
-def activate_ultratb():
-    from IPython.core import ultratb
-    sys.excepthook = ultratb.VerboseTB(call_pdb=True, tb_offset=6)
-
-
 def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
@@ -202,15 +193,6 @@ def safe_lstrip_hex(val):
     if isinstance(val, str):
         return remove_0x_prefix(val)
     return val
-
-
-def camel_to_snake_case(name):
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-
-def snake_to_camel_case(snake_string):
-    return snake_string.title().replace('_', '')
 
 
 def get_system_spec():
