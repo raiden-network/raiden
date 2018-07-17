@@ -257,7 +257,7 @@ class RaidenService:
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        self.install_and_query_payment_network_filters(
+        self.install_and_query_all_blockchain_filters(
             self.default_registry.address,
             last_log_block_number,
         )
@@ -398,12 +398,19 @@ class RaidenService:
 
         message.sign(self.private_key)
 
-    def install_and_query_payment_network_filters(
+    def install_and_query_all_blockchain_filters(
             self,
             token_network_registry_address,
             from_block=0,
     ):
         token_network_registry = self.chain.token_network_registry(token_network_registry_address)
+        channels = views.list_all_channelstate(
+            views.state_from_raiden(self),
+        )
+        token_networks = views.get_token_network_identifiers(
+            views.state_from_raiden(self),
+            token_network_registry_address,
+        )
 
         # Install the filters and then poll them and dispatch the events to the WAL
         with self.event_poll_lock:
@@ -411,6 +418,23 @@ class RaidenService:
                 token_network_registry,
                 from_block,
             )
+
+            for token_network in token_networks:
+                token_network_proxy = self.chain.token_network(token_network)
+                self.blockchain_events.add_token_network_listener(
+                    token_network_proxy,
+                    from_block,
+                )
+
+            for channel_state in channels:
+                channel_proxy = self.chain.payment_channel(
+                    channel_state.token_network_identifier,
+                    channel_state.identifier
+                )
+                self.blockchain_events.add_payment_channel_listener(
+                    channel_proxy,
+                    from_block,
+                )
 
             chain_id = self.chain.network_id
             # We need to query the events at this point in order to obtain an up to
