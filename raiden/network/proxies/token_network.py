@@ -33,7 +33,6 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     ChannelIncorrectStateError,
     SamePeerAddress,
-    ChannelBusyError,
     TransactionThrew,
     InvalidAddress,
     ContractVersionMismatch,
@@ -106,15 +105,9 @@ class TokenNetwork:
             lock = RLock()
             self.channel_operations_lock[partner] = lock
 
-        if not lock.acquire(blocking=False):
-            raise ChannelBusyError(
-                f'Channel between {self.node_address} and {partner} is '
-                f'busy with another ongoing operation.',
-            )
-
-        yield
-
-        lock.release()
+        # __enter__ will call aquire with blocking=True
+        with lock:
+            yield
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
