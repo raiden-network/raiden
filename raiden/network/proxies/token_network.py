@@ -1,6 +1,5 @@
 from binascii import unhexlify
 from collections import defaultdict
-from contextlib import contextmanager
 from typing import List, Dict, Optional
 
 import structlog
@@ -97,14 +96,6 @@ class TokenNetwork:
             raise RuntimeError(f"Call to '{function_name}' returned nothing")
 
         return call_result
-
-    @contextmanager
-    def lock_or_raise(self, partner):
-        lock = self.channel_operations_lock[partner]
-
-        # __enter__ will call aquire with blocking=True
-        with lock:
-            yield
 
     def token_address(self) -> typing.Address:
         """ Return the token of this manager. """
@@ -418,7 +409,7 @@ class TokenNetwork:
         token_address = self.token_address()
         token = Token(self.client, token_address)
 
-        with self.lock_or_raise(partner), self.deposit_lock:
+        with self.channel_operations_lock[partner], self.deposit_lock:
             # setTotalDeposit requires a monotonically increasing value. This
             # is used to handle concurrent actions:
             #
@@ -549,7 +540,7 @@ class TokenNetwork:
                 'Channel is not in an opened state. It cannot be closed.',
             )
 
-        with self.lock_or_raise(partner):
+        with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'closeChannel',
                 partner,
@@ -632,7 +623,7 @@ class TokenNetwork:
         }
         log.info('withdraw called', **log_details)
 
-        with self.lock_or_raise(partner):
+        with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
                 self.node_address,
@@ -722,7 +713,7 @@ class TokenNetwork:
         }
         log.info('settle called', **log_details)
 
-        with self.lock_or_raise(partner):
+        with self.channel_operations_lock[partner]:
             our_maximum = transferred_amount + locked_amount
             partner_maximum = partner_transferred_amount + partner_locked_amount
 
