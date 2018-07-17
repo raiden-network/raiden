@@ -1,6 +1,5 @@
 import pytest
 import gevent
-from eth_utils import to_checksum_address
 
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,

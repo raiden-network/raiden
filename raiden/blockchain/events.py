@@ -326,7 +326,7 @@ class BlockchainEvents:
         ]
         self.event_listeners = listeners
 
-    def poll_blockchain_events(self, block_number: int=None):
+    def poll_blockchain_events(self, block_number: int = None):
         # When we test with geth if the contracts have already been deployed
         # before the filter creation we need to use `get_all_entries` to make
         # sure we get all the events. With tester this is not required.
