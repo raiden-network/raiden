@@ -111,7 +111,7 @@ class StatelessFilter(LogFilter):
         self._last_block: int = -1
         self._lock = Semaphore()
 
-    def get_new_entries(self, block_number: int=None):
+    def get_new_entries(self, block_number: int = None):
         with self._lock:
             filter_params = self.filter_params.copy()
             filter_params['fromBlock'] = max(
@@ -132,7 +132,7 @@ class StatelessFilter(LogFilter):
             except BlockNotFound:
                 return []
 
-    def get_all_entries(self, block_number: int=None):
+    def get_all_entries(self, block_number: int = None):
         with self._lock:
             filter_params = self.filter_params.copy()
             if block_number is None:
