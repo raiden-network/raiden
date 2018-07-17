@@ -1,6 +1,5 @@
 import pytest
 import gevent
-from binascii import unhexlify
 from eth_utils import to_checksum_address
 
 from raiden_contracts.constants import (
@@ -14,8 +13,8 @@ from raiden.exceptions import (
     InvalidAddress,
     InsufficientFunds,
 )
+from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.events import must_have_event
-from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.transfer import (
     assert_synched_channel_state,
     direct_transfer,
@@ -89,14 +88,7 @@ def test_register_token_insufficient_eth(raiden_network, token_amount):
     assert token_address not in api1.get_tokens_list(registry_address)
 
     # app1.raiden loses all its ETH because it has been naughty
-    address = to_checksum_address(app1.raiden.address)
-    client = app1.raiden.chain.client
-    web3 = client.web3
-    gas_price = web3.eth.gasPrice
-    value = web3.eth.getBalance(address) - gas_price * 21000
-    transaction_hash_hex = client.send_transaction(to=HOP1, value=value, startgas=21000)
-    transaction_hash = unhexlify(transaction_hash_hex)
-    client.poll(transaction_hash)
+    burn_all_eth(app1.raiden)
 
     # At this point we should get the InsufficientFunds exception
     with pytest.raises(InsufficientFunds):
