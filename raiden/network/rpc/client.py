@@ -2,7 +2,6 @@ import warnings
 import time
 import os
 import copy
-import json
 from binascii import unhexlify
 from typing import List, Dict
 from json.decoder import JSONDecodeError
@@ -28,7 +27,6 @@ from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
     RaidenShuttingDown,
-    InsufficientFunds,
 )
 from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
@@ -43,7 +41,11 @@ from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
 )
-from raiden.constants import NULL_ADDRESS, TESTNET_GASPRICE_MULTIPLIER
+from raiden.constants import (
+    EthClient,
+    NULL_ADDRESS,
+    TESTNET_GASPRICE_MULTIPLIER,
+)
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -222,6 +224,14 @@ class JSONRPCClient:
             # injected twice. This happens with `eth-tester` setup where a single session
             # scoped web3 instance is used for all clients
             pass
+
+        client_version = self.web3.version.node
+        if 'Geth' in client_version:
+            self.eth_node = EthClient.GETH
+        elif 'Parity' in client_version:
+            self.eth_node = EthClient.PARITY
+        else:
+            raise RuntimeError('Should never get here. Only parity or geth permitted')
 
         # create the connection test middleware (but only for non-tester chain)
         if not hasattr(web3, 'testing'):
@@ -475,20 +485,7 @@ class JSONRPCClient:
 
         signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
-        try:
-            result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-        except ValueError as e:
-            try:
-                error = json.loads(str(e))
-            except json.JSONDecodeError:
-                raise e
-
-            if error['code'] == -32000 and 'insufficient funds' in error['message']:
-                raise InsufficientFunds('Insufficient ETH to send the transaction')
-
-            # else just reraise the value error
-            raise e
-
+        result = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
         encoded_result = encode_hex(result)
         return remove_0x_prefix(encoded_result)
 

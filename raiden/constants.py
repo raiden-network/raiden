@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import Enum
 
 UINT64_MAX = 2 ** 64 - 1
 UINT64_MIN = 0
@@ -7,6 +8,12 @@ INT64_MAX = 2 ** 63 - 1
 INT64_MIN = -(2 ** 63)
 
 UINT256_MAX = 2 ** 256 - 1
+
+
+class EthClient(Enum):
+    GETH = 1
+    PARITY = 2
+
 
 # Deployed to Ropsten revival on 2018-07-09 from
 # raiden-contracts@42ad67c10f82899c11dc4654c7daed2422f415aa
