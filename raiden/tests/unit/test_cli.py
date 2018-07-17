@@ -4,22 +4,6 @@ from raiden.utils import (
 )
 
 
-class MockVersion:
-    def __init__(self, node):
-        self.node = node
-
-
-class MockWeb3:
-    def __init__(self, version):
-        self.version = version
-
-
-class MockClient:
-    def __init__(self, version):
-        version = MockVersion(version)
-        self.web3 = MockWeb3(version)
-
-
 def test_check_json_rpc_geth():
     assert is_supported_client('Geth/v1.7.3-unstable-e9295163/linux-amd64/go1.9.1')
     assert is_supported_client('Geth/v1.7.2-unstable-e9295163/linux-amd64/go1.9.1')
