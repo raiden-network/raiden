@@ -362,6 +362,11 @@ class RestAPI:
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
             )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
 
         return api_response(
             result=dict(token_network_address=to_checksum_address(token_network_address)),

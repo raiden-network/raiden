@@ -800,6 +800,17 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
             'Rd',
         ),
     )
+    other_token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app0.raiden.chain.client,
+        num_confirmations=None,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
+    )
 
     register_request = grequests.put(api_url_for(
         api_backend,
@@ -820,6 +831,16 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     ))
     conflict_response = conflict_request.send().response
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
+
+    # Lose all the eth and then make sure we get the appropriate API error
+    burn_all_eth(app0.raiden)
+    poor_request = grequests.put(api_url_for(
+        api_backend,
+        'registertokenresource',
+        token_address=to_checksum_address(other_token_address),
+    ))
+    poor_response = poor_request.send().response
+    assert_response_with_error(poor_response, HTTPStatus.PAYMENT_REQUIRED)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
