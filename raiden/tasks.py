@@ -21,14 +21,13 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def check_version():
     """Check every 3h for a new release"""
     app_version = parse_version(require('raiden')[0].version)
-    print(app_version)
     while True:
         try:
             content = requests.get(LATEST).json()
             # getting the latest release version
             latest_release = parse_version(content['tag_name'])
             # comparing it to the user's application
-            if app_version > latest_release:
+            if app_version < latest_release:
                 click.secho('You\'re running version {}. The latest version is {}'
                             .format(app_version,
                                     latest_release,
