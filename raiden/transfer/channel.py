@@ -1767,20 +1767,12 @@ def apply_channel_newbalance(
         deposit_transaction: TransactionChannelNewBalance,
 ) -> None:
     participant_address = deposit_transaction.participant_address
+    contract_balance = deposit_transaction.contract_balance
 
     if participant_address == channel_state.our_state.address:
-        new_balance = max(
-            channel_state.our_state.contract_balance,
-            deposit_transaction.contract_balance,
-        )
-        channel_state.our_state.contract_balance = new_balance
-
+        update_contract_balance(channel_state.our_state, contract_balance)
     elif participant_address == channel_state.partner_state.address:
-        new_balance = max(
-            channel_state.partner_state.contract_balance,
-            deposit_transaction.contract_balance,
-        )
-        channel_state.partner_state.contract_balance = new_balance
+        update_contract_balance(channel_state.partner_state, contract_balance)
 
 
 def handle_channel_batch_unlock(
