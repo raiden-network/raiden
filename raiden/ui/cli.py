@@ -48,6 +48,7 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenServicePortInUseError,
     RaidenError,
+    ReplacementTransactionUnderpriced,
 )
 from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
@@ -977,27 +978,37 @@ def run(ctx, **kwargs):
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
-    if kwargs['transport'] == 'udp':
-        (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-        try:
-            with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
-                kwargs['mapped_socket'] = mapped_socket
-                app_ = _run_app()
+    try:
+        if kwargs['transport'] == 'udp':
+            (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
+            try:
+                with SocketFactory(
+                        listen_host, listen_port, strategy=kwargs['nat'],
+                ) as mapped_socket:
+                    kwargs['mapped_socket'] = mapped_socket
+                    app_ = _run_app()
 
-        except RaidenServicePortInUseError:
-            print(
-                'ERROR: Address %s:%s is in use. '
-                'Use --listen-address <host:port> to specify port to listen on.' %
-                (listen_host, listen_port),
-            )
-            sys.exit(1)
-    elif kwargs['transport'] == 'matrix':
-        kwargs['mapped_socket'] = None
-        app_ = _run_app()
-    else:
-        # Shouldn't happen
-        raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
-    app_.stop(leave_channels=False)
+            except RaidenServicePortInUseError:
+                print(
+                    'ERROR: Address %s:%s is in use. '
+                    'Use --listen-address <host:port> to specify port to listen on.' %
+                    (listen_host, listen_port),
+                )
+                sys.exit(1)
+        elif kwargs['transport'] == 'matrix':
+            kwargs['mapped_socket'] = None
+            app_ = _run_app()
+        else:
+            # Shouldn't happen
+            raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
+        app_.stop(leave_channels=False)
+    except ReplacementTransactionUnderpriced:
+        print(
+            'It looks like the same account is being used by different '
+            'applications. Please make sure that this Raiden node is the '
+            'only user of the selected account',
+        )
+        sys.exit(1)
 
 
 @run.command()
