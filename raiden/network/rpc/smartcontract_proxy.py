@@ -49,6 +49,8 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspe
     elif eth_node == EthClient.PARITY:
         if error['code'] == -32010 and 'insufficient funds' in error['message']:
             return ClientErrorInspectResult.INSUFFICIENT_FUNDS
+        elif error['code'] == -32010 and 'another transaction with same nonce in the queue':
+            return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
 
     return ClientErrorInspectResult.PROPAGATE_ERROR
 
@@ -81,7 +83,12 @@ class ContractProxy:
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
                 raise InsufficientFunds('Insufficient ETH for transaction')
             elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
-                raise ReplacementTransactionUnderpriced()
+                raise ReplacementTransactionUnderpriced(
+                    'Transaction was rejected. This is potentially '
+                    'caused by the reuse of the previous transaction '
+                    'nonce as well as paying an amount of gas less than or '
+                    'equal to the previous transaction\'s gas amount',
+                )
 
             raise e
 
