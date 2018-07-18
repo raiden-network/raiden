@@ -1,3 +1,4 @@
+import os
 import random
 
 import gevent
@@ -103,6 +104,10 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     })
 
 
+@pytest.mark.skipif(
+    'TRAVIS' in os.environ,
+    reason='Test fails only on Travis. See issue #1870',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
     """Batch unlock can be called after the channel is settled."""
