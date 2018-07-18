@@ -536,7 +536,7 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         if not isinstance(partner, typing.T_Address):
             raise ValueError('partner must be of type address')
 
-        self.token_network_identifier = token_network_identifier
+        self.payment_network_identifier = token_network_identifier
         self.participant = participant
         self.partner = partner
         self.locksroot = locksroot
@@ -546,7 +546,8 @@ class ContractReceiveChannelBatchUnlock(StateChange):
     def __repr__(self):
         return (
             '<ContractReceiveChannelBatchUnlock'
-            'paymentid:{} token:{} channelid:{} participant:{} unlocked:{} returned:{}'
+            'paymentid:{} token:{} channelid:{} merkle_leaves:{} '
+            'participant:{} unlocked:{} returned:{}'
             '>'
         ).format(
             self.payment_network_identifier,
