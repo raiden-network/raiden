@@ -18,7 +18,7 @@ from eth_utils import (
 import gevent
 import structlog
 from gevent.event import AsyncResult
-from matrix_client.errors import MatrixRequestError
+from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 from cachetools import cachedmethod
 from operator import attrgetter
@@ -31,6 +31,7 @@ from raiden.exceptions import (
     InvalidAddress,
     UnknownAddress,
     UnknownTokenAddress,
+    TransportError,
 )
 from raiden.messages import (
     decode as message_from_bytes,
@@ -125,10 +126,27 @@ class MatrixTransport:
     def __init__(self, config: dict):
         self._bound_logger = None
         self._raiden_service: RaidenService = None
-        self._server_url: str = self._select_server(config)
-        self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
-        client_class = config.get('client_class', GMatrixClient)
-        self._client: GMatrixClient = client_class(self._server_url)
+        while True:
+            self._server_url: str = self._select_server(config)
+            self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
+            client_class = config.get('client_class', GMatrixClient)
+            self._client: GMatrixClient = client_class(self._server_url)
+            try:
+                self._client.api._send('GET', '/versions', api_path='/_matrix/client')
+                break
+            except MatrixError as ex:
+                if config['server'] != 'auto':
+                    raise TransportError(
+                        f"Could not connect to requested server '{config['server']}'",
+                    ) from ex
+
+                config['available_servers'].remove(self._server_url)
+                if len(config['available_servers']) == 0:
+                    raise TransportError(
+                        f"Unable to find a reachable Matrix server. "
+                        f"Please check your network connectivity.",
+                    ) from ex
+                log.warning(f"Selected server '{self._server_url}' not usable. Retrying.")
 
         self.greenlets = list()
 
@@ -174,7 +192,8 @@ class MatrixTransport:
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
         # TODO: Add (better) error handling strategy
-        self._client.start_listener_thread(exception_handler=lambda e: None)
+        self._client.start_listener_thread()
+        self._client.sync_thread.link_exception(self._client_exception_handler)
         self.greenlets.append(self._client.sync_thread)
 
         # TODO: Add greenlet that regularly refreshes our presence state
@@ -215,7 +234,7 @@ class MatrixTransport:
         receiver_address: Address,
         queue_name: bytes,
         message: Message,
-    ) -> AsyncResult:
+    ):
         if not self._running:
             return
         self.log.info(
@@ -241,8 +260,6 @@ class MatrixTransport:
         else:
             self._messageids_to_asyncresult[message_id] = async_result
             self._send_with_retry(receiver_address, async_result, json.dumps(message.to_dict()))
-
-        return async_result
 
     def stop_and_wait(self):
         if self._running:
@@ -788,7 +805,7 @@ class MatrixTransport:
         if server.startswith('http'):
             return server
         elif server != 'auto':
-            raise ValueError('Invalid matrix server specified (valid values: "auto" or a URL)')
+            raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
 
         def _get_rtt(server_name):
             return server_name, get_http_rtt(server_name)
@@ -799,8 +816,16 @@ class MatrixTransport:
             in config['available_servers']
         ]
         gevent.joinall(get_rtt_jobs)
-        sorted_servers = sorted((job.value for job in get_rtt_jobs), key=itemgetter(1))
+        sorted_servers = sorted(
+            (job.value for job in get_rtt_jobs if job.value[1] is not None),
+            key=itemgetter(1),
+        )
         self.log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
+        if not sorted_servers:
+            raise TransportError(
+                'Could not select a Matrix server. No candidates remaining. '
+                'Please check your network connectivity.',
+            )
         best_server, rtt = sorted_servers[0]
         self.log.info(
             'Automatically selecting matrix homeserver based on RTT',
@@ -808,6 +833,18 @@ class MatrixTransport:
             rtt=rtt,
         )
         return best_server
+
+    def _client_exception_handler(self, greenlet):
+        self._running = False
+        try:
+            greenlet.get()
+        except MatrixError as ex:
+            gevent.get_hub().handle_system_error(
+                TransportError,
+                TransportError(
+                    f'Unexpected error while communicating with Matrix homeserver: {ex}',
+                ),
+            )
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """

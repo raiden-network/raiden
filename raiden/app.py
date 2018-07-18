@@ -5,8 +5,6 @@ from binascii import unhexlify
 from eth_utils import to_normalized_address, to_checksum_address
 from raiden.utils import typing
 
-import gevent
-
 from raiden.network.blockchain_service import BlockChainService
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -32,12 +30,12 @@ from raiden.network.proxies import (
     Discovery,
 )
 from raiden.exceptions import InvalidSettleTimeout
+from raiden.utils.gevent import configure_gevent
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
+log = structlog.get_logger(__name__)
 
-gevent.get_hub().SYSTEM_ERROR = (BaseException,)
-gevent.get_hub().NOT_ERROR = (gevent.GreenletExit,)
+configure_gevent()
 
 
 class App:  # pylint: disable=too-few-public-methods

@@ -1,3 +1,5 @@
+from tempfile import NamedTemporaryFile
+
 import gevent.monkey
 gevent.monkey.patch_all()
 
@@ -45,8 +47,7 @@ from raiden.exceptions import (
     ContractVersionMismatch,
     EthNodeCommunicationError,
     RaidenServicePortInUseError,
-    InvalidDBData,
-    InvalidSettleTimeout,
+    RaidenError,
 )
 from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
@@ -84,11 +85,14 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
+from raiden.utils.gevent import configure_gevent
 
 
 log = structlog.get_logger(__name__)
 
 LOG_CONFIG_OPTION_NAME = 'log_config'
+
+configure_gevent()
 
 
 def check_json_rpc(blockchain_service: BlockChainService) -> None:
@@ -673,7 +677,11 @@ def app(
         # matrix gets spammed with the default retry-interval of 1s, wait a little more
         if config['transport']['retry_interval'] == DEFAULT_TRANSPORT_RETRY_INTERVAL:
             config['transport']['retry_interval'] *= 5
-        transport = MatrixTransport(config['matrix'])
+        try:
+            transport = MatrixTransport(config['matrix'])
+        except RaidenError as ex:
+            click.secho(f'FATAL: {ex}', fg='red')
+            sys.exit(1)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
@@ -687,8 +695,8 @@ def app(
             transport=transport,
             discovery=discovery,
         )
-    except (InvalidSettleTimeout, InvalidDBData) as e:
-        print(f'FATAL: {str(e)}')
+    except RaidenError as e:
+        click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
 
     return raiden_app
@@ -932,8 +940,26 @@ def run(ctx, **kwargs):
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
 
-        event.wait()
-        print('Signal received. Shutting down ...')
+        try:
+            event.wait()
+            print('Signal received. Shutting down ...')
+        except RaidenError as ex:
+            click.secho(f'FATAL: {ex}', fg='red')
+        except Exception as ex:
+            with NamedTemporaryFile(
+                'w',
+                prefix='raiden-exception',
+                suffix='.txt',
+                delete=False,
+            ) as traceback_file:
+                traceback.print_exc(file=traceback_file)
+                click.secho(
+                    f'FATAL: An unexpected exception occured.'
+                    f'A traceback has been written to {traceback_file.name}\n'
+                    f'{ex}',
+                    fg='red',
+                )
+
         if api_server:
             api_server.stop()
 

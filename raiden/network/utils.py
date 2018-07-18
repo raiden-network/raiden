@@ -1,5 +1,5 @@
-import math
 from time import sleep
+from typing import Optional
 
 import psutil
 from itertools import count
@@ -45,16 +45,27 @@ def get_free_port(address: str, initial_port: int):
     return _unused_ports()
 
 
-def get_http_rtt(url: str, samples: int = 3, method: str = 'head', timeout: int = 1) -> float:
-    """ Determine the average HTTP RTT to `url` over the number of `samples`. """
+def get_http_rtt(
+    url: str,
+    samples: int = 3,
+    method: str = 'head',
+    timeout: int = 1,
+) -> Optional[float]:
+    """
+    Determine the average HTTP RTT to `url` over the number of `samples`.
+    Returns `None` if the server is unreachable.
+    """
     durations = []
     for _ in range(samples):
         try:
             durations.append(
                 requests.request(method, url, timeout=timeout).elapsed.total_seconds(),
             )
-        except RequestException:
-            return math.inf
+        except (RequestException, OSError):
+            return None
+        except Exception as ex:
+            print(ex)
+            return None
         # Slight delay to avoid overloading
         sleep(.125)
     return sum(durations) / samples
