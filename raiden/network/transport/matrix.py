@@ -455,6 +455,14 @@ class MatrixTransport:
                 message=data,
             )
         elif isinstance(message, SignedMessage):
+            if message.sender != peer_address:
+                self.log.warning(
+                    'Message not signed by sender!',
+                    message=message,
+                    signer=message.sender,
+                    peer_address=peer_address,
+                )
+                return
             self._receive_message(message)
         else:
             self.log.error(
@@ -494,7 +502,7 @@ class MatrixTransport:
             'MESSAGE RECEIVED',
             node=pex(self._raiden_service.address),
             message=message,
-            message_sender=pex(message.sender),
+            sender=pex(message.sender),
         )
 
         try:
