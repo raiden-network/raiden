@@ -519,7 +519,7 @@ class ContractReceiveChannelBatchUnlock(StateChange):
 
     def __init__(
             self,
-            token_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkIdentifier,
             participant: typing.Address,
             partner: typing.Address,
             locksroot: typing.Locksroot,
@@ -527,8 +527,8 @@ class ContractReceiveChannelBatchUnlock(StateChange):
             returned_tokens: typing.TokenAmount,
     ):
 
-        if not isinstance(token_network_identifier, typing.T_PaymentNetworkID):
-            raise ValueError('payment_network_identifier must be of type PaymentNetworkID')
+        if not isinstance(token_network_identifier, typing.T_TokenNetworkIdentifier):
+            raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
 
         if not isinstance(participant, typing.T_Address):
             raise ValueError('participant must be of type address')
@@ -536,7 +536,7 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         if not isinstance(partner, typing.T_Address):
             raise ValueError('partner must be of type address')
 
-        self.payment_network_identifier = token_network_identifier
+        self.token_network_identifier = token_network_identifier
         self.participant = participant
         self.partner = partner
         self.locksroot = locksroot
@@ -546,11 +546,11 @@ class ContractReceiveChannelBatchUnlock(StateChange):
     def __repr__(self):
         return (
             '<ContractReceiveChannelBatchUnlock'
-            'paymentid:{} token:{} channelid:{} merkle_leaves:{} '
+            'tokennetworkid:{} token:{} channelid:{} merkle_leaves:{} '
             'participant:{} unlocked:{} returned:{}'
             '>'
         ).format(
-            self.payment_network_identifier,
+            self.token_network_identifier,
             self.token_address,
             self.channel_identifier,
             self.merkle_tree_leaves,
@@ -562,7 +562,7 @@ class ContractReceiveChannelBatchUnlock(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
-            self.payment_network_identifier == other.payment_network_identifier and
+            self.token_network_identifier == other.token_network_identifier and
             self.token_address == other.token_address and
             self.channel_identifier == other.channel_identifier and
             self.merkle_tree_leaves == other.merkle_tree_leaves and
