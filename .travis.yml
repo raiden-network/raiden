@@ -140,7 +140,6 @@ jobs:
     - stage: deploy
       before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; .travis/before_install.sh
       install: .travis/install.sh
-      before_script: .travis/before_script.sh
       script: RAIDENVERSION=$TRAVIS_TAG make bundle-docker
       deploy:
       - provider: releases
@@ -176,7 +175,6 @@ jobs:
       install:
         - .travis/install.sh
       before_script:
-        - .travis/before_script.sh
         - python setup.py build
         - python setup.py compile_webui
       script:
