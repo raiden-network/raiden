@@ -13,6 +13,7 @@ UINT256_MAX = 2 ** 256 - 1
 class EthClient(Enum):
     GETH = 1
     PARITY = 2
+    TESTER = 3
 
 
 # Deployed to Ropsten revival on 2018-07-09 from
