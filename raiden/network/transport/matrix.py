@@ -521,7 +521,7 @@ class MatrixTransport:
                 return
             node_address = self._raiden_service.address
             for event in events:
-                self.send_async('', address, _event_to_message(event, node_address))
+                self.send_async(address, 'global', _event_to_message(event, node_address))
 
         for (address, _queue_name), events in queueids_to_queues.items():
             # TODO: Check if we need to separate this by queue_name
