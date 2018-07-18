@@ -57,6 +57,7 @@ def test_mediated_transfer(
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_with_entire_deposit(
         raiden_network,
+        number_of_nodes,
         token_addresses,
         deposit,
         network_wait,
@@ -75,7 +76,7 @@ def test_mediated_transfer_with_entire_deposit(
         app2,
         token_network_identifier,
         deposit,
-        timeout=network_wait,
+        timeout=network_wait * number_of_nodes,
     )
 
     mediated_transfer(
@@ -83,7 +84,7 @@ def test_mediated_transfer_with_entire_deposit(
         app0,
         token_network_identifier,
         deposit * 2,
-        timeout=network_wait,
+        timeout=network_wait * number_of_nodes,
     )
 
     wait_assert(

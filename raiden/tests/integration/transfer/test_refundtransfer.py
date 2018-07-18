@@ -76,7 +76,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
+def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit, network_wait):
     """A failed transfer must send a refund back.
 
     TODO:
@@ -105,7 +105,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
         token_network_identifier,
         amount_path,
         identifier_path,
-        timeout=network_wait,
+        timeout=network_wait * number_of_nodes,
     )
 
     # drain the channel app1 -> app2
@@ -185,6 +185,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, network_wait):
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_refund_transfer_after_2nd_hop(
         raiden_chain,
+        number_of_nodes,
         token_addresses,
         deposit,
         network_wait,
@@ -212,7 +213,7 @@ def test_refund_transfer_after_2nd_hop(
         token_network_identifier,
         amount_path,
         identifier_path,
-        timeout=network_wait,
+        timeout=network_wait * number_of_nodes,
     )
 
     # drain the channel app2 -> app3
