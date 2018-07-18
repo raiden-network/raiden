@@ -31,6 +31,12 @@ def subdispatch_to_channel_by_id(
             pseudo_random_generator,
             block_number,
         )
+
+        if result.new_state is None:
+            del ids_to_channels[state_change.channel_identifier]
+        else:
+            ids_to_channels[state_change.channel_identifier] = result.new_state
+
         events.extend(result.events)
 
     return TransitionResult(token_network_state, events)
