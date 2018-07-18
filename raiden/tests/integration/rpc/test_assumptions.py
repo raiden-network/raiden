@@ -5,6 +5,7 @@ import pytest
 from eth_utils import decode_hex, to_checksum_address
 from pkg_resources import DistributionNotFound
 
+from raiden.exceptions import ReplacementTransactionUnderpriced
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils.solc import compile_files_cwd
@@ -136,7 +137,7 @@ def test_duplicated_transaction_raises(deploy_client):
 
     gas = contract_proxy.estimate_gas('ret') * 2
 
-    with pytest.raises((ValueError, ValidationError)):
+    with pytest.raises((ReplacementTransactionUnderpriced, ValidationError)):
         second_proxy.transact('ret', startgas=gas)
         contract_proxy.transact('ret', startgas=gas)
 

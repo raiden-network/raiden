@@ -43,6 +43,8 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspe
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
             elif 'always failing transaction' in error['message']:
                 return ClientErrorInspectResult.ALWAYS_FAIL
+            elif error['message'] == 'replacement transaction underpriced':
+                return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
 
     elif eth_node == EthClient.PARITY:
         if error['code'] == -32010 and 'insufficient funds' in error['message']:
@@ -78,7 +80,7 @@ class ContractProxy:
             action = inspect_client_error(e, self.jsonrpc_client.eth_node)
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
                 raise InsufficientFunds('Insufficient ETH for transaction')
-            elif action == ClienErrorInspectResult.TRANSACTION_UNDERPRICED:
+            elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
                 raise ReplacementTransactionUnderpriced()
 
             raise e
