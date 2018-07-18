@@ -1,6 +1,6 @@
 import time
 import requests
-from pkg_resources import parse_version, require
+from pkg_resources import parse_version
 
 import click
 import gevent
@@ -9,6 +9,7 @@ from gevent.queue import Queue
 import structlog
 
 from raiden.exceptions import RaidenShuttingDown
+from raiden.utils import get_system_spec
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
@@ -20,7 +21,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 def check_version():
     """Check every 3h for a new release"""
-    app_version = parse_version(require('raiden')[0].version)
+    app_version = parse_version(get_system_spec()['raiden'])
     while True:
         try:
             content = requests.get(LATEST).json()
