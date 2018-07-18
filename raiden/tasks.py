@@ -29,13 +29,12 @@ def check_version():
             latest_release = parse_version(content['tag_name'])
             # comparing it to the user's application
             if app_version < latest_release:
-                click.secho('You\'re running version {}. The latest version is {}'
-                            .format(app_version,
-                                    latest_release,
-                                    ),
-                            fg='red',
-                            )
-                click.secho('It\'s time to update! Releases: {}'.format(RELEASE_PAGE), fg='red')
+                msg = "You're running version {}. The latest version is {}".format(
+                    app_version,
+                    latest_release,
+                )
+                click.secho(msg, fg='red')
+                click.secho("It's time to update! Releases: {}".format(RELEASE_PAGE), fg='red')
         except requests.exceptions.HTTPError as herr:
             click.secho('Error while checking for version', fg='red')
             print(herr)
