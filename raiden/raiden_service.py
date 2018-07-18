@@ -542,7 +542,7 @@ class RaidenService:
         whereas the mediated transfer requires 6 messages.
         """
 
-        self.transport.start_health_check(target)
+        self.start_health_check_for(target)
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -564,7 +564,7 @@ class RaidenService:
             identifier,
     ):
 
-        self.transport.start_health_check(target)
+        self.start_health_check_for(target)
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -598,5 +598,6 @@ class RaidenService:
         self.handle_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer):
+        self.start_health_check_for(transfer.initiator)
         init_target_statechange = target_init(transfer)
         self.handle_state_change(init_target_statechange)
