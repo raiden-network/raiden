@@ -866,7 +866,4 @@ def _event_to_message(event, node_address):
     message_class = eventtypes_to_messagetype.get(type(event))
     if message_class is None:
         raise TypeError(f'Event type {type(event)} is not supported.')
-
-    if message_class is messages.Processed:
-        return message_class.from_event(event, node_address)
     return message_class.from_event(event)
