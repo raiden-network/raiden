@@ -1,4 +1,4 @@
-use nix
+use nix nix/shell.nix
 
 # Create a virtualenv and activate it.
 layout python

@@ -90,3 +90,4 @@ raiden-debug.log*
 
 # direnv virtual envs
 .direnv
+.envrc
