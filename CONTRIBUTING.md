@@ -76,54 +76,9 @@ For other ways to install `solc` or Geth see the official docs:
 * http://solidity.readthedocs.io/en/latest/installing-solidity.html
 * https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum
 
-#### Nix and direnv (Linux/macOS)
+#### Alternative setup with nix
 
-Install the `nix` package manager, by running
-
-    curl https://nixos.org/nix/install | sh
-
-or better, verify integrity of the installer script first according to
-https://nixos.org/nix/download.html.
-
-If you would like to set up python manually run
-
-    nix-shell
-
-from the project root and `nix` will install all system dependencies and make
-them available in your current shell. Then continue with the `Raiden` section
-below.
-
-You can also let [direnv](https://direnv.net/) take care of activating
-the `nix` shell and a python virtual environment for you.
-
-Install `direnv` for instance by running
-
-    nix-env -iA nixpkgs.direnv
-
-Hook it into your shell
-
-    eval "$(direnv hook bash)"  # for bash
-    eval "$(direnv hook zsh)"   # for zsh
-    eval (direnv hook fish)     # for fish
-
-and add that line into `~/.bashrc` (or equivalent) for future use if desired.
-
-Next run
-
-   direnv allow
-
-which will
-
-1. Fetch all system dependencies with `nix` if necessary.
-2. Activate the `nix` shell.
-3. Create a python virtualenv for the project if necessary.
-4. Install the dependencies in `requirements-dev.txt` and `raiden` itself.
-
-Proceed to `Testing` section below.
-
-Now each time you `cd` into this directory, `direnv` will activate this
-environment.
-
+See [nix.md](docs/nix.md).
 
 ### Raiden
 
@@ -157,6 +112,7 @@ Tests, especially integration tests, will take some time. If you want to run
 single tests simply specify them on the command line, like so:
 
     env/bin/pytest raiden/tests/<path-to-test(s)>
+
 
 ## Development Guidelines
 
