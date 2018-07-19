@@ -93,7 +93,7 @@ install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
     (
         'git+https://github.com/raiden-network/raiden-libs.git'
-        '@588f62700685cac09882a8f2f13c12ebc90640d0'
+        '@f40a867f5d8ea89b1386fd6cc4c66f8eff886fea'
         '#egg=raiden-libs'
     ): 'raiden-libs',
     (
