@@ -214,10 +214,13 @@ class MatrixTransport:
         node_address_hex = to_normalized_address(node_address)
         self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
         with self._health_semaphore:
+            candidates = [
+                self._get_user(user)
+                for user in self._client.search_user_directory(node_address_hex)
+            ]
             user_ids = {
                 user.user_id
-                for user
-                in self._client.search_user_directory(node_address_hex)
+                for user in candidates
                 if self._validate_userid_signature(user) == node_address
             }
             self._address_to_userids[node_address].update(user_ids)
@@ -430,9 +433,6 @@ class MatrixTransport:
         if not peer_address:
             # invalid user displayName signature
             return
-        if peer_address not in self._address_to_userids:
-            # user not start_health_check'ed
-            return
         old_room = self._get_room_id_for_address(peer_address)
         if old_room != room.room_id:
             self.log.debug(
@@ -444,10 +444,22 @@ class MatrixTransport:
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
+        if peer_address not in self._address_to_userids:
+            # user not start_health_check'ed
+            return
+
         data = event['content']['body']
         if data.startswith('0x'):
-            message = message_from_bytes(decode_hex(data))
-            if not message:
+            try:
+                message = message_from_bytes(decode_hex(data))
+                assert message
+            except (DecodeError, AssertionError) as ex:
+                self.log.warning(
+                    "Can't parse message binary data",
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    exception=ex,
+                )
                 return
         else:
             try:
@@ -578,15 +590,15 @@ class MatrixTransport:
 
     def _get_room_for_address(
         self,
-        receiver_address: Address,
+        address: Address,
         allow_missing_peers=False,
     ) -> Optional[Room]:
         if not self._running:
             return
-        assert receiver_address and receiver_address in self._address_to_userids,\
-            f'address not health checked: {self._client.user_id} => ' +\
-            f'{to_checksum_address(receiver_address)}'
-        room_id = self._get_room_id_for_address(receiver_address)
+        address_hex = to_normalized_address(address)
+        assert address and address in self._address_to_userids,\
+            f'address not health checked: me: {self._client.user_id}, peer: {address_hex}'
+        room_id = self._get_room_id_for_address(address)
         if room_id:
             return self._client.rooms[room_id]
 
@@ -595,27 +607,30 @@ class MatrixTransport:
         # e.g.: raiden_ropsten_0xaaaa_0xbbbb
         address_pair = sorted([
             to_normalized_address(address)
-            for address in [receiver_address, self._raiden_service.address]
+            for address in [address, self._raiden_service.address]
         ])
         room_name = self._make_room_alias(*address_pair)
 
         # no room with expected name => create one and invite peer
-        address = to_normalized_address(receiver_address)
-        candidates = self._client.search_user_directory(address)
+        candidates = [
+            self._get_user(user)
+            for user in self._client.search_user_directory(address_hex)
+        ]
 
         # filter candidates
         peers = [
-            user for user in candidates
-            if self._validate_userid_signature(user) == receiver_address
+            user
+            for user in candidates
+            if self._validate_userid_signature(user) == address
         ]
         if not peers and not allow_missing_peers:
-            self.log.error('No valid peer found', peer_address=address)
+            self.log.error('No valid peer found', peer_address=address_hex)
             return
 
-        self._address_to_userids[receiver_address].update({user.user_id for user in peers})
+        self._address_to_userids[address].update({user.user_id for user in peers})
 
         room = self._get_unlisted_room(room_name, invitees=peers)
-        self._set_room_id_for_address(receiver_address, room.room_id)
+        self._set_room_id_for_address(address, room.room_id)
 
         for user in peers:
             self._maybe_invite_user(user)
@@ -625,7 +640,7 @@ class MatrixTransport:
 
         self.log.info(
             'CHANNEL ROOM',
-            peer_address=to_normalized_address(receiver_address),
+            peer_address=to_normalized_address(address),
             room=room,
         )
         return room
@@ -878,10 +893,15 @@ class MatrixTransport:
             return
         return address
 
-    @cachedmethod(_cachegetter('__users_cache', WeakValueDictionary), key=lambda _, uid: uid)
-    def _get_user(self, user_id) -> User:
-        user = self._client.get_user(user_id)
-        user.get_display_name()
+    @cachedmethod(
+        _cachegetter('__users_cache', WeakValueDictionary),
+        key=lambda _, user: user.user_id if isinstance(user, User) else user,
+    )
+    def _get_user(self, user: Union[User, str]) -> User:
+        """ Creates an User from an user_id, if none, or fetch a cached User """
+        if not isinstance(user, User):
+            user = self._client.get_user(user)
+            user.get_display_name()
         return user
 
     def _set_room_id_for_address(self, address: Address, room_id: Optional[str]):
