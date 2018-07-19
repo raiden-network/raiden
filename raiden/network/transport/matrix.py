@@ -552,11 +552,13 @@ class MatrixTransport:
         self,
         queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
-        for (address, _queue_name), events in queueids_to_queues.items():
-            # TODO: Check if we need to separate this by queue_name
+        for (address, queue_name), events in queueids_to_queues.items():
             node_address = self._raiden_service.address
             for event in events:
-                self.send_async(address, 'global', _event_to_message(event, node_address))
+                message = _event_to_message(event, node_address)
+                self._raiden_service.sign(message)
+                self.start_health_check(address)
+                self.send_async(address, queue_name, message)
 
     def _send_with_retry(
         self,
@@ -787,12 +789,23 @@ class MatrixTransport:
         if state != 'join':
             return
         user_id = event['sender']
-        self.log.debug('discovery member change', state=state, user_id=user_id)
-        self._maybe_invite_user(self._get_user(user_id))
+        user = self._get_user(user_id)
+        address = self._validate_userid_signature(user)
+        if not address:
+            # Malformed address - skip
+            return
+
+        # not a user we've started healthcheck, skip
+        if address not in self._address_to_userids:
+            return
+        self._address_to_userids[address].add(user_id)
+        self.log.debug('discovery member change', state=state, user=user)
+        self._maybe_invite_user(user)
 
     def _ensure_room_peers(self):
         """ Check all members of discovery channel for matches to existing rooms """
         for member in self._discovery_room.get_joined_members():
+            member = self._get_user(member)
             self._maybe_invite_user(member)
 
     def _maybe_invite_user(self, user):
@@ -805,6 +818,8 @@ class MatrixTransport:
             return
 
         room = self._client.rooms[room_id]
+        if not room._members:
+            room.get_joined_members()
         if user.user_id not in room._members:
             self.log.debug('INVITE', user=user, room=room)
             room.invite_user(user.user_id)
