@@ -87,3 +87,6 @@ raiden/smart_contracts/contracts.json
 
 # Our logs
 raiden-debug.log*
+
+# direnv virtual envs
+.direnv
