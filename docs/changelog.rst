@@ -6,7 +6,11 @@ Changelog
 
 * :release:`0.4.0 <2018-07-19>`
 
-* :feature:`1518` Update installation docs with Homebrew tap and update Homebrew formula on release
+* :feature:`-` Considerable codebase refactoring.
+* :feature:`-` New Matrix transport protocol.
+* :feature:`-` Smart contracts refactoring for readability, gas costs and new features.
+* :feature:`-` Restartability in case of a proper shutdown of the Raiden node.
+* :feature:`1518` Update installation docs with Homebrew tap and update Homebrew formula on release.
 * :feature:`1195` Improve AccountManager error handling if keyfile is invalid.
 * :bug:`1237` Inform the user if geth binary is missing during raiden smoketest.
 * :feature:`1328` Use separate database directory per network id. This is a breaking change. You will need to copy your data from the previous directory to the new network id subdirectory.
