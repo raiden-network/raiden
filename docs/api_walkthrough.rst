@@ -108,7 +108,6 @@ Successfully opening a channel will return the following information:
    {
        "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
        "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
-       "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
@@ -127,7 +126,7 @@ A payment channel is now open between the user's node and a counterparty. Howeve
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+   PATCH /api/1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -135,30 +134,29 @@ A payment channel is now open between the user's node and a counterparty. Howeve
         "total_deposit": 7331
    }
 
-To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from:
-
-FIXME: update
+To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from (in general the default value should be fine):
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/events/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226?from_block=1337 HTTP/1.1
+   GET /api/1/events/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
 
 This will return a list of events that has happened in the specific payment channel. The relevant event in this case is::
 
     {
-        "event_type": "ChannelNewBalance",
-        "participant": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-        "balance": 7331,
-        "block_number": 54388
-    }
+        "amount": 682,
+        "block_number": 3663408,
+        "event": "EventTransferSentSuccess",
+        "identifier": 1531927405484,
+        "target": "0x25511699C252eeA2678266857C98F459Df97B77c"
+    },
 
 From above event it can be deducted that the counterparty deposited to the channel.
 It is possible for both parties to query the state of the specific payment channel by calling:
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+   GET /api/1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
 
 This will give us result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
@@ -236,7 +234,7 @@ For the token transfer example it is assumed a node is connected to the token ne
 
 Transfer
 ---------
-Transferring tokens to another node is quite easy. The address of the token desired for transfer is known ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
+Transferring tokens to another node is quite easy. The address of the token desired for transfer is ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -251,16 +249,14 @@ An ``"identifier": some_integer`` can also be added to the payload, but it's opt
 
 If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer will go through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels:
 
-FIXME: update
-
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/events/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224?from_block=1337 HTTP/1.1
+   GET /api/1/events/channels/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
 
 Which will return a list of events. All that then needs to be done is to filter for incoming transfers.
 
-Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called ``mediated transfers``.
+Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
 
 
 .. _close:
@@ -269,11 +265,9 @@ Close
 ------
 If at any point in time it is desired to close a specific channel it can be done with the ``close`` endpoint:
 
-FIXME: update
-
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224 HTTP/1.1
+   PATCH /api/1/channels/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -283,16 +277,14 @@ FIXME: update
 
 When successful this will give a response with a channel object where the state is set to ``"closed"``:
 
-FIXME: update
-
 .. sourcecode:: http
 
    HTTP/1.1 200 OK
    Content-Type: application/json
 
    {
-       "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
-       "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+       "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
        "balance": 350,
        "state": "closed",
