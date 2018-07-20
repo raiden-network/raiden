@@ -356,3 +356,12 @@ class ConnectionManager:
             - This attribute must be accessed with the lock held.
         """
         return self.initial_channel_target < 1
+
+    def __repr__(self) -> str:
+        open_channels = views.get_channelstate_open(
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
+        )
+        return f'{self.__class__.__name__}(target={self.initial_channel_target} ' +\
+            f'channels={len(open_channels)}:{open_channels!r})'
