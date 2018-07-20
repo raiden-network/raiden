@@ -10,7 +10,6 @@ pytest-random==0.02
 pytest-cov==2.5.1
 flaky==3.4.0
 grequests==0.3.0
-mirakuru==0.9.0
 
 # Debugging
 pdbpp==0.9.2

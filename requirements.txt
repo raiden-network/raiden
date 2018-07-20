@@ -11,6 +11,7 @@ ipython<5.0.0
 marshmallow==2.15.3
 marshmallow_polyfield==3.2
 miniupnpc==2.0.2
+mirakuru==0.9.0
 netifaces==0.10.7
 networkx==2.1.0
 psutil==5.4.5
