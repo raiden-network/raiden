@@ -46,9 +46,14 @@ which will
 1. Fetch all system dependencies with `nix` if necessary.
 2. Activate the `nix` shell.
 3. Create a python virtualenv for the project if necessary.
-4. Install the dependencies in `requirements-dev.txt` and `raiden` itself.
 
 Now each time you `cd` into this directory, `direnv` will activate this
 environment.
+
+Run
+
+    pip install -r requirements-dev.txt -e .
+
+to install the dependencies in `requirements-dev.txt` and `raiden` itself.
 
 Proceed to `Testing` section in [CONTRIBUTING.md](../CONTRIBUTING.md).

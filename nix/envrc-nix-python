@@ -2,10 +2,3 @@ use nix nix/shell.nix
 
 # Create a virtualenv and activate it.
 layout python
-
-function install () {
-    echo "Installing python dependencies into $VIRTUAL_ENV ..."
-    pip install -r requirements-dev.txt -e .
-}
-
-install
