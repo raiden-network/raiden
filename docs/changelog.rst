@@ -2,6 +2,10 @@
 Changelog
 =========
 
+* :bug:`1899` Print proper error without throwing exception if no accounts are found in the keystore
+
+* :release:`0.4.0 <2018-07-19>`
+
 * :feature:`1518` Update installation docs with Homebrew tap and update Homebrew formula on release
 * :feature:`1195` Improve AccountManager error handling if keyfile is invalid.
 * :bug:`1237` Inform the user if geth binary is missing during raiden smoketest.
