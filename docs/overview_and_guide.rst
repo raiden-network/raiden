@@ -68,8 +68,7 @@ Linux
 Additional dependencies for development installations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- You need to make sure that your system has ``solc``, the ethereum solidity compiler installed.
-Refer to `its documentation`_ for the installation steps.
+- You need to make sure that your system has ``solc``, the ethereum solidity compiler installed. Refer to `its documentation`_ for the installation steps.
 - You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
 
 .. _its documentation: http://solidity.readthedocs.io/en/latest/installing-solidity.html
