@@ -706,7 +706,12 @@ def app(
 def prompt_account(address_hex, keystore_path, password_file):
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
-        raise RuntimeError('No Ethereum accounts found in the user\'s system')
+        print(
+            'No Ethereum accounts found in the provided keystore directory {}. '
+            'Please provide a directory containing valid ethereum account '
+            'files.'.format(keystore_path),
+        )
+        sys.exit(1)
 
     if not accmgr.address_in_keystore(address_hex):
         # check if an address has been passed
