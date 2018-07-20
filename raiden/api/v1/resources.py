@@ -177,7 +177,6 @@ class ConnectionsResource(BaseResource):
             initial_channel_target,
             joinable_funds_target,
     ):
-
         return self.rest_api.connect(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
