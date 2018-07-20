@@ -7,16 +7,18 @@ from operator import attrgetter
 
 import gevent
 import structlog
+import web3.middleware as middleware
 from cachetools import TTLCache, cachedmethod
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 from pkg_resources import DistributionNotFound
 from requests import ConnectTimeout
 from web3 import Web3
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
 
-from raiden.constants import NULL_ADDRESS, TESTNET_GASPRICE_MULTIPLIER
+from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import RPC_CACHE_TTL
@@ -27,7 +29,7 @@ from raiden.utils.solc import (
     solidity_resolve_symbols,
     solidity_unresolved_symbols,
 )
-from raiden.utils.typing import Address, BlockSpecification, Dict, List, Optional
+from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List, Optional
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -134,8 +136,14 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
-def monkey_patch_web3(web3, client):
+def monkey_patch_web3(web3, client, gas_price_strategy):
     try:
+        # install caching middlewares
+        web3.middleware_stack.add(middleware.time_based_cache_middleware)
+
+        # set gas price strategy
+        web3.eth.setGasPriceStrategy(gas_price_strategy)
+
         # we use a PoA chain for smoketest, use this middleware to fix this
         web3.middleware_stack.inject(geth_poa_middleware, layer=0)
     except ValueError:
@@ -164,13 +172,13 @@ class JSONRPCClient:
             self,
             web3: Web3,
             privkey: bytes,
-            gasprice: int = None,
+            gas_price_strategy: Callable = rpc_gas_price_strategy,
             nonce_offset: int = 0,
     ):
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
 
-        monkey_patch_web3(web3, self)
+        monkey_patch_web3(web3, self, gas_price_strategy)
 
         try:
             version = web3.version.node
@@ -184,7 +192,6 @@ class JSONRPCClient:
         _available_nonce = transaction_count + nonce_offset
 
         self.eth_node = eth_node
-        self.given_gas_price = gasprice
         self.privkey = privkey
         self.sender = sender
         self.web3 = web3
@@ -217,12 +224,10 @@ class JSONRPCClient:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
-    @cachedmethod(attrgetter('_gasprice_cache'))
-    def gasprice(self) -> int:
-        if self.given_gas_price:
-            return self.given_gas_price
-
-        return round(TESTNET_GASPRICE_MULTIPLIER * self.web3.eth.gasPrice)
+    def gas_price(self, transaction: Dict = None) -> int:
+        if transaction is None:
+            transaction = dict()
+        return int(self.web3.eth.generateGasPrice(transaction_params=transaction))
 
     def check_startgas(self, startgas):
         if not startgas:
@@ -390,7 +395,6 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
-            gasprice: int = None,
     ) -> bytes:
         """ Helper to send signed messages.
 
@@ -403,16 +407,21 @@ class JSONRPCClient:
 
         with self._nonce_lock:
             nonce = self._available_nonce
-            gasprice = gasprice or self.gasprice()
             startgas = self.check_startgas(startgas)
 
             transaction = {
                 'data': data,
-                'gasPrice': gasprice,
                 'gas': startgas,
                 'nonce': nonce,
                 'value': value,
             }
+            transaction['gasPrice'] = self.gas_price(transaction)
+            node_gas_price = self.web3.eth.gasPrice
+            log.debug(
+                'Calculated gas price for transaction',
+                calculated_gas_price=transaction['gasPrice'],
+                node_gas_price=node_gas_price,
+            )
 
             # add the to address if not deploying a contract
             if to != b'':

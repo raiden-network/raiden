@@ -339,6 +339,7 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
         matrix_server='http://localhost:8008'
                       if matrix_server == 'auto'
                       else matrix_server,
+        gas_price='fast',
     )
     password_file = os.path.join(args['keystore_path'], 'password')
     with open(password_file, 'w') as handler:

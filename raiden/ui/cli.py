@@ -83,6 +83,7 @@ if True:
     )
     from raiden.utils.cli import (
         ADDRESS_TYPE,
+        GasPriceChoiceType,
         LOG_LEVEL_CONFIG_TYPE,
         MatrixServerType,
         NATChoiceType,
@@ -153,7 +154,7 @@ def check_discovery_registration_gas(
         blockchain_service: BlockChainService,
         account_address: typing.Address,
 ) -> None:
-    discovery_tx_cost = blockchain_service.client.gasprice() * constants.DISCOVERY_TX_GAS_LIMIT
+    discovery_tx_cost = blockchain_service.client.gas_price() * constants.DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
     # pylint: disable=no-member
@@ -409,10 +410,15 @@ def options(func):
                 '--gas-price',
                 help=(
                     'Set the gas price for ethereum transactions. If not provided '
-                    'the value of the RPC call eth_gasPrice is going to be used'
+                    'the normal gas price startegy is used.\n'
+                    'Available options:\n'
+                    '"fast" - transactions are usually mined within 60 seconds\n'
+                    '"normal" - transactions are usually mined within 5 minutes\n'
+                    '<GAS_PRICE> - use given gas price\n'
                 ),
-                default=None,
-                type=int,
+                type=GasPriceChoiceType(['normal', 'fast']),
+                default='fast',
+                show_default=True,
             ),
             option(
                 '--eth-rpc-endpoint',
@@ -642,7 +648,7 @@ def run_app(
     rpc_client = JSONRPCClient(
         web3,
         privatekey_bin,
-        gasprice=gas_price,
+        gas_price_strategy=gas_price,
     )
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)

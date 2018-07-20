@@ -112,7 +112,7 @@ def has_enough_gas_reserve(
     gas_estimate = _get_required_gas_estimate_for_state(raiden)
     gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
 
-    gas_price = raiden.chain.client.gasprice()
+    gas_price = raiden.chain.client.gas_price()
     reserve_amount = gas_estimate * gas_price
 
     secure_reserve_estimate = round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
