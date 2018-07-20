@@ -32,27 +32,6 @@ def wait_for_transaction(
         gevent.sleep(0.1)
 
 
-def wait_for_saturated(
-    connection_managers,
-    registry_address,
-    token_address,
-    max_wait_blocks=80,
-):
-    chain = connection_managers[0].raiden.chain
-
-    while max_wait_blocks > 0:
-        saturated = saturated_count(
-            connection_managers,
-            registry_address,
-            token_address,
-        )
-        if saturated >= len(connection_managers):
-            break
-        wait_until_block(chain, chain.block_number() + 1)
-        max_wait_blocks -= 1
-    return max_wait_blocks != 0
-
-
 def is_channel_open_and_funded(channel_state):
     return (
         channel.get_status(channel_state) == CHANNEL_STATE_OPENED and
@@ -134,11 +113,16 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
         ) for app in raiden_network
     ]
 
-    assert wait_for_saturated(
-        connection_managers,
-        registry_address,
-        token_address,
-    ) is True
+    unsaturated_connection_managers = connection_managers[:]
+    with gevent.Timeout(
+        120,
+        AssertionError('Unsaturated connection managers', unsaturated_connection_managers),
+    ):
+        while unsaturated_connection_managers:
+            for manager in unsaturated_connection_managers:
+                if is_manager_saturated(manager, registry_address, token_address):
+                    unsaturated_connection_managers.remove(manager)
+            gevent.sleep(1)
 
     assert saturated_count(
         connection_managers,
