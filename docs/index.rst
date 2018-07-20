@@ -1,5 +1,5 @@
 Raiden Network |capitalized_version| Documentation
-*****************************************
+**************************************************
 
 
 This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
@@ -10,7 +10,7 @@ The Raiden Network is an off-chain scaling solution for performing ERC20-complia
 
 
 Contents
-************
+********
 
 .. toctree::
   :maxdepth: 2
