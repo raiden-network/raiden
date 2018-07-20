@@ -74,7 +74,7 @@ If successful this call will return the address of the freshly created Channel M
        "token_network_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
    }
 
-The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and hence no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
+The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and thus there will be no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to transfer some tokens to another Raiden node in an one-way-channel, it can be done by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
 
 .. _opening-a-channel:
@@ -122,7 +122,7 @@ Here it's interesting to notice that a ``channel_identifier`` has been generated
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel:
+A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address` and the ``participant_address`:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -134,7 +134,7 @@ A payment channel is now open between the user's node and a counterparty. Howeve
         "total_deposit": 7331
    }
 
-To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from (in general the default value should be fine):
+To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from. (in general the default value should be fine):
 
 .. http:example:: curl wget httpie python-requests
 
@@ -151,7 +151,7 @@ This will return a list of events that has happened in the specific payment chan
         "target": "0x25511699C252eeA2678266857C98F459Df97B77c"
     },
 
-From above event it can be deducted that the counterparty deposited to the channel.
+From the above event it can be deducted that the counterparty deposited to the channel.
 It is possible for both parties to query the state of the specific payment channel by calling:
 
 .. http:example:: curl wget httpie python-requests
@@ -256,7 +256,7 @@ If there is a path in the network with enough capacity and the address sending t
 
 Which will return a list of events. All that then needs to be done is to filter for incoming transfers.
 
-Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
+Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called a *mediated transfers*.
 
 
 .. _close:
