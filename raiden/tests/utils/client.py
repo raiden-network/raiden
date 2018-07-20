@@ -14,6 +14,5 @@ def burn_all_eth(raiden_service):
         to=HOP1,
         value=value,
         startgas=21000,
-        gasprice=gas_price,
     )
     client.poll(transaction_hash)

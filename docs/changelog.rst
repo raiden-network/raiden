@@ -34,6 +34,7 @@ Changelog
 * :feature:`2285` Request user acknowledgement for the experimental software disclaimer.
 * :bug:`2277` Fixes sorting by balance for tokens and channels.
 * :bug:`2278` Fixes leave network button request.
+* :feature:`1473` Add gas price strategies that adapt the gas price to the network conditions.
 * :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.
 * :bug:`2264` Notification fonts are now aligned with the rest of the WebUI.
 * :bug:`2170` Removed block number from internal events and rearranged REST API debug endpoints
