@@ -134,7 +134,7 @@ def check_discovery_registration_gas(
         blockchain_service: BlockChainService,
         account_address: typing.Address,
 ) -> None:
-    discovery_tx_cost = blockchain_service.client.gasprice() * constants.DISCOVERY_TX_GAS_LIMIT
+    discovery_tx_cost = blockchain_service.client.gas_price() * constants.DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
     if discovery_tx_cost > account_balance:
