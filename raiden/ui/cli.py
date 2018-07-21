@@ -173,7 +173,7 @@ def wait_for_sync_etherscan(
 ) -> None:
     local_block = blockchain_service.client.block_number()
     etherscan_block = etherscan_query_with_retries(url, sleep)
-    syncing_str = 'Syncing ... Current: {} / Target: ~{}'
+    syncing_str = '\rSyncing ... Current: {} / Target: ~{}'
 
     if local_block >= etherscan_block - tolerance:
         return
@@ -605,7 +605,7 @@ def app(
     database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
     config['database_path'] = database_path
     print(
-        'You are connected to the \'{}\' network and the DB path is: {}'.format(
+        '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
             constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
             database_path,
         ),
