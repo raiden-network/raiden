@@ -579,7 +579,12 @@ class MatrixTransport:
         room = self._get_room_for_address(receiver_address)
         if not room:
             return
-        self.log.debug('SEND', room=room, data=data)
+        presence = self._address_to_presence[receiver_address]
+        if presence == UserPresence.OFFLINE:
+            self.log.debug('NOT SENDING, USER IS OFFLINE', room=room, data=data)
+            return
+
+        self.log.debug('SEND', room=room, data=data, presence=presence)
         room.send_text(data)
 
     def _get_room_for_address(
