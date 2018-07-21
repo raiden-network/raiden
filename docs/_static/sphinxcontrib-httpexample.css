@@ -1,0 +1,26 @@
+.http-example .caption,
+.section ul .http-example .caption {
+    display: inline-block;
+    cursor: pointer;
+    padding: 0.5em 1em;
+    margin: 0;
+}
+.http-example .caption.selected {
+    font-weight: bold;
+    background-color: #fff;
+    border: 1px solid #e1e4e5;
+    border-bottom: 1px solid white;
+}
+.http-example div[class^='highlight'] {
+    margin-top: -1px;
+}
+.http-example div[class^='highlight'] pre {
+    white-space: normal;
+}
+.http-example div.highlight-bash pre {
+    white-space: pre-wrap;
+}
+.http-example-http div[class^='highlight'] pre,
+.http-example-response div[class^='highlight'] pre {
+    white-space: pre;
+}
