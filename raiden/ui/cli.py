@@ -1002,11 +1002,10 @@ def run(ctx, **kwargs):
             # Shouldn't happen
             raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
         app_.stop(leave_channels=False)
-    except ReplacementTransactionUnderpriced:
+    except ReplacementTransactionUnderpriced as e:
         print(
-            'It looks like the same account is being used by different '
-            'applications. Please make sure that this Raiden node is the '
-            'only user of the selected account',
+            '{}. Please make sure that this Raiden node is the '
+            'only user of the selected account'.format(str(e)),
         )
         sys.exit(1)
 
