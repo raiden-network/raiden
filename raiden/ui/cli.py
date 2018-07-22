@@ -97,22 +97,6 @@ LOG_CONFIG_OPTION_NAME = 'log_config'
 configure_gevent()
 
 
-def check_json_rpc(blockchain_service: BlockChainService) -> None:
-    try:
-        blockchain_service.client.web3.version.node
-    except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
-        print(
-            '\n'
-            'Could not contact the ethereum node through JSON-RPC.\n'
-            'Please make sure that JSON-RPC is enabled for these interfaces:\n'
-            '\n'
-            '    eth_*, net_*, web3_*\n'
-            '\n'
-            'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n',
-        )
-        sys.exit(1)
-
-
 def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
@@ -599,9 +583,6 @@ def app(
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
-    # this assumes the eth node is already online
-    check_json_rpc(blockchain_service)
-
     net_id = blockchain_service.network_id
     if net_id != network_id:
         if network_id in constants.ID_TO_NETWORKNAME and net_id in constants.ID_TO_NETWORKNAME:
@@ -896,6 +877,15 @@ def run(ctx, **kwargs):
         try:
             app_ = ctx.invoke(app, **kwargs)
         except EthNodeCommunicationError:
+            print(
+                '\n'
+                'Could not contact the ethereum node through JSON-RPC.\n'
+                'Please make sure that JSON-RPC is enabled for these interfaces:\n'
+                '\n'
+                '    eth_*, net_*, web3_*\n'
+                '\n'
+                'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n',
+            )
             sys.exit(1)
 
         domain_list = []

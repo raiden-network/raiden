@@ -226,16 +226,16 @@ class JSONRPCClient:
             # scoped web3 instance is used for all clients
             pass
 
+        # create the connection test middleware (but only for non-tester chain)
+        if not hasattr(web3, 'testing'):
+            connection_test = make_connection_test_middleware(self)
+            self.web3.middleware_stack.inject(connection_test, layer=0)
+
         supported, self.eth_node = is_supported_client(self.web3.version.node)
 
         if not supported:
             print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
             sys.exit(1)
-
-        # create the connection test middleware (but only for non-tester chain)
-        if not hasattr(web3, 'testing'):
-            connection_test = make_connection_test_middleware(self)
-            self.web3.middleware_stack.inject(connection_test, layer=0)
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
