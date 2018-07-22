@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`1902` Check for ethnode connection at start and print proper error if Raiden can not connect
 * :bug:`1899` Print proper error without throwing exception if no accounts are found in the keystore
 
 * :release:`0.4.0 <2018-07-19>`
