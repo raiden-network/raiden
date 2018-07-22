@@ -124,8 +124,8 @@ class StatelessFilter(LogFilter):
             # next call to `get_new_entries`
             if block_number is None:
                 block_number = self.web3.eth.blockNumber
-            if self.filter_params.get('toBlock') in ('latest', 'pending'):
-                filter_params['toBlock'] = block_number
+            if self.filter_params.get('toBlock') in (None, 'latest', 'pending'):
+                filter_params['toBlock'] = block_number or 'latest'
             self._last_block = filter_params.get('toBlock') or block_number
             try:
                 return self.web3.eth.getLogs(filter_params)
