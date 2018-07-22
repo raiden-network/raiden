@@ -443,18 +443,13 @@ class RaidenService:
                     from_block,
                 )
 
-            chain_id = self.chain.network_id
             # We need to query the events at this point in order to obtain an up to
             # date view of the blockchain right before the node starts its transport
             # and starts receiving messages.
-            for event in self.blockchain_events.poll_blockchain_events(
-                self.get_block_number(),
-            ):
-                on_blockchain_event(
-                    self,
-                    event, event.event_data['block_number'],
-                    chain_id,
-                )
+            chain_id = self.chain.network_id
+            current_block_number = self.chain.client.block_number()
+            for event in self.blockchain_events.poll_blockchain_events(current_block_number):
+                on_blockchain_event(self, event, current_block_number, chain_id)
 
     def connection_manager_for_token_network(self, token_network_identifier):
         if not is_binary_address(token_network_identifier):
