@@ -103,7 +103,7 @@ def handle_channel_new(raiden, event, current_block_number):
         # the channel state was queried
         raiden.blockchain_events.add_payment_channel_listener(
             channel_proxy,
-            from_block=data['blockNumber'],
+            from_block=data['blockNumber'] + 1,
         )
 
     else:

@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from typing import Dict
 
 from eth_abi import encode_single
-from eth_utils import encode_hex, decode_hex
+from eth_utils import encode_hex, decode_hex, event_abi_to_log_topic
 from gevent.lock import RLock
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -10,10 +10,7 @@ from raiden_contracts.constants import (
     EVENT_CHANNEL_UNLOCKED,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from web3.utils.filters import (
-    Filter,
-    construct_event_topic_set,
-)
+from web3.utils.filters import Filter
 
 from raiden.utils import typing
 from raiden.utils.filters import (
@@ -174,20 +171,11 @@ class PaymentChannel:
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
     ) -> typing.Tuple[Filter, Filter]:
-        locksroot = None
-        unlocked_amount = None
-        returned_amount = None
 
-        event_unlock_abi = CONTRACT_MANAGER.get_event_abi(
-            CONTRACT_TOKEN_NETWORK,
-            EVENT_CHANNEL_UNLOCKED,
-        )
-
-        channelid_topic = [
-            None,
-            encode_hex(encode_single('bytes32', self.channel_identifier)),
+        channel_topics = [
+            None,  # event topic is any
+            encode_hex(encode_single('bytes32', self.channel_identifier)),  # channel_id
         ]
-        channel_topics = [channelid_topic]
 
         # This will match the events:
         # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,
@@ -205,28 +193,22 @@ class PaymentChannel:
         # These topics must not be joined with the channel_filter, otherwise
         # the filter ChannelSettled wont match (observed with geth
         # 1.8.11-stable-dea1ce05)
-        unlock_topic1 = construct_event_topic_set(
-            event_unlock_abi,
-            [
-                self.participant1,
-                self.participant2,
-                locksroot,
-                unlocked_amount,
-                returned_amount,
-            ],
+
+        event_unlock_abi = CONTRACT_MANAGER.get_event_abi(
+            CONTRACT_TOKEN_NETWORK,
+            EVENT_CHANNEL_UNLOCKED,
         )
-        unlock_topic2 = construct_event_topic_set(
-            event_unlock_abi,
-            [
-                self.participant2,
-                self.participant1,
-                locksroot,
-                unlocked_amount,
-                returned_amount,
-            ],
-        )
-        unlock_topics = unlock_topic1
-        unlock_topics.extend(unlock_topic2)
+
+        event_unlock_topic = encode_hex(event_abi_to_log_topic(event_unlock_abi))
+        participant1_topic = encode_hex(self.participant1.rjust(32, b'\0'))
+        participant2_topic = encode_hex(self.participant2.rjust(32, b'\0'))
+
+        unlock_topics = [
+            event_unlock_topic,
+            [participant1_topic, participant2_topic],  # event participant1 is us or them
+            [participant2_topic, participant1_topic],  # event participant2 is us or them
+        ]
+
         unlock_filter = self.token_network.client.new_filter(
             contract_address=self.token_network.address,
             topics=unlock_topics,
