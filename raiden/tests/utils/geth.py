@@ -444,7 +444,7 @@ def geth_run_private_blockchain(
             process.poll()
 
             if process.returncode is not None:
-                raise ValueError(f'geth processed failed with exit code {process.returncode}')
+                raise ValueError(f'geth process failed with exit code {process.returncode}')
 
     except (ValueError, RuntimeError) as e:
         # If geth_wait_and_check or the above loop throw an exception make sure
