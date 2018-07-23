@@ -42,7 +42,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
             app1.raiden,
             identifier,
             amount,
-            app1.raiden.alarm.wait_time,
+            app1.raiden.alarm.sleep_time,
         )
 
     api2.channel_close(registry_address, token_address, api1.address)
@@ -52,7 +52,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
         app0.raiden.default_registry.address,
         token_address,
         [channel12.identifier],
-        app0.raiden.alarm.wait_time,
+        app0.raiden.alarm.sleep_time,
     )
     node1_expected_balance = node1_balance_before + deposit - amount
     node2_expected_balance = node2_balance_before + deposit + amount

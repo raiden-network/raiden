@@ -71,7 +71,7 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
             app1.raiden,
             payment_identifier,
             amount,
-            app1.raiden.alarm.wait_time,
+            app1.raiden.alarm.sleep_time,
         )
 
     no_outstanding_locks = []

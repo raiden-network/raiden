@@ -72,7 +72,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         registry_address,
         token_address,
         [channel_identifier],
-        app0.raiden.alarm.wait_time,
+        app0.raiden.alarm.sleep_time,
     )
 
     assert_synched_channel_state(
@@ -170,7 +170,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         registry_address,
         token_address,
         [alice_bob_channel_state.identifier],
-        alice_app.raiden.alarm.wait_time,
+        alice_app.raiden.alarm.sleep_time,
     )
 
     # wait for the node to call batch unlock
@@ -244,7 +244,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         app1.raiden.default_registry.address,
         token_address,
         [channelstate_0_1.identifier],
-        app1.raiden.alarm.wait_time,
+        app1.raiden.alarm.sleep_time,
     )
 
     netting_channel = app1.raiden.chain.payment_channel(
@@ -313,7 +313,7 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
         app0.raiden.default_registry.address,
         token_address,
         [channel_state.identifier],
-        app0.raiden.alarm.wait_time,
+        app0.raiden.alarm.sleep_time,
     )
 
     # wait for the node to call batch unlock
@@ -486,7 +486,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
         registry_address,
         token_address,
         [channel0.identifier],
-        app0.raiden.alarm.wait_time,
+        app0.raiden.alarm.sleep_time,
     )
 
     # check that the channel is properly settled and that Bob's client
