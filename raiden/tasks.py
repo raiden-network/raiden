@@ -88,7 +88,8 @@ class AlarmTask(gevent.Greenlet):
             self.callbacks.remove(callback)
 
     def loop_until_stop(self):
-        # The AlarmTask must be primed before starting the background greenlet.
+        # The AlarmTask must have completed its first_run() before starting
+        # the background greenlet.
         #
         # This is required because the first run will synchronize the node with
         # the blockchain since the last run.
@@ -105,7 +106,7 @@ class AlarmTask(gevent.Greenlet):
             if chain_id != self.chain.network_id:
                 raise RuntimeError(
                     'Changing the underlying blockchain while the Raiden node is running '
-                    'is not supported',
+                    'is not supported.',
                 )
 
             if current_block != last_block_number:
@@ -119,19 +120,10 @@ class AlarmTask(gevent.Greenlet):
                         current_block=current_block,
                     )
 
-                remove = list()
-                for callback in self.callbacks:
-                    result = callback(current_block, chain_id)
-                    if result is REMOVE_CALLBACK:
-                        remove.append(callback)
-
-                for callback in remove:
-                    self.callbacks.remove(callback)
-
-                self.last_block_number = current_block
+                self.run_callbacks(current_block, chain_id)
 
     def first_run(self):
-        # callbacks must for the first run to update the node state
+        # callbacks must be executed during the first run to update the node state
         assert self.callbacks, 'callbacks not set'
 
         chain_id = self.chain.network_id
@@ -139,6 +131,10 @@ class AlarmTask(gevent.Greenlet):
 
         log.debug('starting at block number', current_block=current_block)
 
+        self.run_callbacks(current_block, chain_id)
+        self.chain_id = chain_id
+
+    def run_callbacks(self, current_block, chain_id):
         remove = list()
         for callback in self.callbacks:
             result = callback(current_block, chain_id)
@@ -148,7 +144,6 @@ class AlarmTask(gevent.Greenlet):
         for callback in remove:
             self.callbacks.remove(callback)
 
-        self.chain_id = chain_id
         self.last_block_number = current_block
 
     def stop_async(self):

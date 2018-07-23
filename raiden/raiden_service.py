@@ -265,14 +265,14 @@ class RaidenService:
             last_log_block_number,
         )
 
-        # Prime the alarm task and synchronize with the blockchain since last
-        # run.
+        # Complete the first_run of the alarm task and synchronize with the
+        # blockchain since the last run.
         #
         # Notes about setup order:
         # - The filters must be polled after the node state has been primed,
         # otherwise the state changes won't have effect.
-        # - The alarm must be primed before the transport is started, to avoid
-        # rejecting messages for unknown channels.
+        # - The alarm must complete its first run  before the transport is started,
+        #  to avoid rejecting messages for unknown channels.
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run()
 
