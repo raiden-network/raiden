@@ -550,7 +550,7 @@ class MatrixTransport:
 
         for (address, _queue_name), events in queueids_to_queues.items():
             # TODO: Check if we need to separate this by queue_name
-            gevent.spawn(send_queue, address, events)
+            send_queue(address, events)
 
     def _send_with_retry(
         self,
