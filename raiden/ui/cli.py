@@ -193,7 +193,6 @@ def wait_for_sync_etherscan(
             if local_block >= etherscan_block - tolerance:
                 return
 
-        print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
         print(syncing_str.format(local_block, etherscan_block), end='')
 
 
