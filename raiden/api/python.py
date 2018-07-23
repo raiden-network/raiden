@@ -110,7 +110,7 @@ class RaidenAPI:
         try:
             registry = self.raiden.chain.token_network_registry(registry_address)
 
-            msg = 'After {} seconds the channel was not properly created.'.format(
+            msg = 'After {} seconds the token was not properly registered.'.format(
                 poll_timeout,
             )
 
