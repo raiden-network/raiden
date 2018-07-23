@@ -1,5 +1,3 @@
-from tempfile import NamedTemporaryFile
-
 import gevent.monkey
 gevent.monkey.patch_all()
 
@@ -17,6 +15,7 @@ from itertools import count
 from pathlib import Path
 from urllib.parse import urljoin
 
+from tempfile import NamedTemporaryFile
 import click
 import gevent
 import pytoml
@@ -81,6 +80,7 @@ from raiden.utils.cli import (
     MatrixServerType,
     NATChoiceType,
     NetworkChoiceType,
+    GasPriceChoiceType,
     PathRelativePath,
     command,
     group,
@@ -357,10 +357,15 @@ def options(func):
                 '--gas-price',
                 help=(
                     'Set the gas price for ethereum transactions. If not provided '
-                    'the value of the RPC call eth_gasPrice is going to be used'
+                    'the normal gas price startegy is used.\n'
+                    'Available options:\n'
+                    '"fast" - transactions are usually mined within 60 seconds\n'
+                    '"normal" - transactions are usually mined within 5 minutes\n'
+                    '<GAS_PRICE> - use given gas price\n'
                 ),
-                default=None,
-                type=int,
+                type=GasPriceChoiceType(['normal', 'fast']),
+                default='normal',
+                show_default=True,
             ),
             option(
                 '--eth-rpc-endpoint',
@@ -574,10 +579,10 @@ def app(
     rpc_host, rpc_port = eth_endpoint_to_hostport(eth_rpc_endpoint)
 
     rpc_client = JSONRPCClient(
-        rpc_host,
-        rpc_port,
-        privatekey_bin,
-        gas_price,
+        host=rpc_host,
+        port=rpc_port,
+        privkey=privatekey_bin,
+        gas_price_strategy=gas_price,
     )
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
@@ -1130,6 +1135,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         matrix_server='http://localhost:8008'
                       if ctx.parent.params['matrix_server'] == 'auto'
                       else ctx.parent.params['matrix_server'],
+        gas_price='fast',
     )
     smoketest_config['transport'] = args['transport']
     for option_ in app.params:

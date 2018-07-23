@@ -4,12 +4,12 @@ import sys
 import time
 import warnings
 from binascii import unhexlify
-from typing import List, Dict
+from typing import List, Dict, Callable
 from json.decoder import JSONDecodeError
 
 from pkg_resources import DistributionNotFound
 from web3 import Web3, HTTPProvider
-from web3.middleware import geth_poa_middleware
+import web3.middleware as middleware
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.utils.filters import Filter
 from eth_utils import (
@@ -44,10 +44,7 @@ from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
 )
-from raiden.constants import (
-    NULL_ADDRESS,
-    TESTNET_GASPRICE_MULTIPLIER,
-)
+from raiden.constants import NULL_ADDRESS
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -175,7 +172,7 @@ class JSONRPCClient:
             host: str,
             port: int,
             privkey: bytes,
-            gasprice: int = None,
+            gas_price_strategy: Callable = rpc_gas_price_strategy,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0,
             web3: Web3 = None,
@@ -212,23 +209,16 @@ class JSONRPCClient:
         else:
             self.web3 = web3
         try:
+            # install caching middlewares
+            self.web3.middleware_stack.add(middleware.time_based_cache_middleware)
+            # self.web3.middleware_stack.add(middleware.latest_block_based_cache_middleware)
+            # self.web3.middleware_stack.add(middleware.simple_cache_middleware)
+
             # set gas price strategy
-            if gasprice:
-                def fixed_gas_price_strategy(_web3, _transaction_params):
-                    return gasprice
-                self.web3.eth.setGasPriceStrategy(fixed_gas_price_strategy)
-            else:
-                def multiplied_node_gas_price_strategy(web3, transaction_params):
-                    return round(
-                        TESTNET_GASPRICE_MULTIPLIER * rpc_gas_price_strategy(
-                            web3,
-                            transaction_params=transaction_params,
-                        ),
-                    )
-                self.web3.eth.setGasPriceStrategy(multiplied_node_gas_price_strategy)
+            self.web3.eth.setGasPriceStrategy(gas_price_strategy)
 
             # we use a PoA chain for smoketest, use this middleware to fix this
-            self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+            self.web3.middleware_stack.inject(middleware.geth_poa_middleware, layer=0)
         except ValueError:
             # `middleware_stack.inject()` raises a value error if the same middleware is
             # injected twice. This happens with `eth-tester` setup where a single session

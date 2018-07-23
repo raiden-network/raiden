@@ -7,6 +7,10 @@ from typing import Callable, List
 import click
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
+from web3.gas_strategies.time_based import (
+    medium_gas_price_strategy,
+    fast_gas_price_strategy,
+)
 
 from raiden.utils import address_checksum_and_decode
 from raiden.constants import NETWORKNAME_TO_ID
@@ -258,6 +262,28 @@ class NetworkChoiceType(click.Choice):
         else:
             network_name = super().convert(value, param, ctx)
             return NETWORKNAME_TO_ID[network_name]
+
+
+class GasPriceChoiceType(click.Choice):
+    """ Returns a GasPriceStrategy for the choice """
+    def convert(self, value, param, ctx):
+        if isinstance(value, str) and value.isnumeric():
+            try:
+                gas_price = int(value)
+
+                def fixed_gas_price_strategy(_web3, _transaction_params):
+                    return gas_price
+
+                return fixed_gas_price_strategy
+            except ValueError:
+                self.fail(f'invalid numeric gas price: {value}', param, ctx)
+        else:
+            gas_price_string = super().convert(value, param, ctx)
+            if gas_price_string == 'fast':
+                return fast_gas_price_strategy
+            else:
+                return medium_gas_price_strategy
+        # return rpc_gas_price_strategy
 
 
 class MatrixServerType(click.Choice):
