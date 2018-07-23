@@ -30,7 +30,7 @@ from raiden.network.proxies import (
     Discovery,
 )
 from raiden.exceptions import InvalidSettleTimeout
-from raiden.utils.gevent import configure_gevent
+from raiden.utils.gevent_utils import configure_gevent
 
 
 log = structlog.get_logger(__name__)
