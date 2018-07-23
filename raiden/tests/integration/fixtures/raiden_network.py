@@ -18,7 +18,6 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 @pytest.fixture
 def raiden_chain(
-        request,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -68,10 +67,12 @@ def raiden_chain(
         local_matrix_server,
     )
 
+    from_block = 0
     for app in raiden_apps:
-        app.raiden.install_and_query_all_blockchain_filters(
-            app.raiden.default_registry.address,
-            app.raiden.default_secret_registry.address,
+        app.raiden.install_all_blockchain_filters(
+            app.raiden.default_registry,
+            app.raiden.default_secret_registry,
+            from_block,
         )
 
     app_channels = create_sequential_channels(
@@ -108,7 +109,6 @@ def raiden_chain(
 
 @pytest.fixture
 def raiden_network(
-        request,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -182,9 +182,6 @@ def raiden_network(
 
     with gevent.Timeout(seconds=5, exception=exception):
         wait_for_alarm_start(raiden_apps)
-
-    for app in raiden_apps:
-        app.raiden.alarm.poll_for_new_block()
 
     yield raiden_apps
 
