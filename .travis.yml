@@ -1,3 +1,4 @@
+conditions: v0
 stages:
   - name: lint
   - name: test
