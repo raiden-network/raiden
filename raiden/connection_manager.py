@@ -189,7 +189,7 @@ class ConnectionManager:
                 registry_address,
                 self.token_address,
                 channel_ids,
-                self.raiden.alarm.wait_time,
+                self.raiden.alarm.sleep_time,
             )
 
         return channels_to_close

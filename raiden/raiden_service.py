@@ -477,7 +477,7 @@ class RaidenService:
         if connection_managers:
             waiting.wait_for_settle_all_channels(
                 self,
-                self.alarm.wait_time,
+                self.alarm.sleep_time,
             )
 
     def mediated_transfer_async(
