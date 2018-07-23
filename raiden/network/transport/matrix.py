@@ -205,7 +205,7 @@ class MatrixTransport:
 
         gevent.spawn_later(1, self._inventory_rooms)
         gevent.spawn_later(2, self._ensure_room_peers)
-        gevent.spawn_later(3, self._send_queued_messages, queueids_to_queues)
+        gevent.spawn_later(1, self._send_queued_messages, queueids_to_queues)
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
@@ -541,16 +541,11 @@ class MatrixTransport:
         self,
         queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
-        def send_queue(address, events):
-            if not self._running:
-                return
+        for (address, _queue_name), events in queueids_to_queues.items():
+            # TODO: Check if we need to separate this by queue_name
             node_address = self._raiden_service.address
             for event in events:
                 self.send_async(address, 'global', _event_to_message(event, node_address))
-
-        for (address, _queue_name), events in queueids_to_queues.items():
-            # TODO: Check if we need to separate this by queue_name
-            send_queue(address, events)
 
     def _send_with_retry(
         self,
