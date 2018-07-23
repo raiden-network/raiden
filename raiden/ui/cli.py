@@ -87,7 +87,7 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
-from raiden.utils.gevent import configure_gevent
+from raiden.utils.gevent_utils import configure_gevent
 
 
 log = structlog.get_logger(__name__)
