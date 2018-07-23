@@ -257,23 +257,27 @@ class RaidenService:
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
 
-        self.install_and_query_all_blockchain_filters(
-            self.default_registry.address,
-            self.default_secret_registry.address,
+        # Install the filters using the correct from_block value, otherwise
+        # blockchain logs can be lost.
+        self.install_all_blockchain_filters(
+            self.default_registry,
+            self.default_secret_registry,
             last_log_block_number,
         )
 
-        # Regarding the timing of starting the alarm task it is important to:
-        # - Install the filters which will be polled by poll_blockchain_events
-        #   after the state has been primed, otherwise the state changes won't
-        #   have effect.
-        # - Install the filters using the correct from_block value, otherwise
-        #   blockchain logs can be lost.
+        # Prime the alarm task and synchronize with the blockchain since last
+        # run.
+        #
+        # Notes about setup order:
+        # - The filters must be polled after the node state has been primed,
+        # otherwise the state changes won't have effect.
+        # - The alarm must be primed before the transport is started, to avoid
+        # rejecting messages for unknown channels.
         self.alarm.register_callback(self._callback_new_block)
+        self.alarm.first_run()
+
         self.alarm.start()
 
-        # Start the transport after the registry is queried to avoid warning
-        # about unknown channels.
         queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
         self.transport.start(self, queueids_to_queues)
 
@@ -399,30 +403,26 @@ class RaidenService:
 
         message.sign(self.private_key)
 
-    def install_and_query_all_blockchain_filters(
+    def install_all_blockchain_filters(
             self,
-            token_network_registry_address,
-            secret_registry_address,
-            from_block=0,
+            token_network_registry_proxy,
+            secret_registry_proxy,
+            from_block,
     ):
-        token_network_registry = self.chain.token_network_registry(token_network_registry_address)
-        secret_registry = self.chain.secret_registry(secret_registry_address)
-        channels = views.list_all_channelstate(
-            views.state_from_raiden(self),
-        )
-        token_networks = views.get_token_network_identifiers(
-            views.state_from_raiden(self),
-            token_network_registry_address,
-        )
-
-        # Install the filters and then poll them and dispatch the events to the WAL
         with self.event_poll_lock:
+            node_state = views.state_from_raiden(self)
+            channels = views.list_all_channelstate(node_state)
+            token_networks = views.get_token_network_identifiers(
+                node_state,
+                token_network_registry_proxy.address,
+            )
+
             self.blockchain_events.add_token_network_registry_listener(
-                token_network_registry,
+                token_network_registry_proxy,
                 from_block,
             )
             self.blockchain_events.add_secret_registry_listener(
-                secret_registry,
+                secret_registry_proxy,
                 from_block,
             )
 
@@ -441,19 +441,6 @@ class RaidenService:
                 self.blockchain_events.add_payment_channel_listener(
                     channel_proxy,
                     from_block,
-                )
-
-            chain_id = self.chain.network_id
-            # We need to query the events at this point in order to obtain an up to
-            # date view of the blockchain right before the node starts its transport
-            # and starts receiving messages.
-            for event in self.blockchain_events.poll_blockchain_events(
-                self.get_block_number(),
-            ):
-                on_blockchain_event(
-                    self,
-                    event, event.event_data['block_number'],
-                    chain_id,
                 )
 
     def connection_manager_for_token_network(self, token_network_identifier):

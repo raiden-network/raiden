@@ -142,9 +142,11 @@ def run(
         listen_port,
     )
 
-    app.raiden.install_and_query_all_blockchain_filters(
-        app.raiden.default_registry.address,
-        app.raiden.default_secret_registry.address,
+    from_block = 0
+    app.raiden.install_all_blockchain_filters(
+        app.raiden.default_registry,
+        app.raiden.default_secret_registry,
+        from_block,
     )
 
     if scenario:

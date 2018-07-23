@@ -1,11 +1,9 @@
-import time
 import requests
 from pkg_resources import parse_version
 
 import click
 import gevent
 from gevent.event import AsyncResult
-from gevent.queue import Queue
 import structlog
 
 from raiden.exceptions import RaidenShuttingDown
@@ -51,16 +49,25 @@ class AlarmTask(gevent.Greenlet):
 
     def __init__(self, chain):
         super().__init__()
-        self.callbacks = list()
-        self.stop_event = AsyncResult()
-        self.chain = chain
-        self.last_block_number = None
-        self.response_queue = Queue()
 
-        # TODO: Start with a larger wait_time and decrease it as the
+        # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.
-        self.wait_time = 0.5
-        self.last_loop = time.time()
+        sleep_time = 0.5
+
+        self.callbacks = list()
+        self.chain = chain
+        self.chain_id = None
+        self.last_block_number = None
+        self.stop_event = AsyncResult()
+        self.sleep_time = sleep_time
+
+    def _run(self):  # pylint: disable=method-hidden
+        try:
+            self.loop_until_stop()
+        except RaidenShuttingDown:
+            pass
+        finally:
+            self.callbacks = list()
 
     def register_callback(self, callback):
         """ Register a new callback.
@@ -80,58 +87,69 @@ class AlarmTask(gevent.Greenlet):
         if callback in self.callbacks:
             self.callbacks.remove(callback)
 
-    def _run(self):  # pylint: disable=method-hidden
-        self.last_block_number = self.chain.block_number()
-        log.debug('starting block number', block_number=self.last_block_number)
+    def loop_until_stop(self):
+        # The AlarmTask must be primed before starting the background greenlet.
+        #
+        # This is required because the first run will synchronize the node with
+        # the blockchain since the last run.
+        assert self.chain_id, 'chain_id not set'
+        assert self.last_block_number, 'last_block_number not set'
 
-        sleep_time = 0
+        chain_id = self.chain_id
+
+        sleep_time = self.sleep_time
         while self.stop_event.wait(sleep_time) is not True:
-            try:
-                self.poll_for_new_block()
-            except RaidenShuttingDown:
-                break
+            last_block_number = self.last_block_number
+            current_block = self.chain.block_number()
 
-            # we want this task to iterate in the tick of `wait_time`, so take
-            # into account how long we spent executing one tick.
-            self.last_loop = time.time()
-            work_time = self.last_loop - self.last_loop
-            if work_time > self.wait_time:
-                log.warning(
-                    'alarm loop is taking longer than the wait time',
-                    work_time=work_time,
-                    wait_time=self.wait_time,
+            if chain_id != self.chain.network_id:
+                raise RuntimeError(
+                    'Changing the underlying blockchain while the Raiden node is running '
+                    'is not supported',
                 )
-                sleep_time = 0.001
-            else:
-                sleep_time = self.wait_time - work_time
 
-        # stopping
-        self.callbacks = list()
+            if current_block != last_block_number:
+                log.debug('new block', number=current_block)
 
-    def poll_for_new_block(self):
+                if current_block > last_block_number + 1:
+                    missed_blocks = current_block - last_block_number - 1
+                    log.error(
+                        'missed blocks',
+                        missed_blocks=missed_blocks,
+                        current_block=current_block,
+                    )
+
+                remove = list()
+                for callback in self.callbacks:
+                    result = callback(current_block, chain_id)
+                    if result is REMOVE_CALLBACK:
+                        remove.append(callback)
+
+                for callback in remove:
+                    self.callbacks.remove(callback)
+
+                self.last_block_number = current_block
+
+    def first_run(self):
+        # callbacks must for the first run to update the node state
+        assert self.callbacks, 'callbacks not set'
+
         chain_id = self.chain.network_id
         current_block = self.chain.block_number()
 
-        if current_block > self.last_block_number + 1:
-            difference = current_block - self.last_block_number - 1
-            log.error('alarm missed %s blocks' % (difference), current_block=current_block)
+        log.debug('starting at block number', current_block=current_block)
 
-        if current_block != self.last_block_number:
-            log.debug(
-                'new block',
-                number=current_block,
-                timestamp=self.last_loop,
-            )
+        remove = list()
+        for callback in self.callbacks:
+            result = callback(current_block, chain_id)
+            if result is REMOVE_CALLBACK:
+                remove.append(callback)
 
-            self.last_block_number = current_block
-            remove = list()
-            for callback in self.callbacks:
-                result = callback(current_block, chain_id)
-                if result is REMOVE_CALLBACK:
-                    remove.append(callback)
+        for callback in remove:
+            self.callbacks.remove(callback)
 
-            for callback in remove:
-                self.callbacks.remove(callback)
+        self.chain_id = chain_id
+        self.last_block_number = current_block
 
     def stop_async(self):
         self.stop_event.set(True)
