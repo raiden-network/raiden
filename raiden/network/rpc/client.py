@@ -4,12 +4,13 @@ import sys
 import time
 import warnings
 from binascii import unhexlify
-from typing import List, Dict
+from typing import List, Dict, Callable
 from json.decoder import JSONDecodeError
 
 from pkg_resources import DistributionNotFound
 from web3 import Web3, HTTPProvider
-from web3.middleware import geth_poa_middleware
+import web3.middleware as middleware
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.utils.filters import Filter
 from eth_utils import (
     encode_hex,
@@ -43,10 +44,7 @@ from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
 )
-from raiden.constants import (
-    NULL_ADDRESS,
-    TESTNET_GASPRICE_MULTIPLIER,
-)
+from raiden.constants import NULL_ADDRESS
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -174,7 +172,7 @@ class JSONRPCClient:
             host: str,
             port: int,
             privkey: bytes,
-            gasprice: int = None,
+            gas_price_strategy: Callable = rpc_gas_price_strategy,
             nonce_update_interval: float = 5.0,
             nonce_offset: int = 0,
             web3: Web3 = None,
@@ -197,7 +195,6 @@ class JSONRPCClient:
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
-        self.given_gas_price = gasprice
 
         cache = cachetools.TTLCache(
             maxsize=1,
@@ -205,12 +202,6 @@ class JSONRPCClient:
         )
         cache_wrapper = cachetools.cached(cache=cache)
         self.gaslimit = cache_wrapper(self._gaslimit)
-        cache = cachetools.TTLCache(
-            maxsize=1,
-            ttl=RPC_CACHE_TTL,
-        )
-        cache_wrapper = cachetools.cached(cache=cache)
-        self.gasprice = cache_wrapper(self._gasprice)
 
         # web3
         if web3 is None:
@@ -218,8 +209,16 @@ class JSONRPCClient:
         else:
             self.web3 = web3
         try:
+            # install caching middlewares
+            self.web3.middleware_stack.add(middleware.time_based_cache_middleware)
+            # self.web3.middleware_stack.add(middleware.latest_block_based_cache_middleware)
+            # self.web3.middleware_stack.add(middleware.simple_cache_middleware)
+
+            # set gas price strategy
+            self.web3.eth.setGasPriceStrategy(gas_price_strategy)
+
             # we use a PoA chain for smoketest, use this middleware to fix this
-            self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+            self.web3.middleware_stack.inject(middleware.geth_poa_middleware, layer=0)
         except ValueError:
             # `middleware_stack.inject()` raises a value error if the same middleware is
             # injected twice. This happens with `eth-tester` setup where a single session
@@ -292,15 +291,15 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
-    def _gaslimit(self, location='latest') -> int:
+    def _gaslimit(self, location: typing.BlockSpecification = 'latest') -> int:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
-    def _gasprice(self) -> int:
-        if self.given_gas_price:
-            return self.given_gas_price
+    def gas_price(self, transaction: Dict = None) -> int:
+        if transaction is None:
+            transaction = dict()
 
-        return round(TESTNET_GASPRICE_MULTIPLIER * self.web3.eth.gasPrice)
+        return self.web3.eth.generateGasPrice(transaction_params=transaction)
 
     def check_startgas(self, startgas):
         if not startgas:
@@ -460,7 +459,6 @@ class JSONRPCClient:
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
-            gasprice: int = None,
     ):
         """ Helper to send signed messages.
 
@@ -473,11 +471,11 @@ class JSONRPCClient:
 
         transaction = dict(
             nonce=self.nonce(),
-            gasPrice=gasprice or self.gasprice(),
             gas=self.check_startgas(startgas),
             value=value,
             data=data,
         )
+        transaction['gasPrice'] = self.gas_price(transaction)
 
         # add the to address if not deploying a contract
         if to != b'':

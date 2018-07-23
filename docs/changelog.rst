@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1473` Add gas price strategies that adapt the gas price to the network conditions.
 * :bug:`1902` Check for ethnode connection at start and print proper error if Raiden can not connect
 * :bug:`1911` The syncing message is now printed properly and does not repeat across the screen
 * :bug:`1899` Print proper error without throwing exception if no accounts are found in the keystore
