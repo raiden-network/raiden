@@ -2,7 +2,7 @@ stages:
   - name: lint
   - name: test
   - name: integration
-    if: type = cron OR commit_message =~ /\[ci integration\]/ OR (tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/)
+#    if: type = cron OR commit_message =~ /\[ci integration\]/ OR (tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/)
   - name: deploy
     if: tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
@@ -21,6 +21,17 @@ templates:
 
   job-template-integration: &job-template-integration
     <<: *job-template-test
+    before_install:
+      - export TRAVIS_COMMIT_MSG="$(git log --format=%B --no-merges -n 1)"
+      - |
+          echo "TRAVIS_COMMIT_MSG=${TRAVIS_COMMIT_MSG}"
+          if [[ ! ${TRAVIS_COMMIT_MSG} =~ "\[ci integration\]" ]]; then
+            echo "Skipping non-integration commit"
+            exit
+          fi
+      - mkdir -p $HOME/.bin
+      - export PATH=$PATH:$HOME/.bin
+      - .travis/before_install.sh
     sudo: true
 
 dist: trusty
