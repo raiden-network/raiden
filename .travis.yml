@@ -1,8 +1,9 @@
+conditions: v1
 stages:
   - name: lint
   - name: test
   - name: integration
-    if: type = cron OR commit_message =~ /\[ci integration\]/ OR (tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/)
+    if: type = cron OR commit_message =~ /\[ci integration\]/ OR tag IS present
   - name: deploy
     if: tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
