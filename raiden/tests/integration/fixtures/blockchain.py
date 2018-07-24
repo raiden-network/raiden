@@ -120,7 +120,7 @@ def web3(
         ethereum_tester.revert_to_snapshot(snapshot)
 
     else:
-        raise ValueError(f'unknwon blockchain_type {blockchain_type}')
+        raise ValueError(f'unknown blockchain_type {blockchain_type}')
 
 
 @pytest.fixture
