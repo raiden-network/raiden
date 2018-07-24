@@ -195,6 +195,9 @@ def wait_for_sync_etherscan(
 
         print(syncing_str.format(local_block, etherscan_block), end='')
 
+    # add a newline so that the next print will start have it's own line
+    print('')
+
 
 def wait_for_sync_rpc_api(
         blockchain_service: BlockChainService,
@@ -207,7 +210,7 @@ def wait_for_sync_rpc_api(
 
     for i in count():
         if i % 3 == 0:
-            print(constants.ANSI_ESCAPE_CLEARLINE + constants.ANSI_ESCAPE_CURSOR_STARTLINE, end='')
+            print('\r', end='')
 
         print('.', end='')
         sys.stdout.flush()
@@ -216,6 +219,9 @@ def wait_for_sync_rpc_api(
 
         if blockchain_service.is_synced():
             return
+
+    # add a newline so that the next print will start have it's own line
+    print('')
 
 
 def wait_for_sync(
