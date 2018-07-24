@@ -58,8 +58,4 @@ MIN_REQUIRED_SOLC = 'v0.4.23'
 NULL_ADDRESS = '0x' + '0' * 40
 NULL_ADDRESS_BYTES = b'\x00' * 20
 
-# ansi escape code for moving the cursor and clearing the line
-ANSI_ESCAPE_CURSOR_STARTLINE = '\x1b[1000D'
-ANSI_ESCAPE_CLEARLINE = '\x1b[2K'
-
 TESTNET_GASPRICE_MULTIPLIER = 2.0
