@@ -1,7 +1,6 @@
 import copy
 import os
 import sys
-import time
 import warnings
 from binascii import unhexlify
 from typing import List, Dict
@@ -20,7 +19,8 @@ from eth_utils import (
 )
 import gevent
 from gevent.lock import Semaphore
-import cachetools
+from cachetools import TTLCache, cachedmethod
+from operator import attrgetter
 import structlog
 
 from raiden.utils import typing
@@ -192,25 +192,13 @@ class JSONRPCClient:
         # gets constructed before the RaidenService Object.
         self.stop_event = None
 
-        self.nonce_last_update = 0
-        self.nonce_available_value = None
         self.nonce_lock = Semaphore()
-        self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
         self.given_gas_price = gasprice
 
-        cache = cachetools.TTLCache(
-            maxsize=1,
-            ttl=RPC_CACHE_TTL,
-        )
-        cache_wrapper = cachetools.cached(cache=cache)
-        self.gaslimit = cache_wrapper(self._gaslimit)
-        cache = cachetools.TTLCache(
-            maxsize=1,
-            ttl=RPC_CACHE_TTL,
-        )
-        cache_wrapper = cachetools.cached(cache=cache)
-        self.gasprice = cache_wrapper(self._gasprice)
+        self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
+        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
+        self._nonce_cache = TTLCache(maxsize=16, ttl=nonce_update_interval)
 
         # web3
         if web3 is None:
@@ -244,46 +232,16 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def nonce_needs_update(self):
-        if self.nonce_available_value is None:
-            return True
-
-        now = time.time()
-
-        # Python's 2.7 time is not monotonic and it's affected by clock resets,
-        # force an update.
-        if self.nonce_last_update > now:
-            return True
-
-        return now - self.nonce_last_update > self.nonce_update_interval
-
-    def nonce_update_from_node(self):
-        nonce = -2
-        nonce_available_value = self.nonce_available_value or -1
-
-        # Wait until all tx are registered as pending
-        while nonce < nonce_available_value:
+    @cachedmethod(attrgetter('_nonce_cache'))
+    def nonce(self):
+        with self.nonce_lock:
             pending_transactions = self.web3.eth.getTransactionCount(
                 to_checksum_address(self.sender),
             )
             nonce = pending_transactions + self.nonce_offset
 
-            log.debug(
-                'updated nonce from server',
-                server=nonce,
-                local=nonce_available_value,
-            )
-
-        self.nonce_last_update = time.time()
-        self.nonce_available_value = nonce
-
-    def nonce(self):
-        with self.nonce_lock:
-            if self.nonce_needs_update():
-                self.nonce_update_from_node()
-
-            self.nonce_available_value += 1
-            return self.nonce_available_value - 1
+            log.debug('updated nonce from server', server=nonce)
+            return nonce + 1
 
     def inject_stop_event(self, event):
         self.stop_event = event
@@ -292,11 +250,13 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
-    def _gaslimit(self, location='latest') -> int:
+    @cachedmethod(attrgetter('_gaslimit_cache'))
+    def gaslimit(self, location='latest') -> int:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
-    def _gasprice(self) -> int:
+    @cachedmethod(attrgetter('_gasprice_cache'))
+    def gasprice(self) -> int:
         if self.given_gas_price:
             return self.given_gas_price
 
