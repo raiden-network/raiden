@@ -76,6 +76,8 @@ Additional dependencies for development installations
 
 .. _its documentation: http://solidity.readthedocs.io/en/latest/installing-solidity.html
 
+.. _installation_from_source:
+
 Installation from source
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -102,6 +104,11 @@ macOS
 *****
 
 Please refer to the :ref:`detailed step-by-step guide <macos_development_setup>` for setting up a macOS development environment.
+
+nix
+***
+
+Please refer to the :ref:`nix setup guide <nix_development_setup>` for setting up a development environment using the `nix <https://nixos.org/nix>`_ package manager.
 
 
 .. _running_raiden:
