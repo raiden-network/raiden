@@ -78,7 +78,7 @@ For other ways to install `solc` or Geth see the official docs:
 
 #### Alternative setup with nix
 
-See [nix.md](docs/nix.md).
+See [nix.rst](docs/nix.rst).
 
 ### Raiden
 
