@@ -1,7 +1,6 @@
-from binascii import hexlify
-
 import gevent
 
+from eth_utils import to_checksum_address, encode_hex
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3
 from raiden.utils.solc import compile_files_cwd
@@ -26,7 +25,7 @@ def create_and_distribute_token(
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
-    name = name or hexlify(sha3(''.join(receivers).encode()))
+    name = name or encode_hex(sha3(''.join(receivers).encode()))
     contract_path = get_contract_path('HumanStandardToken.sol')
 
     with gevent.Timeout(timeout):
@@ -45,4 +44,4 @@ def create_and_distribute_token(
 
     for receiver in receivers:
         token_proxy.transact('transfer', receiver, amount_per_receiver)
-    return hexlify(token_proxy.contract_address)
+    return to_checksum_address(token_proxy.contract_address)

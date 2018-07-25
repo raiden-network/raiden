@@ -1,6 +1,4 @@
-from binascii import unhexlify
-
-from eth_utils import remove_0x_prefix
+from eth_utils import to_canonical_address
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
@@ -58,29 +56,13 @@ def deploy_contract_web3(
         num_confirmations: int = None,
         constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
-    contract_interface = CONTRACT_MANAGER.get_contract(contract_name)
-
-    contract = deploy_client.web3.eth.contract(
-        abi=contract_interface['abi'],
-        bytecode=contract_interface['bin'],
+    compiled = {
+        contract_name: CONTRACT_MANAGER.get_contract(contract_name),
+    }
+    contract_proxy = deploy_client.deploy_solidity_contract(
+        contract_name,
+        compiled,
+        constructor_parameters=constructor_arguments,
+        confirmations=num_confirmations,
     )
-
-    transaction = contract.constructor(*constructor_arguments).buildTransaction()
-    transaction['nonce'] = deploy_client.nonce()
-
-    signed_txn = deploy_client.web3.eth.account.signTransaction(
-        transaction,
-        deploy_client.privkey,
-    )
-    tx_hash = deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-
-    deploy_client.poll(transaction_hash=tx_hash, confirmations=num_confirmations)
-
-    receipt = deploy_client.get_transaction_receipt(tx_hash)
-
-    if receipt.get('status', 0) == 0:
-        raise RuntimeError('contract was not sucessfully deployed')
-
-    return typing.Address(
-        unhexlify(remove_0x_prefix(receipt['contractAddress'])),
-    )
+    return typing.Address(to_canonical_address(contract_proxy.contract.address))

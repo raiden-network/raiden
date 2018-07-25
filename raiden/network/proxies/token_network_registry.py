@@ -1,4 +1,3 @@
-from binascii import unhexlify
 from typing import Optional
 
 import structlog
@@ -101,7 +100,7 @@ class TokenNetworkRegistry:
             token_address,
         )
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.info(

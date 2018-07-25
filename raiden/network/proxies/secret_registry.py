@@ -1,5 +1,4 @@
 import structlog
-from binascii import unhexlify
 from typing import List
 
 from web3.utils.filters import Filter
@@ -109,7 +108,7 @@ class SecretRegistry:
             secrets,
         )
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:

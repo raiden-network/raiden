@@ -1,5 +1,3 @@
-from binascii import unhexlify
-
 from eth_utils import (
     to_canonical_address,
     to_checksum_address,
@@ -65,7 +63,7 @@ class Discovery:
             endpoint,
         )
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
