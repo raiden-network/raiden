@@ -1,5 +1,3 @@
-from binascii import unhexlify
-
 import pytest
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
@@ -60,7 +58,7 @@ def test_endpointregistry_gas(endpoint_discovery_services):
     endpoint = host_port_to_endpoint('127.0.0.1', 44444)
 
     transaction_hash = discovery_proxy.proxy.transact('registerEndpoint', endpoint)
-    discovery_proxy.client.poll(unhexlify(transaction_hash))
+    discovery_proxy.client.poll(transaction_hash)
 
-    receipt = discovery_proxy.client.web3.eth.getTransactionReceipt(transaction_hash)
+    receipt = discovery_proxy.client.get_transaction_receipt(transaction_hash)
     assert receipt['gasUsed'] <= DISCOVERY_TX_GAS_LIMIT

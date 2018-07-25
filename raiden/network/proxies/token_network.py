@@ -1,4 +1,3 @@
-from binascii import unhexlify
 from collections import defaultdict
 from typing import List, Dict, Optional
 
@@ -185,7 +184,7 @@ class TokenNetwork:
         if not transaction_hash:
             raise RuntimeError('open channel transaction failed')
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
 
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
@@ -483,7 +482,7 @@ class TokenNetwork:
                 total_deposit,
                 partner,
             )
-            self.client.poll(unhexlify(transaction_hash))
+            self.client.poll(transaction_hash)
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
@@ -549,7 +548,7 @@ class TokenNetwork:
                 additional_hash,
                 signature,
             )
-            self.client.poll(unhexlify(transaction_hash))
+            self.client.poll(transaction_hash)
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -594,7 +593,7 @@ class TokenNetwork:
             non_closing_signature,
         )
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
@@ -632,7 +631,7 @@ class TokenNetwork:
                 partner_signature,
                 signature,
             )
-            self.client.poll(unhexlify(transaction_hash))
+            self.client.poll(transaction_hash)
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
@@ -668,7 +667,7 @@ class TokenNetwork:
             leaves_packed,
         )
 
-        self.client.poll(unhexlify(transaction_hash))
+        self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
@@ -745,7 +744,7 @@ class TokenNetwork:
                     partner_locksroot,
                 )
 
-            self.client.poll(unhexlify(transaction_hash))
+            self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 channel_exists = self.channel_exists(self.node_address, partner)
