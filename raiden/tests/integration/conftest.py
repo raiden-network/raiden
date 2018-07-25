@@ -9,7 +9,6 @@ from raiden.tests.integration.fixtures.transport import (
     TransportConfig,
     TransportProtocol,
 )
-from raiden.tests.utils.patch_connection_pool import patch_http_connection_pool
 
 
 def pytest_generate_tests(metafunc):
@@ -35,7 +34,3 @@ def pytest_generate_tests(metafunc):
             )
 
         metafunc.parametrize('transport_config', transport_config)
-
-
-# since we are running everything in a single thread, patch urrlib to allow more connections
-patch_http_connection_pool(maxsize=256)
