@@ -4,8 +4,7 @@ import { LicenseComponent } from './license.component';
 
 describe('LicenseComponent', () => {
   let component: LicenseComponent;
-  let fixture: LicenseFixture<LicenseComponent>;
-
+  let fixture: ComponentFixture<LicenseComponent>;
   beforeEach(async(() => {
     TestBed.configureTestingModule({
       declarations: [ LicenseComponent ]
