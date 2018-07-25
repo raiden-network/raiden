@@ -1,23 +1,22 @@
-import { Observable, BehaviorSubject } from 'rxjs';
-import { scan, tap, switchMap, map, finalize } from 'rxjs/operators';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MenuItem } from 'primeng/primeng';
-
-import { RaidenConfig } from '../../services/raiden.config';
-import { RaidenService } from '../../services/raiden.service';
-import { SharedService } from '../../services/shared.service';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { Observable } from 'rxjs/internal/Observable';
+import { finalize, map, scan, switchMap, tap } from 'rxjs/operators';
 import { Channel } from '../../models/channel';
 import { EventsParam } from '../../models/event';
 import { WithMenu } from '../../models/withmenu';
+import { RaidenConfig } from '../../services/raiden.config';
+import { RaidenService } from '../../services/raiden.service';
+import { SharedService } from '../../services/shared.service';
 
 @Component({
     selector: 'app-channel-table',
     templateUrl: './channel-table.component.html',
     styleUrls: ['./channel-table.component.css'],
 })
-export class ChannelTableComponent implements OnInit {
+export class ChannelTableComponent implements OnInit, OnDestroy {
 
-    private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     public channels$: Observable<Array<WithMenu<Channel>>>;
     public amount: number;
     public displayDialog: boolean;
@@ -26,37 +25,43 @@ export class ChannelTableComponent implements OnInit {
     public tempChannel: Channel;
     public watchEvents: EventsParam[] = [];
     public tabIndex = 0;
+    private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
 
     constructor(
         private raidenConfig: RaidenConfig,
         private raidenService: RaidenService,
         private sharedService: SharedService,
-    ) { }
+    ) {
+    }
 
     ngOnInit() {
         let timeout;
         this.channels$ = this.channelsSubject.pipe(
             tap(() => clearTimeout(timeout)),
             switchMap(() => this.raidenService.getChannels()),
-            map((newChannels) =>
-                newChannels.map((newchannel) =>
-                    Object.assign(newchannel, { menu: null }) as WithMenu<Channel>
-                )
-            ),
+            map((newChannels) => newChannels.map((newchannel) =>
+            Object.assign(newchannel, {menu: null}) as WithMenu<Channel>
+        )),
             scan((oldChannels, newChannels) => {
                 // use scan and Object.assign to keep object references and
                 // improve *ngFor change detection on data table
                 for (const newchannel of newChannels) {
                     const oldchannel: WithMenu<Channel> = oldChannels.find((c) =>
                         c.channel_identifier === newchannel.channel_identifier);
-                    if (oldchannel && oldchannel.state == newchannel.state) {
-                        Object.assign(newchannel, { menu: oldchannel.menu });
+
+                    if (oldchannel && oldchannel.state === newchannel.state) {
+                        Object.assign(newchannel, {
+                            menu: this.updateMenu(newchannel, oldchannel.menu)
+                        });
                     } else {
-                        Object.assign(
-                            newchannel,
-                            { menu: this.menuFor(newchannel) }
-                        );
+                        Object.assign(newchannel, {
+                            menu: this.menuFor(newchannel)
+                        });
                     }
+
+                    Object.assign(newchannel, {
+                        menu: this.menuFor(newchannel)
+                    });
                 }
                 return newChannels;
             }, []),
@@ -67,6 +72,12 @@ export class ChannelTableComponent implements OnInit {
                 )
             ),
         );
+
+        this.channelsSubject.next(null);
+    }
+
+    ngOnDestroy() {
+        this.channelsSubject.complete();
     }
 
     public onTransfer(channel: Channel) {
@@ -84,12 +95,6 @@ export class ChannelTableComponent implements OnInit {
 
     public onClose(channel: Channel) {
         this.action = 'close';
-        this.tempChannel = channel;
-        this.manageChannel();
-    }
-
-    public onSettle(channel: Channel) {
-        this.action = 'settle';
         this.tempChannel = channel;
         this.manageChannel();
     }
@@ -112,23 +117,15 @@ export class ChannelTableComponent implements OnInit {
                 break;
             case 'deposit':
                 this.raidenService.depositToChannel(
-                        this.tempChannel.token_address,
-                        this.tempChannel.partner_address,
-                        this.amount,
-                    ).pipe(
-                        finalize(() => this.channelsSubject.next(null)),
-                    ).subscribe((response) => this.showMessage(response));
-                break;
-            case 'close':
-                this.raidenService.closeChannel(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
+                    this.amount,
                 ).pipe(
                     finalize(() => this.channelsSubject.next(null)),
                 ).subscribe((response) => this.showMessage(response));
                 break;
-            case 'settle':
-                this.raidenService.settleChannel(
+            case 'close':
+                this.raidenService.closeChannel(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
                 ).pipe(
@@ -207,13 +204,13 @@ export class ChannelTableComponent implements OnInit {
             {
                 label: 'Transfer',
                 icon: 'fa fa-exchange',
-                disabled: !(channel.state === 'opened' && channel.balance > 0),
+                disabled: !this.channelCanTransfer(channel),
                 command: () => this.onTransfer(channel)
             },
             {
                 label: 'Deposit',
                 icon: 'fa fa-money',
-                disabled: channel.state !== 'opened',
+                disabled: this.channelIsNotOpen(channel),
                 command: () => this.onDeposit(channel)
             },
             {
@@ -222,12 +219,6 @@ export class ChannelTableComponent implements OnInit {
                 disabled: channel.state !== 'opened',
                 command: () => this.onClose(channel)
             },
-            // {
-            //     label: 'Settle',
-            //     icon: 'fa fa-book',
-            //     disabled: channel.state !== 'closed',
-            //     command: () => this.onSettle(channel)
-            // },
             {
                 label: 'Watch Events',
                 icon: 'fa fa-clock-o',
@@ -241,15 +232,14 @@ export class ChannelTableComponent implements OnInit {
             .map((event) => event.channel)
             .indexOf(channel);
         if (index < 0) {
-            this.watchEvents = [...this.watchEvents, { channel }];
+            this.watchEvents = [...this.watchEvents, {channel}];
             index = this.watchEvents.length - 1;
         }
         setTimeout(() => this.tabIndex = index + 1, 100);
     }
 
     public handleCloseTab($event) {
-        const newEvents = this.watchEvents.filter((e, i) =>
-            i === $event.index - 1 ? false : true);
+        const newEvents = this.watchEvents.filter((e, i) => i !== $event.index - 1);
         $event.close();
         setTimeout(() => this.watchEvents = newEvents, 0);
     }
@@ -262,12 +252,24 @@ export class ChannelTableComponent implements OnInit {
     }
 
     public handleActivity(eventsParam: EventsParam) {
-        const index = this.watchEvents
-            .indexOf(eventsParam);
-        if (index >= 0 && this.tabIndex - 1 === index) {
-            eventsParam.activity = false;
-        } else {
-            eventsParam.activity = true;
+        const index = this.watchEvents.indexOf(eventsParam);
+        eventsParam.activity = !(index >= 0 && this.tabIndex - 1 === index);
+    }
+
+    private channelIsNotOpen(channel: Channel): boolean {
+        return channel.state !== 'opened';
+    }
+
+    private channelCanTransfer(channel: Channel): boolean {
+        return (channel.state === 'opened' && channel.balance > 0);
+    }
+
+    private updateMenu(channel: Channel, menuItems: MenuItem[]): MenuItem[] {
+        if (menuItems != null) {
+            menuItems[0].disabled = !this.channelCanTransfer(channel);
+            menuItems[1].disabled = this.channelIsNotOpen(channel);
+            menuItems[2].disabled = this.channelIsNotOpen(channel);
         }
+        return menuItems;
     }
 }
