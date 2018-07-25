@@ -269,6 +269,8 @@ def test_recovery_blockchain_events(
 
     del app0  # from here on the app0_restart should be used
 
+    app0_restart.raiden.start()
+
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(
         app0_restart.raiden,
