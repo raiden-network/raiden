@@ -1,4 +1,5 @@
 import pytest
+import gevent
 from eth_utils import (
     to_canonical_address,
     encode_hex,
@@ -19,10 +20,66 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     TransactionThrew,
     ChannelIncorrectStateError,
+    DepositMismatch,
 )
 from raiden.tests.utils import wait_blocks
 from raiden_libs.messages import BalanceProof
 from raiden_libs.utils.signing import sign_data
+
+
+def test_token_network_deposit_race(
+    token_network_proxy,
+    private_keys,
+    blockchain_rpc_ports,
+    token_proxy,
+    chain_id,
+    web3,
+):
+    assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
+    assert token_network_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
+
+    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+
+    c1_client = JSONRPCClient(
+        '0.0.0.0',
+        blockchain_rpc_ports[0],
+        private_keys[1],
+        web3=web3,
+    )
+    c2_client = JSONRPCClient(
+        '0.0.0.0',
+        blockchain_rpc_ports[0],
+        private_keys[2],
+        web3=web3,
+    )
+    c1_token_network_proxy = TokenNetwork(
+        c1_client,
+        token_network_address,
+    )
+    token_proxy.transfer(c1_client.sender, 10)
+    channel_identifier = c1_token_network_proxy.new_netting_channel(
+        c2_client.sender,
+        TEST_SETTLE_TIMEOUT_MIN,
+    )
+    assert channel_identifier is not None
+
+    def deposit_tokens(total_amount):
+        c1_token_network_proxy.set_total_deposit(
+            total_amount,
+            c2_client.sender,
+        )
+
+    def deposit_tokens_fail(total_amount):
+        with pytest.raises(DepositMismatch):
+            c1_token_network_proxy.set_total_deposit(
+                total_amount,
+                c2_client.sender,
+            )
+    deposit_greenlets = [
+        gevent.spawn(deposit_tokens, 2),
+        gevent.spawn(deposit_tokens_fail, 1),
+    ]
+    gevent.joinall(deposit_greenlets)
 
 
 def test_token_network_proxy_basics(

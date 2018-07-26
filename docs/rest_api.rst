@@ -377,7 +377,9 @@ Channel Management
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409:
     - Provided channel does not exist or
-    - ``state`` and ``total_deposit`` have been attempted to update in the same request.
+    - ``state`` and ``total_deposit`` have been attempted to update in the same request or
+    - attempt to deposit token amount lower than on-chain balance of the channel
+    - attempt to deposit more tokens than the testing limit
    :statuscode 500: Internal Raiden node error
 
 Connection Management

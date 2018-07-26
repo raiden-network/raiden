@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`1916` Return E409 on two concurrent conflicting channel deposits
 * :bug:`1869` Various matrix improvements. Prevent DOS attacks, and race conditions that caused client crashes. Require peers to be present to send message to them. Improves user discovery across Matrix federation.
 * :bug:`1902` Check for ethnode connection at start and print proper error if Raiden can not connect
 * :bug:`1911` The syncing message is now printed properly and does not repeat across the screen
