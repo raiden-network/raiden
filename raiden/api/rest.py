@@ -668,7 +668,7 @@ class RestAPI:
         if transfer_result is False:
             return api_error(
                 errors="Payment couldn't be completed "
-                "(insufficient funds or no route to target).",
+                "(insufficient funds, no route to target or target offline).",
                 status_code=HTTPStatus.CONFLICT,
             )
 
