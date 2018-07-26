@@ -5,7 +5,8 @@
       <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
       <button pButton type="button" (click)="showOpenChannelDialog()" icon="fa fa-external-link-square" label="Open Channel"></button>
     </div>
-    <p-dataTable [value]="channels" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
+    <p-dataTable [value]="channels" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb"
+                 dataKey="channel_identifier" [rowTrackBy]="rowTrackBy">
       <p-column field="channel_identifier" header="Channel" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
           <span [title]="data[col.field]">{{ data[col.field] }}</span>
