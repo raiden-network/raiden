@@ -16,7 +16,6 @@ import { SharedService } from '../../services/shared.service';
     styleUrls: ['./channel-table.component.css'],
 })
 export class ChannelTableComponent implements OnInit, OnDestroy {
-
     public channels$: Observable<Array<WithMenu<Channel>>>;
     public amount: number;
     public displayDialog: boolean;
@@ -45,22 +44,15 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
             scan((oldChannels, newChannels) => {
                 // use scan and Object.assign to keep object references and
                 // improve *ngFor change detection on data table
-                for (const newchannel of newChannels) {
-                    const oldchannel: WithMenu<Channel> = oldChannels.find((c) =>
-                        c.channel_identifier === newchannel.channel_identifier);
+                for (const newChannel of newChannels) {
+                    const oldChannel: WithMenu<Channel> = oldChannels.find((c) => {
+                        return c.channel_identifier === newChannel.channel_identifier;
+                    });
 
-                    if (oldchannel && oldchannel.state === newchannel.state) {
-                        Object.assign(newchannel, {
-                            menu: this.updateMenu(newchannel, oldchannel.menu)
-                        });
-                    } else {
-                        Object.assign(newchannel, {
-                            menu: this.menuFor(newchannel)
-                        });
-                    }
+                    const menu: MenuItem[] = oldChannel && oldChannel.menu ? oldChannel.menu : this.menuFor(newChannel);
 
-                    Object.assign(newchannel, {
-                        menu: this.menuFor(newchannel)
+                    Object.assign(newChannel, {
+                        menu: this.updateMenu(newChannel, menu)
                     });
                 }
                 return newChannels;
