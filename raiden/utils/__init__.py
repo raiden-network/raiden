@@ -223,6 +223,7 @@ def get_system_spec():
         python_implementation=platform.python_implementation(),
         python_version=platform.python_version(),
         system=system_info,
+        distribution='bundled' if getattr(sys, 'frozen', False) else 'source',
     )
     return system_spec
 

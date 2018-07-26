@@ -5,18 +5,8 @@ import subprocess
 from setuptools import setup, find_packages
 from setuptools import Command
 from setuptools.command.test import test as TestCommand
-from setuptools.command.build_py import build_py
 import distutils.log
 from distutils.spawn import find_executable
-
-
-class BuildPyCommand(build_py):
-
-    def run(self):
-        # ensure smoketest_config.json is generated
-        from raiden.tests.utils.smoketest import load_or_create_smoketest_config
-        load_or_create_smoketest_config()
-        build_py.run(self)
 
 
 class PyTest(TestCommand):
@@ -134,7 +124,6 @@ setup(
     cmdclass={
         'test': PyTest,
         'compile_webui': CompileWebUI,
-        'build_py': BuildPyCommand,
     },
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
