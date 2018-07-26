@@ -12,6 +12,7 @@ from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.exceptions import (
     AddressWithoutCode,
+    InvalidAmount,
     TransactionThrew,
 )
 from raiden.transfer import views
@@ -105,7 +106,9 @@ class ConnectionManager:
             joinable_funds_target: Amount of funds not initially assigned.
         """
         if funds <= 0:
-            raise ValueError('connecting needs a positive value for `funds`')
+            raise InvalidAmount(
+                'The funds to use in the connection need to be a positive integer'
+            )
 
         with self.lock:
             self.funds = funds

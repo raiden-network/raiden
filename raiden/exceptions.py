@@ -56,8 +56,8 @@ class InvalidAddress(RaidenError):
 
 
 class InvalidAmount(RaidenError):
-    """ Raised when the user provided value is not an integer and cannot be
-    used to defined a transfer value.
+    """ Raised when the user provided value is not a positive integer and
+    cannot be used to define a transfer value.
     """
     pass
 
