@@ -215,15 +215,6 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
 This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
-For reasons of speed and financial efficiency the ``leave`` call will only close and settle channels for which the node has received a transfer.
-
-To override the default behaviour and leave all open channels add the following payload::
-
-  {
-      "only_receiving_channels": false
-  }
-
-
 .. _transferring-tokens:
 
 Transferring tokens

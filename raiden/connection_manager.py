@@ -134,10 +134,10 @@ class ConnectionManager:
             else:
                 self._open_channels()
 
-    def leave_async(self, only_receiving=True):
+    def leave_async(self):
         """ Async version of `leave()` """
         leave_result = AsyncResult()
-        gevent.spawn(self.leave, only_receiving).link(leave_result)
+        gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
     def leave(self, registry_address):

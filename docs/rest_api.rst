@@ -463,12 +463,6 @@ Connection Management
       Host: localhost:5001
       Content-Type: application/json
 
-      {
-          "only_receiving_channels": false
-      }
-
-   :reqjson boolean only_receiving_channels: Only close and settle channels where your node has received transfers. Defaults to ``true``.
-
    **Example Response**:
 
    .. sourcecode:: http
@@ -486,12 +480,6 @@ Connection Management
 
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
-
-   .. note::
-
-      The default behavior to close and settle only receiving channels is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
-
-      If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
 
 Transfers
 =========
@@ -550,7 +538,7 @@ Events are queried by two different endpoints depending on whether they are rela
 to a specific channel or not.
 
 All events can be filtered down by providing the query string arguments ``from_block``
-and/or ``to_block`` to query only a events from a limited range of blocks. The block number 
+and/or ``to_block`` to query only a events from a limited range of blocks. The block number
 argument needs to be in the range of 0 to UINT64_MAX. Any blocknumber outside this range will
 be rejected.
 
