@@ -228,6 +228,13 @@ class RaidenAPI:
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
         registry = self.raiden.chain.token_network_registry(registry_address)
+        token_network_address = registry.get_token_network(token_address)
+
+        if token_network_address is None:
+            raise InvalidAddress(
+                'Token network for token %s does not exist' % to_checksum_address(token_address),
+            )
+
         token_network = self.raiden.chain.token_network(
             registry.get_token_network(token_address),
         )
