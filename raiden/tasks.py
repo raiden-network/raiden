@@ -114,7 +114,7 @@ class AlarmTask(gevent.Greenlet):
 
                 if current_block > last_block_number + 1:
                     missed_blocks = current_block - last_block_number - 1
-                    log.error(
+                    log.info(
                         'missed blocks',
                         missed_blocks=missed_blocks,
                         current_block=current_block,
