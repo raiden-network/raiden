@@ -218,9 +218,9 @@ def handle_contract_send_channelclose(
         log.info(msg)
     except ChannelOutdatedError as e:
         log.debug(
-            f'{e.args}. '
-            f'Current channel identifier: {e.current_channel_id}, '
-            f'New channel identifier: {e.new_channel_id}',
+            e.args,
+            current_channel_identifier=e.current_channel_id,
+            new_channel_identifier=e.new_channel_id,
         )
 
 
@@ -251,9 +251,9 @@ def handle_contract_send_channelupdate(
             )
         except ChannelOutdatedError as e:
             log.debug(
-                f'{e.args}. '
-                f'Current channel identifier: {e.current_channel_id}, '
-                f'New channel identifier: {e.new_channel_id}',
+                e.args,
+                current_channel_identifier=e.current_channel_id,
+                new_channel_identifier=e.new_channel_id,
             )
 
 
@@ -269,9 +269,9 @@ def handle_contract_send_channelunlock(
         channel.unlock(channel_unlock_event.merkle_treee_leaves)
     except ChannelOutdatedError as e:
         log.debug(
-            f'{e.args}. '
-            f'Current channel identifier: {e.current_channel_id}, '
-            f'New channel identifier: {e.new_channel_id}',
+            e.args,
+            current_channel_identifier=e.current_channel_id,
+            new_channel_identifier=e.new_channel_id,
         )
 
 
@@ -340,9 +340,9 @@ def handle_contract_send_channelsettle(
         pass
     except ChannelOutdatedError as e:
         log.debug(
-            f'{e.args}. '
-            f'Current channel identifier: {e.current_channel_id}, '
-            f'New channel identifier: {e.new_channel_id}',
+            e.args,
+            current_channel_identifier=e.current_channel_id,
+            new_channel_identifier=e.new_channel_id,
         )
 
 
