@@ -164,7 +164,7 @@ class RaidenAPI:
             joinable_funds_target=joinable_funds_target,
         )
 
-    def token_network_leave(self, registry_address, token_address, only_receiving=True):
+    def token_network_leave(self, registry_address, token_address):
         """Close all channels and wait for settlement."""
         if not is_binary_address(token_address):
             raise InvalidAddress('token_address must be a valid address in binary')
@@ -182,7 +182,7 @@ class RaidenAPI:
             token_network_identifier,
         )
 
-        return connection_manager.leave(registry_address, only_receiving)
+        return connection_manager.leave(registry_address)
 
     def channel_open(
             self,

@@ -491,11 +491,10 @@ class RestAPI:
             status_code=HTTPStatus.NO_CONTENT,
         )
 
-    def leave(self, registry_address, token_address, only_receiving):
+    def leave(self, registry_address, token_address):
         closed_channels = self.raiden_api.token_network_leave(
             registry_address,
             token_address,
-            only_receiving,
         )
         closed_channels = [
             self.channel_schema.dump(channel_state).data
