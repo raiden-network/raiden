@@ -427,7 +427,7 @@ class TokenNetwork:
             if total_deposit < current_deposit:
                 raise DepositMismatch(
                     f'Current deposit ({current_deposit}) is already larger '
-                    f'than requested total deposit amount ({total_deposit})',
+                    f'than the requested total deposit amount ({total_deposit})',
                 )
             if amount_to_deposit <= 0:
                 raise ValueError(f'deposit {amount_to_deposit} must be greater than 0.')

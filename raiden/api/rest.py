@@ -80,7 +80,6 @@ ERROR_STATUS_CODES = [
     HTTPStatus.PAYMENT_REQUIRED,
     HTTPStatus.BAD_REQUEST,
     HTTPStatus.NOT_FOUND,
-    HTTPStatus.EXPECTATION_FAILED,
 ]
 
 URLS_V1 = [
@@ -431,12 +430,12 @@ class RestAPI:
             except DepositOverLimit as e:
                 return api_error(
                     errors=str(e),
-                    status_code=HTTPStatus.EXPECTATION_FAILED,
+                    status_code=HTTPStatus.CONFLICT,
                 )
             except DepositMismatch as e:
                 return api_error(
                     errors=str(e),
-                    status_code=HTTPStatus.EXPECTATION_FAILED,
+                    status_code=HTTPStatus.CONFLICT,
                 )
 
         channel_state = views.get_channelstate_for(
@@ -711,12 +710,12 @@ class RestAPI:
         except DepositOverLimit as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.EXPECTATION_FAILED,
+                status_code=HTTPStatus.CONFLICT,
             )
         except DepositMismatch as e:
             return api_error(
                 errors=str(e),
-                status_code=HTTPStatus.EXPECTATION_FAILED,
+                status_code=HTTPStatus.CONFLICT,
             )
 
         updated_channel_state = self.raiden_api.get_channel(
