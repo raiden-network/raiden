@@ -780,15 +780,18 @@ class RaidenAPI:
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
-    def get_token_network_events(
-            self,
-            token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
+    def get_token_network_events_blockchain(
+        self,
+        token_address: typing.TokenAddress,
+        from_block: typing.BlockSpecification = 0,
+        to_block: typing.BlockSpecification = 'latest',
     ):
+        """Returns a list of internal events
+        coresponding to the token_address.
+        """
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events',
+                'Expected binary address format for token in get_token_network_events blockchain',
             )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
@@ -812,7 +815,20 @@ class RaidenAPI:
                 encode_byte_values(event['args'])
 
             hexbytes_to_str(event)
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        return returned_events
 
+    def get_token_network_events_raiden(
+        self,
+        token_address,
+        from_block,
+        to_block='latest',
+    ):
+        """Returns a list of internal events
+        coresponding to the token_address.
+        """
+
+        returned_events = []
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,
             to_block=to_block,
@@ -820,7 +836,7 @@ class RaidenAPI:
 
         # Here choose which raiden internal events we want to expose to the end user
         for block_number, event in raiden_events:
-            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
+            if event['address'] == token_address:
                 new_event = {
                     'block_number': block_number,
                     'event': type(event).__name__,
