@@ -80,6 +80,10 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         this.channelsSubject.complete();
     }
 
+    rowTrackBy(index: number, channel: any) {
+        return channel.channel_identifier;
+    }
+
     public onTransfer(channel: Channel) {
         console.log('Transfer');
         this.action = 'transfer';
