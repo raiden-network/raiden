@@ -62,6 +62,7 @@ To register a token simply use the endpoint listed below:
 
    PUT /api/1/tokens/0x9aBa529db3FF2D8409A1da4C9eB148879b046700 HTTP/1.1
    Host: localhost:5001
+   Content-Type: application/json
 
 If successful this call will return the address of the freshly created Channel Manager like this:
 
@@ -122,7 +123,7 @@ Here it's interesting to notice that a ``channel_identifier`` has been generated
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address` and the ``participant_address`:
+A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -210,6 +211,7 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
    DELETE /api/1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671 HTTP/1.1
    Host: localhost:5001
+   Content-Type: application/json
 
 This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
@@ -240,6 +242,7 @@ Transferring tokens to another node is quite easy. The address of the token desi
 
    POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
+   Content-Type: application/json
 
    {
        "amount": 42
@@ -253,10 +256,11 @@ If there is a path in the network with enough capacity and the address sending t
 
    GET /api/1/events/channels/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
+   Content-Type: application/json
 
 Which will return a list of events. All that then needs to be done is to filter for incoming transfers.
 
-Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called a *mediated transfers*.
+Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
 
 
 .. _close:

@@ -43,7 +43,9 @@ Or you can use Homebrew to install the most up to date binary::
     brew tap raiden-network/raiden
     brew install raiden
 
-An Ethereum client is required in both cases.
+An Ethereum client is required in both cases. The Raiden binary takes the same command line
+arguments as the ``raiden`` script.
+
 
 Dependencies
 ************
@@ -107,7 +109,7 @@ Firing it up
 =============
 
 In order to use Raiden it is required to have a specific ethereum account dedicated to Raiden. Create an account for Raiden and fill it up with ETH and some tokens you want to have in payment channels and let the Raiden client manage it.
-**Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result to undefined behaviour**.
+**Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour**.
 
 Using geth
 **********
@@ -131,15 +133,12 @@ Run the client and let it sync with the Ropsten testnet::
 
     parity --chain ropsten --bootnodes "enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303,enode://6ce05930c72abc632c58e2e4324f7c7ea478cec0ed4fa2528982cf34483094e9cbc9216e7aa349691242576d552a2a56aaeae426c5303ded677ce455ba1acd9d@13.84.180.240:30303"
 
-After syncing the chain, create an account on the Ropsten testnet by navigating to the url that parity shows.  It is usually::
-
-    http://127.0.0.1:8180
-
+After syncing the chain, an existing Ethereum account can be used or a new one can be generated using ``parity-ethkey``.
 After account creation, launch Raiden with the path of your keystore supplied::
 
     raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
 
-Select the Ethereum account when prompted, and type in the account's password.
+Select the desired Ethereum account when prompted, and type in the account's password.
 
 
 See the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden.
