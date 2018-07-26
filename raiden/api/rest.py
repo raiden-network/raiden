@@ -35,6 +35,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     DepositOverLimit,
     DepositMismatch,
+    TokenNotRegistered,
 )
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -397,7 +398,7 @@ class RestAPI:
                 status_code=HTTPStatus.ACCEPTED,
             )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
-                AddressWithoutCode, DuplicatedChannelError) as e:
+                AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,

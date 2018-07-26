@@ -29,6 +29,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     DepositOverLimit,
     DuplicatedChannelError,
+    TokenNotRegistered,
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -231,7 +232,7 @@ class RaidenAPI:
         token_network_address = registry.get_token_network(token_address)
 
         if token_network_address is None:
-            raise InvalidAddress(
+            raise TokenNotRegistered(
                 'Token network for token %s does not exist' % to_checksum_address(token_address),
             )
 
