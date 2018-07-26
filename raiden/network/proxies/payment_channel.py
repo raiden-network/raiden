@@ -12,6 +12,7 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
+from raiden.exceptions import ChannelOutdatedError
 from raiden.utils import typing
 from raiden.utils.filters import (
     get_filter_args_for_specific_event_from_channel,
@@ -114,6 +115,9 @@ class PaymentChannel:
             signature: typing.Signature,
     ):
         """ Closes the channel using the provided balance proof. """
+
+        self.check_outdated_channel()
+
         self.token_network.close(
             partner=self.participant2,
             nonce=nonce,
@@ -131,6 +135,9 @@ class PaymentChannel:
             signature: typing.Signature,
     ):
         """ Updates the channel using the provided balance proof. """
+
+        self.check_outdated_channel()
+
         self.token_network.update_transfer(
             partner=self.participant2,
             nonce=nonce,
@@ -141,6 +148,8 @@ class PaymentChannel:
         )
 
     def unlock(self, merkle_tree_leaves: bytes):
+        self.check_outdated_channel()
+
         self.token_network.unlock(
             self.participant2,
             merkle_tree_leaves,
@@ -156,6 +165,9 @@ class PaymentChannel:
             partner_locksroot: typing.Locksroot,
     ):
         """ Settles the channel. """
+
+        self.check_outdated_channel()
+
         self.token_network.settle(
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
@@ -216,3 +228,20 @@ class PaymentChannel:
             to_block=to_block,
         )
         return channel_filter, unlock_filter
+
+    def check_outdated_channel(self):
+        onchain_channel_details = self.token_network.detail_channel(
+            self.participant1,
+            self.participant2,
+        )
+
+        onchain_channel_identifier = onchain_channel_details.get(
+            'channel_identifier',
+        )
+
+        if onchain_channel_identifier != self.channel_identifier:
+            raise ChannelOutdatedError(
+                message='Current channel identifier is outdated.',
+                current_channel_id=self.channel_identifier,
+                new_channel_id=onchain_channel_identifier,
+            )
