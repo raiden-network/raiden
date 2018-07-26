@@ -85,6 +85,11 @@ class UnknownTokenAddress(RaidenError):
     pass
 
 
+class TokenNotRegistered(RaidenError):
+    """ Raised if there is no token network for token used when opening a channel  """
+    pass
+
+
 class AlreadyRegisteredTokenAddress(RaidenError):
     """ Raised when the token address in already registered with the given network. """
     pass
