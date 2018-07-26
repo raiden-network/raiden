@@ -374,6 +374,26 @@ style consistency's sake and may change in the future as there [may
 be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better)
 a tiny change in performance.
 
+Class attributes and functions:
+
+All class members should be private by default and they should start with a leading `_`. Whatever is part of the interface of
+the class should not have the leading underscore. The public interface of the class is what we should be testing in our tests
+and it should be the only way other parts of the code use the class through.
+
+Minimal Example:
+
+```python
+
+class Diary(object):
+
+    def __init__(self, entries):
+        self._entries = entries
+
+    def entry(index):
+        return _entries[index]
+
+```
+
 **NewTypes and type comparisons**
 
 For often used types it makes sense to define new types using the `typing.NewType` function.
