@@ -32,7 +32,7 @@ def configure_logging(
 ):
     if logger_level_config is None:
         logger_level_config = {'': DEFAULT_LOG_LEVEL}
-    timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S")
+    timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False)
     processors = [
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
