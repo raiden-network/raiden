@@ -448,6 +448,7 @@ Connection Management
    :statuscode 204: For a successful connection creation
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions
    :statuscode 408: If a timeout happened during any of the transactions
+   :statuscode 409: If any of the provided input to the call is invalid.
    :statuscode 500: Internal Raiden node error
 
 .. http:delete:: /api/(version)/connections/(token_address)
