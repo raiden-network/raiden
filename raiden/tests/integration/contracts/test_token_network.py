@@ -9,9 +9,9 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MIN,
     TEST_SETTLE_TIMEOUT_MAX,
 )
+from raiden_libs.messages import BalanceProof
+from raiden_libs.utils.signing import sign_data
 
-from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.proxies import TokenNetwork
 from raiden.constants import EMPTY_HASH
 from raiden.exceptions import (
     InvalidSettleTimeout,
@@ -21,9 +21,9 @@ from raiden.exceptions import (
     ChannelIncorrectStateError,
     DepositMismatch,
 )
+from raiden.network.proxies import TokenNetwork
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils import wait_blocks
-from raiden_libs.messages import BalanceProof
-from raiden_libs.utils.signing import sign_data
 
 
 def test_token_network_deposit_race(
@@ -31,7 +31,6 @@ def test_token_network_deposit_race(
         private_keys,
         blockchain_rpc_ports,
         token_proxy,
-        chain_id,
         web3,
 ):
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
