@@ -107,7 +107,7 @@ class ConnectionManager:
         """
         if funds <= 0:
             raise InvalidAmount(
-                'The funds to use in the connection need to be a positive integer'
+                'The funds to use in the connection need to be a positive integer',
             )
 
         with self.lock:
