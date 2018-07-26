@@ -36,6 +36,7 @@ from raiden.exceptions import (
     InvalidAddress,
     ContractVersionMismatch,
     InvalidSettleTimeout,
+    DepositMismatch,
 )
 from raiden.settings import (
     EXPECTED_CONTRACTS_VERSION,
@@ -423,6 +424,11 @@ class TokenNetwork:
             #
             current_deposit = self.detail_participant(self.node_address, partner)['deposit']
             amount_to_deposit = total_deposit - current_deposit
+            if total_deposit < current_deposit:
+                raise DepositMismatch(
+                    f'Current deposit ({current_deposit}) is already larger '
+                    f'than requested total deposit amount ({total_deposit})',
+                )
             if amount_to_deposit <= 0:
                 raise ValueError(f'deposit {amount_to_deposit} must be greater than 0.')
 

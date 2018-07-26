@@ -34,6 +34,7 @@ from raiden.exceptions import (
     TransactionThrew,
     UnknownTokenAddress,
     DepositOverLimit,
+    DepositMismatch,
 )
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -432,6 +433,11 @@ class RestAPI:
                     errors=str(e),
                     status_code=HTTPStatus.EXPECTATION_FAILED,
                 )
+            except DepositMismatch as e:
+                return api_error(
+                    errors=str(e),
+                    status_code=HTTPStatus.EXPECTATION_FAILED,
+                )
 
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(self.raiden_api.raiden),
@@ -703,6 +709,11 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
         except DepositOverLimit as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.EXPECTATION_FAILED,
+            )
+        except DepositMismatch as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.EXPECTATION_FAILED,

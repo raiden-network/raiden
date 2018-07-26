@@ -41,6 +41,15 @@ class DepositOverLimit(RaidenError):
     pass
 
 
+class DepositMismatch(RaidenError):
+    """ Raised when the requested deposit is lower than actual channel deposit
+
+    Used when a *user* tries to deposit a given amount of token in a channel,
+    but the on-chain amount is already higher.
+    """
+    pass
+
+
 class InvalidAddress(RaidenError):
     """ Raised when the user provided value is not a valid address. """
     pass
