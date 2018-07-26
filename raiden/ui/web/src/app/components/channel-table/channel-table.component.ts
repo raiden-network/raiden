@@ -208,19 +208,16 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
             {
                 label: 'Transfer',
                 icon: 'fa fa-exchange',
-                disabled: !this.channelCanTransfer(channel),
                 command: () => this.onTransfer(channel)
             },
             {
                 label: 'Deposit',
                 icon: 'fa fa-money',
-                disabled: this.channelIsNotOpen(channel),
                 command: () => this.onDeposit(channel)
             },
             {
                 label: 'Close',
                 icon: 'fa fa-close',
-                disabled: channel.state !== 'opened',
                 command: () => this.onClose(channel)
             },
             {
