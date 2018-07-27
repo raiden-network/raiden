@@ -6,7 +6,6 @@ gevent.monkey.patch_all()
 import errno
 import json
 import os
-import shutil
 import signal
 import sys
 import tempfile
@@ -70,7 +69,6 @@ from raiden.tasks import check_version
 from raiden.utils import (
     eth_endpoint_to_hostport,
     get_system_spec,
-    is_minified_address,
     merge_dict,
     split_endpoint,
     typing,
@@ -1254,55 +1252,3 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     if not success:
         sys.exit(1)
-
-
-def _removedb(netdir, address_hex):
-    user_db_dir = os.path.join(netdir, address_hex[:8]) if address_hex else netdir
-
-    if not os.path.exists(user_db_dir):
-        return False
-
-    # Sanity check if the specified directory is a Raiden datadir.
-    sane = True
-    if not address_hex:
-        ls = os.listdir(user_db_dir)
-        sane = all(
-            is_minified_address(f) and
-            len(f) == 8 and
-            os.path.isdir(os.path.join(user_db_dir, f))
-            for f in ls
-        )
-
-    if not sane:
-        print('WARNING: The specified directory does not appear to be a Raiden data directory.')
-
-    prompt = 'Are you sure you want to delete {}?'.format(user_db_dir)
-
-    if click.confirm(prompt):
-        shutil.rmtree(user_db_dir)
-        print('Local data deleted.')
-    else:
-        print('Aborted.')
-
-    return True
-
-
-@run.command()
-@click.pass_context
-def removedb(ctx):
-    """Delete local cache and database of this address or all if none is specified."""
-
-    datadir = ctx.obj['datadir']
-    address = ctx.obj['address']
-    address_hex = to_normalized_address(address) if address else None
-
-    result = False
-    for f in os.listdir(datadir):
-        netdir = os.path.join(datadir, f)
-        if os.path.isdir(netdir):
-            if _removedb(netdir, address_hex):
-                result = True
-
-    if not result:
-        print('No raiden databases found for {}'.format(address_hex))
-        print('Nothing to delete.')
