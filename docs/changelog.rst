@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`1883` Properly update menu state when channel state changes on webui
 * :bug:`1969` Return E409 if negative ``initial_funds`` are given to the connect endpoint
 * :bug:`1960` Return E409 when trying to open a channel for a token that is not registered
 * :bug:`1916` Return E409 on two concurrent conflicting channel deposits
