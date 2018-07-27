@@ -157,8 +157,7 @@ class SQLiteStorage:
             ]
         except AttributeError:
             raise InvalidDBData(
-                'Invalid DB Data. Please use the removedb command and start '
-                'with a fresh database.',
+                'Your local database is corrupt. Bailing ...'
             )
 
         return result
