@@ -32,11 +32,14 @@ ROPSTEN_SECRET_REGISTRY_ADDRESS = '0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8'
 
 DISCOVERY_TX_GAS_LIMIT = 76000
 
+
 # The more pending transfers there are, the more computationally complex
-# it becomes to unlock them. The maximal number defined here cannot be
-# exceeded lest we run out of gas trying to unlock.
-# TODO compute a reasonable value based on the available gas limit
-MAXIMUM_PENDING_TRANSFERS = 8
+# it becomes to unlock them. Lest an unlocking operation fails because
+# not enough gas is available, we define a gas limit for unlock calls
+# and limit the number of pending transfers per channel so it is not
+# exceeded. The limit is inclusive.
+UNLOCK_TX_GAS_LIMIT = int(0.4 * 3141592)
+MAXIMUM_PENDING_TRANSFERS = 160
 
 
 ETH_RPC_DEFAULT_PORT = 8545
