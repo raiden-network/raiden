@@ -32,7 +32,7 @@ def check_if_nightly(version):
         git_version, _ = subprocess.Popen(
             shlex.split('git describe --tags --abbrev=8'),
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         ).communicate()
         git_version = git_version.decode()
 
@@ -376,7 +376,7 @@ texinfo_documents = [
         author,
         'Raiden',
         'One line description of project.',
-        'Miscellaneous'
+        'Miscellaneous',
     ),
 ]
 
