@@ -7,16 +7,12 @@ from gevent.lock import BoundedSemaphore
 from gevent.event import Event
 from gevent.timeout import Timeout
 import structlog
-import click
 
 from raiden.api.python import RaidenAPI
-from raiden.network.sockfactory import SocketFactory
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.ui.cli import options, app, split_endpoint, signal, APIServer, RestAPI
-from raiden.utils import pex, get_system_spec
-from raiden.utils.cli import ADDRESS_TYPE
+from raiden.utils import pex
 
 
 log = structlog.get_logger(__name__)
@@ -52,7 +48,8 @@ class EchoNode:
                     pex(self.api.raiden.address),
                     pex(self.token_address),
                 ))
-            self.api.connect_token_network(
+            self.api.token_network_connect(
+                self.api.raiden.default_registry.address,
                 self.token_address,
                 token.balance_of(self.api.raiden.address),
                 initial_channel_target=10,
@@ -70,6 +67,7 @@ class EchoNode:
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
+        log.info('Echo node started')
 
     def echo_node_alarm_callback(self, block_number, chain_id):
         """ This can be registered with the raiden AlarmTask.
@@ -171,8 +169,8 @@ class EchoNode:
             initiator """
         echo_amount = 0
         if transfer['amount'] % 3 == 0:
-            log.debug(
-                'minus one transfer received',
+            log.info(
+                'ECHO amount - 1',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
                 identifier=transfer['identifier'],
@@ -180,8 +178,8 @@ class EchoNode:
             echo_amount = transfer['amount'] - 1
 
         elif transfer['amount'] == 7:
-            log.debug(
-                'lucky number transfer received',
+            log.info(
+                'ECHO lucky number draw',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
                 identifier=transfer['identifier'],
@@ -252,84 +250,3 @@ class EchoNode:
         self.stop_signal = True
         self.greenlets.append(self.echo_worker_greenlet)
         gevent.wait(self.greenlets)
-
-
-@click.group(invoke_without_command=True)
-@options
-@click.option('--token-address', type=ADDRESS_TYPE, required=True)
-@click.pass_context
-def runner(ctx, **kwargs):
-    """ Start a raiden Echo Node that will send received transfers back to the initiator. """
-    # This is largely a copy&paste job from `raiden.ui.cli::run`, with the difference that
-    # an `EchoNode` is instantiated from the App's `RaidenAPI`.
-    print('Welcome to Raiden, version {} [Echo Node]'.format(get_system_spec()['raiden']))
-    structlog.configure(
-        kwargs['structlog'],
-        log_json=kwargs['log_json'],
-        log_file=kwargs['logfile'],
-    )
-    if kwargs['logfile']:
-        # Disable stream structlog
-        root = structlog.get_logger()
-        for handler in root.handlers:
-            if isinstance(handler, structlog.structlog.StreamHandler):
-                root.handlers.remove(handler)
-                break
-
-    token_address = kwargs.pop('token_address')
-
-    (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-    with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
-        kwargs['mapped_socket'] = mapped_socket
-
-        app_ = ctx.invoke(app, **kwargs)
-
-        domain_list = []
-        if kwargs['rpccorsdomain']:
-            if ',' in kwargs['rpccorsdomain']:
-                for domain in kwargs['rpccorsdomain'].split(','):
-                    domain_list.append(str(domain))
-            else:
-                domain_list.append(str(kwargs['rpccorsdomain']))
-
-        raiden_api = RaidenAPI(app_.raiden)
-        if ctx.params['rpc']:
-            rest_api = RestAPI(raiden_api)
-            api_server = APIServer(
-                rest_api,
-                cors_domain_list=domain_list,
-                web_ui=ctx.params['web_ui'],
-            )
-            (api_host, api_port) = split_endpoint(kwargs['api_address'])
-            api_server.start(api_host, api_port)
-
-            print(
-                'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
-                'See the Raiden documentation for all available endpoints at\n'
-                'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
-                    api_host,
-                    api_port,
-                ),
-            )
-
-        # This will install the EchoNode callback in the alarm task:
-        echo = EchoNode(raiden_api, token_address)
-
-        event = gevent.event.Event()
-        gevent.signal(signal.SIGQUIT, event.set)
-        gevent.signal(signal.SIGTERM, event.set)
-        gevent.signal(signal.SIGINT, event.set)
-        event.wait()
-
-        # This will remove the EchoNode callback from the alarm task:
-        echo.stop()
-
-        try:
-            api_server.stop()
-        except NameError:
-            pass
-    app_.stop(leave_channels=False)
-
-
-if __name__ == '__main__':
-    runner()
