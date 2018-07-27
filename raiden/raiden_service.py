@@ -214,6 +214,7 @@ class RaidenService:
             state_change = ActionInitChain(
                 random.Random(),
                 block_number,
+                self.chain.node_address,
                 self.chain.network_id,
             )
             self.wal.log_and_dispatch(state_change, block_number)

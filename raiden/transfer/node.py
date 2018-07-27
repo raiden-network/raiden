@@ -10,6 +10,8 @@ from raiden.transfer.mediated_transfer import (
     target,
 )
 from raiden.transfer.architecture import (
+    ContractReceiveStateChange,
+    ContractSendEvent,
     SendMessageEvent,
     StateChange,
     TransitionResult,
@@ -423,6 +425,7 @@ def handle_chain_init(
     chain_state = ChainState(
         state_change.pseudo_random_generator,
         state_change.block_number,
+        state_change.our_address,
         state_change.chain_id,
     )
     events = list()
@@ -813,8 +816,25 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def update_queues(iteration: TransitionResult):
+def is_transaction_sucessful(transaction, state_change):  # pylint: disable=unused-argument
+    return False
+
+
+def update_queues(iteration: TransitionResult, state_change):
     chain_state = iteration.new_state
+
+    is_our_transaction = (
+        isinstance(state_change, ContractReceiveStateChange) and
+        state_change.transaction_from == chain_state.our_address
+    )
+    if is_our_transaction:
+        indeces_to_remove = []
+        for idx, transaction in enumerate(chain_state.pending_transactions):
+            if is_transaction_sucessful(transaction, state_change):
+                indeces_to_remove.append(idx)
+
+        for idx in reversed(indeces_to_remove):
+            chain_state.pending_transactions.pop(idx)
 
     for event in iteration.events:
         if isinstance(event, SendMessageEvent):
@@ -822,13 +842,16 @@ def update_queues(iteration: TransitionResult):
             queue = chain_state.queueids_to_queues.setdefault(queueid, [])
             queue.append(event)
 
+        if isinstance(event, ContractSendEvent):
+            chain_state.pending_transactions.append(event)
+
 
 def state_transition(chain_state: ChainState, state_change):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     iteration = handle_state_change(chain_state, state_change)
 
-    update_queues(iteration)
+    update_queues(iteration, state_change)
     sanity_check(iteration)
 
     return iteration
