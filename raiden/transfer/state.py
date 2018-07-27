@@ -85,13 +85,14 @@ class ChainState(State):
     """
 
     __slots__ = (
-        'queueids_to_queues',
-        'pseudo_random_generator',
         'block_number',
+        'chain_id',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
         'payment_mapping',
-        'chain_id',
+        'pending_transactions',
+        'pseudo_random_generator',
+        'queueids_to_queues',
     )
 
     def __init__(
@@ -106,13 +107,14 @@ class ChainState(State):
         if not isinstance(chain_id, typing.T_ChainID):
             raise ValueError('chain_id must be of ChainID type')
 
-        self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
         self.chain_id = chain_id
-        self.queueids_to_queues = dict()
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
         self.payment_mapping = PaymentMappingState()
+        self.pending_transactions = list()
+        self.pseudo_random_generator = pseudo_random_generator
+        self.queueids_to_queues = dict()
 
     def __repr__(self):
         return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
@@ -849,8 +851,10 @@ class NettingChannelEndState(State):
             self.contract_balance == other.contract_balance and
             self.secrethashes_to_lockedlocks == other.secrethashes_to_lockedlocks and
             self.secrethashes_to_unlockedlocks == other.secrethashes_to_unlockedlocks and
-            (self.secrethashes_to_onchain_unlockedlocks ==
-                other.secrethashes_to_onchain_unlockedlocks) and
+            (
+                self.secrethashes_to_onchain_unlockedlocks ==
+                other.secrethashes_to_onchain_unlockedlocks
+            ) and
             self.merkletree == other.merkletree and
             self.balance_proof == other.balance_proof
         )

@@ -1,5 +1,6 @@
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
+    ContractSendEvent,
     Event,
     SendMessageEvent,
 )
@@ -8,7 +9,7 @@ from raiden.utils import pex, typing, sha3
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
-class ContractSendChannelClose(Event):
+class ContractSendChannelClose(ContractSendEvent):
     """ Event emitted to close the netting channel.
     This event is used when a node needs to prepare the channel to unlock
     on-chain.
@@ -43,7 +44,7 @@ class ContractSendChannelClose(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelSettle(Event):
+class ContractSendChannelSettle(ContractSendEvent):
     """ Event emitted if the netting channel must be settled. """
 
     def __init__(
@@ -103,7 +104,7 @@ class ContractSendChannelSettle(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelUpdateTransfer(Event):
+class ContractSendChannelUpdateTransfer(ContractSendEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
 
     def __init__(self, channel_identifier, token_network_identifier, balance_proof):
@@ -132,7 +133,7 @@ class ContractSendChannelUpdateTransfer(Event):
         return not self.__eq__(other)
 
 
-class ContractSendChannelBatchUnlock(Event):
+class ContractSendChannelBatchUnlock(ContractSendEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
     def __init__(self, token_network_identifier, channel_identifier, merkle_treee_leaves):
@@ -159,7 +160,7 @@ class ContractSendChannelBatchUnlock(Event):
         return not self.__eq__(other)
 
 
-class ContractSendSecretReveal(Event):
+class ContractSendSecretReveal(ContractSendEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
     def __init__(self, secret: typing.Secret):
