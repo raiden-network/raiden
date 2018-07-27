@@ -138,7 +138,22 @@ class TokenRaidenEventsResource(BaseResource):
         )
 
 
-class ChannelEventsResource(BaseResource):
+# class ChannelEventsResource(BaseResource):
+#
+#     get_schema = EventRequestSchema()
+#
+#     @use_kwargs(get_schema, locations=('query',))
+#     def get(self, token_address, partner_address=None, from_block=None, to_block=None):
+#         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
+#         to_block = to_block or 'latest'
+#         return self.rest_api.get_channel_events(
+#             token_address=token_address,
+#             partner_address=partner_address,
+#             from_block=from_block,
+#             to_block=to_block,
+#         )
+
+class ChannelBlockchainEventsResource(BaseResource):
 
     get_schema = EventRequestSchema()
 
@@ -146,7 +161,23 @@ class ChannelEventsResource(BaseResource):
     def get(self, token_address, partner_address=None, from_block=None, to_block=None):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
-        return self.rest_api.get_channel_events(
+        return self.rest_api.get_channel_events_blockchain(
+            token_address=token_address,
+            partner_address=partner_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
+
+
+class ChannelRaidenEventsResource(BaseResource):
+
+    get_schema = EventRequestSchema()
+
+    @use_kwargs(get_schema, locations=('query',))
+    def get(self, token_address, partner_address=None, from_block=None, to_block=None):
+        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
+        to_block = to_block or 'latest'
+        return self.rest_api.get_channel_events_raiden(
             token_address=token_address,
             partner_address=partner_address,
             from_block=from_block,
