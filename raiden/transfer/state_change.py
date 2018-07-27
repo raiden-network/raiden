@@ -234,6 +234,7 @@ class ActionInitChain(StateChange):
             self,
             pseudo_random_generator,
             block_number: typing.BlockNumber,
+            our_address: typing.Address,
             chain_id: typing.ChainID,
     ):
         if not isinstance(block_number, int):
@@ -242,9 +243,10 @@ class ActionInitChain(StateChange):
         if not isinstance(chain_id, int):
             raise ValueError('chain_id must be int')
 
-        self.pseudo_random_generator = pseudo_random_generator
         self.block_number = block_number
         self.chain_id = chain_id
+        self.our_address = our_address
+        self.pseudo_random_generator = pseudo_random_generator
 
     def __repr__(self):
         return '<ActionInitChain block_number:{} chain_id:{}>'.format(

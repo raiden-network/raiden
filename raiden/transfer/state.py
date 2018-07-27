@@ -89,6 +89,7 @@ class ChainState(State):
         'chain_id',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
+        'our_address',
         'payment_mapping',
         'pending_transactions',
         'pseudo_random_generator',
@@ -99,6 +100,7 @@ class ChainState(State):
             self,
             pseudo_random_generator: random.Random,
             block_number: typing.BlockNumber,
+            our_address: typing.Address,
             chain_id: typing.ChainID,
     ):
         if not isinstance(block_number, typing.T_BlockNumber):
@@ -111,6 +113,7 @@ class ChainState(State):
         self.chain_id = chain_id
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
+        self.our_address = our_address
         self.payment_mapping = PaymentMappingState()
         self.pending_transactions = list()
         self.pseudo_random_generator = pseudo_random_generator

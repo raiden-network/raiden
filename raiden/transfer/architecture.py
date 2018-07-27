@@ -91,7 +91,8 @@ class ContractSendEvent(Event):
 
 
 class ContractReceiveStateChange(StateChange):
-    pass
+    def __init__(self, transaction_from):
+        self.transaction_from = transaction_from
 
 
 class StateManager:
