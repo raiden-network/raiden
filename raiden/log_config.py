@@ -1,6 +1,8 @@
 import logging.config
 import structlog
-from typing import Dict
+import re
+from functools import wraps
+from typing import Dict, Callable, Pattern
 
 
 DEFAULT_LOG_LEVEL = 'INFO'
@@ -24,6 +26,33 @@ def _get_log_handler(formatter, log_file):
         }
 
 
+def redactor(blacklist: Dict[Pattern, str]) -> Callable:
+    """Returns a function which transforms a str, replacing all matches for its replacement"""
+    def processor_wrapper(msg: str) -> str:
+        for regex, repl in blacklist.items():
+            if repl is None:
+                repl = '<redacted>'
+            msg = regex.sub(repl, msg)
+        return msg
+    return processor_wrapper
+
+
+def _chain(first_func, *funcs) -> Callable:
+    """Chains a give number of functions.
+
+    First function receives all args/kwargs. Its result is passed on as an argument
+    to the second one and so on and so forth until all function arguments are used.
+    The last result is then returned.
+    """
+    @wraps(first_func)
+    def wrapper(*args, **kwargs):
+        result = first_func(*args, **kwargs)
+        for func in funcs:
+            result = func(result)
+        return result
+    return wrapper
+
+
 def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
@@ -41,10 +70,16 @@ def configure_logging(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
+
     formatter = 'colorized' if colorize and not log_file else 'plain'
     if log_json:
         formatter = 'json'
     log_handler = _get_log_handler(formatter, log_file)
+
+    redact = redactor({
+        re.compile(r'\b(access_?token=)([a-z0-9_-]+)', re.I): r'\1<redacted>',
+    })
+
     logging.config.dictConfig(
         {
             'version': 1,
@@ -52,17 +87,17 @@ def configure_logging(
             'formatters': {
                 'plain': {
                     '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': structlog.dev.ConsoleRenderer(colors=False),
+                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
                     'foreign_pre_chain': processors,
                 },
                 'json': {
                     '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': structlog.processors.JSONRenderer(),
+                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
                     'foreign_pre_chain': processors,
                 },
                 'colorized': {
                     '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': structlog.dev.ConsoleRenderer(colors=True),
+                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=True), redact),
                     'foreign_pre_chain': processors,
                 },
             },
