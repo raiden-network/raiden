@@ -61,9 +61,10 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenBlockchainEventsResource,
     TokenRaidenEventsResource,
-    ChannelEventsResource,
-    ConnectionsResource,
+    ChannelRaidenEventsResource,
+    ChannelBlockchainEventsResource,
     ConnectionsInfoResource,
+    ConnectionsResource,
     PaymentResource,
 )
 from raiden.transfer import channel, views
@@ -102,13 +103,22 @@ URLS_V1 = [
     ('/events/tokens/blockchain/<hexaddress:token_address>', TokenBlockchainEventsResource),
     ('/events/tokens/raiden/<hexaddress:token_address>', TokenRaidenEventsResource),
     (
-        '/events/channels/<hexaddress:token_address>',
-        ChannelEventsResource,
-        'tokenchanneleventsresource',
+        '/events/channels/blockchain/<hexaddress:token_address>',
+        ChannelBlockchainEventsResource,
+        'tokenchanneleventsresourceblockchain',
     ),
     (
-        '/events/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
-        ChannelEventsResource,
+        '/events/channels/raiden/<hexaddress:token_address>',
+        ChannelRaidenEventsResource,
+        'tokenchanneleventsresourceraiden',
+    ),
+    (
+        '/events/channels/blockchain/<hexaddress:token_address>/<hexaddress:partner_address>',
+        ChannelBlockchainEventsResource,
+    ),
+    (
+        '/events/channels/raiden/<hexaddress:token_address>/<hexaddress:partner_address>',
+        ChannelRaidenEventsResource,
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
     ('/connections', ConnectionsInfoResource),
@@ -615,6 +625,7 @@ class RestAPI:
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
+
     def get_payment_history(
             self,
             token_address: typing.TokenAddress = None,
@@ -653,7 +664,7 @@ class RestAPI:
 
         return api_response(result=result)
 
-    def get_channel_events(
+    def get_channel_events_blockchain(
             self,
             token_address,
             partner_address=None,
@@ -661,7 +672,7 @@ class RestAPI:
             to_block=None,
     ):
         try:
-            raiden_service_result = self.raiden_api.get_channel_events(
+            raiden_service_result = self.raiden_api.get_channel_events_blockchain(
                 token_address,
                 partner_address,
                 from_block,
@@ -671,6 +682,25 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         return api_response(result=normalize_events_list(raiden_service_result))
+
+    def get_channel_events_raiden(
+            self,
+            token_address,
+            partner_address=None,
+            from_block=None,
+            to_block=None,
+    ):
+        try:
+            raiden_service_result = self.raiden_api.get_channel_events_raiden(
+                token_address,
+                partner_address,
+                from_block,
+                to_block,
+            )
+        except InvalidBlockNumberInput as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+
+        return api_response(result=raiden_service_result)
 
     def get_channel(self, registry_address, token_address, partner_address):
         try:
@@ -886,5 +916,4 @@ class RestAPI:
                 errors='Provided invalid channel state {}'.format(state),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
-
         return result

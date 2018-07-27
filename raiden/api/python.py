@@ -737,7 +737,7 @@ class RaidenAPI:
 
         return events
 
-    def get_channel_events(
+    def get_channel_events_blockchain(
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
@@ -761,21 +761,37 @@ class RaidenAPI:
                 from_block=from_block,
                 to_block=to_block,
             ))
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        return returned_events
 
+    def get_channel_events_raiden(
+            self,
+            token_address: typing.Address,
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
+        returned_events = []
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,
             to_block=to_block,
         )
-
         # Here choose which raiden internal events we want to expose to the end user
         for block_number, event in raiden_events:
-            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
-                new_event = {
-                    'block_number': block_number,
-                    'event': type(event).__name__,
-                }
-                new_event.update(event.__dict__)
-                returned_events.append(new_event)
+            new_event = {
+                'block_number': block_number,
+                'event': type(event).__name__,
+            }
+            if hasattr(event, 'transfer'):
+                if event.transfer.token == token_address:
+                    event.transfer = event.transfer.__repr__()
+                    new_event.update(event.__dict__)
+            elif hasattr(event, 'token'):
+                if event.token == token_address:
+                    event.balance_proof = event.balance_proof.__repr__()
+                    new_event.update(event.__dict__)
+            encode_byte_values(new_event)
+            returned_events.append(new_event)
 
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
@@ -834,16 +850,21 @@ class RaidenAPI:
             to_block=to_block,
         )
 
-        # Here choose which raiden internal events we want to expose to the end user
         for block_number, event in raiden_events:
-            if event['address'] == token_address:
-                new_event = {
-                    'block_number': block_number,
-                    'event': type(event).__name__,
-                }
-                new_event.update(event.__dict__)
-                returned_events.append(new_event)
-
+            new_event = {
+                'block_number': block_number,
+                'event': type(event).__name__,
+            }
+            if hasattr(event, 'transfer'):
+                if event.transfer.token == token_address:
+                    event.transfer = event.transfer.__repr__()
+                    new_event.update(event.__dict__)
+            elif hasattr(event, 'token'):
+                if event.token == token_address:
+                    event.balance_proof = event.balance_proof.__repr__()
+                    new_event.update(event.__dict__)
+            encode_byte_values(new_event)
+            returned_events.append(new_event)
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
