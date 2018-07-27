@@ -10,6 +10,7 @@ from raiden.transfer.mediated_transfer import (
 )
 from raiden.transfer.architecture import (
     SendMessageEvent,
+    StateChange,
     TransitionResult,
 )
 from raiden.transfer.events import (
@@ -20,6 +21,7 @@ from raiden.transfer.state import (
     ChainState,
     PaymentMappingState,
     PaymentNetworkState,
+    TokenNetworkState,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -52,9 +54,14 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
+from raiden.utils import typing
 
 
-def get_networks(chain_state, payment_network_identifier, token_address):
+def get_networks(
+        chain_state: ChainState,
+        payment_network_identifier: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+) -> typing.Tuple[PaymentNetworkState, TokenNetworkState]:
     token_network_state = None
     payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
         payment_network_identifier,
@@ -68,7 +75,11 @@ def get_networks(chain_state, payment_network_identifier, token_address):
     return payment_network_state, token_network_state
 
 
-def get_token_network_by_token_address(chain_state, payment_network_identifier, token_address):
+def get_token_network_by_token_address(
+        chain_state: ChainState,
+        payment_network_identifier: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+) -> TokenNetworkState:
     _, token_network_state = get_networks(
         chain_state,
         payment_network_identifier,
@@ -78,7 +89,11 @@ def get_token_network_by_token_address(chain_state, payment_network_identifier, 
     return token_network_state
 
 
-def subdispatch_to_all_channels(chain_state, state_change, block_number):
+def subdispatch_to_all_channels(
+        chain_state: ChainState,
+        state_change: StateChange,
+        block_number: typing.BlockNumber,
+) -> TransitionResult:
     events = list()
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
@@ -95,7 +110,10 @@ def subdispatch_to_all_channels(chain_state, state_change, block_number):
     return TransitionResult(chain_state, events)
 
 
-def subdispatch_to_all_lockedtransfers(chain_state, state_change):
+def subdispatch_to_all_lockedtransfers(
+        chain_state: ChainState,
+        state_change: StateChange,
+) -> TransitionResult:
     events = list()
 
     for secrethash in chain_state.payment_mapping.secrethashes_to_task.keys():
@@ -105,7 +123,11 @@ def subdispatch_to_all_lockedtransfers(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def subdispatch_to_paymenttask(chain_state, state_change, secrethash):
+def subdispatch_to_paymenttask(
+        chain_state: ChainState,
+        state_change: StateChange,
+        secrethash: typing.SecretHash,
+) -> TransitionResult:
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events = list()
@@ -179,11 +201,11 @@ def subdispatch_to_paymenttask(chain_state, state_change, secrethash):
 
 
 def subdispatch_initiatortask(
-        chain_state,
-        state_change,
-        token_network_identifier,
-        secrethash,
-):
+        chain_state: ChainState,
+        state_change: StateChange,
+        token_network_identifier: typing.TokenNetworkID,
+        secrethash: typing.SecretHash,
+) -> TransitionResult:
 
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -230,11 +252,11 @@ def subdispatch_initiatortask(
 
 
 def subdispatch_mediatortask(
-        chain_state,
-        state_change,
-        token_network_identifier,
-        secrethash,
-):
+        chain_state: ChainState,
+        state_change: StateChange,
+        token_network_identifier: typing.TokenNetworkID,
+        secrethash: typing.SecretHash,
+) -> TransitionResult:
 
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -281,12 +303,12 @@ def subdispatch_mediatortask(
 
 
 def subdispatch_targettask(
-        chain_state,
-        state_change,
-        token_network_identifier,
-        channel_identifier,
-        secrethash,
-):
+        chain_state: ChainState,
+        state_change: StateChange,
+        token_network_identifier: typing.TokenNetworkID,
+        channel_identifier: typing.ChannelID,
+        secrethash: typing.SecretHash,
+) -> TransitionResult:
 
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -337,7 +359,11 @@ def subdispatch_targettask(
     return TransitionResult(chain_state, events)
 
 
-def maybe_add_tokennetwork(chain_state, payment_network_identifier, token_network_state):
+def maybe_add_tokennetwork(
+        chain_state: ChainState,
+        payment_network_identifier: typing.PaymentNetworkID,
+        token_network_state: TokenNetworkState,
+):
     token_network_identifier = token_network_state.address
     token_address = token_network_state.token_address
 
@@ -364,11 +390,14 @@ def maybe_add_tokennetwork(chain_state, payment_network_identifier, token_networ
         addrs_to_tokens[token_address] = token_network_state
 
 
-def sanity_check(iteration):
+def sanity_check(iteration: TransitionResult):
     assert isinstance(iteration.new_state, ChainState)
 
 
-def handle_block(chain_state, state_change):
+def handle_block(
+        chain_state: ChainState,
+        state_change: Block,
+) -> TransitionResult:
     block_number = state_change.block_number
     chain_state.block_number = block_number
 
@@ -386,7 +415,10 @@ def handle_block(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_chain_init(chain_state, state_change):
+def handle_chain_init(
+        chain_state: ChainState,
+        state_change: ActionInitChain,
+) -> TransitionResult:
     chain_state = ChainState(
         state_change.pseudo_random_generator,
         state_change.block_number,
@@ -396,7 +428,10 @@ def handle_chain_init(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_token_network_action(chain_state, state_change):
+def handle_token_network_action(
+        chain_state: ChainState,
+        state_change: StateChange,
+) -> TransitionResult:
     token_network_state = views.get_token_network_by_identifier(
         chain_state,
         state_change.token_network_identifier,
@@ -430,7 +465,7 @@ def handle_token_network_action(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_delivered(chain_state, state_change):
+def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
     for queueid, queue in chain_state.queueids_to_queues.items():
         if queueid[1] == 'global':
@@ -446,7 +481,10 @@ def handle_delivered(chain_state, state_change):
     return TransitionResult(chain_state, [])
 
 
-def handle_new_token_network(chain_state, state_change):
+def handle_new_token_network(
+        chain_state: ChainState,
+        state_change: ActionNewTokenNetwork,
+) -> TransitionResult:
     token_network_state = state_change.token_network
     payment_network_identifier = state_change.payment_network_identifier
 
@@ -460,7 +498,10 @@ def handle_new_token_network(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_node_change_network_state(chain_state, state_change):
+def handle_node_change_network_state(
+        chain_state: ChainState,
+        state_change: ActionChangeNodeNetworkState,
+) -> TransitionResult:
     events = list()
 
     node_address = state_change.node_address
@@ -470,7 +511,7 @@ def handle_node_change_network_state(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_leave_all_networks(chain_state):
+def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
     events = list()
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
@@ -484,7 +525,10 @@ def handle_leave_all_networks(chain_state):
     return TransitionResult(chain_state, events)
 
 
-def handle_new_payment_network(chain_state, state_change):
+def handle_new_payment_network(
+        chain_state: ChainState,
+        state_change: ContractReceiveNewPaymentNetwork,
+) -> TransitionResult:
     events = list()
 
     payment_network = state_change.payment_network
@@ -495,7 +539,10 @@ def handle_new_payment_network(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_tokenadded(chain_state, state_change):
+def handle_tokenadded(
+        chain_state: ChainState,
+        state_change: ContractReceiveNewTokenNetwork,
+) -> TransitionResult:
     events = list()
     maybe_add_tokennetwork(
         chain_state,
@@ -562,7 +609,10 @@ def handle_channel_batch_unlock(
     return TransitionResult(chain_state, events)
 
 
-def handle_secret_reveal(chain_state, state_change):
+def handle_secret_reveal(
+        chain_state: ChainState,
+        state_change: ContractReceiveSecretReveal,
+) -> TransitionResult:
     return subdispatch_to_paymenttask(
         chain_state,
         state_change,
@@ -570,7 +620,10 @@ def handle_secret_reveal(chain_state, state_change):
     )
 
 
-def handle_init_initiator(chain_state, state_change):
+def handle_init_initiator(
+        chain_state: ChainState,
+        state_change: ActionInitInitiator,
+) -> TransitionResult:
     transfer = state_change.transfer
     secrethash = transfer.secrethash
 
@@ -582,7 +635,10 @@ def handle_init_initiator(chain_state, state_change):
     )
 
 
-def handle_init_mediator(chain_state, state_change):
+def handle_init_mediator(
+        chain_state: ChainState,
+        state_change: ActionInitMediator,
+) -> TransitionResult:
     transfer = state_change.from_transfer
     secrethash = transfer.lock.secrethash
     token_network_identifier = transfer.balance_proof.token_network_identifier
@@ -595,7 +651,10 @@ def handle_init_mediator(chain_state, state_change):
     )
 
 
-def handle_init_target(chain_state, state_change):
+def handle_init_target(
+        chain_state: ChainState,
+        state_change: ActionInitTarget,
+) -> TransitionResult:
     transfer = state_change.transfer
     secrethash = transfer.lock.secrethash
     channel_identifier = transfer.balance_proof.channel_address
@@ -610,7 +669,10 @@ def handle_init_target(chain_state, state_change):
     )
 
 
-def handle_receive_transfer_refund(chain_state, state_change):
+def handle_receive_transfer_refund(
+        chain_state: ChainState,
+        state_change: ReceiveTransferRefund,
+) -> TransitionResult:
     return subdispatch_to_paymenttask(
         chain_state,
         state_change,
@@ -618,7 +680,10 @@ def handle_receive_transfer_refund(chain_state, state_change):
     )
 
 
-def handle_receive_transfer_refund_cancel_route(chain_state, state_change):
+def handle_receive_transfer_refund_cancel_route(
+        chain_state: ChainState,
+        state_change: ReceiveTransferRefundCancelRoute,
+) -> TransitionResult:
     return subdispatch_to_paymenttask(
         chain_state,
         state_change,
@@ -626,12 +691,18 @@ def handle_receive_transfer_refund_cancel_route(chain_state, state_change):
     )
 
 
-def handle_receive_secret_request(chain_state, state_change):
+def handle_receive_secret_request(
+        chain_state: ChainState,
+        state_change: ReceiveSecretRequest,
+) -> TransitionResult:
     secrethash = state_change.secrethash
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
-def handle_processed(chain_state, state_change):
+def handle_processed(
+        chain_state: ChainState,
+        state_change: ReceiveProcessed,
+) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
     events = list()
     for queue in chain_state.queueids_to_queues.values():
@@ -654,14 +725,15 @@ def handle_processed(chain_state, state_change):
     return TransitionResult(chain_state, events)
 
 
-def handle_receive_unlock(chain_state, state_change):
+def handle_receive_unlock(
+        chain_state: ChainState,
+        state_change: ReceiveUnlock,
+) -> TransitionResult:
     secrethash = state_change.secrethash
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
-def state_transition(chain_state, state_change):
-    # pylint: disable=too-many-branches,unidiomatic-typecheck
-
+def handle_state_change(chain_state: ChainState, state_change: StateChange) -> TransitionResult:
     if type(state_change) == Block:
         iteration = handle_block(
             chain_state,
@@ -797,12 +869,25 @@ def state_transition(chain_state, state_change):
             state_change,
         )
 
-    sanity_check(iteration)
+    return iteration
+
+
+def update_queues(iteration: TransitionResult):
+    chain_state = iteration.new_state
 
     for event in iteration.events:
         if isinstance(event, SendMessageEvent):
             queueid = (event.recipient, event.queue_name)
             queue = chain_state.queueids_to_queues.setdefault(queueid, [])
             queue.append(event)
+
+
+def state_transition(chain_state: ChainState, state_change):
+    # pylint: disable=too-many-branches,unidiomatic-typecheck
+
+    iteration = handle_state_change(chain_state, state_change)
+
+    update_queues(iteration)
+    sanity_check(iteration)
 
     return iteration
