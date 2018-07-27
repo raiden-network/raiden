@@ -1194,6 +1194,6 @@ def test_api_deposit_limit(
     )
     response = request.send().response
 
-    assert_proper_response(response, HTTPStatus.EXPECTATION_FAILED)
+    assert_proper_response(response, HTTPStatus.CONFLICT)
     response = response.json()
     assert response['errors'] == 'The deposit of 10001 is bigger than the current limit of 10000'
