@@ -24,7 +24,7 @@ checkout of raiden.
 
 #. Install system packages needed for :code:`raiden` and its dependencies::
 
-    $ brew install automake libtool pkg-config libffi gmp openssl
+    $ brew install automake gmp leveldb libffi libtool openssl pkg-config
 
 #. Install `pip`_ (a Python package manager)::
 
