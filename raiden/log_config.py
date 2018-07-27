@@ -1,4 +1,5 @@
 import sys
+import time
 import logging
 import logging.config
 import re
@@ -135,10 +136,11 @@ def wrap_tracebackexception_format(redact: Callable[[str], str]):
 
 
 def _get_log_file_handler() -> Dict:
+    time_suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
     return {
         'debug-info': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'raiden-debug.log',
+            'filename': f'raiden-debug-{time_suffix}.log',
             'formatter': 'debug',
             'level': 'DEBUG',
             'maxBytes': MAX_LOG_FILE_SIZE,
