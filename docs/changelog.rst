@@ -11,7 +11,7 @@ Changelog
 * :bug:`1902` Check for ethnode connection at start and print proper error if Raiden can not connect
 * :bug:`1911` The syncing message is now printed properly and does not repeat across the screen
 * :bug:`1899` Print proper error without throwing exception if no accounts are found in the keystore
-* :bug:`1975` Fix balance hash generation to match the logic that lives in ``TokenNetwork`` contract.
+* :bug:`1975` Fix balance hash generation for zero transfers and empty locksroot
 
 * :release:`0.4.0 <2018-07-19>`
 * :feature:`-` Considerable codebase refactoring.
