@@ -324,12 +324,6 @@ class ConnectionsConnectSchema(BaseSchema):
 
 
 class ConnectionsLeaveSchema(BaseSchema):
-    only_receiving_channels = fields.Boolean(
-        required=False,
-        default=True,
-        missing=True,
-    )
-
     class Meta:
         strict = True
         decoding_class = dict

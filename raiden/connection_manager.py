@@ -134,43 +134,26 @@ class ConnectionManager:
             else:
                 self._open_channels()
 
-    def leave_async(self, only_receiving=True):
+    def leave_async(self):
         """ Async version of `leave()` """
         leave_result = AsyncResult()
-        gevent.spawn(self.leave, only_receiving).link(leave_result)
+        gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
-    def leave(self, registry_address, only_receiving=True):
+    def leave(self, registry_address):
         """ Leave the token network.
 
         This implies closing all channels and waiting for all channels to be
         settled.
-
-        Note: By default we're just discarding all channels for which we haven't
-        received anything.  This potentially leaves deposits locked in channels after
-        `closing`. This is "safe" from an accounting point of view (deposits
-        can not be lost), but may still be undesirable from a liquidity point
-        of view (deposits will only be freed after manually closing or after
-        the partner closed the channel).
-
-        If only_receiving is False then we close and settle all channels
-        irrespective of them having received transfers or not.
         """
         with self.lock:
             self.initial_channel_target = 0
 
-            if only_receiving:
-                channels_to_close = views.get_channelstate_for_receiving(
-                    views.state_from_raiden(self.raiden),
-                    registry_address,
-                    self.token_address,
-                )
-            else:
-                channels_to_close = views.get_channelstate_open(
-                    chain_state=views.state_from_raiden(self.raiden),
-                    payment_network_id=registry_address,
-                    token_address=self.token_address,
-                )
+            channels_to_close = views.get_channelstate_open(
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_id=registry_address,
+                token_address=self.token_address,
+            )
 
             partner_addresses = [
                 channel_state.partner_state.address
