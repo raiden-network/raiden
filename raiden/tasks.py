@@ -1,4 +1,5 @@
 import requests
+import re
 from pkg_resources import parse_version
 
 import click
@@ -6,12 +7,14 @@ import gevent
 from gevent.event import AsyncResult
 import structlog
 
+
 from raiden.exceptions import RaidenShuttingDown
 from raiden.utils import get_system_spec
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
+SECURITY_EXPRESSION = '\[CRITICAL UPDATE.*?\]'
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -25,6 +28,9 @@ def check_version():
             content = requests.get(LATEST).json()
             # getting the latest release version
             latest_release = parse_version(content['tag_name'])
+            security_message = re.search(SECURITY_EXPRESSION, content['body'])
+            if security_message:
+                click.secho(security_message.group(0), fg='red')
             # comparing it to the user's application
             if app_version < latest_release:
                 msg = "You're running version {}. The latest version is {}".format(
