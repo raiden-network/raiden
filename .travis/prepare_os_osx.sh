@@ -3,7 +3,7 @@
 set -e
 set -x
 
-for tool in automake libtool pkg-config libffi gmp openssl node python3; do
+for tool in automake gmp leveldb libffi libtool node openssl pkg-config python3; do
     brew install ${tool} || brew upgrade ${tool} || true
 done
 
