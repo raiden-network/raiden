@@ -1,5 +1,8 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from raiden.transfer.architecture import StateChange
+from raiden.transfer.architecture import (
+    ContractReceiveStateChange,
+    StateChange,
+)
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
@@ -151,7 +154,7 @@ class ActionTransferDirect(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelNew(StateChange):
+class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
 
     def __init__(
@@ -179,7 +182,7 @@ class ContractReceiveChannelNew(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelClosed(StateChange):
+class ContractReceiveChannelClosed(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was closed. """
 
     def __init__(
@@ -294,7 +297,7 @@ class ActionNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelNewBalance(StateChange):
+class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a deposit. """
 
     def __init__(
@@ -328,7 +331,7 @@ class ContractReceiveChannelNewBalance(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelSettled(StateChange):
+class ContractReceiveChannelSettled(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was settled. """
 
     def __init__(
@@ -410,7 +413,7 @@ class ActionChangeNodeNetworkState(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveNewPaymentNetwork(StateChange):
+class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     """ Registers a new payment network.
     A payment network corresponds to a registry smart contract.
     """
@@ -436,7 +439,7 @@ class ContractReceiveNewPaymentNetwork(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveNewTokenNetwork(StateChange):
+class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     """ A new token was registered with the payment network. """
 
     def __init__(
@@ -467,14 +470,14 @@ class ContractReceiveNewTokenNetwork(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveSecretReveal(StateChange):
+class ContractReceiveSecretReveal(ContractReceiveStateChange):
     """ A new secret was registered with the SecretRegistry contract. """
 
     def __init__(
-        self,
-        secret_registry_address: typing.SecretRegistryAddress,
-        secrethash: typing.SecretHash,
-        secret: typing.Secret,
+            self,
+            secret_registry_address: typing.SecretRegistryAddress,
+            secrethash: typing.SecretHash,
+            secret: typing.Secret,
     ):
         if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
             raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
@@ -506,7 +509,7 @@ class ContractReceiveSecretReveal(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveChannelBatchUnlock(StateChange):
+class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     """ All the locks were claimed via the blockchain.
 
     Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted
@@ -572,7 +575,7 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveRouteNew(StateChange):
+class ContractReceiveRouteNew(ContractReceiveStateChange):
     """ New channel was created and this node is NOT a participant. """
 
     def __init__(

@@ -86,6 +86,14 @@ class SendMessageEvent(Event):
         self.message_identifier = message_identifier
 
 
+class ContractSendEvent(Event):
+    pass
+
+
+class ContractReceiveStateChange(StateChange):
+    pass
+
+
 class StateManager:
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
