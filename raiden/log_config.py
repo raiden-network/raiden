@@ -1,6 +1,7 @@
 import logging.config
 import structlog
 import re
+from traceback import TracebackException
 from functools import wraps
 from typing import Dict, Callable, Pattern
 
@@ -53,6 +54,20 @@ def _chain(first_func, *funcs) -> Callable:
     return wrapper
 
 
+def wrap_tracebackexception_format(redact: Callable[[str], str]):
+    """Monkey-patch TracebackException.format to redact printed lines"""
+    if hasattr(TracebackException, '_orig_format'):
+        prev_fmt = TracebackException._orig_format
+    else:
+        prev_fmt = TracebackException._orig_format = TracebackException.format
+
+    def tracebackexception_format(self, *, chain=True):
+        for line in prev_fmt(self, chain=chain):
+            yield redact(line)
+
+    TracebackException.format = tracebackexception_format
+
+
 def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
@@ -79,6 +94,7 @@ def configure_logging(
     redact = redactor({
         re.compile(r'\b(access_?token=)([a-z0-9_-]+)', re.I): r'\1<redacted>',
     })
+    wrap_tracebackexception_format(redact)
 
     logging.config.dictConfig(
         {
