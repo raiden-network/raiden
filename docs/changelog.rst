@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :feature:`1844` Log detailed debug information to a file, so that bugs can be reported easier
+
 * :bug:`1879` Leaving a token network should now work. Also removed the ``only_receiving`` parameter from the leave endpoint
 * :bug:`1897` Limit number of concurrent matrix connections so that raiden client does not crash.
 * :bug:`1976` Remove the ability to removedb. User should not be able to easily delete local state.
