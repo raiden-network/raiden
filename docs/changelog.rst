@@ -1,7 +1,8 @@
 =========
 Changelog
 =========
-
+* :bug:`1821` Show a better error message when channel creation fails.
+* :bug:`1817` Change the webui error message when the token registration fails.
 * :feature:`1844` Log debug output to a file to make debugging of problems easier.
 * :bug:`1994` Starting Raiden with a corrupt database will now throw a proper error instead of crashing with an exception.
 
