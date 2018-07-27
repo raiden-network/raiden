@@ -6,6 +6,7 @@ Changelog
 * :bug:`1879` Leaving a token network should now work. Also removed the ``only_receiving`` parameter from the leave endpoint
 * :bug:`1897` Limit number of concurrent matrix connections so that raiden client does not crash.
 * :bug:`1976` Remove the ability to removedb. User should not be able to easily delete local state.
+* :feature:`1825` Added periodical update notification and security releases checks.
 * :bug:`1883` Properly update menu state when channel state changes on webui
 * :bug:`1969` Return E409 if negative ``initial_funds`` are given to the connect endpoint
 * :bug:`1960` Return E409 when trying to open a channel for a token that is not registered
