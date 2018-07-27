@@ -1,24 +1,24 @@
-from tempfile import NamedTemporaryFile
-
 import gevent.monkey
 gevent.monkey.patch_all()
 
-import errno
 import json
 import os
 import signal
 import sys
 import tempfile
+import textwrap
 import traceback
 from binascii import hexlify
 from copy import deepcopy
+from datetime import datetime
 from itertools import count
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import Any, Dict
 from urllib.parse import urljoin
 
 import click
 import gevent
-import pytoml
 import requests
 import structlog
 from eth_utils import (
@@ -29,14 +29,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from mirakuru import HTTPExecutor, ProcessExitedWithError
-from pytoml import TomlError
 from requests.exceptions import RequestException
-
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    CONTRACT_ENDPOINT_REGISTRY,
-    CONTRACT_SECRET_REGISTRY,
-)
 
 from raiden import constants
 from raiden.accounts import AccountManager
@@ -45,25 +38,25 @@ from raiden.exceptions import (
     APIServerPortInUseError,
     ContractVersionMismatch,
     EthNodeCommunicationError,
-    RaidenServicePortInUseError,
     RaidenError,
+    RaidenServicePortInUseError,
     ReplacementTransactionUnderpriced,
 )
 from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import TokenNetworkRegistry
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
+    DEFAULT_TRANSPORT_RETRY_INTERVAL,
     ETHERSCAN_API,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
-    DEFAULT_TRANSPORT_RETRY_INTERVAL,
 )
 from raiden.tasks import check_version
 from raiden.utils import (
@@ -80,17 +73,21 @@ from raiden.utils.cli import (
     NATChoiceType,
     NetworkChoiceType,
     PathRelativePath,
-    command,
+    apply_config_file,
     group,
     option,
     option_group,
 )
+from raiden.utils.echo_node import EchoNode
 from raiden.utils.gevent_utils import configure_gevent
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+)
 
 
 log = structlog.get_logger(__name__)
-
-LOG_CONFIG_OPTION_NAME = 'log_config'
 
 configure_gevent()
 
@@ -502,9 +499,7 @@ def options(func):
     return func
 
 
-@options
-@command()
-def app(
+def run_app(
         address,
         keystore_path,
         gas_price,
@@ -513,13 +508,8 @@ def app(
         secret_registry_contract_address,
         discovery_contract_address,
         listen_address,
-        rpccorsdomain,
         mapped_socket,
-        log_config,
-        log_file,
-        log_json,
         max_unresponsive_time,
-        send_ping_time,
         api_address,
         rpc,
         sync_check,
@@ -527,12 +517,11 @@ def app(
         password_file,
         web_ui,
         datadir,
-        nat,
         transport,
         matrix_server,
         network_id,
-        config_file,
         extra_config=None,
+        **kwargs,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -765,120 +754,93 @@ def prompt_account(address_hex, keystore_path, password_file):
     return address_hex, privatekey_bin
 
 
-@group(invoke_without_command=True, context_settings={'max_content_width': 120})
-@options
-@click.pass_context
-def run(ctx, **kwargs):
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+class NodeRunner:
+    def __init__(self, options: Dict[str, Any], ctx):
+        self._options = options
+        self._ctx = ctx
+        self._raiden_api = None
 
-    if ctx.invoked_subcommand is not None:
-        # Pass parsed args on to subcommands.
-        ctx.obj = kwargs
-        return
+    @property
+    def _welcome_string(self):
+        return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
 
-    click.secho('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']), fg='green')
-    click.secho(
-        '''
-----------------------------------------------------------------------
-| This is an Alpha version of experimental open source software      |
-| released under the MIT license and may contain errors and/or bugs. |
-| Use of the software is at your own risk and discretion. No         |
-| guarantee whatsoever is made regarding its suitability for your    |
-| intended purposes and its compliance with applicable law and       |
-| regulations. It is up to the user to determine the software´s      |
-| quality and suitability and whether its use is compliant with its  |
-| respective regulatory regime, especially in the case that you are  |
-| operating in a commercial context.                                 |
-----------------------------------------------------------------------''',
-        fg='yellow',
-    )
-    from raiden.ui.console import Console
-    from raiden.api.python import RaidenAPI
+    def _startup_hook(self):
+        """ Hook that is called after startup is finished. Intended for subclass usage. """
+        pass
 
-    if kwargs['config_file']:
-        paramname_to_param = {param.name: param for param in run.params}
-        path_params = {
-            param.name
-            for param in run.params
-            if isinstance(param.type, (click.Path, click.File))
-        }
+    def _shutdown_hook(self):
+        """ Hook that is called just before shutdown. Intended for subclass usage. """
+        pass
 
-        config_file_path = Path(kwargs['config_file'])
-        config_file_values = dict()
+    def run(self):
+        click.secho(self._welcome_string, fg='green')
+        click.secho(
+            textwrap.dedent(
+                '''\
+                ----------------------------------------------------------------------
+                | This is an Alpha version of experimental open source software      |
+                | released under the MIT license and may contain errors and/or bugs. |
+                | Use of the software is at your own risk and discretion. No         |
+                | guarantee whatsoever is made regarding its suitability for your    |
+                | intended purposes and its compliance with applicable law and       |
+                | regulations. It is up to the user to determine the software´s      |
+                | quality and suitability and whether its use is compliant with its  |
+                | respective regulatory regime, especially in the case that you are  |
+                | operating in a commercial context.                                 |
+                ----------------------------------------------------------------------''',
+            ),
+            fg='yellow',
+        )
+        configure_logging(
+            self._options['log_config'],
+            log_json=self._options['log_json'],
+            log_file=self._options['log_file'],
+        )
+
+        if self._options['config_file']:
+            log.debug('Using config file', config_file=self._options['config_file'])
+
+        # TODO:
+        # - Ask for confirmation to quit if there are any locked transfers that did
+        # not timeout.
         try:
-            with config_file_path.open() as config_file:
-                config_file_values = pytoml.load(config_file)
-        except OSError as ex:
-            # Silently ignore if 'file not found' and the config file path is the default
-            config_file_param = paramname_to_param['config_file']
-            config_file_default_path = Path(
-                config_file_param.type.expand_default(config_file_param.get_default(ctx), kwargs),
-            )
-            default_config_missing = (
-                ex.errno == errno.ENOENT and
-                config_file_path.resolve() == config_file_default_path.resolve()
-            )
-            if default_config_missing:
-                kwargs['config_file'] = None
-            else:
-                click.secho(f"Error opening config file: {ex}", fg='red')
-                sys.exit(2)
-        except TomlError as ex:
-            click.secho(f'Error loading config file: {ex}', fg='red')
-            sys.exit(2)
-
-        for config_name, config_value in config_file_values.items():
-            config_name_int = config_name.replace('-', '_')
-
-            if config_name_int not in paramname_to_param:
-                click.secho(
-                    f"Unknown setting '{config_name}' found in config file - ignoring.",
-                    fg='yellow',
-                )
-                continue
-
-            if config_name_int in path_params:
-                # Allow users to use `~` in paths in the config file
-                config_value = os.path.expanduser(config_value)
-
-            if config_name_int == LOG_CONFIG_OPTION_NAME:
-                # Uppercase log level names
-                config_value = {k: v.upper() for k, v in config_value.items()}
-            else:
-                # Pipe config file values through cli converter to ensure correct types
-                # We exclude `log-config` because it already is a dict when loading from toml
+            if self._options['transport'] == 'udp':
+                (listen_host, listen_port) = split_endpoint(self._options['listen_address'])
                 try:
-                    config_value = paramname_to_param[config_name_int].type.convert(
-                        config_value,
-                        paramname_to_param[config_name_int],
-                        ctx,
+                    with SocketFactory(
+                        listen_host, listen_port, strategy=self._options['nat'],
+                    ) as mapped_socket:
+                        self._options['mapped_socket'] = mapped_socket
+                        app = self._run_app()
+
+                except RaidenServicePortInUseError:
+                    print(
+                        'ERROR: Address %s:%s is in use. '
+                        'Use --listen-address <host:port> to specify port to listen on.' %
+                        (listen_host, listen_port),
                     )
-                except click.BadParameter as ex:
-                    click.secho(f"Invalid config file setting '{config_name}': {ex}", fg='red')
-                    sys.exit(2)
+                    sys.exit(1)
+            elif self._options['transport'] == 'matrix':
+                self._options['mapped_socket'] = None
+                app = self._run_app()
+            else:
+                # Shouldn't happen
+                raise RuntimeError(f"Invalid transport type '{self._options['transport']}'")
+            app.stop(leave_channels=False)
+        except ReplacementTransactionUnderpriced as e:
+            print(
+                '{}. Please make sure that this Raiden node is the '
+                'only user of the selected account'.format(str(e)),
+            )
+            sys.exit(1)
 
-            # Use the config file value if the value from the command line is the default
-            if kwargs[config_name_int] == paramname_to_param[config_name_int].get_default(ctx):
-                kwargs[config_name_int] = config_value
+    def _run_app(self):
+        from raiden.ui.console import Console
+        from raiden.api.python import RaidenAPI
 
-    configure_logging(
-        kwargs['log_config'],
-        log_json=kwargs['log_json'],
-        log_file=kwargs['log_file'],
-    )
-
-    # Do this here so logging is configured
-    if kwargs['config_file']:
-        log.debug('Using config file', config_file=kwargs['config_file'])
-
-    # TODO:
-    # - Ask for confirmation to quit if there are any locked transfers that did
-    # not timeout.
-
-    def _run_app():
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
-            app_ = ctx.invoke(app, **kwargs)
+            app_ = run_app(**self._options)
         except EthNodeCommunicationError:
             print(
                 '\n'
@@ -892,24 +854,25 @@ def run(ctx, **kwargs):
             sys.exit(1)
 
         domain_list = []
-        if kwargs['rpccorsdomain']:
-            if ',' in kwargs['rpccorsdomain']:
-                for domain in kwargs['rpccorsdomain'].split(','):
+        if self._options['rpccorsdomain']:
+            if ',' in self._options['rpccorsdomain']:
+                for domain in self._options['rpccorsdomain'].split(','):
                     domain_list.append(str(domain))
             else:
-                domain_list.append(str(kwargs['rpccorsdomain']))
+                domain_list.append(str(self._options['rpccorsdomain']))
+
+        self._raiden_api = RaidenAPI(app_.raiden)
 
         api_server = None
-        if ctx.params['rpc']:
-            raiden_api = RaidenAPI(app_.raiden)
-            rest_api = RestAPI(raiden_api)
+        if self._options['rpc']:
+            rest_api = RestAPI(self._raiden_api)
             api_server = APIServer(
                 rest_api,
                 cors_domain_list=domain_list,
-                web_ui=ctx.params['web_ui'],
-                eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
+                web_ui=self._options['web_ui'],
+                eth_rpc_endpoint=self._options['eth_rpc_endpoint'],
             )
-            (api_host, api_port) = split_endpoint(kwargs['api_address'])
+            (api_host, api_port) = split_endpoint(self._options['api_address'])
 
             try:
                 api_server.start(api_host, api_port)
@@ -930,12 +893,14 @@ def run(ctx, **kwargs):
                 ),
             )
 
-        if ctx.params['console']:
+        if self._options['console']:
             console = Console(app_)
             console.start()
 
         # spawning a thread to handle the version checking
         gevent.spawn(check_version)
+
+        self._startup_hook()
 
         # wait for interrupt
         event = gevent.event.Event()
@@ -951,7 +916,7 @@ def run(ctx, **kwargs):
         except Exception as ex:
             with NamedTemporaryFile(
                 'w',
-                prefix='raiden-exception',
+                prefix=f'raiden-exception-{datetime.utcnow():%Y-%m-%dT%H-%M}',
                 suffix='.txt',
                 delete=False,
             ) as traceback_file:
@@ -962,45 +927,46 @@ def run(ctx, **kwargs):
                     f'{ex}',
                     fg='red',
                 )
-
-        if api_server:
-            api_server.stop()
+        finally:
+            self._shutdown_hook()
+            if api_server:
+                api_server.stop()
 
         return app_
 
-    # TODO:
-    # - Ask for confirmation to quit if there are any locked transfers that did
-    # not timeout.
-    try:
-        if kwargs['transport'] == 'udp':
-            (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-            try:
-                with SocketFactory(
-                        listen_host, listen_port, strategy=kwargs['nat'],
-                ) as mapped_socket:
-                    kwargs['mapped_socket'] = mapped_socket
-                    app_ = _run_app()
 
-            except RaidenServicePortInUseError:
-                print(
-                    'ERROR: Address %s:%s is in use. '
-                    'Use --listen-address <host:port> to specify port to listen on.' %
-                    (listen_host, listen_port),
-                )
-                sys.exit(1)
-        elif kwargs['transport'] == 'matrix':
-            kwargs['mapped_socket'] = None
-            app_ = _run_app()
-        else:
-            # Shouldn't happen
-            raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
-        app_.stop(leave_channels=False)
-    except ReplacementTransactionUnderpriced as e:
-        print(
-            '{}. Please make sure that this Raiden node is the '
-            'only user of the selected account'.format(str(e)),
-        )
-        sys.exit(1)
+class EchoNodeRunner(NodeRunner):
+    def __init__(self, options: Dict[str, Any], ctx, token_address: typing.TokenAddress):
+        super().__init__(options, ctx)
+        self._token_address = token_address
+        self._echo_node = None
+
+    @property
+    def _welcome_string(self):
+        return '{} [ECHO NODE]'.format(super(EchoNodeRunner, self)._welcome_string)
+
+    def _startup_hook(self):
+        self._echo_node = EchoNode(self._raiden_api, self._token_address)
+
+    def _shutdown_hook(self):
+        self._echo_node.stop()
+
+
+@group(invoke_without_command=True, context_settings={'max_content_width': 120})
+@options
+@click.pass_context
+def run(ctx, **kwargs):
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+
+    if kwargs['config_file']:
+        apply_config_file(run, kwargs, ctx)
+
+    if ctx.invoked_subcommand is not None:
+        # Pass parsed args on to subcommands.
+        ctx.obj = kwargs
+        return
+
+    NodeRunner(kwargs, ctx).run()
 
 
 @run.command()
@@ -1136,7 +1102,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                       else ctx.parent.params['matrix_server'],
     )
     smoketest_config['transport'] = args['transport']
-    for option_ in app.params:
+    for option_ in run.params:
         if option_.name in args.keys():
             args[option_.name] = option_.process_value(ctx, args[option_.name])
         else:
@@ -1156,9 +1122,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         print_step('Starting Raiden')
 
         # invoke the raiden app
-        app_ = ctx.invoke(app, **args)
+        app = run_app(**args)
 
-        raiden_api = RaidenAPI(app_.raiden)
+        raiden_api = RaidenAPI(app.raiden)
         rest_api = RestAPI(raiden_api)
         api_server = APIServer(rest_api)
         (api_host, api_port) = split_endpoint(args['api_address'])
@@ -1194,13 +1160,13 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         success = False
         try:
             print_step('Running smoketest')
-            error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
+            error = run_smoketests(app.raiden, smoketest_config, debug=debug)
             if error is not None:
                 append_report('Smoketest assertion error', error)
             else:
                 success = True
         finally:
-            app_.stop()
+            app.stop()
             ethereum.send_signal(2)
 
             err, out = ethereum.communicate()
@@ -1252,3 +1218,18 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     if not success:
         sys.exit(1)
+
+
+@run.command(
+    help=(
+        'Start an echo node.\n'
+        'Mainly useful for development.\n'
+        'See: https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html'
+        '#interacting-with-the-raiden-echo-node'
+    ),
+)
+@click.option('--token-address', type=ADDRESS_TYPE, required=True)
+@click.pass_context
+def echonode(ctx, token_address):
+    """ Start a raiden Echo Node that will send received transfers back to the initiator. """
+    EchoNodeRunner(ctx.obj, ctx, token_address).run()
