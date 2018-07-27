@@ -74,6 +74,7 @@ def configure_logging(
     log_json: bool = False,
     log_file: str = None,
 ):
+    structlog.reset_defaults()
     if logger_level_config is None:
         logger_level_config = {'': DEFAULT_LOG_LEVEL}
     timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S")
