@@ -13,7 +13,7 @@ DEFAULT_LOG_LEVEL = 'INFO'
 MAX_LOG_FILE_SIZE = 5 * 1024 * 1024
 
 
-def match_list(module_rule: Tuple[List[str], str], logger_module: str) -> Tuple[int, str]:
+def _match_list(module_rule: Tuple[List[str], str], logger_module: str) -> Tuple[int, str]:
     logger_modules_split = logger_module.split('.')
 
     modules_split: List[str] = module_rule[0]
@@ -29,7 +29,7 @@ def match_list(module_rule: Tuple[List[str], str], logger_module: str) -> Tuple[
             return 0, None
 
 
-def get_log_level(
+def _get_log_level(
     module_rules: List[Tuple[List[str], str]],
     logger_module: str,
     default_log_level: str = DEFAULT_LOG_LEVEL,
@@ -38,7 +38,7 @@ def get_log_level(
     best_match_level = default_log_level
 
     for module in module_rules:
-        match_length, level = match_list(module, logger_module)
+        match_length, level = _match_list(module, logger_module)
 
         if match_length > best_match_length:
             best_match_length = match_length
@@ -59,7 +59,7 @@ class RaidenFilter(logging.Filter):
         event_dict = record.msg
         # this check is needed as the flask logs somehow don't get processed by structlog
         if isinstance(event_dict, dict):
-            log_level_per_rule = get_log_level(self._log_rules, event_dict.get('logger', ''))
+            log_level_per_rule = _get_log_level(self._log_rules, event_dict.get('logger', ''))
             log_level_event = event_dict.get('level', DEFAULT_LOG_LEVEL).upper()
 
             log_level_per_rule_numeric = getattr(logging, log_level_per_rule.upper(), 10)
@@ -135,7 +135,7 @@ def _chain(first_func, *funcs) -> Callable:
     return wrapper
 
 
-def wrap_tracebackexception_format(redact: Callable[[str], str]):
+def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     """Monkey-patch TracebackException.format to redact printed lines"""
     if hasattr(TracebackException, '_orig_format'):
         prev_fmt = TracebackException._orig_format
@@ -174,7 +174,7 @@ def configure_logging(
     redact = redactor({
         re.compile(r'\b(access_?token=)([a-z0-9_-]+)', re.I): r'\1<redacted>',
     })
-    wrap_tracebackexception_format(redact)
+    _wrap_tracebackexception_format(redact)
 
     log_handler = _get_log_handler(
         formatter,
