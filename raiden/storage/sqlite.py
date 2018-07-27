@@ -157,7 +157,7 @@ class SQLiteStorage:
             ]
         except AttributeError:
             raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...'
+                'Your local database is corrupt. Bailing ...',
             )
 
         return result
