@@ -94,6 +94,20 @@ def _get_log_handler(formatter: str, log_file: str, log_level: str) -> Dict:
         }
 
 
+def _get_log_file_handler() -> Dict:
+    time_suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
+    return {
+        'debug-info': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': f'raiden-debug-{time_suffix}.log',
+            'formatter': 'debug',
+            'level': 'DEBUG',
+            'maxBytes': MAX_LOG_FILE_SIZE,
+            'backupCount': 1,
+        },
+    }
+
+
 def redactor(blacklist: Dict[Pattern, str]) -> Callable:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
     def processor_wrapper(msg: str) -> str:
@@ -133,20 +147,6 @@ def wrap_tracebackexception_format(redact: Callable[[str], str]):
             yield redact(line)
 
     TracebackException.format = tracebackexception_format
-
-
-def _get_log_file_handler() -> Dict:
-    time_suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
-    return {
-        'debug-info': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': f'raiden-debug-{time_suffix}.log',
-            'formatter': 'debug',
-            'level': 'DEBUG',
-            'maxBytes': MAX_LOG_FILE_SIZE,
-            'backupCount': 1,
-        },
-    }
 
 
 def configure_logging(
@@ -236,4 +236,5 @@ def configure_logging(
     )
 
     # set raiden logging level to DEBUG, to be able to intercept all messages
+    structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
     structlog.get_logger('raiden').setLevel('DEBUG')
