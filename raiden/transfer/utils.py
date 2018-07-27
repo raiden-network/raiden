@@ -9,7 +9,7 @@ def hash_balance_data(
         transferred_amount: typing.TokenAmount,
         locked_amount: typing.TokenAmount,
         locksroot: typing.Locksroot,
-) -> bytes(32):
+) -> bytes:
     if transferred_amount == 0 and locked_amount == 0 and locksroot == b'':
         return decode_hex(
             EMPTY_HEX_HASH,
