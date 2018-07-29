@@ -1,11 +1,15 @@
 import sqlite3
 import threading
 from raiden.exceptions import InvalidDBData
+from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES
 from typing import (
     Any,
     Optional,
     Tuple,
 )
+
+# The latest DB version
+RAIDEN_DB_VERSION = 0
 
 
 class SQLiteStorage:
@@ -15,30 +19,9 @@ class SQLiteStorage:
         conn.execute('PRAGMA foreign_keys=ON')
 
         with conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                'CREATE TABLE IF NOT EXISTS state_changes ('
-                '    identifier INTEGER PRIMARY KEY AUTOINCREMENT, '
-                '    data BINARY'
-                ')',
-            )
-            cursor.execute(
-                'CREATE TABLE IF NOT EXISTS state_snapshot ('
-                '    identifier INTEGER PRIMARY KEY, '
-                '    statechange_id INTEGER, '
-                '    data BINARY, '
-                '    FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)'
-                ')',
-            )
-            cursor.execute(
-                'CREATE TABLE IF NOT EXISTS state_events ('
-                '    identifier INTEGER PRIMARY KEY, '
-                '    source_statechange_id INTEGER NOT NULL, '
-                '    block_number INTEGER NOT NULL, '
-                '    data BINARY, '
-                '    FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)'
-                ')',
-            )
+            conn.executescript(DB_SCRIPT_CREATE_TABLES)
+
+        self._run_updates()
 
         # When writting to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
@@ -55,6 +38,30 @@ class SQLiteStorage:
         self.write_lock = threading.Lock()
         self.conn = conn
         self.serializer = serializer
+
+    def _run_updates(self):
+        # TODO: Here add upgrade mechanism depending on the version
+        # current_version = self.get_version()
+
+        # And finally at the end write the latest version in the DB
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
+            ('version', str(RAIDEN_DB_VERSION))
+        )
+        self.conn.commit()
+
+    def get_version(self) -> int:
+        cursor = self.conn.cursor()
+        query = cursor.execute(
+            'SELECT value FROM settings WHERE name=?;', ('version',)
+        )
+        query = query.fetchall()
+        # If setting is not set, it's the latest version
+        if len(query) == 0:
+            return RAIDEN_DB_VERSION
+
+        return int(query[0][0])
 
     def write_state_change(self, state_change):
         serialized_data = self.serializer.serialize(state_change)
