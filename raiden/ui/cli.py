@@ -259,7 +259,7 @@ def handle_contract_wrong_address(name: str, address: typing.Address) -> None:
     hex_addr = to_checksum_address(address)
     print(
         f'Error: Provided address {hex_addr} for {name} contract'
-        ' does not contain expected code.'
+        ' does not contain expected code.',
     )
     sys.exit(1)
 
