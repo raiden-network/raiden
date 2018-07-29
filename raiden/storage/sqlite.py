@@ -53,14 +53,14 @@ class SQLiteStorage:
         cursor = self.conn.cursor()
         cursor.execute(
             'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
-            ('version', str(RAIDEN_DB_VERSION))
+            ('version', str(RAIDEN_DB_VERSION)),
         )
         self.conn.commit()
 
     def get_version(self) -> int:
         cursor = self.conn.cursor()
         query = cursor.execute(
-            'SELECT value FROM settings WHERE name=?;', ('version',)
+            'SELECT value FROM settings WHERE name=?;', ('version',),
         )
         query = query.fetchall()
         # If setting is not set, it's the latest version
