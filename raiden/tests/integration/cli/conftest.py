@@ -33,13 +33,23 @@ def removed_args():
 
 
 @pytest.fixture()
-def cli_args(blockchain_provider, removed_args):
+def changed_args():
+    return None
+
+
+@pytest.fixture()
+def cli_args(blockchain_provider, removed_args, changed_args):
     initial_args = blockchain_provider.copy()
 
     if removed_args is not None:
         for arg in removed_args:
             if arg in initial_args:
                 del initial_args[arg]
+
+    if changed_args is not None:
+        for k, v in changed_args.items():
+            if k in initial_args:
+                initial_args[k] = v
 
     args = [
         '--no-sync-check',
