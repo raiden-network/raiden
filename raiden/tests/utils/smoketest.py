@@ -1,6 +1,7 @@
-from binascii import unhexlify
+from binascii import unhexlify, hexlify
 from http import HTTPStatus
 from string import Template
+import click
 import json
 import os
 import sys
@@ -12,6 +13,8 @@ import tempfile
 import time
 import traceback
 from typing import Dict
+from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware
 
 from eth_utils import to_checksum_address, to_canonical_address
 
@@ -22,15 +25,20 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MIN,
     TEST_SETTLE_TIMEOUT_MAX,
 )
+from raiden.tests.utils.geth import geth_wait_and_check
+from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
+from raiden.network.proxies import TokenNetworkRegistry
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import get_project_root
 from raiden.raiden_service import RaidenService
+
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -291,3 +299,62 @@ def get_private_key():
 
     addresses = list(accmgr.accounts.keys())
     return accmgr.get_privkey(addresses[0], TEST_ACCOUNT_PASSWORD)
+
+
+def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print_step):
+    print_step('Starting Ethereum node')
+    ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
+    port = ethereum_config['rpc']
+    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
+    web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
+    random_marker = hexlify(b'raiden').decode()
+    privatekeys = []
+    geth_wait_and_check(web3_client, privatekeys, random_marker)
+
+    print_step('Deploying Raiden contracts')
+    host = '0.0.0.0'
+    client = JSONRPCClient(
+        host,
+        ethereum_config['rpc'],
+        get_private_key(),
+        web3=web3_client,
+    )
+    contract_addresses = deploy_smoketest_contracts(client, 627)
+    token_contract = deploy_token(client)
+    token = token_contract(1000, 0, 'TKN', 'TKN')
+    registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
+    registry.add_token(to_canonical_address(token.contract.address))
+
+    print_step('Setting up Raiden')
+    # setup cli arguments for starting raiden
+    args = dict(
+        discovery_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+        ),
+        registry_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+        ),
+        secret_registry_contract_address=to_checksum_address(
+            contract_addresses[CONTRACT_SECRET_REGISTRY],
+        ),
+        eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
+        keystore_path=ethereum_config['keystore'],
+        address=ethereum_config['address'],
+        network_id='627',
+        transport=transport,
+        matrix_server='http://localhost:8008'
+                      if matrix_server == 'auto'
+                      else matrix_server,
+    )
+    password_file = os.path.join(args['keystore_path'], 'password')
+    with open(password_file, 'w') as handler:
+        handler.write('password')
+
+    args['password_file'] = click.File()(password_file)
+    return dict(
+        args=args,
+        contract_addresses=contract_addresses,
+        ethereum=ethereum,
+        ethereum_config=ethereum_config,
+        token=token,
+    )

@@ -45,7 +45,6 @@ from raiden.exceptions import (
 from raiden.log_config import configure_logging
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.throttle import TokenBucket
@@ -1001,20 +1000,13 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
 @click.pass_context
 def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
-    import binascii
-    from web3 import Web3, HTTPProvider
-    from web3.middleware import geth_poa_middleware
     from raiden.api.python import RaidenAPI
-    from raiden.tests.utils.geth import geth_wait_and_check
-    from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
     from raiden.tests.utils.smoketest import (
         TEST_PARTNER_ADDRESS,
         TEST_DEPOSIT_AMOUNT,
-        deploy_smoketest_contracts,
-        get_private_key,
         load_smoketest_config,
-        start_ethereum,
         run_smoketests,
+        setup_testchain_and_raiden,
     )
 
     report_file = tempfile.mktemp(suffix='.log')
@@ -1054,53 +1046,18 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             'Could not load the smoketest genesis configuration file.',
         )
 
-    print_step('Starting Ethereum node')
-    ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
-    port = ethereum_config['rpc']
-    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
-    web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
-    random_marker = binascii.hexlify(b'raiden').decode()
-    privatekeys = []
-    geth_wait_and_check(web3_client, privatekeys, random_marker)
-
-    print_step('Deploying Raiden contracts')
-    host = '0.0.0.0'
-    client = JSONRPCClient(
-        host,
-        ethereum_config['rpc'],
-        get_private_key(),
-        web3=web3_client,
+    result = setup_testchain_and_raiden(
+        smoketest_config,
+        ctx.parent.params['transport'],
+        ctx.parent.params['matrix_server'],
+        print_step,
     )
-    contract_addresses = deploy_smoketest_contracts(client, 627)
+    args = result['args']
+    contract_addresses = result['contract_addresses']
+    token = result['token']
+    ethereum = result['ethereum']
+    ethereum_config = result['ethereum_config']
 
-    token_contract = deploy_token(client)
-    token = token_contract(1000, 0, 'TKN', 'TKN')
-
-    registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
-
-    registry.add_token(to_canonical_address(token.contract.address))
-
-    print_step('Setting up Raiden')
-    # setup cli arguments for starting raiden
-    args = dict(
-        discovery_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-        ),
-        registry_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-        ),
-        secret_registry_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_SECRET_REGISTRY],
-        ),
-        eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
-        keystore_path=ethereum_config['keystore'],
-        address=ethereum_config['address'],
-        network_id='627',
-        transport=ctx.parent.params['transport'],
-        matrix_server='http://localhost:8008'
-                      if ctx.parent.params['matrix_server'] == 'auto'
-                      else ctx.parent.params['matrix_server'],
-    )
     smoketest_config['transport'] = args['transport']
     for option_ in run.params:
         if option_.name in args.keys():
@@ -1108,12 +1065,8 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         else:
             args[option_.name] = option_.default
 
-    password_file = os.path.join(args['keystore_path'], 'password')
-    with open(password_file, 'w') as handler:
-        handler.write('password')
-
     port = next(get_free_port('127.0.0.1', 5001))
-    args['password_file'] = click.File()(password_file)
+
     args['datadir'] = args['keystore_path']
     args['api_address'] = 'localhost:' + str(port)
     args['sync_check'] = False
