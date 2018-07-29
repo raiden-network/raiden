@@ -341,6 +341,7 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
         network_id='627',
+        sync_check=False,
         transport=transport,
         matrix_server='http://localhost:8008'
                       if matrix_server == 'auto'
@@ -351,6 +352,7 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
         handler.write('password')
 
     args['password_file'] = click.File()(password_file)
+    args['datadir'] = args['keystore_path']
     return dict(
         args=args,
         contract_addresses=contract_addresses,

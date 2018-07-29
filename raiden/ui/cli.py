@@ -1067,9 +1067,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     port = next(get_free_port('127.0.0.1', 5001))
 
-    args['datadir'] = args['keystore_path']
     args['api_address'] = 'localhost:' + str(port)
-    args['sync_check'] = False
 
     def _run_smoketest():
         print_step('Starting Raiden')

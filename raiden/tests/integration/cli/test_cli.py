@@ -18,19 +18,8 @@ def test_cli_version():
 
 
 @pytest.mark.timeout(25)
-def test_cli_full_init(blockchain_provider):
-    cli_args = ['--keystore-path', blockchain_provider['keystore_path'],
-                '--password-file', blockchain_provider['password_file_path'],
-                '--datadir', blockchain_provider['datadir_path'],
-                '--nat', 'none',
-                '--no-sync-check',
-                '--eth-rpc-endpoint', blockchain_provider['eth_rpc_endpoint'],
-                '--network-id', blockchain_provider['network_id'],
-                '--registry-contract-address', blockchain_provider['registry_contract_address'],
-                '--discovery-contract-address', blockchain_provider['discovery_contract_address']]
-    child = pexpect.spawn('raiden',
-                          cli_args,
-                          logfile=sys.stdout)
+def test_cli_full_init(cli_args):
+    child = pexpect.spawn('raiden', cli_args, logfile=sys.stdout)
     try:
         child.expect('Welcome to Raiden')
         child.expect('The following accounts were found in your machine:')
