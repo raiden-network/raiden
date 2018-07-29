@@ -1,10 +1,11 @@
 import sqlite3
-
+import os
 import pytest
 
+from raiden.exceptions import InvalidDBData
 from raiden.transfer.architecture import State, StateManager
 from raiden.storage.serialize import PickleSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage, RAIDEN_DB_VERSION
 from raiden.storage.wal import (
     restore_from_latest_snapshot,
     WriteAheadLog,
@@ -42,6 +43,24 @@ def new_wal():
     storage = SQLiteStorage(':memory:', serializer)
     wal = WriteAheadLog(state_manager, storage)
     return wal
+
+
+def test_connect_to_corrupt_db(tmpdir):
+    serializer = PickleSerializer
+    dbpath = os.path.join(tmpdir, 'log.db')
+    with open(dbpath, 'wb') as f:
+        f.write(os.urandom(256))
+
+    with pytest.raises(InvalidDBData):
+        SQLiteStorage(dbpath, serializer)
+
+
+def test_wal_has_version():
+    wal = new_wal()
+    assert wal.version == RAIDEN_DB_VERSION
+    # Let's make sure that nobody makes a setter for this attribute
+    with pytest.raises(AttributeError):
+        wal.version = 5
 
 
 def test_write_read_log():

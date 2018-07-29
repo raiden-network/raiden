@@ -63,3 +63,7 @@ class WriteAheadLog:
         # otherwise no state change was dispatched
         if state_change_id:
             self.storage.write_state_snapshot(state_change_id, current_state)
+
+    @property
+    def version(self):
+        return self.storage.get_version()
