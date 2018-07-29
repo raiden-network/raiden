@@ -35,6 +35,7 @@ from raiden import constants
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.exceptions import (
+    AddressWithoutCode,
     APIServerPortInUseError,
     ContractVersionMismatch,
     EthNodeCommunicationError,
@@ -236,6 +237,21 @@ def wait_for_sync(
         print('Falling back to eth_sync api.')
 
         wait_for_sync_rpc_api(blockchain_service, sleep)
+
+
+def handle_contract_version_mismatch(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    print(
+        f'Error: Provided {name} {hex_addr} contract version mismatch. '
+        'Please update your Raiden installation.',
+    )
+    sys.exit(1)
+
+
+def handle_contract_no_code(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    print(f'Error: Provided {name} {hex_addr} contract does not contain code')
+    sys.exit(1)
 
 
 def options(func):
@@ -621,22 +637,18 @@ def run_app(
             registry_contract_address or contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         )
     except ContractVersionMismatch:
-        print(
-            'Deployed registry contract version mismatch. '
-            'Please update your Raiden installation.',
-        )
-        sys.exit(1)
+        handle_contract_version_mismatch('token network registry', registry_contract_address)
+    except AddressWithoutCode:
+        handle_contract_no_code('token network registry', registry_contract_address)
 
     try:
         secret_registry = blockchain_service.secret_registry(
             secret_registry_contract_address or contract_addresses[CONTRACT_SECRET_REGISTRY],
         )
     except ContractVersionMismatch:
-        print(
-            'Deployed secret registry contract version mismatch. '
-            'Please update your Raiden installation.',
-        )
-        sys.exit(1)
+        handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
+    except AddressWithoutCode:
+        handle_contract_no_code('secret registry', secret_registry_contract_address)
 
     discovery = None
     if transport == 'udp':
@@ -650,9 +662,9 @@ def run_app(
                 dicovery_proxy,
             )
         except ContractVersionMismatch:
-            print('Deployed discovery contract version mismatch. '
-                  'Please update your Raiden installation.')
-            sys.exit(1)
+            handle_contract_version_mismatch('discovery', discovery_contract_address)
+        except AddressWithoutCode:
+            handle_contract_no_code('discovery', discovery_contract_address)
         throttle_policy = TokenBucket(
             config['transport']['throttle_capacity'],
             config['transport']['throttle_fill_rate'],
