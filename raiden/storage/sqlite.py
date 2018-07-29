@@ -17,9 +17,16 @@ class SQLiteStorage:
         conn = sqlite3.connect(database_path)
         conn.text_factory = str
         conn.execute('PRAGMA foreign_keys=ON')
+        self.conn = conn
 
         with conn:
-            conn.executescript(DB_SCRIPT_CREATE_TABLES)
+            try:
+                conn.executescript(DB_SCRIPT_CREATE_TABLES)
+            except sqlite3.DatabaseError:
+                raise InvalidDBData(
+                    'Existing DB {} was found to be corrupt at Raiden startup. '
+                    'Manual user intervention required. Bailing ...'.format(database_path),
+                )
 
         self._run_updates()
 
@@ -36,7 +43,6 @@ class SQLiteStorage:
         # Improve on this and find a better way to protect against this potential race
         # condition.
         self.write_lock = threading.Lock()
-        self.conn = conn
         self.serializer = serializer
 
     def _run_updates(self):
