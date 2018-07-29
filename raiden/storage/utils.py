@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS state_snapshot (
     statechange_id INTEGER,
     data BINARY,
     FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)
-)
+);
 '''
 
 DB_CREATE_STATE_EVENTS = '''
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS state_events (
     block_number INTEGER NOT NULL,
     data BINARY,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
-)
+);
 '''
 
 DB_SCRIPT_CREATE_TABLES = """
