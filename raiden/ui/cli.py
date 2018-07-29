@@ -36,6 +36,7 @@ from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.exceptions import (
     AddressWithoutCode,
+    AddressWrongContract,
     APIServerPortInUseError,
     ContractVersionMismatch,
     EthNodeCommunicationError,
@@ -251,6 +252,15 @@ def handle_contract_version_mismatch(name: str, address: typing.Address) -> None
 def handle_contract_no_code(name: str, address: typing.Address) -> None:
     hex_addr = to_checksum_address(address)
     print(f'Error: Provided {name} {hex_addr} contract does not contain code')
+    sys.exit(1)
+
+
+def handle_contract_wrong_address(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    print(
+        f'Error: Provided address {hex_addr} for {name} contract'
+        ' does not contain expected code.'
+    )
     sys.exit(1)
 
 
@@ -640,6 +650,8 @@ def run_app(
         handle_contract_version_mismatch('token network registry', registry_contract_address)
     except AddressWithoutCode:
         handle_contract_no_code('token network registry', registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('token network registry', registry_contract_address)
 
     try:
         secret_registry = blockchain_service.secret_registry(
@@ -649,6 +661,8 @@ def run_app(
         handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
     except AddressWithoutCode:
         handle_contract_no_code('secret registry', secret_registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
     discovery = None
     if transport == 'udp':
@@ -665,6 +679,9 @@ def run_app(
             handle_contract_version_mismatch('discovery', discovery_contract_address)
         except AddressWithoutCode:
             handle_contract_no_code('discovery', discovery_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('discovery', discovery_contract_address)
+
         throttle_policy = TokenBucket(
             config['transport']['throttle_capacity'],
             config['transport']['throttle_fill_rate'],

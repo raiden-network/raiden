@@ -2,6 +2,7 @@ from typing import Optional
 
 import structlog
 from web3.utils.filters import Filter
+from web3.exceptions import BadFunctionCallOutput
 from eth_utils import (
     is_binary_address,
     to_normalized_address,
@@ -20,6 +21,7 @@ from raiden_contracts.constants import (
 from raiden.utils import typing, compare_versions
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
+    AddressWrongContract,
     TransactionThrew,
     InvalidAddress,
     ContractVersionMismatch,
@@ -55,10 +57,13 @@ class TokenNetworkRegistry:
             to_normalized_address(registry_address),
         )
 
-        is_valid_version = compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            EXPECTED_CONTRACTS_VERSION,
-        )
+        try:
+            is_valid_version = compare_versions(
+                proxy.contract.functions.contract_version().call(),
+                EXPECTED_CONTRACTS_VERSION,
+            )
+        except BadFunctionCallOutput:
+            raise AddressWrongContract('')
         if not is_valid_version:
             raise ContractVersionMismatch('Incompatible ABI for TokenNetworkRegistry')
 

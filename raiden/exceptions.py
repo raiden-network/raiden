@@ -124,6 +124,12 @@ class AddressWithoutCode(RaidenError):
     pass
 
 
+class AddressWrongContract(RaidenError):
+    """Raised on attempt to execute contract on address that has code but
+    is probably not the contract we wanted."""
+    pass
+
+
 class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
 
