@@ -83,13 +83,13 @@ jobs:
     - stage: integration
       <<: *job-template-integration
       env:
-        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
+        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=udp'
 
     - stage: integration
       <<: *job-template-integration
       env:
-        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts'
+        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 
@@ -134,6 +134,19 @@ jobs:
       <<: *job-template-integration
       env:
         - TEST='raiden/tests/integration/api'
+        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+        - RUN_SYNAPSE=1
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/cli'
+        - TRANSPORT_OPTIONS='--transport=udp'
+
+    - stage: integration
+      <<: *job-template-integration
+      env:
+        - TEST='raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 

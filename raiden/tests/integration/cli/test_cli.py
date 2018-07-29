@@ -119,14 +119,14 @@ def test_cli_wrong_network_id_try_mainnet(cli_args):
 
 @pytest.mark.timeout(25)
 @pytest.mark.parametrize('changed_args', [{
-    'registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584'
+    'registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
 }])
 def test_cli_malformed_registry_address(cli_args):
     child = pexpect.spawn('raiden', cli_args, logfile=sys.stdout)
     try:
         child.expect(
             'Error: Invalid value for "--registry-contract-address"'
-            ': Address must be EIP55 checksummed'
+            ': Address must be EIP55 checksummed',
         )
     except pexpect.TIMEOUT as e:
         print("Timed out at", e)
