@@ -1,6 +1,7 @@
 import structlog
 from typing import List
 
+from web3.exceptions import BadFunctionCallOutput
 from web3.utils.filters import Filter
 from gevent.event import AsyncResult
 from eth_utils import (
@@ -14,7 +15,12 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     EVENT_SECRET_REVEALED,
 )
-from raiden.exceptions import TransactionThrew, InvalidAddress, ContractVersionMismatch
+from raiden.exceptions import (
+    AddressWrongContract,
+    ContractVersionMismatch,
+    InvalidAddress,
+    TransactionThrew,
+)
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
     check_transaction_threw,
@@ -49,11 +55,14 @@ class SecretRegistry:
             to_normalized_address(secret_registry_address),
         )
 
-        if not compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            EXPECTED_CONTRACTS_VERSION,
-        ):
-            raise ContractVersionMismatch('Incompatible ABI for SecretRegistry')
+        try:
+            if not compare_versions(
+                    proxy.contract.functions.contract_version().call(),
+                    EXPECTED_CONTRACTS_VERSION,
+            ):
+                raise ContractVersionMismatch('Incompatible ABI for SecretRegistry')
+        except BadFunctionCallOutput:
+            raise AddressWrongContract('')
 
         self.address = secret_registry_address
         self.proxy = proxy

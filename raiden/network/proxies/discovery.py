@@ -4,11 +4,13 @@ from eth_utils import (
     is_binary_address,
     to_normalized_address,
 )
+from web3.exceptions import BadFunctionCallOutput
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
+    AddressWrongContract,
     ContractVersionMismatch,
     TransactionThrew,
     UnknownAddress,
@@ -42,12 +44,15 @@ class Discovery:
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
-        is_valid_version = compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            EXPECTED_CONTRACTS_VERSION,
-        )
-        if not is_valid_version:
-            raise ContractVersionMismatch('Incompatible ABI for Discovery')
+        try:
+            is_valid_version = compare_versions(
+                proxy.contract.functions.contract_version().call(),
+                EXPECTED_CONTRACTS_VERSION,
+            )
+            if not is_valid_version:
+                raise ContractVersionMismatch('Incompatible ABI for Discovery')
+        except BadFunctionCallOutput:
+            raise AddressWrongContract('')
 
         self.address = discovery_address
         self.client = jsonrpc_client
