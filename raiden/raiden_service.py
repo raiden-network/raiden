@@ -15,7 +15,11 @@ from raiden.network.proxies import (
     SecretRegistry,
     TokenNetworkRegistry,
 )
-from raiden import routing, waiting
+from raiden import (
+    constants,
+    routing,
+    waiting,
+)
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
@@ -222,7 +226,10 @@ class RaidenService:
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
             )
-            state_change = ContractReceiveNewPaymentNetwork(payment_network)
+            state_change = ContractReceiveNewPaymentNetwork(
+                constants.NULL_ADDRESS,
+                payment_network,
+            )
             self.handle_state_change(state_change)
 
             # On first run Raiden needs to fetch all events for the payment

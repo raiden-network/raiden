@@ -75,6 +75,7 @@ def test_write_read_log():
     locksroot = sha3(b'test_write_read_log')
     contract_receive_unlock = ContractReceiveChannelBatchUnlock(
         factories.make_address(),
+        factories.make_address(),
         participant,
         partner,
         locksroot,

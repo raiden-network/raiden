@@ -1,6 +1,8 @@
 import gevent
 import structlog
 
+from eth_utils import to_canonical_address
+
 from raiden_contracts.constants import (
     EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
     EVENT_CHANNEL_CLOSED,
@@ -54,7 +56,13 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
         token_address,
     )
 
+    receipt = raiden.chain.client.get_transaction_receipt(
+        event.event_data['transactionHash'],
+    )
+    from_address = to_canonical_address(receipt['from'])
+
     new_token_network = ContractReceiveNewTokenNetwork(
+        from_address,
         event.originating_contract,
         token_network_state,
     )
@@ -82,7 +90,13 @@ def handle_channel_new(raiden, event, current_block_number):
             event.event_data['block_number'],
         )
 
+        receipt = raiden.chain.client.get_transaction_receipt(
+            event.event_data['transactionHash'],
+        )
+        from_address = to_canonical_address(receipt['from'])
+
         new_channel = ContractReceiveChannelNew(
+            from_address,
             token_network_identifier,
             channel_state,
         )
@@ -107,7 +121,13 @@ def handle_channel_new(raiden, event, current_block_number):
         )
 
     else:
+        receipt = raiden.chain.client.get_transaction_receipt(
+            event.event_data['transactionHash'],
+        )
+        from_address = to_canonical_address(receipt['from'])
+
         new_route = ContractReceiveRouteNew(
+            from_address,
             token_network_identifier,
             participant1,
             participant2,
@@ -141,7 +161,14 @@ def handle_channel_new_balance(raiden, event, current_block_number):
             total_deposit,
             deposit_block_number,
         )
+
+        receipt = raiden.chain.client.get_transaction_receipt(
+            event.event_data['transactionHash'],
+        )
+        from_address = to_canonical_address(receipt['from'])
+
         newbalance_statechange = ContractReceiveChannelNewBalance(
+            from_address,
             token_network_identifier,
             channel_identifier,
             deposit_transaction,
@@ -172,10 +199,18 @@ def handle_channel_closed(raiden, event, current_block_number):
     )
 
     if channel_state:
+        # The from address is included in the ChannelClosed event as the
+        # closing_participant field
+        #
+        # receipt = raiden.chain.client.get_transaction_receipt(
+        #     event.event_data['transactionHash'],
+        # )
+        # from_address = to_canonical_address(receipt['from'])
+
         channel_closed = ContractReceiveChannelClosed(
+            data['closing_participant'],
             token_network_identifier,
             channel_identifier,
-            data['closing_participant'],
             data['block_number'],
         )
         raiden.handle_state_change(channel_closed, current_block_number)
@@ -193,7 +228,13 @@ def handle_channel_settled(raiden, event, current_block_number):
     )
 
     if channel_state:
+        receipt = raiden.chain.client.get_transaction_receipt(
+            event.event_data['transactionHash'],
+        )
+        from_address = to_canonical_address(receipt['from'])
+
         channel_settled = ContractReceiveChannelSettled(
+            from_address,
             token_network_identifier,
             channel_identifier,
             data['block_number'],
@@ -205,7 +246,13 @@ def handle_channel_batch_unlock(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
 
+    receipt = raiden.chain.client.get_transaction_receipt(
+        event.event_data['transactionHash'],
+    )
+    from_address = to_canonical_address(receipt['from'])
+
     unlock_state_change = ContractReceiveChannelBatchUnlock(
+        from_address,
         token_network_identifier,
         data['participant'],
         data['partner'],
@@ -221,7 +268,13 @@ def handle_secret_revealed(raiden, event, current_block_number):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
+    receipt = raiden.chain.client.get_transaction_receipt(
+        event.event_data['transactionHash'],
+    )
+    from_address = to_canonical_address(receipt['from'])
+
     registeredsecret_state_change = ContractReceiveSecretReveal(
+        from_address,
         secret_registry_address,
         data['secrethash'],
         data['secret'],
@@ -250,8 +303,9 @@ def on_blockchain_event(raiden, event, current_block_number, chain_id):
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
     elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
-        # balance proof updates are handled in the linked code, so no action is needed here
-        # https://github.com/raiden-network/raiden/blob/da54ef4b20fb006c126fcb091b18269314c2003b/raiden/transfer/channel.py#L1337-L1344  # noqa
+        # balance proof updates are handled by the function
+        # raiden.transfer.channel::handle_channel_closed, so no action is
+        # needed here
         pass
 
     elif data['event'] == EVENT_CHANNEL_CLOSED:

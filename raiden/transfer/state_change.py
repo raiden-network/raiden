@@ -159,9 +159,12 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             channel_state: NettingChannelState,
     ):
+        super().__init__(transaction_from)
+
         self.token_network_identifier = token_network_identifier
         self.channel_state = channel_state
 
@@ -174,6 +177,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNew) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_state == other.channel_state
         )
@@ -187,21 +191,19 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            closing_address: typing.Address,
             closed_block_number: typing.BlockNumber,
     ):
-
-        if not isinstance(closing_address, typing.T_Address):
-            raise ValueError('closing_address must be of type address')
-
         if not isinstance(closed_block_number, typing.T_BlockNumber):
             raise ValueError('closed_block_number must be of type block_number')
 
+        super().__init__(transaction_from)
+
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.closing_address = closing_address
+        self.closing_address = transaction_from  # alias for backwards compatibility
         self.closed_block_number = closed_block_number
 
     def __repr__(self):
@@ -219,6 +221,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelClosed) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.closing_address == other.closing_address and
@@ -304,10 +307,13 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             deposit_transaction: TransactionChannelNewBalance,
     ):
+        super().__init__(transaction_from)
+
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.deposit_transaction = deposit_transaction
@@ -324,6 +330,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNewBalance) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.deposit_transaction == other.deposit_transaction
@@ -338,12 +345,15 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             settle_block_number: typing.BlockNumber,
     ):
         if not isinstance(settle_block_number, int):
             raise ValueError('settle_block_number must be of type int')
+
+        super().__init__(transaction_from)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
@@ -362,6 +372,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelSettled) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.settle_block_number == other.settle_block_number
@@ -420,9 +431,15 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     A payment network corresponds to a registry smart contract.
     """
 
-    def __init__(self, payment_network: PaymentNetworkState):
+    def __init__(
+            self,
+            transaction_from: typing.Address,
+            payment_network: PaymentNetworkState,
+    ):
         if not isinstance(payment_network, PaymentNetworkState):
             raise ValueError('payment_network must be a PaymentNetworkState instance')
+
+        super().__init__(transaction_from)
 
         self.payment_network = payment_network
 
@@ -434,6 +451,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveNewPaymentNetwork) and
+            self.transaction_from == other.transaction_from and
             self.payment_network == other.payment_network
         )
 
@@ -446,11 +464,14 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             payment_network_identifier: typing.PaymentNetworkID,
             token_network: TokenNetworkState,
     ):
         if not isinstance(token_network, TokenNetworkState):
             raise ValueError('token_network must be a TokenNetworkState instance')
+
+        super().__init__(transaction_from)
 
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
@@ -464,6 +485,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveNewTokenNetwork) and
+            self.transaction_from == other.transaction_from and
             self.payment_network_identifier == other.payment_network_identifier and
             self.token_network == other.token_network
         )
@@ -477,6 +499,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             secret_registry_address: typing.SecretRegistryAddress,
             secrethash: typing.SecretHash,
             secret: typing.Secret,
@@ -487,6 +510,8 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             raise ValueError('secrethash must be of type SecretHash')
         if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be of type Secret')
+
+        super().__init__(transaction_from)
 
         self.secret_registry_address = secret_registry_address
         self.secrethash = secrethash
@@ -502,6 +527,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveSecretReveal) and
+            self.transaction_from == other.transaction_from and
             self.secret_registry_address == other.secret_registry_address and
             self.secrethash == other.secrethash and
             self.secret == other.secret
@@ -524,6 +550,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkIdentifier,
             participant: typing.Address,
             partner: typing.Address,
@@ -540,6 +567,8 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
         if not isinstance(partner, typing.T_Address):
             raise ValueError('partner must be of type address')
+
+        super().__init__(transaction_from)
 
         self.token_network_identifier = token_network_identifier
         self.participant = participant
@@ -565,6 +594,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.participant == other.participant and
             self.partner == other.partner and
@@ -582,6 +612,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
 
     def __init__(
             self,
+            transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             participant1: typing.Address,
             participant2: typing.Address,
@@ -592,6 +623,8 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
 
         if not isinstance(participant2, typing.T_Address):
             raise ValueError('participant2 must be of type address')
+
+        super().__init__(transaction_from)
 
         self.token_network_identifier = token_network_identifier
         self.participant1 = participant1
@@ -607,6 +640,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveRouteNew) and
+            self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2
