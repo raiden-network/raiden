@@ -1,4 +1,3 @@
-from collections import defaultdict
 from enum import Enum
 
 from eth_utils import to_canonical_address
@@ -37,8 +36,9 @@ ETH_RPC_DEFAULT_PORT = 8545
 HTTP_PORT = 80
 HTTPS_PORT = 443
 
-
 EMPTY_HASH = b'\x00' * 32
+
+START_QUERY_BLOCK_KEY = 'DefaultStartBlock'
 
 MAINNET = 'mainnet'
 ROPSTEN = 'ropsten'
@@ -54,15 +54,12 @@ ID_TO_NETWORKNAME = {
     627: SMOKETEST,
 }
 
-ID_TO_QUERY_BLOCK = defaultdict(int, {
-    3: 3604000,  # 924 blocks before token network registry deployment
-})
-
-ID_TO_CONTRACT_ADDRESSES = {
+ID_TO_NETWORK_CONFIG = {
     3: {
         CONTRACT_ENDPOINT_REGISTRY: to_canonical_address(ROPSTEN_DISCOVERY_ADDRESS),
         CONTRACT_SECRET_REGISTRY: to_canonical_address(ROPSTEN_SECRET_REGISTRY_ADDRESS),
         CONTRACT_TOKEN_NETWORK_REGISTRY: to_canonical_address(ROPSTEN_REGISTRY_ADDRESS),
+        START_QUERY_BLOCK_KEY: 3604000,  # 924 blocks before token network registry deployment
     },
 }
 
