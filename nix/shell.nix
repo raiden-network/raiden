@@ -34,6 +34,7 @@ in mkShell rec {
     libxslt
     go-ethereum
     gitMinimal
+    nodejs-8_x
   ];
 
 }
