@@ -4,7 +4,7 @@ from enum import Enum
 from collections import namedtuple
 from urllib.parse import urljoin
 
-from mirakuru import HTTPExecutor
+from raiden.utils.http import HTTPExecutor
 
 
 TransportConfig = namedtuple('TransportConfig', 'protocol parameters')
@@ -47,10 +47,9 @@ def local_matrix_server(transport_config):
     # otherwise, run our own local server
     matrix = HTTPExecutor(
         transport_config.parameters.command,
-        status=r'^[24]\d\d$',
-        url=urljoin(server, '/_matrix'),
-        timeout=120,
-        sleep=0.1,
+        url=urljoin(server, '/_matrix/client/versions'),
+        method='GET',
+        timeout=30,
         shell=True,
     )
 

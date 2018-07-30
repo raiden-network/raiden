@@ -28,7 +28,7 @@ from eth_utils import (
     to_int,
     to_normalized_address,
 )
-from mirakuru import HTTPExecutor, ProcessExitedWithError
+from mirakuru import ProcessExitedWithError
 from requests.exceptions import RequestException
 
 from raiden import constants
@@ -79,6 +79,7 @@ from raiden.utils.cli import (
 )
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.gevent_utils import configure_gevent
+from raiden.utils.http import HTTPExecutor
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -1160,8 +1161,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         try:
             with HTTPExecutor(
                 local_matrix,
-                status=r'^[24]\d\d$',
                 url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
+                method='GET',
+                timeout=30,
                 shell=True,
             ):
                 args['extra_config'] = {
