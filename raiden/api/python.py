@@ -737,6 +737,32 @@ class RaidenAPI:
 
         return events
 
+    def get_channel_events_externally_visible(
+            self,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
+        returned_events = []
+        raiden_events = self.raiden.wal.storage.get_events_by_block(
+            from_block=from_block,
+            to_block=to_block,
+        )
+
+        # Here choose internal events we want to expose to the end user
+        for block_number, event in raiden_events:
+            if isinstance(event, EVENTS_EXTERNALLY_VISIBLE):
+                new_event = {
+                    'block_number': block_number,
+                    'event': type(event).__name__,
+                }
+                new_event.update(event.__dict__)
+                returned_events.append(new_event)
+
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        return returned_events
+
     def get_channel_events_blockchain(
             self,
             token_address: typing.TokenAddress,
@@ -744,9 +770,16 @@ class RaidenAPI:
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ):
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_token_network_events_blockchain',
+            )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
         )
+        if token_network_address is None:
+            raise UnknownTokenAddress('Token address is not known.')
+
         channel_list = self.get_channel_list(
             registry_address=self.raiden.default_registry.address,
             token_address=token_address,
@@ -766,7 +799,7 @@ class RaidenAPI:
 
     def get_channel_events_raiden(
             self,
-            token_address: typing.Address,
+            token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
@@ -782,32 +815,50 @@ class RaidenAPI:
                 'block_number': block_number,
                 'event': type(event).__name__,
             }
-            if hasattr(event, 'transfer'):
-                if event.transfer.token == token_address:
-                    event.transfer = event.transfer.__repr__()
+            if partner_address:
+                if hasattr(event, 'recipient') and event.recipient == partner_address:
+                    if hasattr(event, 'transfer') and event.transfer.token == token_address:
+                        event.transfer = repr(event.transfer)
+                        new_event.update(event.__dict__)
+                        self._encode_and_append(returned_events, new_event)
+                    elif hasattr(event, 'token') and event.token == token_address:
+                        event.balance_proof = repr(event.balance_proof)
+                        new_event.update(event.__dict__)
+                        self._encode_and_append(returned_events, new_event)
+                    else:
+                        self._encode_and_append(returned_events, new_event)
+                else:
+                    self._encode_and_append(returned_events, new_event)
+            else:
+                if hasattr(event, 'transfer') and event.transfer.token == token_address:
+                    event.transfer = repr(event.transfer)
                     new_event.update(event.__dict__)
-            elif hasattr(event, 'token'):
-                if event.token == token_address:
-                    event.balance_proof = event.balance_proof.__repr__()
+                    self._encode_and_append(returned_events, new_event)
+                elif hasattr(event, 'token') and event.token == token_address:
+                    event.balance_proof = repr(event.balance_proof)
                     new_event.update(event.__dict__)
-            encode_byte_values(new_event)
-            returned_events.append(new_event)
+                    self._encode_and_append(returned_events, new_event)
+                else:
+                    self._encode_and_append(returned_events, new_event)
 
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
+    def _encode_and_append(self, returned_events, new_event):
+        encode_byte_values(new_event)
+        returned_events.append(new_event)
+
     def get_token_network_events_blockchain(
-        self,
-        token_address: typing.TokenAddress,
-        from_block: typing.BlockSpecification = 0,
-        to_block: typing.BlockSpecification = 'latest',
+            self,
+            token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
-        """Returns a list of internal events
-        coresponding to the token_address.
-        """
+        """Returns a list of blockchain events coresponding to the token_address."""
+
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events blockchain',
+                'Expected binary address format for token in get_token_network_events_blockchain',
             )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
@@ -835,14 +886,12 @@ class RaidenAPI:
         return returned_events
 
     def get_token_network_events_raiden(
-        self,
-        token_address,
-        from_block,
-        to_block='latest',
+            self,
+            token_address,
+            from_block,
+            to_block='latest',
     ):
-        """Returns a list of internal events
-        coresponding to the token_address.
-        """
+        """Returns a list of internal events coresponding to the token_address."""
 
         returned_events = []
         raiden_events = self.raiden.wal.storage.get_events_by_block(
@@ -857,11 +906,11 @@ class RaidenAPI:
             }
             if hasattr(event, 'transfer'):
                 if event.transfer.token == token_address:
-                    event.transfer = event.transfer.__repr__()
+                    event.transfer = repr(event.transfer)
                     new_event.update(event.__dict__)
             elif hasattr(event, 'token'):
                 if event.token == token_address:
-                    event.balance_proof = event.balance_proof.__repr__()
+                    event.balance_proof = repr(event.balance_proof)
                     new_event.update(event.__dict__)
             encode_byte_values(new_event)
             returned_events.append(new_event)

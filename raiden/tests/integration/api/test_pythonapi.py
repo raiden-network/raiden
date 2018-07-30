@@ -55,7 +55,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     channel12 = get_channelstate(node1, node2, token_network_identifier)
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
 
-    event_list1 = api1.get_channel_events(
+    event_list1 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
         channel12.open_transaction.finished_block_number,
@@ -75,7 +75,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         for event in event_list1
     )
 
-    token_events = api1.get_token_network_events(
+    token_events = api1.get_token_network_events_blockchain(
         token_address,
         channel12.open_transaction.finished_block_number,
     )
@@ -109,7 +109,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_REACHABLE
     assert api2.get_node_network_state(api1.address) == NODE_NETWORK_REACHABLE
 
-    event_list2 = api1.get_channel_events(
+    event_list2 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
         channel12.open_transaction.finished_block_number,
@@ -131,7 +131,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     # Load the new state with the channel closed
     channel12 = get_channelstate(node1, node2, token_network_identifier)
 
-    event_list3 = api1.get_channel_events(
+    event_list3 = api1.get_channel_events_blockchain(
         token_address,
         channel12.partner_state.address,
         channel12.open_transaction.finished_block_number,

@@ -1091,7 +1091,7 @@ def test_token_events(api_backend, token_addresses):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokeneventsresource',
+            'tokenblockchaineventsresource',
             token_address=token_address,
             from_block=0,
         ),
@@ -1127,7 +1127,7 @@ def test_channel_events(api_backend, token_addresses):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'channeleventsresource',
+            'tokenchanneleventsresourceblockchain',
             partner_address=partner_address,
             token_address=token_address,
             from_block=0,
@@ -1144,7 +1144,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokeneventsresource',
+            'tokenblockchaineventsresource',
             token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             from_block=5,
             to_block=20,
@@ -1335,14 +1335,50 @@ def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
     )
     request.send()
 
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+
+    request = grequests.post(
+        api_url_for(
+            api_backend,
+            'transfertotargetresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={'amount': amount, 'identifier': identifier},
+    )
+    response = request.send().response
+    assert_proper_response(response)
+
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokeneventsresource',
+            'tokenchanneleventsresourceraiden',
+            partner_address=None,
             token_address=token_address,
             from_block=0,
         ),
     )
+
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'tokenchanneleventsresourceraiden',
+            partner_address=target_address,
+            token_address=token_address,
+            from_block=0,
+        ),
+    )
+
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
 
@@ -1356,3 +1392,7 @@ def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
     assert 'ChannelOpened' in events_list
     assert 'ChannelNewDeposit' in events_list
     assert 'EventPaymentSentSuccess' in events_list
+
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert len(response.json()) > 0
