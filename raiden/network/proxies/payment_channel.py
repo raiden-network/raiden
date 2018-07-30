@@ -104,7 +104,11 @@ class PaymentChannel:
         return self.token_network.can_transfer(self.participant1, self.participant2)
 
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
-        self.token_network.set_total_deposit(total_deposit, self.participant2)
+        self.token_network.set_total_deposit(
+            channel_identifier=self.channel_identifier,
+            total_deposit=total_deposit,
+            partner=self.participant2
+        )
 
     def close(
             self,

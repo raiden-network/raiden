@@ -397,7 +397,12 @@ class TokenNetwork:
 
         return self.detail_participant(participant1, participant2)['deposit'] > 0
 
-    def set_total_deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
+    def set_total_deposit(
+            self,
+            channel_identifier: typing.ChannelID,
+            total_deposit: typing.TokenAmount,
+            partner: typing.Address,
+    ):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
@@ -406,6 +411,12 @@ class TokenNetwork:
         """
         if not isinstance(total_deposit, int):
             raise ValueError('total_deposit needs to be an integral number.')
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         token_address = self.token_address()
         token = Token(self.client, token_address)
