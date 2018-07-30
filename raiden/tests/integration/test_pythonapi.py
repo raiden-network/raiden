@@ -268,7 +268,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         identifier=1,
     )
 
-    app0_events = RaidenAPI(app0.raiden).get_channel_events(
+    app0_events = RaidenAPI(app0.raiden).get_channel_events_blockchain(
         token_address,
         app1.raiden.address,
         from_block=0,
@@ -282,7 +282,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
     max_block = max(event[0] for event in app0_events)
-    results = RaidenAPI(app0.raiden).get_channel_events(
+    results = RaidenAPI(app0.raiden).get_channel_events_blockchain(
         token_address,
         app1.raiden.address,
         from_block=max_block + 1,
@@ -290,13 +290,20 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
     assert not results
 
-    app1_events = RaidenAPI(app1.raiden).get_channel_events(
+    app1_events = RaidenAPI(app1.raiden).get_channel_events_raiden(
         token_address,
         app0.raiden.address,
         from_block=0,
     )
     assert must_have_event(app1_events, {'event': ChannelEvent.DEPOSIT})
     assert must_have_event(app1_events, {'event': 'EventPaymentReceivedSuccess'})
+
+    app1_events = RaidenAPI(app1.raiden).get_channel_events_blockchain(
+        token_address,
+        app0.raiden.address,
+        from_block=0,
+    )
+    assert must_have_event(app1_events, {'event': EVENT_CHANNEL_DEPOSIT})
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
