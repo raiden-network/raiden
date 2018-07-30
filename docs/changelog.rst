@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1844` Log debug output to a file to make debugging of problems easier.
 * :bug:`1994` Starting Raiden with a corrupt database will now throw a proper error instead of crashing with an exception.
 
 * :release:`0.4.1 <2018-07-27>`
