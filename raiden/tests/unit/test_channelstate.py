@@ -262,6 +262,7 @@ def test_channelstate_update_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
+        our_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
@@ -307,6 +308,7 @@ def test_channelstate_decreasing_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
+        our_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
@@ -345,6 +347,7 @@ def test_channelstate_repeated_contract_balance():
         deposit_block_number,
     )
     state_change = ContractReceiveChannelNewBalance(
+        our_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
@@ -397,6 +400,7 @@ def test_deposit_must_wait_for_confirmation():
         block_number,
     )
     new_balance = ContractReceiveChannelNewBalance(
+        channel_state.our_state.address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
@@ -1240,9 +1244,9 @@ def test_channelstate_unlock_without_locks():
 
     closed_block_number = 77
     state_change = ContractReceiveChannelClosed(
+        our_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
-        partner_model1.participant_address,
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
@@ -1336,9 +1340,9 @@ def test_channelstate_unlock():
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     close_state_change = ContractReceiveChannelClosed(
+        partner_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
-        partner_model1.participant_address,
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, close_state_change)
@@ -1346,6 +1350,7 @@ def test_channelstate_unlock():
 
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
+        partner_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         settle_block_number,
@@ -1448,15 +1453,16 @@ def test_settle_transaction_must_be_sent_only_once():
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     close_state_change = ContractReceiveChannelClosed(
+        partner_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
-        partner_model1.participant_address,
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, close_state_change)
 
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
+        partner_model1.participant_address,
         channel_state.token_network_identifier,
         channel_state.identifier,
         settle_block_number,

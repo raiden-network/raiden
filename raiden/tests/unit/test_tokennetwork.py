@@ -29,7 +29,11 @@ def test_contract_receive_channelnew_must_be_idempotent():
     channel_state1 = factories.make_channel(our_balance=our_balance)
     channel_state2 = copy.deepcopy(channel_state1)
 
-    state_change1 = ContractReceiveChannelNew(token_network_id, channel_state1)
+    state_change1 = ContractReceiveChannelNew(
+        channel_state1.our_state.address,
+        token_network_id,
+        channel_state1,
+    )
 
     token_network.state_transition(
         token_network_state,
@@ -48,7 +52,11 @@ def test_contract_receive_channelnew_must_be_idempotent():
         payment_identifier,
     )
 
-    state_change2 = ContractReceiveChannelNew(token_network_id, channel_state2)
+    state_change2 = ContractReceiveChannelNew(
+        channel_state2.our_state.address,
+        token_network_id,
+        channel_state2,
+    )
 
     # replay the ContractReceiveChannelNew state change
     iteration = token_network.state_transition(
@@ -79,7 +87,11 @@ def test_channel_settle_must_properly_cleanup():
     our_balance = amount + 50
     channel_state = factories.make_channel(our_balance=our_balance)
 
-    channel_new_state_change = ContractReceiveChannelNew(token_network_id, channel_state)
+    channel_new_state_change = ContractReceiveChannelNew(
+        channel_state.our_state.address,
+        token_network_id,
+        channel_state,
+    )
 
     channel_new_iteration = token_network.state_transition(
         token_network_state,
@@ -90,9 +102,9 @@ def test_channel_settle_must_properly_cleanup():
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(
+        channel_state.partner_state.address,
         token_network_id,
         channel_state.identifier,
-        channel_state.partner_state.address,
         closed_block_number,
     )
 
@@ -105,6 +117,7 @@ def test_channel_settle_must_properly_cleanup():
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
+        channel_state.partner_state.address,
         token_network_id,
         channel_state.identifier,
         settle_block_number,
