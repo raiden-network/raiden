@@ -300,21 +300,18 @@ def options(func):
         option(
             '--registry-contract-address',
             help='hex encoded address of the registry contract.',
-            default=constants.ROPSTEN_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--secret-registry-contract-address',
             help='hex encoded address of the secret registry contract.',
-            default=constants.ROPSTEN_SECRET_REGISTRY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--discovery-contract-address',
             help='hex encoded address of the discovery contract.',
-            default=constants.ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
             type=ADDRESS_TYPE,
             show_default=True,
         ),
@@ -602,9 +599,25 @@ def run_app(
         ),
     )
 
+    contract_addresses_given = (
+        registry_contract_address is not None and
+        secret_registry_contract_address is not None and
+        discovery_contract_address is not None
+    )
+    contract_addresses_known = net_id in constants.ID_TO_CONTRACT_ADDRESSES
+
+    if not contract_addresses_given and not contract_addresses_known:
+        print((
+              "There are known contract addresses for network id '{}'. Please provide "
+              'them in the command line or the configuration file.'
+              ).format(net_id))
+        sys.exit(1)
+
+    contract_addresses = constants.ID_TO_CONTRACT_ADDRESSES.get(net_id, dict())
+
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address,
+            registry_contract_address or contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         )
     except ContractVersionMismatch:
         print(
@@ -615,7 +628,7 @@ def run_app(
 
     try:
         secret_registry = blockchain_service.secret_registry(
-            secret_registry_contract_address,
+            secret_registry_contract_address or contract_addresses[CONTRACT_SECRET_REGISTRY],
         )
     except ContractVersionMismatch:
         print(
@@ -628,9 +641,12 @@ def run_app(
     if transport == 'udp':
         check_discovery_registration_gas(blockchain_service, address)
         try:
+            dicovery_proxy = blockchain_service.discovery(
+                discovery_contract_address or contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+            )
             discovery = ContractDiscovery(
                 blockchain_service.node_address,
-                blockchain_service.discovery(discovery_contract_address),
+                dicovery_proxy,
             )
         except ContractVersionMismatch:
             print('Deployed discovery contract version mismatch. '
