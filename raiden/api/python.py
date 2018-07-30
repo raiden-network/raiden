@@ -1,6 +1,5 @@
 from contextlib import ExitStack
 
-import gevent
 import structlog
 from eth_utils import is_binary_address, to_checksum_address
 
@@ -21,7 +20,6 @@ from raiden.transfer.state_change import ActionChannelClose
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
-    EthNodeCommunicationError,
     InsufficientFunds,
     InvalidAddress,
     InvalidAmount,
@@ -111,12 +109,7 @@ class RaidenAPI:
         try:
             registry = self.raiden.chain.token_network_registry(registry_address)
 
-            msg = 'After {} seconds the token was not properly registered.'.format(
-                poll_timeout,
-            )
-
-            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-                return registry.add_token(token_address)
+            return registry.add_token(token_address)
         finally:
             # Assume the transaction failed because the token is already
             # registered with the smart contract and this node has not yet
@@ -248,18 +241,13 @@ class RaidenAPI:
         except DuplicatedChannelError:
             log.info('partner opened channel first')
 
-        msg = 'After {} seconds the channel was not properly created.'.format(
-            poll_timeout,
+        waiting.wait_for_newchannel(
+            self.raiden,
+            registry_address,
+            token_address,
+            partner_address,
+            retry_timeout,
         )
-
-        with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-            waiting.wait_for_newchannel(
-                self.raiden,
-                registry_address,
-                token_address,
-                partner_address,
-                retry_timeout,
-            )
         chain_state = views.state_from_raiden(self.raiden)
         channel_state = views.get_channelstate_for(
             chain_state,
@@ -365,22 +353,16 @@ class RaidenAPI:
             # token.approve(netcontract_address, addendum)
             channel_proxy.set_total_deposit(total_deposit)
 
-            msg = 'After {} seconds the deposit was not properly processed.'.format(
-                poll_timeout,
+            target_address = self.raiden.address
+            waiting.wait_for_participant_newbalance(
+                self.raiden,
+                registry_address,
+                token_address,
+                partner_address,
+                target_address,
+                total_deposit,
+                retry_timeout,
             )
-
-            # Wait until the `ChannelNewBalance` event is processed.
-            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-                target_address = self.raiden.address
-                waiting.wait_for_participant_newbalance(
-                    self.raiden,
-                    registry_address,
-                    token_address,
-                    partner_address,
-                    target_address,
-                    total_deposit,
-                    retry_timeout,
-                )
 
     def channel_close(
             self,
@@ -463,20 +445,15 @@ class RaidenAPI:
 
                 self.raiden.handle_state_change(channel_close)
 
-            msg = 'After {} seconds the closing transactions were not properly processed.'.format(
-                poll_timeout,
-            )
-
             channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 
-            with gevent.Timeout(poll_timeout, EthNodeCommunicationError(msg)):
-                waiting.wait_for_close(
-                    self.raiden,
-                    registry_address,
-                    token_address,
-                    channel_ids,
-                    retry_timeout,
-                )
+            waiting.wait_for_close(
+                self.raiden,
+                registry_address,
+                token_address,
+                channel_ids,
+                retry_timeout,
+            )
 
     def get_channel_list(self, registry_address, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
