@@ -219,6 +219,18 @@ def test_token_network_proxy_basics(
     # update transfer
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
+    # try to settle using incorrect data
+    with pytest.raises(ChannelIncorrectStateError):
+        c2_token_network_proxy.settle(
+            channel_identifier,
+            1,
+            0,
+            EMPTY_HASH,
+            c1_client.sender,
+            transferred_amount,
+            0,
+            EMPTY_HASH,
+        )
     c2_token_network_proxy.settle(
         channel_identifier,
         0,
@@ -357,7 +369,7 @@ def test_token_network_proxy_update_transfer(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # settling with an invalid amount
-    with pytest.raises(TransactionThrew):
+    with pytest.raises(ChannelIncorrectStateError):
         c1_token_network_proxy.settle(
             channel_identifier,
             2,

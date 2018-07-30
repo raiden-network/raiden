@@ -32,6 +32,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.balance_proof import signing_update_data
 from raiden.utils import pex
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 
@@ -188,9 +189,9 @@ def handle_contract_send_channelclose(
 
     else:
         nonce = 0
-        balance_hash = b''
-        signature = b''
-        message_hash = b''
+        balance_hash = EMPTY_HASH
+        signature = EMPTY_SIGNATURE
+        message_hash = EMPTY_HASH
 
     channel_proxy = raiden.chain.payment_channel(
         token_network_address=channel_close_event.token_network_identifier,
@@ -281,7 +282,7 @@ def handle_contract_send_channelsettle(
     else:
         our_transferred_amount = 0
         our_locked_amount = 0
-        our_locksroot = b''
+        our_locksroot = EMPTY_HASH
 
     if partner_balance_proof:
         partner_transferred_amount = partner_balance_proof.transferred_amount
@@ -290,7 +291,7 @@ def handle_contract_send_channelsettle(
     else:
         partner_transferred_amount = 0
         partner_locked_amount = 0
-        partner_locksroot = b''
+        partner_locksroot = EMPTY_HASH
 
     our_max_transferred = our_transferred_amount + our_locked_amount
     partner_max_transferred = partner_transferred_amount + partner_locked_amount
@@ -321,11 +322,11 @@ def handle_contract_send_channelsettle(
             second_locked_amount,
             second_locksroot,
         )
-    except ChannelIncorrectStateError:
+    except ChannelIncorrectStateError as e:
         # Ignoring the exception as there might
         # be a race condition when both nodes try to settle
         # at the same time.
-        pass
+        log.error('settle failed', reason=str(e))
     except ChannelOutdatedError as e:
         log.error(e.args)
 

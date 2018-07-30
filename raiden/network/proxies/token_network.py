@@ -48,6 +48,7 @@ from raiden.utils import (
     privatekey_to_address,
     typing,
 )
+from raiden.transfer.utils import hash_balance_data
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -765,6 +766,16 @@ class TokenNetwork:
         )
 
         with self.channel_operations_lock[partner]:
+            if self._verify_settle_state(
+                transferred_amount,
+                locked_amount,
+                locksroot,
+                partner,
+                partner_transferred_amount,
+                partner_locked_amount,
+                partner_locksroot,
+            ) is False:
+                raise ChannelIncorrectStateError('local state can not be used to call settle')
             our_maximum = transferred_amount + locked_amount
             partner_maximum = partner_transferred_amount + partner_locked_amount
 
@@ -818,6 +829,30 @@ class TokenNetwork:
                 raise TransactionThrew('Settle', receipt_or_none)
 
             log.info('settle successful', **log_details)
+
+    def _verify_settle_state(
+        self,
+        transferred_amount: int,
+        locked_amount: int,
+        locksroot: typing.Locksroot,
+        partner: typing.Address,
+        partner_transferred_amount: int,
+        partner_locked_amount: int,
+        partner_locksroot: typing.Locksroot,
+    ):
+        """Check if our local state is up to date with on-chain state."""
+        channel_details = self.detail_participants(self.node_address, partner)
+        our_balance_hash_ok = hash_balance_data(
+            transferred_amount,
+            locked_amount,
+            locksroot,
+        ) == channel_details['our_balance_hash']
+        partner_balance_hash_ok = hash_balance_data(
+            partner_transferred_amount,
+            partner_locked_amount,
+            partner_locksroot,
+        ) == channel_details['partner_balance_hash']
+        return our_balance_hash_ok and partner_balance_hash_ok
 
     def events_filter(
             self,
