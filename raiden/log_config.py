@@ -1,12 +1,10 @@
-import time
 import logging
 import logging.config
 import re
+import sys
 from traceback import TracebackException
 from functools import wraps
-from typing import Dict, Callable, Pattern, Optional
-from cachetools import LRUCache, cachedmethod
-from operator import attrgetter
+from typing import Dict, Callable, Pattern, Tuple, List
 
 import structlog
 
@@ -29,40 +27,74 @@ def _chain(first_func, *funcs) -> Callable:
     return wrapper
 
 
-def _get_log_level(
-    module_rules: Dict[str, str],
-    logger_module: str,
-) -> Optional[str]:
-    split = lambda l: l.split('.') if l else list()
-    logger = split(logger_module)
-    for module in sorted(module_rules.keys(), key=_chain(split, len), reverse=True):
-        split_module = split(module)
+class LogFilter:
+    """ Utility for filtering log records on module level rules """
 
-        if logger[:len(split_module)] == split_module:
-            return module_rules[module]
+    def __init__(self, config: Dict[str, int], default_level: str):
+        """ Initializes a new `LogFilter`
+
+        Args:
+            config: Dictionary mapping module names to logging level
+            default_level: The default logging level
+        """
+        self._should_log = {}
+        # the empty module is not matched, so set it here
+        self._default_level = config.get('', default_level)
+        self._log_rules = [
+            (logger.split('.'), level)
+            for logger, level in config.items()
+        ]
+
+    def _match_list(
+        self,
+        module_rule: Tuple[List[str], str],
+        logger_name: str,
+    ) -> Tuple[int, str]:
+        logger_modules_split = logger_name.split('.')
+
+        modules_split: List[str] = module_rule[0]
+        level: str = module_rule[1]
+
+        if logger_modules_split == modules_split:
+            return sys.maxsize, level
+        else:
+            num_modules = len(modules_split)
+            if logger_modules_split[:num_modules] == modules_split:
+                return num_modules, level
+            else:
+                return 0, None
+
+    def _get_log_level(self, logger_name: str) -> str:
+        best_match_length = 0
+        best_match_level = self._default_level
+        for module in self._log_rules:
+            match_length, level = self._match_list(module, logger_name)
+
+            if match_length > best_match_length:
+                best_match_length = match_length
+                best_match_level = level
+
+        return best_match_level
+
+    def should_log(self, logger_name: str, level: str) -> bool:
+        """ Returns if a message for the logger should be logged. """
+        if (logger_name, level) not in self._should_log:
+            log_level_per_rule = self._get_log_level(logger_name)
+            log_level_per_rule_numeric = getattr(logging, log_level_per_rule.upper(), 10)
+            log_level_event_numeric = getattr(logging, level.upper(), 10)
+
+            should_log = log_level_event_numeric >= log_level_per_rule_numeric
+            self._should_log[(logger_name, level)] = should_log
+        return self._should_log[(logger_name, level)]
 
 
 class RaidenFilter(logging.Filter):
     def __init__(self, log_level_config, name=''):
         super().__init__(name)
-        self._log_rules = log_level_config
-        self._cache = LRUCache(64)
+        self._log_filter = LogFilter(log_level_config, default_level=DEFAULT_LOG_LEVEL)
 
-    @cachedmethod(attrgetter('_cache'), key=lambda _, record: (record.name, record.levelname))
     def filter(self, record):
-        # this check is needed as the flask logs somehow don't get processed by structlog
-        log_level_per_rule = _get_log_level(
-            self._log_rules,
-            record.name,
-        ) or DEFAULT_LOG_LEVEL
-        log_level_per_rule_numeric = getattr(logging, log_level_per_rule, logging.DEBUG)
-        log_level_event_numeric = record.levelno
-
-        # Propgate the event when the log level is lower than the threshold
-        if log_level_event_numeric < log_level_per_rule_numeric:
-            return False
-
-        return True
+        return self._log_filter.should_log(record.name, record.levelname)
 
 
 def _get_log_handler(formatter: str, log_file: str) -> Dict:
@@ -88,15 +120,14 @@ def _get_log_handler(formatter: str, log_file: str) -> Dict:
 
 
 def _get_log_file_handler() -> Dict:
-    time_suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
     return {
         'debug-info': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': f'raiden-debug-{time_suffix}.log',
+            'filename': f'raiden-debug.log',
             'level': 'DEBUG',
             'formatter': 'debug',
             'maxBytes': MAX_LOG_FILE_SIZE,
-            'backupCount': 1,
+            'backupCount': 3,
             'filters': ['log_level_debug_filter'],
         },
     }

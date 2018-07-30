@@ -5,6 +5,98 @@ import structlog
 import pytest
 
 from raiden.log_config import configure_logging
+from raiden.log_config import LogFilter
+
+
+def test_log_filter():
+    rules = {'': 'INFO'}
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('test', 'DEBUG') is False
+    assert filter.should_log('test', 'INFO') is True
+    assert filter.should_log('raiden', 'DEBUG') is False
+    assert filter.should_log('raiden', 'INFO') is True
+    assert filter.should_log('raiden.cli', 'DEBUG') is False
+    assert filter.should_log('raiden.cli', 'INFO') is True
+
+    rules = {'': 'WARN'}
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('test', 'INFO') is False
+    assert filter.should_log('test', 'WARN') is True
+    assert filter.should_log('raiden', 'INFO') is False
+    assert filter.should_log('raiden', 'WARN') is True
+    assert filter.should_log('raiden.cli', 'INFO') is False
+    assert filter.should_log('raiden.cli', 'WARN') is True
+
+    rules = {'test': 'WARN'}
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('test', 'INFO') is False
+    assert filter.should_log('test', 'WARN') is True
+    assert filter.should_log('raiden', 'DEBUG') is False
+    assert filter.should_log('raiden', 'INFO') is True
+    assert filter.should_log('raiden', 'WARN') is True
+    assert filter.should_log('raiden.cli', 'DEBUG') is False
+    assert filter.should_log('raiden.cli', 'INFO') is True
+    assert filter.should_log('raiden.cli', 'WARN') is True
+
+    rules = {'raiden': 'DEBUG'}
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('test', 'DEBUG') is False
+    assert filter.should_log('test', 'INFO') is True
+    assert filter.should_log('raiden', 'DEBUG') is True
+    assert filter.should_log('raiden.cli', 'DEBUG') is True
+
+    rules = {'raiden.network': 'DEBUG'}
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('test', 'DEBUG') is False
+    assert filter.should_log('test', 'INFO') is True
+    assert filter.should_log('raiden', 'DEBUG') is False
+    assert filter.should_log('raiden', 'INFO') is True
+    assert filter.should_log('raiden.network', 'DEBUG') is True
+
+    rules = {
+        '': 'WARN',
+        'raiden': 'DEBUG',
+        'raiden.network': 'INFO',
+        'raiden.network.transport': 'DEBUG',
+    }
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('raiden.network.transport.matrix', 'DEBUG') is True
+    assert filter.should_log('raiden.network.transport', 'DEBUG') is True
+    assert filter.should_log('raiden.network', 'DEBUG') is False
+    assert filter.should_log('raiden.network', 'INFO') is True
+    assert filter.should_log('raiden.network', 'INFO') is True
+    assert filter.should_log('raiden', 'DEBUG') is True
+    assert filter.should_log('', 'DEBUG') is False
+    assert filter.should_log('', 'INFO') is False
+    assert filter.should_log('', 'WARN') is True
+    assert filter.should_log('other', 'DEBUG') is False
+    assert filter.should_log('other', 'WARN') is True
+
+    rules = {
+        'raiden': 'DEBUG',
+        'raiden.network': 'INFO',
+        'raiden.network.transport': 'DEBUG',
+    }
+    filter = LogFilter(rules, default_level='INFO')
+
+    assert filter.should_log('raiden.network.transport.matrix', 'DEBUG') is True
+    assert filter.should_log('raiden.network.transport', 'DEBUG') is True
+    assert filter.should_log('raiden.network', 'DEBUG') is False
+    assert filter.should_log('raiden.network', 'INFO') is True
+    assert filter.should_log('raiden.network', 'INFO') is True
+    assert filter.should_log('raiden', 'DEBUG') is True
+    assert filter.should_log('', 'DEBUG') is False
+    assert filter.should_log('', 'INFO') is True
+    assert filter.should_log('', 'WARN') is True
+    assert filter.should_log('other', 'DEBUG') is False
+    assert filter.should_log('other', 'INFO') is True
+    assert filter.should_log('other', 'WARN') is True
 
 
 @pytest.mark.parametrize('module', ['', 'raiden', 'raiden.network'])
