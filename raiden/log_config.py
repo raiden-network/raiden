@@ -41,7 +41,7 @@ class LogFilter:
         # the empty module is not matched, so set it here
         self._default_level = config.get('', default_level)
         self._log_rules = [
-            (logger.split('.'), level)
+            (logger.split('.') if logger else list(), level)
             for logger, level in config.items()
         ]
 
@@ -50,7 +50,7 @@ class LogFilter:
         module_rule: Tuple[List[str], str],
         logger_name: str,
     ) -> Tuple[int, str]:
-        logger_modules_split = logger_name.split('.')
+        logger_modules_split = logger_name.split('.') if logger_name else []
 
         modules_split: List[str] = module_rule[0]
         level: str = module_rule[1]
