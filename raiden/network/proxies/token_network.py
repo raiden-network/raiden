@@ -877,6 +877,10 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
     ):
+        """
+        Checks whether an operation is being execute on a channel
+        between two participants using an old channel identifier
+        """
         onchain_channel_details = self.detail_channel(
             participant1,
             participant2,
@@ -888,7 +892,7 @@ class TokenNetwork:
 
         if onchain_channel_identifier != channel_identifier:
             raise ChannelOutdatedError(
-                'Current channel identifier is outdated.',
-                current_channel_id=channel_identifier,
-                new_channel_id=onchain_channel_identifier,
+                'Current channel identifier is outdated. '
+                f'current={channel_identifier}, '
+                f'new={onchain_channel_identifier}',
             )

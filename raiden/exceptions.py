@@ -179,9 +179,5 @@ class ChannelOutdatedError(RaidenError):
     """
     Raised when an action is invoked on a channel whose
     identifier has been replaced with a new channel identifier
-    due to a close of current channel and a re-open of a new one.
+    due to a close/re-open of current channel.
     """
-    def __init__(self, error_msg, current_channel_id, new_channel_id):
-        super().__init__(error_msg)
-        self.current_channel_id = current_channel_id
-        self.new_channel_id = new_channel_id

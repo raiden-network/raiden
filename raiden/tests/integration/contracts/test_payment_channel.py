@@ -1,3 +1,5 @@
+import pytest
+
 from eth_utils import (
     to_canonical_address,
     encode_hex,
@@ -8,10 +10,14 @@ from raiden_libs.utils.signing import sign_data
 from raiden_libs.messages import BalanceProof
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 
+from raiden.exceptions import ChannelOutdatedError
+from raiden.constants import EMPTY_HASH
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.proxies import TokenNetwork, PaymentChannel
-from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import wait_blocks
+from raiden.utils import (
+    privatekey_to_address,
+)
 
 
 def test_payment_channel_proxy_basics(
@@ -136,3 +142,116 @@ def test_payment_channel_proxy_basics(
     events = channel_filter.get_all_entries()
 
     assert len(events) == 4  # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
+
+
+def test_payment_channel_outdated_channel_close(
+    token_network_proxy,
+    private_keys,
+    blockchain_rpc_ports,
+    token_proxy,
+    chain_id,
+    web3,
+):
+    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+
+    partner = privatekey_to_address(private_keys[0])
+
+    client = JSONRPCClient(
+        '0.0.0.0',
+        blockchain_rpc_ports[0],
+        private_keys[1],
+        web3=web3,
+    )
+    token_network_proxy = TokenNetwork(
+        client,
+        token_network_address,
+    )
+
+    # create a channel
+    channel_identifier = token_network_proxy.new_netting_channel(
+        partner,
+        TEST_SETTLE_TIMEOUT_MIN,
+    )
+    assert channel_identifier is not None
+
+    # create channel proxies
+    channel_proxy_1 = PaymentChannel(token_network_proxy, channel_identifier)
+
+    channel_filter, _ = channel_proxy_1.all_events_filter(
+        from_block=web3.eth.blockNumber,
+        to_block='latest',
+    )
+
+    assert channel_proxy_1.channel_identifier == channel_identifier
+
+    assert channel_proxy_1.opened() is True
+
+    # balance proof by c1
+    balance_proof = BalanceProof(
+        channel_identifier=encode_hex(channel_identifier),
+        token_network_address=to_checksum_address(token_network_address),
+        nonce=0,
+        chain_id=chain_id,
+        transferred_amount=0,
+    )
+    balance_proof.signature = encode_hex(
+        sign_data(encode_hex(private_keys[0]), balance_proof.serialize_bin()),
+    )
+    # correct close
+    token_network_proxy.close(
+        channel_identifier,
+        partner,
+        balance_proof.nonce,
+        bytes(32),
+        bytes(32),
+        decode_hex(balance_proof.signature),
+    )
+    assert channel_proxy_1.closed() is True
+
+    events = channel_filter.get_all_entries()
+    assert len(events) == 2  # ChannelOpened, ChannelClosed
+
+    # check the settlement timeouts again
+    assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
+
+    # update transfer
+    wait_blocks(client.web3, TEST_SETTLE_TIMEOUT_MIN)
+
+    token_network_proxy.settle(
+        channel_identifier,
+        0,
+        0,
+        EMPTY_HASH,
+        partner,
+        0,
+        0,
+        EMPTY_HASH,
+    )
+    assert channel_proxy_1.settled() is True
+
+    events = channel_filter.get_all_entries()
+
+    assert len(events) == 3  # ChannelOpened, ChannelClosed, ChannelSettled
+
+    # Create a new channel with a different identifier
+    # create a channel
+    new_channel_identifier = token_network_proxy.new_netting_channel(
+        partner,
+        TEST_SETTLE_TIMEOUT_MIN,
+    )
+    assert new_channel_identifier is not None
+    # create channel proxies
+    channel_proxy_2 = PaymentChannel(token_network_proxy, new_channel_identifier)
+
+    assert channel_proxy_2.channel_identifier == new_channel_identifier
+    assert channel_proxy_2.opened() is True
+
+    with pytest.raises(ChannelOutdatedError):
+        token_network_proxy.close(
+            channel_identifier,
+            partner,
+            balance_proof.nonce,
+            bytes(32),
+            bytes(32),
+            decode_hex(balance_proof.signature),
+        )

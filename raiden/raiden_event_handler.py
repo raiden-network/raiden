@@ -217,11 +217,7 @@ def handle_contract_send_channelclose(
         )
         log.info(msg)
     except ChannelOutdatedError as e:
-        log.debug(
-            e.args,
-            current_channel_identifier=e.current_channel_id,
-            new_channel_identifier=e.new_channel_id,
-        )
+        log.error(e.args)
 
 
 def handle_contract_send_channelupdate(
@@ -250,11 +246,7 @@ def handle_contract_send_channelupdate(
                 our_signature,
             )
         except ChannelOutdatedError as e:
-            log.debug(
-                e.args,
-                current_channel_identifier=e.current_channel_id,
-                new_channel_identifier=e.new_channel_id,
-            )
+            log.error(e.args)
 
 
 def handle_contract_send_channelunlock(
@@ -339,11 +331,7 @@ def handle_contract_send_channelsettle(
         # at the same time.
         pass
     except ChannelOutdatedError as e:
-        log.debug(
-            e.args,
-            current_channel_identifier=e.current_channel_id,
-            new_channel_identifier=e.new_channel_id,
-        )
+        log.error(e.args)
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):
