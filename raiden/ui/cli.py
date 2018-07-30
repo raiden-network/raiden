@@ -604,7 +604,7 @@ def run_app(
         secret_registry_contract_address is not None and
         discovery_contract_address is not None
     )
-    contract_addresses_known = net_id in constants.ID_TO_CONTRACT_ADDRESSES
+    contract_addresses_known = net_id in constants.ID_TO_NETWORK_CONFIG
 
     if not contract_addresses_given and not contract_addresses_known:
         print((
@@ -613,7 +613,7 @@ def run_app(
               ).format(net_id))
         sys.exit(1)
 
-    contract_addresses = constants.ID_TO_CONTRACT_ADDRESSES.get(net_id, dict())
+    contract_addresses = constants.ID_TO_NETWORK_CONFIG.get(net_id, dict())
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
@@ -676,10 +676,12 @@ def run_app(
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     try:
+        chain_config = constants.ID_TO_NETWORK_CONFIG.get(net_id, {})
+        start_block = chain_config.get(constants.START_QUERY_BLOCK_KEY, 0)
         raiden_app = App(
             config=config,
             chain=blockchain_service,
-            query_start_block=constants.ID_TO_QUERY_BLOCK[net_id],
+            query_start_block=start_block,
             default_registry=token_network_registry,
             default_secret_registry=secret_registry,
             transport=transport,
