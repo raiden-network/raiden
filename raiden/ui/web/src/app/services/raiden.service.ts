@@ -1,7 +1,7 @@
-import { throwError, zip, of, bindNodeCallback, Observable, BehaviorSubject } from 'rxjs';
+import { throwError, zip, of, bindNodeCallback, Observable } from 'rxjs';
 import { combineLatest, tap, first, switchMap, map, catchError } from 'rxjs/operators';
 import { Injectable, NgZone } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
@@ -11,7 +11,7 @@ import { UserToken } from '../models/usertoken';
 import { Channel } from '../models/channel';
 import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
-import { Connection, Connections } from '../models/connection';
+import { Connections } from '../models/connection';
 
 type CallbackFunc = (error: Error, result: any) => void;
 
@@ -37,10 +37,6 @@ export class RaidenService {
 
     get identifier(): number {
         return Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
-    }
-
-    get blockNumber(): number {
-        return this.raidenConfig.web3.eth.blockNumber;
     }
 
     getBlockNumber(): Observable<number> {
@@ -157,15 +153,6 @@ export class RaidenService {
         );
     }
 
-    public settleChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
-        return this.http.patch<Channel>(
-            `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-            { state: 'settled' },
-        ).pipe(
-            catchError((error) => this.handleError(error)),
-        );
-    }
-
     public registerToken(tokenAddress: string): Observable<UserToken> {
         return this.http.put(
             `${this.raidenConfig.api}/tokens/${tokenAddress}`,
@@ -179,7 +166,7 @@ export class RaidenService {
                     return userToken;
                 }),
             )),
-            catchError((error) => this.handleError(error)),
+            catchError((error) => this.handleError(error))
         );
     }
 
@@ -267,18 +254,18 @@ export class RaidenService {
             return bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
             )().pipe(
-                catchError((error) => of(null)),
+                catchError(() => of(null)),
                 combineLatest(
                     bindNodeCallback((cb: CallbackFunc) =>
                         tokenContractInstance.name(this.zoneEncap(cb))
                     )().pipe(
-                        catchError((error) => of(null)),
+                        catchError(() => of(null)),
                     ),
                     bindNodeCallback((addr: string, cb: CallbackFunc) =>
                         tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
                     )(this.raidenAddress).pipe(
                         map((balance) => balance.toNumber()),
-                        catchError((error) => of(null)),
+                        catchError(() => of(null)),
                     ),
                 ),
                 map(([symbol, name, balance]): UserToken => {
@@ -299,7 +286,7 @@ export class RaidenService {
                 tokenContractInstance.balanceOf(addr, this.zoneEncap(cb))
             )(this.raidenAddress).pipe(
                 map((balance) => balance.toNumber()),
-                catchError((error) => of(null)),
+                catchError(() => of(null)),
                 map((balance) => {
                     if (balance === null) {
                         return null;
@@ -326,7 +313,26 @@ export class RaidenService {
             const err = body || JSON.stringify(body);
             errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
         } else if (error instanceof HttpErrorResponse && error.error['errors']) {
-            errMsg = `${error.message} => ${error.error.errors}`;
+            const errors = error.error.errors;
+
+            if (typeof errors === 'string') {
+                errMsg = errors;
+            } else if (typeof errors === 'object') {
+                errMsg = '';
+
+                for (const key in errors) {
+                    if (errors.hasOwnProperty(key)) {
+                        if (errMsg !== '') {
+                            errMsg += '\n';
+                        }
+                        errMsg += `${key}: ${errors[key]}`;
+                    }
+                }
+
+            } else {
+                errMsg = errors;
+            }
+
         } else {
             errMsg = error.message ? error.message : error.toString();
         }
@@ -334,7 +340,7 @@ export class RaidenService {
         this.sharedService.msg({
             severity: 'error',
             summary: 'Raiden Error',
-            detail: JSON.stringify(errMsg),
+            detail: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg),
         });
         return throwError(errMsg);
     }
