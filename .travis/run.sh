@@ -2,9 +2,9 @@
 
 set -ex
 
-if [[ ${TRAVIS_EVENT_TYPE} == "cron" ]]; then
+if [ -z ${BLOCKCHAIN_TYPE} ] && [[ ${TRAVIS_EVENT_TYPE} == "cron" ]]; then
     BLOCKCHAIN_TYPE="geth"
-else
+elif [ -z ${BLOCKCHAIN_TYPE} ]; then
     # FIXME: change to "tester" once the test failures are fixed
     BLOCKCHAIN_TYPE="geth"
 fi
