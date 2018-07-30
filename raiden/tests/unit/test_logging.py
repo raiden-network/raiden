@@ -1,6 +1,8 @@
-import structlog
 import logging
 import traceback
+
+import structlog
+import pytest
 
 from raiden.log_config import configure_logging
 
