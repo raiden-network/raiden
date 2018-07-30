@@ -1,6 +1,15 @@
 from collections import defaultdict
 from enum import Enum
 
+from eth_utils import to_canonical_address
+
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+)
+
+
 UINT64_MAX = 2 ** 64 - 1
 UINT64_MIN = 0
 
@@ -48,6 +57,14 @@ ID_TO_NETWORKNAME = {
 ID_TO_QUERY_BLOCK = defaultdict(int, {
     3: 3604000,  # 924 blocks before token network registry deployment
 })
+
+ID_TO_CONTRACT_ADDRESSES = {
+    3: {
+        CONTRACT_ENDPOINT_REGISTRY: to_canonical_address(ROPSTEN_DISCOVERY_ADDRESS),
+        CONTRACT_SECRET_REGISTRY: to_canonical_address(ROPSTEN_SECRET_REGISTRY_ADDRESS),
+        CONTRACT_TOKEN_NETWORK_REGISTRY: to_canonical_address(ROPSTEN_REGISTRY_ADDRESS),
+    },
+}
 
 NETWORKNAME_TO_ID = {
     name: id
