@@ -21,12 +21,12 @@ from raiden.utils import (
 
 
 def test_payment_channel_proxy_basics(
-    token_network_proxy,
-    private_keys,
-    blockchain_rpc_ports,
-    token_proxy,
-    chain_id,
-    web3,
+        token_network_proxy,
+        private_keys,
+        blockchain_rpc_ports,
+        token_proxy,
+        chain_id,
+        web3,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -108,6 +108,7 @@ def test_payment_channel_proxy_basics(
     )
     # correct close
     c2_token_network_proxy.close(
+        channel_identifier,
         c1_client.sender,
         balance_proof.nonce,
         decode_hex(balance_proof.balance_hash),
@@ -128,6 +129,7 @@ def test_payment_channel_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     c2_token_network_proxy.settle(
+        channel_identifier,
         0,
         0,
         EMPTY_HASH,
@@ -145,12 +147,12 @@ def test_payment_channel_proxy_basics(
 
 
 def test_payment_channel_outdated_channel_close(
-    token_network_proxy,
-    private_keys,
-    blockchain_rpc_ports,
-    token_proxy,
-    chain_id,
-    web3,
+        token_network_proxy,
+        private_keys,
+        blockchain_rpc_ports,
+        token_proxy,
+        chain_id,
+        web3,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 

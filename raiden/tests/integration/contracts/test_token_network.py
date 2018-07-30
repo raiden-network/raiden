@@ -62,11 +62,13 @@ def test_token_network_deposit_race(
     assert channel_identifier is not None
 
     c1_token_network_proxy.set_total_deposit(
+        channel_identifier,
         2,
         c2_client.sender,
     )
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
+            channel_identifier,
             1,
             c2_client.sender,
         )
@@ -147,6 +149,7 @@ def test_token_network_proxy_basics(
     # deposit with no balance
     with pytest.raises(ValueError):
         c1_token_network_proxy.set_total_deposit(
+            channel_identifier,
             10,
             c2_client.sender,
         )
@@ -160,11 +163,13 @@ def test_token_network_proxy_basics(
     # no negative deposit
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
+            channel_identifier,
             -1,
             c2_client.sender,
         )
     # actual deposit
     c1_token_network_proxy.set_total_deposit(
+        channel_identifier,
         10,
         c2_client.sender,
     )
@@ -183,6 +188,7 @@ def test_token_network_proxy_basics(
     # close with invalid signature
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.close(
+            channel_identifier,
             c1_client.sender,
             balance_proof.nonce,
             decode_hex(balance_proof.balance_hash),
@@ -191,6 +197,7 @@ def test_token_network_proxy_basics(
         )
     # correct close
     c2_token_network_proxy.close(
+        channel_identifier,
         c1_client.sender,
         balance_proof.nonce,
         decode_hex(balance_proof.balance_hash),
@@ -202,6 +209,7 @@ def test_token_network_proxy_basics(
     # closing already closed channel
     with pytest.raises(ChannelIncorrectStateError):
         c2_token_network_proxy.close(
+            channel_identifier,
             c1_client.sender,
             balance_proof.nonce,
             decode_hex(balance_proof.balance_hash),
@@ -212,6 +220,7 @@ def test_token_network_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     c2_token_network_proxy.settle(
+        channel_identifier,
         0,
         0,
         EMPTY_HASH,
@@ -270,10 +279,12 @@ def test_token_network_proxy_update_transfer(
     initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
     assert initial_balance_c2 == initial_balance
     c1_token_network_proxy.set_total_deposit(
+        channel_identifier,
         10,
         c2_client.sender,
     )
     c2_token_network_proxy.set_total_deposit(
+        channel_identifier,
         10,
         c1_client.sender,
     )
@@ -303,6 +314,7 @@ def test_token_network_proxy_update_transfer(
     )
     # close by c1
     c1_token_network_proxy.close(
+        channel_identifier,
         c2_client.sender,
         balance_proof_c2.nonce,
         decode_hex(balance_proof_c2.balance_hash),
@@ -319,6 +331,7 @@ def test_token_network_proxy_update_transfer(
     )
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.update_transfer(
+            channel_identifier,
             c1_client.sender,
             balance_proof_c1.nonce,
             decode_hex(balance_proof_c1.balance_hash),
@@ -333,6 +346,7 @@ def test_token_network_proxy_update_transfer(
         non_closing_data,
     )
     c2_token_network_proxy.update_transfer(
+        channel_identifier,
         c1_client.sender,
         balance_proof_c1.nonce,
         decode_hex(balance_proof_c1.balance_hash),
@@ -345,6 +359,7 @@ def test_token_network_proxy_update_transfer(
     # settling with an invalid amount
     with pytest.raises(TransactionThrew):
         c1_token_network_proxy.settle(
+            channel_identifier,
             2,
             0,
             EMPTY_HASH,
@@ -355,6 +370,7 @@ def test_token_network_proxy_update_transfer(
         )
     # proper settle
     c1_token_network_proxy.settle(
+        channel_identifier,
         transferred_amount_c1,
         0,
         EMPTY_HASH,

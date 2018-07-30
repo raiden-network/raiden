@@ -107,7 +107,7 @@ class PaymentChannel:
         self.token_network.set_total_deposit(
             channel_identifier=self.channel_identifier,
             total_deposit=total_deposit,
-            partner=self.participant2
+            partner=self.participant2,
         )
 
     def close(
