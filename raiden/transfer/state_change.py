@@ -650,6 +650,30 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return not self.__eq__(other)
 
 
+class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
+    def __init__(
+            self,
+            transaction_from: typing.Address,
+            nonce: typing.Nonce,
+    ):
+        super().__init__(transaction_from)
+
+        self.nonce = nonce
+
+    def __repr__(self):
+        return f'<ContractReceiveUpdateTransfer nonce:{self.nonce}>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveUpdateTransfer) and
+            self.transaction_from == other.transaction_from and
+            self.nonce == other.nonce
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ReceiveTransferDirect(StateChange):
     def __init__(
             self,
