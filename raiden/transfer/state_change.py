@@ -572,36 +572,6 @@ class ContractReceiveChannelBatchUnlock(StateChange):
         return not self.__eq__(other)
 
 
-class ContractReceiveNewRoute(StateChange):
-    """ New channel was created and this node is NOT a participant. """
-
-    def __init__(self, participant1: typing.Address, participant2: typing.Address):
-        if not isinstance(participant1, typing.T_Address):
-            raise ValueError('participant1 must be of type address')
-
-        if not isinstance(participant2, typing.T_Address):
-            raise ValueError('participant2 must be of type address')
-
-        self.participant1 = participant1
-        self.participant2 = participant2
-
-    def __repr__(self):
-        return '<ContractReceiveNewRoute node1:{} node2:{}>'.format(
-            pex(self.participant1),
-            pex(self.participant2),
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ContractReceiveNewRoute) and
-            self.participant1 == other.participant1 and
-            self.participant2 == other.participant2
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class ContractReceiveRouteNew(StateChange):
     """ New channel was created and this node is NOT a participant. """
 
