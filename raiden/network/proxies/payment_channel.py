@@ -188,7 +188,7 @@ class PaymentChannel:
 
         channel_topics = [
             None,  # event topic is any
-            encode_hex(encode_single('bytes32', self.channel_identifier)),  # channel_id
+            self.channel_identifier,
         ]
 
         # This will match the events:
