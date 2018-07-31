@@ -252,6 +252,5 @@ def configure_logging(
 
     # set raiden logging level to DEBUG, to be able to intercept all messages,
     # which should then be filtered by the specific filters
-    if not disable_debug_logfile:
-        structlog.get_logger('').setLevel('DEBUG')
-        structlog.get_logger('raiden').setLevel('DEBUG')
+    structlog.get_logger('').setLevel('DEBUG')
+    structlog.get_logger('raiden').setLevel('DEBUG')
