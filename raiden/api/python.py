@@ -30,10 +30,7 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     TokenNotRegistered,
 )
-from raiden.settings import (
-    DEFAULT_POLL_TIMEOUT,
-    DEFAULT_RETRY_TIMEOUT,
-)
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
     pex,
     typing,
@@ -88,7 +85,6 @@ class RaidenAPI:
             self,
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
-            poll_timeout: typing.NetworkTimeout = DEFAULT_POLL_TIMEOUT,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> typing.TokenNetworkAddress:
         """Register the `token_address` in the blockchain. If the address is already
@@ -198,7 +194,6 @@ class RaidenAPI:
             partner_address: typing.Address,
             settle_timeout: typing.BlockTimeout = None,
             reveal_timeout: typing.BlockTimeout = None,
-            poll_timeout: typing.NetworkTimeout = DEFAULT_POLL_TIMEOUT,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> typing.ChannelID:
         """ Open a channel with the peer at `partner_address`
@@ -278,7 +273,6 @@ class RaidenAPI:
             token_address: typing.TokenAddress,
             partner_address: typing.Address,
             total_deposit: typing.TokenAmount,
-            poll_timeout: typing.NetworkTimeout = DEFAULT_POLL_TIMEOUT,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
@@ -383,7 +377,6 @@ class RaidenAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
             partner_address: typing.Address,
-            poll_timeout: typing.NetworkTimeout = DEFAULT_POLL_TIMEOUT,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """Close a channel opened with `partner_address` for the given
@@ -395,7 +388,6 @@ class RaidenAPI:
             registry_address,
             token_address,
             [partner_address],
-            poll_timeout,
             retry_timeout,
         )
 
@@ -404,7 +396,6 @@ class RaidenAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
             partner_addresses: typing.List[typing.Address],
-            poll_timeout: typing.NetworkTimeout = DEFAULT_POLL_TIMEOUT,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """Close a channel opened with `partner_address` for the given
