@@ -159,10 +159,11 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
 
 
 def configure_logging(
-    logger_level_config: Dict[str, str] = None,
-    colorize: bool = True,
-    log_json: bool = False,
-    log_file: str = None,
+        logger_level_config: Dict[str, str] = None,
+        colorize: bool = True,
+        log_json: bool = False,
+        log_file: str = None,
+        disable_debug_logfile: bool = False,
 ):
     structlog.reset_defaults()
     if logger_level_config is None:
@@ -189,9 +190,11 @@ def configure_logging(
         formatter,
         log_file,
     )
-    debug_log_file_handler = _get_log_file_handler()
-
-    combined_log_handlers = {**log_handler, **debug_log_file_handler}
+    if disable_debug_logfile:
+        combined_log_handlers = log_handler
+    else:
+        debug_log_file_handler = _get_log_file_handler()
+        combined_log_handlers = {**log_handler, **debug_log_file_handler}
 
     logging.config.dictConfig(
         {
@@ -249,5 +252,6 @@ def configure_logging(
 
     # set raiden logging level to DEBUG, to be able to intercept all messages,
     # which should then be filtered by the specific filters
-    structlog.get_logger('').setLevel('DEBUG')
-    structlog.get_logger('raiden').setLevel('DEBUG')
+    if not disable_debug_logfile:
+        structlog.get_logger('').setLevel('DEBUG')
+        structlog.get_logger('raiden').setLevel('DEBUG')
