@@ -82,7 +82,8 @@ class InitiatorTransferState(State):
     def __init__(
             self,
             transfer_description: 'TransferDescriptionWithSecretState',
-            channel_identifier):
+            channel_identifier,
+    ):
 
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError(
@@ -102,7 +103,7 @@ class InitiatorTransferState(State):
     def __repr__(self):
         return '<InitiatorTransferState transfer:{} channel:{}>'.format(
             self.transfer,
-            pex(self.channel_identifier),
+            self.channel_identifier,
         )
 
     def __eq__(self, other):

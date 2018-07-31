@@ -76,7 +76,7 @@ class ActionChannelClose(StateChange):
 
     def __repr__(self):
         return '<ActionChannelClose channel:{}>'.format(
-            pex(self.channel_identifier),
+            self.channel_identifier,
         )
 
     def __eq__(self, other):
@@ -212,7 +212,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             '>'
         ).format(
             pex(self.token_network_identifier),
-            pex(self.channel_identifier),
+            self.channel_identifier,
             pex(self.transaction_from),
             self.closed_block_number,
         )
@@ -320,7 +320,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
         return (
             '<ContractReceiveChannelNewBalance token_network:{} channel:{} transaction:{}>'.format(
                 pex(self.token_network_identifier),
-                pex(self.channel_identifier),
+                self.channel_identifier,
                 self.deposit_transaction,
             )
         )
@@ -363,7 +363,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             '>'
         ).format(
             pex(self.token_network_identifier),
-            pex(self.channel_identifier),
+            self.channel_identifier,
             self.settle_block_number,
         )
 

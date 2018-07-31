@@ -325,7 +325,11 @@ class RouteState(State):
         'channel_identifier',
     )
 
-    def __init__(self, node_address: typing.Address, channel_identifier):
+    def __init__(
+            self,
+            node_address: typing.Address,
+            channel_identifier: typing.ChannelID,
+    ):
         if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')
 
@@ -335,7 +339,7 @@ class RouteState(State):
     def __repr__(self):
         return '<RouteState hop:{node} channel:{channel}>'.format(
             node=pex(self.node_address),
-            channel=pex(self.channel_identifier),
+            channel=self.channel_identifier,
         )
 
     def __eq__(self, other):

@@ -13,8 +13,8 @@ from raiden.network.proxies import (
     SecretRegistry,
     PaymentChannel,
 )
-from raiden.utils import privatekey_to_address, ishash
-from raiden.utils.typing import Address, ChannelID
+from raiden.utils import privatekey_to_address
+from raiden.utils.typing import Address, ChannelID, T_ChannelID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -174,8 +174,8 @@ class BlockChainService:
 
         if not is_binary_address(token_network_address):
             raise ValueError('address must be a valid address')
-        if not ishash(channel_id):
-            raise ValueError('identifier must be a hash')
+        if not isinstance(channel_id, T_ChannelID):
+            raise ValueError('channel identifier must be a hash')
 
         with self._payment_channel_creation_lock:
             dict_key = (token_network_address, channel_id)
