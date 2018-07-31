@@ -236,6 +236,16 @@ class APIServer:
                 'Invalid api version: {}'.format(rest_api.version),
             )
 
+        # We cannot accept requests before the node has synchronized with the
+        # blockchain, which is done during the call to RaidenService.start.
+        # Otherwise there is no guarantee that the node is in a valid state and
+        # that the actions are valid, e.g. deposit in a channel that has closed
+        # while the node was offline.
+        if not rest_api.raiden_api.raiden.start_event.is_set():
+            raise RuntimeError(
+                'The RaidenService must be started before the API can be used',
+            )
+
         flask_app = Flask(__name__)
         if cors_domain_list:
             CORS(flask_app, origins=cors_domain_list)
