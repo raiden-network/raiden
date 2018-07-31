@@ -25,7 +25,7 @@ class ContractSendChannelClose(ContractSendEvent):
         return (
             '<ContractSendChannelClose channel:{} token:{} token_network:{} balance_proof:{}>'
         ).format(
-            pex(self.channel_identifier),
+            self.channel_identifier,
             pex(self.token_address),
             pex(self.token_network_identifier),
             self.balance_proof,
@@ -87,7 +87,7 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     def __repr__(self):
         return '<ContractSendChannelSettle channel:{} token_network:{}>'.format(
-            pex(self.channel_identifier),
+            self.channel_identifier,
             pex(self.token_network_identifier),
         )
 
@@ -116,7 +116,7 @@ class ContractSendChannelUpdateTransfer(ContractSendEvent):
         return (
             '<ContractSendChannelUpdateTransfer channel:{} token_network:{} balance_proof:{}>'
         ).format(
-            pex(self.channel_identifier),
+            self.channel_identifier,
             pex(self.token_network_identifier),
             self.balance_proof,
         )
@@ -144,7 +144,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def __repr__(self):
         return '<ContractSendChannelBatchUnlock channel:{} merkle_treee_leaves:{}>'.format(
             pex(self.token_network_identifier),
-            pex(self.channel_identifier),
+            self.channel_identifier,
             self.merkle_treee_leaves,
         )
 
