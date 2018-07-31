@@ -49,6 +49,7 @@ def is_manager_saturated(connection_manager, registry_address, token_address):
         lambda channel_state:
         (
             is_channel_open_and_funded(channel_state) and
+            channel_state.partner_state.address != connection_manager.BOOTSTRAP_ADDR and
             (
                 channel_state.our_state.address == raiden.address or
                 channel_state.partner_state.address == raiden.address
@@ -72,7 +73,6 @@ def saturated_count(connection_managers, registry_address, token_address):
 # - Check if this test needs to be adapted for the matrix transport
 #   layer when activating it again. It might as it depends on the
 #   raiden_network fixture.
-@pytest.mark.skip(reason='issue #1924')
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
@@ -98,7 +98,6 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
             token_address,
             100,
         )
-
         for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
@@ -111,7 +110,8 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
     connection_managers = [
         app.raiden.connection_manager_for_token_network(
             token_network_registry_address,
-        ) for app in raiden_network
+        )
+        for app in raiden_network
     ]
 
     unsaturated_connection_managers = connection_managers[:]
@@ -155,9 +155,17 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
 
     # create a transfer to the leaving node, so we have a channel to settle
     sender = raiden_network[-1].raiden
-    receiver = raiden_network[0].raiden
-
     registry_address = sender.default_registry.address
+    sender_channel = list(RaidenAPI(sender).get_channel_list(
+        registry_address=registry_address,
+        token_address=token_address,
+    ))[-1]  # arbitrarily choose a channel from sender
+
+    receiver = next(
+        app.raiden for app in raiden_network
+        if app.raiden.address == sender_channel.partner_state.address
+    )
+
     # assert there is a direct channel receiver -> sender (vv)
     receiver_channel = RaidenAPI(receiver).get_channel_list(
         registry_address=registry_address,
@@ -166,15 +174,6 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
     )
     assert len(receiver_channel) == 1
     receiver_channel = receiver_channel[0]
-
-    # assert there is a direct channel sender -> receiver
-    sender_channel = RaidenAPI(sender).get_channel_list(
-        registry_address=registry_address,
-        token_address=token_address,
-        partner_address=receiver.address,
-    )
-    assert len(sender_channel) == 1
-    sender_channel = sender_channel[0]
 
     exception = ValueError('partner not reachable')
     with gevent.Timeout(30, exception=exception):
@@ -210,7 +209,8 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
     assert timeout > 0
     exception = ValueError('timeout while waiting for leave')
     with gevent.Timeout(timeout, exception=exception):
-        RaidenAPI(raiden_network[0].raiden).token_network_leave(
+        # sender leaves the network
+        RaidenAPI(sender).token_network_leave(
             registry_address,
             token_address,
         )
@@ -231,4 +231,5 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
         token_address=token_address,
         partner_address=sender.address,
     )
-    assert receiver_channel[0].settle_transaction is not None
+    # because of timing, channel may already have been cleaned
+    assert not receiver_channel or receiver_channel[0].settle_transaction is not None
