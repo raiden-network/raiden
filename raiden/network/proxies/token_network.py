@@ -703,12 +703,6 @@ class TokenNetwork:
 
         log.info('unlock called', **log_details)
 
-        self._check_for_outdated_channel(
-            self.node_address,
-            partner,
-            channel_identifier,
-        )
-
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         transaction_hash = self.proxy.transact(
