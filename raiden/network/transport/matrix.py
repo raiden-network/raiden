@@ -131,7 +131,11 @@ class MatrixTransport:
             self._server_url: str = self._select_server(config)
             self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
             client_class = config.get('client_class', GMatrixClient)
-            self._client: GMatrixClient = client_class(self._server_url)
+            self._client: GMatrixClient = client_class(
+                self._server_url,
+                max_retries=5,
+                pool_maxsize=4,
+            )
             try:
                 self._client.api._send('GET', '/versions', api_path='/_matrix/client')
                 break
