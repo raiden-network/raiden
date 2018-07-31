@@ -75,7 +75,8 @@ def handle_channelnew(token_network_state, state_change):
     # the ethereum node
     if channel_id not in token_network_state.channelidentifiers_to_channels:
         token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
-        token_network_state.partneraddresses_to_channels[partner_address] = channel_state
+        partneraddresses_to_channels = token_network_state.partneraddresses_to_channels
+        partneraddresses_to_channels[partner_address][channel_id] = channel_state
 
     return TransitionResult(token_network_state, events)
 

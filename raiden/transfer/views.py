@@ -25,7 +25,7 @@ def all_neighbour_nodes(chain_state: ChainState) -> typing.Set[typing.Address]:
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
-            for channel_state in token_network.partneraddresses_to_channels.values():
+            for channel_state in token_network.channelidentifiers_to_channels.values():
                 addresses.add(channel_state.partner_state.address)
 
     return addresses
@@ -257,7 +257,11 @@ def get_channelstate_for(
 
     channel_state = None
     if token_network:
-        channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+        states = token_network.partneraddresses_to_channels.get(partner_address)
+        for state in states.values():
+            if channel.get_status(state) not in channel.CHANNEL_AFTER_CLOSE_STATES:
+                channel_state = state
+                break
 
     return channel_state
 

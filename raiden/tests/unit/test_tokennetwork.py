@@ -59,7 +59,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
     assert channelmap_by_id[channel_state1.identifier] == channel_state1, msg
 
     channelmap_by_address = iteration.new_state.partneraddresses_to_channels
-    assert channelmap_by_address[channel_state1.partner_state.address] == channel_state1, msg
+    assert channelmap_by_address[channel_state1.partner_state.address][channel_state1.identifier] == channel_state1, msg
 
 
 def test_channel_settle_must_properly_cleanup():
