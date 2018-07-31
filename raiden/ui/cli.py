@@ -482,6 +482,14 @@ def options(func):
                 help='Output log lines in JSON format',
                 is_flag=True,
             ),
+            option(
+                '--disable-debug-logfile',
+                help=(
+                    'Disable the debug logfile feature. This is independent of '
+                    'the normal logging setup'
+                ),
+                is_flag=True,
+            ),
         ),
         option_group(
             'RPC Options',
@@ -842,6 +850,7 @@ class NodeRunner:
             self._options['log_config'],
             log_json=self._options['log_json'],
             log_file=self._options['log_file'],
+            disable_debug_logfile=self._options['disable_debug_logfile'],
         )
 
         if self._options['config_file']:
