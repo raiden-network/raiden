@@ -75,7 +75,7 @@ class ActionChannelClose(StateChange):
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return '<ActionChannelClose channel:{}>'.format(
+        return '<ActionChannelClose channel_identifier:{}>'.format(
             self.channel_identifier,
         )
 

@@ -46,7 +46,7 @@ token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
 initiator = make_field('initiator', 20, '20s')
-channel = make_field('channel', 32, '20s')
+channel_identifier = make_field('channel_identifier', 32, '32s', integer(0, UINT256_MAX))
 
 locksroot = make_field('locksroot', 32, '32s')
 secrethash = make_field('secrethash', 32, '32s')
@@ -122,7 +122,7 @@ Secret = namedbuffer(
         token_network_address,
         secret,
         nonce,
-        channel,
+        channel_identifier,
         transferred_amount,
         locked_amount,
         locksroot,
@@ -152,7 +152,7 @@ DirectTransfer = namedbuffer(
         payment_identifier,
         token_network_address,
         token,
-        channel,
+        channel_identifier,
         recipient,
         transferred_amount,
         locked_amount,
@@ -173,7 +173,7 @@ LockedTransfer = namedbuffer(
         expiration,
         token_network_address,
         token,
-        channel,
+        channel_identifier,
         recipient,
         target,
         initiator,
@@ -199,7 +199,7 @@ RefundTransfer = namedbuffer(
         expiration,
         token_network_address,
         token,
-        channel,
+        channel_identifier,
         recipient,
         target,
         initiator,

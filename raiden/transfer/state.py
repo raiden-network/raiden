@@ -56,7 +56,7 @@ def balanceproof_from_envelope(envelope_message):
         envelope_message.locked_amount,
         envelope_message.locksroot,
         envelope_message.token_network_address,
-        envelope_message.channel,
+        envelope_message.channel_identifier,
         envelope_message.message_hash,
         envelope_message.signature,
         envelope_message.sender,
@@ -337,9 +337,9 @@ class RouteState(State):
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return '<RouteState hop:{node} channel:{channel}>'.format(
+        return '<RouteState hop:{node} channel_identifier:{channel_identifier}>'.format(
             node=pex(self.node_address),
-            channel=self.channel_identifier,
+            channel_identifier=self.channel_identifier,
         )
 
     def __eq__(self, other):
