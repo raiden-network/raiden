@@ -413,7 +413,7 @@ def valid_lockedtransfer_check(
         msg = 'Invalid {} message. The channel is already closed.'.format(message_name)
         result = (False, msg, None)
 
-    if merkletree is None:
+    elif merkletree is None:
         msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
         result = (False, msg, None)
 
