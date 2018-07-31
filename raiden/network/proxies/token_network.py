@@ -29,8 +29,9 @@ from raiden.network.rpc.transactions import (
     check_transaction_threw,
 )
 from raiden.exceptions import (
-    DuplicatedChannelError,
     ChannelIncorrectStateError,
+    ChannelOutdatedError,
+    DuplicatedChannelError,
     SamePeerAddress,
     TransactionThrew,
     InvalidAddress,
@@ -396,7 +397,12 @@ class TokenNetwork:
 
         return self.detail_participant(participant1, participant2)['deposit'] > 0
 
-    def set_total_deposit(self, total_deposit: typing.TokenAmount, partner: typing.Address):
+    def set_total_deposit(
+            self,
+            channel_identifier: typing.ChannelID,
+            total_deposit: typing.TokenAmount,
+            partner: typing.Address,
+    ):
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
@@ -405,6 +411,12 @@ class TokenNetwork:
         """
         if not isinstance(total_deposit, int):
             raise ValueError('total_deposit needs to be an integral number.')
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         token_address = self.token_address()
         token = Token(self.client, token_address)
@@ -516,6 +528,7 @@ class TokenNetwork:
 
     def close(
             self,
+            channel_identifier: typing.ChannelID,
             partner: typing.Address,
             nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
@@ -539,6 +552,12 @@ class TokenNetwork:
             'signature': encode_hex(signature),
         }
         log.info('close called', **log_details)
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         if not self.channel_is_opened(self.node_address, partner):
             raise ChannelIncorrectStateError(
@@ -569,6 +588,7 @@ class TokenNetwork:
 
     def update_transfer(
             self,
+            channel_identifier: typing.ChannelID,
             partner: typing.Address,
             nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
@@ -587,6 +607,12 @@ class TokenNetwork:
             'non_closing_signature': encode_hex(non_closing_signature),
         }
         log.info('updateNonClosingBalanceProof called', **log_details)
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
@@ -613,6 +639,7 @@ class TokenNetwork:
 
     def withdraw(
             self,
+            channel_identifier: typing.ChannelID,
             partner: typing.Address,
             total_withdraw: int,
             partner_signature: typing.Address,
@@ -627,6 +654,12 @@ class TokenNetwork:
             'signature': encode_hex(signature),
         }
         log.info('withdraw called', **log_details)
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
@@ -651,7 +684,12 @@ class TokenNetwork:
 
             log.info('withdraw successful', **log_details)
 
-    def unlock(self, partner: typing.Address, merkle_tree_leaves: typing.MerkleTreeLeaves):
+    def unlock(
+            self,
+            channel_identifier: typing.ChannelID,
+            partner: typing.Address,
+            merkle_tree_leaves: typing.MerkleTreeLeaves,
+    ):
         log_details = {
             'token_network': pex(self.address),
             'node': pex(self.node_address),
@@ -664,6 +702,7 @@ class TokenNetwork:
             return
 
         log.info('unlock called', **log_details)
+
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         transaction_hash = self.proxy.transact(
@@ -692,6 +731,7 @@ class TokenNetwork:
 
     def settle(
             self,
+            channel_identifier: typing.ChannelID,
             transferred_amount: int,
             locked_amount: int,
             locksroot: typing.Locksroot,
@@ -717,6 +757,12 @@ class TokenNetwork:
             'partner_locksroot': encode_hex(partner_locksroot),
         }
         log.info('settle called', **log_details)
+
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         with self.channel_operations_lock[partner]:
             our_maximum = transferred_amount + locked_amount
@@ -829,3 +875,29 @@ class TokenNetwork:
             The filter instance.
         """
         return self.events_filter(None, from_block, to_block)
+
+    def _check_for_outdated_channel(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID,
+    ):
+        """
+        Checks whether an operation is being execute on a channel
+        between two participants using an old channel identifier
+        """
+        onchain_channel_details = self.detail_channel(
+            participant1,
+            participant2,
+        )
+
+        onchain_channel_identifier = onchain_channel_details.get(
+            'channel_identifier',
+        )
+
+        if onchain_channel_identifier != channel_identifier:
+            raise ChannelOutdatedError(
+                'Current channel identifier is outdated. '
+                f'current={channel_identifier}, '
+                f'new={onchain_channel_identifier}',
+            )

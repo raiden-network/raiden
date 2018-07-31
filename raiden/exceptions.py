@@ -173,3 +173,10 @@ class TransportError(RaidenError):
 
 class ReplacementTransactionUnderpriced(RaidenError):
     """Raised when a replacement transaction is rejected by the blockchain"""
+
+
+class ChannelOutdatedError(RaidenError):
+    """ Raised when an action is invoked on a channel whose
+    identifier has been replaced with a new channel identifier
+    due to a close/re-open of current channel.
+    """

@@ -104,7 +104,11 @@ class PaymentChannel:
         return self.token_network.can_transfer(self.participant1, self.participant2)
 
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
-        self.token_network.set_total_deposit(total_deposit, self.participant2)
+        self.token_network.set_total_deposit(
+            channel_identifier=self.channel_identifier,
+            total_deposit=total_deposit,
+            partner=self.participant2,
+        )
 
     def close(
             self,
@@ -115,6 +119,7 @@ class PaymentChannel:
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
+            channel_identifier=self.channel_identifier,
             partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
@@ -132,6 +137,7 @@ class PaymentChannel:
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
+            channel_identifier=self.channel_identifier,
             partner=self.participant2,
             nonce=nonce,
             balance_hash=balance_hash,
@@ -142,8 +148,9 @@ class PaymentChannel:
 
     def unlock(self, merkle_tree_leaves: bytes):
         self.token_network.unlock(
-            self.participant2,
-            merkle_tree_leaves,
+            channel_identifier=self.channel_identifier,
+            partner=self.participant2,
+            merkle_tree_leaves=merkle_tree_leaves,
         )
 
     def settle(
@@ -157,6 +164,7 @@ class PaymentChannel:
     ):
         """ Settles the channel. """
         self.token_network.settle(
+            channel_identifier=self.channel_identifier,
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,

@@ -1,6 +1,9 @@
 import structlog
 
-from raiden.exceptions import ChannelIncorrectStateError
+from raiden.exceptions import (
+    ChannelIncorrectStateError,
+    ChannelOutdatedError,
+)
 from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
@@ -213,6 +216,8 @@ def handle_contract_send_channelclose(
             token_address=pex(channel_proxy.token_address()),
         )
         log.info(msg)
+    except ChannelOutdatedError as e:
+        log.error(e.args)
 
 
 def handle_contract_send_channelupdate(
@@ -232,13 +237,16 @@ def handle_contract_send_channelupdate(
             raiden.privkey,
         )
 
-        channel.update_transfer(
-            balance_proof.nonce,
-            balance_proof.balance_hash,
-            balance_proof.message_hash,
-            balance_proof.signature,
-            our_signature,
-        )
+        try:
+            channel.update_transfer(
+                balance_proof.nonce,
+                balance_proof.balance_hash,
+                balance_proof.message_hash,
+                balance_proof.signature,
+                our_signature,
+            )
+        except ChannelOutdatedError as e:
+            log.error(e.args)
 
 
 def handle_contract_send_channelunlock(
@@ -249,7 +257,10 @@ def handle_contract_send_channelunlock(
         channel_unlock_event.token_network_identifier,
         channel_unlock_event.channel_identifier,
     )
-    channel.unlock(channel_unlock_event.merkle_treee_leaves)
+    try:
+        channel.unlock(channel_unlock_event.merkle_treee_leaves)
+    except ChannelOutdatedError as e:
+        log.error(e.args)
 
 
 def handle_contract_send_channelsettle(
@@ -315,6 +326,8 @@ def handle_contract_send_channelsettle(
         # be a race condition when both nodes try to settle
         # at the same time.
         pass
+    except ChannelOutdatedError as e:
+        log.error(e.args)
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):
