@@ -12,12 +12,12 @@ from raiden.exceptions import DuplicatedChannelError
 from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.exceptions import (
-    AddressWithoutCode,
     InvalidAmount,
     TransactionThrew,
     ChannelIncorrectStateError,
 )
 from raiden.transfer import views
+from raiden.utils.typing import Address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -226,17 +226,9 @@ class ConnectionManager:
             if self._funds_remaining <= 0 or self._leaving_state:
                 return
 
-            open_channels = views.get_channelstate_open(
-                chain_state=views.state_from_raiden(self.raiden),
-                payment_network_id=self.registry_address,
-                token_address=self.token_address,
-            )
-            if len(open_channels) >= self.initial_channel_target:
-                return
-
             self._open_channels()
 
-    def find_new_partners(self):
+    def _find_new_partners(self):
         """ Search the token network for potential channel partners. """
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
@@ -261,6 +253,31 @@ class ConnectionManager:
         log.debug('found {} partners'.format(len(available)))
 
         return new_partners
+
+    def _join_partner(self, partner: Address):
+        """ Ensure a channel exists with partner and is funded in our side """
+        try:
+            self.api.channel_open(
+                self.registry_address,
+                self.token_address,
+                partner,
+            )
+        except DuplicatedChannelError:
+            # If channel already exists (either because partner created it,
+            # or it's nonfunded channel), continue to ensure it's funded
+            pass
+
+        try:
+            self.api.set_total_channel_deposit(
+                self.registry_address,
+                self.token_address,
+                partner,
+                self._initial_funding_per_partner,
+            )
+        except TransactionThrew:
+            log.exception('connection manager: deposit failed')
+        except ChannelIncorrectStateError:
+            log.exception('connection manager: channel not in opened state')
 
     def _open_channels(self):
         """ Open channels until there are `self.initial_channel_target`
@@ -290,7 +307,7 @@ class ConnectionManager:
                 channel_state for channel_state in open_channels
                 if channel_state not in funded_channels
             ]
-            possible_new_partners = self.find_new_partners()
+            possible_new_partners = self._find_new_partners()
 
             # if we already met our target, break
             if len(funded_channels) >= self.initial_channel_target:
@@ -309,41 +326,8 @@ class ConnectionManager:
             # until initial_channel_target of funded channels is met
             join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
 
-            def _join_partner(partner):
-                has_channel = any(
-                    channel_state.partner_state.address == partner
-                    for channel_state in open_channels
-                )
-                if not has_channel:
-                    try:
-                        self.api.channel_open(
-                            self.registry_address,
-                            self.token_address,
-                            partner,
-                        )
-                    except DuplicatedChannelError:
-                        # This can fail because of a race condition, where the channel
-                        # partner opens first.
-                        log.info('partner opened channel first')
-
-                try:
-                    self.api.set_total_channel_deposit(
-                        self.registry_address,
-                        self.token_address,
-                        partner,
-                        self._initial_funding_per_partner,
-                    )
-                except AddressWithoutCode:
-                    log.warn('connection manager: channel closed just after it was created')
-                except TransactionThrew:
-                    log.exception('connection manager: deposit failed')
-                except ChannelIncorrectStateError:
-                    log.exception('connection manager: channel not in opened state')
-                else:
-                    return True
-
             greenlets = [
-                gevent.spawn(_join_partner, partner)
+                gevent.spawn(self._join_partner, partner)
                 for partner in join_partners
             ]
             gevent.joinall(greenlets)
