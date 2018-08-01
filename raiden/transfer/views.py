@@ -262,11 +262,12 @@ def get_channelstate_for(
     channel_state = None
     if token_network:
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels.get(partner_address),
+            token_network.partneraddresses_to_channels[partner_address],
             CHANNEL_AFTER_CLOSE_STATES,
         )
         # If multiple channel states are found, return the last one.
-        channel_state = states[-1]
+        if states:
+            channel_state = states[-1]
 
     return channel_state
 
@@ -285,11 +286,11 @@ def get_channelstate_by_token_network_and_partner(
     channel_state = None
     if token_network:
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels.get(partner_address),
+            token_network.partneraddresses_to_channels[partner_address],
             CHANNEL_AFTER_CLOSE_STATES,
         )
-        # If multiple channel states are found, return the last one.
-        channel_state = states[-1]
+        if states:
+            channel_state = states[-1]
 
     return channel_state
 
@@ -526,13 +527,12 @@ def filter_channels_by_partneraddress(
     result = []
     for partner in partner_addresses:
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels.get(partner),
+            token_network.partneraddresses_to_channels[partner],
             CHANNEL_AFTER_CLOSE_STATES,
         )
         # If multiple channel states are found, return the last one.
-        channel_state = states[-1]
-        if channel_state:
-            result.append(channel_state)
+        if states:
+            result.append(states[-1])
 
     return result
 
@@ -562,5 +562,7 @@ def flatten_channel_states(
     and return the values of those dicts flattened. """
     states = []
     for channel_state in channel_states:
-        channel_state.extend(channel_state.values())
-    return states
+        states.extend(channel_state.values())
+
+    # Sort the list of states in ascending order of identifiers
+    return sorted(states, key=lambda item: item.identifier)

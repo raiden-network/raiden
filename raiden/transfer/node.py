@@ -516,15 +516,16 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
         for token_network_state in payment_network_state.tokenaddresses_to_tokennetworks.values():
-            channel_states = views.filter_channels_by_status(
-                token_network_state.partneraddresses_to_channels.values(),
-                channel.CHANNEL_AFTER_CLOSE_STATES,
-            )
-            for channel_state in channel_states:
-                events.extend(channel.events_for_close(
-                    channel_state,
-                    chain_state.block_number,
-                ))
+            for channel_states in token_network_state.partneraddresses_to_channels.values():
+                filtered_channel_states = views.filter_channels_by_status(
+                    channel_states,
+                    channel.CHANNEL_AFTER_CLOSE_STATES,
+                )
+                for channel_state in filtered_channel_states:
+                    events.extend(channel.events_for_close(
+                        channel_state,
+                        chain_state.block_number,
+                    ))
 
     return TransitionResult(chain_state, events)
 

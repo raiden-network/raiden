@@ -1,6 +1,7 @@
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed
+from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionTransferDirect,
@@ -141,13 +142,14 @@ def handle_action_transfer_direct(
         block_number,
 ):
     receiver_address = state_change.receiver_address
-    channel_state = views.filter_channels_by_status(
-        token_network_state.partneraddresses_to_channels.get(receiver_address),
+    channel_states = views.filter_channels_by_status(
+        token_network_state.partneraddresses_to_channels[receiver_address],
+        CHANNEL_AFTER_CLOSE_STATES,
     )
 
-    if channel_state:
+    if channel_states:
         iteration = channel.state_transition(
-            channel_state,
+            channel_states[-1],
             state_change,
             pseudo_random_generator,
             block_number,
