@@ -78,6 +78,7 @@ def get_contract_events(
         decoded_event = dict(decode_event(abi, event))
         if event.get('blockNumber'):
             decoded_event['block_number'] = event['blockNumber']
+            del decoded_event['blockNumber']
         result.append(decoded_event)
     return result
 
