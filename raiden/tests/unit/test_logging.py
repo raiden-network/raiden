@@ -101,8 +101,9 @@ def test_log_filter():
 @pytest.mark.parametrize('module', ['', 'raiden', 'raiden.network'])
 @pytest.mark.parametrize('level', ['DEBUG', 'WARNING'])
 @pytest.mark.parametrize('logger', ['test', 'raiden', 'raiden.network'])
-def test_basic_logging(capsys, module, level, logger):
-    configure_logging({module: level})
+@pytest.mark.parametrize('disabled_debug', [True, False])
+def test_basic_logging(capsys, module, level, logger, disabled_debug):
+    configure_logging({module: level}, disable_debug_logfile=disabled_debug)
     log = structlog.get_logger(logger).bind(foo='bar')
     log.debug('test event', key='value')
 

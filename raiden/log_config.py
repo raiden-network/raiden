@@ -250,7 +250,6 @@ def configure_logging(
         cache_logger_on_first_use=True,
     )
 
-    # set raiden logging level to DEBUG, to be able to intercept all messages,
-    # which should then be filtered by the specific filters
+    # set logging level of the root logger to DEBUG, to be able to intercept
+    # all messages, which are then be filtered by the `RaidenFilter`
     structlog.get_logger('').setLevel('DEBUG')
-    structlog.get_logger('raiden').setLevel('DEBUG')
