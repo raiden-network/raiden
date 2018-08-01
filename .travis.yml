@@ -14,7 +14,7 @@ before_install:
   - export PATH=$PATH:$HOME/.bin
   - ./.travis/download_solc.sh
 
-install: pip install -r requirements_dev.txt
+install: pip install -r requirements-dev.txt
 
 script:
   - make lint

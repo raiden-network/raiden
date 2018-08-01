@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Dict, List
 
 import gevent
-from eth_utils import is_address, is_checksum_address, is_same_address, decode_hex
+from eth_utils import is_address, is_checksum_address, is_same_address
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
@@ -46,10 +46,9 @@ class PathfinderResource(Resource):
 
     def _validate_channel_id_argument(self, channel_id: str) -> Optional[Tuple[Dict, int]]:
         try:
-            channel_identifier = decode_hex(channel_id)
-            assert len(channel_identifier) == 32
+            int(channel_id)
         except Exception:
-            id_error = 'Channel Id is not a hash: {}'
+            id_error = 'Channel Id is not an int: {}'
             return {'error': id_error.format(channel_id)}, 400
 
         return None
@@ -86,7 +85,7 @@ class ChannelBalanceResource(PathfinderResource):
                 )
             }, 400
 
-        if not channel_id == balance_proof.channel_identifier:
+        if not channel_id == str(balance_proof.channel_identifier):
             error = 'The channel identifier from the balance proof ({}) ' \
                     'and the request ({}) do not match'
             return {
@@ -138,7 +137,7 @@ class ChannelFeeResource(PathfinderResource):
                 'error': error.format(fee_info.token_network_address, token_network_address)
             }, 400
 
-        if not channel_id == fee_info.channel_identifier:
+        if not channel_id == str(fee_info.channel_identifier):
             error = 'The channel identifier from the fee info ({}) ' \
                     'and the request ({}) do not match'
             return {

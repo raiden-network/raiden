@@ -55,12 +55,11 @@ def test_pfs_with_mocked_events(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
-        channel_identifier = decode_hex('0x%064x' % index)
         network_listener.emit_event(dict(
             address=token_network_address,
             name='ChannelOpened',
             args=dict(
-                channel_identifier=channel_identifier,
+                channel_identifier=index,
                 participant1=addresses[p1_index],
                 participant2=addresses[p2_index]
             )
@@ -70,7 +69,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelNewDeposit',
             args=dict(
-                channel_identifier=channel_identifier,
+                channel_identifier=index,
                 participant=addresses[p1_index],
                 total_deposit=p1_deposit
             )
@@ -80,7 +79,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelNewDeposit',
             args=dict(
-                channel_identifier=channel_identifier,
+                channel_identifier=index,
                 participant=addresses[p2_index],
                 total_deposit=p2_deposit
             )
@@ -100,7 +99,7 @@ def test_pfs_with_mocked_events(
         p2_transferred_amount,
         p2_fee
     ) in enumerate(channel_descriptions_case_1):
-        p1, p2 = token_network.channel_id_to_addresses['0x%064x' % index]
+        p1, p2 = token_network.channel_id_to_addresses[index]
         assert p1 == addresses[p1_index]
         assert p2 == addresses[p2_index]
 
@@ -132,7 +131,7 @@ def test_pfs_with_mocked_events(
             address=token_network_address,
             name='ChannelClosed',
             args=dict(
-                channel_identifier=decode_hex('0x%064x' % index),
+                channel_identifier=index,
                 closing_participant=addresses[p1_index]
             )
         ))

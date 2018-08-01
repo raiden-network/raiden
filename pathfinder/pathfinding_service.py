@@ -5,7 +5,7 @@ import traceback
 from typing import Dict, Optional, List
 
 import gevent
-from eth_utils import is_checksum_address, to_checksum_address, encode_hex
+from eth_utils import is_checksum_address, to_checksum_address
 from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.messages import Message, FeeInfo, BalanceProof, PathsRequest, PathsReply
 from raiden_libs.gevent_error_handler import register_error_handler
@@ -163,7 +163,7 @@ class PathfindingService(gevent.Greenlet):
             token_network.address
         ))
 
-        channel_identifier = encode_hex(event['args']['channel_identifier'])
+        channel_identifier = event['args']['channel_identifier']
         participant1 = event['args']['participant1']
         participant2 = event['args']['participant2']
 
@@ -183,7 +183,7 @@ class PathfindingService(gevent.Greenlet):
             token_network.address
         ))
 
-        channel_identifier = encode_hex(event['args']['channel_identifier'])
+        channel_identifier = event['args']['channel_identifier']
         participant_address = event['args']['participant']
         total_deposit = event['args']['total_deposit']
 
@@ -203,7 +203,7 @@ class PathfindingService(gevent.Greenlet):
             token_network.address
         ))
 
-        channel_identifier = encode_hex(event['args']['channel_identifier'])
+        channel_identifier = event['args']['channel_identifier']
 
         token_network.handle_channel_closed_event(channel_identifier)
 
