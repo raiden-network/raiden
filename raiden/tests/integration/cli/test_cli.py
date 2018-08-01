@@ -149,8 +149,6 @@ def test_cli_malformed_registry_address(cli_args):
     'registry_contract_address': to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
 }])
 def test_cli_registry_address_without_deployed_contract(cli_args):
-    # TODO: Change the expectation for this (don't expect a trace) when
-    # https://github.com/raiden-network/raiden/issues/1996 is implemented
     child = spawn_raiden(cli_args)
     try:
         child.expect('Welcome to Raiden')
@@ -158,7 +156,7 @@ def test_cli_registry_address_without_deployed_contract(cli_args):
         child.expect('Select one of them by index to continue: ')
         child.sendline('0')
         child.expect('You are connected')
-        child.expect('raiden.exceptions.AddressWithoutCode')
+        child.expect('contract does not contain code')
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
