@@ -207,14 +207,11 @@ def normalize_events_list(old_list):
         hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
-
         name = new_event['event']
         if name == 'EventPaymentReceivedSuccess':
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
         if name == 'EventPaymentSentSuccess' or name == 'EventPaymentSentFailed':
             new_event['target'] = to_checksum_address(new_event['target'])
-
-        # Ensuring that payment network identifer and token_network identifer are encoded
         encode_byte_values(new_event)
         new_list.append(new_event)
     return new_list
@@ -622,7 +619,7 @@ class RestAPI:
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-        except InvalidBlockNumberInput as e:
+        except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_payment_history(
@@ -672,9 +669,7 @@ class RestAPI:
                 to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
-        except UnknownTokenAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-        except InvalidBlockNumberInput as e:
+        except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_channel_events_blockchain(
@@ -684,15 +679,18 @@ class RestAPI:
             from_block=None,
             to_block=None,
     ):
-
-        raiden_service_result = self.raiden_api.get_channel_events_blockchain(
-            token_address,
-            partner_address,
-            from_block,
-            to_block,
-        )
-
-        return api_response(result=normalize_events_list(raiden_service_result))
+        try:
+            raiden_service_result = self.raiden_api.get_channel_events_blockchain(
+                token_address,
+                partner_address,
+                from_block,
+                to_block,
+            )
+            return api_response(result=normalize_events_list(raiden_service_result))
+        except (InvalidBlockNumberInput, InvalidAddress) as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+        except UnknownTokenAddress as e:
+            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_channel_events_raiden(
             self,
@@ -701,15 +699,16 @@ class RestAPI:
             from_block=None,
             to_block=None,
     ):
-
-        raiden_service_result = self.raiden_api.get_channel_events_raiden(
-            token_address,
-            partner_address,
-            from_block,
-            to_block,
-        )
-
-        return api_response(result=raiden_service_result)
+        try:
+            raiden_service_result = self.raiden_api.get_channel_events_raiden(
+                token_address,
+                partner_address,
+                from_block,
+                to_block,
+            )
+            return api_response(result=normalize_events_list(raiden_service_result))
+        except InvalidAddress as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_channel(self, registry_address, token_address, partner_address):
         try:

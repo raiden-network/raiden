@@ -189,7 +189,6 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
 
     def get_echoed_transfer(sent_transfer):
         """For a given transfer sent to echo node, get the corresponding echoed transfer"""
-        app = address_to_app[sent_transfer.initiator]
         events = RaidenAPI(app.raiden).get_payment_history_for_token(token_address)
 
         def is_valid(event):
