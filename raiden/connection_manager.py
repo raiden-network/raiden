@@ -15,6 +15,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     InvalidAmount,
     TransactionThrew,
+    ChannelIncorrectStateError,
 )
 from raiden.transfer import views
 
@@ -197,18 +198,22 @@ class ConnectionManager:
             if joining_funds <= 0 or self._leaving_state:
                 return
 
-            self.api.set_total_channel_deposit(
-                self.registry_address,
-                self.token_address,
-                partner_address,
-                joining_funds,
-            )
-            log.debug(
-                'joined a channel!',
-                funds=joining_funds,
-                me=pex(self.raiden.address),
-                partner=pex(partner_address),
-            )
+            try:
+                self.api.set_total_channel_deposit(
+                    self.registry_address,
+                    self.token_address,
+                    partner_address,
+                    joining_funds,
+                )
+            except ChannelIncorrectStateError:
+                log.exception('connection manager join: channel not in opened state')
+            else:
+                log.debug(
+                    'joined a channel!',
+                    funds=joining_funds,
+                    me=pex(self.raiden.address),
+                    partner=pex(partner_address),
+                )
 
     def retry_connect(self):
         """Will be called when new channels in the token network are detected.
@@ -332,6 +337,8 @@ class ConnectionManager:
                     log.warn('connection manager: channel closed just after it was created')
                 except TransactionThrew:
                     log.exception('connection manager: deposit failed')
+                except ChannelIncorrectStateError:
+                    log.exception('connection manager: channel not in opened state')
                 else:
                     return True
 
