@@ -1,6 +1,7 @@
 from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
+    CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLING,
@@ -25,7 +26,10 @@ def all_neighbour_nodes(chain_state: ChainState) -> typing.Set[typing.Address]:
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
-            for channel_state in token_network.channelidentifiers_to_channels.values():
+            channel_states = flatten_channel_states(
+                token_network.channelidentifiers_to_channels.values(),
+            )
+            for channel_state in channel_states:
                 addresses.add(channel_state.partner_state.address)
 
     return addresses
@@ -257,11 +261,12 @@ def get_channelstate_for(
 
     channel_state = None
     if token_network:
-        states = token_network.partneraddresses_to_channels.get(partner_address)
-        for state in states.values():
-            if channel.get_status(state) not in channel.CHANNEL_AFTER_CLOSE_STATES:
-                channel_state = state
-                break
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels.get(partner_address),
+            CHANNEL_AFTER_CLOSE_STATES,
+        )
+        # If multiple channel states are found, return the last one.
+        channel_state = states[-1]
 
     return channel_state
 
@@ -279,7 +284,12 @@ def get_channelstate_by_token_network_and_partner(
 
     channel_state = None
     if token_network:
-        channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels.get(partner_address),
+            CHANNEL_AFTER_CLOSE_STATES,
+        )
+        # If multiple channel states are found, return the last one.
+        channel_state = states[-1]
 
     return channel_state
 
@@ -464,7 +474,7 @@ def list_channelstate_for_tokennetwork(
     )
 
     if token_network:
-        result = token_network.partneraddresses_to_channels.values()
+        result = flatten_channel_states(token_network.partneraddresses_to_channels.values())
     else:
         result = []
 
@@ -477,7 +487,7 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
         for token_network in payment_network.tokenaddresses_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(
-                token_network.partneraddresses_to_channels.values(),
+                flatten_channel_states(token_network.partneraddresses_to_channels.values()),
             )
 
     return result
@@ -515,8 +525,42 @@ def filter_channels_by_partneraddress(
 
     result = []
     for partner in partner_addresses:
-        channel_state = token_network.partneraddresses_to_channels.get(partner)
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels.get(partner),
+            CHANNEL_AFTER_CLOSE_STATES,
+        )
+        # If multiple channel states are found, return the last one.
+        channel_state = states[-1]
         if channel_state:
             result.append(channel_state)
 
     return result
+
+
+def filter_channels_by_status(
+        channel_states: typing.Dict[typing.ChannelID, NettingChannelState],
+        exclude_states=None,
+) -> typing.List[NettingChannelState]:
+    """ Filter the list of channels by excluding ones
+    for which the state exists in `exclude_states`. """
+
+    if exclude_states is None:
+        exclude_states = []
+
+    states = []
+    for channel_state in channel_states.values():
+        if channel.get_status(channel_state) not in exclude_states:
+            states.append(channel_state)
+
+    return states
+
+
+def flatten_channel_states(
+        channel_states: typing.List[typing.Dict[typing.ChannelID, NettingChannelState]],
+) -> typing.List[NettingChannelState]:
+    """ Receive a list of dicts with channel_id -> channel state
+    and return the values of those dicts flattened. """
+    states = []
+    for channel_state in channel_states:
+        channel_state.extend(channel_state.values())
+    return states

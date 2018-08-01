@@ -204,7 +204,7 @@ class TokenNetworkState(State):
         self.network_graph = TokenNetworkGraphState(networkx.Graph())
 
         self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channels = defaultdict(lambda: dict())
+        self.partneraddresses_to_channels = defaultdict(dict)
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
