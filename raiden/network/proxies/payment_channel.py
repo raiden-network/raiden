@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 from typing import Dict
 
-from eth_abi import encode_single
 from eth_utils import encode_hex, decode_hex, event_abi_to_log_topic
 from gevent.lock import RLock
 from raiden_contracts.constants import (
@@ -12,7 +11,7 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import UINT256_MAX
 from raiden.utils import typing
 from raiden.utils.filters import (
     get_filter_args_for_specific_event_from_channel,
@@ -28,8 +27,8 @@ class PaymentChannel:
             channel_identifier: typing.ChannelID,
     ):
 
-        if 0 > channel_identifier > UINT64_MAX:
-            raise ValueError
+        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
+            raise ValueError('channel_identifier {} is not a uint256'.format(channel_identifier))
 
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,

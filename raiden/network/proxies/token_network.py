@@ -115,7 +115,7 @@ class TokenNetwork:
             settle_timeout: The settle timout to use for this channel.
 
         Returns:
-            The ChannelID (int) of the new netting channel.
+            The ChannelID of the new netting channel.
         """
         if not is_binary_address(partner):
             raise InvalidAddress('Expected binary address format for channel partner')
@@ -168,7 +168,7 @@ class TokenNetwork:
             'new_netting_channel called',
             peer1=pex(self.node_address),
             peer2=pex(partner),
-            channel_identifier=str(channel_identifier),
+            channel_identifier=channel_identifier,
         )
 
         return channel_identifier
