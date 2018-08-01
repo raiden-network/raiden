@@ -3,6 +3,7 @@ from binascii import unhexlify
 import gevent
 from gevent.lock import Semaphore
 from gevent.event import AsyncResult
+from random import shuffle
 
 import structlog
 
@@ -230,12 +231,8 @@ class ConnectionManager:
 
             self._open_channels()
 
-    def find_new_partners(self, number: int):
-        """Search the token network for potential channel partners.
-
-        Args:
-            number: number of partners to return
-        """
+    def find_new_partners(self):
+        """ Search the token network for potential channel partners. """
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=self.registry_address,
@@ -252,7 +249,9 @@ class ConnectionManager:
         )
 
         available = participants_addresses - known
-        new_partners = list(available)[:number]
+        available = list(available)
+        shuffle(available)
+        new_partners = available
 
         log.debug('found {} partners'.format(len(available)))
 
@@ -265,39 +264,82 @@ class ConnectionManager:
         Note:
             - This method must be called with the lock held.
         """
-        open_channels = views.get_channelstate_open(
-            chain_state=views.state_from_raiden(self.raiden),
-            payment_network_id=self.registry_address,
-            token_address=self.token_address,
-        )
 
-        qty_channels_to_open = self.initial_channel_target - len(open_channels)
-        if qty_channels_to_open <= 0:
-            return
+        while True:
+            open_channels = views.get_channelstate_open(
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_id=self.registry_address,
+                token_address=self.token_address,
+            )
+            # don't consider the bootstrap channel
+            open_channels = [
+                channel_state
+                for channel_state in open_channels
+                if channel_state.partner_state.address != self.BOOTSTRAP_ADDR
+            ]
+            funded_channels = [
+                channel_state for channel_state in open_channels
+                if channel_state.our_state.contract_balance >= self._initial_funding_per_partner
+            ]
+            nonfunded_channels = [
+                channel_state for channel_state in open_channels
+                if channel_state not in funded_channels
+            ]
+            possible_new_partners = self.find_new_partners()
 
-        for partner in self.find_new_partners(qty_channels_to_open):
-            try:
-                self.api.channel_open(
-                    self.registry_address,
-                    self.token_address,
-                    partner,
+            # if we already met our target, break
+            if len(funded_channels) >= self.initial_channel_target:
+                break
+            # if we didn't, but there's no nonfunded channels and no available partners
+            # it means the network is smaller than our target, so we should also break
+            if not nonfunded_channels and not possible_new_partners:
+                break
+
+            n_to_join = self.initial_channel_target - len(funded_channels)
+            nonfunded_partners = [
+                channel_state.partner_state.address
+                for channel_state in nonfunded_channels
+            ]
+            # first, fund nonfunded channels, then open and fund with possible_new_partners,
+            # until initial_channel_target of funded channels is met
+            join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
+
+            def _join_partner(partner):
+                has_channel = any(
+                    channel_state.partner_state.address == partner
+                    for channel_state in open_channels
                 )
-            except DuplicatedChannelError:
-                # This can fail because of a race condition, where the channel
-                # partner opens first.
-                log.info('partner opened channel first')
+                if not has_channel:
+                    try:
+                        self.api.channel_open(
+                            self.registry_address,
+                            self.token_address,
+                            partner,
+                        )
+                    except DuplicatedChannelError:
+                        # This can fail because of a race condition, where the channel
+                        # partner opens first.
+                        log.info('partner opened channel first')
 
-            try:
-                self.api.set_total_channel_deposit(
-                    self.registry_address,
-                    self.token_address,
-                    partner,
-                    self._initial_funding_per_partner,
-                )
-            except AddressWithoutCode:
-                log.warn('connection manager: channel closed just after it was created')
-            except TransactionThrew:
-                log.exception('connection manager: deposit failed')
+                try:
+                    self.api.set_total_channel_deposit(
+                        self.registry_address,
+                        self.token_address,
+                        partner,
+                        self._initial_funding_per_partner,
+                    )
+                except AddressWithoutCode:
+                    log.warn('connection manager: channel closed just after it was created')
+                except TransactionThrew:
+                    log.exception('connection manager: deposit failed')
+                else:
+                    return True
+
+            greenlets = [
+                gevent.spawn(_join_partner, partner)
+                for partner in join_partners
+            ]
+            gevent.joinall(greenlets)
 
     @property
     def _initial_funding_per_partner(self) -> int:
