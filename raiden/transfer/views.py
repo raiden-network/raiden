@@ -1,6 +1,7 @@
 from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
     NettingChannelState,
     NODE_NETWORK_UNKNOWN,
     ChainState,
@@ -144,14 +145,30 @@ def get_token_network_identifier_by_token_address(
 def get_token_network_identifiers(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
-) -> typing.List[typing.Address]:
-    """ Return the list of tokens registered with the given payment network. """
+) -> typing.List[typing.TokenNetworkIdentifier]:
+    """ Return the list of token networks registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 
     if payment_network is not None:
         return [
             token_network.address
             for token_network in payment_network.tokenidentifiers_to_tokennetworks.values()
+        ]
+
+    return list()
+
+
+def get_token_identifiers(
+        chain_state: ChainState,
+        payment_network_id: typing.PaymentNetworkID,
+) -> typing.List[typing.TokenAddress]:
+    """ Return the list of tokens registered with the given payment network. """
+    payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
+
+    if payment_network is not None:
+        return [
+            token_address
+            for token_address in payment_network.tokenaddresses_to_tokennetworks.keys()
         ]
 
     return list()
@@ -303,9 +320,7 @@ def get_channelstate_filter(
         token_address: typing.TokenAddress,
         filter_fn: typing.Callable,
 ) -> typing.List[NettingChannelState]:
-    """Return the state of channels that had received any transfers in this
-    token network.
-    """
+    """ Return the state of channels that match the condition in `filter_fn` """
     token_network = get_token_network_by_token_address(
         chain_state,
         payment_network_id,
@@ -347,18 +362,26 @@ def get_channelstate_open(
         token_address: typing.TokenAddress,
 ) -> typing.List[NettingChannelState]:
     """Return the state of open channels in a token network."""
-    token_network = get_token_network_by_token_address(
+    return get_channelstate_filter(
         chain_state,
         payment_network_id,
         token_address,
+        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_OPENED,
     )
 
-    result = []
-    for channel_state in token_network.channelidentifiers_to_channels.values():
-        if channel.get_status(channel_state) == CHANNEL_STATE_OPENED:
-            result.append(channel_state)
 
-    return result
+def get_channelstate_closed(
+        chain_state: ChainState,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+) -> typing.List[NettingChannelState]:
+    """Return the state of closed channels in a token network."""
+    return get_channelstate_filter(
+        chain_state,
+        payment_network_id,
+        token_address,
+        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_CLOSED,
+    )
 
 
 def get_transfer_role(
