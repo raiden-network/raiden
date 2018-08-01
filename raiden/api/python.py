@@ -29,12 +29,14 @@ from raiden.exceptions import (
     DepositOverLimit,
     DuplicatedChannelError,
     TokenNotRegistered,
+    InsufficientGasEscrow,
 )
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
     pex,
     typing,
 )
+from raiden.utils.gas_escrow import has_enough_gas_escrow
 from raiden.api.rest import hexbytes_to_str, encode_byte_values
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -164,6 +166,17 @@ class RaidenAPI:
             token_network_identifier,
         )
 
+        has_enough_balance, estimated_required_balance = has_enough_gas_escrow(
+            self.raiden,
+            channels_to_open=initial_channel_target,
+        )
+
+        if not has_enough_balance:
+            raise InsufficientGasEscrow((
+                'Account balance below the estimated amount necessary to finish all channel'
+                f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
+            ))
+
         connection_manager.connect(
             funds,
             initial_channel_target=initial_channel_target,
@@ -250,6 +263,17 @@ class RaidenAPI:
         token_network = self.raiden.chain.token_network(
             registry.get_token_network(token_address),
         )
+
+        has_enough_balance, estimated_required_balance = has_enough_gas_escrow(
+            self.raiden,
+            channels_to_open=1,
+        )
+
+        if not has_enough_balance:
+            raise InsufficientGasEscrow((
+                'Account balance below the estimated amount necessary to finish all channel'
+                f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
+            ))
 
         try:
             token_network.new_netting_channel(

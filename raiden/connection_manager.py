@@ -10,7 +10,7 @@ import structlog
 from raiden import waiting
 from raiden.exceptions import DuplicatedChannelError
 from raiden.api.python import RaidenAPI
-from raiden.utils import pex
+from raiden.utils import pex, typing
 from raiden.exceptions import (
     InvalidAmount,
     TransactionThrew,
@@ -88,7 +88,7 @@ class ConnectionManager:
 
     def connect(
             self,
-            funds: int,
+            funds: typing.TokenAmount,
             initial_channel_target: int = 3,
             joinable_funds_target: float = 0.4,
     ):

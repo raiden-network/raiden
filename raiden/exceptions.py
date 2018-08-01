@@ -186,3 +186,8 @@ class ChannelOutdatedError(RaidenError):
     identifier has been replaced with a new channel identifier
     due to a close/re-open of current channel.
     """
+
+
+class InsufficientGasEscrow(RaidenError):
+    """ Raised when an action cannot be done because the available balance
+    is not sufficient for the whole actions lifecycle. """

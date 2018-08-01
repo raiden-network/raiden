@@ -68,7 +68,7 @@ from raiden.utils import (
     merge_dict,
     split_endpoint,
     typing,
-    gas_pricing,
+    gas_escrow,
 )
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -743,17 +743,20 @@ def run_app(
         )
         sys.exit(1)
 
-    current_balance = blockchain_service.client.balance(blockchain_service.client.sender)
-    estimated_required_balance = gas_pricing.get_required_balance(raiden_app.raiden)
+    has_enough_balance, estimated_required_balance = gas_escrow.has_enough_gas_escrow(
+        raiden_app.raiden,
+        channels_to_open=0,
+    )
     estimated_required_balance_eth = Web3.fromWei(estimated_required_balance, 'ether')
 
     log.debug('Estimated safe balance', required_wei=estimated_required_balance)
-    if current_balance < estimated_required_balance:
+    if not has_enough_balance:
         click.secho(
             (
+                'WARNING\n'
                 'Your account\'s balance is below the estimated safe amount of '
                 f'{estimated_required_balance_eth} eth. This may lead to a loss of '
-                f'funds. Please add funds to your account as soon as possible.'
+                'funds. Please add funds to your account as soon as possible.'
             ),
             fg='red',
         )
