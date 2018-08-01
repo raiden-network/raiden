@@ -115,7 +115,7 @@ class TokenNetwork:
             settle_timeout: The settle timout to use for this channel.
 
         Returns:
-            The address of the new netting channel.
+            The ChannelID (int) of the new netting channel.
         """
         if not is_binary_address(partner):
             raise InvalidAddress('Expected binary address format for channel partner')
@@ -168,7 +168,7 @@ class TokenNetwork:
             'new_netting_channel called',
             peer1=pex(self.node_address),
             peer2=pex(partner),
-            channel_identifier=encode_hex(channel_identifier),
+            channel_identifier=str(channel_identifier),
         )
 
         return channel_identifier
@@ -210,10 +210,16 @@ class TokenNetwork:
             participant2: typing.Address,
     ) -> Dict:
         """ Returns a dictionary with the channel participant information. """
-        data = self._call_and_check_result(
-            'getChannelParticipantInfo',
+
+        channel_identifier = self._call_and_check_result(
+            'getChannelIdentifier',
             to_checksum_address(participant1),
             to_checksum_address(participant2),
+        )
+        data = self._call_and_check_result(
+            'getChannelParticipantInfo',
+            channel_identifier,
+            to_checksum_address(participant1),
         )
         return {
             'deposit': data[0],
@@ -225,18 +231,23 @@ class TokenNetwork:
 
     def detail_channel(self, participant1: typing.Address, participant2: typing.Address) -> Dict:
         """ Returns a dictionary with the channel specific information. """
+        channel_identifier = self._call_and_check_result(
+            'getChannelIdentifier',
+            to_checksum_address(participant1),
+            to_checksum_address(participant2),
+        )
         channel_data = self._call_and_check_result(
             'getChannelInfo',
             to_checksum_address(participant1),
             to_checksum_address(participant2),
         )
 
-        assert isinstance(channel_data[0], typing.T_ChannelID)
+        assert isinstance(channel_identifier, typing.T_ChannelID)
 
         return {
-            'channel_identifier': channel_data[0],
-            'settle_block_number': channel_data[1],
-            'state': channel_data[2],
+            'channel_identifier': channel_identifier,
+            'settle_block_number': channel_data[0],
+            'state': channel_data[1],
         }
 
     def detail_participants(
@@ -497,6 +508,7 @@ class TokenNetwork:
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
+                channel_identifier,
                 self.node_address,
                 total_deposit,
                 partner,
@@ -531,8 +543,8 @@ class TokenNetwork:
             self,
             channel_identifier: typing.ChannelID,
             partner: typing.Address,
-            nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
+            nonce: typing.Nonce,
             additional_hash: typing.AdditionalHash,
             signature: typing.Signature,
     ):
@@ -591,8 +603,8 @@ class TokenNetwork:
             self,
             channel_identifier: typing.ChannelID,
             partner: typing.Address,
-            nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
+            nonce: typing.Nonce,
             additional_hash: typing.AdditionalHash,
             closing_signature: typing.Signature,
             non_closing_signature: typing.Signature,
@@ -617,6 +629,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
+            channel_identifier,
             partner,
             self.node_address,
             balance_hash,
@@ -708,6 +721,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'unlock',
+            channel_identifier,
             self.node_address,
             partner,
             leaves_packed,
@@ -785,6 +799,7 @@ class TokenNetwork:
             if our_bp_is_larger:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
+                    self.channel_identifier,
                     partner,
                     partner_transferred_amount,
                     partner_locked_amount,
@@ -797,6 +812,7 @@ class TokenNetwork:
             else:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
+                    self.channel_identifier,
                     self.node_address,
                     transferred_amount,
                     locked_amount,

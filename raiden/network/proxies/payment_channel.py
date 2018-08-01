@@ -12,6 +12,7 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
+from raiden.constants import UINT64_MAX
 from raiden.utils import typing
 from raiden.utils.filters import (
     get_filter_args_for_specific_event_from_channel,
@@ -26,6 +27,10 @@ class PaymentChannel:
             token_network: TokenNetwork,
             channel_identifier: typing.ChannelID,
     ):
+
+        if 0 > channel_identifier > UINT64_MAX:
+            raise ValueError
+
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
             channel_identifier=channel_identifier,
@@ -106,6 +111,7 @@ class PaymentChannel:
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
         self.token_network.set_total_deposit(
             channel_identifier=self.channel_identifier,
+            participant=self.participant1,
             total_deposit=total_deposit,
             partner=self.participant2,
         )
@@ -121,8 +127,8 @@ class PaymentChannel:
         self.token_network.close(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
-            nonce=nonce,
             balance_hash=balance_hash,
+            nonce=nonce,
             additional_hash=additional_hash,
             signature=signature,
         )
@@ -139,8 +145,8 @@ class PaymentChannel:
         self.token_network.update_transfer(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
-            nonce=nonce,
             balance_hash=balance_hash,
+            nonce=nonce,
             additional_hash=additional_hash,
             closing_signature=partner_signature,
             non_closing_signature=signature,

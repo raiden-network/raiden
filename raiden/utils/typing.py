@@ -23,7 +23,7 @@ BlockNumber = NewType('BlockNumber', T_BlockNumber)
 T_BlockTimeout = int
 BlockTimeout = NewType('BlockTimeout', T_BlockTimeout)
 
-T_ChannelID = bytes
+T_ChannelID = int
 ChannelID = NewType('ChannelID', T_ChannelID)
 
 T_ChannelState = int
