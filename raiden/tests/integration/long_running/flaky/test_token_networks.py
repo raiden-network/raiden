@@ -35,8 +35,7 @@ def wait_for_transaction(
 def is_channel_open_and_funded(channel_state):
     return (
         channel.get_status(channel_state) == CHANNEL_STATE_OPENED and
-        channel_state.our_state.contract_balance > 0 and
-        channel_state.partner_state.contract_balance > 0
+        channel_state.our_state.contract_balance > 0
     )
 
 
@@ -156,10 +155,15 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
     # create a transfer to the leaving node, so we have a channel to settle
     sender = raiden_network[-1].raiden
     registry_address = sender.default_registry.address
-    sender_channel = list(RaidenAPI(sender).get_channel_list(
-        registry_address=registry_address,
-        token_address=token_address,
-    ))[-1]  # arbitrarily choose a channel from sender
+    sender_channel = next(
+        channel_state
+        for channel_state in RaidenAPI(sender).get_channel_list(
+            registry_address=registry_address,
+            token_address=token_address,
+        )
+        if channel_state.our_state.contract_balance > 0 and
+        channel_state.partner_state.contract_balance > 0
+    )  # choose a fully funded channel from sender
 
     receiver = next(
         app.raiden for app in raiden_network
