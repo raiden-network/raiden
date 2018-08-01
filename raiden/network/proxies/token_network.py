@@ -167,7 +167,7 @@ class TokenNetwork:
             'new_netting_channel called',
             peer1=pex(self.node_address),
             peer2=pex(partner),
-            channel_identifier=channel_identifier,
+            channel_identifier=str(channel_identifier),
         )
 
         return channel_identifier
@@ -507,6 +507,7 @@ class TokenNetwork:
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
+                channel_identifier,
                 self.node_address,
                 total_deposit,
                 partner,
@@ -541,8 +542,8 @@ class TokenNetwork:
             self,
             channel_identifier: typing.ChannelID,
             partner: typing.Address,
-            nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
+            nonce: typing.Nonce,
             additional_hash: typing.AdditionalHash,
             signature: typing.Signature,
     ):
@@ -601,8 +602,8 @@ class TokenNetwork:
             self,
             channel_identifier: typing.ChannelID,
             partner: typing.Address,
-            nonce: typing.Nonce,
             balance_hash: typing.BalanceHash,
+            nonce: typing.Nonce,
             additional_hash: typing.AdditionalHash,
             closing_signature: typing.Signature,
             non_closing_signature: typing.Signature,
@@ -627,6 +628,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
+            channel_identifier,
             partner,
             self.node_address,
             balance_hash,
@@ -718,6 +720,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'unlock',
+            channel_identifier,
             self.node_address,
             partner,
             leaves_packed,
@@ -785,6 +788,7 @@ class TokenNetwork:
             if our_bp_is_larger:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
+                    self.channel_identifier,
                     partner,
                     partner_transferred_amount,
                     partner_locked_amount,
@@ -797,6 +801,7 @@ class TokenNetwork:
             else:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
+                    self.channel_identifier,
                     self.node_address,
                     transferred_amount,
                     locked_amount,
