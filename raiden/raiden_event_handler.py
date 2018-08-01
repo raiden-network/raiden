@@ -218,7 +218,7 @@ def handle_contract_send_channelclose(
         )
         log.info(msg)
     except ChannelOutdatedError as e:
-        log.error(e.args)
+        log.error(str(e))
 
 
 def handle_contract_send_channelupdate(
@@ -247,7 +247,7 @@ def handle_contract_send_channelupdate(
                 our_signature,
             )
         except ChannelOutdatedError as e:
-            log.error(e.args)
+            log.error(str(e))
 
 
 def handle_contract_send_channelunlock(
@@ -261,7 +261,7 @@ def handle_contract_send_channelunlock(
     try:
         channel.unlock(channel_unlock_event.merkle_treee_leaves)
     except ChannelOutdatedError as e:
-        log.error(e.args)
+        log.error(str(e))
 
 
 def handle_contract_send_channelsettle(
@@ -328,7 +328,7 @@ def handle_contract_send_channelsettle(
         # at the same time.
         log.error('settle failed', reason=str(e))
     except ChannelOutdatedError as e:
-        log.error(e.args)
+        log.error(str(e))
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):
