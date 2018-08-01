@@ -1,3 +1,5 @@
+import { UserToken } from './usertoken';
+
 export interface Channel {
     channel_identifier: string;
     token_address: string;
@@ -6,4 +8,5 @@ export interface Channel {
     balance: number;
     settle_timeout: number;
     reveal_timeout: number;
+    userToken: UserToken | null;
 }

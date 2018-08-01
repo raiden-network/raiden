@@ -1,27 +1,41 @@
-import { async, inject, TestBed } from '@angular/core/testing';
-import { RaidenService } from '../services/raiden.service';
+import { UserToken } from '../models/usertoken';
 import { TokenPipe } from './token.pipe';
 
 describe('TokenPipe', () => {
-    let service: jasmine.SpyObj<RaidenService>;
 
-    beforeEach(async(() => {
-        service = jasmine.createSpyObj('RaidenService', [
-            'getChannels'
-        ]);
+    let pipe: TokenPipe;
 
-        TestBed.configureTestingModule({
-            providers: [
-                {
-                    provide: RaidenService, useClass: service
-                }
-            ]
-        }).compileComponents();
-    }));
+    const token: UserToken = {
+        address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
+        symbol: 'TST',
+        name: 'Test Suite Token',
+        balance: 20
+    };
 
+    beforeAll(() => {
+        pipe = new TokenPipe();
+    });
 
-    it('create an instance', inject([RaidenService], (raidenService: RaidenService) => {
-        const pipe = new TokenPipe(raidenService);
+    it('create an instance', () => {
         expect(pipe).toBeTruthy();
-    }));
+    });
+
+    it('should convert a user token to a string representation', () => {
+        const tokenString = pipe.transform(token);
+        expect(tokenString).toBe(`[${token.symbol}] ${token.name} (${token.address})`);
+    });
+
+    it('should have the following format if symbol is missing', () => {
+        token.symbol = null;
+        const tokenString = pipe.transform(token);
+        expect(tokenString).toBe(`${token.name} (${token.address})`);
+    });
+
+    it('should have the following format if only address is available', () => {
+        token.symbol = null;
+        token.name = null;
+        const tokenString = pipe.transform(token);
+        expect(tokenString).toBe(token.address);
+    });
+
 });

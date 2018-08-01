@@ -96,6 +96,13 @@ describe('ChannelTableComponent', () => {
 
     it('should update action when channel has balance', fakeAsync(() => {
 
+        const token: UserToken = {
+            address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
+            symbol: 'TST',
+            name: 'Test Suite Token',
+            balance: 20
+        };
+
         const channel1: Channel = {
             state: 'opened',
             channel_identifier: '0xc0ecf413bfc8fc6b0e313b5ae231084e1c397b96ed5c0ec3d5ee3b5558ab20be',
@@ -103,7 +110,8 @@ describe('ChannelTableComponent', () => {
             partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
             reveal_timeout: 600,
             balance: 10,
-            settle_timeout: 500
+            settle_timeout: 500,
+            userToken: token
         };
 
         const channel2: Channel = {
@@ -113,7 +121,8 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
             balance: 0,
-            settle_timeout: 500
+            settle_timeout: 500,
+            userToken: token
         };
 
         const channel2Balance: Channel = {
@@ -123,7 +132,8 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
             balance: 10,
-            settle_timeout: 500
+            settle_timeout: 500,
+            userToken: token
         };
 
         const channel3: Channel = {
@@ -133,7 +143,8 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xfB398E621c15E2BC5Ae6A508D8D89AF1f88c93e8',
             reveal_timeout: 600,
             balance: 10,
-            settle_timeout: 500
+            settle_timeout: 500,
+            userToken: token
         };
 
         const channel4: Channel = {
@@ -143,15 +154,9 @@ describe('ChannelTableComponent', () => {
             partner_address: '0x8A0cE8bDA200D64d858957080bf7eDDD3371135F',
             reveal_timeout: 600,
             balance: 60,
-            settle_timeout: 600
+            settle_timeout: 600,
+            userToken: token
 
-        };
-
-        const token: UserToken = {
-            address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
-            symbol: 'TST',
-            name: 'Test Suite Token',
-            balance: 20
         };
 
         raidenServiceSpy
