@@ -519,7 +519,7 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
             for channel_states in token_network_state.partneraddresses_to_channels.values():
                 filtered_channel_states = views.filter_channels_by_status(
                     channel_states,
-                    channel.CHANNEL_AFTER_CLOSE_STATES,
+                    [channel.CHANNEL_STATE_UNUSABLE],
                 )
                 for channel_state in filtered_channel_states:
                     events.extend(channel.events_for_close(

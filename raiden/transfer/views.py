@@ -6,6 +6,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_UNUSABLE,
     NettingChannelState,
     NODE_NETWORK_UNKNOWN,
     ChainState,
@@ -263,7 +264,7 @@ def get_channelstate_for(
     if token_network:
         states = filter_channels_by_status(
             token_network.partneraddresses_to_channels[partner_address],
-            CHANNEL_AFTER_CLOSE_STATES,
+            [CHANNEL_STATE_UNUSABLE],
         )
         # If multiple channel states are found, return the last one.
         if states:
@@ -287,7 +288,7 @@ def get_channelstate_by_token_network_and_partner(
     if token_network:
         states = filter_channels_by_status(
             token_network.partneraddresses_to_channels[partner_address],
-            CHANNEL_AFTER_CLOSE_STATES,
+            [CHANNEL_STATE_UNUSABLE],
         )
         if states:
             channel_state = states[-1]
@@ -528,7 +529,7 @@ def filter_channels_by_partneraddress(
     for partner in partner_addresses:
         states = filter_channels_by_status(
             token_network.partneraddresses_to_channels[partner],
-            CHANNEL_AFTER_CLOSE_STATES,
+            [CHANNEL_STATE_UNUSABLE],
         )
         # If multiple channel states are found, return the last one.
         if states:
