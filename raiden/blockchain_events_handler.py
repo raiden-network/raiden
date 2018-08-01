@@ -1,8 +1,6 @@
 import gevent
 import structlog
 
-from eth_utils import to_canonical_address
-
 from raiden_contracts.constants import (
     EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
     EVENT_CHANNEL_CLOSED,
@@ -56,10 +54,8 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
         token_address,
     )
 
-    receipt = raiden.chain.client.get_transaction_receipt(
-        event.event_data['transactionHash'],
-    )
-    from_address = to_canonical_address(receipt['from'])
+    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
+    assert from_address, 'A mined transaction must have the from field'
 
     new_token_network = ContractReceiveNewTokenNetwork(
         from_address,
@@ -90,10 +86,10 @@ def handle_channel_new(raiden, event, current_block_number):
             event.event_data['block_number'],
         )
 
-        receipt = raiden.chain.client.get_transaction_receipt(
+        from_address = raiden.chain.client.get_transaction_from(
             event.event_data['transactionHash'],
         )
-        from_address = to_canonical_address(receipt['from'])
+        assert from_address, 'A mined transaction must have the from field'
 
         new_channel = ContractReceiveChannelNew(
             from_address,
@@ -121,10 +117,10 @@ def handle_channel_new(raiden, event, current_block_number):
         )
 
     else:
-        receipt = raiden.chain.client.get_transaction_receipt(
+        from_address = raiden.chain.client.get_transaction_from(
             event.event_data['transactionHash'],
         )
-        from_address = to_canonical_address(receipt['from'])
+        assert from_address, 'A mined transaction must have the from field'
 
         new_route = ContractReceiveRouteNew(
             from_address,
@@ -162,10 +158,10 @@ def handle_channel_new_balance(raiden, event, current_block_number):
             deposit_block_number,
         )
 
-        receipt = raiden.chain.client.get_transaction_receipt(
+        from_address = raiden.chain.client.get_transaction_from(
             event.event_data['transactionHash'],
         )
-        from_address = to_canonical_address(receipt['from'])
+        assert from_address, 'A mined transaction must have the from field'
 
         newbalance_statechange = ContractReceiveChannelNewBalance(
             from_address,
@@ -202,10 +198,10 @@ def handle_channel_closed(raiden, event, current_block_number):
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
         #
-        # receipt = raiden.chain.client.get_transaction_receipt(
+        # from_address = raiden.chain.client.get_transaction_from(
         #     event.event_data['transactionHash'],
         # )
-        # from_address = to_canonical_address(receipt['from'])
+        # assert from_address, 'A mined transaction must have the from field'
 
         channel_closed = ContractReceiveChannelClosed(
             data['closing_participant'],
@@ -228,10 +224,10 @@ def handle_channel_settled(raiden, event, current_block_number):
     )
 
     if channel_state:
-        receipt = raiden.chain.client.get_transaction_receipt(
+        from_address = raiden.chain.client.get_transaction_from(
             event.event_data['transactionHash'],
         )
-        from_address = to_canonical_address(receipt['from'])
+        assert from_address, 'A mined transaction must have the from field'
 
         channel_settled = ContractReceiveChannelSettled(
             from_address,
@@ -246,10 +242,8 @@ def handle_channel_batch_unlock(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
 
-    receipt = raiden.chain.client.get_transaction_receipt(
-        event.event_data['transactionHash'],
-    )
-    from_address = to_canonical_address(receipt['from'])
+    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
+    assert from_address, 'A mined transaction must have the from field'
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         from_address,
@@ -268,10 +262,8 @@ def handle_secret_revealed(raiden, event, current_block_number):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
-    receipt = raiden.chain.client.get_transaction_receipt(
-        event.event_data['transactionHash'],
-    )
-    from_address = to_canonical_address(receipt['from'])
+    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
+    assert from_address, 'A mined transaction must have the from field'
 
     registeredsecret_state_change = ContractReceiveSecretReveal(
         from_address,

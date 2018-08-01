@@ -184,18 +184,18 @@ class ContractSendSecretReveal(ContractSendEvent):
 
 
 class EventTransferSentSuccess(Event):
-    """ Event emitted by the initiator when a transfer is considered sucessful.
+    """ Event emitted by the initiator when a transfer is considered successful.
 
-    A transfer is considered sucessful when the initiator's payee hop sends the
+    A transfer is considered successful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
     also learned the secret and unlocked its token off-chain or on-chain.
 
-    This definition of sucessful is used to avoid the following corner case:
+    This definition of successful is used to avoid the following corner case:
 
     - The reveal secret message is sent, since the network is unreliable and we
       assume byzantine behavior the message is considered delivered without an
       acknowledgement.
-    - The transfer is considered sucessful because of the above.
+    - The transfer is considered successful because of the above.
     - The reveal secret message was not delivered because of actual network
       problems.
     - The lock expires and an EventUnlockFailed follows, contradicting the
@@ -203,7 +203,7 @@ class EventTransferSentSuccess(Event):
 
     Note:
         Mediators cannot use this event, since an off-chain unlock may be locally
-        sucessful but there is no knowledge about the global transfer.
+        successful but there is no knowledge about the global transfer.
     """
 
     def __init__(self, identifier, amount, target):

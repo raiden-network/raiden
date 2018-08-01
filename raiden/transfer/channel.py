@@ -876,12 +876,12 @@ def get_next_nonce(end_state: NettingChannelEndState) -> typing.Nonce:
 
 def get_status(channel_state):
     if channel_state.settle_transaction:
-        finished_sucessfully = (
+        finished_successfully = (
             channel_state.settle_transaction.result == TransactionExecutionStatus.SUCCESS
         )
         running = channel_state.settle_transaction.finished_block_number is None
 
-        if finished_sucessfully:
+        if finished_successfully:
             result = CHANNEL_STATE_SETTLED
         elif running:
             result = CHANNEL_STATE_SETTLING
@@ -889,12 +889,12 @@ def get_status(channel_state):
             result = CHANNEL_STATE_UNUSABLE
 
     elif channel_state.close_transaction:
-        finished_sucessfully = (
+        finished_successfully = (
             channel_state.close_transaction.result == TransactionExecutionStatus.SUCCESS
         )
         running = channel_state.close_transaction.finished_block_number is None
 
-        if finished_sucessfully:
+        if finished_successfully:
             result = CHANNEL_STATE_CLOSED
         elif running:
             result = CHANNEL_STATE_CLOSING
@@ -1690,7 +1690,7 @@ def handle_channel_closed(
 
         balance_proof = channel_state.partner_state.balance_proof
         call_update = (
-            state_change.closing_address != channel_state.our_state.address and
+            state_change.transaction_from != channel_state.our_state.address and
             balance_proof
         )
         if call_update:
@@ -1735,7 +1735,7 @@ def handle_channel_settled(
                 None,
             )
         else:
-            # we don't need to wait for the unlock to be sucessfull, the
+            # we don't need to wait for the unlock to be successfull, the
             # channel can be cleaned now
             channel_state = None
 
