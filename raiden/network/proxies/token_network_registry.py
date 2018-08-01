@@ -128,7 +128,7 @@ class TokenNetworkRegistry:
             raise RuntimeError('token_to_token_networks failed')
 
         log.info(
-            'add_token sucessful',
+            'add_token successful',
             node=pex(self.node_address),
             token_address=pex(token_address),
             registry_address=pex(self.address),

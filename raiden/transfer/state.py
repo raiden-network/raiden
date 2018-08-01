@@ -914,7 +914,7 @@ class NettingChannelState(State):
 
         if open_transaction.result != TransactionExecutionStatus.SUCCESS:
             raise ValueError(
-                'Cannot create a NettingChannelState with a non sucessfull open_transaction',
+                'Cannot create a NettingChannelState with a non successfull open_transaction',
             )
 
         valid_close_transaction = (

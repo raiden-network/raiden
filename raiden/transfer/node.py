@@ -822,7 +822,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def is_transaction_sucessful(chain_state, transaction, state_change):
+def is_transaction_successful(chain_state, transaction, state_change):
     # These transactions are not made atomic through the wall, they are sent
     # exclusively through the external APIs.
     #
@@ -914,13 +914,12 @@ def update_queues(iteration: TransitionResult, state_change):
         state_change.transaction_from == chain_state.our_address
     )
     if is_our_transaction:
-        indeces_to_remove = []
-        for idx, transaction in enumerate(chain_state.pending_transactions):
-            if is_transaction_sucessful(chain_state, transaction, state_change):
-                indeces_to_remove.append(idx)
-
-        for idx in reversed(indeces_to_remove):
-            chain_state.pending_transactions.pop(idx)
+        pending_transactions = [
+            transaction
+            for transaction in chain_state.pending_transactions
+            if not is_transaction_successful(chain_state, transaction, state_change)
+        ]
+        chain_state.pending_transactions = pending_transactions
 
     for event in iteration.events:
         if isinstance(event, SendMessageEvent):

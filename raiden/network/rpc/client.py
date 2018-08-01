@@ -36,7 +36,9 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
+    Iterable,
     List,
+    Optional,
 )
 from raiden.utils.filters import StatelessFilter
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -127,7 +129,7 @@ def deploy_dependencies_symbols(all_contract):
 
 
 def dependencies_order_of_build(target_contract, dependencies_map):
-    """ Return an ordered list of contracts that is sufficient to sucessfully
+    """ Return an ordered list of contracts that is sufficient to successfully
     deploy the target contract.
 
     Note:
@@ -280,6 +282,14 @@ class JSONRPCClient:
 
     def get_transaction_receipt(self, tx_hash: bytes):
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
+
+    def get_transaction_from(self, tx_hash: bytes) -> Optional[Address]:
+        receipt = self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
+
+        if receipt:
+            return to_canonical_address(receipt['from'])
+
+        return None
 
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals

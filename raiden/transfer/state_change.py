@@ -203,7 +203,6 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.closing_address = transaction_from  # alias for backwards compatibility
         self.closed_block_number = closed_block_number
 
     def __repr__(self):
@@ -214,7 +213,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         ).format(
             pex(self.token_network_identifier),
             pex(self.channel_identifier),
-            pex(self.closing_address),
+            pex(self.transaction_from),
             self.closed_block_number,
         )
 
@@ -224,8 +223,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.closing_address == other.closing_address and
-            self.closed_block_number == other.closing_address
+            self.closed_block_number == other.closed_block_number
         )
 
     def __ne__(self, other):
