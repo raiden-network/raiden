@@ -481,8 +481,8 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
 
-Payments
-========
+Transfers
+=========
 
 .. http:post:: /api/(version)/payments/(token_address)/(target_address)
 
@@ -534,8 +534,11 @@ Querying Events
 Events are kept by the node. Once an event endpoint is queried the relevant events
 from either the beginning of time or the given block are returned. Events are returned in a sorted list with the most recent events on the top of the list.
 
-Events are queried by two different endpoints depending on whether they are related
-to a specific channel or not.
+In Raiden we distinguish between two types of events: ``blockchain_events`` and ``raiden_events``.
+``blockchain_events`` are events that are being emitted by the smart contracts.
+``raiden_events`` are events happening in the Raiden nod. For now, it's being used for debugging purpose.
+
+**Be aware**: All raiden events endpoints might get removed in the future.
 
 All events can be filtered down by providing the query string arguments ``from_block``
 and/or ``to_block`` to query only a events from a limited range of blocks. The block number
@@ -544,7 +547,7 @@ be rejected.
 
 .. http:get:: /api/(version)/events/network
 
-   Query for registry network events.
+   Query for token network creations.
 
    .. NOTE::
       The network registry used is the default registry. The default registry is
@@ -565,15 +568,19 @@ be rejected.
       Content-Type: application/json
 
       [
-          {
-              "event_type": "TokenAdded",
-              "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
-          }, {
-              "event_type": "TokenAdded",
-              "token_address": "0x91337A300e0361BDDb2e377DD4e88CCB7796663D",
-              "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
-          }
+        {
+            args: {
+                token_address: "0x2E2A012D28cC95ed6A254fe14501722925719e72",
+                token_network_address: "0x398a45A94292E850932deD44F1db20cA494400db"
+            },
+            event: "TokenNetworkCreated",
+            logIndex: 3,
+            transactionIndex: 7,
+            transactionHash: "0xf162f616f241679f954385c8a63450f554aa34a97dedf2eb5e7b19ef3c78d31a",
+            address: "0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584",
+            blockHash: "0xb6b0fa7080293bf0649ce86e9bb6e13dbf92ca8ced52a550df8c790b67c84131",
+            block_number: 3745593
+        }, ...
       ]
 
    :statuscode 200: For successful query
@@ -581,15 +588,15 @@ be rejected.
    :statuscode 409: If the given block number argument is invalid
    :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/events/tokens/(token_address)
+.. http:get:: /api/(version)/blockchain_events/tokens/(token_address)
 
-   Query for all new channels opened for a token
+   Query for all blockchain events happening on a token network.
 
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/events/tokens/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      GET /api/1/blockchain_events/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -599,68 +606,112 @@ be rejected.
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      [
-          {
-              "event_type": "ChannelNew",
-              "settle_timeout": 500,
-              "netting_channel": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949",
-              "participant1": "0x4894A542053248E0c504e3dEF2048c08f73E1CA6",
-              "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A"
-          }, {
-              "event_type": "ChannelNew",
-              "settle_timeout": 1500,
-              "netting_channel": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-              "participant1": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "participant2": "0xc7262f1447FCB2f75AB14B2A28DeEd6006eEA95B"
-          }
-      ]
+    [
+        {
+            args: {
+                channel_identifier: "0xce2283dd884aeec753d534968683193bdfb8f92d3e134a992a9b43ee0dd4a613",
+                participant1: "0x3C46570896F3eC1323280Df466716d1076a7162B",
+                participant2: "0x13AE1c7fb262be079d7850d435D75a9bFC141b8e",
+                settle_timeout: 600
+            },
+            event: "ChannelOpened",
+            logIndex: 6,
+            transactionIndex: 10,
+            transactionHash: "0x021d0cc04a1e2aa182b38c5d20396b1b3a5aa1a2da255c0fa006d67d0fd1f5d8",
+            address: "0x7692624c0C43285D51c0DdDfb2A6388f5002762E",
+            blockHash: "0x5249788b4d34b9f6104f33aa1d8b6dab254adc0c038501ca8e974acb46e75fa3",
+            block_number: 3750320
+        },
+        {
+            args: {
+                channel_identifier: "0xcc89e8554f9031bf23d5b2cf1fc26d3cd3dbde4ebbcbf7248a51432d5bc8916c",
+                participant1: "0x7A664079423fa25B87014EB53282F34c7AC7B87E",
+                participant2: "0x000D91Cf263a11F9BfCeE3752E5B03FC1196CE98",
+                settle_timeout: 500
+            },
+            event: "ChannelOpened",
+            logIndex: 9,
+            transactionIndex: 17,
+            transactionHash: "0x60c7c4480b5d3d0d7f94f42ad70f77a2b44613b3eb001503272f758613893370",
+            address: "0x7692624c0C43285D51c0DdDfb2A6388f5002762E",
+            blockHash: "0xce6741d45439abfcf8a3af0dde480e9b2bf17a61a1bec52a99e946f5921c4278",
+            block_number: 3750140
+        }, ...
+    ]
 
    :statuscode 200: For successful query
    :statuscode 400: If the provided query string is malformed
-   :statuscode 404: If the token does not exist
-   :statuscode 409: If the given block number argument is invalid
+   :statuscode 404: If the token at the given token_address does not exist
+   :statuscode 409: If the given block number or token_address arguments are invalid
    :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/events/channels/(channel_address)
+.. http:get:: /api/(version)/blockchain_events/payment_networks/(token_address)/channels/(partner_address)
 
-   Query for events tied to a specific channel.
+   Query for ``blockchain_events`` tied to all the channels which are part of the token network.
+   If the partner_address is not provided it will show the events for all the channels.
 
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/events/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226?from_block=1337 HTTP/1.1
+      GET /blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
 
   .. sourcecode:: http
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json
+     HTTP/1.1 200 OK
+     Content-Type: application/json
 
     [
         {
-            "amount": 42,
-            "block_number": 3760179,
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": 10358310507812090372,
-            "initiator": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
-        },
+            args: {
+                channel_identifier: "0xa152038763d73b05df7b036f477236b527ad14a249e4077fb4048d845226ac43",
+                participant1_amount: 60,
+                participant2_amount: 955
+            },
+            event: "ChannelSettled",
+            logIndex: 3,
+            transactionIndex: 2,
+            transactionHash: "0x6460c83a8005b3c04179e4d63817d7c5877e0d3ed514a60b25cfd8368330d7f4",
+            address: "0x7692624c0C43285D51c0DdDfb2A6388f5002762E",
+            blockHash: "0x988abf5d672a9d6e07a2210ca5f4391bf9ef38e65896457f1bf95024d4f172f0",
+            block_number: 3694882
+        }, ...
+    ]
+
+
+  **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
+      Host: localhost:5001
+
+  **Example Response**:
+
+  .. sourcecode:: http
+
+     HTTP/1.1 200 OK
+     Content-Type: application/json
+
+    [
         {
-            "amount": 1,
-            "block_number": 3760174,
-            "event": "EventPaymentSentSuccess",
-            "identifier": 1533231937481,
-            "target": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
-        },
-        {
-            "amount": 13,
-            "block_number": 3760173,
-            "event": "EventPaymentSentSuccess",
-            "identifier": 1533231931291,
-            "target": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
-        },
+            args: {
+                channel_identifier: "0xa152038763d73b05df7b036f477236b527ad14a249e4077fb4048d845226ac43",
+                participant1: "0x82641569b2062B545431cF6D7F0A418582865ba7",
+                participant2: "0x8A0cE8bDA200D64d858957080bf7eDDD3371135F",
+                settle_timeout: 600
+            },
+            event: "ChannelOpened",
+            logIndex: 1,
+            transactionIndex: 1,
+            transactionHash: "0x6c1ea37c2d401244e336863a2c7e149a2b364655b6423af472e48044878db107",
+            address: "0x7692624c0C43285D51c0DdDfb2A6388f5002762E",
+            blockHash: "0xcc88f89b3278b7abcb49eeabfe055df5de60449eac5876e77ebf0fcb7ab968f8",
+            block_number: 3694177
+        }, ...
     ]
 
   :statuscode 200: For successful query
@@ -713,4 +764,138 @@ be rejected.
   :statuscode 400: If the provided query string is malformed
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
+
+
+Now for the raiden events:
+
+.. http:get:: /api/(version)/raiden_events/tokens/(token_address)
+
+   Query for Raiden internal node events.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
+      Host: localhost:5001
+
+  **Example Response**:
+
+  .. sourcecode:: http
+
+     HTTP/1.1 200 OK
+     Content-Type: application/json
+
+    [{
+        'block_number': 36,
+        'event': 'SendLockedTransfer',
+        'message_identifier': 17084435898865420397,
+        'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
+        'transfer': '<LockedTransferUnsignedState id:43 '
+                      'token:0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 '
+                      'balance_proof:<BalanceProofUnsignedState nonce:1 '
+                      'transferred_amount:0 locked_amount:200 locksroot:e12a619f '
+                      'token_network:edf18937 channel_identifier:1 chain_id: 337> '
+                      'lock:<HashTimeLockState amount:200 expiration:56 '
+                      'secrethash:8747cef6> '
+                      'target:0x636f37d785257d919931acff318f70fb7da4f903>'
+     },
+     {
+        'block_number': 36,
+        'event': 'SendRevealSecret',
+        'message_identifier': 9182020688704924936,
+        'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
+        'secret': '0xcefe6d325fc2b01f47d303417ddd14d788a31c0b078610b427a85b2141bc514d',
+        'secrethash': '0x8747cef6a143f0bd123070ea75479f7e09a451a08ce731fb572211d8bda11b3a'
+     },
+     {
+        'amount': 200,
+        'block_number': 36,
+        'event': 'EventPaymentSentSuccess',
+        'identifier': 43,
+        'payment_network_identifier': '0x41ac2632d8c233784783e50ec6678cdc43f74c76',
+        'target': '0x636F37d785257D919931ACFf318F70fB7Da4f903',
+        'token_network_identifier': '0xedf18937be4064dfbe3e307bd193e812b723ac6f'
+     }, ...]
+
+    :statuscode 200: For successful query
+    :statuscode 400: If the provided query string is malformed
+    :statuscode 404: If the token at the given token_address does not exist
+    :statuscode 409: If the given block number or token_address arguments are invalid
+    :statuscode 500: Internal Raiden node error
+
+.. http:get:: /api/(version)/raiden_events/payment_networks/(token_address)/channels/(partner_address)
+
+   Query f1or Raiden internal node events.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /raiden_events/payment_networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
+      Host: localhost:5001
+
+  **Example Response**:
+
+  .. sourcecode:: http
+
+     HTTP/1.1 200 OK
+     Content-Type: application/json
+
+    [{
+        'block_number': 36,
+        'event': 'SendLockedTransfer',
+        'message_identifier': 16700893459475179678,
+        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
+        'transfer': '<LockedTransferUnsignedState id:42 '
+                  'token:0x7150c717eb60978713f4ddaa288cf3101581cd81 '
+                  'balance_proof:<BalanceProofUnsignedState nonce:1 '
+                  'transferred_amount:0 locked_amount:200 locksroot:b407910b '
+                  'token_network:b12596e5 channel_identifier:1 chain_id: 337> '
+                  'lock:<HashTimeLockState amount:200 expiration:56 '
+                  'secrethash:8ee5cb32> '
+                  'target:0x1d2cb001f807882c4a862731cbb77390e641a8fd>'
+     },
+     {
+        'block_number': 36,
+        'event': 'SendRevealSecret',
+        'message_identifier': 17638248769110067506,
+        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
+        'secret': '0x211c0b2cef1541eda28e0b1f86391f19eb3519fccd2e643096d9066a8a992d10',
+        'secrethash': '0x8ee5cb32c24203b9d62dd55359c3494f4a1694039fb0ce7c2c46bdf619b54c76'
+     },
+     {
+        'amount': 200,
+        'block_number': 36,
+        'event': 'EventPaymentSentSuccess',
+        'identifier': 42,
+        'payment_network_identifier': '0xf6febb9ca9efab37e495612dff0e30964cbb2c15',
+        'target': '0x1d2cB001f807882C4a862731CBB77390e641A8fD',
+        'token_network_identifier': '0xb12596e59a7fa29c0f7c349261cd91148a496dc8'
+     },
+     {
+        'block_number': 36,
+        'event': 'EventUnlockSuccess',
+        'identifier': 42,
+        'secrethash': '0x8ee5cb32c24203b9d62dd55359c3494f4a1694039fb0ce7c2c46bdf619b54c76'
+     },
+     {
+        'balance_proof': '<BalanceProofUnsignedState nonce:2 transferred_amount:200 '
+                       'locked_amount:0 locksroot:00000000 token_network:b12596e5 '
+                       'channel_identifier:1 chain_id: 337>',
+        'block_number': 36,
+        'event': 'SendBalanceProof',
+        'message_identifier': 42,
+        'payment_identifier': 5518212473974981549,
+        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
+        'secret': '0x211c0b2cef1541eda28e0b1f86391f19eb3519fccd2e643096d9066a8a992d10',
+        'token': '0x7150c717eb60978713f4ddaa288cf3101581cd81'
+     }]
+
+
+    :statuscode 200: For successful query
+    :statuscode 400: If the provided query string is malformed
+    :statuscode 404: If the token at the given token_address does not exist
+    :statuscode 409: If the given token_address argument is invalid
+    :statuscode 500: Internal Raiden node error
 
