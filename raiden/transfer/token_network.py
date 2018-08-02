@@ -23,6 +23,7 @@ def subdispatch_to_channel_by_id(
     events = list()
 
     ids_to_channels = token_network_state.channelidentifiers_to_channels
+
     channel_state = ids_to_channels.get(state_change.channel_identifier)
 
     if channel_state:
@@ -33,10 +34,16 @@ def subdispatch_to_channel_by_id(
             block_number,
         )
 
+        partner_to_channels = token_network_state.partneraddresses_to_channels[
+            channel_state.partner_state.address
+        ]
+
         if result.new_state is None:
             del ids_to_channels[state_change.channel_identifier]
+            del partner_to_channels[state_change.channel_identifier]
         else:
             ids_to_channels[state_change.channel_identifier] = result.new_state
+            partner_to_channels[state_change.channel_identifier] = result.new_state
 
         events.extend(result.events)
 

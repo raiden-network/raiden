@@ -10,6 +10,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     NODE_NETWORK_UNKNOWN,
     ChainState,
+    PaymentNetworkState,
     PaymentMappingState,
     TokenNetworkState,
 )
@@ -126,10 +127,10 @@ def get_our_capacity_for_token_network(
 def get_token_network_registry_by_token_network_identifier(
         chain_state: ChainState,
         token_network_identifier: typing.Address,
-) -> typing.Address:
-    for token_network in chain_state.identifiers_to_paymentnetworks.values():
-        if token_network_identifier in token_network.tokenidentifiers_to_tokennetworks:
-            return token_network
+) -> PaymentNetworkState:
+    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
+        if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
+            return payment_network
 
     return None
 
@@ -240,7 +241,6 @@ def get_token_network_by_identifier(
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
             token_network_id,
         )
-
         if token_network_state:
             return token_network_state
 
@@ -300,7 +300,7 @@ def get_channelstate_by_token_network_identifier(
         chain_state: ChainState,
         token_network_id: typing.Address,
         channel_id: typing.Address,
-):
+) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,

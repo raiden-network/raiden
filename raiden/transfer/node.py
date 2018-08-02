@@ -570,16 +570,11 @@ def handle_channel_batch_unlock(
 
     events = []
     if token_network_state:
-        payment_network_state = views.get_token_network_registry_by_token_network_identifier(
-            chain_state,
-            token_network_state.address,
-        )
-
         pseudo_random_generator = chain_state.pseudo_random_generator
         participant1 = state_change.participant
         participant2 = state_change.partner
 
-        for channel_state in token_network_state.channelidentifiers_to_channels.values():
+        for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
             are_addresses_valid1 = (
                 channel_state.our_state.address == participant1 and
                 channel_state.partner_state.address == participant2
@@ -604,11 +599,13 @@ def handle_channel_batch_unlock(
                 events.extend(sub_iteration.events)
 
                 if sub_iteration.new_state is None:
-                    del payment_network_state.tokenaddresses_to_tokennetworks[
-                        token_network_state.token_address
-                    ]
-                    del payment_network_state.tokenidentifiers_to_tokennetworks[
-                        token_network_identifier
+
+                    del token_network_state.partneraddresses_to_channels[
+                        channel_state.partner_state.address
+                    ][channel_state.identifier]
+
+                    del token_network_state.channelidentifiers_to_channels[
+                        channel_state.identifier
                     ]
 
     return TransitionResult(chain_state, events)
