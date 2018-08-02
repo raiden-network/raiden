@@ -654,6 +654,59 @@ class RaidenAPI:
             to_block=to_block,
         ), key=lambda evt: evt.get('block_number'), reverse=True)
 
+    def get_channel_history_events(
+            self,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+    ):
+
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_token_network_events',
+            )
+        if partner_address and not is_binary_address(partner_address):
+            raise InvalidAddress('Expected binary address format for partner in channel deposit')
+
+        raiden_events = self.raiden.wal.storage.get_events_by_block(
+            from_block=0,
+            to_block='latest',
+        )
+        events = []
+        if partner_address:
+            channel_state = views.get_channelstate_for(
+                views.state_from_raiden(self.raiden),
+                self.raiden.default_registry.address,
+                token_address,
+                partner_address,
+            )
+            if channel_state:
+                events = [
+                    (block_number, event)
+                    for block_number, event in raiden_events
+                    if isinstance(event, EVENTS_EXTERNALLY_VISIBLE) and
+                    event.channel_identifier == channel_state.identifier
+                ]
+            else:
+                events = []
+        else:
+            def is_part_of_token_network(event):
+                token_network_identifier = views.get_token_network_identifier_by_token_address(
+                    views.state_from_raiden(self.raiden),
+                    event.payment_network_identifier,
+                    token_address,
+                )
+                if token_network_identifier == event.token_network_identifier:
+                    return True
+                return False
+            events = [
+                (block_number, event)
+                for block_number, event in raiden_events
+                if isinstance(event, EVENTS_EXTERNALLY_VISIBLE) and
+                is_part_of_token_network(event)
+            ]
+        events.sort(key=lambda tup: tup[0], reverse=True)
+        return events
+
     def get_channel_events(
             self,
             token_address: typing.TokenAddress,

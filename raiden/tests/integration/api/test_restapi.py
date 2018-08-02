@@ -1209,3 +1209,71 @@ def test_api_deposit_limit(
     assert_proper_response(response, HTTPStatus.CONFLICT)
     response = response.json()
     assert response['errors'] == 'The deposit of 10001 is bigger than the current limit of 10000'
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_channel_history_events(api_backend, raiden_network, token_addresses):
+    _, app1, app2 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+
+    target1_address = app1.raiden.address
+    target2_address = app2.raiden.address
+
+    api_server, _ = api_backend
+
+    # sending tokens to target 1
+    request = grequests.post(
+        api_url_for(
+            api_backend,
+            'transfertotargetresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target1_address),
+        ),
+        json={'amount': amount, 'identifier': identifier},
+    )
+    request.send().response
+
+    # sending some tokens to target 2
+    amount -= 10
+    request = grequests.post(
+        api_url_for(
+            api_backend,
+            'transfertotargetresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target2_address),
+        ),
+        json={'amount': amount, 'identifier': identifier},
+    )
+    request.send().response
+
+    # test endpoint without partner
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'tokenchannelhistoryresource',
+            partner_address=None,
+            token_address=token_address,
+        ),
+    )
+
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert len(response.json()) == 2
+    assert response.json()[0]['event'] == 'EventTransferSentSuccess'
+    assert response.json()[1]['event'] == 'EventTransferSentSuccess'
+
+    # test endpoint with partner
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'channelhistoryresource',
+            partner_address=target1_address,
+            token_address=token_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert len(response.json()) == 1
+    assert response.json()[0]['event'] == 'EventTransferSentSuccess'

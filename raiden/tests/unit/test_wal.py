@@ -135,7 +135,7 @@ def test_write_read_log():
 def test_write_read_events():
     wal = new_wal()
 
-    event = EventTransferSentFailed(1, 'whatever')
+    event = EventTransferSentFailed(2, 3, 4, 1, 'whatever')
     event_list = [event]
     block_number = 10
 

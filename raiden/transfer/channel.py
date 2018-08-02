@@ -1456,12 +1456,24 @@ def handle_send_directtransfer(
         events.append(direct_transfer)
     else:
         if not is_open:
-            failure = EventTransferSentFailed(payment_identifier, 'Channel is not opened')
+            failure = EventTransferSentFailed(
+                channel_state.payment_network_identifier,
+                channel_state.token_network_identifier,
+                channel_state.identifier,
+                payment_identifier,
+                'Channel is not opened',
+            )
             events.append(failure)
 
         elif not is_valid:
             msg = 'Transfer amount is invalid. Transfer: {}'.format(amount)
-            failure = EventTransferSentFailed(payment_identifier, msg)
+            failure = EventTransferSentFailed(
+                channel_state.payment_network_identifier,
+                channel_state.token_network_identifier,
+                channel_state.identifier,
+                payment_identifier,
+                msg,
+            )
             events.append(failure)
 
         elif not can_pay:
@@ -1473,7 +1485,13 @@ def handle_send_directtransfer(
                 amount,
             )
 
-            failure = EventTransferSentFailed(payment_identifier, msg)
+            failure = EventTransferSentFailed(
+                channel_state.payment_network_identifier,
+                channel_state.token_network_identifier,
+                channel_state.identifier,
+                payment_identifier,
+                msg,
+            )
             events.append(failure)
 
     return TransitionResult(channel_state, events)
@@ -1515,10 +1533,14 @@ def handle_receive_directtransfer(
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
         transfer_sucess_event = EventTransferReceivedSuccess(
+            channel_state.payment_network_identifier,
+            channel_state.token_network_identifier,
+            channel_state.identifier,
             direct_transfer.payment_identifier,
             transfer_amount,
             channel_state.partner_state.address,
         )
+
         send_processed = SendProcessed(
             direct_transfer.balance_proof.sender,
             b'global',

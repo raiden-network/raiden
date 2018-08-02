@@ -663,3 +663,89 @@ be rejected.
   :statuscode 404: If the channel does not exist
   :statuscode 409: If the given block number argument is invalid
   :statuscode 500: Internal Raiden node error
+
+
+.. http:get:: /api/1/channels/history/(token_address)/
+
+   Query for all channel history events (EventTransferSentSuccess, EventTransferSentFailed, EventTransferReceivedSuccess) tied to a specific token network channel.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /channels/history/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
+      Host: localhost:5001
+
+  **Example Response**:
+
+  .. sourcecode:: http
+
+     HTTP/1.1 200 OK
+     Content-Type: application/json
+
+    [
+        {
+            block_number: 3694255,
+            event: "EventTransferReceivedSuccess",
+            amount: 5,
+            initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+        },
+        {
+            block_number: 3694245,
+            event: "EventTransferSentSuccess",
+            amount: 35,
+            target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+        },
+        {
+            block_number: 3694216,
+            event: "EventTransferSentSuccess",
+            amount: 20,
+            target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+        }
+    ]
+
+
+.. http:get:: /api/1/channels/history/(token_address)/(partner_address)
+
+     Query for all channel history events (EventTransferSentSuccess, EventTransferSentFailed, EventTransferReceivedSuccess) tied to a specific token network channel that we have opened with our partner.
+
+    **Example Request**:
+
+    .. http:example:: curl wget httpie python-requests
+
+       GET /channels/history/0x0f114A1E9Db192502E7856309cc899952b3db1ED/ HTTP/1.1
+       Host: localhost:5001
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+     [
+         {
+             block_number: 3694255,
+             event: "EventTransferReceivedSuccess",
+             amount: 5,
+             initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+         },
+         {
+             block_number: 3694245,
+             event: "EventTransferSentSuccess",
+             amount: 35,
+             target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+         },
+         {
+             block_number: 3694216,
+             event: "EventTransferSentSuccess",
+             amount: 20,
+             target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+         }
+     ]
+
+  :statuscode 200: For successful query
+  :statuscode 400: If the provided query string is malformed
+  :statuscode 404: If the channel does not exist
+  :statuscode 409: If the given block number or token_address arguments are invalid
+  :statuscode 500: Internal Raiden node error

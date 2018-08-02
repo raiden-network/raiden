@@ -46,6 +46,9 @@ from raiden.api.v1.encoding import (
     PartnersPerTokenListSchema,
     PaymentSchema,
     InvalidEndpoint,
+    EventTransferSentSuccessSchema,
+    EventTransferReceivedSuccessSchema,
+    EventTransferSentFailedSchema,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -61,6 +64,7 @@ from raiden.api.v1.resources import (
     PaymentToTargetResource,
     ConnectionsResource,
     ConnectionsInfoResource,
+    ChannelHistoryResource,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -72,6 +76,7 @@ from raiden.api.objects import PartnersPerTokenList, AddressList
 from raiden.utils import (
     split_endpoint,
     is_frozen,
+    typing,
 )
 
 log = structlog.get_logger(__name__)
@@ -110,6 +115,15 @@ URLS_V1 = [
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
     ('/connections', ConnectionsInfoResource),
+    (
+        '/channels/history/<hexaddress:token_address>',
+        ChannelHistoryResource,
+        'tokenchannelhistoryresource',
+    ),
+    (
+        '/channels/history/<hexaddress:token_address>/<hexaddress:partner_address>',
+        ChannelHistoryResource,
+    ),
 ]
 
 
@@ -352,6 +366,10 @@ class RestAPI:
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.payment_schema = PaymentSchema()
+        self.sent_success_transfer_schema = EventTransferSentSuccessSchema()
+        self.received_success_transfer_schema = EventTransferReceivedSuccessSchema()
+        self.failed_transfer_schema = EventTransferSentFailedSchema()
+
 
     def get_our_address(self):
         return api_response(
@@ -594,6 +612,32 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+
+    def get_channel_history_events(
+            self,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+    ):
+        try:
+            raiden_service_result = self.raiden_api.get_channel_history_events(
+                token_address,
+                partner_address,
+            )
+        except (InvalidBlockNumberInput, InvalidAddress) as e:
+            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+        result = []
+        for block_number, evt in raiden_service_result:
+            evt.block_number = block_number
+            name = type(evt).__name__
+            evt.event = name
+            if name == 'EventTransferSentSuccess':
+                event = self.sent_success_transfer_schema.dump(evt)
+            elif name == 'EvnetTransferSentFailed':
+                event = self.failed_transfer_schema.dump(evt)
+            else:
+                event = self.received_success_transfer_schema.dump(evt)
+            result.append(event.data)
+        return api_response(result=result)
 
     def get_channel_events(
             self,

@@ -206,16 +206,36 @@ class EventTransferSentSuccess(Event):
         successful but there is no knowledge about the global transfer.
     """
 
-    def __init__(self, identifier, amount, target):
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_network_identifier,
+            channel_identifier,
+            identifier,
+            amount,
+            target,
+    ):
+        self.payment_network_identifier = payment_network_identifier
+        self.token_network_identifier = token_network_identifier
+        self.channel_identifier = channel_identifier
         self.identifier = identifier
         self.amount = amount
         self.target = target
 
     def __repr__(self):
-        return '<EventTransferSentSuccess identifier:{} amount:{} target:{}>'.format(
+        return (
+            '<'
+            'EventTransferSentSuccess identifier:{} amount:{} '
+            'target:{} payment_network_identifier:{} channel_identifier:{} '
+            'token_network_identifier:{}'
+            '>'
+        ).format(
             self.identifier,
             self.amount,
             pex(self.target),
+            self.payment_network_identifier,
+            self.channel_identifier,
+            self.token_network_identifier,
         )
 
     def __eq__(self, other):
@@ -223,7 +243,10 @@ class EventTransferSentSuccess(Event):
             isinstance(other, EventTransferSentSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
-            self.target == other.target
+            self.target == other.target and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.channel_identifier == other.channel_identifier and
+            self.token_network_identifier == other.token_network_identifier
         )
 
     def __ne__(self, other):
@@ -238,21 +261,43 @@ class EventTransferSentFailed(Event):
         has failed, they may infer about lock successes and failures.
     """
 
-    def __init__(self, identifier, reason):
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_network_identifier,
+            channel_identifier,
+            identifier,
+            reason,
+    ):
+        self.payment_network_identifier = payment_network_identifier
+        self.channel_identifier = channel_identifier
+        self.token_network_identifier = token_network_identifier
         self.identifier = identifier
         self.reason = reason
 
     def __repr__(self):
-        return '<EventTransferSentFailed id:{} reason:{}>'.format(
+        return (
+            '<'
+            'EventTransferSentFailed id:{} reason:{} '
+            'payment_network_identifier:{} channel_identifier:{} '
+            'token_network_identifier:{}'
+            '>'
+        ).format(
             self.identifier,
             self.reason,
+            self.payment_network_identifier,
+            self.channel_identifier,
+            self.token_network_identifier,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, EventTransferSentFailed) and
             self.identifier == other.identifier and
-            self.reason == other.reason
+            self.reason == other.reason and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.channel_identifier == other.channel_identifier and
+            self.token_network_identifier == other.token_network_identifier
         )
 
     def __ne__(self, other):
@@ -269,7 +314,15 @@ class EventTransferReceivedSuccess(Event):
         there is no correspoding `EventTransferReceivedFailed`.
     """
 
-    def __init__(self, identifier, amount, initiator):
+    def __init__(
+            self,
+            payment_network_identifier,
+            token_network_identifier,
+            channel_identifier,
+            identifier,
+            amount,
+            initiator,
+    ):
         if amount < 0:
             raise ValueError('transferred_amount cannot be negative')
 
@@ -279,12 +332,24 @@ class EventTransferReceivedSuccess(Event):
         self.identifier = identifier
         self.amount = amount
         self.initiator = initiator
+        self.payment_network_identifier = payment_network_identifier
+        self.channel_identifier = channel_identifier
+        self.token_network_identifier = token_network_identifier
 
     def __repr__(self):
-        return '<EventTransferReceivedSuccess identifier:{} amount:{} initiator:{}>'.format(
+        return (
+            '<'
+            'EventTransferReceivedSuccess identifier:{} amount:{} '
+            'initiator:{} payment_network_identifier:{} channel_identifier:{} '
+            'token_network_identifier:{}'
+            '>'
+        ).format(
             self.identifier,
             self.amount,
             pex(self.initiator),
+            self.payment_network_identifier,
+            self.channel_identifier,
+            self.token_network_identifier,
         )
 
     def __eq__(self, other):
@@ -292,7 +357,10 @@ class EventTransferReceivedSuccess(Event):
             isinstance(other, EventTransferReceivedSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
-            self.initiator == other.initiator
+            self.initiator == other.initiator and
+            self.payment_network_identifier == other.payment_network_identifier and
+            self.channel_identifier == other.channel_identifier and
+            self.token_network_identifier == other.token_network_identifier
         )
 
     def __ne__(self, other):

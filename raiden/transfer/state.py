@@ -875,6 +875,7 @@ class NettingChannelState(State):
         'our_state',
         'partner_state',
         'token_address',
+        'payment_network_identifier',
         'token_network_identifier',
         'reveal_timeout',
         'settle_timeout',
@@ -890,6 +891,7 @@ class NettingChannelState(State):
             identifier,
             chain_id: typing.ChainID,
             token_address: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
             token_network_identifier: typing.Address,
             reveal_timeout: typing.BlockNumber,
             settle_timeout: typing.BlockNumber,
@@ -935,6 +937,7 @@ class NettingChannelState(State):
 
         self.identifier = identifier
         self.token_address = token_address
+        self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
@@ -959,6 +962,7 @@ class NettingChannelState(State):
         return (
             isinstance(other, NettingChannelState) and
             self.identifier == other.identifier and
+            self.payment_network_identifier == other.payment_network_identifier and
             self.our_state == other.our_state and
             self.partner_state == other.partner_state and
             self.token_address == other.token_address and

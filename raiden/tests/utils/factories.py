@@ -87,6 +87,10 @@ def make_channel_identifier():
     return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
 
 
+def make_payment_network_identifier():
+    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
+
+
 def make_privkey_address():
     private_key_bin = os.urandom(32)
     privkey = PrivateKey(private_key_bin)
@@ -122,6 +126,7 @@ def make_channel(
         our_address=None,
         partner_address=None,
         token_address=None,
+        payment_network_identifier=None,
         token_network_identifier=None,
         channel_identifier=None,
         reveal_timeout=10,
@@ -131,6 +136,7 @@ def make_channel(
     our_address = our_address or make_address()
     partner_address = partner_address or make_address()
     token_address = token_address or make_address()
+    payment_network_identifier = payment_network_identifier or make_payment_network_identifier()
     token_network_identifier = token_network_identifier or make_address()
     channel_identifier = channel_identifier or make_channel_identifier()
 
@@ -150,6 +156,7 @@ def make_channel(
         identifier=channel_identifier,
         chain_id=UNIT_CHAIN_ID,
         token_address=token_address,
+        payment_network_identifier=payment_network_identifier,
         token_network_identifier=token_network_identifier,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,

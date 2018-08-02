@@ -327,3 +327,41 @@ class ConnectionsLeaveSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = dict
+
+
+class EventTransferSentFailedSchema(BaseSchema):
+    block_number = fields.Integer()
+    identifier = fields.Integer(missing=None)
+    event = fields.Str()
+    reason = fields.Str()
+
+    class Meta:
+        fields = ('block_number', 'event', 'reason')
+        strict = True
+        decoding_class = dict
+
+
+class EventTransferSentSuccessSchema(BaseSchema):
+    block_number = fields.Integer()
+    identifier = fields.Integer(missing=None)
+    event = fields.Str()
+    amount = fields.Integer(required=True)
+    target = AddressField(missing=None)
+
+    class Meta:
+        fields = ('block_number', 'event', 'amount', 'target')
+        strict = True
+        decoding_class = dict
+
+
+class EventTransferReceivedSuccessSchema(BaseSchema):
+    block_number = fields.Integer()
+    identifier = fields.Integer(missing=None)
+    event = fields.Str()
+    amount = fields.Integer(required=True)
+    initiator = AddressField(missing=None)
+
+    class Meta:
+        fields = ('block_number', 'event', 'amount', 'initiator')
+        strict = True
+        decoding_class = dict
