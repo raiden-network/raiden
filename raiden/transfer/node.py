@@ -968,6 +968,65 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
     return False
 
 
+def is_transaction_invalidated(transaction, state_change):
+    """ True if the `transaction` is made invalid by `state_change`.
+
+    Some transactions will fail due to race conditions, the races are:
+
+    - Another transaction which does the same side effect is executed before.
+    - Another transaction  *invalidates* the state of the smart contract
+    required by the local transaction is executed before.
+
+    The first case is handled by the predicate `is_transaction_effect_satisfied`,
+    where a transaction from a different source which does the same thing is
+    considered. This predicate handles the second scenario.
+
+    A transaction can **only** invalidate another iff both share a valid
+    initial state but a different end state.
+
+    Valid example:
+
+        A close can invalidate a deposit, because both a close and a deposit
+        can be executed from an opened state (same initial state), but a close
+        transaction will transition the channel to a closed state which doesn't
+        allow for deposits (different end state).
+
+    Invalid example:
+
+        A settle transaction cannot invalidate a deposit, because a settle is
+        only allowed for the closed state, and deposits are only allowed for
+        the open state, therefore a deposit should never been sent, the deposit
+        transaction for an invalid state is a bug and not a transaction which
+        was invalidated.
+    """
+    # Most transactions cannot be invalidated by others. These are:
+    #
+    # - close transactions
+    # - settle transactions
+    # - batch unlocks
+    #
+    # Deposits and withdraws are invalidated by the close, but these are not
+    # made atomic through the WAL.
+
+    is_our_failed_update_transfer = (
+        isinstance(state_change, ContractReceiveChannelSettled) and
+        isinstance(transaction, ContractSendChannelUpdateTransfer) and
+        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.channel_identifier == transaction.channel_identifier
+    )
+    if is_our_failed_update_transfer:
+        return True
+
+    return False
+
+
+def is_transaction_pending(chain_state, transaction, state_change):
+    return not (
+        is_transaction_effect_satisfied(chain_state, transaction, state_change) or
+        is_transaction_invalidated(transaction, state_change)
+    )
+
+
 def update_queues(iteration: TransitionResult, state_change):
     chain_state = iteration.new_state
 
@@ -975,7 +1034,7 @@ def update_queues(iteration: TransitionResult, state_change):
         pending_transactions = [
             transaction
             for transaction in chain_state.pending_transactions
-            if not is_transaction_effect_satisfied(chain_state, transaction, state_change)
+            if is_transaction_pending(chain_state, transaction, state_change)
         ]
         chain_state.pending_transactions = pending_transactions
 
