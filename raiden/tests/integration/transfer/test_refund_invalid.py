@@ -35,7 +35,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
 
     other_key = HOP1_KEY
     other_address = HOP1
-    channel_address = make_channel_identifier()
+    channel_identifier = make_channel_identifier()
 
     amount = 10
     refund_transfer_message = make_refund_transfer(
@@ -43,7 +43,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         nonce=1,
         token_network_address=token_network_identifier,
         token=token_address,
-        channel=channel_address,
+        channel_identifier=channel_identifier,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=UNIT_SECRETHASH,
@@ -57,7 +57,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
         nonce=1,
-        channel_identifier=channel_address,
+        channel_identifier=channel_identifier,
         token_network_address=token_network_identifier,
         transferred_amount=amount,
         locked_amount=0,

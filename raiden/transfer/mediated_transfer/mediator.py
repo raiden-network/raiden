@@ -156,11 +156,11 @@ def filter_used_routes(transfers_pair, routes):
     channelid_to_route = {r.channel_identifier: r for r in routes}
 
     for pair in transfers_pair:
-        channelid = pair.payer_transfer.balance_proof.channel_address
+        channelid = pair.payer_transfer.balance_proof.channel_identifier
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-        channelid = pair.payee_transfer.balance_proof.channel_address
+        channelid = pair.payee_transfer.balance_proof.channel_identifier
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
@@ -169,7 +169,7 @@ def filter_used_routes(transfers_pair, routes):
 
 def get_payee_channel(channelidentifiers_to_channels, transfer_pair):
     """ Returns the payee channel of a given transfer pair. """
-    payee_channel_identifier = transfer_pair.payee_transfer.balance_proof.channel_address
+    payee_channel_identifier = transfer_pair.payee_transfer.balance_proof.channel_identifier
     assert payee_channel_identifier in channelidentifiers_to_channels
     payee_channel = channelidentifiers_to_channels[payee_channel_identifier]
 
@@ -178,7 +178,7 @@ def get_payee_channel(channelidentifiers_to_channels, transfer_pair):
 
 def get_payer_channel(channelidentifiers_to_channels, transfer_pair):
     """ Returns the payer channel of a given transfer pair. """
-    payer_channel_identifier = transfer_pair.payer_transfer.balance_proof.channel_address
+    payer_channel_identifier = transfer_pair.payer_transfer.balance_proof.channel_identifier
     assert payer_channel_identifier in channelidentifiers_to_channels
     payer_channel = channelidentifiers_to_channels[payer_channel_identifier]
 
@@ -401,7 +401,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
 
     for pair in state.transfers_pair:
         payer_channel = channelidentifiers_to_channels[
-            pair.payer_transfer.balance_proof.channel_address
+            pair.payer_transfer.balance_proof.channel_identifier
         ]
         channel.register_secret(
             payer_channel,
@@ -410,7 +410,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
         )
 
         payee_channel = channelidentifiers_to_channels[
-            pair.payee_transfer.balance_proof.channel_address
+            pair.payee_transfer.balance_proof.channel_identifier
         ]
         channel.register_secret(
             payee_channel,
@@ -428,7 +428,7 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
 
     for pair in state.transfers_pair:
         payer_channel = channelidentifiers_to_channels[
-            pair.payer_transfer.balance_proof.channel_address
+            pair.payer_transfer.balance_proof.channel_identifier
         ]
         channel.register_onchain_secret(
             payer_channel,
@@ -437,7 +437,7 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
         )
 
         payee_channel = channelidentifiers_to_channels[
-            pair.payee_transfer.balance_proof.channel_address
+            pair.payee_transfer.balance_proof.channel_identifier
         ]
         channel.register_onchain_secret(
             payee_channel,
@@ -1047,8 +1047,8 @@ def handle_refundtransfer(
         transfer_pair = mediator_state.transfers_pair[-1]
         payee_transfer = transfer_pair.payee_transfer
         payer_transfer = mediator_state_change.transfer
-        channel_address = payer_transfer.balance_proof.channel_address
-        payer_channel = channelidentifiers_to_channels[channel_address]
+        channel_identifier = payer_transfer.balance_proof.channel_identifier
+        payer_channel = channelidentifiers_to_channels[channel_identifier]
         is_valid, events, _ = channel.handle_refundtransfer(
             received_transfer=payee_transfer,
             channel_state=payer_channel,
@@ -1109,7 +1109,7 @@ def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifier
     """ Handle a ReceiveUnlock state change. """
     events = list()
     balance_proof_sender = state_change.balance_proof.sender
-    channel_identifier = state_change.balance_proof.channel_address
+    channel_identifier = state_change.balance_proof.channel_identifier
 
     for pair in mediator_state.transfers_pair:
         if pair.payer_transfer.balance_proof.sender == balance_proof_sender:

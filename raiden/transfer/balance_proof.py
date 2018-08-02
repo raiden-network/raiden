@@ -19,7 +19,7 @@ def signing_data(
         nonce: int,
         transferred_amount: int,
         locked_amount: int,
-        channel_address: bytes,
+        channel_identifier: typing.ChannelID,
         locksroot: bytes,
         extra_hash: bytes,
 ) -> bytes:
@@ -45,7 +45,7 @@ def signing_data(
         transferred_amount_bytes_padded +
         locked_amount_bytes_padded +
         locksroot +
-        channel_address +
+        channel_identifier +
         extra_hash
     )
 
@@ -64,7 +64,7 @@ def pack_signing_data(
         'bytes32',
         'uint256',
         'bytes32',
-        'bytes32',
+        'uint256',
         'address',
         'uint256',
     ], [
@@ -85,7 +85,7 @@ def signing_update_data(
         balance_proof.nonce,
         balance_proof.balance_hash,
         balance_proof.message_hash,
-        balance_proof.channel_address,
+        balance_proof.channel_identifier,
         balance_proof.token_network_identifier,
         balance_proof.chain_id,
     ) + balance_proof.signature

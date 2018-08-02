@@ -613,7 +613,7 @@ def handle_init_target(
 ) -> TransitionResult:
     transfer = state_change.transfer
     secrethash = transfer.lock.secrethash
-    channel_identifier = transfer.balance_proof.channel_address
+    channel_identifier = transfer.balance_proof.channel_identifier
     token_network_identifier = transfer.balance_proof.token_network_identifier
 
     return subdispatch_targettask(
