@@ -28,9 +28,7 @@ def all_neighbour_nodes(chain_state: ChainState) -> typing.Set[typing.Address]:
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
-            channel_states = flatten_channel_states(
-                token_network.channelidentifiers_to_channels.values(),
-            )
+            channel_states = token_network.channelidentifiers_to_channels.values()
             for channel_state in channel_states:
                 addresses.add(channel_state.partner_state.address)
 

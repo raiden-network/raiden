@@ -12,7 +12,10 @@ from raiden.tests.utils.transfer import (
     mediated_transfer,
 )
 from raiden.transfer import views
-from raiden.transfer.state_change import ContractReceiveChannelClosed
+from raiden.transfer.state_change import (
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelSettled,
+)
 
 
 @pytest.mark.parametrize('in_memory_database', [False])
@@ -206,16 +209,15 @@ def test_recovery_unhappy_case(
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
 
-    assert_synched_channel_state(
-        token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
+    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
+        from_identifier=0,
+        to_identifier='latest',
     )
-    assert_synched_channel_state(
-        token_network_identifier,
-        app1, deposit - spent_amount, [],
-        app2, deposit + spent_amount, [],
-    )
+
+    assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
+        'token_network_identifier': token_network_identifier,
+        'channel_identifier': channel01.identifier,
+    })
 
 
 @pytest.mark.parametrize('in_memory_database', [False])
