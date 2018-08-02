@@ -80,6 +80,7 @@ def handle_channel_new(raiden, event, current_block_number):
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
             token_address,
+            raiden.default_registry.address,
             token_network_identifier,
             raiden.config['reveal_timeout'],
             channel_proxy,

@@ -9,6 +9,7 @@ from raiden.api.v1.encoding import (
     ConnectionsConnectSchema,
     ConnectionsLeaveSchema,
 )
+from raiden.utils import typing
 
 import structlog
 
@@ -198,4 +199,17 @@ class ConnectionsInfoResource(BaseResource):
     def get(self):
         return self.rest_api.get_connection_managers_info(
             self.rest_api.raiden_api.raiden.default_registry.address,
+        )
+
+
+class ChannelHistoryResource(BaseResource):
+
+    def get(
+            self,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+    ):
+        return self.rest_api.get_channel_history_events(
+            token_address=token_address,
+            partner_address=partner_address,
         )

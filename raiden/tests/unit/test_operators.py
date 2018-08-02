@@ -69,10 +69,10 @@ def test_transfer_statechange_operators():
 
 
 def test_event_operators():
-    a = EventTransferSentSuccess(2, 5, sha3(b'target'))
-    b = EventTransferSentSuccess(2, 5, sha3(b'target'))
-    c = EventTransferSentSuccess(3, 4, sha3(b'target'))
-    d = EventTransferSentSuccess(3, 4, sha3(b'differenttarget'))
+    a = EventTransferSentSuccess(1, 4, 6, 2, 5, sha3(b'target'))
+    b = EventTransferSentSuccess(1, 4, 6, 2, 5, sha3(b'target'))
+    c = EventTransferSentSuccess(2, 7, 6, 3, 4, sha3(b'target'))
+    d = EventTransferSentSuccess(2, 7, 6, 3, 4, sha3(b'differenttarget'))
 
     # pylint: disable=unneeded-not
     assert a == b
@@ -81,19 +81,19 @@ def test_event_operators():
     assert not a == c
     assert not c == d
 
-    a = EventTransferSentFailed(2, 'BECAUSE')
-    b = EventTransferSentFailed(2, 'BECAUSE')
-    c = EventTransferSentFailed(3, 'UNKNOWN')
+    a = EventTransferSentFailed(1, 7, 8, 2, 'BECAUSE')
+    b = EventTransferSentFailed(1, 7, 8, 2, 'BECAUSE')
+    c = EventTransferSentFailed(3, 3, 3, 3, 'UNKNOWN')
 
     assert a == b
     assert not a != b
     assert a != c
     assert not a == c
 
-    a = EventTransferReceivedSuccess(2, 5, sha3(b'initiator'))
-    b = EventTransferReceivedSuccess(2, 5, sha3(b'initiator'))
-    c = EventTransferReceivedSuccess(3, 5, sha3(b'initiator'))
-    d = EventTransferReceivedSuccess(3, 5, sha3(b'other initiator'))
+    a = EventTransferReceivedSuccess(4, 4, 4, 2, 5, sha3(b'initiator'))
+    b = EventTransferReceivedSuccess(4, 4, 4, 2, 5, sha3(b'initiator'))
+    c = EventTransferReceivedSuccess(1, 2, 2, 3, 5, sha3(b'initiator'))
+    d = EventTransferReceivedSuccess(1, 2, 2, 3, 5, sha3(b'other initiator'))
 
     assert a == b
     assert not a != b

@@ -151,7 +151,6 @@ def subdispatch_to_paymenttask(
                 chain_state,
                 token_network_identifier,
             )
-
             if token_network_state:
                 sub_iteration = initiator_manager.state_transition(
                     sub_task.manager_state,
@@ -662,7 +661,15 @@ def handle_processed(
         for pos, message in enumerate(queue):
             if message.message_identifier == state_change.message_identifier:
                 if type(message) == SendDirectTransfer:
+                    channel_state = views.get_channelstate_by_token_network_and_partner(
+                        chain_state,
+                        message.balance_proof.token_network_identifier,
+                        message.recipient,
+                    )
                     events.append(EventTransferSentSuccess(
+                        channel_state.payment_network_identifier,
+                        channel_state.token_network_identifier,
+                        channel_state.identifier,
                         message.payment_identifier,
                         message.balance_proof.transferred_amount,
                         message.recipient,
@@ -929,7 +936,7 @@ def update_queues(iteration: TransitionResult, state_change):
             chain_state.pending_transactions.append(event)
 
 
-def state_transition(chain_state: ChainState, state_change):
+def state_transition(chain_state: ChainState, state_change: StateChange):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     iteration = handle_state_change(chain_state, state_change)

@@ -7,6 +7,7 @@ from raiden.transfer.state import (
 
 def get_channel_state(
         token_address,
+        payment_network_identifier,
         token_network_address,
         reveal_timeout,
         payment_channel_proxy,
@@ -55,6 +56,7 @@ def get_channel_state(
         identifier=identifier,
         chain_id=channel_details['chain_id'],
         token_address=token_address,
+        payment_network_identifier=payment_network_identifier,
         token_network_identifier=token_network_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,

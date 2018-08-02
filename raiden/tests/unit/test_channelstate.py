@@ -120,6 +120,7 @@ def create_channel_from_models(our_model, partner_model):
 
     identifier = factories.make_channel_identifier()
     token_address = factories.make_address()
+    payment_network_identifier = factories.make_payment_network_identifier()
     token_network_identifier = factories.make_address()
     reveal_timeout = 10
     settle_timeout = 100
@@ -135,6 +136,7 @@ def create_channel_from_models(our_model, partner_model):
         identifier=identifier,
         chain_id=UNIT_CHAIN_ID,
         token_address=token_address,
+        payment_network_identifier=payment_network_identifier,
         token_network_identifier=token_network_identifier,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
@@ -900,6 +902,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 def test_invalid_timeouts():
     token_address = factories.make_address()
     token_network_identifier = factories.make_address()
+    payment_network_identifier = factories.make_payment_network_identifier()
     reveal_timeout = 5
     settle_timeout = 10
     identifier = factories.make_address()
@@ -929,6 +932,7 @@ def test_invalid_timeouts():
             identifier=identifier,
             chain_id=UNIT_CHAIN_ID,
             token_address=token_address,
+            payment_network_identifier=payment_network_identifier,
             token_network_identifier=token_network_identifier,
             reveal_timeout=large_reveal_timeout,
             settle_timeout=small_settle_timeout,
@@ -946,6 +950,7 @@ def test_invalid_timeouts():
                 identifier=identifier,
                 chain_id=UNIT_CHAIN_ID,
                 token_address=token_address,
+                payment_network_identifier=payment_network_identifier,
                 token_network_identifier=token_network_identifier,
                 reveal_timeout=invalid_value,
                 settle_timeout=settle_timeout,
@@ -961,6 +966,7 @@ def test_invalid_timeouts():
                 identifier=identifier,
                 chain_id=UNIT_CHAIN_ID,
                 token_address=token_address,
+                payment_network_identifier=payment_network_identifier,
                 token_network_identifier=token_network_identifier,
                 reveal_timeout=reveal_timeout,
                 settle_timeout=invalid_value,

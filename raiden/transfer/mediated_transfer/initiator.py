@@ -102,8 +102,11 @@ def try_new_route(
             reason = 'none of the available routes could be used'
 
         transfer_failed = EventTransferSentFailed(
-            identifier=transfer_description.payment_identifier,
-            reason=reason,
+            None,
+            None,
+            transfer_description.token_network_identifier,
+            transfer_description.payment_identifier,
+            reason,
         )
         events.append(transfer_failed)
 
@@ -259,6 +262,9 @@ def handle_secretreveal(
 
         # TODO: Emit these events after on-chain unlock
         transfer_success = EventTransferSentSuccess(
+            channel_state.payment_network_identifier,
+            channel_state.token_network_identifier,
+            channel_state.identifier,
             transfer_description.payment_identifier,
             transfer_description.amount,
             transfer_description.target,

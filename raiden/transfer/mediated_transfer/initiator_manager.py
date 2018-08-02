@@ -22,6 +22,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state_change import ActionCancelPayment
+from raiden.transfer.state import NettingChannelState
 
 # TODO:
 # - Add synchronization for expired locks (issue #193).
@@ -121,6 +122,7 @@ def handle_cancelroute(
 
         msg = 'The previous transfer must be cancelled prior to trying a new route'
         assert payment_state.initiator is None, msg
+
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
             state_change.routes,
@@ -142,7 +144,10 @@ def handle_cancelroute(
     return iteration
 
 
-def handle_cancelpayment(payment_state: InitiatorPaymentState) -> TransitionResult:
+def handle_cancelpayment(
+        payment_state: InitiatorPaymentState,
+        channel_state: NettingChannelState,
+) -> TransitionResult:
     """ Cancel the payment. """
     assert can_cancel(payment_state), 'Cannot cancel a transfer after the secret is revealed'
 
@@ -150,8 +155,11 @@ def handle_cancelpayment(payment_state: InitiatorPaymentState) -> TransitionResu
     cancel_events = cancel_current_route(payment_state)
 
     cancel = EventTransferSentFailed(
-        identifier=transfer_description.payment_identifier,
-        reason='user canceled transfer',
+        channel_state.payment_network_identifier,
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        transfer_description.payment_identifier,
+        'user canceled transfer',
     )
     cancel_events.append(cancel)
 
@@ -294,8 +302,11 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ActionCancelPayment:
+        channel_identifier = payment_state.initiator.channel_identifier
+        channel_state = channelidentifiers_to_channels[channel_identifier]
         iteration = handle_cancelpayment(
             payment_state,
+            channel_state,
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secretreveal(

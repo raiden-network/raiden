@@ -197,6 +197,9 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
         if is_valid:
             transfer = target_state.transfer
             transfer_success = EventTransferReceivedSuccess(
+                channel_state.payment_network_identifier,
+                channel_state.token_network_identifier,
+                channel_state.identifier,
                 transfer.payment_identifier,
                 transfer.lock.amount,
                 transfer.initiator,
@@ -259,7 +262,6 @@ def state_transition(
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     iteration = TransitionResult(target_state, list())
-
     if type(state_change) == ActionInitTarget:
         iteration = handle_inittarget(
             state_change,
