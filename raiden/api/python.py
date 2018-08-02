@@ -173,7 +173,7 @@ class RaidenAPI:
 
         if not has_enough_balance:
             raise InsufficientGasEscrow((
-                'Account balance below the estimated amount necessary to finish all channel'
+                'Account balance below the estimated amount necessary to finish all channel '
                 f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
             ))
 
@@ -271,7 +271,7 @@ class RaidenAPI:
 
         if not has_enough_balance:
             raise InsufficientGasEscrow((
-                'Account balance below the estimated amount necessary to finish all channel'
+                'Account balance below the estimated amount necessary to finish all channel '
                 f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
             ))
 
