@@ -1,17 +1,37 @@
-<p-dialog header="Register New Token" [(visible)]="visible" [responsive]="true" showEffect="fade" [modal]="true" width="600">
-  <div class="ui-grid ui-grid-responsive ui-fluid">
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="amount">Enter token address</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="text" [formControl]="tokenAddress" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42" maxlength="42" /></div>
-    </div>
-  </div>
-  <p-footer>
-    <div *ngIf="notAChecksumAddress()" align="left">
-      <a style="color: red">{{convertToChecksum()}}</a>
-    </div>
-    <div class="ui-dialog-buttonpane ui-helper-clearfix">
-      <button type="button" pButton icon="fa fa-pencil" (click)="registerToken()" label="Register" [disabled]="tokenAddress.invalid || notAChecksumAddress()"></button>
-    </div>
-  </p-footer>
-</p-dialog>
+<h1 mat-dialog-title>Register a New Token</h1>
+<div mat-dialog-content>
+    <mat-form-field class="full-width-form-field"
+                    [hideRequiredMarker]="true">
+        <input placeholder="Enter token address"
+               [ngModel]="tokenAddress"
+               required
+               pattern="^0x[0-9a-fA-F]{40}$"
+               minlength="42"
+               maxlength="42"
+               matInput
+               name="token-address"
+               [formControl]="tokenAddressControl"
+               [errorStateMatcher]="invalidTokenErrorStateMatcher"
+        />
+
+        <mat-error *ngIf="tokenAddressControl.value.length == 0">Token address cannot be empty</mat-error>
+        <mat-error *ngIf="tokenAddressControl.value.length> 0 && tokenAddressControl.value.length < 42">
+            Token address should be 42 characters long
+        </mat-error>
+        <mat-error *ngIf="tokenAddressControl.value.length == 42 && tokenAddressControl.invalid">
+            Invalid token address format
+        </mat-error>
+        <mat-error *ngIf="tokenAddressControl.value && notAChecksumAddress()">
+            Not a checksum address, try <br/> {{convertToChecksum()}} instead.
+        </mat-error>
+
+
+    </mat-form-field>
+</div>
+<div mat-dialog-actions>
+    <button mat-button mat-dialog-close>Close</button>
+    <button mat-button
+            [disabled]="tokenAddressControl.invalid || notAChecksumAddress()"
+            (click)="registerToken()">Register
+    </button>
+</div>

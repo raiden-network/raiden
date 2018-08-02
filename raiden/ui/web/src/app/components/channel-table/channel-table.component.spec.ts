@@ -3,16 +3,6 @@ import { async, ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angul
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import {
-    ButtonModule,
-    DataTableModule,
-    DialogModule,
-    DropdownModule,
-    Menu,
-    MenuItem,
-    MenuModule,
-    TabViewModule
-} from 'primeng/primeng';
 import { of } from 'rxjs/internal/observable/of';
 import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
@@ -67,15 +57,9 @@ describe('ChannelTableComponent', () => {
                 HttpHandler
             ],
             imports: [
-                DataTableModule,
-                TabViewModule,
-                MenuModule,
                 FormsModule,
                 ReactiveFormsModule,
-                DialogModule,
                 FormsModule,
-                ButtonModule,
-                DropdownModule,
                 NoopAnimationsModule
             ]
         }).compileComponents();
@@ -105,7 +89,7 @@ describe('ChannelTableComponent', () => {
 
         const channel1: Channel = {
             state: 'opened',
-            channel_identifier: '0xc0ecf413bfc8fc6b0e313b5ae231084e1c397b96ed5c0ec3d5ee3b5558ab20be',
+            channel_identifier: 1,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
             reveal_timeout: 600,
@@ -116,7 +100,7 @@ describe('ChannelTableComponent', () => {
 
         const channel2: Channel = {
             state: 'opened',
-            channel_identifier: '0xcf4f8999d22fd1a783fc6236b1ba1599cdc26ebedb36e053b973fc56a3280d0e',
+            channel_identifier: 2,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
@@ -127,7 +111,7 @@ describe('ChannelTableComponent', () => {
 
         const channel2Balance: Channel = {
             state: 'opened',
-            channel_identifier: '0xcf4f8999d22fd1a783fc6236b1ba1599cdc26ebedb36e053b973fc56a3280d0e',
+            channel_identifier: 2,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
@@ -138,7 +122,7 @@ describe('ChannelTableComponent', () => {
 
         const channel3: Channel = {
             state: 'opened',
-            channel_identifier: '0x82852927dd7fb86339af0c57566b0068e3341615a759950ea7de9a64f63f7d2a',
+            channel_identifier: 3,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xfB398E621c15E2BC5Ae6A508D8D89AF1f88c93e8',
             reveal_timeout: 600,
@@ -149,7 +133,7 @@ describe('ChannelTableComponent', () => {
 
         const channel4: Channel = {
             state: 'closed',
-            channel_identifier: '0xa152038763d73b05df7b036f477236b527ad14a249e4077fb4048d845226ac43',
+            channel_identifier: 4,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0x8A0cE8bDA200D64d858957080bf7eDDD3371135F',
             reveal_timeout: 600,
@@ -172,20 +156,18 @@ describe('ChannelTableComponent', () => {
         tick(5000);
         fixture.detectChanges();
 
-        let menus = fixture.debugElement.queryAll(By.css('.ui-menu'));
-        let menu: Menu = menus[1].componentInstance;
-        let menuItem: MenuItem = menu.model[0];
+        let button = fixture.debugElement.query(By.css('#pay-button'));
+        let payButton = button.componentInstance as HTMLButtonElement;
 
-        expect(menuItem.disabled).toBe(true, 'Payment should be disabled with 0 balance');
+        expect(payButton.disabled).toBe(true, 'Payment should be disabled with 0 balance');
 
         tick(5000);
         fixture.detectChanges();
 
-        menus = fixture.debugElement.queryAll(By.css('.ui-menu'));
-        menu = menus[1].componentInstance;
-        menuItem = menu.model[0];
+        button = fixture.debugElement.query(By.css('#pay-button'));
+        payButton = button.componentInstance as HTMLButtonElement;
 
-        expect(menuItem.disabled).toBe(false, 'Payment option should be enabled with positive balance');
+        expect(payButton.disabled).toBe(false, 'Payment option should be enabled with positive balance');
 
         component.ngOnDestroy();
         flush();

@@ -1,7 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { bindNodeCallback, Observable, of, throwError, zip } from 'rxjs';
-import { fromArray } from 'rxjs/internal/observable/fromArray';
+import { bindNodeCallback, from, Observable, of, throwError, zip } from 'rxjs';
 import { catchError, combineLatest, first, flatMap, map, switchMap, tap, toArray } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { Connections } from '../models/connection';
@@ -32,9 +31,7 @@ export class RaidenService {
         this.tokenContract = this.raidenConfig.web3.eth.contract(tokenabi);
     }
 
-    private zoneEncap(cb: CallbackFunc): CallbackFunc {
-        return (err, res) => this.zone.run(() => cb(err, res));
-    }
+    // noinspection JSMethodCanBeStatic
 
     get identifier(): number {
         return Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
@@ -62,7 +59,7 @@ export class RaidenService {
 
     public getChannels(): Observable<Array<Channel>> {
         return this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`).pipe(
-            flatMap((channels: Array<Channel>) => fromArray(channels)),
+            flatMap((channels: Array<Channel>) => from(channels)),
             flatMap((channel: Channel) => {
                 return this.getUserToken(channel.token_address, false).pipe(
                     map((token: UserToken | null) => {
@@ -88,7 +85,7 @@ export class RaidenService {
                         map((userToken) => userToken && connections ?
                             Object.assign(
                                 userToken,
-                                { connected: connections[token] }
+                                {connected: connections[token]}
                             ) : userToken
                         ))
                 )
@@ -135,8 +132,21 @@ export class RaidenService {
     ): Observable<any> {
         return this.http.post(
             `${this.raidenConfig.api}/payments/${tokenAddress}/${targetAddress}`,
-            { amount, identifier: this.identifier },
+            {amount, identifier: this.identifier},
         ).pipe(
+            tap((response) => {
+                if ('target_address' in response && 'identifier' in response) {
+                    this.sharedService.success({
+                        title: 'Transfer successful',
+                        description: `A payment of ${amount} was successfully sent to the partner ${targetAddress}`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: 'Payment error',
+                        description: JSON.stringify(response),
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -149,8 +159,22 @@ export class RaidenService {
         return this.getChannel(tokenAddress, partnerAddress).pipe(
             switchMap((channel) => this.http.patch<Channel>(
                 `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-                { total_deposit: channel.balance + amount },
+                {total_deposit: channel.balance + amount},
             )),
+            tap((response) => {
+                const action = 'Deposit';
+                if ('balance' in response && 'state' in response) {
+                    this.sharedService.info({
+                        title: action,
+                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${response.balance}`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: action,
+                        description: JSON.stringify(response)
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -158,8 +182,23 @@ export class RaidenService {
     public closeChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
         return this.http.patch<Channel>(
             `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-            { state: 'closed' },
+            {state: 'closed'},
         ).pipe(
+            tap(response => {
+                const action = 'Close';
+                if ('state' in response && response.state === 'closed') {
+                    this.sharedService.info({
+                        title: action,
+                        description: `The channel ${response.channel_identifier} with partner
+                    ${response.partner_address} has been closed successfully`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: action,
+                        description: JSON.stringify(response)
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -177,6 +216,12 @@ export class RaidenService {
                     return userToken;
                 }),
             )),
+            tap((userToken: UserToken) => {
+                this.sharedService.success({
+                    title: 'Token registered',
+                    description: `Your token was successfully registered: ${userToken.address}`
+                });
+            }),
             catchError((error) => this.handleError(error))
         );
     }
@@ -184,14 +229,28 @@ export class RaidenService {
     public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
         return this.http.put(
             `${this.raidenConfig.api}/connections/${tokenAddress}`,
-            { funds },
+            {funds},
         ).pipe(
+            tap(() => {
+                this.sharedService.success({
+                    title: 'Joined Token Network',
+                    description: `You have successfully Joined the Network of Token ${tokenAddress}`
+                });
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
 
-    public leaveTokenNetwork(tokenAddress: string): Observable<any> {
-        return this.http.delete(`${this.raidenConfig.api}/connections/${tokenAddress}`).pipe(
+    public leaveTokenNetwork(userToken: UserToken): Observable<any> {
+        return this.http.delete(`${this.raidenConfig.api}/connections/${userToken}`).pipe(
+            map(() => true),
+            tap(() => {
+                const description = `Successfully closed and settled all channels in ${userToken.name} <${userToken.address}> token`;
+                this.sharedService.success({
+                    title: 'Left Token Network',
+                    description: description,
+                });
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -219,7 +278,7 @@ export class RaidenService {
         }
         return this.http.get<Array<Event>>(
             `${this.raidenConfig.api}/${path}`,
-            { params }
+            {params}
         ).pipe(
             catchError((error) => this.handleError(error)),
         );
@@ -236,7 +295,7 @@ export class RaidenService {
         return this.http.put(
             `${this.raidenConfig.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
             data,
-            { observe: 'response'},
+            {observe: 'response'},
         ).pipe(
             switchMap((response) => response.ok ? of(true) : throwError(response.toString())),
             catchError((error) => this.handleError(error)),
@@ -244,7 +303,7 @@ export class RaidenService {
     }
 
     public sha3(data: string): string {
-        return this.raidenConfig.web3.sha3(data, { encoding: 'hex' });
+        return this.raidenConfig.web3.sha3(data, {encoding: 'hex'});
     }
 
     public blocknumberToDate(block: number): Observable<Date> {
@@ -320,6 +379,10 @@ export class RaidenService {
         }
     }
 
+    private zoneEncap(cb: CallbackFunc): CallbackFunc {
+        return (err, res) => this.zone.run(() => cb(err, res));
+    }
+
     private handleError(error: Response | Error | any) {
         // In a real world app, you might use a remote logging infrastructure
         let errMsg: string;
@@ -357,10 +420,9 @@ export class RaidenService {
             errMsg = error.message ? error.message : error.toString();
         }
         console.error(errMsg);
-        this.sharedService.msg({
-            severity: 'error',
-            summary: 'Raiden Error',
-            detail: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg),
+        this.sharedService.error({
+            title: 'Raiden Error',
+            description: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)
         });
         return throwError(errMsg);
     }

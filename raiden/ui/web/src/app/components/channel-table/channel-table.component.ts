@@ -1,270 +1,313 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { MenuItem } from 'primeng/primeng';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { MatDialog, MatPaginator, PageEvent } from '@angular/material';
+import { default as makeBlockie } from 'ethereum-blockies-base64';
+import { EMPTY } from 'rxjs';
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from 'rxjs/internal/Observable';
-import { finalize, map, scan, switchMap, tap } from 'rxjs/operators';
+import { flatMap, switchMap, tap } from 'rxjs/operators';
 import { Channel } from '../../models/channel';
-import { EventsParam } from '../../models/event';
-import { WithMenu } from '../../models/withmenu';
+import { SortingData } from '../../models/sorting.data';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
-import { SharedService } from '../../services/shared.service';
+import { StringUtils } from '../../utils/string.utils';
+import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
+import { DepositDialogComponent } from '../deposit-dialog/deposit-dialog.component';
+import { OpenDialogComponent, OpenDialogPayload, OpenDialogResult } from '../open-dialog/open-dialog.component';
+import { PaymentDialogComponent, PaymentDialogPayload } from '../payment-dialog/payment-dialog.component';
+import { ChannelSorting } from './channel.sorting.enum';
 
 @Component({
     selector: 'app-channel-table',
     templateUrl: './channel-table.component.html',
     styleUrls: ['./channel-table.component.css'],
+    animations: [
+        trigger('flyInOut', [
+            state('in', style({opacity: 1, transform: 'translateX(0)'})),
+            transition('void => *', [
+                style({
+                    opacity: 0,
+                    transform: 'translateX(+100%)'
+                }),
+                animate('0.2s ease-in')
+            ]),
+            transition('* => void', [
+                animate('0.2s 0.1s ease-out', style({
+                    opacity: 0,
+                    transform: 'translateX(100%)'
+                }))
+            ])
+        ])
+    ]
 })
 export class ChannelTableComponent implements OnInit, OnDestroy {
-    public channels$: Observable<Array<WithMenu<Channel>>>;
+
+    @ViewChild(MatPaginator) paginator: MatPaginator;
+
+    public channels$: Observable<Channel[]>;
     public amount: number;
-    public displayDialog: boolean;
-    public displayOpenChannelDialog: boolean;
-    public action: string;
-    public tempChannel: Channel;
-    public watchEvents: EventsParam[] = [];
-    public tabIndex = 0;
+
+    visibleChannels: Channel[] = [];
+    totalChannels = 0;
+
+    public refreshing = true;
+
+    pageSize = 10;
+    sorting = ChannelSorting.Balance;
+    filter = '';
+    ascending = false;
+
+    sortingOptions: SortingData[] = [
+        {
+            value: ChannelSorting.Channel,
+            label: 'Channel'
+        },
+        {
+            value: ChannelSorting.Partner,
+            label: 'Partner'
+        },
+        {
+            value: ChannelSorting.Token,
+            label: 'Token'
+        },
+        {
+            value: ChannelSorting.Balance,
+            label: 'Balance'
+        },
+        {
+            value: ChannelSorting.State,
+            label: 'State'
+        }
+    ];
+
     private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
+    private currentPage = 0;
+
+    private channels: Channel[];
 
     constructor(
+        public dialog: MatDialog,
         private raidenConfig: RaidenConfig,
-        private raidenService: RaidenService,
-        private sharedService: SharedService,
+        private raidenService: RaidenService
     ) {
     }
 
     ngOnInit() {
         let timeout;
         this.channels$ = this.channelsSubject.pipe(
-            tap(() => clearTimeout(timeout)),
+            tap(() => {
+                clearTimeout(timeout);
+                this.refreshing = true;
+            }),
             switchMap(() => this.raidenService.getChannels()),
-            map((newChannels) => newChannels.map((newchannel) =>
-            Object.assign(newchannel, {menu: null}) as WithMenu<Channel>
-        )),
-            scan((oldChannels, newChannels) => {
-                // use scan and Object.assign to keep object references and
-                // improve *ngFor change detection on data table
-                for (const newChannel of newChannels) {
-                    const oldChannel: WithMenu<Channel> = oldChannels.find((c) => {
-                        return c.channel_identifier === newChannel.channel_identifier;
-                    });
-
-                    const menu: MenuItem[] = oldChannel && oldChannel.menu ? oldChannel.menu : this.menuFor(newChannel);
-
-                    Object.assign(newChannel, {
-                        menu: this.updateMenu(newChannel, menu)
-                    });
+            tap(() => {
+                    timeout = setTimeout(
+                        () => this.refresh(),
+                        this.raidenConfig.config.poll_interval,
+                    );
+                    this.refreshing = false;
                 }
-                return newChannels;
-            }, []),
-            tap(() =>
-                timeout = setTimeout(
-                    () => this.channelsSubject.next(null),
-                    this.raidenConfig.config.poll_interval,
-                )
             ),
         );
+        this.channels$.subscribe((channels: Channel[]) => {
+            this.channels = channels;
+            this.totalChannels = channels.length;
+            this.applyFilters(this.sorting);
+        });
 
-        this.channelsSubject.next(null);
+        this.refresh();
     }
 
     ngOnDestroy() {
         this.channelsSubject.complete();
     }
 
-    rowTrackBy(index: number, channel: any) {
-        return channel.channel_identifier;
+    onPageEvent(event: PageEvent) {
+        this.currentPage = event.pageIndex;
+        this.pageSize = event.pageSize;
+    }
+
+    changeOrder() {
+        this.ascending = !this.ascending;
+        this.applyFilters(this.sorting);
+    }
+
+    applyKeywordFilter() {
+        this.applyFilters(this.sorting);
+        this.paginator.firstPage();
+    }
+
+    clearFilter() {
+        this.filter = '';
+        this.applyFilters(this.sorting);
+        this.paginator.firstPage();
+    }
+
+    // noinspection JSMethodCanBeStatic
+    trackByFn(index, item: Channel) {
+        return item.channel_identifier;
+    }
+
+    // noinspection JSMethodCanBeStatic
+    identicon(channel: Channel): string {
+        return makeBlockie(channel.partner_address);
     }
 
     public onPay(channel: Channel) {
-        console.log('Pay');
-        this.action = 'pay';
-        this.tempChannel = channel;
-        this.displayDialog = true;
+
+        const payload: PaymentDialogPayload = {
+            userToken: channel.userToken,
+            targetAddress: channel.partner_address,
+            amount: this.amount
+        };
+
+        const dialog = this.dialog.open(PaymentDialogComponent, {
+            width: '500px',
+            data: payload
+        });
+
+        dialog.afterClosed().pipe(
+            flatMap((result?: PaymentDialogPayload) => {
+                if (!result) {
+                    return EMPTY;
+                }
+
+                return this.raidenService.initiatePayment(
+                    result.userToken.address,
+                    result.targetAddress,
+                    result.amount,
+                );
+            })
+        ).subscribe(() => this.refresh());
     }
 
     public onDeposit(channel: Channel) {
-        this.action = 'deposit';
-        this.tempChannel = channel;
-        this.displayDialog = true;
+
+        const dialog = this.dialog.open(DepositDialogComponent, {
+            width: '500px'
+        });
+
+        dialog.afterClosed().pipe(
+            flatMap((deposit?: number) => {
+                if (!deposit) {
+                    return EMPTY;
+                }
+
+                return this.raidenService.depositToChannel(
+                    channel.token_address,
+                    channel.partner_address,
+                    deposit,
+                );
+            })
+        ).subscribe(() => this.refresh());
     }
 
     public onClose(channel: Channel) {
-        this.action = 'close';
-        this.tempChannel = channel;
-        this.manageChannel();
-    }
 
-    public showOpenChannelDialog(show: boolean = true) {
-        this.displayOpenChannelDialog = show;
-    }
+        const payload: ConfirmationDialogPayload = {
+            title: 'Close Channel',
+            message: `Are you sure you want to close channel ${channel.channel_identifier}<br/>` +
+                `with <b>${channel.partner_address}</b><br/> on <b>${channel.userToken.name}<b/> (${channel.userToken.address})`
+        };
 
-    public manageChannel() {
-        this.displayDialog = false;
-        switch (this.action) {
-            case 'pay':
-                this.raidenService.initiatePayment(
-                    this.tempChannel.token_address,
-                    this.tempChannel.partner_address,
-                    this.amount,
-                ).pipe(
-                    finalize(() => this.channelsSubject.next(null)),
-                ).subscribe((response) => this.showMessage(response));
-                break;
-            case 'deposit':
-                this.raidenService.depositToChannel(
-                    this.tempChannel.token_address,
-                    this.tempChannel.partner_address,
-                    this.amount,
-                ).pipe(
-                    finalize(() => this.channelsSubject.next(null)),
-                ).subscribe((response) => this.showMessage(response));
-                break;
-            case 'close':
-                this.raidenService.closeChannel(
-                    this.tempChannel.token_address,
-                    this.tempChannel.partner_address,
-                ).pipe(
-                    finalize(() => this.channelsSubject.next(null)),
-                ).subscribe((response) => this.showMessage(response));
-                break;
-            default: // this should never happen
-                console.error('Invalid channel action');
-        }
-    }
+        const dialog = this.dialog.open(ConfirmationDialogComponent, {
+            width: '500px',
+            data: payload
+        });
 
-    public showMessage(response: any) {
-        switch (this.action) {
-            case 'pay':
-                if ('target_address' in response && 'identifier' in response) {
-                    this.sharedService.msg({
-                        severity: 'info',
-                        summary: 'Payment',
-                        detail: `A payment of ${response.amount} was successfully sent to the partner ${response.target_address}`
-                    });
-                } else {
-                    this.sharedService.msg({
-                        severity: 'error',
-                        summary: 'Payment',
-                        detail: JSON.stringify(response)
-                    });
+        dialog.afterClosed().pipe(
+            flatMap(result => {
+                if (!result) {
+                    return EMPTY;
                 }
-                break;
-            case 'deposit':
-                if ('balance' in response && 'state' in response) {
-                    this.sharedService.msg({
-                        severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_identifier} has been modified with a deposit of ${response.balance}`
-                    });
-                } else {
-                    this.sharedService.msg({
-                        severity: 'error', summary: this.action,
-                        detail: JSON.stringify(response)
-                    });
+
+                return this.raidenService.closeChannel(
+                    channel.token_address,
+                    channel.partner_address,
+                );
+            })
+        ).subscribe(() => this.refresh());
+    }
+
+    public onOpenChannel() {
+
+        const payload = new OpenDialogPayload(this.raidenService.raidenAddress);
+
+        const dialog = this.dialog.open(OpenDialogComponent, {
+            width: '500px',
+            data: payload
+        });
+
+        dialog.afterClosed().pipe(
+            flatMap((result: OpenDialogResult) => {
+                if (!result) {
+                    return EMPTY;
                 }
+
+                return this.raidenService.openChannel(
+                    result.tokenAddress,
+                    result.partnerAddress,
+                    result.settleTimeout,
+                    result.balance
+                );
+            })).subscribe(() => this.refresh());
+    }
+
+    private refresh() {
+        this.channelsSubject.next(null);
+    }
+
+    applyFilters(sorting: ChannelSorting) {
+        const channels: Array<Channel> = this.channels;
+        let compareFn: (a: Channel, b: Channel) => number;
+
+        const compareNumbers: (ascending: boolean, a: number, b: number) => number = ((ascending, a, b) => {
+            return this.ascending ? a - b : b - a;
+        });
+
+        switch (sorting) {
+            case ChannelSorting.State:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.state, b.state);
                 break;
-            case 'close':
-                if ('state' in response && response.state === 'closed') {
-                    this.sharedService.msg({
-                        severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_identifier} with partner
-                    ${response.partner_address} has been closed successfully`
-                    });
-                } else {
-                    this.sharedService.msg({
-                        severity: 'error', summary: this.action,
-                        detail: JSON.stringify(response)
-                    });
-                }
+            case ChannelSorting.Token:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.token_address, b.token_address);
                 break;
-            case 'settle':
-                if ('state' in response && response.state === 'settled') {
-                    this.sharedService.msg({
-                        severity: 'info', summary: this.action,
-                        detail: `The channel ${response.channel_identifier} with partner
-                    ${response.partner_address} has been settled successfully`
-                    });
-                } else {
-                    this.sharedService.msg({
-                        severity: 'error', summary: this.action,
-                        detail: JSON.stringify(response)
-                    });
-                }
+            case ChannelSorting.Partner:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.partner_address, b.partner_address);
                 break;
-            default: // this should never happen
-                console.error('Invalid showMessage action');
+            case ChannelSorting.Channel:
+                compareFn = (a, b) => compareNumbers(this.ascending, a.channel_identifier, b.channel_identifier);
+                break;
+            default:
+                compareFn = (a, b) => compareNumbers(this.ascending, a.balance, b.balance);
+                break;
         }
 
+        const start = this.pageSize * this.currentPage;
+
+        const filteredChannels = channels.filter((value: Channel) => this.searchFilter(value));
+
+        this.totalChannels = this.filter ? filteredChannels.length : this.channels.length;
+
+        this.visibleChannels = filteredChannels
+            .sort(compareFn)
+            .slice(start, start + this.pageSize);
     }
 
-    public menuFor(channel: Channel): MenuItem[] {
-        return [
-            {
-                label: 'Pay',
-                icon: 'fa fa-exchange',
-                command: () => this.onPay(channel)
-            },
-            {
-                label: 'Deposit',
-                icon: 'fa fa-money',
-                command: () => this.onDeposit(channel)
-            },
-            {
-                label: 'Close',
-                icon: 'fa fa-close',
-                command: () => this.onClose(channel)
-            },
-            {
-                label: 'Watch Events',
-                icon: 'fa fa-clock-o',
-                command: () => this.watchChannelEvents(channel)
-            },
-        ];
-    }
+    private searchFilter(channel: Channel): boolean {
+        const searchString = this.filter.toLocaleLowerCase();
+        const identifier = channel.channel_identifier.toString();
+        const partner = channel.partner_address.toLocaleLowerCase();
+        const tokenAddress = channel.token_address.toLocaleLowerCase();
+        const channelState = channel.state.toLocaleLowerCase();
+        const tokenName = channel.userToken.name.toLocaleLowerCase();
+        const tokenSymbol = channel.userToken.symbol.toLocaleLowerCase();
 
-    public watchChannelEvents(channel: Channel) {
-        let index = this.watchEvents
-            .map((event) => event.channel)
-            .indexOf(channel);
-        if (index < 0) {
-            this.watchEvents = [...this.watchEvents, {channel}];
-            index = this.watchEvents.length - 1;
-        }
-        setTimeout(() => this.tabIndex = index + 1, 100);
-    }
-
-    public handleCloseTab($event) {
-        const newEvents = this.watchEvents.filter((e, i) => i !== $event.index - 1);
-        $event.close();
-        setTimeout(() => this.watchEvents = newEvents, 0);
-    }
-
-    public handleChangeTab($event) {
-        if ($event.index >= 1) {
-            this.watchEvents[$event.index - 1].activity = false;
-        }
-        this.tabIndex = $event.index;
-    }
-
-    public handleActivity(eventsParam: EventsParam) {
-        const index = this.watchEvents.indexOf(eventsParam);
-        eventsParam.activity = !(index >= 0 && this.tabIndex - 1 === index);
-    }
-
-    private channelIsNotOpen(channel: Channel): boolean {
-        return channel.state !== 'opened';
-    }
-
-    private channelCanPay(channel: Channel): boolean {
-        return (channel.state === 'opened' && channel.balance > 0);
-    }
-
-    private updateMenu(channel: Channel, menuItems: MenuItem[]): MenuItem[] {
-        if (menuItems != null) {
-            menuItems[0].disabled = !this.channelCanPay(channel);
-            menuItems[1].disabled = this.channelIsNotOpen(channel);
-            menuItems[2].disabled = this.channelIsNotOpen(channel);
-        }
-        return menuItems;
+        return identifier.startsWith(searchString) ||
+            partner.startsWith(searchString) ||
+            tokenAddress.startsWith(searchString) ||
+            channelState.startsWith(searchString) ||
+            tokenName.startsWith(searchString) ||
+            tokenSymbol.startsWith(searchString);
     }
 }

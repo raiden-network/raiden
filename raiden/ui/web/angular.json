@@ -22,11 +22,10 @@
               "src/favicon.ico"
             ],
             "styles": [
-              "node_modules/font-awesome/css/font-awesome.min.css",
-              "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "node_modules/primeng/resources/themes/omega/theme.css",
-              "node_modules/primeng/resources/primeng.min.css",
-              "src/styles.css"
+              "node_modules/ngx-toastr/toastr.css",
+              "node_modules/material-design-icons/iconfont/material-icons.css",
+              "src/styles.css",
+              "src/webui-app-theme.scss"
             ],
             "scripts": [
               "node_modules/web3/dist/web3.min.js"
