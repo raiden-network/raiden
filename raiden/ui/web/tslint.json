@@ -23,7 +23,8 @@
     "import-spacing": true,
     "indent": [
       true,
-      "spaces"
+      "spaces",
+      4
     ],
     "interface-over-type-literal": true,
     "label-position": true,
@@ -111,6 +112,7 @@
     "whitespace": [
       true,
       "check-branch",
+      "check-module",
       "check-decl",
       "check-operator",
       "check-separator",

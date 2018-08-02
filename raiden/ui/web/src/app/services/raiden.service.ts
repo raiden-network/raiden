@@ -1,26 +1,27 @@
-import { throwError, zip, of, bindNodeCallback, Observable } from 'rxjs';
-import { combineLatest, tap, first, switchMap, map, catchError } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { bindNodeCallback, Observable, of, throwError, zip } from 'rxjs';
+import { fromArray } from 'rxjs/internal/observable/fromArray';
+import { catchError, combineLatest, first, flatMap, map, switchMap, tap, toArray } from 'rxjs/operators';
+import { Channel } from '../models/channel';
+import { Connections } from '../models/connection';
+import { Event, EventsParam } from '../models/event';
+import { SwapToken } from '../models/swaptoken';
+
+import { UserToken } from '../models/usertoken';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
 
-import { UserToken } from '../models/usertoken';
-import { Channel } from '../models/channel';
-import { Event, EventsParam } from '../models/event';
-import { SwapToken } from '../models/swaptoken';
-import { Connections } from '../models/connection';
-
-type CallbackFunc = (error: Error, result: any) => void;
+export type CallbackFunc = (error: Error, result: any) => void;
 
 @Injectable()
 export class RaidenService {
 
     public tokenContract: any;
     public raidenAddress: string;
-    private userTokens: { [id: string]: UserToken | null} = {};
+    private userTokens: { [id: string]: UserToken | null } = {};
 
     constructor(
         private http: HttpClient,
@@ -61,6 +62,16 @@ export class RaidenService {
 
     public getChannels(): Observable<Array<Channel>> {
         return this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`).pipe(
+            flatMap((channels: Array<Channel>) => fromArray(channels)),
+            flatMap((channel: Channel) => {
+                return this.getUserToken(channel.token_address, false).pipe(
+                    map((token: UserToken | null) => {
+                        channel.userToken = token;
+                        return channel;
+                    })
+                );
+            }),
+            toArray(),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -250,25 +261,27 @@ export class RaidenService {
     ): Observable<UserToken | null> {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
         const userToken: UserToken | null | undefined = this.userTokens[tokenAddress];
+
+        const balanceObservable: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
+            tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
+        )(this.raidenAddress).pipe(
+            map((balance) => balance.toNumber())
+        );
+
         if (userToken === undefined) {
-            return bindNodeCallback((cb: CallbackFunc) =>
+            const symbolObservable = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
-            )().pipe(
-                catchError(() => of(null)),
-                combineLatest(
-                    bindNodeCallback((cb: CallbackFunc) =>
-                        tokenContractInstance.name(this.zoneEncap(cb))
-                    )().pipe(
-                        catchError(() => of(null)),
-                    ),
-                    bindNodeCallback((addr: string, cb: CallbackFunc) =>
-                        tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
-                    )(this.raidenAddress).pipe(
-                        map((balance) => balance.toNumber()),
-                        catchError(() => of(null)),
-                    ),
-                ),
-                map(([symbol, name, balance]): UserToken => {
+            )();
+
+            const nameObservable = bindNodeCallback((cb: CallbackFunc) =>
+                tokenContractInstance.name(this.zoneEncap(cb))
+            )();
+
+            return zip(
+                symbolObservable,
+                nameObservable,
+                balanceObservable,
+            ).pipe(map(([symbol, name, balance]): UserToken => {
                     if (balance === null) {
                         return null;
                     }
@@ -280,13 +293,19 @@ export class RaidenService {
                     };
                 }),
                 tap((token) => this.userTokens[tokenAddress] = token),
+                catchError((error) => {
+                    const message = (error as Error).message;
+                    if (message.startsWith('Invalid JSON RPC response')) {
+                        const errorMessage = 'Could not access the JSON-RPC endpoint, ' +
+                            'Please make sure that CORS for this domain is enabled on your ethereum client.';
+                        return throwError(Error(errorMessage));
+                    }
+                    return throwError(error);
+                })
             );
+
         } else if (refresh && userToken !== null) {
-            return bindNodeCallback((addr: string, cb: CallbackFunc) =>
-                tokenContractInstance.balanceOf(addr, this.zoneEncap(cb))
-            )(this.raidenAddress).pipe(
-                map((balance) => balance.toNumber()),
-                catchError(() => of(null)),
+            return balanceObservable.pipe(
                 map((balance) => {
                     if (balance === null) {
                         return null;
@@ -344,5 +363,4 @@ export class RaidenService {
         });
         return throwError(errMsg);
     }
-
 }
