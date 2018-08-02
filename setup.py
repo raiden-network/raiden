@@ -81,10 +81,6 @@ history = ''
 
 install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
-    (
-        'git+https://github.com/raiden-network/raiden-libs.git'
-        '@9ba6749729b7f7bb940d1483e2d89250820ddca4'
-    ): 'raiden-libs',
 }
 
 install_requires = list(set(
