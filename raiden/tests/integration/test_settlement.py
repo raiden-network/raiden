@@ -11,7 +11,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     claim_lock,
     direct_transfer,
     get_channelstate,
@@ -171,7 +171,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     #    A -> B LockedTransfer
     #    B -> A SecretRequest
     #    - protocol didn't continue
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         alice_app, deposit, [lock],
         bob_app, deposit, [],

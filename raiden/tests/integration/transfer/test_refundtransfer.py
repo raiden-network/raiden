@@ -5,7 +5,7 @@ from raiden.transfer import views
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.events import raiden_events_must_contain_entry
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     direct_transfer,
     mediated_transfer,
 )
@@ -59,14 +59,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     send_refundtransfer = raiden_events_must_contain_entry(app1.raiden, SendRefundTransfer, {})
     assert send_refundtransfer
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [send_lockedtransfer.transfer.lock],
         app1, deposit, [send_refundtransfer.lock],
     )
 
     # This channel was exhausted to force the refund transfer
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, 0, [],
         app2, deposit * 2, [],
@@ -123,12 +123,12 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
     # wait for the nodes to sync
     gevent.sleep(0.2)
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
@@ -167,12 +167,12 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
     assert lock.expiration
 
     # Both channels have the amount locked because of the refund message
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount_path, [lockstate_from_lock(lock)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
@@ -231,17 +231,17 @@ def test_refund_transfer_after_2nd_hop(
     # wait for the nodes to sync
     gevent.sleep(0.2)
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - amount_path, [],
         app2, deposit + amount_path, [],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app2, deposit - amount_path - amount_drain, [],
         app3, deposit + amount_path + amount_drain, [],
@@ -296,17 +296,17 @@ def test_refund_transfer_after_2nd_hop(
     assert lock2.expiration
 
     # channels have the amount locked because of the refund message
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount_path, [lockstate_from_lock(lock1)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - amount_path, [lockstate_from_lock(lock2)],
         app2, deposit + amount_path, [lockstate_from_lock(refund_lock2)],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app2, deposit - amount_path - amount_drain, [],
         app3, deposit + amount_path + amount_drain, [],

@@ -224,7 +224,7 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
         assert is_valid, msg
 
 
-def assert_synched_channel_state(
+def assert_synced_channel_state(
         token_network_identifier,
         app0,
         balance0,

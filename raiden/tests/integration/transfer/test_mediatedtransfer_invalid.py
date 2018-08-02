@@ -17,7 +17,7 @@ from raiden.tests.utils.factories import (
 )
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     wait_assert,
     get_channelstate,
     mediated_transfer,
@@ -53,7 +53,7 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
     assert result.successful()
     assert result.get_nowait() is False
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -145,7 +145,7 @@ def test_receive_lockedtransfer_invalidnonce(
         token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
-        func=assert_synched_channel_state,
+        func=assert_synced_channel_state,
         timeout=network_wait,
     )
 
@@ -196,7 +196,7 @@ def test_receive_lockedtransfer_invalidsender(
         app0,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -250,7 +250,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         app1,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -318,7 +318,7 @@ def test_received_lockedtransfer_closedchannel(
     )
 
     # The local state must not change since the channel is already closed
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],

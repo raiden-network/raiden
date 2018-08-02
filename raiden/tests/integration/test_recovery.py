@@ -8,7 +8,7 @@ from raiden.network.transport import UDPTransport
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     mediated_transfer,
 )
 from raiden.transfer import views
@@ -78,12 +78,12 @@ def test_recovery_happy_case(
 
     app0_restart.start()
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - spent_amount, [],
         app2, deposit + spent_amount, [],
@@ -116,12 +116,12 @@ def test_recovery_happy_case(
         timeout=network_wait * number_of_nodes * 2,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - spent_amount, [],
         app2, deposit + spent_amount, [],
