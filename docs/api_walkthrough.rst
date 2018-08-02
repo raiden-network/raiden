@@ -8,7 +8,7 @@ Introduction
 =============
 Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
-This section will walk through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, will be provided.
+This section walks through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, are be provided.
 
 Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that a proper connection to Raiden is established.
 
@@ -34,19 +34,19 @@ Bootstrapping a token network
 ===============================
 In this scenario it is assumed that a user holds some ERC20 token, with address ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``, which has not yet been registered with Raiden.
 
-The user wants to register the token, which will create a `Token Network <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#tokennetwork-contract>`_ for that token. For each registered token there is a corresponding token network. Token networks are responsible for opening new payment channels between two parties.
+The user wants to register the token, which creates a `Token Network <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#tokennetwork-contract>`_ for that token. For each registered token there is a corresponding token network. Token networks are responsible for opening new payment channels between two parties.
 
 
 Checking if a token is already registered
 -----------------------------------------
-One way of checking if a token is already registered is to get the list of all registered tokens and check if the address of the token wanted for interaction exists in the list:
+One way of checking if a token is already registered is to get the list of all registered tokens. Then, in the returned list, check if the address of the token wanted for interaction exists:
 
 .. http:example:: curl wget httpie python-requests
 
    GET /api/1/tokens HTTP/1.1
    Host: localhost:5001
 
-If the address of the token exists in the list, see the :ref:`next scenario <joining-existing-token-network>`.
+If the address of the token exists in the list, see the :ref:`Joining an already existing token network scenario <joining-existing-token-network>`.
 If it does not exist in the list, it is desired to :ref:`register the token <adding-a-token>`.
 
 
@@ -54,7 +54,7 @@ If it does not exist in the list, it is desired to :ref:`register the token <add
 
 Registering a token
 --------------------
-In order to register a token only its address is needed. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage (costs about 1.8 million gas).
+In order to register a token, only its address is needed. When a new token is registered a Token Network contract is deployed. This is quite expensive in terms of gas usage (costs about 3.5 million gas). Luckily, this only has to be done once per token.
 
 To register a token simply use the endpoint listed below:
 
@@ -64,18 +64,18 @@ To register a token simply use the endpoint listed below:
    Host: localhost:5001
    Content-Type: application/json
 
-If successful this call will return the address of the freshly created Channel Manager like this:
+If successful this call returns the address of the freshly created Token Network like this:
 
 .. sourcecode:: http
 
-   HTTP/1.1 201 CREATED
-   Content-Type: application/json
+    HTTP/1.1 201 CREATED
+    Content-Type: application/json
 
-   {
-       "token_network_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
-   }
+    {
+        "token_network_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
+    }
 
-The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and thus there will be no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to transfer some tokens to another Raiden node in an one-way-channel, it can be done by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
+The token is now registered. However, since the token was just registered, there are no other Raiden nodes connected to the token network. This means that there are no nodes to connect to. Due to this the token network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done by opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
 
 .. _opening-a-channel:
@@ -99,7 +99,7 @@ To open a channel with another Raiden node four things are needed: the address o
 
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
 
-Successfully opening a channel will return the following information:
+Successfully opening a channel returns the following information:
 
 .. sourcecode:: http
 
@@ -113,7 +113,8 @@ Successfully opening a channel will return the following information:
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
        "state": "opened",
-       "settle_timeout": 600
+       "settle_timeout": 600,
+       "reveal_timeout": 10
    }
 
 Here it's interesting to notice that a ``channel_identifier`` has been generated. This means that the channel has been created inside the `Token Network <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#tokennetwork-contract>`_.
@@ -123,7 +124,7 @@ Here it's interesting to notice that a ``channel_identifier`` has been generated
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
+A payment channel is now open between the node of the user and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -142,7 +143,7 @@ To see if and when the counterparty deposited tokens, the channel can be queried
    GET /api/1/events/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
 
-This will return a list of events that has happened in the specific payment channel. The relevant event in this case is::
+This returns a list of events that has happened in the specific payment channel. The relevant event in this case is::
 
     {
         "amount": 682,
@@ -160,24 +161,24 @@ It is possible for both parties to query the state of the specific payment chann
    GET /api/1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
 
-This will give us result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
+This gives a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
 A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`transferring tokens <transferring-tokens>` between each other.
 
 The above is not how a user would normally join an already existing token network. It is only included here to show how it works under the hood.
 
-In :ref:`the next scenario <joining-existing-token-network>` it will be explained how to join already bootstrapped token networks.
+In :ref:`the next scenario <joining-existing-token-network>` it is explained how to join already bootstrapped token networks.
 
 
 .. _joining-existing-token-network:
 
 Joining an already existing token network
 ==========================================
-In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network will be explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
+In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network is be explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
 
-The main focus of this section will be the usage of the ``connect`` and the ``leave`` endpoints. The ``connect`` endpoint allows users to automatically connect to a token network and open channels with other nodes. Furthermore the ``leave`` endpoint allows users to leave a token network by automatically closing and settling all of their open channels.
+The main focus of this section is the usage of the ``connect`` and the ``leave`` endpoints. The ``connect`` endpoint allows users to automatically connect to a token network and open channels with other nodes. Furthermore the ``leave`` endpoint allows users to leave a token network by automatically closing and settling all of their open channels.
 
-It's assumed that a user holds 2000 of some awesome ERC20 token (AET). The user knows that a Raiden based token network already exists for this token.
+It's assumed that a user holds at least 2000 Raiden Testnet ERC20 token (RTT). The user knows that a token network already exists for this token.
 
 
 .. _connect-to-network:
@@ -188,68 +189,68 @@ Connecting to an already existing token network is quite simple. All that is nee
 
 .. http:example:: curl wget httpie python-requests
 
-   PUT /api/1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671 HTTP/1.1
-   Host: localhost:5001
-   Content-Type: application/json
+    PUT /api/1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
-   {
-       "funds": 2000
-   }
+    {
+        "funds": 2000
+    }
 
-This will automatically connect to and open channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it will leave 40% of the funds initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with this node in the same way that it just opened channels with random nodes already in the network. The default behaviour of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": 3`` and ``"joinable_funds_target": 0.4`` to the payload and adjusting the default value.
+This automatically opens channels with three random peers in the token network. With 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 
-The user node is now connected to the token network for the AET token, and should have a path to all other nodes that have joined this token network, so that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
+The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
 
 .. _leave-network:
 
 Leave
 ------
-If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels for a specific in the token network:
+If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint takes care of closing and settling all open channels for a specific  token network:
 
 .. http:example:: curl wget httpie python-requests
 
-   DELETE /api/1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671 HTTP/1.1
-   Host: localhost:5001
-   Content-Type: application/json
+    DELETE /api/1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
-This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
+This call takes some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
 .. _transferring-tokens:
 
 Transferring tokens
 ====================
 
-For the token transfer example it is assumed a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
+For the token transfer example it is assumed a node is connected to the RTT token network as mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
 .. _transfer:
 
 Transfer
 ---------
-Transferring tokens to another node is quite easy. The address of the token desired for transfer is ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
+Transferring tokens to another node is quite easy. The address of the token desired for transfer is ``0x0f114A1E9Db192502E7856309cc899952b3db1ED``. All that then remains is the address of the target node. Assume the address of the target node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
 
 .. http:example:: curl wget httpie python-requests
 
-   POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-   Host: localhost:5001
-   Content-Type: application/json
+    POST /api/1/transfers/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
-   {
-       "amount": 42
-   }
+    {
+        "amount": 42
+    }
 
 An ``"identifier": some_integer`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag transfers.
 
-If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer will go through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels:
+If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer goes through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels:
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/events/channels/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
+   GET /api/1/events/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
-Which will return a list of events. All that then needs to be done is to filter for incoming transfers.
+Which returns a list of events. All that then needs to be done is to filter for incoming transfers.
 
 Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
 
@@ -262,29 +263,30 @@ If at any point in time it is desired to close a specific channel it can be done
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   PATCH /api/1/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
-   {
-       "state":"closed"
-   }
+    {
+        "state":"closed"
+    }
 
-When successful this will give a response with a channel object where the state is set to ``"closed"``:
+When successful this gives a response with a channel object where the state is set to ``"closed"``:
 
 .. sourcecode:: http
 
    HTTP/1.1 200 OK
    Content-Type: application/json
 
-   {
-       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
-       "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
-       "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
-       "balance": 350,
-       "state": "closed",
-       "settle_timeout": 600
-   }
+    {
+        "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+        "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+        "token_address": "0x0f114A1E9Db192502E7856309cc899952b3db1ED",
+        "balance": 350,
+        "state": "closed",
+        "settle_timeout": 600,
+        "reveal_timeout"
+    }
 
 Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"opened"``.
 
@@ -292,9 +294,9 @@ Notice how the ``state`` is now set to ``"closed"`` compared to the previous cha
 
 Settle
 ------
-Once ``close`` has been called, the settle timeout period starts. The channel will be automatically settled as soon as it is over.
+Once ``close`` has been called, the settle timeout period starts. The channel is automatically settled as soon as it is over.
 
-The balance of the channel will then be ``0`` and the state ``"settled"``. This means that the net balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended. At this point the blockchain contract has also self-destructed.
+The balance of the channel is now ``0`` and the state ``"settled"``. This means that the net balances that the two parties participating in the channel owe each other has now been transferred on the blockchain. It also means that the life cycle of the payment channel has ended.
 
 
 Interacting with the Raiden Echo Node
