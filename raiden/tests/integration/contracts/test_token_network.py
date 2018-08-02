@@ -312,8 +312,8 @@ def test_token_network_proxy_update_transfer(
         c2_token_network_proxy.update_transfer(
             channel_identifier,
             c1_client.sender,
-            balance_proof_c1.nonce,
             decode_hex(balance_proof_c1.balance_hash),
+            balance_proof_c1.nonce,
             decode_hex(balance_proof_c1.additional_hash),
             decode_hex(balance_proof_c1.signature),
             non_closing_signature,
@@ -327,8 +327,8 @@ def test_token_network_proxy_update_transfer(
     c2_token_network_proxy.update_transfer(
         channel_identifier,
         c1_client.sender,
-        balance_proof_c1.nonce,
         decode_hex(balance_proof_c1.balance_hash),
+        balance_proof_c1.nonce,
         decode_hex(balance_proof_c1.additional_hash),
         decode_hex(balance_proof_c1.signature),
         non_closing_signature,

@@ -580,6 +580,7 @@ class TokenNetwork:
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'closeChannel',
+                channel_identifier,
                 partner,
                 balance_hash,
                 nonce,
@@ -678,6 +679,7 @@ class TokenNetwork:
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
+                channel_identifier,
                 self.node_address,
                 partner,
                 total_withdraw,
