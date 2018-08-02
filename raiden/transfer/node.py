@@ -558,59 +558,6 @@ def handle_tokenadded(
     return TransitionResult(chain_state, events)
 
 
-def handle_channel_batch_unlock(
-        chain_state: ChainState,
-        state_change: ContractReceiveChannelBatchUnlock,
-) -> TransitionResult:
-    token_network_identifier = state_change.token_network_identifier
-    token_network_state = views.get_token_network_by_identifier(
-        chain_state,
-        token_network_identifier,
-    )
-
-    events = []
-    if token_network_state:
-        pseudo_random_generator = chain_state.pseudo_random_generator
-        participant1 = state_change.participant
-        participant2 = state_change.partner
-
-        for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
-            are_addresses_valid1 = (
-                channel_state.our_state.address == participant1 and
-                channel_state.partner_state.address == participant2
-            )
-            are_addresses_valid2 = (
-                channel_state.our_state.address == participant2 and
-                channel_state.partner_state.address == participant1
-            )
-            is_valid_locksroot = True
-            is_valid_channel = (
-                (are_addresses_valid1 or are_addresses_valid2) and
-                is_valid_locksroot
-            )
-
-            if is_valid_channel:
-                sub_iteration = channel.state_transition(
-                    channel_state,
-                    state_change,
-                    pseudo_random_generator,
-                    chain_state.block_number,
-                )
-                events.extend(sub_iteration.events)
-
-                if sub_iteration.new_state is None:
-
-                    del token_network_state.partneraddresses_to_channels[
-                        channel_state.partner_state.address
-                    ][channel_state.identifier]
-
-                    del token_network_state.channelidentifiers_to_channels[
-                        channel_state.identifier
-                    ]
-
-    return TransitionResult(chain_state, events)
-
-
 def handle_secret_reveal(
         chain_state: ChainState,
         state_change: ContractReceiveSecretReveal,
@@ -796,7 +743,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
-        iteration = handle_channel_batch_unlock(
+        iteration = handle_token_network_action(
             chain_state,
             state_change,
         )

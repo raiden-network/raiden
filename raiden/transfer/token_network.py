@@ -9,6 +9,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveRouteNew,
     ReceiveTransferDirect,
 )
@@ -129,6 +130,53 @@ def handle_settled(
         pseudo_random_generator,
         block_number,
     )
+
+
+def handle_batch_unlock(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
+    participant1 = state_change.participant
+    participant2 = state_change.partner
+
+    events = list()
+    for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
+        are_addresses_valid1 = (
+            channel_state.our_state.address == participant1 and
+            channel_state.partner_state.address == participant2
+        )
+        are_addresses_valid2 = (
+            channel_state.our_state.address == participant2 and
+            channel_state.partner_state.address == participant1
+        )
+        is_valid_locksroot = True
+        is_valid_channel = (
+            (are_addresses_valid1 or are_addresses_valid2) and
+            is_valid_locksroot
+        )
+
+        if is_valid_channel:
+            sub_iteration = channel.state_transition(
+                channel_state,
+                state_change,
+                pseudo_random_generator,
+                block_number,
+            )
+            events.extend(sub_iteration.events)
+
+            if sub_iteration.new_state is None:
+
+                del token_network_state.partneraddresses_to_channels[
+                    channel_state.partner_state.address
+                ][channel_state.identifier]
+
+                del token_network_state.channelidentifiers_to_channels[
+                    channel_state.identifier
+                ]
+
+    return TransitionResult(token_network_state, events)
 
 
 def handle_newroute(token_network_state, state_change):
@@ -254,6 +302,13 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_settled(
+            token_network_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
+    elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        iteration = handle_batch_unlock(
             token_network_state,
             state_change,
             pseudo_random_generator,
