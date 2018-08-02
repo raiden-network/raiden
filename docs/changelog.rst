@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :release:`0.4.2 <2018-08-02>`
+
 * :bug:`2004` Show a webui error when JSON-RPC requests fail.
 * :bug:`2039` Return error for negative deposits via REST API
 * :feature:`2011` Add a ``--disable-debug-logfile`` argument to disable the always on debug file if required by the user.
