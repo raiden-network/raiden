@@ -104,7 +104,7 @@ def mediator_init(raiden, transfer: LockedTransfer):
     )
     from_route = RouteState(
         transfer.sender,
-        from_transfer.balance_proof.channel_address,
+        from_transfer.balance_proof.channel_identifier,
     )
     init_mediator_statechange = ActionInitMediator(
         routes,
@@ -118,7 +118,7 @@ def target_init(transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
         transfer.sender,
-        from_transfer.balance_proof.channel_address,
+        from_transfer.balance_proof.channel_identifier,
     )
     init_target_statechange = ActionInitTarget(
         from_route,

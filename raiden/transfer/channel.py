@@ -194,7 +194,7 @@ def is_valid_signature(
         nonce=balance_proof.nonce,
         balance_hash=balance_hash,
         additional_hash=balance_proof.message_hash,
-        channel_identifier=balance_proof.channel_address,
+        channel_identifier=balance_proof.channel_identifier,
         token_network_identifier=balance_proof.token_network_identifier,
         chain_id=balance_proof.chain_id,
     )
@@ -335,7 +335,7 @@ def is_valid_directtransfer(
 
         result = (False, msg)
 
-    elif received_balance_proof.channel_address != channel_state.identifier:
+    elif received_balance_proof.channel_identifier != channel_state.identifier:
         # The balance proof must be tied to this channel, otherwise the
         # on-chain contract would be sucesstible to replay attacks across
         # channels.
@@ -343,8 +343,8 @@ def is_valid_directtransfer(
             'Invalid DirectTransfer message. '
             'Balance proof is tied to the wrong channel, expected: {} got: {}'
         ).format(
-            hexlify(channel_state.identifier).decode(),
-            hexlify(received_balance_proof.channel_address).decode(),
+            channel_state.identifier,
+            received_balance_proof.channel_identifier,
         )
         result = (False, msg)
 
@@ -509,7 +509,7 @@ def valid_lockedtransfer_check(
 
             result = (False, msg, None)
 
-        elif received_balance_proof.channel_address != channel_state.identifier:
+        elif received_balance_proof.channel_identifier != channel_state.identifier:
             # The balance proof must be tied to this channel, otherwise the
             # on-chain contract would be sucesstible to replay attacks across
             # channels.
@@ -518,8 +518,8 @@ def valid_lockedtransfer_check(
                 'Balance proof is tied to the wrong channel, expected: {} got: {}'
             ).format(
                 message_name,
-                hexlify(channel_state.identifier).decode(),
-                hexlify(received_balance_proof.channel_address).decode(),
+                channel_state.identifier,
+                received_balance_proof.channel_identifier,
             )
             result = (False, msg, None)
 
@@ -712,7 +712,7 @@ def is_valid_unlock(
 
         result = (False, msg, None)
 
-    elif received_balance_proof.channel_address != channel_state.identifier:
+    elif received_balance_proof.channel_identifier != channel_state.identifier:
         # The balance proof must be tied to this channel, otherwise the
         # on-chain contract would be sucesstible to replay attacks across
         # channels.
@@ -721,7 +721,7 @@ def is_valid_unlock(
             'Balance proof is tied to the wrong channel, expected: {} got: {}'
         ).format(
             channel_state.identifier,
-            hexlify(received_balance_proof.channel_address).decode(),
+            received_balance_proof.channel_identifier,
         )
         result = (False, msg, None)
 
@@ -1055,7 +1055,7 @@ def create_senddirecttransfer(
         locked_amount=locked_amount,
         locksroot=locksroot,
         token_network_identifier=channel_state.token_network_identifier,
-        channel_address=channel_state.identifier,
+        channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
 
@@ -1126,7 +1126,7 @@ def create_sendlockedtransfer(
         locked_amount=locked_amount,
         locksroot=locksroot,
         token_network_identifier=channel_state.token_network_identifier,
-        channel_address=channel_state.identifier,
+        channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
 
@@ -1188,7 +1188,7 @@ def create_unlock(
         locked_amount=locked_amount,
         locksroot=locksroot,
         token_network_identifier=channel_state.token_network_identifier,
-        channel_address=channel_state.identifier,
+        channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
 

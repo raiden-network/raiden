@@ -231,7 +231,7 @@ def handle_receive_transfer_direct(
 ):
     events = list()
 
-    channel_id = state_change.balance_proof.channel_address
+    channel_id = state_change.balance_proof.channel_identifier
     channel_state = token_network_state.channelidentifiers_to_channels.get(channel_id)
 
     if channel_state:
@@ -254,7 +254,7 @@ def handle_receive_transfer_refund(
 ):
     events = list()
 
-    channel_id = state_change.balance_proof.channel_address
+    channel_id = state_change.balance_proof.channel_identifier
     channel_state = token_network_state.channelidentifiers_to_channels.get(channel_id)
 
     if channel_state:

@@ -35,17 +35,17 @@ def check_channel(
         app1,
         app2,
         token_network_identifier,
-        netting_channel_address,
+        channel_identifier,
         settle_timeout,
         deposit_amount,
 ):
     netcontract1 = app1.raiden.chain.payment_channel(
         token_network_identifier,
-        netting_channel_address,
+        channel_identifier,
     )
     netcontract2 = app2.raiden.chain.payment_channel(
         token_network_identifier,
-        netting_channel_address,
+        channel_identifier,
     )
 
     # Check a valid settle timeout was used, the netting contract has an

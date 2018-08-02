@@ -208,16 +208,16 @@ def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
         )
 
         secret_message = Secret(
-            unlock_lock.balance_proof.chain_id,
-            unlock_lock.message_identifier,
-            unlock_lock.payment_identifier,
-            unlock_lock.balance_proof.nonce,
-            partner_channel.token_network_identifier,
-            unlock_lock.balance_proof.channel_address,
-            unlock_lock.balance_proof.transferred_amount,
-            unlock_lock.balance_proof.locked_amount,
-            unlock_lock.balance_proof.locksroot,
-            unlock_lock.secret,
+            chain_id=unlock_lock.balance_proof.chain_id,
+            message_identifier=unlock_lock.message_identifier,
+            payment_identifier=unlock_lock.payment_identifier,
+            nonce=unlock_lock.balance_proof.nonce,
+            token_network_address=partner_channel.token_network_identifier,
+            channel_identifier=unlock_lock.balance_proof.channel_identifier,
+            transferred_amount=unlock_lock.balance_proof.transferred_amount,
+            locked_amount=unlock_lock.balance_proof.locked_amount,
+            locksroot=unlock_lock.balance_proof.locksroot,
+            secret=unlock_lock.secret,
         )
         from_.raiden.sign(secret_message)
 

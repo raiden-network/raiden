@@ -44,8 +44,7 @@ UNIT_SECRETHASH = sha3(UNIT_SECRET)
 UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
 UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
-UNIT_CHANNEL_ADDRESS = b'channelchannelchanne'
-UNIT_CHANNEL_ID = sha3(UNIT_CHANNEL_ADDRESS)
+UNIT_CHANNEL_ID = 1338
 UNIT_PAYMENT_NETWORK_IDENTIFIER = b'paymentnetworkidentifier'
 
 UNIT_TRANSFER_IDENTIFIER = 37
@@ -207,7 +206,7 @@ def make_transfer(
         locked_amount=locked_amount,
         locksroot=locksroot,
         token_network_identifier=token_network_identifier,
-        channel_address=channel_identifier,
+        channel_identifier=channel_identifier,
         chain_id=UNIT_CHAIN_ID,
     )
 
@@ -287,7 +286,7 @@ def make_signed_balance_proof(
         transferred_amount,
         locked_amount,
         token_network_address,
-        channel_address,
+        channel_identifier,
         locksroot,
         extra_hash,
         private_key,
@@ -295,12 +294,12 @@ def make_signed_balance_proof(
 ):
 
     data_to_sign = balance_proof.signing_data(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        channel_address,
-        locksroot,
-        extra_hash,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        channel_identifier=channel_identifier,
+        locksroot=locksroot,
+        extra_hash=extra_hash,
     )
 
     balance_hash = hash_balance_data(
@@ -312,7 +311,7 @@ def make_signed_balance_proof(
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=extra_hash,
-        channel_identifier=channel_address,
+        channel_identifier=channel_identifier,
         token_network_identifier=token_network_address,
         chain_id=UNIT_CHAIN_ID,
     )
@@ -325,7 +324,7 @@ def make_signed_balance_proof(
         locked_amount,
         locksroot,
         token_network_address,
-        channel_address,
+        channel_identifier,
         extra_hash,
         signature,
         sender_address,
@@ -358,7 +357,7 @@ def make_signed_transfer_for(
     else:
         recipient = channel_state.our_state.address
 
-    channel_address = channel_state.identifier
+    channel_identifier = channel_state.identifier
     token_address = channel_state.token_address
     mediated_transfer = make_signed_transfer(
         amount,
@@ -370,7 +369,7 @@ def make_signed_transfer_for(
         nonce=nonce,
         transferred_amount=transferred_amount,
         recipient=recipient,
-        channel_identifier=channel_address,
+        channel_identifier=channel_identifier,
         token=token_address,
         pkey=pkey,
         sender=sender,

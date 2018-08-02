@@ -362,7 +362,7 @@ class BalanceProofUnsignedState(State):
         'locked_amount',
         'locksroot',
         'token_network_identifier',
-        'channel_address',
+        'channel_identifier',
         'chain_id',
     )
 
@@ -373,7 +373,7 @@ class BalanceProofUnsignedState(State):
             locked_amount: typing.TokenAmount,
             locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
-            channel_address: typing.Address,  # FIXME: is this used anywhere
+            channel_identifier: typing.ChannelID,  # FIXME: is this used anywhere
             chain_id: typing.ChainID,
     ):
         if not isinstance(nonce, int):
@@ -388,8 +388,8 @@ class BalanceProofUnsignedState(State):
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_address, typing.T_Address):
-            raise ValueError('channel_address must be an address instance')
+        if not isinstance(channel_identifier, typing.T_ChannelID):
+            raise ValueError('channel_identifier must be an T_ChannelID instance')
 
         if not isinstance(chain_id, typing.T_ChainID):
             raise ValueError('chain_id must be a ChainID instance')
@@ -409,7 +409,7 @@ class BalanceProofUnsignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if len(channel_address) != 32:
+        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
             raise ValueError('channel id is invalid')
 
         self.nonce = nonce
@@ -417,14 +417,14 @@ class BalanceProofUnsignedState(State):
         self.locked_amount = locked_amount
         self.locksroot = locksroot
         self.token_network_identifier = token_network_identifier
-        self.channel_address = channel_address
+        self.channel_identifier = channel_identifier
         self.chain_id = chain_id
 
     def __repr__(self):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} token_network:{} channel_address:{} chain_id: {}'
+            'locked_amount:{} locksroot:{} token_network:{} channel_identifier:{} chain_id: {}'
             '>'
         ).format(
             self.nonce,
@@ -432,7 +432,7 @@ class BalanceProofUnsignedState(State):
             self.locked_amount,
             pex(self.locksroot),
             pex(self.token_network_identifier),
-            pex(self.channel_address),
+            self.channel_identifier,
             self.chain_id,
         )
 
@@ -444,7 +444,7 @@ class BalanceProofUnsignedState(State):
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
             self.token_network_identifier == other.token_network_identifier and
-            self.channel_address == other.channel_address and
+            self.channel_identifier == other.channel_identifier and
             self.chain_id == other.chain_id
         )
 
@@ -471,7 +471,7 @@ class BalanceProofSignedState(State):
         'locked_amount',
         'locksroot',
         'token_network_identifier',
-        'channel_address',
+        'channel_identifier',
         'message_hash',
         'signature',
         'sender',
@@ -485,7 +485,7 @@ class BalanceProofSignedState(State):
             locked_amount: typing.TokenAmount,
             locksroot: typing.Locksroot,
             token_network_identifier: typing.Address,
-            channel_address: typing.Address,
+            channel_identifier: typing.ChannelID,
             message_hash: typing.Keccak256,
             signature: typing.Signature,
             sender: typing.Address,
@@ -506,8 +506,8 @@ class BalanceProofSignedState(State):
         if not isinstance(token_network_identifier, typing.T_Address):
             raise ValueError('token_network_identifier must be an address instance')
 
-        if not isinstance(channel_address, typing.T_Address):
-            raise ValueError('channel_address must be an address instance')
+        if not isinstance(channel_identifier, typing.T_ChannelID):
+            raise ValueError('channel_identifier must be an ChannelID instance')
 
         if not isinstance(message_hash, typing.T_Keccak256):
             raise ValueError('message_hash must be a keccak256 instance')
@@ -536,7 +536,7 @@ class BalanceProofSignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if len(channel_address) != 32:
+        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
             raise ValueError('channel id is invalid')
 
         if len(message_hash) != 32:
@@ -550,7 +550,7 @@ class BalanceProofSignedState(State):
         self.locked_amount = locked_amount
         self.locksroot = locksroot
         self.token_network_identifier = token_network_identifier
-        self.channel_address = channel_address
+        self.channel_identifier = channel_identifier
         self.message_hash = message_hash
         self.signature = signature
         self.sender = sender
@@ -560,7 +560,7 @@ class BalanceProofSignedState(State):
         return (
             '<'
             'BalanceProofSignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} token_network:{} channel_address:{} '
+            'locked_amount:{} locksroot:{} token_network:{} channel_identifier:{} '
             'message_hash:{} signature:{} sender:{} chain_id:{}'
             '>'
         ).format(
@@ -569,7 +569,7 @@ class BalanceProofSignedState(State):
             self.locked_amount,
             pex(self.locksroot),
             pex(self.token_network_identifier),
-            pex(self.channel_address),
+            self.channel_identifier,
             pex(self.message_hash),
             pex(self.signature),
             pex(self.sender),
@@ -584,7 +584,7 @@ class BalanceProofSignedState(State):
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
             self.token_network_identifier == other.token_network_identifier and
-            self.channel_address == other.channel_address and
+            self.channel_identifier == other.channel_identifier and
             self.message_hash == other.message_hash and
             self.signature == other.signature and
             self.sender == other.sender and

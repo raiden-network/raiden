@@ -862,7 +862,7 @@ def test_events_for_balanceproof_channel_closed():
         )
 
         last_pair = transfers_pair[-1]
-        channel_identifier = last_pair.payee_transfer.balance_proof.channel_address
+        channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
         last_channel = channelmap[channel_identifier]
 
         if invalid_state == CHANNEL_STATE_CLOSED:
@@ -1005,7 +1005,7 @@ def test_events_for_close():
 
         pair = transfers_pair[0]
         pair.payee_state = payee_state
-        channel_identifier = pair.payer_transfer.balance_proof.channel_address
+        channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
         channel_state = channelmap[channel_identifier]
 
         block_number = (
@@ -1019,7 +1019,7 @@ def test_events_for_close():
         )
 
         assert isinstance(events[0], ContractSendChannelClose)
-        assert events[0].channel_identifier == pair.payer_transfer.balance_proof.channel_address
+        assert events[0].channel_identifier == pair.payer_transfer.balance_proof.channel_identifier
         assert pair.payer_state == 'payer_waiting_close'
 
 
@@ -1034,7 +1034,7 @@ def test_events_for_onchain_secretreveal():
     )
 
     pair = transfers_pair[0]
-    channel_identifier = pair.payer_transfer.balance_proof.channel_address
+    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
     channel_state = channelmap[channel_identifier]
 
     # Reveal the secret off-chain
@@ -1074,7 +1074,7 @@ def test_onchain_secretreveal_must_be_emitted_only_once():
     )
 
     pair = transfers_pair[0]
-    channel_identifier = pair.payer_transfer.balance_proof.channel_address
+    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
     channel_state = channelmap[channel_identifier]
 
     # Reveal the secret off-chain
@@ -1123,7 +1123,7 @@ def test_events_for_close_hold_for_unpaid_payee():
     assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
 
     # do not generate events if the secret is known AND the payee is not paid
-    channel_identifier = pair.payer_transfer.balance_proof.channel_address
+    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
     channel_state = channelmap[channel_identifier]
     first_unsafe_block = pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
     events = mediator.events_for_close(
@@ -1801,8 +1801,8 @@ def test_set_secret():
     )
     mediator_state.transfers_pair = transfers_pair
 
-    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_address
-    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_address
+    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_identifier
+    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_identifier
 
     payer_channel_our_state = channelmap[payer_channelid].our_state
     payer_channel_partner_state = channelmap[payer_channelid].partner_state

@@ -92,7 +92,7 @@ def handle_inittarget(
         transfer,
     )
 
-    assert channel_state.identifier == transfer.balance_proof.channel_address
+    assert channel_state.identifier == transfer.balance_proof.channel_identifier
     is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
