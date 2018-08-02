@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2039` Return error for negative deposits via REST API
 * :feature:`2011` Add a ``--disable-debug-logfile`` argument to disable the always on debug file if required by the user.
 * :bug:`1821` Show a better error message when channel creation fails.
 * :bug:`1817` Change the webui error message when the token registration fails.

@@ -794,6 +794,11 @@ class RestAPI:
                 errors="Nothing to do. Should either provide 'total_deposit' or 'state' argument",
                 status_code=HTTPStatus.BAD_REQUEST,
             )
+        if total_deposit < 0:
+            return api_error(
+                errors="Amount to deposit must not be negative.",
+                status_code=HTTPStatus.CONFLICT,
+            )
 
         try:
             channel_state = self.raiden_api.get_channel(
