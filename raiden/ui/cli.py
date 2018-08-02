@@ -16,7 +16,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict
 from urllib.parse import urljoin
-from web3 import Web3
 
 import click
 import filelock
@@ -61,14 +60,13 @@ from raiden.settings import (
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
-from raiden.tasks import check_version
+from raiden.tasks import check_version, check_gas_escrow
 from raiden.utils import (
     eth_endpoint_to_hostport,
     get_system_spec,
     merge_dict,
     split_endpoint,
     typing,
-    gas_escrow,
 )
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -743,24 +741,6 @@ def run_app(
         )
         sys.exit(1)
 
-    has_enough_balance, estimated_required_balance = gas_escrow.has_enough_gas_escrow(
-        raiden_app.raiden,
-        channels_to_open=0,
-    )
-    estimated_required_balance_eth = Web3.fromWei(estimated_required_balance, 'ether')
-
-    log.debug('Estimated safe balance', required_wei=estimated_required_balance)
-    if not has_enough_balance:
-        click.secho(
-            (
-                'WARNING\n'
-                'Your account\'s balance is below the estimated safe amount of '
-                f'{estimated_required_balance_eth} eth. This may lead to a loss of '
-                'funds. Please add funds to your account as soon as possible.'
-            ),
-            fg='red',
-        )
-
     return raiden_app
 
 
@@ -985,8 +965,10 @@ class NodeRunner:
             console = Console(app_)
             console.start()
 
-        # spawning a thread to handle the version checking
+        # spawn a greenlet to handle the version checking
         gevent.spawn(check_version)
+        # spawn a greenlet to handle the gas escrow check
+        gevent.spawn(check_gas_escrow, app_.raiden)
 
         self._startup_hook()
 
@@ -1010,7 +992,7 @@ class NodeRunner:
             ) as traceback_file:
                 traceback.print_exc(file=traceback_file)
                 click.secho(
-                    f'FATAL: An unexpected exception occured.'
+                    f'FATAL: An unexpected exception occured. '
                     f'A traceback has been written to {traceback_file.name}\n'
                     f'{ex}',
                     fg='red',
