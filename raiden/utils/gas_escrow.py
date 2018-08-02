@@ -54,10 +54,16 @@ def _get_gas_estimate_for_state(raiden) -> int:
             raiden.default_registry.address,
             token_address,
         ))
+        num_settled_channels = len(views.get_channelstate_settled(
+            chain_state,
+            raiden.default_registry.address,
+            token_address,
+        ))
 
         gas_estimate += _get_gas_estimate(
             opened_channels=num_opened_channels,
             closed_channels=num_closed_channels,
+            settled_channels=num_settled_channels,
         )
 
     return gas_estimate
