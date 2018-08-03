@@ -9,7 +9,7 @@ RUN apt-get update
 RUN apt-get install -y git-core wget
 
 RUN wget -O /usr/bin/solc ${SOLC_URL_LINUX} && chmod +x /usr/bin/solc
-RUN wget -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && cd /tmp && tar xzvf geth.tar.gz && mv geth-linux-amd64-1.8.0-5f540757/geth /usr/bin/geth && rm geth.tar.gz
+RUN wget -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && cd /tmp && tar xzvf geth.tar.gz && mv geth-linux-amd64-*/geth /usr/bin/geth && rm geth.tar.gz
 RUN wget -O /tmp/node.tar.gz https://nodejs.org/download/release/v8.11.3/node-v8.11.3-linux-x64.tar.gz && cd /tmp && tar xzvf node.tar.gz && mkdir /tmp/node_modules && chmod -R a+rwX /tmp/node_modules && rm node.tar.gz
 
 
