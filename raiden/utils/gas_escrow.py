@@ -30,14 +30,22 @@ ESCROW_ESTIMATE_SECURITY_FACTOR = 1.1
 def _get_gas_estimate(
     new_channels: int = 0,
     opened_channels: int = 0,
+    closing_channels: int = 0,
     closed_channels: int = 0,
+    settling_channels: int = 0,
     settled_channels: int = 0,
 ) -> int:
     estimate = 0
 
     estimate += new_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE
     estimate += opened_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
+
+    # this might go wrong, therefore assume another close transaction
+    estimate += closing_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
     estimate += closed_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
+
+    # this might go wrong, therefore assume another settle transaction
+    estimate += settling_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
     estimate += settled_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
 
     return estimate
@@ -55,7 +63,17 @@ def _get_gas_estimate_for_state(raiden) -> int:
             raiden.default_registry.address,
             token_address,
         ))
+        num_closing_channels = len(views.get_channelstate_closing(
+            chain_state,
+            raiden.default_registry.address,
+            token_address,
+        ))
         num_closed_channels = len(views.get_channelstate_closed(
+            chain_state,
+            raiden.default_registry.address,
+            token_address,
+        ))
+        num_settling_channels = len(views.get_channelstate_settling(
             chain_state,
             raiden.default_registry.address,
             token_address,
@@ -68,7 +86,9 @@ def _get_gas_estimate_for_state(raiden) -> int:
 
         gas_estimate += _get_gas_estimate(
             opened_channels=num_opened_channels,
+            closing_channels=num_closing_channels,
             closed_channels=num_closed_channels,
+            settling_channels=num_settling_channels,
             settled_channels=num_settled_channels,
         )
 

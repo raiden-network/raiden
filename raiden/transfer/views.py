@@ -1,7 +1,9 @@
 from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_SETTLED,
     NettingChannelState,
     NODE_NETWORK_UNKNOWN,
@@ -371,6 +373,20 @@ def get_channelstate_open(
     )
 
 
+def get_channelstate_closing(
+        chain_state: ChainState,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+) -> typing.List[NettingChannelState]:
+    """Return the state of closing channels in a token network."""
+    return get_channelstate_filter(
+        chain_state,
+        payment_network_id,
+        token_address,
+        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_CLOSING,
+    )
+
+
 def get_channelstate_closed(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
@@ -382,6 +398,20 @@ def get_channelstate_closed(
         payment_network_id,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_CLOSED,
+    )
+
+
+def get_channelstate_settling(
+        chain_state: ChainState,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+) -> typing.List[NettingChannelState]:
+    """Return the state of settling channels in a token network."""
+    return get_channelstate_filter(
+        chain_state,
+        payment_network_id,
+        token_address,
+        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_SETTLING,
     )
 
 
