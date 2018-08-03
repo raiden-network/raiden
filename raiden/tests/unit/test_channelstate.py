@@ -62,6 +62,7 @@ from raiden.tests.utils.factories import (
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.utils import (
+    random_secret,
     sha3,
     privatekey_to_address,
 )
@@ -94,8 +95,10 @@ def assert_partner_state(end_state, partner_state, model):
     assert end_state.contract_balance == model.contract_balance
 
 
-def create_model(balance):
+def create_model(balance, merkletree_width=0):
     privkey, address = factories.make_privkey_address()
+
+    merkletree_leaves = [random_secret() for _ in range(merkletree_width)]
 
     our_model = PartnerStateModel(
         participant_address=address,
@@ -103,23 +106,24 @@ def create_model(balance):
         balance=balance,
         distributable=balance,
         next_nonce=1,
-        merkletree_leaves=[],
+        merkletree_leaves=merkletree_leaves,
         contract_balance=balance,
     )
 
     return our_model, privkey
 
 
+def create_channel_end_state_from_model(model):
+    state = NettingChannelEndState(model.participant_address, model.balance)
+    if model.merkletree_leaves:
+        state.merkletree = MerkleTreeState(compute_layers(model.merkletree_leaves))
+    return state
+
+
 def create_channel_from_models(our_model, partner_model):
     """Utility to instantiate state objects used throughout the tests."""
-    our_state = NettingChannelEndState(
-        our_model.participant_address,
-        our_model.balance,
-    )
-    partner_state = NettingChannelEndState(
-        partner_model.participant_address,
-        partner_model.balance,
-    )
+    our_state = create_channel_end_state_from_model(our_model)
+    partner_state = create_channel_end_state_from_model(partner_model)
 
     identifier = factories.make_channel_identifier()
     token_address = factories.make_address()
