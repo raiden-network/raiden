@@ -24,10 +24,10 @@ GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE = (
     GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT
 )
 
-ESCROW_ESTIMATE_SECURITY_FACTOR = 1.1
+GAS_RESERVE_ESTIMATE_SECURITY_FACTOR = 1.1
 
 
-def _get_gas_estimate(
+def _get_required_gas_estimate(
     new_channels: int = 0,
     opened_channels: int = 0,
     closing_channels: int = 0,
@@ -39,19 +39,15 @@ def _get_gas_estimate(
 
     estimate += new_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE
     estimate += opened_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
-
-    # this might go wrong, therefore assume another close transaction
-    estimate += closing_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
+    estimate += closing_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
     estimate += closed_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
-
-    # this might go wrong, therefore assume another settle transaction
-    estimate += settling_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
+    estimate += settling_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
     estimate += settled_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
 
     return estimate
 
 
-def _get_gas_estimate_for_state(raiden) -> int:
+def _get_required_gas_estimate_for_state(raiden) -> int:
     chain_state = views.state_from_raiden(raiden)
     token_addresses = views.get_token_identifiers(chain_state, raiden.default_registry.address)
 
@@ -84,7 +80,7 @@ def _get_gas_estimate_for_state(raiden) -> int:
             token_address,
         ))
 
-        gas_estimate += _get_gas_estimate(
+        gas_estimate += _get_required_gas_estimate(
             opened_channels=num_opened_channels,
             closing_channels=num_closing_channels,
             closed_channels=num_closed_channels,
@@ -95,7 +91,7 @@ def _get_gas_estimate_for_state(raiden) -> int:
     return gas_estimate
 
 
-def has_enough_gas_escrow(
+def has_enough_gas_reserve(
     raiden,
     channels_to_open: int = 0,
 ) -> Tuple[bool, int]:
@@ -113,13 +109,13 @@ def has_enough_gas_escrow(
         the remaining lifecycle events and the estimate for the remaining
         lifecycle cost
     """
-    gas_estimate = _get_gas_estimate_for_state(raiden)
-    gas_estimate += _get_gas_estimate(new_channels=channels_to_open)
+    gas_estimate = _get_required_gas_estimate_for_state(raiden)
+    gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
 
     gas_price = raiden.chain.client.gasprice()
-    escrow_amount = gas_estimate * gas_price
+    reserve_amount = gas_estimate * gas_price
 
-    secure_escrow_estimate = round(escrow_amount * ESCROW_ESTIMATE_SECURITY_FACTOR)
+    secure_reserve_estimate = round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
     current_account_balance = raiden.chain.client.balance(raiden.chain.client.sender)
 
-    return secure_escrow_estimate <= current_account_balance, secure_escrow_estimate
+    return secure_reserve_estimate <= current_account_balance, secure_reserve_estimate
