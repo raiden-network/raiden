@@ -39,7 +39,7 @@ max_upload_size: "0M"  # changed
 max_image_pixels: "0M"  # changed
 url_preview_enabled: false
 
-enable_registration: true  # changed
+enable_registration: false  # changed
 bcrypt_rounds: 12
 allow_guest_access: false
 enable_metrics: false
@@ -61,6 +61,11 @@ key_refresh_interval: "1d" # 1 Day.
 
 password_config:
    enabled: true
+
+password_providers:
+  - module: 'eth_auth_provider.EthAuthProvider'
+    config:
+      enabled: true
 
 # Whether to allow non server admins to create groups on this server
 enable_group_creation: false

@@ -35,14 +35,19 @@ if [[ ! -x ${SYNAPSE} ]]; then
     pushd "${BUILDDIR}"
 
     virtualenv -p "$(which python2)" venv
-    ./venv/bin/pip install "${SYNAPSE_URL}" pyinstaller
-    SYNDIR="$( find venv/lib -name synapse -type d | head -1 )"
+    ./venv/bin/pip install "${SYNAPSE_URL}" pyinstaller coincurve pycryptodome
+    SITE="$( find venv/lib -name site-packages -type d | head -1 )"
+    cp "${BASEDIR}/raiden/tests/test_files/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
     ./venv/bin/pyinstaller -F -n synapse \
         --hidden-import="sqlite3" \
         --hidden-import="syweb" \
-        --add-data="${SYNDIR}/storage/schema:synapse/storage/schema" \
-        --add-data="${SYNDIR}/../syweb:syweb" \
-        "${SYNDIR}/app/homeserver.py"
+        --hidden-import="eth_auth_provider" \
+        --add-data="${SITE}/synapse/storage/schema:synapse/storage/schema" \
+        --add-data="${SITE}/syweb:syweb" \
+        --add-data="${SITE}/Crypto/__init__.py:Crypto/" \
+        --add-data="${SITE}/Crypto/Util:Crypto/Util" \
+        --add-data="${SITE}/Crypto/Hash:Crypto/Hash" \
+        "${SITE}/synapse/app/homeserver.py"
     rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
 
