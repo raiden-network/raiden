@@ -76,7 +76,7 @@ extensions = [
 
 # 'releases' (changelog) settings
 releases_issue_uri = "https://github.com/raiden-network/raiden/issues/%s"
-releases_release_uri = "https://github.com/raiden-network/raiden/releases/tags/%s"
+releases_release_uri = "https://github.com/raiden-network/raiden/releases/tag/v%s"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
