@@ -29,14 +29,14 @@ from raiden.exceptions import (
     DepositOverLimit,
     DuplicatedChannelError,
     TokenNotRegistered,
-    InsufficientGasEscrow,
+    InsufficientGasReserve,
 )
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
     pex,
     typing,
 )
-from raiden.utils.gas_escrow import has_enough_gas_escrow
+from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.api.rest import hexbytes_to_str, encode_byte_values
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -166,15 +166,16 @@ class RaidenAPI:
             token_network_identifier,
         )
 
-        has_enough_balance, estimated_required_balance = has_enough_gas_escrow(
+        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
             self.raiden,
             channels_to_open=initial_channel_target,
         )
 
-        if not has_enough_balance:
-            raise InsufficientGasEscrow((
-                'Account balance below the estimated amount necessary to finish all channel '
-                f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
+        if not has_enough_reserve:
+            raise InsufficientGasReserve((
+                'The account balance is below the estimated amount necessary to '
+                'finish the lifecycles of all active channels. A balance of at '
+                f'least {estimated_required_reserve} wei is required.'
             ))
 
         connection_manager.connect(
@@ -264,15 +265,16 @@ class RaidenAPI:
             registry.get_token_network(token_address),
         )
 
-        has_enough_balance, estimated_required_balance = has_enough_gas_escrow(
+        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
             self.raiden,
             channels_to_open=1,
         )
 
-        if not has_enough_balance:
-            raise InsufficientGasEscrow((
-                'Account balance below the estimated amount necessary to finish all channel '
-                f'lifecycles. Balance of at least {estimated_required_balance} wei needed.'
+        if not has_enough_reserve:
+            raise InsufficientGasReserve((
+                'The account balance is below the estimated amount necessary to '
+                'finish the lifecycles of all active channels. A balance of at '
+                f'least {estimated_required_reserve} wei is required.'
             ))
 
         try:

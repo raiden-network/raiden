@@ -188,6 +188,6 @@ class ChannelOutdatedError(RaidenError):
     """
 
 
-class InsufficientGasEscrow(RaidenError):
+class InsufficientGasReserve(RaidenError):
     """ Raised when an action cannot be done because the available balance
-    is not sufficient for the whole actions lifecycle. """
+    is not sufficient for the lifecycles of all active channels. """

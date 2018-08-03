@@ -9,10 +9,10 @@ import structlog
 from web3 import Web3
 
 from raiden.exceptions import RaidenShuttingDown
-from raiden.utils import get_system_spec, gas_escrow
+from raiden.utils import get_system_spec, gas_reserve
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
-CHECK_GAS_ESCROW_INTERVAL = 60 * 60
+CHECK_GAS_RESERVE_INTERVAL = 60 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = '\[CRITICAL UPDATE.*?\]'
@@ -51,28 +51,29 @@ def check_version():
             gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
-def check_gas_escrow(raiden):
-    """ Check periodically for gas escrow in the account """
+def check_gas_reserve(raiden):
+    """ Check periodically for gas reserve in the account """
     while True:
-        has_enough_balance, estimated_required_balance = gas_escrow.has_enough_gas_escrow(
+        has_enough_balance, estimated_required_balance = gas_reserve.has_enough_gas_reserve(
             raiden,
             channels_to_open=0,
         )
         estimated_required_balance_eth = Web3.fromWei(estimated_required_balance, 'ether')
 
-        log.debug('Estimated safe balance', required_wei=estimated_required_balance)
         if not has_enough_balance:
+            log.info('Missing gas reserve', required_wei=estimated_required_balance)
             click.secho(
                 (
                     'WARNING\n'
-                    "Your account's balance is below the estimated safe amount of "
+                    "Your account's balance is below the estimated gas reserve of "
                     f'{estimated_required_balance_eth} eth. This may lead to a loss of '
-                    'funds. Please add funds to your account as soon as possible.'
+                    'of funds because your account will be unable to perform on-chain '
+                    'transactions. Please add funds to your account as soon as possible.'
                 ),
                 fg='red',
             )
 
-        gevent.sleep(CHECK_GAS_ESCROW_INTERVAL)
+        gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
 class AlarmTask(gevent.Greenlet):

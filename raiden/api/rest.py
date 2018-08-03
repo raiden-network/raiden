@@ -36,7 +36,7 @@ from raiden.exceptions import (
     DepositOverLimit,
     DepositMismatch,
     TokenNotRegistered,
-    InsufficientGasEscrow,
+    InsufficientGasReserve,
 )
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -414,7 +414,7 @@ class RestAPI:
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
             )
-        except (InsufficientFunds, InsufficientGasEscrow) as e:
+        except (InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
@@ -486,7 +486,7 @@ class RestAPI:
                 result='',
                 status_code=HTTPStatus.ACCEPTED,
             )
-        except (InsufficientFunds, InsufficientGasEscrow) as e:
+        except (InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.PAYMENT_REQUIRED,

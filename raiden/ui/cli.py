@@ -60,7 +60,7 @@ from raiden.settings import (
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
-from raiden.tasks import check_version, check_gas_escrow
+from raiden.tasks import check_version, check_gas_reserve
 from raiden.utils import (
     eth_endpoint_to_hostport,
     get_system_spec,
@@ -967,8 +967,8 @@ class NodeRunner:
 
         # spawn a greenlet to handle the version checking
         gevent.spawn(check_version)
-        # spawn a greenlet to handle the gas escrow check
-        gevent.spawn(check_gas_escrow, app_.raiden)
+        # spawn a greenlet to handle the gas reserve check
+        gevent.spawn(check_gas_reserve, app_.raiden)
 
         self._startup_hook()
 

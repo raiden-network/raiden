@@ -457,7 +457,7 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     response = response.json()
-    assert 'Account balance below the estimated amount necessary' in response['errors']
+    assert 'The account balance is below the estimated amount' in response['errors']
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -1000,7 +1000,7 @@ def test_get_connection_managers_info(api_backend, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-def test_connect_insufficient_escrow(api_backend, token_addresses):
+def test_connect_insufficient_reserve(api_backend, token_addresses):
 
     # Burn all eth and then try to connect to a token network
     api_server, _ = api_backend
@@ -1021,7 +1021,7 @@ def test_connect_insufficient_escrow(api_backend, token_addresses):
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     response = response.json()
-    assert 'Account balance below the estimated amount necessary' in response['errors']
+    assert 'The account balance is below the estimated amount' in response['errors']
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
