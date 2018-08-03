@@ -73,6 +73,7 @@ from raiden.utils.typing import (
     TypeVar,
     Union,
     Type,
+    Iterable,
 )
 from raiden.utils.gevent_utils import RaidenAsyncResult
 from raiden_libs.network.matrix import GMatrixClient, Room
@@ -129,14 +130,23 @@ class MatrixTransport:
         self._bound_logger = None
         self._raiden_service: RaidenService = None
         self._config = config
+
+        def http_retry_delay() -> Union[float, Iterable[float]]:
+            return udp_utils.timeout_exponential_backoff(
+                self._config['retries_before_backoff'],  # default = 5
+                self._config['retry_interval'] / 5,  # default=5/5=1s
+                self._config['retry_interval'],  # default=5s
+            )
+
         while True:
             self._server_url: str = self._select_server(config)
             self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
             client_class = config.get('client_class', GMatrixClient)
             self._client: GMatrixClient = client_class(
                 self._server_url,
-                max_retries=5,
-                pool_maxsize=4,
+                http_pool_maxsize=4,
+                http_retry_timeout=40,
+                http_retry_delay=http_retry_delay,
             )
             try:
                 self._client.api._send('GET', '/versions', api_path='/_matrix/client')
