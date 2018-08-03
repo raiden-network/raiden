@@ -5,7 +5,7 @@ import string
 
 from coincurve import PrivateKey
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -85,7 +85,7 @@ def make_address():
 
 
 def make_channel_identifier():
-    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
+    return random.randint(0, UINT256_MAX)
 
 
 def make_payment_network_identifier():

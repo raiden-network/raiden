@@ -8,9 +8,10 @@ from raiden_libs.utils import (
 
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.encoding.messages import (
+    channel_identifier as channel_identifier_field,
+    locked_amount as locked_amount_field,
     nonce as nonce_field,
     transferred_amount as transferred_amount_field,
-    locked_amount as locked_amount_field,
 )
 from raiden.utils import typing
 
@@ -25,6 +26,9 @@ def signing_data(
 ) -> bytes:
 
     nonce_bytes = nonce_field.encoder.encode(nonce, nonce_field.size_bytes)
+    channel_identifier_bytes = channel_identifier_field.encoder.encode(
+        channel_identifier, channel_identifier_field.size_bytes,
+    )
     pad_size = nonce_field.size_bytes - len(nonce_bytes)
     nonce_bytes_padded = nonce_bytes.rjust(pad_size, b'\x00')
 
@@ -45,7 +49,7 @@ def signing_data(
         transferred_amount_bytes_padded +
         locked_amount_bytes_padded +
         locksroot +
-        channel_identifier +
+        channel_identifier_bytes +
         extra_hash
     )
 
