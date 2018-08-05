@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import click
+from web3 import Web3, HTTPProvider
 
 from raiden.network.rpc.client import JSONRPCClient
 
@@ -14,11 +15,8 @@ WEI_TO_ETH = 10 ** 18
 @click.option("-p", "--port", default=8545)
 @click.option("-h", "--host", default="127.0.0.1")
 def main(private_key, eth_amount, targets_file, port, host):
-    client = JSONRPCClient(
-        host,
-        port,
-        private_key,
-    )
+    web3 = Web3(HTTPProvider(f'http://{host}:{port}'))
+    client = JSONRPCClient(web3, private_key)
 
     targets = [t.strip() for t in targets_file]
     balance = client.balance(client.sender)
@@ -39,4 +37,4 @@ def main(private_key, eth_amount, targets_file, port, host):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter

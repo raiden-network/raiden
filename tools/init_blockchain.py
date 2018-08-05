@@ -1,6 +1,7 @@
 import gevent
-
+from web3 import Web3, HTTPProvider
 from eth_utils import to_checksum_address, encode_hex
+
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3
 from raiden.utils.solc import compile_files_cwd
@@ -8,11 +9,9 @@ from raiden.utils.solc import compile_files_cwd
 
 def connect(host='127.0.0.1', port=8545):
     """Create a jsonrpcclient instance, using the 'zero-privatekey'. """
-    client = JSONRPCClient(
-        host,
-        port,
-        privkey=b'1' * 64,
-    )
+    privkey = b'1' * 64
+    web3 = Web3(HTTPProvider(f'http://{host}:{port}'))
+    client = JSONRPCClient(web3, privkey)
     return client
 
 

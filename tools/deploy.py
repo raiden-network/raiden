@@ -5,6 +5,7 @@ import os
 import click
 import structlog
 from eth_utils import to_checksum_address
+from web3 import Web3, HTTPProvider
 
 from raiden.log_config import configure_logging
 from raiden.network.rpc.client import JSONRPCClient
@@ -33,6 +34,7 @@ def patch_deploy_solidity_contract():
         Removes the AST node representing the line
         `    libraries = dict(libraries)`
         """
+
         def visit_Assign(self, node):  # pylint: disable=no-self-use
             is_libraries = (
                 len(node.targets) == 1 and
@@ -84,11 +86,11 @@ def main(keystore_path, pretty, gas_price, port):
     gas_price_in_wei = gas_price * 1000000000
     patch_deploy_solidity_contract()
     host = '127.0.0.1'
+    web3 = Web3(HTTPProvider(f'http://{host}:{port}'))
     client = JSONRPCClient(
-        host,
-        port,
+        web3,
         privatekey,
-        gas_price_in_wei,
+        gasprice=gas_price_in_wei,
     )
 
     deployed = deploy_contracts(client)

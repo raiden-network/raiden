@@ -123,10 +123,8 @@ def test_duplicated_transaction_raises(deploy_client):
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     second_client = JSONRPCClient(
-        '0.0.0.0',
-        deploy_client.port,
+        deploy_client.web3,
         deploy_client.privkey,
-        web3=deploy_client.web3,
     )
 
     second_proxy = second_client.new_contract_proxy(

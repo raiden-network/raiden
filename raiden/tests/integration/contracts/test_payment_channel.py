@@ -23,25 +23,14 @@ from raiden.utils import (
 def test_payment_channel_proxy_basics(
         token_network_proxy,
         private_keys,
-        blockchain_rpc_ports,
         token_proxy,
         chain_id,
         web3,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
-    c1_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[1],
-        web3=web3,
-    )
-    c2_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[2],
-        web3=web3,
-    )
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         c1_client,
         token_network_address,
@@ -62,7 +51,7 @@ def test_payment_channel_proxy_basics(
     channel_proxy_1 = PaymentChannel(c1_token_network_proxy, channel_identifier)
     channel_proxy_2 = PaymentChannel(c2_token_network_proxy, channel_identifier)
 
-    channel_filter, unlock_filter = channel_proxy_1.all_events_filter(
+    channel_filter, _ = channel_proxy_1.all_events_filter(
         from_block=web3.eth.blockNumber,
         to_block='latest',
     )
@@ -149,8 +138,6 @@ def test_payment_channel_proxy_basics(
 def test_payment_channel_outdated_channel_close(
         token_network_proxy,
         private_keys,
-        blockchain_rpc_ports,
-        token_proxy,
         chain_id,
         web3,
 ):
@@ -158,12 +145,7 @@ def test_payment_channel_outdated_channel_close(
 
     partner = privatekey_to_address(private_keys[0])
 
-    client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[1],
-        web3=web3,
-    )
+    client = JSONRPCClient(web3, private_keys[1])
     token_network_proxy = TokenNetwork(
         client,
         token_network_address,

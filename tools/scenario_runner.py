@@ -8,8 +8,8 @@ import random
 import click
 import gevent
 import structlog
-
 from eth_utils import decode_hex
+from web3 import Web3, HTTPProvider
 
 from raiden.app import App
 from raiden.api.python import RaidenAPI
@@ -93,11 +93,8 @@ def run(
 
     privatekey_bin = decode_hex(privatekey)
 
-    rpc_client = JSONRPCClient(
-        '127.0.0.1',
-        8545,
-        privatekey_bin,
-    )
+    web3 = Web3(HTTPProvider(f'http://127.0.0.1:8545'))
+    rpc_client = JSONRPCClient(web3, privatekey_bin)
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 

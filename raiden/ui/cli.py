@@ -31,6 +31,7 @@ from eth_utils import (
 )
 from mirakuru import ProcessExitedWithError
 from requests.exceptions import RequestException
+from web3 import Web3, HTTPProvider
 
 from raiden import constants
 from raiden.accounts import AccountManager
@@ -62,7 +63,6 @@ from raiden.settings import (
 )
 from raiden.tasks import check_version, check_gas_reserve
 from raiden.utils import (
-    eth_endpoint_to_hostport,
     get_system_spec,
     merge_dict,
     split_endpoint,
@@ -597,13 +597,12 @@ def run_app(
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
 
-    rpc_host, rpc_port = eth_endpoint_to_hostport(eth_rpc_endpoint)
+    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
 
     rpc_client = JSONRPCClient(
-        rpc_host,
-        rpc_port,
+        web3,
         privatekey_bin,
-        gas_price,
+        gasprice=gas_price,
     )
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)

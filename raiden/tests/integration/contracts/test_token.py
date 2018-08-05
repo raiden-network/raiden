@@ -1,25 +1,20 @@
-from raiden.utils import privatekey_to_address
 from eth_utils import to_canonical_address, to_checksum_address
+
 from raiden.network.proxies import Token
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.utils import privatekey_to_address
 
 
 def test_token(
-    deploy_client,
-    token_proxy,
-    private_keys,
-    blockchain_rpc_ports,
-    web3,
+        deploy_client,
+        token_proxy,
+        private_keys,
+        web3,
 ):
     privkey = private_keys[1]
     address = privatekey_to_address(privkey)
     address = to_canonical_address(address)
-    other_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        privkey,
-        web3=web3,
-    )
+    other_client = JSONRPCClient(web3, privkey)
     other_token_proxy = Token(
         other_client,
         to_canonical_address(token_proxy.proxy.contract.address),

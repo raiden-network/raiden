@@ -57,9 +57,9 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspe
 
 class ContractProxy:
     def __init__(
-        self,
-        jsonrpc_client,
-        contract: Contract,
+            self,
+            jsonrpc_client,
+            contract: Contract,
     ):
         if contract is None:
             raise ValueError('Contract must not be None')
