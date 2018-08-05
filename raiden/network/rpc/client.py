@@ -1,6 +1,5 @@
 import copy
 import os
-import sys
 import warnings
 from binascii import unhexlify
 from json.decoder import JSONDecodeError
@@ -203,11 +202,7 @@ class JSONRPCClient:
         except ConnectTimeout:
             raise EthNodeCommunicationError('couldnt reach the ethereum node')
 
-        supported, eth_node = is_supported_client(version)
-
-        if not supported:
-            print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
-            sys.exit(1)
+        _, eth_node = is_supported_client(version)
 
         sender = privatekey_to_address(privkey)
         transaction_count = web3.eth.getTransactionCount(to_checksum_address(sender), 'pending')
