@@ -7,7 +7,7 @@ from json.decoder import JSONDecodeError
 
 from requests import ConnectTimeout
 from pkg_resources import DistributionNotFound
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
 from eth_utils import (
@@ -188,18 +188,13 @@ class JSONRPCClient:
 
     def __init__(
             self,
-            host: str,
-            port: int,
+            web3: Web3,
             privkey: bytes,
             gasprice: int = None,
             nonce_offset: int = 0,
-            web3: Web3 = None,
     ):
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
-
-        endpoint = 'http://{}:{}'.format(host, port)
-        web3: Web3 = web3 or Web3(HTTPProvider(endpoint))
 
         monkey_patch_web3(web3, self)
 
@@ -220,7 +215,6 @@ class JSONRPCClient:
 
         self.eth_node = eth_node
         self.given_gas_price = gasprice
-        self.port = port
         self.privkey = privkey
         self.sender = sender
         # Needs to be initialized to None in the beginning since JSONRPCClient

@@ -32,9 +32,7 @@ def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
 
 
 @pytest.fixture(scope='session')
-def ethereum_tester(
-    patch_genesis_gas_limit,
-):
+def ethereum_tester(patch_genesis_gas_limit):
     """Returns an instance of an Ethereum tester"""
     tester = EthereumTester(PyEVMBackend())
     tester.set_fork_block('FORK_BYZANTIUM', 0)
@@ -127,15 +125,7 @@ def web3(
 
 @pytest.fixture
 def deploy_client(blockchain_rpc_ports, deploy_key, web3):
-    host = '0.0.0.0'
-    rpc_port = blockchain_rpc_ports[0]
-
-    return JSONRPCClient(
-        host,
-        rpc_port,
-        deploy_key,
-        web3=web3,
-    )
+    return JSONRPCClient(web3, deploy_key)
 
 
 @pytest.fixture

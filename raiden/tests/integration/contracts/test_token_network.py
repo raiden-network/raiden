@@ -29,7 +29,6 @@ from raiden.tests.utils import wait_blocks
 def test_token_network_deposit_race(
         token_network_proxy,
         private_keys,
-        blockchain_rpc_ports,
         token_proxy,
         web3,
 ):
@@ -38,18 +37,8 @@ def test_token_network_deposit_race(
 
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
-    c1_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[1],
-        web3=web3,
-    )
-    c2_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[2],
-        web3=web3,
-    )
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         c1_client,
         token_network_address,
@@ -77,7 +66,6 @@ def test_token_network_deposit_race(
 def test_token_network_proxy_basics(
         token_network_proxy,
         private_keys,
-        blockchain_rpc_ports,
         token_proxy,
         chain_id,
         web3,
@@ -88,18 +76,8 @@ def test_token_network_proxy_basics(
 
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
-    c1_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[1],
-        web3=web3,
-    )
-    c2_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[2],
-        web3=web3,
-    )
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         c1_client,
         token_network_address,
@@ -249,7 +227,6 @@ def test_token_network_proxy_basics(
 def test_token_network_proxy_update_transfer(
         token_network_proxy,
         private_keys,
-        blockchain_rpc_ports,
         token_proxy,
         chain_id,
         web3,
@@ -257,18 +234,8 @@ def test_token_network_proxy_update_transfer(
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
-    c1_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[1],
-        web3=web3,
-    )
-    c2_client = JSONRPCClient(
-        '0.0.0.0',
-        blockchain_rpc_ports[0],
-        private_keys[2],
-        web3=web3,
-    )
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         c1_client,
         token_network_address,

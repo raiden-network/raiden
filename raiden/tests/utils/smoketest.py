@@ -312,13 +312,8 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
     geth_wait_and_check(web3_client, privatekeys, random_marker)
 
     print_step('Deploying Raiden contracts')
-    host = '0.0.0.0'
-    client = JSONRPCClient(
-        host,
-        ethereum_config['rpc'],
-        get_private_key(),
-        web3=web3_client,
-    )
+
+    client = JSONRPCClient(web3_client, get_private_key())
     contract_addresses = deploy_smoketest_contracts(client, 627)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
