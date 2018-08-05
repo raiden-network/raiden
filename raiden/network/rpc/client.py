@@ -4,7 +4,6 @@ import sys
 import warnings
 from binascii import unhexlify
 from json.decoder import JSONDecodeError
-from itertools import count
 
 from pkg_resources import DistributionNotFound
 from web3 import Web3, HTTPProvider
@@ -30,9 +29,15 @@ from raiden.exceptions import (
 from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
     is_supported_client,
+    pex,
     privatekey_to_address,
 )
-from raiden.utils.typing import List, Dict, Iterable, Address, BlockSpecification
+from raiden.utils.typing import (
+    Address,
+    BlockSpecification,
+    Dict,
+    List,
+)
 from raiden.utils.filters import StatelessFilter
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.solc import (
@@ -154,6 +159,22 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
+def monkey_patch_web3(web3, client):
+    try:
+        # we use a PoA chain for smoketest, use this middleware to fix this
+        web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+    except ValueError:
+        # `middleware_stack.inject()` raises a value error if the same middleware is
+        # injected twice. This happens with `eth-tester` setup where a single session
+        # scoped web3 instance is used for all clients
+        pass
+
+    # create the connection test middleware (but only for non-tester chain)
+    if not hasattr(web3, 'testing'):
+        connection_test = make_connection_test_middleware(client)
+        web3.middleware_stack.inject(connection_test, layer=0)
+
+
 class JSONRPCClient:
     """ Ethereum JSON RPC client.
 
@@ -161,8 +182,6 @@ class JSONRPCClient:
         host: Ethereum node host address.
         port: Ethereum node port number.
         privkey: Local user private key, used to sign transactions.
-        nonce_update_interval: Update the account nonce every
-            `nonce_update_interval` seconds.
         nonce_offset: Network's default base nonce number.
     """
 
@@ -172,82 +191,54 @@ class JSONRPCClient:
             port: int,
             privkey: bytes,
             gasprice: int = None,
-            nonce_update_interval: float = 5.0,
             nonce_offset: int = 0,
             web3: Web3 = None,
     ):
-
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
 
         endpoint = 'http://{}:{}'.format(host, port)
+        web3: Web3 = web3 or Web3(HTTPProvider(endpoint))
 
-        self.port = port
-        self.privkey = privkey
-        self.sender = privatekey_to_address(privkey)
-        # Needs to be initialized to None in the beginning since JSONRPCClient
-        # gets constructed before the RaidenService Object.
-        self.stop_event = None
-
-        self._nonce_offset = nonce_offset
-        self._nonce_lock = Semaphore()
-        self.given_gas_price = gasprice
-
-        self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
-        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
-        self._nonce_cache = TTLCache(maxsize=16, ttl=nonce_update_interval)
-
-        # web3
-        if web3 is None:
-            self.web3: Web3 = Web3(HTTPProvider(endpoint))
-        else:
-            self.web3 = web3
-        try:
-            # we use a PoA chain for smoketest, use this middleware to fix this
-            self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
-        except ValueError:
-            # `middleware_stack.inject()` raises a value error if the same middleware is
-            # injected twice. This happens with `eth-tester` setup where a single session
-            # scoped web3 instance is used for all clients
-            pass
-
-        # create the connection test middleware (but only for non-tester chain)
-        if not hasattr(web3, 'testing'):
-            connection_test = make_connection_test_middleware(self)
-            self.web3.middleware_stack.inject(connection_test, layer=0)
-
-        supported, self.eth_node = is_supported_client(self.web3.version.node)
+        monkey_patch_web3(web3, self)
+        supported, eth_node = is_supported_client(web3.version.node)
 
         if not supported:
             print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
             sys.exit(1)
 
+        sender = privatekey_to_address(privkey)
+        transaction_count = web3.eth.getTransactionCount(to_checksum_address(sender), 'pending')
+        _available_nonce = transaction_count + nonce_offset
+
+        self.eth_node = eth_node
+        self.given_gas_price = gasprice
+        self.port = port
+        self.privkey = privkey
+        self.sender = sender
+        # Needs to be initialized to None in the beginning since JSONRPCClient
+        # gets constructed before the RaidenService Object.
+        self.stop_event = None
+        self.web3 = web3
+
+        self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
+        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
+        self._available_nonce = _available_nonce
+        self._nonce_lock = Semaphore()
+        self._nonce_offset = nonce_offset
+
+        log.debug(
+            'JSONRPCClient created',
+            sender=pex(self.sender),
+            available_nonce=_available_nonce,
+        )
+
     def __repr__(self):
-        return '<JSONRPCClient @%d>' % self.port
+        return f'<JSONRPCClient node:{pex(self.sender)} nonce:{self._available_nonce}>'
 
     def block_number(self):
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
-
-    @cachedmethod(attrgetter('_nonce_cache'))
-    def _node_nonce_it(self) -> Iterable[int]:
-        """Returns counter iterator from the account's nonce
-
-        As this method is backed by a TTLCache and _nonce_lock-protected,
-        it may be used as iterable-cache of the node's nonce, and refreshed every
-        nonce_update_inverval seconds, to ensure it's always in-sync.
-        """
-        transaction_count = self.web3.eth.getTransactionCount(
-            to_checksum_address(self.sender),
-            'pending',
-        )
-        nonce = transaction_count + self._nonce_offset
-
-        return count(nonce)
-
-    def _nonce(self) -> int:
-        """Returns and increments the nonce on every call"""
-        return next(self._node_nonce_it())
 
     def inject_stop_event(self, event):
         self.stop_event = event
@@ -438,13 +429,17 @@ class JSONRPCClient:
             warnings.warn('For contract creation the empty string must be used.')
 
         with self._nonce_lock:
-            transaction = dict(
-                nonce=self._nonce(),
-                gasPrice=gasprice or self.gasprice(),
-                gas=self.check_startgas(startgas),
-                value=value,
-                data=data,
-            )
+            nonce = self._available_nonce
+            gasprice = gasprice or self.gasprice()
+            startgas = self.check_startgas(startgas)
+
+            transaction = {
+                'data': data,
+                'gasPrice': gasprice,
+                'gas': startgas,
+                'nonce': nonce,
+                'value': value,
+            }
 
             # add the to address if not deploying a contract
             if to != b'':
@@ -452,15 +447,18 @@ class JSONRPCClient:
 
             signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
+            log_details = {
+                'account': to_checksum_address(self.sender),
+                'nonce': transaction['nonce'],
+                'gasLimit': transaction['gas'],
+                'gasPrice': transaction['gasPrice'],
+            }
+            log.debug('send_raw_transaction called', **log_details)
+
             tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-            log.debug(
-                'send_raw_transaction',
-                account=to_checksum_address(self.sender),
-                nonce=transaction['nonce'],
-                gasLimit=transaction['gas'],
-                gasPrice=transaction['gasPrice'],
-                tx_hash=tx_hash,
-            )
+            self._available_nonce += 1
+
+            log.debug('send_raw_transaction returned', tx_hash=tx_hash, **log_details)
             return tx_hash
 
     def poll(self, transaction_hash: bytes, confirmations: int = None):
