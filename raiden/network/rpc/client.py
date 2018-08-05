@@ -5,6 +5,7 @@ import warnings
 from binascii import unhexlify
 from json.decoder import JSONDecodeError
 
+from requests import ConnectTimeout
 from pkg_resources import DistributionNotFound
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
@@ -201,7 +202,13 @@ class JSONRPCClient:
         web3: Web3 = web3 or Web3(HTTPProvider(endpoint))
 
         monkey_patch_web3(web3, self)
-        supported, eth_node = is_supported_client(web3.version.node)
+
+        try:
+            version = web3.version.node
+        except ConnectTimeout:
+            raise EthNodeCommunicationError('couldnt reach the ethereum node')
+
+        supported, eth_node = is_supported_client(version)
 
         if not supported:
             print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
