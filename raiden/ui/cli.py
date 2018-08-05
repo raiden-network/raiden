@@ -30,7 +30,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from mirakuru import ProcessExitedWithError
-from requests.exceptions import RequestException
+from requests.exceptions import ConnectTimeout, RequestException
 from web3 import Web3, HTTPProvider
 
 from raiden import constants
@@ -64,6 +64,7 @@ from raiden.settings import (
 from raiden.tasks import check_version, check_gas_reserve
 from raiden.utils import (
     get_system_spec,
+    is_supported_client,
     merge_dict,
     split_endpoint,
     typing,
@@ -598,6 +599,16 @@ def run_app(
     config['privatekey_hex'] = privatekey_hex
 
     web3 = Web3(HTTPProvider(eth_rpc_endpoint))
+
+    try:
+        node_version = web3.version.node  # pylint: disable=no-member
+    except ConnectTimeout:
+        raise EthNodeCommunicationError('couldnt reach the ethereum node')
+
+    supported, _ = is_supported_client(node_version)
+    if not supported:
+        print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
+        sys.exit(1)
 
     rpc_client = JSONRPCClient(
         web3,
