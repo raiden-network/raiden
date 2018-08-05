@@ -242,7 +242,7 @@ def wrap(data):
     try:
         cmdid = data[0]
     except IndexError:
-        log.warn('data is empty')
+        log.warning('data is empty')
         return
 
     try:

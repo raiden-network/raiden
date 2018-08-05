@@ -549,7 +549,7 @@ class MatrixTransport:
                 self._send_immediate(message.sender, json.dumps(delivered_message.to_dict()))
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
-            self.log.warn('Exception while processing message', exc_info=True)
+            self.log.warning('Exception while processing message', exc_info=True)
             return
 
     def _send_queued_messages(
