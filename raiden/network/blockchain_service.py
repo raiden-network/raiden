@@ -1,4 +1,5 @@
 import gevent
+from gevent.lock import Semaphore
 from cachetools.func import ttl_cache
 import structlog
 from eth_utils import is_binary_address
@@ -37,6 +38,13 @@ class BlockChainService:
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
+
+        self._token_creation_lock = Semaphore()
+        self._discovery_creation_lock = Semaphore()
+        self._token_network_creation_lock = Semaphore()
+        self._token_network_registry_creation_lock = Semaphore()
+        self._secret_registry_creation_lock = Semaphore()
+        self._payment_channel_creation_lock = Semaphore()
 
     def block_number(self) -> int:
         return self.client.block_number()
@@ -96,11 +104,12 @@ class BlockChainService:
         if not is_binary_address(token_address):
             raise ValueError('token_address must be a valid address')
 
-        if token_address not in self.address_to_token:
-            self.address_to_token[token_address] = Token(
-                self.client,
-                token_address,
-            )
+        with self._token_creation_lock:
+            if token_address not in self.address_to_token:
+                self.address_to_token[token_address] = Token(
+                    self.client,
+                    token_address,
+                )
 
         return self.address_to_token[token_address]
 
@@ -109,11 +118,12 @@ class BlockChainService:
         if not is_binary_address(discovery_address):
             raise ValueError('discovery_address must be a valid address')
 
-        if discovery_address not in self.address_to_discovery:
-            self.address_to_discovery[discovery_address] = Discovery(
-                self.client,
-                discovery_address,
-            )
+        with self._discovery_creation_lock:
+            if discovery_address not in self.address_to_discovery:
+                self.address_to_discovery[discovery_address] = Discovery(
+                    self.client,
+                    discovery_address,
+                )
 
         return self.address_to_discovery[discovery_address]
 
@@ -121,11 +131,12 @@ class BlockChainService:
         if not is_binary_address(address):
             raise ValueError('address must be a valid address')
 
-        if address not in self.address_to_token_network_registry:
-            self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                self.client,
-                address,
-            )
+        with self._token_network_registry_creation_lock:
+            if address not in self.address_to_token_network_registry:
+                self.address_to_token_network_registry[address] = TokenNetworkRegistry(
+                    self.client,
+                    address,
+                )
 
         return self.address_to_token_network_registry[address]
 
@@ -133,11 +144,12 @@ class BlockChainService:
         if not is_binary_address(address):
             raise ValueError('address must be a valid address')
 
-        if address not in self.address_to_token_network:
-            self.address_to_token_network[address] = TokenNetwork(
-                self.client,
-                address,
-            )
+        with self._token_network_creation_lock:
+            if address not in self.address_to_token_network:
+                self.address_to_token_network[address] = TokenNetwork(
+                    self.client,
+                    address,
+                )
 
         return self.address_to_token_network[address]
 
@@ -145,11 +157,12 @@ class BlockChainService:
         if not is_binary_address(address):
             raise ValueError('address must be a valid address')
 
-        if address not in self.address_to_secret_registry:
-            self.address_to_secret_registry[address] = SecretRegistry(
-                self.client,
-                address,
-            )
+        with self._secret_registry_creation_lock:
+            if address not in self.address_to_secret_registry:
+                self.address_to_secret_registry[address] = SecretRegistry(
+                    self.client,
+                    address,
+                )
 
         return self.address_to_secret_registry[address]
 
@@ -164,15 +177,16 @@ class BlockChainService:
         if not ishash(channel_id):
             raise ValueError('identifier must be a hash')
 
-        dict_key = (token_network_address, channel_id)
+        with self._payment_channel_creation_lock:
+            dict_key = (token_network_address, channel_id)
 
-        if dict_key not in self.identifier_to_payment_channel:
-            token_network = self.token_network(token_network_address)
+            if dict_key not in self.identifier_to_payment_channel:
+                token_network = self.token_network(token_network_address)
 
-            self.identifier_to_payment_channel[dict_key] = PaymentChannel(
-                token_network=token_network,
-                channel_identifier=channel_id,
-            )
+                self.identifier_to_payment_channel[dict_key] = PaymentChannel(
+                    token_network=token_network,
+                    channel_identifier=channel_id,
+                )
 
         return self.identifier_to_payment_channel[dict_key]
 
