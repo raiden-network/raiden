@@ -867,8 +867,6 @@ def is_transaction_successful(chain_state, transaction, state_change):
         isinstance(state_change, ContractReceiveSecretReveal) and
         isinstance(transaction, ContractSendSecretReveal) and
         state_change.transaction_from == our_address and
-        state_change.secret_registry_address == transaction.secret_registry_address and
-        state_change.secrethash == transaction.secrethash and
         state_change.secret == transaction.secret
     )
     if is_our_secret_reveal:
