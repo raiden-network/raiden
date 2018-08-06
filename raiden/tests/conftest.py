@@ -10,6 +10,7 @@ monkey.patch_all()
 import pytest
 
 from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.gevent_utils import configure_gevent, undo_configure_gevent
 from raiden.exceptions import RaidenShuttingDown
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.log_config import configure_logging
@@ -160,6 +161,20 @@ def dont_exit_pytest():
     """
     gevent.get_hub().SYSTEM_ERROR = BaseException
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
+
+
+@pytest.fixture
+def with_configure_gevent():
+    """ Switch to the custom gevent configuration that we use when running Raiden.
+
+    Override the dont_exit_pytest fixture for the duration of a test.
+    """
+    gevent.get_hub().SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)  # default values
+    gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
+    configure_gevent()
+    yield
+    undo_configure_gevent()
+    dont_exit_pytest()
 
 
 if sys.platform == 'darwin':
