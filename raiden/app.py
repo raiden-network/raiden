@@ -44,7 +44,6 @@ class App:  # pylint: disable=too-few-public-methods
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
         'database_path': '',
-        'msg_timeout': 100.0,
         'transport_type': 'udp',
         'transport': {
             'udp': {

@@ -570,9 +570,6 @@ class RaidenService:
             target,
         )
 
-        # TODO: implement the network timeout raiden.config['msg_timeout'] and
-        # cancel the current transfer if it happens (issue #374)
-        #
         # Dispatch the state change even if there are no routes to create the
         # wal entry.
         self.handle_state_change(init_initiator_statechange)
