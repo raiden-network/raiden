@@ -45,31 +45,33 @@ class App:  # pylint: disable=too-few-public-methods
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
         'database_path': '',
         'msg_timeout': 100.0,
+        'transport_type': 'udp',
         'transport': {
-            'retry_interval': DEFAULT_TRANSPORT_RETRY_INTERVAL,
-            'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-            'throttle_capacity': DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-            'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
-            'nat_invitation_timeout': DEFAULT_NAT_INVITATION_TIMEOUT,
-            'nat_keepalive_retries': DEFAULT_NAT_KEEPALIVE_RETRIES,
-            'nat_keepalive_timeout': DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+            'udp': {
+                'retry_interval': DEFAULT_TRANSPORT_RETRY_INTERVAL,
+                'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+                'throttle_capacity': DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
+                'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
+                'nat_invitation_timeout': DEFAULT_NAT_INVITATION_TIMEOUT,
+                'nat_keepalive_retries': DEFAULT_NAT_KEEPALIVE_RETRIES,
+                'nat_keepalive_timeout': DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+            },
+            'matrix': {
+                'server': 'auto',
+                'available_servers': [
+                    'https://transport01.raiden.network',
+                    'https://transport02.raiden.network',
+                    'https://transport03.raiden.network',
+                ],
+                'discovery_room': {
+                    'alias_fragment': 'discovery',
+                    'server': 'transport01.raiden.network',
+                },
+            },
         },
         'rpc': True,
         'console': False,
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
-        'transport_type': 'udp',
-        'matrix': {
-            'server': 'auto',
-            'available_servers': [
-                'https://transport01.raiden.network',
-                'https://transport02.raiden.network',
-                'https://transport03.raiden.network',
-            ],
-            'discovery_room': {
-                'alias_fragment': 'discovery',
-                'server': 'transport01.raiden.network',
-            },
-        },
     }
 
     def __init__(
@@ -80,7 +82,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
-            discovery: Discovery = None,
+            discovery: Discovery=None,
     ):
         raiden = RaidenService(
             chain=chain,
@@ -130,7 +132,7 @@ class App:  # pylint: disable=too-few-public-methods
         """ Start the raiden app. """
         self.raiden.start()
 
-    def stop(self, leave_channels: bool = False):
+    def stop(self, leave_channels: bool=False):
         """ Stop the raiden app.
 
         Args:

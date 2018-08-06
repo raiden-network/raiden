@@ -46,8 +46,8 @@ def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
     )
 
     nat_keepalive_fail = (
-        app0.config['transport']['nat_keepalive_timeout'] *
-        app0.config['transport']['nat_keepalive_retries'] *
+        app0.config['transport']['udp']['nat_keepalive_timeout'] *
+        app0.config['transport']['udp']['nat_keepalive_retries'] *
         2  # wait a bit longer to avoid races
     )
     msg = "The message was dropped, it can't be acknowledged"

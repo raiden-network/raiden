@@ -60,7 +60,7 @@ def test_recovery_happy_case(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport'],
+        app0.raiden.config['transport']['udp'],
     )
 
     app0_restart = App(
@@ -171,7 +171,7 @@ def test_recovery_unhappy_case(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport'],
+        app0.raiden.config['transport']['udp'],
     )
 
     app0.stop()
@@ -247,7 +247,7 @@ def test_recovery_blockchain_events(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport'],
+        app0.raiden.config['transport']['udp'],
     )
 
     app1_api = RaidenAPI(app1.raiden)

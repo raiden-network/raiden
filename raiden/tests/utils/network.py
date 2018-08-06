@@ -1,5 +1,6 @@
 """ Utilities to set-up a Raiden network. """
 from binascii import hexlify
+import collections
 from collections import namedtuple
 from os import environ
 
@@ -28,6 +29,19 @@ BlockchainServices = namedtuple(
         'blockchain_services',
     ),
 )
+
+
+def dict_merge(to_update, other_dict):
+    for key, value in other_dict.items():
+        has_map = (
+            isinstance(value, collections.Mapping) and
+            isinstance(to_update.get(key, None), collections.Mapping)
+        )
+
+        if has_map:
+            dict_merge(to_update[key], value)
+        else:
+            to_update[key] = value
 
 
 def check_channel(
@@ -273,13 +287,15 @@ def create_apps(
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
             'transport': {
-                'retry_interval': retry_interval,
-                'retries_before_backoff': retries_before_backoff,
-                'throttle_capacity': throttle_capacity,
-                'throttle_fill_rate': throttle_fill_rate,
-                'nat_invitation_timeout': nat_invitation_timeout,
-                'nat_keepalive_retries': nat_keepalive_retries,
-                'nat_keepalive_timeout': nat_keepalive_timeout,
+                'udp': {
+                    'retry_interval': retry_interval,
+                    'retries_before_backoff': retries_before_backoff,
+                    'throttle_capacity': throttle_capacity,
+                    'throttle_fill_rate': throttle_fill_rate,
+                    'nat_invitation_timeout': nat_invitation_timeout,
+                    'nat_keepalive_retries': nat_keepalive_retries,
+                    'nat_keepalive_timeout': nat_keepalive_timeout,
+                },
             },
             'rpc': True,
             'console': False,
@@ -287,19 +303,24 @@ def create_apps(
 
         use_matrix = local_matrix_url is not None
         if use_matrix:
-            config.update({
-                'transport_type': 'matrix',
-                'matrix': {
-                    'server': local_matrix_url,
-                    'server_name': 'matrix.local.raiden',
-                    'discovery_room': {
-                        'alias_fragment': 'discovery',
-                        'server': 'matrix.local.raiden',
+            dict_merge(
+                config,
+                {
+                    'transport_type': 'matrix',
+                    'transport': {
+                        'matrix': {
+                            'server': local_matrix_url,
+                            'server_name': 'matrix.local.raiden',
+                            'discovery_room': {
+                                'alias_fragment': 'discovery',
+                                'server': 'matrix.local.raiden',
+                            },
+                        },
                     },
                 },
-            })
+            )
             if 'TRAVIS' in environ:
-                config.update({'login_retry_wait': 1.5})
+                config['transport']['matrix']['login_retry_wait'] = 1.5
 
         config_copy = App.DEFAULT_CONFIG.copy()
         config_copy.update(config)
@@ -308,18 +329,18 @@ def create_apps(
         secret_registry = blockchain.secret_registry(secret_registry_address)
 
         if use_matrix:
-            transport = MatrixTransport(config['matrix'])
+            transport = MatrixTransport(config['transport']['matrix'])
         else:
             throttle_policy = TokenBucket(
-                config['transport']['throttle_capacity'],
-                config['transport']['throttle_fill_rate'],
+                config['transport']['udp']['throttle_capacity'],
+                config['transport']['udp']['throttle_fill_rate'],
             )
 
             transport = UDPTransport(
                 discovery,
                 server._udp_socket((host, port)),  # pylint: disable=protected-access
                 throttle_policy,
-                config['transport'],
+                config['transport']['udp'],
             )
 
         app = App(

@@ -181,7 +181,7 @@ class MatrixTransport:
     ):
         self._running = True
         self._raiden_service = raiden_service
-        config = raiden_service.config['matrix']
+        config = raiden_service.config['transport']['matrix']
 
         self._discovery_room_alias = self._make_room_alias(
             config['discovery_room']['alias_fragment'],
@@ -351,7 +351,7 @@ class MatrixTransport:
         self._get_user(self._client.user_id).set_display_name(name)
 
     def _join_discovery_room(self):
-        discovery_cfg = self._raiden_service.config['matrix']['discovery_room']
+        discovery_cfg = self._raiden_service.config['transport']['matrix']['discovery_room']
         try:
             discovery_room = self._client.join_room(self._discovery_room_alias_full)
         except MatrixRequestError as ex:
@@ -574,9 +574,9 @@ class MatrixTransport:
             if not self._running:
                 return
             timeout_generator = udp_utils.timeout_exponential_backoff(
-                self._raiden_service.config['transport']['retries_before_backoff'],
-                self._raiden_service.config['transport']['retry_interval'],
-                self._raiden_service.config['transport']['retry_interval'] * 10,
+                self._raiden_service.config['transport']['udp']['retries_before_backoff'],
+                self._raiden_service.config['transport']['udp']['retry_interval'],
+                self._raiden_service.config['transport']['udp']['retry_interval'] * 10,
             )
             while async_result.value is None:
                 self._send_immediate(receiver_address, data)

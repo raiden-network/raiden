@@ -120,7 +120,7 @@ def run(
         discovery=discovery,
         udpsocket=gevent.server._udp_socket((listen_host, listen_port)),
         throttle_policy=throttle_policy,
-        config=config['protocol'],
+        config=config['transport']['udp'],
     )
 
     app = App(
