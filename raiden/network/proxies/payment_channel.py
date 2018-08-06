@@ -110,7 +110,6 @@ class PaymentChannel:
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
         self.token_network.set_total_deposit(
             channel_identifier=self.channel_identifier,
-            participant=self.participant1,
             total_deposit=total_deposit,
             partner=self.participant2,
         )
@@ -187,7 +186,7 @@ class PaymentChannel:
 
         channel_topics = [
             None,  # event topic is any
-            self.channel_identifier,
+            f'0x{self.channel_identifier:064x}',
         ]
 
         # This will match the events:
