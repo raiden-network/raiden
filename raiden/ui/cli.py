@@ -578,8 +578,8 @@ def run_app(
     if extra_config:
         merge_dict(config, extra_config)
 
-    config['host'] = listen_host
-    config['port'] = listen_port
+    config['transport']['udp']['host'] = listen_host
+    config['transport']['udp']['port'] = listen_port
     config['console'] = console
     config['rpc'] = rpc
     config['web_ui'] = rpc and web_ui
