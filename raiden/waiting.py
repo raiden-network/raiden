@@ -253,7 +253,6 @@ def wait_for_transfer_success(
         state_events = raiden.wal.storage.get_events_by_identifier(0, 'latest')
         for event_tuple in state_events:
             event = event_tuple[1]
-            # if isinstance(event, EventTransferReceivedSuccess):
             found = (
                 isinstance(event, EventTransferReceivedSuccess) and
                 event.identifier == payment_identifier and
