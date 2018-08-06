@@ -197,12 +197,6 @@ def handle_channel_closed(raiden, event, current_block_number):
     if channel_state:
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
-        #
-        # from_address = raiden.chain.client.get_transaction_from(
-        #     event.event_data['transactionHash'],
-        # )
-        # assert from_address, 'A mined transaction must have the from field'
-
         channel_closed = ContractReceiveChannelClosed(
             data['closing_participant'],
             token_network_identifier,
