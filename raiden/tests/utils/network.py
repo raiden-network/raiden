@@ -280,14 +280,14 @@ def create_apps(
             'chain_id': chain_id,
             'host': host,
             'port': port,
-            'external_ip': host,
-            'external_port': port,
             'privatekey_hex': hexlify(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
             'transport': {
                 'udp': {
+                    'external_ip': host,
+                    'external_port': port,
                     'retry_interval': retry_interval,
                     'retries_before_backoff': retries_before_backoff,
                     'throttle_capacity': throttle_capacity,

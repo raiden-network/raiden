@@ -38,8 +38,6 @@ class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'host': '',
         'port': INITIAL_PORT,
-        'external_ip': '',
-        'external_port': INITIAL_PORT,
         'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
@@ -47,13 +45,15 @@ class App:  # pylint: disable=too-few-public-methods
         'transport_type': 'udp',
         'transport': {
             'udp': {
-                'retry_interval': DEFAULT_TRANSPORT_RETRY_INTERVAL,
-                'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-                'throttle_capacity': DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-                'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
+                'external_ip': '',
+                'external_port': INITIAL_PORT,
                 'nat_invitation_timeout': DEFAULT_NAT_INVITATION_TIMEOUT,
                 'nat_keepalive_retries': DEFAULT_NAT_KEEPALIVE_RETRIES,
                 'nat_keepalive_timeout': DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+                'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+                'retry_interval': DEFAULT_TRANSPORT_RETRY_INTERVAL,
+                'throttle_capacity': DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
+                'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
             },
             'matrix': {
                 'server': 'auto',
