@@ -202,7 +202,7 @@ class MatrixTransport:
 
         # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
-        self._client.sync_thread.link_exception(self._client_exception_handler)
+        self._client.sync_thread.link_exception_safe(self._client_exception_handler)
         self.greenlets.append(self._client.sync_thread)
 
         # TODO: Add greenlet that regularly refreshes our presence state

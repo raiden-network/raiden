@@ -148,7 +148,7 @@ class ConnectionManager:
     def leave_async(self):
         """ Async version of `leave()` """
         leave_result = AsyncResult()
-        gevent.spawn(self.leave).link(leave_result)
+        gevent.spawn(self.leave).link_safe(leave_result)
         return leave_result
 
     def leave(self, registry_address):

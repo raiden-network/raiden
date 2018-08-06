@@ -278,7 +278,7 @@ class RaidenService:
             def set_start_on_registration(_):
                 self.start_event.set()
 
-            endpoint_registration_greenlet.link(set_start_on_registration)
+            endpoint_registration_greenlet.link_safe(set_start_on_registration)
         else:
             self.start_event.set()
 

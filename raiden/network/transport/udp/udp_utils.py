@@ -23,7 +23,7 @@ def event_first_of(*events: _AbstractLinkable) -> Event:
         raise ValueError('all events must be linkable')
 
     for event in events:
-        event.rawlink(lambda _: first_finished.set())
+        event.rawlink_safe(lambda _: first_finished.set())
 
     return first_finished
 
