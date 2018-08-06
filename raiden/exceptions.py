@@ -191,3 +191,11 @@ class ChannelOutdatedError(RaidenError):
 class InsufficientGasReserve(RaidenError):
     """ Raised when an action cannot be done because the available balance
     is not sufficient for the lifecycles of all active channels. """
+
+
+class UnhandledExceptionInGreenlet(RaidenError):
+    """Raised when a Greenlet has been linked but the
+    linked functions failed to handle an exception."""
+
+    def __init__(self, exception):
+        super().__init__(f'{type(exception)} ({str(exception) or "-"})')
