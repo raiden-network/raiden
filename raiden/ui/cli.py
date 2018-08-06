@@ -590,10 +590,10 @@ def run_app(
         config['external_ip'] = mapped_socket.external_ip
         config['external_port'] = mapped_socket.external_port
     config['transport_type'] = transport
-    config['matrix']['server'] = matrix_server
-    config['transport']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
+    config['transport']['matrix']['server'] = matrix_server
+    config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
-    config['transport']['nat_keepalive_timeout'] = timeout
+    config['transport']['udp']['nat_keepalive_timeout'] = timeout
 
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
@@ -707,22 +707,22 @@ def run_app(
             handle_contract_wrong_address('discovery', discovery_contract_address)
 
         throttle_policy = TokenBucket(
-            config['transport']['throttle_capacity'],
-            config['transport']['throttle_fill_rate'],
+            config['transport']['udp']['throttle_capacity'],
+            config['transport']['udp']['throttle_fill_rate'],
         )
 
         transport = UDPTransport(
             discovery,
             mapped_socket.socket,
             throttle_policy,
-            config['transport'],
+            config['transport']['udp'],
         )
     elif transport == 'matrix':
         # matrix gets spammed with the default retry-interval of 1s, wait a little more
-        if config['transport']['retry_interval'] == DEFAULT_TRANSPORT_RETRY_INTERVAL:
-            config['transport']['retry_interval'] *= 5
+        if config['transport']['udp']['retry_interval'] == DEFAULT_TRANSPORT_RETRY_INTERVAL:
+            config['transport']['udp']['retry_interval'] *= 5
         try:
-            transport = MatrixTransport(config['matrix'])
+            transport = MatrixTransport(config['transport']['matrix'])
         except RaidenError as ex:
             click.secho(f'FATAL: {ex}', fg='red')
             sys.exit(1)
@@ -1233,9 +1233,11 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                 shell=True,
             ):
                 args['extra_config'] = {
-                    'matrix': {
-                        'discovery_room': {'server': 'matrix.local.raiden'},
-                        'server_name': 'matrix.local.raiden',
+                    'transport': {
+                        'matrix': {
+                            'discovery_room': {'server': 'matrix.local.raiden'},
+                            'server_name': 'matrix.local.raiden',
+                        },
                     },
                 }
                 success = _run_smoketest()
