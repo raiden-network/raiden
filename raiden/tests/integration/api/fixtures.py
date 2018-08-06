@@ -3,10 +3,10 @@ import os
 import pytest
 import psutil
 import gevent
-from gevent import Greenlet
 
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import RestAPI, APIServer
+from raiden.utils.gevent_utils import RaidenGreenlet
 
 
 def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
@@ -36,7 +36,7 @@ def api_backend(raiden_network, rest_api_port_number):
     api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
 
     # TODO: Find out why tests fail with debug=True
-    server = Greenlet.spawn(
+    server = RaidenGreenlet.spawn(
         api_server.run,
         port=rest_api_port_number,
         debug=False,

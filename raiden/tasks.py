@@ -10,6 +10,7 @@ from web3 import Web3
 
 from raiden.exceptions import RaidenShuttingDown
 from raiden.utils import get_system_spec, gas_reserve
+from raiden.utils.gevent_utils import RaidenGreenlet
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 CHECK_GAS_RESERVE_INTERVAL = 60 * 60
@@ -76,7 +77,7 @@ def check_gas_reserve(raiden):
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-class AlarmTask(gevent.Greenlet):
+class AlarmTask(RaidenGreenlet):
     """ Task to notify when a block is mined. """
 
     def __init__(self, chain):

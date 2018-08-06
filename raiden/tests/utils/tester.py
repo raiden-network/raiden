@@ -2,6 +2,7 @@ import gevent
 from gevent.event import Event
 from eth_utils import encode_hex, to_checksum_address
 from raiden.utils import privatekey_to_address
+from raiden.utils.gevent_utils import RaidenGreenlet
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE
 
@@ -23,7 +24,7 @@ def fund_accounts(web3, private_keys, ethereum_tester):
         })
 
 
-class Miner(gevent.Greenlet):
+class Miner(RaidenGreenlet):
     def __init__(self, web3, mine_sleep=1):
         super().__init__()
         self.web3 = web3
