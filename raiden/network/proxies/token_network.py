@@ -52,6 +52,17 @@ from raiden.transfer.utils import hash_balance_data
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
+ParticipantDetails = Dict[
+    str,
+    typing.Union[
+        typing.TokenAmount,
+        typing.TokenAmount,
+        bool,
+        typing.BalanceHash,
+        int,
+    ]
+]
+
 
 class TokenNetwork:
     def __init__(
@@ -206,20 +217,22 @@ class TokenNetwork:
 
     def detail_participant(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-    ) -> Dict:
+            channel_identifier: typing.ChannelID,
+            participant: typing.Address,
+            partner: typing.Address,
+    ) -> ParticipantDetails:
         """ Returns a dictionary with the channel participant information. """
 
         channel_identifier = self._call_and_check_result(
             'getChannelIdentifier',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
+            to_checksum_address(participant),
+            to_checksum_address(partner),
         )
         data = self._call_and_check_result(
             'getChannelParticipantInfo',
             channel_identifier,
-            to_checksum_address(participant1),
+            to_checksum_address(participant),
+            to_checksum_address(partner),
         )
         return {
             'deposit': data[0],
@@ -229,20 +242,19 @@ class TokenNetwork:
             'nonce': data[4],
         }
 
-    def detail_channel(self, participant1: typing.Address, participant2: typing.Address) -> Dict:
+    def detail_channel(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+    ) -> Dict[str, typing.Union[typing.ChannelID, typing.BlockNumber, str]]:
         """ Returns a dictionary with the channel specific information. """
         channel_identifier = self._call_and_check_result(
             'getChannelIdentifier',
             to_checksum_address(participant1),
             to_checksum_address(participant2),
         )
-        channel_data = self._call_and_check_result(
-            'getChannelInfo',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
-        )
-
         assert isinstance(channel_identifier, typing.T_ChannelID)
+        channel_data = self._call_and_check_result('getChannelInfo', channel_identifier)
 
         return {
             'channel_identifier': channel_identifier,
@@ -254,7 +266,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-    ) -> Dict:
+    ) -> ParticipantDetails:
         """ Returns a dictionary with the participants' channel information.
 
         Note:
@@ -266,8 +278,14 @@ class TokenNetwork:
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        our_data = self.detail_participant(participant1, participant2)
-        partner_data = self.detail_participant(participant2, participant1)
+        channel_identifier = self._call_and_check_result(
+            'getChannelIdentifier',
+            to_checksum_address(participant1),
+            to_checksum_address(participant2),
+        )
+
+        our_data = self.detail_participant(channel_identifier, participant1, participant2)
+        partner_data = self.detail_participant(channel_identifier, participant2, participant1)
         return {
             'our_address': participant1,
             'our_deposit': our_data['deposit'],
@@ -296,7 +314,10 @@ class TokenNetwork:
             participant1, participant2 = participant2, participant1
 
         channel_data = self.detail_channel(participant1, participant2)
-        participants_data = self.detail_participants(participant1, participant2)
+        participants_data = self.detail_participants(
+            participant1,
+            participant2,
+        )
         chain_id = self.proxy.contract.functions.chain_id().call()
 
         return {
@@ -407,7 +428,18 @@ class TokenNetwork:
         if opened is False:
             return False
 
-        return self.detail_participant(participant1, participant2)['deposit'] > 0
+        channel_identifier = self._call_and_check_result(
+            'getChannelIdentifier',
+            to_checksum_address(participant1),
+            to_checksum_address(participant2),
+        )
+
+        deposit = self.detail_participant(
+            channel_identifier,
+            participant1,
+            participant2,
+        )['deposit']
+        return deposit > 0
 
     def set_total_deposit(
             self,
@@ -446,7 +478,11 @@ class TokenNetwork:
             # This check is serialized with the channel_operations_lock to avoid
             # sending invalid transactions on-chain (decreasing total deposit).
             #
-            current_deposit = self.detail_participant(self.node_address, partner)['deposit']
+            current_deposit = self.detail_participant(
+                channel_identifier,
+                self.node_address,
+                partner,
+            )['deposit']
             amount_to_deposit = total_deposit - current_deposit
             if total_deposit < current_deposit:
                 raise DepositMismatch(
