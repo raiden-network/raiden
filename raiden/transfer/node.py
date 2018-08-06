@@ -823,7 +823,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
 
 
 def is_transaction_successful(chain_state, transaction, state_change):
-    # These transactions are not made atomic through the wall, they are sent
+    # These transactions are not made atomic through the WAL, they are sent
     # exclusively through the external APIs.
     #
     #  - ContractReceiveChannelNew

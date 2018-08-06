@@ -36,7 +36,6 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
-    Iterable,
     List,
     Optional,
 )
