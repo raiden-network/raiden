@@ -63,6 +63,21 @@ def configure_gevent():
 
     gevent.spawn = RaidenGreenlet.spawn
     gevent.spawn_later = RaidenGreenlet.spawn_later
+    hub._default_system_error = hub.SYSTEM_ERROR
+    hub._default_handle_error = hub.__class__.handle_error
     hub.SYSTEM_ERROR = hub.SYSTEM_ERROR + (UnhandledExceptionInGreenlet,)
     hub.__class__.handle_error = _patch_handle_error(hub.__class__.handle_error)
     hub._patched = True
+
+
+def undo_configure_gevent():
+    hub = gevent.get_hub()
+
+    if not getattr(hub, '_patched', False):
+        return
+
+    gevent.spawn = gevent.Greenlet.spawn
+    gevent.spawn_later = gevent.Greenlet.spawn_later
+    hub.SYSTEM_ERROR = hub._default_system_error
+    hub.__class__.handle_error = hub._default_handle_error
+    hub._patched = False
