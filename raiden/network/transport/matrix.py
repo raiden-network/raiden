@@ -131,11 +131,12 @@ class MatrixTransport:
         self._raiden_service: RaidenService = None
         self._config = config
 
-        def http_retry_delay() -> Union[float, Iterable[float]]:
+        def _http_retry_delay() -> Iterable[float]:
+            # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return udp_utils.timeout_exponential_backoff(
-                self._config['retries_before_backoff'],  # default = 5
-                self._config['retry_interval'] / 5,  # default=5/5=1s
-                self._config['retry_interval'],  # default=5s
+                self._config['retries_before_backoff'],
+                self._config['retry_interval'] / 5,
+                self._config['retry_interval'],
             )
 
         while True:
@@ -146,7 +147,7 @@ class MatrixTransport:
                 self._server_url,
                 http_pool_maxsize=4,
                 http_retry_timeout=40,
-                http_retry_delay=http_retry_delay,
+                http_retry_delay=_http_retry_delay,
             )
             try:
                 self._client.api._send('GET', '/versions', api_path='/_matrix/client')
