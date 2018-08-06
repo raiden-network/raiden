@@ -125,7 +125,7 @@ def get_our_capacity_for_token_network(
 def get_token_network_registry_by_token_network_identifier(
         chain_state: ChainState,
         token_network_identifier: typing.Address,
-) -> PaymentNetworkState:
+) -> typing.Optional[PaymentNetworkState]:
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
             return payment_network

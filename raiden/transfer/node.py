@@ -3,6 +3,7 @@ from raiden.transfer import (
     token_network,
     views,
 )
+from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer import (
     initiator_manager,
     mediator,
@@ -516,16 +517,7 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
         for token_network_state in payment_network_state.tokenaddresses_to_tokennetworks.values():
-            for channel_states in token_network_state.partneraddresses_to_channels.values():
-                filtered_channel_states = views.filter_channels_by_status(
-                    channel_states,
-                    [channel.CHANNEL_STATE_UNUSABLE],
-                )
-                for channel_state in filtered_channel_states:
-                    events.extend(channel.events_for_close(
-                        channel_state,
-                        chain_state.block_number,
-                    ))
+            events.extend(_get_channels_close_events(payment_network_state))
 
     return TransitionResult(chain_state, events)
 
@@ -840,3 +832,21 @@ def state_transition(chain_state: ChainState, state_change):
     sanity_check(iteration)
 
     return iteration
+
+
+def _get_channels_close_events(
+        chain_state: ChainState,
+        token_network_state: TokenNetworkState
+) -> typing.List[Event]:
+    events = []
+    for channel_states in token_network_state.partneraddresses_to_channels.values():
+        filtered_channel_states = views.filter_channels_by_status(
+            channel_states,
+            [channel.CHANNEL_STATE_UNUSABLE],
+        )
+        for channel_state in filtered_channel_states:
+            events.extend(channel.events_for_close(
+                channel_state,
+                chain_state.block_number,
+            ))
+    return events
