@@ -587,8 +587,8 @@ def run_app(
     config['api_port'] = api_port
     if mapped_socket:
         config['socket'] = mapped_socket.socket
-        config['external_ip'] = mapped_socket.external_ip
-        config['external_port'] = mapped_socket.external_port
+        config['transport']['udp']['external_ip'] = mapped_socket.external_ip
+        config['transport']['udp']['external_port'] = mapped_socket.external_port
     config['transport_type'] = transport
     config['transport']['matrix']['server'] = matrix_server
     config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES

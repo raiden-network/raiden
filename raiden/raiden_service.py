@@ -201,8 +201,8 @@ class RaidenService:
             endpoint_registration_greenlet = gevent.spawn(
                 self.discovery.register,
                 self.address,
-                self.config['external_ip'],
-                self.config['external_port'],
+                self.config['transport']['udp']['external_ip'],
+                self.config['transport']['udp']['external_port'],
             )
 
         # The database may be :memory:
