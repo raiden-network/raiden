@@ -1,7 +1,6 @@
 from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
-    CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLING,

@@ -33,7 +33,7 @@ def chain_state():
     return ChainState(
         random.Random(),
         1,
-        UNIT_CHAIN_ID
+        UNIT_CHAIN_ID,
     )
 
 

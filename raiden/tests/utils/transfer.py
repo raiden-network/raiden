@@ -18,18 +18,28 @@ from raiden.raiden_service import (
 )
 
 from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.factories import (
+    UNIT_REGISTRY_IDENTIFIER,
+    UNIT_CHAIN_ID,
+    make_address,
+)
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
-from raiden.transfer.merkle_tree import compute_layers
+from raiden.transfer.mediated_transfer.state import (
+    LockedTransferSignedState,
+    lockedtransfersigned_from_message,
+)
+from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
+    HashTimeLockState,
     MerkleTreeState,
-    balanceproof_from_envelope,
     NettingChannelState,
+
+    balanceproof_from_envelope,
 )
 from raiden.transfer.state_change import ReceiveUnlock
-from raiden.utils import sha3
+from raiden.utils import sha3, privatekey_to_address
 
 
 def sign_and_inject(message, key, address, app):
@@ -389,3 +399,71 @@ def make_mediated_transfer(
         channel.register_secret(partner_channel, secret, secrethash)
 
     return mediated_transfer_msg
+
+
+def make_receive_transfer_mediated(
+        channel_state,
+        privkey,
+        nonce,
+        transferred_amount,
+        lock,
+        merkletree_leaves=None,
+        token_network_address=UNIT_REGISTRY_IDENTIFIER,
+        locked_amount=None,
+        chain_id=UNIT_CHAIN_ID,
+):
+
+    if not isinstance(lock, HashTimeLockState):
+        raise ValueError('lock must be of type HashTimeLockState')
+
+    address = privatekey_to_address(privkey.secret)
+    if address not in (channel_state.our_state.address, channel_state.partner_state.address):
+        raise ValueError('Private key does not match any of the participants.')
+
+    if merkletree_leaves is None:
+        layers = [[lock.lockhash]]
+    else:
+        assert lock.lockhash in merkletree_leaves
+        layers = compute_layers(merkletree_leaves)
+
+    if locked_amount is None:
+        locked_amount = lock.amount
+
+    assert locked_amount >= lock.amount
+
+    locksroot = layers[MERKLEROOT][0]
+
+    payment_identifier = nonce
+    transfer_target = make_address()
+    transfer_initiator = make_address()
+    mediated_transfer_msg = LockedTransfer(
+        chain_id=chain_id,
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_address=token_network_address,
+        token=channel_state.token_address,
+        channel_identifier=channel_state.identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        recipient=channel_state.partner_state.address,
+        locksroot=locksroot,
+        lock=lock,
+        target=transfer_target,
+        initiator=transfer_initiator,
+    )
+    mediated_transfer_msg.sign(privkey)
+
+    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
+
+    receive_lockedtransfer = LockedTransferSignedState(
+        random.randint(0, UINT64_MAX),
+        payment_identifier,
+        channel_state.token_address,
+        balance_proof,
+        lock,
+        transfer_initiator,
+        transfer_target,
+    )
+
+    return receive_lockedtransfer
