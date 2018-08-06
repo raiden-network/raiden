@@ -76,7 +76,6 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
 
     token_events = api1.get_token_network_events_blockchain(
         token_address,
-        channel12.open_transaction.finished_block_number,
     )
     assert token_events[0]['event'] == ChannelEvent.OPENED
 
