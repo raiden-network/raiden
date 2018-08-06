@@ -837,7 +837,7 @@ class TokenNetwork:
             if our_bp_is_larger:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
-                    self.channel_identifier,
+                    channel_identifier,
                     partner,
                     partner_transferred_amount,
                     partner_locked_amount,
@@ -850,7 +850,7 @@ class TokenNetwork:
             else:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
-                    self.channel_identifier,
+                    channel_identifier,
                     self.node_address,
                     transferred_amount,
                     locked_amount,

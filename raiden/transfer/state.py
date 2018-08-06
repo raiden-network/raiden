@@ -892,7 +892,7 @@ class NettingChannelState(State):
 
     def __init__(
             self,
-            identifier,
+            identifier: typing.ChannelID,
             chain_id: typing.ChainID,
             token_address: typing.Address,
             payment_network_identifier: typing.PaymentNetworkID,
@@ -922,6 +922,12 @@ class NettingChannelState(State):
             raise ValueError(
                 'Cannot create a NettingChannelState with a non successfull open_transaction',
             )
+
+        if not isinstance(identifier, typing.T_ChannelID):
+            raise ValueError('channel identifier must be of type T_ChannelID')
+
+        if identifier < 0 or identifier > UINT256_MAX:
+            raise ValueError('channel identifier should be a uint256')
 
         valid_close_transaction = (
             close_transaction is None or
@@ -956,7 +962,7 @@ class NettingChannelState(State):
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
-            pex(self.identifier),
+            self.identifier,
             self.open_transaction,
             self.close_transaction,
             self.settle_transaction,
