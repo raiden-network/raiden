@@ -281,7 +281,7 @@ class ConnectionsLeaveSchema(BaseSchema):
 class EventPaymentSentFailedSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Str()
+    event = fields.Constant('EventPaymentSentFailed')
     reason = fields.Str()
     target = AddressField()
 
@@ -294,7 +294,7 @@ class EventPaymentSentFailedSchema(BaseSchema):
 class EventPaymentSentSuccessSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Str()
+    event = fields.Constant('EventPaymentSentSuccess')
     amount = fields.Integer()
     target = AddressField()
 
@@ -307,7 +307,7 @@ class EventPaymentSentSuccessSchema(BaseSchema):
 class EventPaymentReceivedSuccessSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Str()
+    event = fields.Constant('EventPaymentReceivedSuccess')
     amount = fields.Integer()
     initiator = AddressField()
 

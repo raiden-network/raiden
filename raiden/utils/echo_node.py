@@ -58,7 +58,7 @@ class EchoNode:
                 joinable_funds_target=.5,
             )
 
-        self.last_poll_block = self.api.raiden.get_block_number()
+        self.last_poll_offset = 0
         self.received_transfers = Queue()
         self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
         self.greenlets = list()
@@ -99,30 +99,24 @@ class EchoNode:
                     return
                 else:
                     received_transfers = self.api.get_payment_history_for_token(
-                        self.token_address,
+                        token_address=self.token_address,
+                        offset=self.last_poll_offset,
                     )
 
                     # received transfer is a tuple of (block_number, event)
                     received_transfers = [
-                        (block_number, event)
-                        for block_number, event in received_transfers
+                        event
+                        for event in received_transfers
                         if type(event) == EventPaymentReceivedSuccess
                     ]
-                    for _, event in received_transfers:
+
+                    for event in received_transfers:
                         transfer = copy.deepcopy(event)
                         self.received_transfers.put(transfer)
 
                     # set last_poll_block after events are enqueued (timeout safe)
                     if received_transfers:
-                        self.last_poll_block = max(
-                            block_number
-                            for block_number, _ in received_transfers
-                        )
-
-                    # increase last_poll_block if the blockchain proceeded
-                    delta_blocks = self.api.raiden.get_block_number() - self.last_poll_block
-                    if delta_blocks > 1:
-                        self.last_poll_block += 1
+                        self.last_poll_offset += len(received_transfers)
 
                     if not self.echo_worker_greenlet.started:
                         log.debug(

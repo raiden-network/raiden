@@ -68,6 +68,11 @@ from raiden.api.v1.resources import (
     PaymentResource,
 )
 from raiden.transfer import channel, views
+from raiden.transfer.events import (
+    EventPaymentSentSuccess,
+    EventPaymentSentFailed,
+    EventPaymentReceivedSuccess,
+)
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -767,21 +772,17 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         result = []
-        for block_number, evt in raiden_service_result:
-            evt.block_number = block_number
-            name = type(evt).__name__
-            evt.event = name
-            if name == 'EventPaymentSentSuccess':
-                event = self.sent_success_payment_schema.dump(evt)
-            elif name == 'EventPaymentSentFailed':
-                event = self.failed_payment_schema.dump(evt)
-            elif name == 'EventPaymentReceivedSuccess':
-                event = self.received_success_payment_schema.dump(evt)
+        for event in raiden_service_result:
+            if isinstance(event, EventPaymentSentSuccess):
+                serialized_event = self.sent_success_payment_schema.dump(event)
+            elif isinstance(event, EventPaymentSentFailed):
+                serialized_event = self.failed_payment_schema.dump(event)
+            elif isinstance(event, EventPaymentReceivedSuccess):
+                serialized_event = self.received_success_payment_schema.dump(event)
             else:
-                log.warning('Unexpected event', unexpected_event=evt)
+                log.warning('Unexpected event', unexpected_event=event)
 
-            result.append(event.data)
-
+            result.append(serialized_event.data)
         return api_response(result=result)
 
     def get_token_network_events_raiden(

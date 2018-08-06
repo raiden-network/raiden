@@ -169,7 +169,7 @@ class SQLiteStorage:
 
         return result
 
-    def get_events_by_identifier(self, from_identifier, to_identifier):
+    def get_events_by_identifier(self, from_identifier, to_identifier, limit=-1, offset=0):
         if not (from_identifier == 'latest' or isinstance(from_identifier, int)):
             raise ValueError("from_identifier must be an integer or 'latest'")
 
@@ -186,15 +186,18 @@ class SQLiteStorage:
             )
             from_identifier = cursor.fetchone()
 
+        limit_offset_clause = f'LIMIT {limit} OFFSET {offset}'
         if to_identifier == 'latest':
             cursor.execute(
-                'SELECT data FROM state_events WHERE identifier >= ? ORDER BY identifier ASC',
+                'SELECT data FROM state_events WHERE identifier >= ? '
+                f'ORDER BY identifier ASC {limit_offset_clause}',
                 (from_identifier,),
             )
         else:
             cursor.execute(
                 'SELECT data FROM state_events WHERE identifier BETWEEN ? AND ? '
-                'ORDER BY identifier ASC', (from_identifier, to_identifier),
+                f'ORDER BY identifier ASC {limit_offset_clause}',
+                (from_identifier, to_identifier),
             )
 
         result = [
