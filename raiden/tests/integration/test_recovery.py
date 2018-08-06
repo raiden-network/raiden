@@ -53,7 +53,10 @@ def test_recovery_happy_case(
         )
 
     app0.raiden.stop()
-    host_port = (app0.raiden.config['host'], app0.raiden.config['port'])
+    host_port = (
+        app0.raiden.config['transport']['udp']['host'],
+        app0.raiden.config['transport']['udp']['port'],
+    )
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(
@@ -164,7 +167,10 @@ def test_recovery_unhappy_case(
         )
 
     app0.raiden.stop()
-    host_port = (app0.raiden.config['host'], app0.raiden.config['port'])
+    host_port = (
+        app0.raiden.config['transport']['udp']['host'],
+        app0.raiden.config['transport']['udp']['port'],
+    )
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(
@@ -240,7 +246,10 @@ def test_recovery_blockchain_events(
     token_address = token_addresses[0]
 
     app0.raiden.stop()
-    host_port = (app0.raiden.config['host'], app0.raiden.config['port'])
+    host_port = (
+        app0.raiden.config['transport']['udp']['host'],
+        app0.raiden.config['transport']['udp']['port'],
+    )
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(

@@ -278,8 +278,6 @@ def create_apps(
 
         config = {
             'chain_id': chain_id,
-            'host': host,
-            'port': port,
             'privatekey_hex': hexlify(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
@@ -288,13 +286,15 @@ def create_apps(
                 'udp': {
                     'external_ip': host,
                     'external_port': port,
-                    'retry_interval': retry_interval,
-                    'retries_before_backoff': retries_before_backoff,
-                    'throttle_capacity': throttle_capacity,
-                    'throttle_fill_rate': throttle_fill_rate,
+                    'host': host,
                     'nat_invitation_timeout': nat_invitation_timeout,
                     'nat_keepalive_retries': nat_keepalive_retries,
                     'nat_keepalive_timeout': nat_keepalive_timeout,
+                    'port': port,
+                    'retries_before_backoff': retries_before_backoff,
+                    'retry_interval': retry_interval,
+                    'throttle_capacity': throttle_capacity,
+                    'throttle_fill_rate': throttle_fill_rate,
                 },
             },
             'rpc': True,
