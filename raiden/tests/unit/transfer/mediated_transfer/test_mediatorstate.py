@@ -3,7 +3,8 @@ import random
 
 import pytest
 
-from raiden.utils import publickey_to_address
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.utils import publickey_to_address, random_secret
 from raiden.transfer import channel
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer import mediator
@@ -1836,3 +1837,66 @@ def test_set_secret():
 
     assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
     assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+
+
+def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
+    amount = UNIT_TRANSFER_AMOUNT
+    target = HOP2
+    from_expiration = UNIT_SETTLE_TIMEOUT
+    pseudo_random_generator = random.Random()
+
+    from_channel = factories.make_channel(
+        partner_balance=2 * MAXIMUM_PENDING_TRANSFERS * amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    from_route = factories.route_from_channel(from_channel)
+
+    channel1 = factories.make_channel(
+        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * amount,
+        partner_address=HOP2,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    available_routes = [factories.route_from_channel(channel1)]
+
+    channelmap = {
+        from_channel.identifier: from_channel,
+        channel1.identifier: channel1,
+    }
+
+    iterations = []
+    for index in range(1, MAXIMUM_PENDING_TRANSFERS + 2):
+        from_transfer = factories.make_signed_transfer_for(
+            from_channel,
+            amount,
+            HOP1,
+            target,
+            from_expiration,
+            random_secret(),
+            identifier=index,
+            nonce=index,
+            locked_amount=index * amount,
+            compute_locksroot=True,
+            allow_invalid=True,
+        )
+
+        block_number = 1
+        init_state_change = ActionInitMediator(
+            available_routes,
+            from_route,
+            from_transfer,
+        )
+
+        iterations.append(mediator.state_transition(
+            None,
+            init_state_change,
+            channelmap,
+            pseudo_random_generator,
+            block_number,
+        ))
+
+    # last iteration should have failed due to exceeded pending transfer limit
+    failed_iteration = iterations.pop()
+    assert failed_iteration.new_state is None and not failed_iteration.events
+
+    assert all(isinstance(iteration.new_state, MediatorTransferState) for iteration in iterations)
