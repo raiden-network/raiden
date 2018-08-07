@@ -1,6 +1,5 @@
 import json
 from enum import Enum
-from typing import Dict, List
 
 from eth_utils import (
     to_canonical_address,
@@ -14,10 +13,16 @@ from web3.contract import Contract
 from raiden.constants import EthClient
 from raiden.exceptions import InsufficientFunds, ReplacementTransactionUnderpriced
 from raiden.utils.filters import decode_event
+from raiden.utils.typing import Dict, List, Union
 try:
     from eth_tester.exceptions import TransactionFailed
 except (ModuleNotFoundError, DistributionNotFound):
     class TransactionFailed(Exception):
+        pass
+try:
+    from evm.exceptions import ValidationError
+except (ModuleNotFoundError, DistributionNotFound):
+    class ValidationError(Exception):
         pass
 
 
@@ -29,9 +34,21 @@ class ClientErrorInspectResult(Enum):
     ALWAYS_FAIL = 4
 
 
-def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspectResult:
+def inspect_client_error(
+        err: Union[ValueError, ValidationError],
+        eth_node: str,
+) -> ClientErrorInspectResult:
+    # tester/py-evm doesn't return json at all, only a message inside ValidationError
+    if eth_node == EthClient.TESTER:
+        if not getattr(err, 'args', None):
+            return ClientErrorInspectResult.PROPAGATE_ERROR
+        elif 'cannot afford txn gas' in err.args[0]:
+            return ClientErrorInspectResult.INSUFFICIENT_FUNDS
+        elif 'transaction nonce' in err.args[0]:
+            return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+
     # both clients return invalid json. They use single quotes while json needs double ones.
-    json_response = str(val_err).replace("'", '"')
+    json_response = str(err).replace("'", '"')
     try:
         error = json.loads(json_response)
     except json.JSONDecodeError:
@@ -78,7 +95,7 @@ class ContractProxy:
                 data=decode_hex(data),
                 **kargs,
             )
-        except ValueError as e:
+        except (ValueError, ValidationError) as e:
             action = inspect_client_error(e, self.jsonrpc_client.eth_node)
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
                 raise InsufficientFunds('Insufficient ETH for transaction')
@@ -90,7 +107,7 @@ class ContractProxy:
                     'equal to the previous transaction\'s gas amount',
                 )
 
-            raise e
+            raise
 
         return txhash
 
