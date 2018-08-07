@@ -135,7 +135,11 @@ def test_channel_settle_must_properly_cleanup():
     assert channel_state.identifier not in ids_to_channels
 
 
-def test_multiple_channel_states(chain_state, payment_network_state, token_network_state):
+def test_multiple_channel_states(
+        chain_state,
+        token_network_state,
+        our_address,
+):
     open_block_number = 10
     pseudo_random_generator = random.Random()
     pkey, address = factories.make_privkey_address()
@@ -144,11 +148,13 @@ def test_multiple_channel_states(chain_state, payment_network_state, token_netwo
     our_balance = amount + 50
     channel_state = factories.make_channel(
         our_balance=our_balance,
+        our_address=our_address,
         partner_balance=our_balance,
         partner_address=address,
     )
 
     channel_new_state_change = ContractReceiveChannelNew(
+        our_address,
         token_network_state.address,
         channel_state,
     )
@@ -204,6 +210,7 @@ def test_multiple_channel_states(chain_state, payment_network_state, token_netwo
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
+        our_address,
         token_network_state.address,
         channel_state.identifier,
         settle_block_number,
@@ -228,6 +235,7 @@ def test_multiple_channel_states(chain_state, payment_network_state, token_netwo
         partner_address=address,
     )
     channel_new_state_change = ContractReceiveChannelNew(
+        our_address,
         token_network_state.address,
         new_channel_state,
     )
