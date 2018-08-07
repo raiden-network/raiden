@@ -309,12 +309,14 @@ def create_apps(
                     'transport_type': 'matrix',
                     'transport': {
                         'matrix': {
-                            'server': local_matrix_url,
-                            'server_name': 'matrix.local.raiden',
                             'discovery_room': {
                                 'alias_fragment': 'discovery',
                                 'server': 'matrix.local.raiden',
                             },
+                            'retries_before_backoff': retries_before_backoff,
+                            'retry_interval': retry_interval,
+                            'server': local_matrix_url,
+                            'server_name': 'matrix.local.raiden',
                         },
                     },
                 },
