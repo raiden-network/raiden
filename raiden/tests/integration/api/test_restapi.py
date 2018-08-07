@@ -838,7 +838,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_api_transfers(api_backend, raiden_network, token_addresses):
+def test_api_payments(api_backend, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
@@ -848,7 +848,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
     api_server, _ = api_backend
     our_address = api_server.rest_api.raiden_api.address
 
-    transfer = {
+    payment = {
         'initiator_address': to_checksum_address(our_address),
         'target_address': to_checksum_address(target_address),
         'token_address': to_checksum_address(token_address),
@@ -859,7 +859,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
     request = grequests.post(
         api_url_for(
             api_backend,
-            'transfertotargetresource',
+            'paymenttotargetresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
@@ -868,7 +868,7 @@ def test_api_transfers(api_backend, raiden_network, token_addresses):
     response = request.send().response
     assert_proper_response(response)
     response = response.json()
-    assert response == transfer
+    assert response == payment
 
 
 @pytest.mark.parametrize('number_of_tokens', [0])

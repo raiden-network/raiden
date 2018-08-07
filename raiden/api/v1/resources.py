@@ -5,7 +5,7 @@ from raiden.api.v1.encoding import (
     ChannelPutSchema,
     ChannelPatchSchema,
     EventRequestSchema,
-    TransferSchema,
+    PaymentSchema,
     ConnectionsConnectSchema,
     ConnectionsLeaveSchema,
 )
@@ -147,15 +147,15 @@ class RegisterTokenResource(BaseResource):
         )
 
 
-class TransferToTargetResource(BaseResource):
+class PaymentToTargetResource(BaseResource):
 
-    post_schema = TransferSchema(
+    post_schema = PaymentSchema(
         only=('amount', 'identifier'),
     )
 
     @use_kwargs(post_schema, locations=('json',))
     def post(self, token_address, target_address, amount, identifier):
-        return self.rest_api.initiate_transfer(
+        return self.rest_api.initiate_payment(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
             target_address=target_address,

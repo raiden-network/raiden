@@ -44,7 +44,7 @@ from raiden.api.v1.encoding import (
     HexAddressConverter,
     KeccakConverter,
     PartnersPerTokenListSchema,
-    TransferSchema,
+    PaymentSchema,
     InvalidEndpoint,
 )
 from raiden.api.v1.resources import (
@@ -58,7 +58,7 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenEventsResource,
     ChannelEventsResource,
-    TransferToTargetResource,
+    PaymentToTargetResource,
     ConnectionsResource,
     ConnectionsInfoResource,
 )
@@ -105,8 +105,8 @@ URLS_V1 = [
         ChannelEventsResource,
     ),
     (
-        '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
-        TransferToTargetResource,
+        '/payments/<hexaddress:token_address>/<hexaddress:target_address>',
+        PaymentToTargetResource,
     ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
     ('/connections', ConnectionsInfoResource),
@@ -351,7 +351,7 @@ class RestAPI:
         self.channel_schema = ChannelStateSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
-        self.transfer_schema = TransferSchema()
+        self.payment_schema = PaymentSchema()
 
     def get_our_address(self):
         return api_response(
@@ -650,7 +650,7 @@ class RestAPI:
         result = self.partner_per_token_list_schema.dump(schema_list)
         return api_response(result=result.data)
 
-    def initiate_transfer(
+    def initiate_payment(
             self,
             registry_address,
             token_address,
@@ -688,7 +688,7 @@ class RestAPI:
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        transfer = {
+        payment = {
             'initiator_address': self.raiden_api.address,
             'registry_address': registry_address,
             'token_address': token_address,
@@ -696,7 +696,7 @@ class RestAPI:
             'amount': amount,
             'identifier': identifier,
         }
-        result = self.transfer_schema.dump(transfer)
+        result = self.payment_schema.dump(payment)
         return api_response(result=result.data)
 
     def _deposit(self, registry_address, channel_state, total_deposit):
