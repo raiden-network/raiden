@@ -1,4 +1,8 @@
+import structlog
+
 from raiden.transfer.architecture import StateManager
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_from_latest_snapshot(transition_function, storage):
@@ -6,12 +10,14 @@ def restore_from_latest_snapshot(transition_function, storage):
     snapshot = storage.get_state_snapshot()
 
     if snapshot:
+        log.debug('Restoring from snapshot')
         last_applied_state_change_id, state = snapshot
         unapplied_state_changes = storage.get_statechanges_by_identifier(
             from_identifier=last_applied_state_change_id,
             to_identifier='latest',
         )
     else:
+        log.debug('No snapshot found, replaying all state changes')
         state = None
         unapplied_state_changes = storage.get_statechanges_by_identifier(
             from_identifier=0,
@@ -21,6 +27,7 @@ def restore_from_latest_snapshot(transition_function, storage):
     state_manager = StateManager(transition_function, state)
     wal = WriteAheadLog(state_manager, storage)
 
+    log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
     for state_change in unapplied_state_changes:
         events.extend(state_manager.dispatch(state_change))
 

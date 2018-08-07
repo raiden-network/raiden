@@ -208,6 +208,7 @@ class RaidenService:
         )
 
         if self.wal.state_manager.current_state is None:
+            log.debug('No recoverable state available, created inital state')
             block_number = self.chain.block_number()
 
             state_change = ActionInitChain(
@@ -232,6 +233,7 @@ class RaidenService:
             # for that given block have been processed, filters can be safely
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
+            log.debug('Restored state from WAL', last_restored_block=last_log_block_number)
 
         # Install the filters using the correct from_block value, otherwise
         # blockchain logs can be lost.
