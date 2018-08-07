@@ -3,12 +3,12 @@ Changelog
 =========
 
 * :feature:`1998` Add a strategy to make sure that the account Raiden runs on always has enough balance to settle all channels. No new channels can be openend when no sufficient balance for the whole channel lifecycle is available.
+* :feature:`1950` Breaking change: Better transaction handling on restart. This change breaks binary compatibility with the previous WAL.
 
 * :release:`0.4.2 <2018-08-02>`
 * :bug:`2004` Show a webui error when JSON-RPC requests fail.
 * :bug:`2039` Return error for negative deposits via REST API
 * :feature:`2011` Add a ``--disable-debug-logfile`` argument to disable the always on debug file if required by the user.
-* :feature:`1950` Breaking change: Better transaction handling on restart. This change breaks binary compatibility with the previous WAL.
 * :bug:`1821` Show a better error message when channel creation fails.
 * :bug:`1817` Change the webui error message when the token registration fails.
 * :feature:`1844` Log debug output to a file to make debugging of problems easier.
