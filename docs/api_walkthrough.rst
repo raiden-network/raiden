@@ -124,7 +124,7 @@ Here it's interesting to notice that a ``channel_identifier`` has been generated
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the node of the user and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
+A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -197,7 +197,7 @@ Connecting to an already existing token network is quite simple. All that is nee
         "funds": 2000
     }
 
-This automatically opens channels with three random peers in the token network. With 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
+This automatically opens channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 
 The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
@@ -206,7 +206,7 @@ The user node is now connected to the token network for the RTT token. It should
 
 Leave
 ------
-If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint takes care of closing and settling all open channels for a specific  token network:
+If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint takes care of closing and settling all open channels for a specific token network:
 
 .. http:example:: curl wget httpie python-requests
 
