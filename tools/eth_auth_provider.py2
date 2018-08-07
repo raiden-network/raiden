@@ -104,8 +104,7 @@ class EthAuthProvider(object):
         rec_addr = _recover(data=self.hs_hostname, signature=signature)
         if not rec_addr or rec_addr != user_addr:
             logger.error(
-                'hs hostname signature mismatch user informed account. '
-                'user=%r, signer=%r',
+                'invalid account password/signature. user=%r, signer=%r',
                 user_id,
                 rec_address,
             )
