@@ -12,6 +12,7 @@ from raiden.messages import (
     signing,
 )
 from raiden.utils import (
+    random_secret,
     sha3,
     publickey_to_address,
     privatekey_to_address,
@@ -31,6 +32,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     LockedTransferUnsignedState,
 )
+from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
 
 # prefixing with UNIT_ to differ from the default globals
@@ -50,15 +52,7 @@ UNIT_PAYMENT_NETWORK_IDENTIFIER = b'paymentnetworkidentifier'
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
 UNIT_TRANSFER_TARGET = b'targettargettargetta'
-UNIT_TRANSFER_DESCRIPTION = TransferDescriptionWithSecretState(
-    UNIT_PAYMENT_NETWORK_IDENTIFIER,
-    UNIT_TRANSFER_IDENTIFIER,
-    UNIT_TRANSFER_AMOUNT,
-    UNIT_TOKEN_NETWORK_ADDRESS,
-    UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_TARGET,
-    UNIT_SECRET,
-)
+
 UNIT_TRANSFER_PKEY_BIN = sha3(b'transfer pkey')
 UNIT_TRANSFER_PKEY = PrivateKey(UNIT_TRANSFER_PKEY_BIN)
 UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b'transfer pkey'))
@@ -78,6 +72,29 @@ HOP6 = privatekey_to_address(b'66666666666666666666666666666666')
 UNIT_CHAIN_ID = 337
 
 ADDR = b'addraddraddraddraddr'
+
+
+def make_transfer_description(
+        payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=UNIT_TRANSFER_AMOUNT,
+        token_network=UNIT_TOKEN_NETWORK_ADDRESS,
+        initiator=UNIT_TRANSFER_INITIATOR,
+        target=UNIT_TRANSFER_TARGET,
+        secret=None,
+):
+    return TransferDescriptionWithSecretState(
+        payment_network_identifier=payment_network_identifier,
+        payment_identifier=payment_identifier,
+        amount=amount,
+        token_network_identifier=token_network,
+        initiator=initiator,
+        target=target,
+        secret=secret or random_secret(),
+    )
+
+
+UNIT_TRANSFER_DESCRIPTION = make_transfer_description(secret=UNIT_SECRET)
 
 
 def make_address():
@@ -344,8 +361,11 @@ def make_signed_transfer_for(
         identifier=1,
         nonce=1,
         transferred_amount=0,
+        locked_amount=None,
         pkey=UNIT_TRANSFER_PKEY,
         sender=UNIT_TRANSFER_SENDER,
+        compute_locksroot=False,
+        allow_invalid=False,
 ):
 
     pubkey = pkey.public_key.format(compressed=False)
@@ -359,6 +379,15 @@ def make_signed_transfer_for(
 
     channel_identifier = channel_state.identifier
     token_address = channel_state.token_address
+
+    if compute_locksroot:
+        locksroot = merkleroot(channel.compute_merkletree_with(
+            channel_state.partner_state.merkletree,
+            sha3(Lock(amount, expiration, sha3(secret)).as_bytes),
+        ))
+    else:
+        locksroot = EMPTY_MERKLE_ROOT
+
     mediated_transfer = make_signed_transfer(
         amount,
         initiator,
@@ -368,20 +397,23 @@ def make_signed_transfer_for(
         payment_identifier=identifier,
         nonce=nonce,
         transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
         recipient=recipient,
         channel_identifier=channel_identifier,
         token=token_address,
         pkey=pkey,
         sender=sender,
+        locksroot=locksroot,
     )
 
     # Do *not* register the transfer here
-    is_valid, msg, _ = channel.is_valid_lockedtransfer(
-        mediated_transfer,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
-    )
-    assert is_valid, msg
+    if not allow_invalid:
+        is_valid, msg, _ = channel.is_valid_lockedtransfer(
+            mediated_transfer,
+            channel_state,
+            channel_state.partner_state,
+            channel_state.our_state,
+        )
+        assert is_valid, msg
 
     return mediated_transfer

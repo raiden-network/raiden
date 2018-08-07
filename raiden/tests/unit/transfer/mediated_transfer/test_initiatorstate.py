@@ -2,9 +2,11 @@
 import random
 from copy import deepcopy
 
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.utils import random_secret
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
+    make_transfer_description,
     UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRET,
     UNIT_SECRETHASH,
@@ -153,7 +155,7 @@ def test_init_with_usable_routes():
     )
 
     assert isinstance(transition.new_state, InitiatorPaymentState)
-    assert transition.events, 'we have a valid route, the mediated transfer event must be emited'
+    assert transition.events, 'we have a valid route, the mediated transfer event must be emitted'
 
     payment_state = transition.new_state
     assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
@@ -605,3 +607,36 @@ def test_action_cancel_route_comparison():
     assert a != b
     assert a != c
     assert c == d
+
+
+def test_init_with_maximum_pending_transfers_exceeded():
+    channel1 = factories.make_channel(
+        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channelmap = {channel1.identifier: channel1}
+    available_routes = [factories.route_from_channel(channel1)]
+    pseudo_random_generator = random.Random()
+
+    transitions = list()
+    block_number = 1
+    for _ in range(MAXIMUM_PENDING_TRANSFERS + 1):
+        init_state_change = ActionInitInitiator(make_transfer_description(), available_routes)
+        transitions.append(initiator_manager.state_transition(
+            None,
+            init_state_change,
+            channelmap,
+            pseudo_random_generator,
+            block_number,
+        ))
+
+    failed_transition = transitions.pop()
+    assert all(
+        isinstance(transition.new_state, InitiatorPaymentState)
+        for transition in transitions
+    )
+
+    assert failed_transition.new_state is None
+    assert len(failed_transition.events) == 1
+    assert isinstance(failed_transition.events[0], EventPaymentSentFailed)
