@@ -603,7 +603,7 @@ def run_app(
     try:
         node_version = web3.version.node  # pylint: disable=no-member
     except ConnectTimeout:
-        raise EthNodeCommunicationError('couldnt reach the ethereum node')
+        raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
 
     supported, _ = is_supported_client(node_version)
     if not supported:
