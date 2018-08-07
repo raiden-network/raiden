@@ -11,7 +11,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     claim_lock,
     direct_transfer,
     get_channelstate,
@@ -55,8 +55,16 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         app0.raiden.default_registry.address,
         token_address,
     )
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(app0),
+        token_network_identifier,
+    )
 
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+
+    assert channel_identifier in token_network.partneraddresses_to_channels[
+        app1.raiden.address
+    ]
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
@@ -66,6 +74,23 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         app0.raiden.address,
     )
 
+    waiting.wait_for_close(
+        app0.raiden,
+        registry_address,
+        token_address,
+        [channel_identifier],
+        app0.raiden.alarm.sleep_time,
+    )
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0.raiden),
+        registry_address,
+        token_address,
+        app1.raiden.address,
+    )
+
+    assert channel_state.close_transaction.finished_block_number
+
     waiting.wait_for_settle(
         app0.raiden,
         registry_address,
@@ -74,20 +99,19 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         app0.raiden.alarm.sleep_time,
     )
 
-    assert_synched_channel_state(
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(app0),
         token_network_identifier,
-        app0, deposit, [],
-        app1, deposit, [],
     )
+
+    assert channel_identifier not in token_network.partneraddresses_to_channels[
+        app1.raiden.address
+    ]
 
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
         to_identifier='latest',
     )
-
-    channel_state = get_channelstate(app0, app1, token_network_identifier)
-    assert channel_state.close_transaction.finished_block_number
-    assert channel_state.settle_transaction.finished_block_number
 
     assert must_contain_entry(state_changes, ContractReceiveChannelClosed, {
         'token_network_identifier': token_network_identifier,
@@ -99,7 +123,6 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
-        'settle_block_number': channel_state.settle_transaction.finished_block_number,
     })
 
 
@@ -115,6 +138,17 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app.raiden.default_registry.address,
         token_address,
     )
+
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(alice_app),
+        token_network_identifier,
+    )
+
+    channel_identifier = get_channelstate(alice_app, bob_app, token_network_identifier).identifier
+
+    assert channel_identifier in token_network.partneraddresses_to_channels[
+        bob_app.raiden.address
+    ]
 
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
@@ -137,7 +171,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     #    A -> B LockedTransfer
     #    B -> A SecretRequest
     #    - protocol didn't continue
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         alice_app, deposit, [lock],
         bob_app, deposit, [],
@@ -169,14 +203,32 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app.raiden.alarm.sleep_time,
     )
 
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(bob_app),
+        token_network_identifier,
+    )
+
+    assert channel_identifier in token_network.partneraddresses_to_channels[
+        alice_app.raiden.address
+    ]
+
     # wait for the node to call batch unlock
     with gevent.Timeout(10):
         wait_for_batch_unlock(
-            alice_app,
+            bob_app,
             token_network_identifier,
             alice_bob_channel_state.partner_state.address,
             alice_bob_channel_state.our_state.address,
         )
+
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(bob_app),
+        token_network_identifier,
+    )
+
+    assert channel_identifier not in token_network.partneraddresses_to_channels[
+        alice_app.raiden.address
+    ]
 
     alice_new_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_new_balance = bob_initial_balance + deposit + alice_to_bob_amount

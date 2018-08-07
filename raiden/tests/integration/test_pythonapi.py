@@ -15,7 +15,7 @@ from raiden.exceptions import (
 from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     direct_transfer,
     get_channelstate,
 )
@@ -235,13 +235,13 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     # wait for the taker to receive and process the messages
     gevent.sleep(0.5)
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         maker_token,
         app0, deposit - maker_amount, [],
         app1, deposit + maker_amount, [],
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         taker_token,
         app0, deposit + taker_amount, [],
         app1, deposit - taker_amount, [],

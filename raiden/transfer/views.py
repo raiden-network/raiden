@@ -5,9 +5,11 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_UNUSABLE,
     NettingChannelState,
     NODE_NETWORK_UNKNOWN,
     ChainState,
+    PaymentNetworkState,
     PaymentMappingState,
     TokenNetworkState,
 )
@@ -25,7 +27,8 @@ def all_neighbour_nodes(chain_state: ChainState) -> typing.Set[typing.Address]:
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
-            for channel_state in token_network.partneraddresses_to_channels.values():
+            channel_states = token_network.channelidentifiers_to_channels.values()
+            for channel_state in channel_states:
                 addresses.add(channel_state.partner_state.address)
 
     return addresses
@@ -121,10 +124,10 @@ def get_our_capacity_for_token_network(
 def get_token_network_registry_by_token_network_identifier(
         chain_state: ChainState,
         token_network_identifier: typing.Address,
-) -> typing.Address:
-    for token_network in chain_state.identifiers_to_paymentnetworks.values():
-        if token_network_identifier in token_network.tokenidentifiers_to_tokennetworks:
-            return token_network
+) -> typing.Optional[PaymentNetworkState]:
+    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
+        if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
+            return payment_network
 
     return None
 
@@ -235,7 +238,6 @@ def get_token_network_by_identifier(
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
             token_network_id,
         )
-
         if token_network_state:
             return token_network_state
 
@@ -257,7 +259,13 @@ def get_channelstate_for(
 
     channel_state = None
     if token_network:
-        channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels[partner_address],
+            [CHANNEL_STATE_UNUSABLE],
+        )
+        # If multiple channel states are found, return the last one.
+        if states:
+            channel_state = states[-1]
 
     return channel_state
 
@@ -275,7 +283,12 @@ def get_channelstate_by_token_network_and_partner(
 
     channel_state = None
     if token_network:
-        channel_state = token_network.partneraddresses_to_channels.get(partner_address)
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels[partner_address],
+            [CHANNEL_STATE_UNUSABLE],
+        )
+        if states:
+            channel_state = states[-1]
 
     return channel_state
 
@@ -284,7 +297,7 @@ def get_channelstate_by_token_network_identifier(
         chain_state: ChainState,
         token_network_id: typing.Address,
         channel_id: typing.Address,
-):
+) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
@@ -460,7 +473,7 @@ def list_channelstate_for_tokennetwork(
     )
 
     if token_network:
-        result = token_network.partneraddresses_to_channels.values()
+        result = flatten_channel_states(token_network.partneraddresses_to_channels.values())
     else:
         result = []
 
@@ -473,7 +486,7 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
         for token_network in payment_network.tokenaddresses_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(
-                token_network.partneraddresses_to_channels.values(),
+                flatten_channel_states(token_network.partneraddresses_to_channels.values()),
             )
 
     return result
@@ -511,8 +524,43 @@ def filter_channels_by_partneraddress(
 
     result = []
     for partner in partner_addresses:
-        channel_state = token_network.partneraddresses_to_channels.get(partner)
-        if channel_state:
-            result.append(channel_state)
+        states = filter_channels_by_status(
+            token_network.partneraddresses_to_channels[partner],
+            [CHANNEL_STATE_UNUSABLE],
+        )
+        # If multiple channel states are found, return the last one.
+        if states:
+            result.append(states[-1])
 
     return result
+
+
+def filter_channels_by_status(
+        channel_states: typing.Dict[typing.ChannelID, NettingChannelState],
+        exclude_states=None,
+) -> typing.List[NettingChannelState]:
+    """ Filter the list of channels by excluding ones
+    for which the state exists in `exclude_states`. """
+
+    if exclude_states is None:
+        exclude_states = []
+
+    states = []
+    for channel_state in channel_states.values():
+        if channel.get_status(channel_state) not in exclude_states:
+            states.append(channel_state)
+
+    return states
+
+
+def flatten_channel_states(
+        channel_states: typing.List[typing.Dict[typing.ChannelID, NettingChannelState]],
+) -> typing.List[NettingChannelState]:
+    """ Receive a list of dicts with channel_id -> channel state
+    and return the values of those dicts flattened. """
+    states = []
+    for channel_state in channel_states:
+        states.extend(channel_state.values())
+
+    # Sort the list of states in ascending order of identifiers
+    return sorted(states, key=lambda item: item.identifier)

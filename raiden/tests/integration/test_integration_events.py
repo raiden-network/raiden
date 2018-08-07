@@ -23,7 +23,7 @@ from raiden.blockchain.events import (
 )
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     get_channelstate,
     pending_mediated_transfer,
 )
@@ -142,7 +142,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, 0, [],
         app1, 0, [],
@@ -164,7 +164,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         retry_timeout,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, 0, [],
@@ -186,7 +186,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         retry_timeout,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -285,7 +285,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
     assert channelcount0 + 1 == channelcount1
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, 0, [],
         app1, 0, [],
@@ -419,13 +419,13 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout
     wait_until_block(app0.raiden.chain, settle_expiration)
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_address,
         app1, deposit - amount, [],
         app2, deposit + amount, [],
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_address,
         app0, deposit - amount, [],
         app1, deposit + amount, [],

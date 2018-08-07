@@ -3,6 +3,7 @@ from raiden.transfer import (
     token_network,
     views,
 )
+from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer import (
     initiator_manager,
     mediator,
@@ -516,11 +517,7 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
         for token_network_state in payment_network_state.tokenaddresses_to_tokennetworks.values():
-            for channel_state in token_network_state.partneraddresses_to_channels.values():
-                events.extend(channel.events_for_close(
-                    channel_state,
-                    chain_state.block_number,
-                ))
+            events.extend(_get_channels_close_events(token_network_state))
 
     return TransitionResult(chain_state, events)
 
@@ -549,62 +546,6 @@ def handle_tokenadded(
         state_change.payment_network_identifier,
         state_change.token_network,
     )
-
-    return TransitionResult(chain_state, events)
-
-
-def handle_channel_batch_unlock(
-        chain_state: ChainState,
-        state_change: ContractReceiveChannelBatchUnlock,
-) -> TransitionResult:
-    token_network_identifier = state_change.token_network_identifier
-    token_network_state = views.get_token_network_by_identifier(
-        chain_state,
-        token_network_identifier,
-    )
-
-    events = []
-    if token_network_state:
-        payment_network_state = views.get_token_network_registry_by_token_network_identifier(
-            chain_state,
-            token_network_state.address,
-        )
-
-        pseudo_random_generator = chain_state.pseudo_random_generator
-        participant1 = state_change.participant
-        participant2 = state_change.partner
-
-        for channel_state in token_network_state.channelidentifiers_to_channels.values():
-            are_addresses_valid1 = (
-                channel_state.our_state.address == participant1 and
-                channel_state.partner_state.address == participant2
-            )
-            are_addresses_valid2 = (
-                channel_state.our_state.address == participant2 and
-                channel_state.partner_state.address == participant1
-            )
-            is_valid_locksroot = True
-            is_valid_channel = (
-                (are_addresses_valid1 or are_addresses_valid2) and
-                is_valid_locksroot
-            )
-
-            if is_valid_channel:
-                sub_iteration = channel.state_transition(
-                    channel_state,
-                    state_change,
-                    pseudo_random_generator,
-                    chain_state.block_number,
-                )
-                events.extend(sub_iteration.events)
-
-                if sub_iteration.new_state is None:
-                    del payment_network_state.tokenaddresses_to_tokennetworks[
-                        token_network_state.token_address
-                    ]
-                    del payment_network_state.tokenidentifiers_to_tokennetworks[
-                        token_network_identifier
-                    ]
 
     return TransitionResult(chain_state, events)
 
@@ -794,7 +735,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
-        iteration = handle_channel_batch_unlock(
+        iteration = handle_token_network_action(
             chain_state,
             state_change,
         )
@@ -891,3 +832,21 @@ def state_transition(chain_state: ChainState, state_change):
     sanity_check(iteration)
 
     return iteration
+
+
+def _get_channels_close_events(
+        chain_state: ChainState,
+        token_network_state: TokenNetworkState,
+) -> typing.List[Event]:
+    events = []
+    for channel_states in token_network_state.partneraddresses_to_channels.values():
+        filtered_channel_states = views.filter_channels_by_status(
+            channel_states,
+            [channel.CHANNEL_STATE_UNUSABLE],
+        )
+        for channel_state in filtered_channel_states:
+            events.extend(channel.events_for_close(
+                channel_state,
+                chain_state.block_number,
+            ))
+    return events

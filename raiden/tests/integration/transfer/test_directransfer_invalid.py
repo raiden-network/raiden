@@ -15,7 +15,7 @@ from raiden.tests.utils.factories import (
     make_privkey_address,
 )
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     get_channelstate,
     sign_and_inject,
 )
@@ -88,7 +88,7 @@ def test_receive_directtransfer_invalidtoken(raiden_network, deposit, token_addr
         app1,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -136,7 +136,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, token_addresses
         app1,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, balance0, [],
         app1, balance1, [],
@@ -180,7 +180,7 @@ def test_receive_directtransfer_invalidsender(raiden_network, deposit, token_add
         app0,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],
@@ -244,7 +244,7 @@ def test_receive_directtransfer_invalidnonce(raiden_network, deposit, token_addr
         app1,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - transferred_amount, [],
         app1, deposit + transferred_amount, [],
@@ -300,7 +300,7 @@ def test_received_directtransfer_closedchannel(raiden_network, token_addresses, 
     )
 
     # The local state must not change since the channel is already closed
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [],
         app1, deposit, [],

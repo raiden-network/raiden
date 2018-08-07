@@ -9,14 +9,15 @@ from raiden_contracts.constants import (
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.tests.utils.geth import wait_until_block
+from raiden.tests.utils.events import must_contain_entry
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
 )
+from raiden.transfer.state_change import ContractReceiveChannelSettled
 from eth_utils import is_same_address, to_normalized_address
 
 
@@ -159,7 +160,12 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     )
     wait_until_block(node1.raiden.chain, settlement_block)
 
-    # Load the new state with the channel settled
-    channel12 = get_channelstate(node1, node2, token_network_identifier)
+    state_changes = node1.raiden.wal.storage.get_statechanges_by_identifier(
+        from_identifier=0,
+        to_identifier='latest',
+    )
 
-    assert channel.get_status(channel12) == CHANNEL_STATE_SETTLED
+    assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
+        'token_network_identifier': token_network_identifier,
+        'channel_identifier': channel12.identifier,
+    })

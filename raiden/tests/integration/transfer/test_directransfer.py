@@ -4,7 +4,7 @@ from raiden.transfer import views
 from raiden.waiting import wait_for_transfer_success
 
 from raiden.tests.utils.transfer import (
-    assert_synched_channel_state,
+    assert_synced_channel_state,
     direct_transfer,
 )
 
@@ -30,7 +30,7 @@ def test_direct_transfer(raiden_network, token_addresses, deposit, network_wait)
         timeout=network_wait,
     )
 
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
@@ -75,7 +75,7 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
         )
 
     no_outstanding_locks = []
-    assert_synched_channel_state(
+    assert_synced_channel_state(
         token_network_identifier,
         app0, deposit - amount, no_outstanding_locks,
         app1, deposit + amount, no_outstanding_locks,

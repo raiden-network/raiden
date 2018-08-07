@@ -1,6 +1,7 @@
-from raiden.transfer import channel
+from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventTransferSentFailed
+from raiden.transfer.state import CHANNEL_STATE_UNUSABLE
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionTransferDirect,
@@ -8,6 +9,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveRouteNew,
     ReceiveTransferDirect,
 )
@@ -22,6 +24,7 @@ def subdispatch_to_channel_by_id(
     events = list()
 
     ids_to_channels = token_network_state.channelidentifiers_to_channels
+
     channel_state = ids_to_channels.get(state_change.channel_identifier)
 
     if channel_state:
@@ -32,10 +35,16 @@ def subdispatch_to_channel_by_id(
             block_number,
         )
 
+        partner_to_channels = token_network_state.partneraddresses_to_channels[
+            channel_state.partner_state.address
+        ]
+
         if result.new_state is None:
             del ids_to_channels[state_change.channel_identifier]
+            del partner_to_channels[state_change.channel_identifier]
         else:
             ids_to_channels[state_change.channel_identifier] = result.new_state
+            partner_to_channels[state_change.channel_identifier] = result.new_state
 
         events.extend(result.events)
 
@@ -75,7 +84,8 @@ def handle_channelnew(token_network_state, state_change):
     # the ethereum node
     if channel_id not in token_network_state.channelidentifiers_to_channels:
         token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
-        token_network_state.partneraddresses_to_channels[partner_address] = channel_state
+        partneraddresses_to_channels = token_network_state.partneraddresses_to_channels
+        partneraddresses_to_channels[partner_address][channel_id] = channel_state
 
     return TransitionResult(token_network_state, events)
 
@@ -122,6 +132,53 @@ def handle_settled(
     )
 
 
+def handle_batch_unlock(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
+    participant1 = state_change.participant
+    participant2 = state_change.partner
+
+    events = list()
+    for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
+        are_addresses_valid1 = (
+            channel_state.our_state.address == participant1 and
+            channel_state.partner_state.address == participant2
+        )
+        are_addresses_valid2 = (
+            channel_state.our_state.address == participant2 and
+            channel_state.partner_state.address == participant1
+        )
+        is_valid_locksroot = True
+        is_valid_channel = (
+            (are_addresses_valid1 or are_addresses_valid2) and
+            is_valid_locksroot
+        )
+
+        if is_valid_channel:
+            sub_iteration = channel.state_transition(
+                channel_state,
+                state_change,
+                pseudo_random_generator,
+                block_number,
+            )
+            events.extend(sub_iteration.events)
+
+            if sub_iteration.new_state is None:
+
+                del token_network_state.partneraddresses_to_channels[
+                    channel_state.partner_state.address
+                ][channel_state.identifier]
+
+                del token_network_state.channelidentifiers_to_channels[
+                    channel_state.identifier
+                ]
+
+    return TransitionResult(token_network_state, events)
+
+
 def handle_newroute(token_network_state, state_change):
     events = list()
 
@@ -140,11 +197,14 @@ def handle_action_transfer_direct(
         block_number,
 ):
     receiver_address = state_change.receiver_address
-    channel_state = token_network_state.partneraddresses_to_channels.get(receiver_address)
+    channel_states = views.filter_channels_by_status(
+        token_network_state.partneraddresses_to_channels[receiver_address],
+        [CHANNEL_STATE_UNUSABLE],
+    )
 
-    if channel_state:
+    if channel_states:
         iteration = channel.state_transition(
-            channel_state,
+            channel_states[-1],
             state_change,
             pseudo_random_generator,
             block_number,
@@ -242,6 +302,13 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_settled(
+            token_network_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
+    elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        iteration = handle_batch_unlock(
             token_network_state,
             state_change,
             pseudo_random_generator,

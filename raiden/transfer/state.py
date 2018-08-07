@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
 from binascii import hexlify
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from functools import total_ordering
 
 import networkx
@@ -204,7 +204,7 @@ class TokenNetworkState(State):
         self.network_graph = TokenNetworkGraphState(networkx.Graph())
 
         self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channels = dict()
+        self.partneraddresses_to_channels = defaultdict(dict)
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
