@@ -29,6 +29,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     refund_from_sendmediated,
     SendBalanceProof,
     SendLockedTransfer,
@@ -1538,9 +1539,9 @@ def handle_receive_directtransfer(
         )
 
         send_processed = SendProcessed(
-            direct_transfer.balance_proof.sender,
-            b'global',
-            direct_transfer.message_identifier,
+            recipient=direct_transfer.balance_proof.sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=direct_transfer.message_identifier,
         )
         events = [payment_received_success, send_processed]
     else:
@@ -1573,9 +1574,9 @@ def handle_refundtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
-            refund.transfer.balance_proof.sender,
-            b'global',
-            refund.transfer.message_identifier,
+            recipient=refund.transfer.balance_proof.sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=refund.transfer.message_identifier,
         )
         events = [send_processed]
     else:
@@ -1610,9 +1611,9 @@ def handle_receive_lockedtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
-            mediated_transfer.balance_proof.sender,
-            b'global',
-            mediated_transfer.message_identifier,
+            recipient=mediated_transfer.balance_proof.sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=mediated_transfer.message_identifier,
         )
         events = [send_processed]
     else:
@@ -1644,9 +1645,9 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
         send_processed = SendProcessed(
-            unlock.balance_proof.sender,
-            b'global',
-            unlock.message_identifier,
+            recipient=unlock.balance_proof.sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=unlock.message_identifier,
         )
         events = [send_processed]
     else:

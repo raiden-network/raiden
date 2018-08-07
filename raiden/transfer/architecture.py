@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from typing import (
+from raiden.utils.typing import (
     Address,
     List,
     MessageID,

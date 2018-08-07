@@ -209,9 +209,9 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
             )
 
             send_processed = SendProcessed(
-                balance_proof_sender,
-                b'global',
-                state_change.message_identifier,
+                recipient=balance_proof_sender,
+                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+                message_identifier=state_change.message_identifier,
             )
 
             events.extend([payment_received_success, unlock_success, send_processed])

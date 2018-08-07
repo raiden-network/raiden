@@ -1130,9 +1130,9 @@ def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifier
                     events.append(unlock)
 
                     send_processed = SendProcessed(
-                        balance_proof_sender,
-                        b'global',
-                        state_change.message_identifier,
+                        recipient=balance_proof_sender,
+                        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+                        message_identifier=state_change.message_identifier,
                     )
                     events.append(send_processed)
 
