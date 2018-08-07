@@ -163,7 +163,7 @@ It is possible for both parties to query the state of the specific payment chann
 
 This gives a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
-A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`transferring tokens <transferring-tokens>` between each other.
+A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`transferring tokens <token-payments>` between each other.
 
 The above is not how a user would normally join an already existing token network. It is only included here to show how it works under the hood.
 
@@ -199,7 +199,7 @@ Connecting to an already existing token network is quite simple. All that is nee
 
 This automatically opens channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 
-The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
+The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <token-payments>` section for instructions on how to transfer tokens to other nodes.
 
 
 .. _leave-network:
@@ -216,23 +216,23 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
 This call takes some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
-.. _transferring-tokens:
+.. _token-payments:
 
-Transferring tokens
-====================
+Token payments
+==============
 
-For the token transfer example it is assumed a node is connected to the RTT token network as mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
+For the token payment example it is assumed a node is connected to the RTT token network as mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
-.. _transfer:
+.. _payments:
 
-Transfer
----------
-Transferring tokens to another node is quite easy. The address of the token desired for transfer is ``0x0f114A1E9Db192502E7856309cc899952b3db1ED``. All that then remains is the address of the target node. Assume the address of the target node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
+Payments
+--------
+Paying tokens to another node is quite easy. The address of the token desired for the payment is ``0x0f114A1E9Db192502E7856309cc899952b3db1ED``. All that then remains is the address of the target node. Assume the address of the target node is ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``:
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/transfers/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    POST /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -240,9 +240,9 @@ Transferring tokens to another node is quite easy. The address of the token desi
         "amount": 42
     }
 
-An ``"identifier": some_integer`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag transfers.
+An ``"identifier": <some_integer>`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag payments.
 
-If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer goes through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels:
+If there is a path in the network with enough capacity and the address sending the payment holds enough tokens to transfer the amount in the payload, the payment goes through. The receiving node should then be able to see incoming payments by querying all its open channels. This is done by doing the following for all addresses of open channels:
 
 .. http:example:: curl wget httpie python-requests
 
