@@ -690,8 +690,7 @@ class ReceiveTransferDirect(StateChange):
 
     def __repr__(self):
         return (
-            '<'
-            'ReceiveTransferDirect'
+            '<ReceiveTransferDirect'
             ' token_network:{} msgid:{} paymentid:{} balance_proof:{}'
             '>'
         ).format(

@@ -1,7 +1,7 @@
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.state import CHANNEL_STATE_UNUSABLE
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionTransferDirect,
@@ -201,7 +201,6 @@ def handle_action_transfer_direct(
         token_network_state.partneraddresses_to_channels[receiver_address],
         [CHANNEL_STATE_UNUSABLE],
     )
-
     if channel_states:
         iteration = channel.state_transition(
             channel_states[-1],
@@ -211,8 +210,11 @@ def handle_action_transfer_direct(
         )
         events = iteration.events
     else:
-        failure = EventTransferSentFailed(
+        failure = EventPaymentSentFailed(
+            channel_states[-1].payment_network_identifier,
+            channel_states[-1].token_network_identifier,
             state_change.identifier,
+            receiver_address,
             'Unknown partner channel',
         )
         events = [failure]

@@ -1,7 +1,7 @@
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
-    EventTransferReceivedSuccess,
+    EventPaymentReceivedSuccess,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -196,10 +196,9 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
 
         if is_valid:
             transfer = target_state.transfer
-            transfer_success = EventTransferReceivedSuccess(
+            payment_received_success = EventPaymentReceivedSuccess(
                 channel_state.payment_network_identifier,
                 channel_state.token_network_identifier,
-                channel_state.identifier,
                 transfer.payment_identifier,
                 transfer.lock.amount,
                 transfer.initiator,
@@ -216,7 +215,7 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
                 state_change.message_identifier,
             )
 
-            events.extend([transfer_success, unlock_success, send_processed])
+            events.extend([payment_received_success, unlock_success, send_processed])
             iteration = TransitionResult(None, events)
 
     return iteration

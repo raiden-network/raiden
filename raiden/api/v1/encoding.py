@@ -329,24 +329,25 @@ class ConnectionsLeaveSchema(BaseSchema):
         decoding_class = dict
 
 
-class EventTransferSentFailedSchema(BaseSchema):
+class EventPaymentSentFailedSchema(BaseSchema):
     block_number = fields.Integer()
-    identifier = fields.Integer(missing=None)
+    identifier = fields.Integer()
     event = fields.Str()
     reason = fields.Str()
+    target = AddressField()
 
     class Meta:
-        fields = ('block_number', 'event', 'reason')
+        fields = ('block_number', 'event', 'reason', 'target')
         strict = True
         decoding_class = dict
 
 
-class EventTransferSentSuccessSchema(BaseSchema):
+class EventPaymentSentSuccessSchema(BaseSchema):
     block_number = fields.Integer()
-    identifier = fields.Integer(missing=None)
+    identifier = fields.Integer()
     event = fields.Str()
-    amount = fields.Integer(required=True)
-    target = AddressField(missing=None)
+    amount = fields.Integer()
+    target = AddressField()
 
     class Meta:
         fields = ('block_number', 'event', 'amount', 'target')
@@ -354,12 +355,12 @@ class EventTransferSentSuccessSchema(BaseSchema):
         decoding_class = dict
 
 
-class EventTransferReceivedSuccessSchema(BaseSchema):
+class EventPaymentReceivedSuccessSchema(BaseSchema):
     block_number = fields.Integer()
-    identifier = fields.Integer(missing=None)
+    identifier = fields.Integer()
     event = fields.Str()
-    amount = fields.Integer(required=True)
-    initiator = AddressField(missing=None)
+    amount = fields.Integer()
+    initiator = AddressField()
 
     class Meta:
         fields = ('block_number', 'event', 'amount', 'initiator')

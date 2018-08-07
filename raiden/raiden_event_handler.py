@@ -13,9 +13,9 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendChannelBatchUnlock,
     EventTransferReceivedInvalidDirectTransfer,
-    EventTransferReceivedSuccess,
-    EventTransferSentFailed,
-    EventTransferSentSuccess,
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
     SendDirectTransfer,
     SendProcessed,
 )
@@ -39,7 +39,7 @@ RaidenService = 'RaidenService'
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
     EventTransferReceivedInvalidDirectTransfer,
-    EventTransferReceivedSuccess,
+    EventPaymentReceivedSuccess,
     EventUnlockSuccess,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
@@ -139,7 +139,7 @@ def handle_send_processed(
 
 def handle_transfersentsuccess(
         raiden: RaidenService,
-        transfer_sent_success_event: EventTransferSentSuccess,
+        transfer_sent_success_event: EventPaymentSentSuccess,
 ):
     for result in raiden.identifier_to_results[transfer_sent_success_event.identifier]:
         result.set(True)
@@ -149,7 +149,7 @@ def handle_transfersentsuccess(
 
 def handle_transfersentfailed(
         raiden: RaidenService,
-        transfer_sent_failed_event: EventTransferSentFailed,
+        transfer_sent_failed_event: EventPaymentSentFailed,
 ):
     for result in raiden.identifier_to_results[transfer_sent_failed_event.identifier]:
         result.set(False)
@@ -348,9 +348,9 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         handle_send_refundtransfer(raiden, event)
     elif type(event) == SendProcessed:
         handle_send_processed(raiden, event)
-    elif type(event) == EventTransferSentSuccess:
+    elif type(event) == EventPaymentSentSuccess:
         handle_transfersentsuccess(raiden, event)
-    elif type(event) == EventTransferSentFailed:
+    elif type(event) == EventPaymentSentFailed:
         handle_transfersentfailed(raiden, event)
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)

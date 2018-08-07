@@ -4,8 +4,8 @@ from raiden.utils import typing
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
-    EventTransferSentSuccess,
-    EventTransferSentFailed,
+    EventPaymentSentSuccess,
+    EventPaymentSentFailed,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
@@ -101,11 +101,11 @@ def try_new_route(
         else:
             reason = 'none of the available routes could be used'
 
-        transfer_failed = EventTransferSentFailed(
-            None,
-            None,
+        transfer_failed = EventPaymentSentFailed(
+            transfer_description.payment_network_identifier,
             transfer_description.token_network_identifier,
             transfer_description.payment_identifier,
+            transfer_description.target,
             reason,
         )
         events.append(transfer_failed)
@@ -172,6 +172,7 @@ def send_lockedtransfer(
 def handle_secretrequest(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretRequest,
+        channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
 
@@ -217,8 +218,11 @@ def handle_secretrequest(
         iteration = TransitionResult(initiator_state, [revealsecret])
 
     elif invalid_secretrequest:
-        cancel = EventTransferSentFailed(
+        cancel = EventPaymentSentFailed(
+            channel_state.payment_network_identifier,
+            channel_state.token_network_identifer,
             identifier=initiator_state.transfer_description.payment_identifier,
+            target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',
         )
         iteration = TransitionResult(None, [cancel])
@@ -261,10 +265,9 @@ def handle_secretreveal(
         )
 
         # TODO: Emit these events after on-chain unlock
-        transfer_success = EventTransferSentSuccess(
+        payment_sent_success = EventPaymentSentSuccess(
             channel_state.payment_network_identifier,
             channel_state.token_network_identifier,
-            channel_state.identifier,
             transfer_description.payment_identifier,
             transfer_description.amount,
             transfer_description.target,
@@ -275,7 +278,7 @@ def handle_secretreveal(
             transfer_description.secrethash,
         )
 
-        iteration = TransitionResult(None, [transfer_success, unlock_success, unlock_lock])
+        iteration = TransitionResult(None, [payment_sent_success, unlock_success, unlock_lock])
     else:
         iteration = TransitionResult(initiator_state, list())
 

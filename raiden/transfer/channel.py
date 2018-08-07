@@ -15,8 +15,8 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     EventTransferReceivedInvalidDirectTransfer,
-    EventTransferReceivedSuccess,
-    EventTransferSentFailed,
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
     SendDirectTransfer,
     SendProcessed,
 )
@@ -1423,6 +1423,7 @@ def handle_send_directtransfer(
 
     amount = state_change.amount
     payment_identifier = state_change.payment_identifier
+    target_address = state_change.receiver_address
     distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
 
     (
@@ -1456,40 +1457,40 @@ def handle_send_directtransfer(
         events.append(direct_transfer)
     else:
         if not is_open:
-            failure = EventTransferSentFailed(
+            failure = EventPaymentSentFailed(
                 channel_state.payment_network_identifier,
                 channel_state.token_network_identifier,
-                channel_state.identifier,
                 payment_identifier,
+                target_address,
                 'Channel is not opened',
             )
             events.append(failure)
 
         elif not is_valid:
-            msg = 'Transfer amount is invalid. Transfer: {}'.format(amount)
-            failure = EventTransferSentFailed(
+            msg = 'Payment amount is invalid. Transfer: {}'.format(amount)
+            failure = EventPaymentSentFailed(
                 channel_state.payment_network_identifier,
                 channel_state.token_network_identifier,
-                channel_state.identifier,
                 payment_identifier,
+                target_address,
                 msg,
             )
             events.append(failure)
 
         elif not can_pay:
             msg = (
-                'Transfer amount exceeds the available capacity. '
+                'Payment amount exceeds the available capacity. '
                 'Capacity: {}, Transfer: {}'
             ).format(
                 distributable_amount,
                 amount,
             )
 
-            failure = EventTransferSentFailed(
+            failure = EventPaymentSentFailed(
                 channel_state.payment_network_identifier,
                 channel_state.token_network_identifier,
-                channel_state.identifier,
                 payment_identifier,
+                target_address,
                 msg,
             )
             events.append(failure)
@@ -1532,10 +1533,9 @@ def handle_receive_directtransfer(
         transfer_amount = new_transferred_amount - previous_transferred_amount
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
-        transfer_sucess_event = EventTransferReceivedSuccess(
+        payment_received_success = EventPaymentReceivedSuccess(
             channel_state.payment_network_identifier,
             channel_state.token_network_identifier,
-            channel_state.identifier,
             direct_transfer.payment_identifier,
             transfer_amount,
             channel_state.partner_state.address,
@@ -1546,7 +1546,7 @@ def handle_receive_directtransfer(
             b'global',
             direct_transfer.message_identifier,
         )
-        events = [transfer_sucess_event, send_processed]
+        events = [payment_received_success, send_processed]
     else:
         transfer_invalid_event = EventTransferReceivedInvalidDirectTransfer(
             direct_transfer.payment_identifier,

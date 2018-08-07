@@ -17,7 +17,7 @@ from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     EventTransferReceivedInvalidDirectTransfer,
-    EventTransferReceivedSuccess,
+    EventPaymentReceivedSuccess,
 )
 from raiden.transfer.merkle_tree import (
     LEAVES,
@@ -1239,7 +1239,7 @@ def test_receive_directdtransfer_before_deposit():
         channel_state,
         receive_directtransfer,
     )
-    assert must_contain_entry(iteration.events, EventTransferReceivedSuccess, {})
+    assert must_contain_entry(iteration.events, EventPaymentReceivedSuccess, {})
 
 
 def test_channelstate_unlock_without_locks():

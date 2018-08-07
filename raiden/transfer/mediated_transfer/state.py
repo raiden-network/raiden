@@ -354,6 +354,7 @@ class TransferDescriptionWithSecretState(State):
     """
 
     __slots__ = (
+        'payment_network_identifier',
         'payment_identifier',
         'amount',
         'token_network_identifier',
@@ -365,6 +366,7 @@ class TransferDescriptionWithSecretState(State):
 
     def __init__(
             self,
+            payment_network_identifier,
             payment_identifier,
             amount: typing.TokenAmount,
             token_network_identifier: typing.TokenNetworkIdentifier,
@@ -375,6 +377,7 @@ class TransferDescriptionWithSecretState(State):
 
         secrethash = sha3(secret)
 
+        self.payment_network_identifier = payment_network_identifier
         self.payment_identifier = payment_identifier
         self.amount = amount
         self.token_network_identifier = token_network_identifier
@@ -395,6 +398,7 @@ class TransferDescriptionWithSecretState(State):
     def __eq__(self, other):
         return (
             isinstance(other, TransferDescriptionWithSecretState) and
+            self.payment_network_identifier == other.payment_network_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
             self.token_network_identifier == other.token_network_identifier and

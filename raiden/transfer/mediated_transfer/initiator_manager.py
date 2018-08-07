@@ -7,7 +7,7 @@ from raiden.transfer.architecture import (
     StateChange,
     TransitionResult,
 )
-from raiden.transfer.events import EventTransferSentFailed
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import EventUnlockFailed
 from raiden.transfer.mediated_transfer import initiator, mediator
 from raiden.transfer.mediated_transfer.state_change import (
@@ -154,12 +154,12 @@ def handle_cancelpayment(
     transfer_description = payment_state.initiator.transfer_description
     cancel_events = cancel_current_route(payment_state)
 
-    cancel = EventTransferSentFailed(
+    cancel = EventPaymentSentFailed(
         channel_state.payment_network_identifier,
         channel_state.token_network_identifier,
-        channel_state.identifier,
         transfer_description.payment_identifier,
-        'user canceled transfer',
+        transfer_description.target,
+        'user canceled payment',
     )
     cancel_events.append(cancel)
 
@@ -218,6 +218,7 @@ def handle_transferrefundcancelroute(
         if is_valid:
             old_description = payment_state.initiator.transfer_description
             transfer_description = TransferDescriptionWithSecretState(
+                old_description.payment_network_identifier,
                 old_description.payment_identifier,
                 old_description.amount,
                 old_description.token_network_identifier,
@@ -279,9 +280,12 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
+        channel_identifier = payment_state.initiator.channel_identifier
+        channel_state = channelidentifiers_to_channels[channel_identifier]
         sub_iteration = initiator.handle_secretrequest(
             payment_state.initiator,
             state_change,
+            channel_state,
             pseudo_random_generator,
         )
         iteration = iteration_from_sub(payment_state, sub_iteration)

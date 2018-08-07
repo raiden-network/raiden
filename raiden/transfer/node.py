@@ -22,7 +22,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
-    EventTransferSentSuccess,
+    EventPaymentSentSuccess,
     SendDirectTransfer,
 )
 from raiden.transfer.state import (
@@ -666,10 +666,9 @@ def handle_processed(
                         message.balance_proof.token_network_identifier,
                         message.recipient,
                     )
-                    events.append(EventTransferSentSuccess(
+                    events.append(EventPaymentSentSuccess(
                         channel_state.payment_network_identifier,
                         channel_state.token_network_identifier,
-                        channel_state.identifier,
                         message.payment_identifier,
                         message.balance_proof.transferred_amount,
                         message.recipient,

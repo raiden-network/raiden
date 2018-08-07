@@ -6,9 +6,9 @@ from raiden.transfer.state_change import (
     Block,
 )
 from raiden.transfer.events import (
-    EventTransferSentSuccess,
-    EventTransferSentFailed,
-    EventTransferReceivedSuccess,
+    EventPaymentSentSuccess,
+    EventPaymentSentFailed,
+    EventPaymentReceivedSuccess,
 )
 from raiden.utils import sha3
 
@@ -69,10 +69,10 @@ def test_transfer_statechange_operators():
 
 
 def test_event_operators():
-    a = EventTransferSentSuccess(1, 4, 6, 2, 5, sha3(b'target'))
-    b = EventTransferSentSuccess(1, 4, 6, 2, 5, sha3(b'target'))
-    c = EventTransferSentSuccess(2, 7, 6, 3, 4, sha3(b'target'))
-    d = EventTransferSentSuccess(2, 7, 6, 3, 4, sha3(b'differenttarget'))
+    a = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b'target'))
+    b = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b'target'))
+    c = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b'target'))
+    d = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b'differenttarget'))
 
     # pylint: disable=unneeded-not
     assert a == b
@@ -81,19 +81,19 @@ def test_event_operators():
     assert not a == c
     assert not c == d
 
-    a = EventTransferSentFailed(1, 7, 8, 2, 'BECAUSE')
-    b = EventTransferSentFailed(1, 7, 8, 2, 'BECAUSE')
-    c = EventTransferSentFailed(3, 3, 3, 3, 'UNKNOWN')
+    a = EventPaymentSentFailed(1, 7, 2, 'target', 'BECAUSE')
+    b = EventPaymentSentFailed(1, 7, 2, 'target', 'BECAUSE')
+    c = EventPaymentSentFailed(3, 3, 3, 'target', 'UNKNOWN')
 
     assert a == b
     assert not a != b
     assert a != c
     assert not a == c
 
-    a = EventTransferReceivedSuccess(4, 4, 4, 2, 5, sha3(b'initiator'))
-    b = EventTransferReceivedSuccess(4, 4, 4, 2, 5, sha3(b'initiator'))
-    c = EventTransferReceivedSuccess(1, 2, 2, 3, 5, sha3(b'initiator'))
-    d = EventTransferReceivedSuccess(1, 2, 2, 3, 5, sha3(b'other initiator'))
+    a = EventPaymentReceivedSuccess(4, 4, 2, 5, sha3(b'initiator'))
+    b = EventPaymentReceivedSuccess(4, 4, 2, 5, sha3(b'initiator'))
+    c = EventPaymentReceivedSuccess(1, 2, 3, 5, sha3(b'initiator'))
+    d = EventPaymentReceivedSuccess(1, 2, 3, 5, sha3(b'other initiator'))
 
     assert a == b
     assert not a != b

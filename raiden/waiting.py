@@ -7,7 +7,7 @@ from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
 )
 from raiden.transfer import channel, views
-from raiden.transfer.events import EventTransferReceivedSuccess
+from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import typing
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -254,7 +254,7 @@ def wait_for_transfer_success(
         for event_tuple in state_events:
             event = event_tuple[1]
             found = (
-                isinstance(event, EventTransferReceivedSuccess) and
+                isinstance(event, EventPaymentReceivedSuccess) and
                 event.identifier == payment_identifier and
                 event.amount == amount
             )

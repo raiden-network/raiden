@@ -183,8 +183,8 @@ class ContractSendSecretReveal(ContractSendEvent):
         return not self.__eq__(other)
 
 
-class EventTransferSentSuccess(Event):
-    """ Event emitted by the initiator when a transfer is considered successful.
+class EventPaymentSentSuccess(Event):
+    """ Event emitted by the initiator when a transfer is considered sucessful.
 
     A transfer is considered successful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
@@ -199,7 +199,7 @@ class EventTransferSentSuccess(Event):
     - The reveal secret message was not delivered because of actual network
       problems.
     - The lock expires and an EventUnlockFailed follows, contradicting the
-      EventTransferSentSuccess.
+      EventPaymentSentSuccess.
 
     Note:
         Mediators cannot use this event, since an off-chain unlock may be locally
@@ -210,14 +210,12 @@ class EventTransferSentSuccess(Event):
             self,
             payment_network_identifier,
             token_network_identifier,
-            channel_identifier,
             identifier,
             amount,
             target,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
         self.identifier = identifier
         self.amount = amount
         self.target = target
@@ -225,27 +223,26 @@ class EventTransferSentSuccess(Event):
     def __repr__(self):
         return (
             '<'
-            'EventTransferSentSuccess identifier:{} amount:{} '
-            'target:{} payment_network_identifier:{} channel_identifier:{} '
-            'token_network_identifier:{}'
+            'EventPaymentSentSuccess payment_network_identifier:{} '
+            'token_network_identifier:{} '
+            'identifier:{} amount:{} '
+            'target:{}'
             '>'
         ).format(
+            self.payment_network_identifier,
+            self.token_network_identifier,
             self.identifier,
             self.amount,
             pex(self.target),
-            self.payment_network_identifier,
-            self.channel_identifier,
-            self.token_network_identifier,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, EventTransferSentSuccess) and
+            isinstance(other, EventPaymentSentSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
             self.target == other.target and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.channel_identifier == other.channel_identifier and
             self.token_network_identifier == other.token_network_identifier
         )
 
@@ -253,7 +250,7 @@ class EventTransferSentSuccess(Event):
         return not self.__eq__(other)
 
 
-class EventTransferSentFailed(Event):
+class EventPaymentSentFailed(Event):
     """ Event emitted by the payer when a transfer has failed.
 
     Note:
@@ -265,46 +262,46 @@ class EventTransferSentFailed(Event):
             self,
             payment_network_identifier,
             token_network_identifier,
-            channel_identifier,
             identifier,
+            target,
             reason,
     ):
         self.payment_network_identifier = payment_network_identifier
-        self.channel_identifier = channel_identifier
         self.token_network_identifier = token_network_identifier
         self.identifier = identifier
+        self.target = target
         self.reason = reason
 
     def __repr__(self):
         return (
             '<'
-            'EventTransferSentFailed id:{} reason:{} '
-            'payment_network_identifier:{} channel_identifier:{} '
-            'token_network_identifier:{}'
+            'EventPaymentSentFailed payment_network_identifier:{} '
+            'token_network_identifier:{} '
+            'id:{} target:{} reason:{} '
             '>'
         ).format(
-            self.identifier,
-            self.reason,
             self.payment_network_identifier,
-            self.channel_identifier,
             self.token_network_identifier,
+            self.identifier,
+            self.target,
+            self.reason,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, EventTransferSentFailed) and
-            self.identifier == other.identifier and
-            self.reason == other.reason and
+            isinstance(other, EventPaymentSentFailed) and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.token_network_identifier == other.token_network_identifier and
+            self.identifier == other.identifier and
+            self.target == other.target and
+            self.reason == other.reason
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
 
-class EventTransferReceivedSuccess(Event):
+class EventPaymentReceivedSuccess(Event):
     """ Event emitted when a payee has received a payment.
 
     Note:
@@ -318,7 +315,6 @@ class EventTransferReceivedSuccess(Event):
             self,
             payment_network_identifier,
             token_network_identifier,
-            channel_identifier,
             identifier,
             amount,
             initiator,
@@ -333,33 +329,30 @@ class EventTransferReceivedSuccess(Event):
         self.amount = amount
         self.initiator = initiator
         self.payment_network_identifier = payment_network_identifier
-        self.channel_identifier = channel_identifier
         self.token_network_identifier = token_network_identifier
 
     def __repr__(self):
         return (
             '<'
-            'EventTransferReceivedSuccess identifier:{} amount:{} '
-            'initiator:{} payment_network_identifier:{} channel_identifier:{} '
-            'token_network_identifier:{}'
+            'EventPaymentReceivedSuccess payment_network_identifier:{} '
+            'token_network_identifier:{} identifier:{} '
+            'amount:{} initiator:{} '
             '>'
         ).format(
+            self.payment_network_identifier,
+            self.token_network_identifier,
             self.identifier,
             self.amount,
             pex(self.initiator),
-            self.payment_network_identifier,
-            self.channel_identifier,
-            self.token_network_identifier,
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, EventTransferReceivedSuccess) and
+            isinstance(other, EventPaymentReceivedSuccess) and
             self.identifier == other.identifier and
             self.amount == other.amount and
             self.initiator == other.initiator and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.channel_identifier == other.channel_identifier and
             self.token_network_identifier == other.token_network_identifier
         )
 

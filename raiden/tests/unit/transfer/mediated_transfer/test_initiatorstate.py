@@ -17,8 +17,8 @@ from raiden.tests.utils.factories import (
     ADDR,
 )
 from raiden.transfer.events import (
-    EventTransferSentSuccess,
-    EventTransferSentFailed,
+    EventPaymentSentSuccess,
+    EventPaymentSentFailed,
 )
 from raiden.transfer.state import RouteState
 from raiden.transfer.mediated_transfer import initiator_manager
@@ -193,7 +193,7 @@ def test_init_without_routes():
     assert iteration.new_state is None
 
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], EventTransferSentFailed)
+    assert isinstance(iteration.events[0], EventPaymentSentFailed)
     assert iteration.new_state is None
 
 
@@ -278,11 +278,11 @@ def test_state_wait_unlock_valid():
 
     assert len(iteration.events) == 3
     assert any(isinstance(e, SendBalanceProof) for e in iteration.events)
-    assert any(isinstance(e, EventTransferSentSuccess) for e in iteration.events)
+    assert any(isinstance(e, EventPaymentSentSuccess) for e in iteration.events)
     assert any(isinstance(e, EventUnlockSuccess) for e in iteration.events)
 
     balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProof))
-    complete = next(e for e in iteration.events if isinstance(e, EventTransferSentSuccess))
+    complete = next(e for e in iteration.events if isinstance(e, EventPaymentSentSuccess))
 
     assert balance_proof.recipient == channel1.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER
@@ -487,7 +487,7 @@ def test_refund_transfer_no_more_routes():
     assert iteration.new_state is None
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    sent_failed = next(e for e in iteration.events if isinstance(e, EventTransferSentFailed))
+    sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))
 
     assert unlocked_failed
     assert sent_failed
@@ -586,7 +586,7 @@ def test_cancel_transfer():
     assert len(iteration.events) == 2
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    sent_failed = next(e for e in iteration.events if isinstance(e, EventTransferSentFailed))
+    sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))
 
     assert unlocked_failed
     assert sent_failed
