@@ -171,7 +171,7 @@ def token_amount(number_of_nodes, deposit):
 
 
 @pytest.fixture
-def network_wait(transport_config, blockchain_type):
+def network_wait():
     """Time in seconds used to wait for network events."""
     return 5.0
 

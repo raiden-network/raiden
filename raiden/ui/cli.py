@@ -56,7 +56,6 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
-    DEFAULT_TRANSPORT_RETRY_INTERVAL,
     ETHERSCAN_API,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
@@ -718,9 +717,6 @@ def run_app(
             config['transport']['udp'],
         )
     elif transport == 'matrix':
-        # matrix gets spammed with the default retry-interval of 1s, wait a little more
-        if config['transport']['udp']['retry_interval'] == DEFAULT_TRANSPORT_RETRY_INTERVAL:
-            config['transport']['udp']['retry_interval'] *= 5
         try:
             transport = MatrixTransport(config['transport']['matrix'])
         except RaidenError as ex:
