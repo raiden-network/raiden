@@ -526,7 +526,7 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
         for token_network_state in payment_network_state.tokenaddresses_to_tokennetworks.values():
-            events.extend(_get_channels_close_events(token_network_state))
+            events.extend(_get_channels_close_events(chain_state, token_network_state))
 
     return TransitionResult(chain_state, events)
 
