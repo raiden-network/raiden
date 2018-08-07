@@ -4,32 +4,48 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
+from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
 from raiden.utils import pex, sha3
+from raiden.utils import typing
+
+
+# According to the smart contracts as of 07/08:
+# https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
+# channel_identifier can never be 0. We make this a requirement in the client and use this fact
+# to signify that a channel_identifier of `0` passed to the messages adds them to the
+# global queu
+CHANNEL_IDENTIFIER_GLOBAL_QUEUE = 0
 
 
 def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
     return SendRefundTransfer(
-        send_lockedtransfer_event.recipient,
-        send_lockedtransfer_event.queue_name,
-        send_lockedtransfer_event.message_identifier,
-        transfer.payment_identifier,
-        transfer.token,
-        transfer.balance_proof,
-        transfer.lock,
-        transfer.initiator,
-        transfer.target,
+        recipient=send_lockedtransfer_event.recipient,
+        channel_identifier=send_lockedtransfer_event.queue_identifier[1],
+        message_identifier=send_lockedtransfer_event.message_identifier,
+        payment_identifier=transfer.payment_identifier,
+        token_address=transfer.token,
+        balance_proof=transfer.balance_proof,
+        lock=transfer.lock,
+        initiator=transfer.initiator,
+        target=transfer.target,
     )
 
 
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
 
-    def __init__(self, recipient, queue_name, message_identifier, transfer):
+    def __init__(
+            self,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            transfer: LockedTransferUnsignedState,
+    ):
         if not isinstance(transfer, LockedTransferUnsignedState):
             raise ValueError('transfer must be a LockedTransferUnsignedState instance')
 
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.transfer = transfer
 
@@ -83,14 +99,14 @@ class SendRevealSecret(SendMessageEvent):
 
     def __init__(
             self,
-            recipient,
-            queue_name,
-            message_identifier,
-            secret,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            secret: typing.Secret,
     ):
         secrethash = sha3(secret)
 
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.secret = secret
         self.secrethash = secrethash
@@ -106,7 +122,7 @@ class SendRevealSecret(SendMessageEvent):
         return (
             isinstance(other, SendRevealSecret) and
             self.recipient == other.recipient and
-            self.queue_name == other.queue_name and
+            self.queue_identifier == other.queue_identifier and
             self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash
@@ -136,18 +152,18 @@ class SendBalanceProof(SendMessageEvent):
 
     def __init__(
             self,
-            recipient,
-            queue_name,
-            message_identifier,
-            payment_identifier,
-            token,
-            secret,
-            balance_proof,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
+            token_address: typing.TokenAddress,
+            secret: typing.Secret,
+            balance_proof: BalanceProofUnsignedState,
     ):
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
-        self.token = token
+        self.token = token_address
         self.secret = secret
         self.balance_proof = balance_proof
 
@@ -166,7 +182,7 @@ class SendBalanceProof(SendMessageEvent):
         return (
             isinstance(other, SendBalanceProof) and
             self.recipient == other.recipient and
-            self.queue_name == other.queue_name and
+            self.queue_identifier == other.queue_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
@@ -186,15 +202,15 @@ class SendSecretRequest(SendMessageEvent):
 
     def __init__(
             self,
-            recipient,
-            queue_name,
-            message_identifier,
-            payment_identifier,
-            amount,
-            secrethash,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
+            amount: typing.TokenAmount,
+            secrethash: typing.SecretHash,
     ):
 
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
         self.amount = amount
@@ -215,7 +231,7 @@ class SendSecretRequest(SendMessageEvent):
         return (
             isinstance(other, SendSecretRequest) and
             self.recipient == other.recipient and
-            self.queue_name == other.queue_name and
+            self.queue_identifier == other.queue_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
@@ -236,21 +252,21 @@ class SendRefundTransfer(SendMessageEvent):
 
     def __init__(
             self,
-            recipient,
-            queue_name,
-            message_identifier,
-            payment_identifier,
-            token,
-            balance_proof,
-            lock,
-            initiator,
-            target,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
+            token_address: typing.TokenAddress,
+            balance_proof: BalanceProofUnsignedState,
+            lock: HashTimeLockState,
+            initiator: typing.InitiatorAddress,
+            target: typing.TargetAddress,
     ):
 
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
-        self.token = token
+        self.token = token_address
         self.balance_proof = balance_proof
         self.lock = lock
         self.initiator = initiator
@@ -277,7 +293,7 @@ class SendRefundTransfer(SendMessageEvent):
         return (
             isinstance(other, SendRefundTransfer) and
             self.recipient == other.recipient and
-            self.queue_name == other.queue_name and
+            self.queue_identifier == other.queue_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and

@@ -1040,8 +1040,7 @@ def update_queues(iteration: TransitionResult, state_change):
 
     for event in iteration.events:
         if isinstance(event, SendMessageEvent):
-            queueid = (event.recipient, event.queue_name)
-            queue = chain_state.queueids_to_queues.setdefault(queueid, [])
+            queue = chain_state.queueids_to_queues.setdefault(event.queue_identifier, [])
             queue.append(event)
 
         if isinstance(event, ContractSendEvent):

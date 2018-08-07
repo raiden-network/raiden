@@ -11,6 +11,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
@@ -109,14 +110,13 @@ def handle_inittarget(
     if is_valid and safe_to_wait:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         recipient = transfer.initiator
-        queue_name = b'global'
         secret_request = SendSecretRequest(
-            recipient,
-            queue_name,
-            message_identifier,
-            transfer.payment_identifier,
-            transfer.lock.amount,
-            transfer.lock.secrethash,
+            recipient=recipient,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=message_identifier,
+            payment_identifier=transfer.payment_identifier,
+            amount=transfer.lock.amount,
+            secrethash=transfer.lock.secrethash,
         )
 
         iteration = TransitionResult(target_state, [secret_request])
@@ -166,12 +166,11 @@ def handle_secretreveal(
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         recipient = route.node_address
-        queue_name = b'global'
         reveal = SendRevealSecret(
-            recipient,
-            queue_name,
-            message_identifier,
-            target_state.secret,
+            recipient=recipient,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=message_identifier,
+            secret=target_state.secret,
         )
 
         iteration = TransitionResult(target_state, [reveal])

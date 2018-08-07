@@ -72,6 +72,7 @@ from raiden.utils.typing import (
     Mapping,
     TypeVar,
     Union,
+    QueueIdentifier,
     Type,
     Iterable,
 )
@@ -247,17 +248,17 @@ class MatrixTransport:
 
     def send_async(
         self,
-        receiver_address: Address,
-        queue_name: bytes,
+        queue_identifier: QueueIdentifier,
         message: Message,
     ):
         if not self._running:
             return
+        receiver_address = queue_identifier.recipient
         self.log.info(
             'SEND ASYNC',
             receiver_address=to_normalized_address(receiver_address),
             message=message,
-            queue_name=queue_name,
+            queue_identifier=queue_identifier,
         )
         if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
@@ -568,13 +569,13 @@ class MatrixTransport:
         self,
         queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
     ):
-        for (address, queue_name), events in queueids_to_queues.items():
+        for (address, queue_identifier), events in queueids_to_queues.items():
             node_address = self._raiden_service.address
             for event in events:
                 message = _event_to_message(event, node_address)
                 self._raiden_service.sign(message)
                 self.start_health_check(address)
-                self.send_async(address, queue_name, message)
+                self.send_async(address, queue_identifier, message)
 
     def _send_with_retry(
         self,

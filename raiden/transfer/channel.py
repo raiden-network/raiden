@@ -1045,7 +1045,6 @@ def create_senddirecttransfer(
     assert transferred_amount <= UINT256_MAX, msg
 
     nonce = get_next_nonce(our_state)
-    token = channel_state.token_address
     recipient = partner_state.address
     locked_amount = get_amount_locked(our_state)
 
@@ -1059,14 +1058,13 @@ def create_senddirecttransfer(
         chain_id=channel_state.chain_id,
     )
 
-    queue_name = channel_state.identifier
     direct_transfer = SendDirectTransfer(
-        recipient,
-        queue_name,
-        message_identifier,
-        payment_identifier,
-        balance_proof,
-        token,
+        recipient=recipient,
+        channel_identifier=channel_state.identifier,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        balance_proof=balance_proof,
+        token_address=channel_state.token_address,
     )
 
     return direct_transfer
@@ -1139,12 +1137,11 @@ def create_sendlockedtransfer(
         target,
     )
 
-    queue_name = channel_state.identifier
     lockedtransfer = SendLockedTransfer(
-        recipient,
-        queue_name,
-        message_identifier,
-        locked_transfer,
+        recipient=recipient,
+        channel_identifier=channel_state.identifier,
+        message_identifier=message_identifier,
+        transfer=locked_transfer,
     )
 
     return lockedtransfer, merkletree
@@ -1177,7 +1174,7 @@ def create_unlock(
     )
     locksroot = merkleroot(merkletree)
 
-    token = channel_state.token_address
+    token_address = channel_state.token_address
     nonce = get_next_nonce(our_state)
     recipient = channel_state.partner_state.address
     locked_amount = get_amount_locked(our_state) - lock.amount  # the lock is still registered
@@ -1192,15 +1189,14 @@ def create_unlock(
         chain_id=channel_state.chain_id,
     )
 
-    queue_name = channel_state.identifier
     unlock_lock = SendBalanceProof(
-        recipient,
-        queue_name,
-        message_identifier,
-        payment_identifier,
-        token,
-        secret,
-        balance_proof,
+        recipient=recipient,
+        channel_identifier=channel_state.identifier,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        token_address=token_address,
+        secret=secret,
+        balance_proof=balance_proof,
     )
 
     return unlock_lock, merkletree

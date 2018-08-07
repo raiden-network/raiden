@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
@@ -258,10 +259,10 @@ def test_state_wait_unlock_valid():
 
     # setup the state for the wait unlock
     current_state.initiator.revealsecret = SendRevealSecret(
-        UNIT_TRANSFER_TARGET,
-        'global',
-        UNIT_TRANSFER_IDENTIFIER,
-        UNIT_SECRET,
+        recipient=UNIT_TRANSFER_TARGET,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        message_identifier=UNIT_TRANSFER_IDENTIFIER,
+        secret=UNIT_SECRET,
     )
 
     state_change = ReceiveSecretReveal(
@@ -312,10 +313,10 @@ def test_state_wait_unlock_invalid():
 
     # setup the state for the wait unlock
     current_state.initiator.revealsecret = SendRevealSecret(
-        target_address,
-        'global',
-        identifier,
-        UNIT_SECRET,
+        recipient=target_address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        message_identifier=identifier,
+        secret=UNIT_SECRET,
     )
 
     before_state = deepcopy(current_state)

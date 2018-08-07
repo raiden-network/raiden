@@ -12,6 +12,7 @@ import structlog
 from eth_utils import is_binary_address
 
 from raiden.transfer.architecture import SendMessageEvent
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.exceptions import (
     InvalidAddress,
     UnknownAddress,
@@ -192,7 +193,7 @@ class UDPTransport:
         # handle must always be set
         self.server.set_handle(self._receive)
 
-        for (recipient, queue_name), queue in queueids_to_queues.items():
+        for queue_identifier, queue in queueids_to_queues.items():
             encoded_queue = list()
 
             for sendevent in queue:
@@ -202,7 +203,7 @@ class UDPTransport:
 
                 encoded_queue.append((encoded, sendevent.message_identifier))
 
-            self.init_queue_for(recipient, queue_name, encoded_queue)
+            self.init_queue_for(queue_identifier, encoded_queue)
 
         self.server.start()
 
@@ -276,19 +277,18 @@ class UDPTransport:
 
     def init_queue_for(
             self,
-            recipient: typing.Address,
-            queue_name: bytes,
+            queue_identifier: typing.QueueIdentifier,
             items: typing.List[QueueItem_T],
     ) -> Queue_T:
-        """ Create the queue identified by the pair `(recipient, queue_name)`
+        """ Create the queue identified by the queue_identifier
         and initialize it with `items`.
         """
-        queueid = (recipient, queue_name)
-        queue = self.queueids_to_queues.get(queueid)
+        recipient = queue_identifier.recipient
+        queue = self.queueids_to_queues.get(queue_identifier)
         assert queue is None
 
         queue = NotifyingQueue(items=items)
-        self.queueids_to_queues[queueid] = queue
+        self.queueids_to_queues[queue_identifier] = queue
 
         events = self.get_health_events(recipient)
 
@@ -305,51 +305,49 @@ class UDPTransport:
             self.retry_interval * 10,
         )
 
-        if queue_name == b'global':
+        if queue_identifier.channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
             greenlet_queue.name = f'Queue for {pex(recipient)} - global'
         else:
-            greenlet_queue.name = f'Queue for {pex(recipient)} - {pex(queue_name)}'
+            greenlet_queue.name = (
+                f'Queue for {pex(recipient)} - {queue_identifier.channel_identifier}'
+            )
 
         self.greenlets.append(greenlet_queue)
 
         log.debug(
             'new queue created for',
             node=pex(self.raiden.address),
-            token=pex(queue_name),
-            to=pex(recipient),
+            queue_identifier=queue_identifier,
         )
 
         return queue
 
     def get_queue_for(
             self,
-            recipient: typing.Address,
-            queue_name: bytes,
+            queue_identifier: typing.QueueIdentifier,
     ) -> Queue_T:
-        """ Return the queue identified by the pair `(recipient, queue_name)`.
+        """ Return the queue identified by the given queue identifier.
 
         If the queue doesn't exist it will be instantiated.
         """
-        queueid = (recipient, queue_name)
-        queue = self.queueids_to_queues.get(queueid)
+        queue = self.queueids_to_queues.get(queue_identifier)
 
         if queue is None:
             items = ()
-            queue = self.init_queue_for(recipient, queue_name, items)
+            queue = self.init_queue_for(queue_identifier, items)
 
         return queue
 
     def send_async(
             self,
-            recipient: typing.Address,
-            queue_name: bytes,
+            queue_identifier: typing.QueueIdentifier,
             message: 'Message',
     ):
         """ Send a new ordered message to recipient.
 
-        Messages that use the same `queue_name` are ordered.
+        Messages that use the same `queue_identifier` are ordered.
         """
-
+        recipient = queue_identifier.recipient
         if not is_binary_address(recipient):
             raise ValueError('Invalid address {}'.format(pex(recipient)))
 
@@ -370,14 +368,13 @@ class UDPTransport:
         if message_id not in self.messageids_to_asyncresults:
             self.messageids_to_asyncresults[message_id] = RaidenAsyncResult()
 
-            queue = self.get_queue_for(recipient, queue_name)
+            queue = self.get_queue_for(queue_identifier)
             queue.put((messagedata, message_id))
 
             log.debug(
                 'MESSAGE QUEUED',
                 node=pex(self.raiden.address),
-                queue_name=queue_name,
-                to=pex(recipient),
+                queue_identifier=queue_identifier,
                 message=message,
             )
 

@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import NewType, Tuple, Optional, Union, List
+from typing import NewType, Tuple, Optional, Union, List, NamedTuple
 
 
 T_Address = bytes
@@ -105,3 +105,8 @@ TokenNetworkIdentifier = NewType('TokenNetworkIdentifier', T_TokenNetworkIdentif
 SuccessOrError = Tuple[bool, Optional[str]]
 
 BlockSpecification = Union[str, T_BlockNumber]
+
+
+class QueueIdentifier(NamedTuple):
+    recipient: Address
+    channel_identifier: ChannelID
