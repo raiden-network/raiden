@@ -13,6 +13,7 @@ from gevent.lock import Semaphore
 
 from raiden import constants, routing, waiting
 from raiden.connection_manager import ConnectionManager
+from raiden.constants import SNAPSHOT_BLOCK_COUNT
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
@@ -349,6 +350,13 @@ class RaidenService:
 
         if block_number is None:
             block_number = self.get_block_number()
+
+        # Take a snapshot every SNAPSHOT_BLOCK_COUNT
+        # TODO: Gather more data about storage requirements
+        # and update the value to specify how often we need
+        # capturing a snapshot should take place
+        if block_number % SNAPSHOT_BLOCK_COUNT == 0:
+            self.wal.snapshot()
 
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
