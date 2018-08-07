@@ -36,8 +36,8 @@ if [[ ! -x ${SYNAPSE} ]]; then
 
     virtualenv -p "$(which python2)" venv
     ./venv/bin/pip install "${SYNAPSE_URL}" pyinstaller coincurve pycryptodome
-    SITE="$( find venv/lib -name site-packages -type d | head -1 )"
-    cp "${BASEDIR}/raiden/tests/test_files/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
+    SITE="$( ./venv/bin/python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())' )"
+    cp "${BASEDIR}/tools/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
     ./venv/bin/pyinstaller -F -n synapse \
         --hidden-import="sqlite3" \
         --hidden-import="syweb" \
@@ -56,7 +56,7 @@ if [[ ! -x ${SYNAPSE} ]]; then
 fi
 
 ln -fs "${SYNAPSE}" "${SYNAPSE_LINK}"
-cp "${BASEDIR}/raiden/tests/test_files/synapse-config.yaml" "${DESTDIR}/"
+cp "${BASEDIR}/tools/synapse-config.yaml" "${DESTDIR}/"
 "${SYNAPSE}" --server-name="${SYNAPSE_SERVER_NAME}" \
            --config-path="${DESTDIR}/synapse-config.yaml" \
            --generate-keys
