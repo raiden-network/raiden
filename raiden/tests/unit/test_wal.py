@@ -12,7 +12,7 @@ from raiden.storage.wal import (
 )
 from raiden.tests.utils import factories
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import EventTransferSentFailed
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -135,7 +135,7 @@ def test_write_read_log():
 def test_write_read_events():
     wal = new_wal()
 
-    event = EventTransferSentFailed(2, 3, 4, 1, 'whatever')
+    event = EventPaymentSentFailed(2, 3, 1, 'address', 'whatever')
     event_list = [event]
     block_number = 10
 
@@ -167,7 +167,7 @@ def test_write_read_events():
 
     latest_event = new_events[-1]
     assert latest_event[0] == block_number
-    assert isinstance(latest_event[1], EventTransferSentFailed)
+    assert isinstance(latest_event[1], EventPaymentSentFailed)
 
 
 def test_restore_without_snapshot():

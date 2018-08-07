@@ -296,7 +296,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         from_block=0,
     )
     assert must_have_event(app1_events, {'event': EVENT_CHANNEL_DEPOSIT})
-    assert must_have_event(app1_events, {'event': 'EventTransferReceivedSuccess'})
+    assert must_have_event(app1_events, {'event': 'EventPaymentReceivedSuccess'})
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

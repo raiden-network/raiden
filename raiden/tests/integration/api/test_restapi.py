@@ -859,7 +859,7 @@ def test_api_payments(api_backend, raiden_network, token_addresses):
     request = grequests.post(
         api_url_for(
             api_backend,
-            'paymenttotargetresource',
+            'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
@@ -1212,7 +1212,7 @@ def test_api_deposit_limit(
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_channel_history_events(api_backend, raiden_network, token_addresses):
+def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     _, app1, app2 = raiden_network
     amount = 200
     identifier = 42
@@ -1227,53 +1227,67 @@ def test_channel_history_events(api_backend, raiden_network, token_addresses):
     request = grequests.post(
         api_url_for(
             api_backend,
-            'transfertotargetresource',
+            'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target1_address),
         ),
         json={'amount': amount, 'identifier': identifier},
     )
-    request.send().response
+    request.send()
 
     # sending some tokens to target 2
     amount -= 10
     request = grequests.post(
         api_url_for(
             api_backend,
-            'transfertotargetresource',
+            'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target2_address),
         ),
         json={'amount': amount, 'identifier': identifier},
     )
-    request.send().response
+    request.send()
+
+    # test endpoint without (partner and token)
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'paymentresource',
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 2
+    assert response[0]['event'] == 'EventPaymentSentSuccess'
+    assert response[1]['event'] == 'EventPaymentSentSuccess'
 
     # test endpoint without partner
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokenchannelhistoryresource',
-            partner_address=None,
+            'token_paymentresource',
             token_address=token_address,
         ),
     )
-
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) == 2
-    assert response.json()[0]['event'] == 'EventTransferSentSuccess'
-    assert response.json()[1]['event'] == 'EventTransferSentSuccess'
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 2
+    assert response[0]['event'] == 'EventPaymentSentSuccess'
+    assert response[1]['event'] == 'EventPaymentSentSuccess'
 
-    # test endpoint with partner
+    # test endpoint for token and partner
     request = grequests.get(
         api_url_for(
             api_backend,
-            'channelhistoryresource',
-            partner_address=target1_address,
+            'token_target_paymentresource',
             token_address=token_address,
+            target_address=target1_address,
         ),
     )
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) == 1
-    assert response.json()[0]['event'] == 'EventTransferSentSuccess'
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentSentSuccess'

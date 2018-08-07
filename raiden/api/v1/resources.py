@@ -148,23 +148,6 @@ class RegisterTokenResource(BaseResource):
         )
 
 
-class PaymentToTargetResource(BaseResource):
-
-    post_schema = PaymentSchema(
-        only=('amount', 'identifier'),
-    )
-
-    @use_kwargs(post_schema, locations=('json',))
-    def post(self, token_address, target_address, amount, identifier):
-        return self.rest_api.initiate_payment(
-            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
-            token_address=token_address,
-            target_address=target_address,
-            amount=amount,
-            identifier=identifier,
-        )
-
-
 class ConnectionsResource(BaseResource):
 
     put_schema = ConnectionsConnectSchema()
@@ -202,14 +185,34 @@ class ConnectionsInfoResource(BaseResource):
         )
 
 
-class ChannelHistoryResource(BaseResource):
+class PaymentResource(BaseResource):
+
+    post_schema = PaymentSchema(
+        only=('amount', 'identifier'),
+    )
 
     def get(
             self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
+            token_address: typing.TokenAddress = None,
+            target_address: typing.Address = None,
     ):
-        return self.rest_api.get_channel_history_events(
+        return self.rest_api.get_payment_history(
             token_address=token_address,
-            partner_address=partner_address,
+            target_address=target_address,
+        )
+
+    @use_kwargs(post_schema, locations=('json',))
+    def post(
+            self,
+            token_address: typing.TokenAddress,
+            target_address: typing.TargetAddress,
+            amount: typing.PaymentAmount,
+            identifier: typing.PaymentID,
+    ):
+        return self.rest_api.initiate_payment(
+            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
+            token_address=token_address,
+            target_address=target_address,
+            amount=amount,
+            identifier=identifier,
         )

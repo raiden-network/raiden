@@ -46,9 +46,9 @@ from raiden.api.v1.encoding import (
     PartnersPerTokenListSchema,
     PaymentSchema,
     InvalidEndpoint,
-    EventTransferSentSuccessSchema,
-    EventTransferReceivedSuccessSchema,
-    EventTransferSentFailedSchema,
+    EventPaymentSentSuccessSchema,
+    EventPaymentReceivedSuccessSchema,
+    EventPaymentSentFailedSchema,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -61,10 +61,9 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenEventsResource,
     ChannelEventsResource,
-    PaymentToTargetResource,
     ConnectionsResource,
     ConnectionsInfoResource,
-    ChannelHistoryResource,
+    PaymentResource,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -109,20 +108,22 @@ URLS_V1 = [
         '/events/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
         ChannelEventsResource,
     ),
-    (
-        '/payments/<hexaddress:token_address>/<hexaddress:target_address>',
-        PaymentToTargetResource,
-    ),
     ('/connections/<hexaddress:token_address>', ConnectionsResource),
     ('/connections', ConnectionsInfoResource),
     (
-        '/channels/history/<hexaddress:token_address>',
-        ChannelHistoryResource,
-        'tokenchannelhistoryresource',
+        '/payments',
+        PaymentResource,
+        'paymentresource',
     ),
     (
-        '/channels/history/<hexaddress:token_address>/<hexaddress:partner_address>',
-        ChannelHistoryResource,
+        '/payments/<hexaddress:token_address>',
+        PaymentResource,
+        'token_paymentresource',
+    ),
+    (
+        '/payments/<hexaddress:token_address>/<hexaddress:target_address>',
+        PaymentResource,
+        'token_target_paymentresource',
     ),
 ]
 
@@ -194,9 +195,9 @@ def normalize_events_list(old_list):
         hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
-        if new_event['event'] == 'EventTransferReceivedSuccess':
+        if new_event['event'] == 'EventPaymentReceivedSuccess':
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
-        if new_event['event'] == 'EventTransferSentSuccess':
+        if new_event['event'] == 'EventPaymentSentSuccess':
             new_event['target'] = to_checksum_address(new_event['target'])
         new_list.append(new_event)
     return new_list
@@ -366,10 +367,9 @@ class RestAPI:
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.payment_schema = PaymentSchema()
-        self.sent_success_transfer_schema = EventTransferSentSuccessSchema()
-        self.received_success_transfer_schema = EventTransferReceivedSuccessSchema()
-        self.failed_transfer_schema = EventTransferSentFailedSchema()
-
+        self.sent_success_payment_schema = EventPaymentSentSuccessSchema()
+        self.received_success_payment_schema = EventPaymentReceivedSuccessSchema()
+        self.failed_payment_schema = EventPaymentSentFailedSchema()
 
     def get_our_address(self):
         return api_response(
@@ -613,16 +613,23 @@ class RestAPI:
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
-    def get_channel_history_events(
+    def get_payment_history(
             self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
+            token_address: typing.TokenAddress = None,
+            target_address: typing.Address = None,
     ):
         try:
-            raiden_service_result = self.raiden_api.get_channel_history_events(
-                token_address,
-                partner_address,
-            )
+            if token_address is None and target_address is None:
+                raiden_service_result = self.raiden_api.get_payment_history()
+            elif target_address is None:
+                raiden_service_result = self.raiden_api.get_payment_history_for_token(
+                    token_address,
+                )
+            else:
+                raiden_service_result = self.raiden_api.get_payment_history_for_token_and_target(
+                    token_address,
+                    target_address,
+                )
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
         result = []
@@ -630,12 +637,14 @@ class RestAPI:
             evt.block_number = block_number
             name = type(evt).__name__
             evt.event = name
-            if name == 'EventTransferSentSuccess':
-                event = self.sent_success_transfer_schema.dump(evt)
-            elif name == 'EvnetTransferSentFailed':
-                event = self.failed_transfer_schema.dump(evt)
+            if name == 'EventPaymentSentSuccess':
+                event = self.sent_success_payment_schema.dump(evt)
+            elif name == 'EventPaymentSentFailed':
+                event = self.failed_payment_schema.dump(evt)
+            elif name == 'EventPaymentReceivedSuccess':
+                event = self.received_success_payment_schema.dump(evt)
             else:
-                event = self.received_success_transfer_schema.dump(evt)
+                log.warning('Unexpected event', unexpected_event=evt)
             result.append(event.data)
         return api_response(result=result)
 

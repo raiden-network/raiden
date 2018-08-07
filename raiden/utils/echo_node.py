@@ -85,7 +85,7 @@ class EchoNode:
 
     def poll_all_received_events(self):
         """ This will be triggered once for each `echo_node_alarm_callback`.
-        It polls all channels for `EventTransferReceivedSuccess` events,
+        It polls all channels for `EventPaymentReceivedSuccess` events,
         adds all new events to the `self.received_transfers` queue and
         respawns `self.echo_node_worker`, if it died. """
 
@@ -102,7 +102,7 @@ class EchoNode:
                     )
                     received_transfers = [
                         event for event in received_transfers
-                        if event['event'] == 'EventTransferReceivedSuccess'
+                        if event['event'] == 'EventPaymentReceivedSuccess'
                     ]
                     for event in received_transfers:
                         transfer = event.copy()

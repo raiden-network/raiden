@@ -94,7 +94,6 @@ def direct_transfer(
         token_network_identifier,
         target_app.raiden.address,
     )
-
     assert channel_state, 'there is not a direct channel'
 
     initiator_app.raiden.direct_transfer_async(

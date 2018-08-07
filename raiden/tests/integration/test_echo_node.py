@@ -1,7 +1,7 @@
 import pytest
 import gevent
 
-from raiden.transfer.events import EventTransferReceivedSuccess
+from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils.echo_node import EchoNode
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
@@ -49,7 +49,7 @@ def test_event_transfer_received_success(
         events = [e[1] for e in events]
         return must_contain_entry(
             events,
-            EventTransferReceivedSuccess,
+            EventPaymentReceivedSuccess,
             {'amount': amount, 'initiator': address},
         )
 
@@ -101,7 +101,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
         received = {
             event['identifier']: event
             for event in events
-            if event['event'] == 'EventTransferReceivedSuccess'
+            if event['event'] == 'EventPaymentReceivedSuccess'
         }
         if len(received) != 1:
             return
@@ -189,7 +189,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         received = {
             event['identifier']: event
             for event in events
-            if event['event'] == 'EventTransferReceivedSuccess' and
+            if event['event'] == 'EventPaymentReceivedSuccess' and
             event['initiator'] == echo_app.raiden.address and
             event['identifier'] == sent_transfer['identifier'] + event['amount']
         }

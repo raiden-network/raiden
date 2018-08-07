@@ -68,6 +68,7 @@ def initiator_init(
 ):
 
     transfer_state = TransferDescriptionWithSecretState(
+        raiden.default_registry.address,
         transfer_identifier,
         transfer_amount,
         token_network_identifier,
