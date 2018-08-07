@@ -39,6 +39,12 @@ Raiden Glossary
    locksroot
        The root of the :ref:`merkle tree<merkletree-section>` which holds the hashes of all the locks in the channel.
 
+   transfer
+       In Raiden a Transfer denotes a single hop transfer of tokens, either direct or hash time locked inside a payment channel.
+
+   payment
+       In Raiden a Payment denotes the process of sending tokens from one account to another. A payment has an initiator and a target and can be composed of multiple transfers.
+
    transferred amount
        The transferred amount is the total amount of token one participant of a netting channel has sent to his counterparty.
 
