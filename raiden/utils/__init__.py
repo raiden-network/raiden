@@ -130,24 +130,6 @@ def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
     return host, port
 
 
-def eth_endpoint_to_hostport(eth_rpc_endpoint: str):
-    if eth_rpc_endpoint.startswith('http://'):
-        rpc_host = eth_rpc_endpoint[len('http://'):]
-        rpc_port = constants.HTTP_PORT
-    elif eth_rpc_endpoint.startswith('https://'):
-        rpc_host = eth_rpc_endpoint[len('https://'):]
-        rpc_port = constants.HTTPS_PORT
-    else:
-        # Fallback to default port if only an IP address is given
-        rpc_host = eth_rpc_endpoint
-        rpc_port = constants.ETH_RPC_DEFAULT_PORT
-
-    if ':' in rpc_host:
-        return split_endpoint(rpc_host)
-
-    return (rpc_host, rpc_port)
-
-
 def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
     """ Returns public key in bitcoins 'bin' encoding. """
     if not ishash(private_key_bin):
