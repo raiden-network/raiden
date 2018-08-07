@@ -60,7 +60,7 @@ ParticipantDetails = Dict[
         bool,
         typing.BalanceHash,
         int,
-    ]
+    ],
 ]
 
 
@@ -254,7 +254,12 @@ class TokenNetwork:
             to_checksum_address(participant2),
         )
         assert isinstance(channel_identifier, typing.T_ChannelID)
-        channel_data = self._call_and_check_result('getChannelInfo', channel_identifier)
+        channel_data = self._call_and_check_result(
+            'getChannelInfo',
+            channel_identifier,
+            to_checksum_address(participant1),
+            to_checksum_address(participant2),
+        )
 
         return {
             'channel_identifier': channel_identifier,
