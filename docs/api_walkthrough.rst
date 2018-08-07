@@ -8,7 +8,7 @@ Introduction
 =============
 Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
-This section walks through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, are be provided.
+This section walks through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, are provided.
 
 Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that a proper connection to Raiden is established.
 
