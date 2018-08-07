@@ -47,7 +47,7 @@ A channel object consists of a
 - ``token_network_identifier`` should be a ``string`` containing the EIP55-encoded address of the
   token network the channel is part of.
 
-- ``balance`` should be an integer of the amount of the ``token_address`` token we have available for transferring.
+- ``balance`` should be an integer of the amount of the ``token_address`` token we have available for payments.
 
 - ``state`` should be the current state of the channel represented by a string.
   Possible value are:
@@ -484,17 +484,17 @@ Connection Management
 Transfers
 =========
 
-.. http:post:: /api/(version)/transfers/(token_address)/(target_address)
+.. http:post:: /api/(version)/payments/(token_address)/(target_address)
 
-   Initiate a transfer.
+   Initiate a payment.
 
-   The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the transfer to be propagated safely e.t.c
+   The request will only return once the payment either succeeded or failed. A payment can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the payment to be propagated safely e.t.c
 
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      POST /api/1/transfers/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      POST /api/1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -503,8 +503,8 @@ Transfers
           "identifier": 42
       }
 
-   :reqjson int amount: Amount to be transferred
-   :reqjson int identifier: Identifier of the transfer (optional)
+   :reqjson int amount: Amount to be sent to the target
+   :reqjson int identifier: Identifier of the payment (optional)
 
    **Example Response**:
 
@@ -521,10 +521,10 @@ Transfers
           "identifier": 42
       }
 
-   :statuscode 200: Successful transfer
+   :statuscode 200: Successful payment
    :statuscode 400: If the provided json is in some way malformed
-   :statuscode 402: If the transfer can't start due to insufficient balance
-   :statuscode 408: If a timeout happened during the transfer
+   :statuscode 402: If the payment can't start due to insufficient balance
+   :statuscode 408: If a timeout happened during the payment
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target
    :statuscode 500: Internal Raiden node error
 
