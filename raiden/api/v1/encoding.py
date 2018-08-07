@@ -299,7 +299,7 @@ class ChannelPatchSchema(BaseSchema):
         decoding_class = dict
 
 
-class TransferSchema(BaseSchema):
+class PaymentSchema(BaseSchema):
     initiator_address = AddressField(missing=None)
     target_address = AddressField(missing=None)
     token_address = AddressField(missing=None)
