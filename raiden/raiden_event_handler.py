@@ -53,8 +53,7 @@ def handle_send_lockedtransfer(
     mediated_transfer_message = message_from_sendevent(send_locked_transfer, raiden.address)
     raiden.sign(mediated_transfer_message)
     raiden.transport.send_async(
-        mediated_transfer_message.recipient,
-        send_locked_transfer.queue_name,
+        send_locked_transfer.queue_identifier,
         mediated_transfer_message,
     )
 
@@ -66,8 +65,7 @@ def handle_send_directtransfer(
     direct_transfer_message = message_from_sendevent(send_direct_transfer, raiden.address)
     raiden.sign(direct_transfer_message)
     raiden.transport.send_async(
-        send_direct_transfer.recipient,
-        send_direct_transfer.queue_name,
+        send_direct_transfer.queue_identifier,
         direct_transfer_message,
     )
 
@@ -79,8 +77,7 @@ def handle_send_revealsecret(
     reveal_secret_message = message_from_sendevent(reveal_secret_event, raiden.address)
     raiden.sign(reveal_secret_message)
     raiden.transport.send_async(
-        reveal_secret_event.recipient,
-        reveal_secret_event.queue_name,
+        reveal_secret_event.queue_identifier,
         reveal_secret_message,
     )
 
@@ -92,8 +89,7 @@ def handle_send_balanceproof(
     secret_message = message_from_sendevent(balance_proof_event, raiden.address)
     raiden.sign(secret_message)
     raiden.transport.send_async(
-        balance_proof_event.recipient,
-        balance_proof_event.queue_name,
+        balance_proof_event.queue_identifier,
         secret_message,
     )
 
@@ -105,8 +101,7 @@ def handle_send_secretrequest(
     secret_request_message = message_from_sendevent(secret_request_event, raiden.address)
     raiden.sign(secret_request_message)
     raiden.transport.send_async(
-        secret_request_event.recipient,
-        secret_request_event.queue_name,
+        secret_request_event.queue_identifier,
         secret_request_message,
     )
 
@@ -118,8 +113,7 @@ def handle_send_refundtransfer(
     refund_transfer_message = message_from_sendevent(refund_transfer_event, raiden.address)
     raiden.sign(refund_transfer_message)
     raiden.transport.send_async(
-        refund_transfer_event.recipient,
-        refund_transfer_event.queue_name,
+        refund_transfer_event.queue_identifier,
         refund_transfer_message,
     )
 
@@ -131,8 +125,7 @@ def handle_send_processed(
     processed_message = message_from_sendevent(processed_event, raiden.address)
     raiden.sign(processed_message)
     raiden.transport.send_async(
-        processed_event.recipient,
-        processed_event.queue_name,
+        processed_event.queue_identifier,
         processed_message,
     )
 

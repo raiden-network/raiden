@@ -1,6 +1,13 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from typing import List
+from typing import (
+    Address,
+    List,
+    MessageID,
+    ChannelID,
+    QueueIdentifier,
+    T_ChannelID,
+)
 
 
 # Quick overview
@@ -80,9 +87,22 @@ class Event:
 
 
 class SendMessageEvent(Event):
-    def __init__(self, recipient, queue_name, message_identifier):
+    def __init__(
+            self,
+            recipient: Address,
+            channel_identifier: ChannelID,
+            message_identifier: MessageID,
+    ):
+        # Note that here and only here channel identifier can also be 0 which stands
+        # for the identifier of no channel (i.e. the global queue)
+        if not isinstance(channel_identifier, T_ChannelID):
+            raise ValueError('channel identifier must be of type T_ChannelIdentifier')
+
         self.recipient = recipient
-        self.queue_name = queue_name
+        self.queue_identifier = QueueIdentifier(
+            recipient=recipient,
+            channel_identifier=channel_identifier,
+        )
         self.message_identifier = message_identifier
 
 

@@ -389,19 +389,19 @@ class SendDirectTransfer(SendMessageEvent):
 
     def __init__(
             self,
-            recipient,
-            queue_name,
-            message_identifier,
-            payment_identifier,
-            balance_proof,
-            token,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
+            balance_proof: BalanceProofUnsignedState,
+            token_address: typing.TokenAddress,
     ):
 
-        super().__init__(recipient, queue_name, message_identifier)
+        super().__init__(recipient, channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof
-        self.token = token
+        self.token = token_address
 
     def __repr__(self):
         return (
@@ -422,6 +422,7 @@ class SendDirectTransfer(SendMessageEvent):
             isinstance(other, SendDirectTransfer) and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
+            self.queue_identifier == other.queue_identifier and
             self.balance_proof == other.balance_proof and
             self.token == other.token and
             self.recipient == other.recipient
