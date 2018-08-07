@@ -12,6 +12,13 @@ from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
 )
 
+# pylint: disable=redefined-outer-name
+
+
+@pytest.fixture
+def our_address():
+    return factories.make_address()
+
 
 @pytest.fixture
 def token_id():
@@ -29,10 +36,13 @@ def payment_network_id():
 
 
 @pytest.fixture
-def chain_state():
+def chain_state(our_address):
+    block_number = 1
+
     return ChainState(
         random.Random(),
-        1,
+        block_number,
+        our_address,
         UNIT_CHAIN_ID,
     )
 
