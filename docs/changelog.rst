@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2084` Rename the ``/transfers/`` endpoint to ``/payments/``.
 * :feature:`1998` Add a strategy to make sure that the account Raiden runs on always has enough balance to settle all channels. No new channels can be openend when no sufficient balance for the whole channel lifecycle is available.
 * :feature:`1950` Breaking change: Better transaction handling on restart. This change breaks binary compatibility with the previous WAL.
 
