@@ -116,7 +116,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
     assert must_contain_entry(state_changes, ContractReceiveChannelClosed, {
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
-        'closing_address': app1.raiden.address,
+        'transaction_from': app1.raiden.address,
         'closed_block_number': channel_state.close_transaction.finished_block_number,
     })
 
