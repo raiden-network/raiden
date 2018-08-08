@@ -23,6 +23,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
     token_network_id = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(token_network_id, token_id)
+    payment_network_identifier = factories.make_payment_network_identifier()
 
     amount = 30
     our_balance = amount + 50
@@ -36,6 +37,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
     )
 
     token_network.state_transition(
+        payment_network_identifier,
         token_network_state,
         state_change1,
         pseudo_random_generator,
@@ -60,6 +62,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
 
     # replay the ContractReceiveChannelNew state change
     iteration = token_network.state_transition(
+        payment_network_identifier,
         token_network_state,
         state_change2,
         pseudo_random_generator,
@@ -82,6 +85,7 @@ def test_channel_settle_must_properly_cleanup():
     token_network_id = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(token_network_id, token_id)
+    payment_network_identifier = factories.make_payment_network_identifier()
 
     amount = 30
     our_balance = amount + 50
@@ -94,6 +98,7 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_new_iteration = token_network.state_transition(
+        payment_network_identifier,
         token_network_state,
         channel_new_state_change,
         pseudo_random_generator,
@@ -109,6 +114,7 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_closed_iteration = token_network.state_transition(
+        payment_network_identifier,
         channel_new_iteration.new_state,
         channel_close_state_change,
         pseudo_random_generator,
@@ -124,6 +130,7 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_settled_iteration = token_network.state_transition(
+        payment_network_identifier,
         channel_closed_iteration.new_state,
         channel_settled_state_change,
         pseudo_random_generator,
@@ -152,6 +159,7 @@ def test_multiple_channel_states(
         partner_balance=our_balance,
         partner_address=address,
     )
+    payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
         our_address,
@@ -160,6 +168,7 @@ def test_multiple_channel_states(
     )
 
     channel_new_iteration = token_network.state_transition(
+        payment_network_identifier,
         token_network_state,
         channel_new_state_change,
         pseudo_random_generator,
@@ -202,6 +211,7 @@ def test_multiple_channel_states(
     )
 
     channel_closed_iteration = token_network.state_transition(
+        payment_network_identifier,
         channel_new_iteration.new_state,
         channel_close_state_change,
         pseudo_random_generator,
@@ -217,6 +227,7 @@ def test_multiple_channel_states(
     )
 
     channel_settled_iteration = token_network.state_transition(
+        payment_network_identifier,
         channel_closed_iteration.new_state,
         channel_settled_state_change,
         pseudo_random_generator,
@@ -241,6 +252,7 @@ def test_multiple_channel_states(
     )
 
     channel_new_iteration = token_network.state_transition(
+        payment_network_identifier,
         token_network_state,
         channel_new_state_change,
         pseudo_random_generator,

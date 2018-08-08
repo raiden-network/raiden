@@ -1536,7 +1536,7 @@ def handle_receive_directtransfer(
         payment_received_success = EventPaymentReceivedSuccess(
             payment_network_identifier=channel_state.payment_network_identifier,
             token_network_identifier=channel_state.token_network_identifier,
-            payment_identifier=direct_transfer.payment_identifier,
+            identifier=direct_transfer.payment_identifier,
             amount=transfer_amount,
             initiator=channel_state.partner_state.address,
         )

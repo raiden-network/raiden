@@ -220,7 +220,7 @@ def handle_secretrequest(
     elif invalid_secretrequest:
         cancel = EventPaymentSentFailed(
             payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifer=channel_state.token_network_identifer,
+            token_network_identifier=channel_state.token_network_identifer,
             identifier=initiator_state.transfer_description.payment_identifier,
             target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',

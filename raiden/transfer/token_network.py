@@ -191,6 +191,7 @@ def handle_newroute(token_network_state, state_change):
 
 
 def handle_action_transfer_direct(
+        payment_network_identifier,
         token_network_state,
         state_change,
         pseudo_random_generator,
@@ -211,8 +212,8 @@ def handle_action_transfer_direct(
         events = iteration.events
     else:
         failure = EventPaymentSentFailed(
-            channel_states[-1].payment_network_identifier,
-            channel_states[-1].token_network_identifier,
+            payment_network_identifier,
+            state_change.token_network_identifier,
             state_change.identifier,
             receiver_address,
             'Unknown partner channel',
@@ -269,6 +270,7 @@ def handle_receive_transfer_refund(
 
 
 def state_transition(
+        payment_network_identifier,
         token_network_state,
         state_change,
         pseudo_random_generator,
@@ -323,6 +325,7 @@ def state_transition(
         )
     elif type(state_change) == ActionTransferDirect:
         iteration = handle_action_transfer_direct(
+            payment_network_identifier,
             token_network_state,
             state_change,
             pseudo_random_generator,
