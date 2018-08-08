@@ -15,6 +15,7 @@ from raiden.exceptions import (
     InvalidAmount,
     TransactionThrew,
     ChannelIncorrectStateError,
+    InsufficientFunds,
 )
 from raiden.transfer import views
 from raiden.utils.typing import Address
@@ -107,6 +108,14 @@ class ConnectionManager:
             initial_channel_target: Target number of channels to open.
             joinable_funds_target: Amount of funds not initially assigned.
         """
+        token = self.raiden.chain.token(self.token_address)
+        token_balance = token.balance_of(self.raiden.address)
+
+        if token_balance < funds:
+            raise InvalidAmount(
+                f'Insufficient balance for token {pex(self.token_address)}',
+            )
+
         if funds <= 0:
             raise InvalidAmount(
                 'The funds to use in the connection need to be a positive integer',
@@ -223,10 +232,9 @@ class ConnectionManager:
         If the connection manager has no funds, this is a noop.
         """
         with self.lock:
-            if self._funds_remaining <= 0 or self._leaving_state:
-                return
-
-            self._open_channels()
+            while self._funds_remaining > 0 and not self._leaving_state:
+                if not self._open_channels():
+                    break
 
     def _find_new_partners(self):
         """ Search the token network for potential channel partners. """
@@ -278,59 +286,65 @@ class ConnectionManager:
             log.exception('connection manager: deposit failed')
         except ChannelIncorrectStateError:
             log.exception('connection manager: channel not in opened state')
+        except InsufficientFunds as e:
+            log.error('connection manager: not enough funds to deposit')
 
-    def _open_channels(self):
+    def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`
         channels open. Do nothing if there are enough channels open already.
 
         Note:
             - This method must be called with the lock held.
+        Return:
+            - False if no channels could be opened
         """
 
-        while True:
-            open_channels = views.get_channelstate_open(
-                chain_state=views.state_from_raiden(self.raiden),
-                payment_network_id=self.registry_address,
-                token_address=self.token_address,
-            )
-            # don't consider the bootstrap channel
-            open_channels = [
-                channel_state
-                for channel_state in open_channels
-                if channel_state.partner_state.address != self.BOOTSTRAP_ADDR
-            ]
-            funded_channels = [
-                channel_state for channel_state in open_channels
-                if channel_state.our_state.contract_balance >= self._initial_funding_per_partner
-            ]
-            nonfunded_channels = [
-                channel_state for channel_state in open_channels
-                if channel_state not in funded_channels
-            ]
-            possible_new_partners = self._find_new_partners()
+        open_channels = views.get_channelstate_open(
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=self.registry_address,
+            token_address=self.token_address,
+        )
+        # don't consider the bootstrap channel
+        open_channels = [
+            channel_state
+            for channel_state in open_channels
+            if channel_state.partner_state.address != self.BOOTSTRAP_ADDR
+        ]
+        funded_channels = [
+            channel_state for channel_state in open_channels
+            if channel_state.our_state.contract_balance >= self._initial_funding_per_partner
+        ]
+        nonfunded_channels = [
+            channel_state for channel_state in open_channels
+            if channel_state not in funded_channels
+        ]
+        possible_new_partners = self._find_new_partners()
+        if possible_new_partners == 0:
+            return False
 
-            # if we already met our target, break
-            if len(funded_channels) >= self.initial_channel_target:
-                break
-            # if we didn't, but there's no nonfunded channels and no available partners
-            # it means the network is smaller than our target, so we should also break
-            if not nonfunded_channels and not possible_new_partners:
-                break
+        # if we already met our target, break
+        if len(funded_channels) >= self.initial_channel_target:
+            return False
+        # if we didn't, but there's no nonfunded channels and no available partners
+        # it means the network is smaller than our target, so we should also break
+        if not nonfunded_channels and not possible_new_partners:
+            return False
 
-            n_to_join = self.initial_channel_target - len(funded_channels)
-            nonfunded_partners = [
-                channel_state.partner_state.address
-                for channel_state in nonfunded_channels
-            ]
-            # first, fund nonfunded channels, then open and fund with possible_new_partners,
-            # until initial_channel_target of funded channels is met
-            join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
+        n_to_join = self.initial_channel_target - len(funded_channels)
+        nonfunded_partners = [
+            channel_state.partner_state.address
+            for channel_state in nonfunded_channels
+        ]
+        # first, fund nonfunded channels, then open and fund with possible_new_partners,
+        # until initial_channel_target of funded channels is met
+        join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
 
-            greenlets = [
-                gevent.spawn(self._join_partner, partner)
-                for partner in join_partners
-            ]
-            gevent.joinall(greenlets)
+        greenlets = [
+            gevent.spawn(self._join_partner, partner)
+            for partner in join_partners
+        ]
+        gevent.joinall(greenlets)
+        return True
 
     @property
     def _initial_funding_per_partner(self) -> int:
@@ -356,14 +370,15 @@ class ConnectionManager:
             - This attribute must be accessed with the lock held.
         """
         if self.funds > 0:
+            token = self.raiden.chain.token(self.token_address)
+            token_balance = token.balance_of(self.raiden.address)
             sum_deposits = views.get_our_capacity_for_token_network(
                 views.state_from_raiden(self.raiden),
                 self.registry_address,
                 self.token_address,
             )
 
-            remaining = self.funds - sum_deposits
-            return remaining
+            return min(self.funds - sum_deposits, token_balance)
 
         return 0
 
