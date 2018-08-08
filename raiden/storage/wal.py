@@ -7,7 +7,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 def restore_from_latest_snapshot(transition_function, storage):
     events = list()
-    snapshot = storage.get_state_snapshot()
+    snapshot = storage.get_latest_state_snapshot()
 
     if snapshot:
         log.debug('Restoring from snapshot')
