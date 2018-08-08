@@ -1,4 +1,5 @@
 from binascii import hexlify, unhexlify
+import collections
 import os
 import re
 import sys
@@ -276,18 +277,15 @@ def create_default_identifier():
     return random.randint(0, constants.UINT64_MAX)
 
 
-def merge_dict(a: dict, b: dict, path=None) -> dict:
+def merge_dict(to_update: dict, other_dict: dict):
     """ merges b into a """
-    if path is None:
-        path = []
-    for key in b:
-        if key in a:
-            if isinstance(a[key], dict) and isinstance(b[key], dict):
-                merge_dict(a[key], b[key], path + [str(key)])
-            elif a[key] == b[key]:
-                pass  # same leaf value
-            else:
-                a[key] = b[key]
+    for key, value in other_dict.items():
+        has_map = (
+            isinstance(value, collections.Mapping) and
+            isinstance(to_update.get(key, None), collections.Mapping)
+        )
+
+        if has_map:
+            merge_dict(to_update[key], value)
         else:
-            a[key] = b[key]
-    return a
+            to_update[key] = value
