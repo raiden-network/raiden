@@ -164,7 +164,7 @@ class TokenNetwork:
             # All other concurrent threads should block on the result of opening this channel
             self.open_channel_transactions[partner].get()
 
-        channel_created = self.channel_exists(self.node_address, partner)
+        channel_created = self.channel_exists_and_not_settled(self.node_address, partner)
         if channel_created is False:
             log.error(
                 'creating new channel failed',
@@ -185,7 +185,7 @@ class TokenNetwork:
         return channel_identifier
 
     def _new_netting_channel(self, partner: typing.Address, settle_timeout: int):
-        if self.channel_exists(self.node_address, partner):
+        if self.channel_exists_and_not_settled(self.node_address, partner):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
         transaction_hash = self.proxy.transact(
@@ -205,15 +205,51 @@ class TokenNetwork:
 
         return transaction_hash
 
-    def channel_exists(self, participant1: typing.Address, participant2: typing.Address) -> bool:
-        channel_data = self.detail_channel(participant1, participant2)
+    def _inspect_channel_identifier(
+            self,
+            channel_identifier: typing.Optional[typing.ChannelID],
+            participant1: typing.Address,
+            participant2: typing.Address,
+            called_by_fn: str,
+    ) -> typing.ChannelID:
+        if not channel_identifier:
+            channel_identifier = self._call_and_check_result(
+                'getChannelIdentifier',
+                to_checksum_address(participant1),
+                to_checksum_address(participant2),
+            )
+        assert isinstance(channel_identifier, typing.T_ChannelID)
+        if channel_identifier == 0:
+            raise ChannelIncorrectStateError(
+                f'When calling {called_by_fn} either 0 value was given for the '
+                'channel_identifier or getChannelIdentifier returned 0, meaning '
+                f'no channel is currently open between {pex(participant1)} and '
+                f'{pex(participant2)}',
+            )
+        return channel_identifier
+
+    def channel_exists_and_not_settled(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
+    ) -> bool:
+        """Returns if the channel exists and is in a non-settled state"""
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except ChannelIncorrectStateError:
+            return False
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
         log.debug('channel data {}'.format(channel_data))
 
-        return channel_data['state'] > CHANNEL_STATE_NONEXISTENT
+        exists_and_not_settled = (
+            channel_data['state'] > CHANNEL_STATE_NONEXISTENT and
+            channel_data['state'] < CHANNEL_STATE_SETTLED
+        )
+        return exists_and_not_settled
 
     def detail_participant(
             self,
@@ -223,11 +259,6 @@ class TokenNetwork:
     ) -> ParticipantDetails:
         """ Returns a dictionary with the channel participant information. """
 
-        channel_identifier = self._call_and_check_result(
-            'getChannelIdentifier',
-            to_checksum_address(participant),
-            to_checksum_address(partner),
-        )
         data = self._call_and_check_result(
             'getChannelParticipantInfo',
             channel_identifier,
@@ -246,14 +277,21 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> Dict[str, typing.Union[typing.ChannelID, typing.BlockNumber, str]]:
-        """ Returns a dictionary with the channel specific information. """
-        channel_identifier = self._call_and_check_result(
-            'getChannelIdentifier',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
+        """ Returns a dictionary with the channel specific information.
+
+        If no specific channel_identifier is given then it tries to see if there
+        is a currently open channel and uses that identifier.
+
+        """
+        channel_identifier = self._inspect_channel_identifier(
+            channel_identifier=channel_identifier,
+            participant1=participant1,
+            participant2=participant2,
+            called_by_fn='detail_channel',
         )
-        assert isinstance(channel_identifier, typing.T_ChannelID)
+
         channel_data = self._call_and_check_result(
             'getChannelInfo',
             channel_identifier,
@@ -271,6 +309,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> ParticipantDetails:
         """ Returns a dictionary with the participants' channel information.
 
@@ -283,10 +322,11 @@ class TokenNetwork:
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        channel_identifier = self._call_and_check_result(
-            'getChannelIdentifier',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
+        channel_identifier = self._inspect_channel_identifier(
+            channel_identifier=channel_identifier,
+            participant1=participant1,
+            participant2=participant2,
+            called_by_fn='details_participants',
         )
 
         our_data = self.detail_participant(channel_identifier, participant1, participant2)
@@ -306,7 +346,12 @@ class TokenNetwork:
             'partner_nonce': partner_data['nonce'],
         }
 
-    def detail(self, participant1: typing.Address, participant2: typing.Address) -> Dict:
+    def detail(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
+    ) -> Dict:
         """ Returns a dictionary with all the details of the channel and the channel participants.
 
         Note:
@@ -318,10 +363,11 @@ class TokenNetwork:
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        channel_data = self.detail_channel(participant1, participant2)
+        channel_data = self.detail_channel(participant1, participant2, channel_identifier)
         participants_data = self.detail_participants(
             participant1,
             participant2,
+            channel_data['channel_identifier'],
         )
         chain_id = self.proxy.contract.functions.chain_id().call()
 
@@ -339,37 +385,34 @@ class TokenNetwork:
         """ Returns the maximal settlement timeout for the token network. """
         return self.proxy.contract.functions.settlement_timeout_max().call()
 
-    def locked_amount_by_locksroot(
-            self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            locksroot: typing.Locksroot,
-    ) -> int:
-        """ Returns the locked amount for a specific participant's locksroot. """
-        data = self._call_and_check_result(
-            'getParticipantLockedAmount',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
-            locksroot,
-        )
-        return data
-
     def settle_block_number(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-    ) -> typing.BlockNumber:
-        """ Returns the channel settle_block_number. """
-        channel_data = self.detail_channel(participant1, participant2)
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
+    ) -> typing.Optional[typing.BlockNumber]:
+        """ Returns the channel settle_block_number if it is not yet settled and None Otherwise """
+        try:
+            channel_data = self.detail_channel(
+                participant1=participant1,
+                participant2=participant2,
+                channel_identifier=channel_identifier,
+            )
+        except ChannelIncorrectStateError:
+            return None
         return channel_data.get('settle_block_number')
 
     def channel_is_opened(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
-        channel_data = self.detail_channel(participant1, participant2)
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except ChannelIncorrectStateError:
+            return False
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
@@ -380,9 +423,13 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
-        channel_data = self.detail_channel(participant1, participant2)
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except ChannelIncorrectStateError:
+            return False
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
@@ -393,23 +440,45 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
-        channel_data = self.detail_channel(participant1, participant2)
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except ChannelIncorrectStateError:
+            return False
 
         if not isinstance(channel_data['state'], typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.get('state') == CHANNEL_STATE_SETTLED
+        return channel_data.get('state') >= CHANNEL_STATE_SETTLED
 
     def closing_address(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> Optional[typing.Address]:
-        """ Returns the address of the closer, if the channel is closed, None
+        """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
-        participants_data = self.detail_participants(participant1, participant2)
+
+        try:
+            channel_data = self.detail_channel(
+                participant1=participant1,
+                participant2=participant2,
+                channel_identifier=channel_identifier,
+            )
+        except ChannelIncorrectStateError:
+            return None
+
+        if channel_data['state'] >= CHANNEL_STATE_SETTLED:
+            return None
+
+        participants_data = self.detail_participants(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_data['channel_identifier'],
+        )
 
         if participants_data.get('our_is_closer'):
             return participants_data.get('our_address')
@@ -422,22 +491,17 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
+            channel_identifier: typing.Optional[typing.ChannelID] = None,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
         it.
 
         Note: Having a deposit does not imply having a balance for off-chain
         transfers. """
-        opened = self.channel_is_opened(participant1, participant2)
+        opened = self.channel_is_opened(participant1, participant2, channel_identifier)
 
         if opened is False:
             return False
-
-        channel_identifier = self._call_and_check_result(
-            'getChannelIdentifier',
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
-        )
 
         deposit = self.detail_participant(
             channel_identifier,
@@ -571,7 +635,11 @@ class TokenNetwork:
 
                 log.critical(log_msg, **log_details)
 
-                channel_opened = self.channel_is_opened(self.node_address, partner)
+                channel_opened = self.channel_is_opened(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    channel_identifier=channel_identifier,
+                )
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
                         'Channel is not in an opened state. A deposit cannot be made',
@@ -613,7 +681,7 @@ class TokenNetwork:
             channel_identifier,
         )
 
-        if not self.channel_is_opened(self.node_address, partner):
+        if not self.channel_is_opened(self.node_address, partner, channel_identifier):
             raise ChannelIncorrectStateError(
                 'Channel is not in an opened state. It cannot be closed.',
             )
@@ -633,7 +701,7 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical('close failed', **log_details)
-                if not self.channel_is_opened(self.node_address, partner):
+                if not self.channel_is_opened(self.node_address, partner, channel_identifier):
                     raise ChannelIncorrectStateError(
                         'Channel is not in an opened state. It cannot be closed.',
                     )
@@ -686,7 +754,11 @@ class TokenNetwork:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.critical('updateNonClosingBalanceProof failed', **log_details)
-            channel_closed = self.channel_is_closed(self.node_address, partner)
+            channel_closed = self.channel_is_closed(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+            )
             if channel_closed is False:
                 raise ChannelIncorrectStateError('Channel is not in a closed state')
             raise TransactionThrew('Update NonClosing balance proof', receipt_or_none)
@@ -732,7 +804,11 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical('withdraw failed', **log_details)
-                channel_opened = self.channel_is_opened(self.node_address, partner)
+                channel_opened = self.channel_is_opened(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    channel_identifier=channel_identifier,
+                )
                 if channel_opened is False:
                     raise ChannelIncorrectStateError(
                         'Channel is not in an opened state. A withdraw cannot be made',
@@ -774,7 +850,11 @@ class TokenNetwork:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            channel_settled = self.channel_is_settled(self.node_address, partner)
+            channel_settled = self.channel_is_settled(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+            )
 
             if channel_settled is False:
                 log.critical('unlock failed. Channel is not in a settled state', **log_details)
@@ -869,7 +949,11 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                channel_exists = self.channel_exists(self.node_address, partner)
+                channel_exists = self.channel_exists_and_not_settled(
+                    self.node_address,
+                    partner,
+                    channel_identifier,
+                )
 
                 if not channel_exists:
                     log.info('settle failed, channel already settled', **log_details)
@@ -877,7 +961,11 @@ class TokenNetwork:
                         'Channel already settled or non-existent',
                     )
 
-                channel_closed = self.channel_is_closed(self.node_address, partner)
+                channel_closed = self.channel_is_closed(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    channel_identifier=channel_identifier,
+                )
                 if channel_closed is False:
                     log.info('settle failed, channel is not closed', **log_details)
                     raise ChannelIncorrectStateError(
