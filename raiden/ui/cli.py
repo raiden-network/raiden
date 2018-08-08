@@ -15,7 +15,7 @@ from itertools import count
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import click
 import filelock
@@ -597,6 +597,10 @@ def run_app(
 
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
+
+    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
+    if not parsed_eth_rpc_endpoint.scheme:
+        eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
     web3 = Web3(HTTPProvider(eth_rpc_endpoint))
 
