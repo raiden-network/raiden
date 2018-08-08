@@ -76,9 +76,9 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         return channel.channel_identifier;
     }
 
-    public onTransfer(channel: Channel) {
-        console.log('Transfer');
-        this.action = 'transfer';
+    public onPay(channel: Channel) {
+        console.log('Pay');
+        this.action = 'pay';
         this.tempChannel = channel;
         this.displayDialog = true;
     }
@@ -102,8 +102,8 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
     public manageChannel() {
         this.displayDialog = false;
         switch (this.action) {
-            case 'transfer':
-                this.raidenService.initiateTransfer(
+            case 'pay':
+                this.raidenService.initiatePayment(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
                     this.amount,
@@ -135,15 +135,17 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
 
     public showMessage(response: any) {
         switch (this.action) {
-            case 'transfer':
+            case 'pay':
                 if ('target_address' in response && 'identifier' in response) {
                     this.sharedService.msg({
-                        severity: 'info', summary: this.action,
-                        detail: `A transfer of amount ${response.amount} is successful with the partner ${response.target_address}`
+                        severity: 'info',
+                        summary: 'Payment',
+                        detail: `A payment of ${response.amount} was successfully sent to the partner ${response.target_address}`
                     });
                 } else {
                     this.sharedService.msg({
-                        severity: 'error', summary: this.action,
+                        severity: 'error',
+                        summary: 'Payment',
                         detail: JSON.stringify(response)
                     });
                 }
@@ -198,9 +200,9 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
     public menuFor(channel: Channel): MenuItem[] {
         return [
             {
-                label: 'Transfer',
+                label: 'Pay',
                 icon: 'fa fa-exchange',
-                command: () => this.onTransfer(channel)
+                command: () => this.onPay(channel)
             },
             {
                 label: 'Deposit',
@@ -253,13 +255,13 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         return channel.state !== 'opened';
     }
 
-    private channelCanTransfer(channel: Channel): boolean {
+    private channelCanPay(channel: Channel): boolean {
         return (channel.state === 'opened' && channel.balance > 0);
     }
 
     private updateMenu(channel: Channel, menuItems: MenuItem[]): MenuItem[] {
         if (menuItems != null) {
-            menuItems[0].disabled = !this.channelCanTransfer(channel);
+            menuItems[0].disabled = !this.channelCanPay(channel);
             menuItems[1].disabled = this.channelIsNotOpen(channel);
             menuItems[2].disabled = this.channelIsNotOpen(channel);
         }

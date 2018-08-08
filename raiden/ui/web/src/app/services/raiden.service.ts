@@ -128,13 +128,13 @@ export class RaidenService {
         );
     }
 
-    public initiateTransfer(
+    public initiatePayment(
         tokenAddress: string,
         targetAddress: string,
         amount: number,
     ): Observable<any> {
         return this.http.post(
-            `${this.raidenConfig.api}/transfers/${tokenAddress}/${targetAddress}`,
+            `${this.raidenConfig.api}/payments/${tokenAddress}/${targetAddress}`,
             { amount, identifier: this.identifier },
         ).pipe(
             catchError((error) => this.handleError(error)),

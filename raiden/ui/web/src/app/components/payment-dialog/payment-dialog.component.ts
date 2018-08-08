@@ -1,21 +1,19 @@
 import { Observable, Subscription } from 'rxjs';
 import { share, map } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
-import { FormControl, FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { FormGroup, FormBuilder} from '@angular/forms';
 import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
-import { SwapToken } from '../../models/swaptoken';
 import { TokenPipe } from '../../pipes/token.pipe';
 
-
 @Component({
-    selector: 'app-transfer-dialog',
-    templateUrl: './transfer-dialog.component.html',
-    styleUrls: ['./transfer-dialog.component.css']
+    selector: 'app-payment-dialog',
+    templateUrl: './payment-dialog.component.html',
+    styleUrls: ['./payment-dialog.component.css']
 })
-export class TransferDialogComponent implements OnInit, OnDestroy {
+export class PaymentDialogComponent implements OnInit, OnDestroy {
     private subs: Subscription[] = [];
 
     private _visible = false;
@@ -66,7 +64,7 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
 
     public accept() {
         const value = this.form.value;
-        this.raidenService.initiateTransfer(
+        this.raidenService.initiatePayment(
             value['token_address'],
             value['target_address'],
             value['amount'],
@@ -74,14 +72,14 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
             if ('target_address' in response && 'identifier' in response) {
                 this.sharedService.msg({
                     severity: 'success',
-                    summary: 'Transfer successful',
+                    summary: 'Payment successful',
                     detail: `${value.amount} of {value.token_address} tokens
                         where transfered to ${value.target_address}`,
                 });
             } else {
                 this.sharedService.msg({
                     severity: 'error',
-                    summary: 'Transfer error',
+                    summary: 'Payment error',
                     detail: JSON.stringify(response),
                 });
             }

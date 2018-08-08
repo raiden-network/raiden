@@ -176,7 +176,7 @@ describe('ChannelTableComponent', () => {
         let menu: Menu = menus[1].componentInstance;
         let menuItem: MenuItem = menu.model[0];
 
-        expect(menuItem.disabled).toBe(true, 'Transfer should be disabled with 0 balance');
+        expect(menuItem.disabled).toBe(true, 'Payment should be disabled with 0 balance');
 
         tick(5000);
         fixture.detectChanges();
@@ -185,7 +185,7 @@ describe('ChannelTableComponent', () => {
         menu = menus[1].componentInstance;
         menuItem = menu.model[0];
 
-        expect(menuItem.disabled).toBe(false, 'Transfer option should be enabled with positive balance');
+        expect(menuItem.disabled).toBe(false, 'Payment option should be enabled with positive balance');
 
         component.ngOnDestroy();
         flush();
