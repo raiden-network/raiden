@@ -265,6 +265,13 @@ class RaidenService:
 
         self.alarm.start()
 
+        # Dispatch pending transactions
+        pending_transactions = views.get_pending_transactions(
+            self.wal.state_manager.current_state,
+        )
+        for transaction in pending_transactions:
+            on_raiden_event(transaction)
+
         queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
         self.transport.start(self, queueids_to_queues)
 
