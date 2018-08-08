@@ -632,6 +632,7 @@ class RestAPI:
                 )
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+
         result = []
         for block_number, evt in raiden_service_result:
             evt.block_number = block_number
@@ -645,7 +646,9 @@ class RestAPI:
                 event = self.received_success_payment_schema.dump(evt)
             else:
                 log.warning('Unexpected event', unexpected_event=evt)
+
             result.append(event.data)
+
         return api_response(result=result)
 
     def get_channel_events(

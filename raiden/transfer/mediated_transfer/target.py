@@ -197,11 +197,11 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
         if is_valid:
             transfer = target_state.transfer
             payment_received_success = EventPaymentReceivedSuccess(
-                channel_state.payment_network_identifier,
-                channel_state.token_network_identifier,
-                transfer.payment_identifier,
-                transfer.lock.amount,
-                transfer.initiator,
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                identifier=transfer.payment_identifier,
+                amount=transfer.lock.amount,
+                initiator=transfer.initiator,
             )
 
             unlock_success = EventUnlockClaimSuccess(
