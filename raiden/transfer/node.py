@@ -828,7 +828,37 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def is_transaction_successful(chain_state, transaction, state_change):
+def is_transaction_effect_satisfied(chain_state, transaction, state_change):
+    """ True if the side-effect of `transaction` is satisfied by
+    `state_change`.
+
+    This predicate is used to clear the transaction queue. This should only be
+    done once the expected side effect of a transaction is achieved. This
+    doesn't necessarily mean that the transaction sent by *this* node was
+    mined, but only that *some* transaction which achieves the same side-effect
+    was successfully executed and mined. This distinction is important for
+    restarts and to reduce the number of state changes.
+
+    On restarts: The state of the on-chain channel could have changed while the
+    node was offline. Once the node learns about the change (e.g. the channel
+    was settled), new transactions can be dispatched by Raiden as a side effect for the
+    on-chain *event* (e.g. do the batch unlock with the latest merkle tree),
+    but the dispatched transaction could have been completed by another agent (e.g.
+    the partner node). For these cases, the transaction from a different
+    address which achieves the same side-effect is sufficient, otherwise
+    unnecessary transactions would be sent by the node.
+
+    NOTE: The above is not important for transactions sent as a side-effect for
+    a new *block*. On restart the node first synchronizes its state by querying
+    for new events, only after the off-chain state is up-to-date, a Block state
+    change is dispatched. At this point some transactions are not required
+    anymore and therefore are not dispatched.
+
+    On the number of state changes: Accepting a transaction from another
+    address removes the need for clearing state changes, e.g. when our the
+    node's close transaction fails but its partner's close transaction
+    succeeds.
+    """
     # These transactions are not made atomic through the WAL, they are sent
     # exclusively through the external APIs.
     #
@@ -838,44 +868,63 @@ def is_transaction_successful(chain_state, transaction, state_change):
     #  - ContractReceiveNewTokenNetwork
     #  - ContractReceiveRouteNew
     #
-    our_address = chain_state.our_address
+    # Note: Deposits and Withdraws must consider a transaction with a higher
+    # value as sufficient, because the values are monotonically increasing and
+    # the transaction with a lower value will never be executed.
 
-    is_our_update_transfer = (
+    # Transactions are used to change the on-chain state of a channel. It
+    # doesn't matter if the sender of the transaction is the local node or
+    # another node authorized to perform the operation. So, for the following
+    # transactions, as long as the side-effects are the same, the local
+    # transaction can be removed from the queue.
+    #
+    # - An update transfer can be done by a trusted third party (i.e. monitoring service)
+    # - A close transaction can be sent by our partner
+    # - A settle transaction can be sent by anyone
+    # - A secret reveal can be done by anyone
+
+    # - A lower nonce is not a valid replacement, since that is an older balance
+    #   proof
+    # - A larger raiden state change nonce is impossible.
+    #   That would require the partner node to produce an invalid balance proof,
+    # and this node to accept the invalid balance proof and sign it
+    is_valid_update_transfer = (
         isinstance(state_change, ContractReceiveUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
-        state_change.transaction_from == our_address and
+        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.channel_identifier == transaction.channel_identifier and
         state_change.nonce == transaction.balance_proof.nonce
     )
-    if is_our_update_transfer:
+    if is_valid_update_transfer:
         return True
 
-    is_our_close = (
+    # The balance proof data cannot be verified, the local close could have
+    # lost a race against a remote close, and the balance proof data would be
+    # the one provided by this node's partner
+    is_valid_close = (
         isinstance(state_change, ContractReceiveChannelClosed) and
         isinstance(transaction, ContractSendChannelClose) and
-        state_change.transaction_from == our_address and
         state_change.token_network_identifier == transaction.token_network_identifier and
         state_change.channel_identifier == transaction.channel_identifier
     )
-    if is_our_close:
+    if is_valid_close:
         return True
 
-    is_our_settled = (
+    is_valid_settle = (
         isinstance(state_change, ContractReceiveChannelSettled) and
         isinstance(transaction, ContractSendChannelSettle) and
-        state_change.transaction_from == our_address and
         state_change.token_network_identifier == transaction.token_network_identifier and
         state_change.channel_identifier == transaction.channel_identifier
     )
-    if is_our_settled:
+    if is_valid_settle:
         return True
 
-    is_our_secret_reveal = (
+    is_valid_secret_reveal = (
         isinstance(state_change, ContractReceiveSecretReveal) and
         isinstance(transaction, ContractSendSecretReveal) and
-        state_change.transaction_from == our_address and
         state_change.secret == transaction.secret
     )
-    if is_our_secret_reveal:
+    if is_valid_secret_reveal:
         return True
 
     is_batch_unlock = (
@@ -883,6 +932,8 @@ def is_transaction_successful(chain_state, transaction, state_change):
         isinstance(transaction, ContractSendChannelBatchUnlock)
     )
     if is_batch_unlock:
+        our_address = chain_state.our_address
+
         # Don't assume that because we sent the transaction, we are a
         # participant
         if state_change.participant == our_address:
@@ -913,15 +964,11 @@ def is_transaction_successful(chain_state, transaction, state_change):
 def update_queues(iteration: TransitionResult, state_change):
     chain_state = iteration.new_state
 
-    is_our_transaction = (
-        isinstance(state_change, ContractReceiveStateChange) and
-        state_change.transaction_from == chain_state.our_address
-    )
-    if is_our_transaction:
+    if isinstance(state_change, ContractReceiveStateChange):
         pending_transactions = [
             transaction
             for transaction in chain_state.pending_transactions
-            if not is_transaction_successful(chain_state, transaction, state_change)
+            if not is_transaction_effect_satisfied(chain_state, transaction, state_change)
         ]
         chain_state.pending_transactions = pending_transactions
 
