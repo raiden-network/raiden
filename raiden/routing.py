@@ -125,6 +125,9 @@ def get_best_routes(
         if partner_address == previous_address:
             continue
 
+        if channel_state is None:
+            continue
+
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
                 'channel %s - %s is not opened, ignoring' %

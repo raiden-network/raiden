@@ -274,7 +274,7 @@ def get_channelstate_by_token_network_and_partner(
         chain_state: ChainState,
         token_network_id: typing.Address,
         partner_address: typing.Address,
-):
+) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
