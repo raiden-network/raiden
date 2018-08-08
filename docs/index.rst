@@ -10,7 +10,7 @@ The Raiden Network is an off-chain scaling solution, enabling near-instant, low-
 
 Where to start?
 ---------------
-If this is your first encounter with the Raiden Network it is recommended to first take a look at the :doc:`Installation Guide<overview_and_guide`. Once a Raiden node is up and running you can go try out :doc:`the Web UI<webui_tutorial>`. If you want a more in depth guide on how to start using the Raiden API you should check out the :doc:`Getting started with the Raiden API<api_walkthrough>` guide.
+If this is your first encounter with the Raiden Network it is recommended to first take a look at the :doc:`Installation Guide<overview_and_guide>`. Once a Raiden node is up and running you can go try out :doc:`the Web UI<webui_tutorial>`. If you want a more in depth guide on how to start using the Raiden API you should check out the :doc:`Getting started with the Raiden API<api_walkthrough>` guide.
 
 Contents
 ********
