@@ -3,21 +3,21 @@ import errno
 import json
 import logging
 import socket
-import structlog
 import sys
 from typing import Dict
 
-import gevent
+from eth_utils import encode_hex
+from eth_utils import to_checksum_address
+from flask_cors import CORS
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
-from flask_cors import CORS
+import gevent
+from gevent.pywsgi import WSGIServer
+from hexbytes import HexBytes
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
-from gevent.pywsgi import WSGIServer
-from eth_utils import to_checksum_address
-from hexbytes import HexBytes
-from eth_utils import encode_hex
+import structlog
 
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -114,7 +114,10 @@ URLS_V1 = [
         'tokenchanneleventsresourceblockchain',
     ),
     (
-        '/blockchain_events/payment_networks/<hexaddress:token_address>/channels/<hexaddress:partner_address>',  # noqa: E501
+        (
+            '/blockchain_events/payment_networks/'
+            '<hexaddress:token_address>/channels/<hexaddress:partner_address>',
+        ),
         ChannelBlockchainEventsResource,
     ),
     ('/raiden_events/tokens/<hexaddress:token_address>', TokenRaidenEventsResource),
@@ -186,26 +189,26 @@ def endpoint_not_found(e):
     return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
-def hexbytes_to_str(map: Dict):
+def hexbytes_to_str(map_: Dict):
     """ Converts values that are of type `HexBytes` to strings. """
-    for k, v in map.items():
+    for k, v in map_.items():
         if isinstance(v, HexBytes):
-            map[k] = encode_hex(v)
+            map_[k] = encode_hex(v)
 
 
-def encode_byte_values(map: Dict):
+def encode_byte_values(map_: Dict):
     """ Converts values that are of type `bytes` to strings. """
-    for k, v in map.items():
+    for k, v in map_.items():
         if isinstance(v, bytes):
-            map[k] = encode_hex(v)
+            map_[k] = encode_hex(v)
 
 
-def encode_object_to_str(map: Dict):
-    for k, v in map.items():
+def encode_object_to_str(map_: Dict):
+    for k, v in map_.items():
         if isinstance(v, int) or k == 'args':
             continue
         if not isinstance(v, str):
-            map[k] = repr(v)
+            map_[k] = repr(v)
 
 
 def normalize_events_list(old_list):
@@ -227,7 +230,7 @@ def normalize_events_list(old_list):
         name = new_event['event']
         if name == 'EventPaymentReceivedSuccess':
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
-        if name == 'EventPaymentSentSuccess' or name == 'EventPaymentSentFailed':
+        if name in ('EventPaymentSentSuccess', 'EventPaymentSentFailed'):
             new_event['target'] = to_checksum_address(new_event['target'])
         encode_byte_values(new_event)
         # encode unserializable objects
@@ -338,6 +341,7 @@ class APIServer:
         self.flask_api_context = flask_api_context
 
         self.wsgiserver = None
+        self.greenlet = None
         self.flask_app.register_blueprint(self.blueprint)
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
         if is_frozen():
@@ -708,8 +712,8 @@ class RestAPI:
     def get_network_events(
             self,
             registry_address: typing.PaymentNetworkID,
-            from_block: typing.BlockSpecification,
-            to_block: typing.BlockSpecification,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(
             'Getting network events',
@@ -719,9 +723,9 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_network_events(
-                registry_address,
-                from_block,
-                to_block,
+                registry_address=registry_address,
+                from_block=from_block,
+                to_block=to_block,
             )
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
@@ -731,6 +735,8 @@ class RestAPI:
     def get_token_network_events_blockchain(
             self,
             token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(
             'Getting token network blockchain events',
@@ -738,7 +744,9 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_blockchain(
-                token_address,
+                token_address=token_address,
+                from_block=from_block,
+                to_block=to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
@@ -750,6 +758,8 @@ class RestAPI:
             self,
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
+            limit: int = None,
+            offset: int = None,
     ):
         log.debug(
             'Getting payment history',
@@ -758,15 +768,22 @@ class RestAPI:
         )
         try:
             if token_address is None and target_address is None:
-                raiden_service_result = self.raiden_api.get_payment_history()
+                raiden_service_result = self.raiden_api.get_payment_history(
+                    limit=limit,
+                    offset=offset,
+                )
             elif target_address is None:
                 raiden_service_result = self.raiden_api.get_payment_history_for_token(
-                    token_address,
+                    token_address=token_address,
+                    limit=limit,
+                    offset=offset,
                 )
             else:
                 raiden_service_result = self.raiden_api.get_payment_history_for_token_and_target(
                     token_address,
                     target_address,
+                    limit=limit,
+                    offset=offset,
                 )
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
@@ -788,6 +805,8 @@ class RestAPI:
     def get_token_network_events_raiden(
             self,
             token_address: typing.TokenAddress,
+            limit: int = None,
+            offset: int = None,
     ):
         log.debug(
             'Getting token network internal events',
@@ -795,17 +814,21 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_raiden(
-                token_address,
+                token_address=token_address,
+                limit=limit,
+                offset=offset,
             )
             raiden_service_result = convert_to_serializable(raiden_service_result)
             return api_response(result=normalize_events_list(raiden_service_result))
-        except (InvalidBlockNumberInput, InvalidAddress) as e:
+        except InvalidAddress as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_channel_events_blockchain(
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(
             'Getting channel blockchain events',
@@ -814,8 +837,10 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_channel_events_blockchain(
-                token_address,
-                partner_address,
+                token_address=token_address,
+                partner_address=partner_address,
+                from_block=from_block,
+                to_block=to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except (InvalidBlockNumberInput, InvalidAddress) as e:
@@ -827,22 +852,22 @@ class RestAPI:
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None,
+            limit: int = None,
+            offset: int = None,
     ):
         log.debug(
             'Getting channel internal events',
-            token_address=to_checksum_address(token_address),
-            partner_address=optional_address_to_string(partner_address),
-            from_block=from_block,
-            to_block=to_block,
+            token_address=token_address,
+            partner_address=partner_address,
+            limit=limit,
+            offset=offset,
         )
         try:
             raiden_service_result = self.raiden_api.get_channel_events_raiden(
-                token_address,
-                partner_address,
-                from_block,
-                to_block,
+                token_address=token_address,
+                partner_address=partner_address,
+                limit=limit,
+                offset=offset,
             )
             raiden_service_result = convert_to_serializable(raiden_service_result)
             return api_response(result=normalize_events_list(raiden_service_result))

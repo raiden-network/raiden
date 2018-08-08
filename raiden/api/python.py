@@ -59,6 +59,13 @@ def contains_partner_address(event, address):
     )
 
 
+def is_valid_target(event, token_network_identifier, target_address):
+    return (
+        token_network_identifier == event.token_network_identifier and
+        getattr(event, 'target', None) == target_address
+    )
+
+
 class RaidenAPI:
     # pylint: disable=too-many-public-methods
 
@@ -653,34 +660,44 @@ class RaidenAPI:
         return async_result
 
     def get_network_events(
-            self, registry_address: typing.PaymentNetworkID,
+            self,
+            registry_address: typing.PaymentNetworkID,
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ):
-        return sorted(get_token_network_registry_events(
-            self.raiden.chain,
-            registry_address,
+        events = get_token_network_registry_events(
+            chain=self.raiden.chain,
+            token_network_registry_address=registry_address,
             events=ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
-        ), key=lambda evt: evt.get('block_number'), reverse=True)
+        )
 
-    def get_payment_history(self):
-        raiden_events = self.raiden.wal.storage.get_events_by_identifier()
+        return sorted(
+            events,
+            key=lambda evt: evt.get('block_number'),
+            reverse=True,
+        )
 
+    def get_payment_history(
+            self,
+            limit: int = None,
+            offset: int = None,
+    ):
         events = [
             event
-            for event in raiden_events
+            for event in self.raiden.wal.storage.get_events(
+                limit=limit,
+                offset=offset,
+            )
             if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED)
         ]
-
         return events
 
     def get_payment_history_for_token(
             self,
             token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
+            limit: int = None,
             offset: int = None,
     ):
         if not is_binary_address(token_address):
@@ -688,37 +705,40 @@ class RaidenAPI:
                 'Expected binary address format for token in get_payment_history_for_token',
             )
 
-        raiden_events = self.get_payment_history()
+        if limit and offset:
+            absolute_limit = offset + limit
+        else:
+            absolute_limit = limit
 
-        events = []
-        if raiden_events:
-            payment_network_identifier = self.raiden.default_registry.address
-            token_network_identifier = views.get_token_network_identifier_by_token_address(
-                views.state_from_raiden(self.raiden),
-                payment_network_identifier,
-                token_address,
-            )
+        payment_network_identifier = self.raiden.default_registry.address
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            payment_network_identifier,
+            token_address,
+        )
 
-            # filtering for the events which have the same token network identifier
-            events = [
-                event
-                for event in raiden_events
-                if token_network_identifier == event.token_network_identifier
-            ]
+        raiden_events = self.raiden.wal.storage.get_events()
 
-        return events
+        events = [
+            event
+            for event in raiden_events
+            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED)
+            if token_network_identifier == event.token_network_identifier
+        ]
 
-    def get_payment_history_for_token_and_target(self, token_address, target_address):
+        return events[offset:absolute_limit]
+
+    def get_payment_history_for_token_and_target(
+            self,
+            token_address: typing.TokenAddress,
+            target_address: typing.Address,
+            limit: int = None,
+            offset: int = None,
+    ):
         if target_address and not is_binary_address(target_address):
             raise InvalidAddress(
                 'Expected binary address format for '
                 'target_address in get_payment_history_for_token_and_target',
-            )
-
-        def is_valid_target(event, target_address):
-            return (
-                getattr(event, 'target', None) == target_address or
-                getattr(event, 'initiator', None) == target_address
             )
 
         if not is_binary_address(target_address):
@@ -727,19 +747,35 @@ class RaidenAPI:
                 'get_payment_history_partner',
             )
 
+        payment_network_identifier = self.raiden.default_registry.address
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            views.state_from_raiden(self.raiden),
+            payment_network_identifier,
+            token_address,
+        )
+
+        if limit and offset:
+            absolute_limit = offset + limit
+        else:
+            absolute_limit = limit
+
+        raiden_events = self.raiden.wal.storage.get_events()
+
         events = [
             event
-            for event in self.get_payment_history_for_token(token_address)
-            if is_valid_target(event, target_address)
+            for event in raiden_events
+            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and
+            is_valid_target(event, token_network_identifier, target_address)
         ]
 
-        return events
+        return events[offset:absolute_limit]
 
     def get_channel_events_blockchain(
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            offset: int = 0,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         if not is_binary_address(token_address):
             raise InvalidAddress(
@@ -759,9 +795,11 @@ class RaidenAPI:
         returned_events = []
         for channel in channel_list:
             returned_events.extend(get_all_netting_channel_events(
-                self.raiden.chain,
-                token_network_address,
-                channel.identifier,
+                chain=self.raiden.chain,
+                token_network_address=token_network_address,
+                netting_channel_identifier=channel.identifier,
+                from_block=from_block,
+                to_block=to_block,
             ))
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
@@ -770,8 +808,8 @@ class RaidenAPI:
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
+            limit: int = None,
+            offset: int = None,
     ):
 
         if not is_binary_address(token_address):
@@ -780,48 +818,30 @@ class RaidenAPI:
             )
 
         returned_events = []
-        raiden_events = self.raiden.wal.storage.get_events_by_block(
-            from_block=from_block,
-            to_block=to_block,
-        )
+        raiden_events = self.raiden.wal.storage.get_events(limit=limit, offset=offset)
+
         # Here choose which raiden internal events we want to expose to the end user
         if partner_address:
             returned_events = [
-                (block_number, event)
-                for block_number, event in raiden_events
+                event
+                for event in raiden_events
                 if contains_partner_address(event, partner_address) and
                 self._is_internal_event(event, token_address)
             ]
         else:
             returned_events = [
-                (block_number, event)
-                for block_number, event in raiden_events
+                event
+                for event in raiden_events
                 if self._is_internal_event(event, token_address)
             ]
-
-        returned_events.sort(key=lambda event: event[0], reverse=True)
-        return returned_events
-
-        raiden_events = self.raiden.wal.storage.get_events_by_identifier(
-            from_identifier=0,
-            to_identifier='latest',
-            offset=offset,
-        )
-
-        # Here choose which raiden internal events we want to expose to the end user
-        for event in raiden_events:
-            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
-                new_event = {
-                    'event': type(event).__name__,
-                }
-                new_event.update(event.__dict__)
-                returned_events.append(new_event)
 
         return returned_events
 
     def get_token_network_events_blockchain(
             self,
             token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ):
         """Returns a list of blockchain events coresponding to the token_address."""
 
@@ -838,9 +858,11 @@ class RaidenAPI:
             raise UnknownTokenAddress('Token address is not known.')
 
         returned_events = get_token_network_events(
-            self.raiden.chain,
-            token_network_address,
+            chain=self.raiden.chain,
+            token_network_address=token_network_address,
             events=ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
         )
 
         for event in returned_events:
@@ -853,6 +875,8 @@ class RaidenAPI:
     def get_token_network_events_raiden(
             self,
             token_address,
+            limit: int = None,
+            offset: int = None,
     ):
         """Returns a list of internal events coresponding to the token_address."""
         if not is_binary_address(token_address):
@@ -860,7 +884,7 @@ class RaidenAPI:
                 'Expected binary address format for token in get_token_network_events_raiden',
             )
 
-        raiden_events = self.raiden.wal.storage.get_events_by_identifier(0, 'latest')
+        raiden_events = self.raiden.wal.storage.get_events(limit=limit, offset=offset)
 
         # Here choose which raiden internal events we want to expose to the end user
         returned_events = list()

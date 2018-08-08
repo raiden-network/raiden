@@ -169,36 +169,19 @@ class SQLiteStorage:
 
         return result
 
-    def get_events_by_identifier(self, from_identifier, to_identifier, limit=-1, offset=0):
-        if not (from_identifier == 'latest' or isinstance(from_identifier, int)):
-            raise ValueError("from_identifier must be an integer or 'latest'")
+    def get_events(self, limit: int = -1, offset: int = 0):
+        if not isinstance(limit, int):
+            raise ValueError('limit must be an integer')
 
-        if not (to_identifier == 'latest' or isinstance(to_identifier, int)):
-            raise ValueError("to_identifier must be an integer or 'latest'")
+        if not isinstance(offset, int):
+            raise ValueError('offset must be an integer')
 
         cursor = self.conn.cursor()
 
-        if from_identifier == 'latest':
-            assert to_identifier is None
-
-            cursor.execute(
-                'SELECT identifier FROM state_events ORDER BY identifier DESC LIMIT 1',
-            )
-            from_identifier = cursor.fetchone()
-
-        limit_offset_clause = f'LIMIT {limit} OFFSET {offset}'
-        if to_identifier == 'latest':
-            cursor.execute(
-                'SELECT data FROM state_events WHERE identifier >= ? '
-                f'ORDER BY identifier ASC {limit_offset_clause}',
-                (from_identifier,),
-            )
-        else:
-            cursor.execute(
-                'SELECT data FROM state_events WHERE identifier BETWEEN ? AND ? '
-                f'ORDER BY identifier ASC {limit_offset_clause}',
-                (from_identifier, to_identifier),
-            )
+        cursor.execute(
+            'SELECT data FROM state_events ORDER BY identifier ASC LIMIT ? OFFSET ?',
+            (limit, offset),
+        )
 
         result = [
             self.serializer.deserialize(entry[0])
