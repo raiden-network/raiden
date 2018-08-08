@@ -14,7 +14,7 @@ def hash_balance_data(
     if transferred_amount == 0 and locked_amount == 0 and locksroot == EMPTY_HASH:
         return EMPTY_HASH
 
-    return Web3.soliditySha3(
+    return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
         ['uint256', 'uint256', 'bytes32'],
         [transferred_amount, locked_amount, locksroot],
     )
