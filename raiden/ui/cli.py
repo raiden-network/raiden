@@ -395,7 +395,7 @@ def options(func):
                     '"host:port" address of ethereum JSON-RPC server.\n'
                     'Also accepts a protocol prefix (http:// or https://) with optional port'
                 ),
-                default='127.0.0.1:8545',  # geth default jsonrpc port
+                default='http://127.0.0.1:8545',  # geth default jsonrpc port
                 type=str,
                 show_default=True,
             ),
