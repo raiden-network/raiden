@@ -832,12 +832,12 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
     """ True if the side-effect of `transaction` is satisfied by
     `state_change`.
 
-    This predicate is used to clear the transaction queue, this should only be
+    This predicate is used to clear the transaction queue. This should only be
     done once the expected side effect of a transaction is achieved. This
     doesn't necessarily mean that the transaction sent by *this* node was
     mined, but only that *some* transaction which achieves the same side-effect
-    was successfully executed. This distinction is important for restarts and
-    to reduce the number of state changes.
+    was successfully executed and mined. This distinction is important for
+    restarts and to reduce the number of state changes.
 
     On restarts: The state of the on-chain channel could have changed while the
     node was offline. Once the node learns about the change (e.g. the channel
@@ -850,8 +850,8 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
 
     NOTE: The above is not important for transactions sent as a side-effect for
     a new *block*. On restart the node first synchronizes its state by querying
-    for new events, only after the off-chain state is up-to-date a Block state
-    change is dispatched, at this point some transactions are not required
+    for new events, only after the off-chain state is up-to-date, a Block state
+    change is dispatched. At this point some transactions are not required
     anymore and therefore are not dispatched.
 
     On the number of state changes: Accepting a transaction from another
@@ -872,22 +872,22 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
     # value as sufficient, because the values are monotonically increasing and
     # the transaction with a lower value will never be executed.
 
-    # Transactions are used to change the on-chain state of a channel, it
+    # Transactions are used to change the on-chain state of a channel. It
     # doesn't matter if the sender of the transaction is the local node or
     # another node authorized to perform the operation. So, for the following
     # transactions, as long as the side-effects are the same, the local
     # transaction can be removed from the queue.
     #
-    # - An update transfer can be done by a monitoring service
+    # - An update transfer can be done by a trusted third party (i.e. monitoring service)
     # - A close transaction can be sent by our partner
     # - A settle transaction can be sent by anyone
     # - A secret reveal can be done by anyone
 
     # - A lower nonce is not a valid replacement, since that is an older balance
     #   proof
-    # - A larger nonce is impossible, that would require the partner node to
-    #   produce and invalid balance proof, and this node to accept the invalid
-    #   balance proof and sign it
+    # - A larger raiden state change nonce is impossible.
+    #   That would require the partner node to produce an invalid balance proof,
+    # and this node to accept the invalid balance proof and sign it
     is_valid_update_transfer = (
         isinstance(state_change, ContractReceiveUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
