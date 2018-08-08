@@ -1,4 +1,5 @@
 from raiden.transfer import channel
+from raiden.transfer.architecture import ContractSendEvent
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSING,
@@ -63,6 +64,10 @@ def state_from_raiden(raiden) -> ChainState:
 
 def state_from_app(app) -> ChainState:
     return app.raiden.wal.state_manager.current_state
+
+
+def get_pending_transactions(chain_state: ChainState) -> typing.List[ContractSendEvent]:
+    return chain_state.pending_transactions
 
 
 def get_all_messagequeues(chain_state: ChainState) -> typing.Dict:
