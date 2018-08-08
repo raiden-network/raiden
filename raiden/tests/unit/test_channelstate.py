@@ -16,8 +16,9 @@ from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
-    EventTransferReceivedInvalidDirectTransfer,
+    ContractSendChannelUpdateTransfer,
     EventPaymentReceivedSuccess,
+    EventTransferReceivedInvalidDirectTransfer,
 )
 from raiden.transfer.merkle_tree import (
     LEAVES,
@@ -27,17 +28,19 @@ from raiden.transfer.merkle_tree import (
     merkle_leaves_from_packed_data,
 )
 from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSING,
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,
-    MerkleTreeState,
     HashTimeLockState,
-    UnlockPartialProofState,
+    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
+    UnlockPartialProofState,
 )
 from raiden.transfer.state_change import (
+    ActionChannelClose,
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
@@ -1487,3 +1490,84 @@ def test_settle_transaction_must_be_sent_only_once():
     )
     msg = 'BatchUnlock must be sent only once, the second transaction will always fail'
     assert not must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {}), msg
+
+
+def test_action_close_must_change_the_channel_state():
+    """ A closed channel must not be used for transactions, even if the
+    transaction was not confirmed on-chain.
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, _ = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    pseudo_random_generator = random.Random()
+    block_number = 10
+    state_change = ActionChannelClose(
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+    )
+    iteration = channel.state_transition(
+        channel_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
+
+
+def test_update_must_be_called_if_close_lost_race():
+    """ If both participants call close, the node that lost the transaction
+    race must call updateTransfer.
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    lock_amount = 30
+    lock_expiration = 10
+    lock_secret = sha3(b'test_update_must_be_called_if_close_lost_race')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state,
+        privkey2,
+        nonce,
+        transferred_amount,
+        lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state,
+        receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    pseudo_random_generator = random.Random()
+    block_number = 10
+    state_change = ActionChannelClose(
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+    )
+    iteration = channel.state_transition(
+        channel_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    closed_block_number = 77
+    state_change = ContractReceiveChannelClosed(
+        partner_model1.participant_address,
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        closed_block_number,
+    )
+    iteration = channel.handle_channel_closed(channel_state, state_change)
+    assert must_contain_entry(iteration.events, ContractSendChannelUpdateTransfer, {})
