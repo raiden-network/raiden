@@ -15,7 +15,7 @@ from itertools import count
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import click
 import filelock
@@ -395,7 +395,7 @@ def options(func):
                     '"host:port" address of ethereum JSON-RPC server.\n'
                     'Also accepts a protocol prefix (http:// or https://) with optional port'
                 ),
-                default='127.0.0.1:8545',  # geth default jsonrpc port
+                default='http://127.0.0.1:8545',  # geth default jsonrpc port
                 type=str,
                 show_default=True,
             ),
@@ -597,6 +597,10 @@ def run_app(
 
     privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
+
+    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
+    if not parsed_eth_rpc_endpoint.scheme:
+        eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
     web3 = Web3(HTTPProvider(eth_rpc_endpoint))
 
