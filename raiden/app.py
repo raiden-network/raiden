@@ -84,7 +84,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
-            discovery: Discovery=None,
+            discovery: Discovery = None,
     ):
         raiden = RaidenService(
             chain=chain,
@@ -134,7 +134,7 @@ class App:  # pylint: disable=too-few-public-methods
         """ Start the raiden app. """
         self.raiden.start()
 
-    def stop(self, leave_channels: bool=False):
+    def stop(self, leave_channels: bool = False):
         """ Stop the raiden app.
 
         Args:
