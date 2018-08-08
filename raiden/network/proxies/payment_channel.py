@@ -67,7 +67,11 @@ class PaymentChannel:
 
     def detail(self) -> Dict:
         """ Returns the channel details. """
-        return self.token_network.detail(self.participant1, self.participant2)
+        return self.token_network.detail(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def settle_timeout(self) -> int:
         """ Returns the channels settle_timeout. """
@@ -89,23 +93,43 @@ class PaymentChannel:
 
     def opened(self) -> bool:
         """ Returns if the channel is opened. """
-        return self.token_network.channel_is_opened(self.participant1, self.participant2)
+        return self.token_network.channel_is_opened(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def closed(self) -> bool:
         """ Returns if the channel is closed. """
-        return self.token_network.channel_is_closed(self.participant1, self.participant2)
+        return self.token_network.channel_is_closed(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def settled(self) -> bool:
         """ Returns if the channel is settled. """
-        return self.token_network.channel_is_settled(self.participant1, self.participant2)
+        return self.token_network.channel_is_settled(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def closing_address(self) -> typing.Address:
         """ Returns the address of the closer of the channel. """
-        return self.token_network.closing_address(self.participant1, self.participant2)
+        return self.token_network.closing_address(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def can_transfer(self) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
-        return self.token_network.can_transfer(self.participant1, self.participant2)
+        return self.token_network.can_transfer(
+            participant1=self.participant1,
+            participant2=self.participant2,
+            channel_identifier=self.channel_identifier,
+        )
 
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
         self.token_network.set_total_deposit(

@@ -88,7 +88,10 @@ def test_token_network_proxy_basics(
     )
 
     # instantiating a new channel - test basic assumptions
-    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is False
+    assert c1_token_network_proxy.channel_exists_and_not_settled(
+        c1_client.sender,
+        c2_client.sender,
+    ) is False
     assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is False
     assert c1_token_network_proxy.channel_is_closed(c1_client.sender, c2_client.sender) is False
     # test timeout limits
@@ -120,8 +123,16 @@ def test_token_network_proxy_basics(
             c2_client.sender,
             TEST_SETTLE_TIMEOUT_MIN,
         )
-    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is True
-    assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is True
+    assert c1_token_network_proxy.channel_exists_and_not_settled(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+        channel_identifier=channel_identifier,
+    ) is True
+    assert c1_token_network_proxy.channel_is_opened(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+        channel_identifier=channel_identifier,
+    ) is True
 
     # channel is open.
     # deposit with no balance
@@ -154,7 +165,7 @@ def test_token_network_proxy_basics(
     # balance proof by c2
     transferred_amount = 3
     balance_proof = BalanceProof(
-        channel_identifier=encode_hex(channel_identifier),
+        channel_identifier=channel_identifier,
         token_network_address=to_checksum_address(token_network_address),
         nonce=1,
         chain_id=chain_id,
@@ -166,33 +177,41 @@ def test_token_network_proxy_basics(
     # close with invalid signature
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.close(
-            channel_identifier,
-            c1_client.sender,
-            balance_proof.nonce,
-            decode_hex(balance_proof.balance_hash),
-            decode_hex(balance_proof.additional_hash),
-            b'\x11' * 65,
+            channel_identifier=channel_identifier,
+            partner=c1_client.sender,
+            balance_hash=decode_hex(balance_proof.balance_hash),
+            nonce=balance_proof.nonce,
+            additional_hash=decode_hex(balance_proof.additional_hash),
+            signature=b'\x11' * 65,
         )
     # correct close
     c2_token_network_proxy.close(
-        channel_identifier,
-        c1_client.sender,
-        balance_proof.nonce,
-        decode_hex(balance_proof.balance_hash),
-        decode_hex(balance_proof.additional_hash),
-        decode_hex(balance_proof.signature),
+        channel_identifier=channel_identifier,
+        partner=c1_client.sender,
+        balance_hash=decode_hex(balance_proof.balance_hash),
+        nonce=balance_proof.nonce,
+        additional_hash=decode_hex(balance_proof.additional_hash),
+        signature=decode_hex(balance_proof.signature),
     )
-    assert c1_token_network_proxy.channel_is_closed(c1_client.sender, c2_client.sender) is True
-    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is True
+    assert c1_token_network_proxy.channel_is_closed(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+        channel_identifier=channel_identifier,
+    ) is True
+    assert c1_token_network_proxy.channel_exists_and_not_settled(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+        channel_identifier=channel_identifier,
+    ) is True
     # closing already closed channel
     with pytest.raises(ChannelIncorrectStateError):
         c2_token_network_proxy.close(
-            channel_identifier,
-            c1_client.sender,
-            balance_proof.nonce,
-            decode_hex(balance_proof.balance_hash),
-            decode_hex(balance_proof.additional_hash),
-            decode_hex(balance_proof.signature),
+            channel_identifier=channel_identifier,
+            partner=c1_client.sender,
+            balance_hash=decode_hex(balance_proof.balance_hash),
+            nonce=balance_proof.nonce,
+            additional_hash=decode_hex(balance_proof.additional_hash),
+            signature=decode_hex(balance_proof.signature),
         )
     # update transfer
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
@@ -200,26 +219,30 @@ def test_token_network_proxy_basics(
     # try to settle using incorrect data
     with pytest.raises(ChannelIncorrectStateError):
         c2_token_network_proxy.settle(
-            channel_identifier,
-            1,
-            0,
-            EMPTY_HASH,
-            c1_client.sender,
-            transferred_amount,
-            0,
-            EMPTY_HASH,
+            channel_identifier=channel_identifier,
+            transferred_amount=1,
+            locked_amount=0,
+            locksroot=EMPTY_HASH,
+            partner=c1_client.sender,
+            partner_transferred_amount=transferred_amount,
+            partner_locked_amount=0,
+            partner_locksroot=EMPTY_HASH,
         )
     c2_token_network_proxy.settle(
-        channel_identifier,
-        0,
-        0,
-        EMPTY_HASH,
-        c1_client.sender,
-        transferred_amount,
-        0,
-        EMPTY_HASH,
+        channel_identifier=channel_identifier,
+        transferred_amount=0,
+        locked_amount=0,
+        locksroot=EMPTY_HASH,
+        partner=c1_client.sender,
+        partner_transferred_amount=transferred_amount,
+        partner_locked_amount=0,
+        partner_locksroot=EMPTY_HASH,
     )
-    assert c1_token_network_proxy.channel_exists(c1_client.sender, c2_client.sender) is False
+    assert c1_token_network_proxy.channel_exists_and_not_settled(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+        channel_identifier=channel_identifier,
+    ) is False
     assert token_proxy.balance_of(c1_client.sender) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.sender) == (initial_balance_c2 + transferred_amount)
 
@@ -271,7 +294,7 @@ def test_token_network_proxy_update_transfer(
     transferred_amount_c1 = 1
     transferred_amount_c2 = 3
     balance_proof_c1 = BalanceProof(
-        channel_identifier=encode_hex(channel_identifier),
+        channel_identifier=channel_identifier,
         token_network_address=to_checksum_address(token_network_address),
         nonce=1,
         chain_id=chain_id,
@@ -282,7 +305,7 @@ def test_token_network_proxy_update_transfer(
     )
     # balance proof signed by c2
     balance_proof_c2 = BalanceProof(
-        channel_identifier=encode_hex(channel_identifier),
+        channel_identifier=channel_identifier,
         token_network_address=to_checksum_address(token_network_address),
         nonce=2,
         chain_id=chain_id,
@@ -293,12 +316,12 @@ def test_token_network_proxy_update_transfer(
     )
     # close by c1
     c1_token_network_proxy.close(
-        channel_identifier,
-        c2_client.sender,
-        balance_proof_c2.nonce,
-        decode_hex(balance_proof_c2.balance_hash),
-        decode_hex(balance_proof_c2.additional_hash),
-        decode_hex(balance_proof_c2.signature),
+        channel_identifier=channel_identifier,
+        partner=c2_client.sender,
+        balance_hash=decode_hex(balance_proof_c2.balance_hash),
+        nonce=balance_proof_c2.nonce,
+        additional_hash=decode_hex(balance_proof_c2.additional_hash),
+        signature=decode_hex(balance_proof_c2.signature),
     )
 
     # using invalid non-closing signature
@@ -338,25 +361,25 @@ def test_token_network_proxy_update_transfer(
     # settling with an invalid amount
     with pytest.raises(ChannelIncorrectStateError):
         c1_token_network_proxy.settle(
-            channel_identifier,
-            2,
-            0,
-            EMPTY_HASH,
-            c2_client.sender,
-            2,
-            0,
-            EMPTY_HASH,
+            channel_identifier=channel_identifier,
+            transferred_amount=2,
+            locked_amount=0,
+            locksroot=EMPTY_HASH,
+            partner=c2_client.sender,
+            partner_transferred_amount=2,
+            partner_locked_amount=0,
+            partner_locksroot=EMPTY_HASH,
         )
     # proper settle
     c1_token_network_proxy.settle(
-        channel_identifier,
-        transferred_amount_c1,
-        0,
-        EMPTY_HASH,
-        c2_client.sender,
-        transferred_amount_c2,
-        0,
-        EMPTY_HASH,
+        channel_identifier=channel_identifier,
+        transferred_amount=transferred_amount_c1,
+        locked_amount=0,
+        locksroot=EMPTY_HASH,
+        partner=c2_client.sender,
+        partner_transferred_amount=transferred_amount_c2,
+        partner_locked_amount=0,
+        partner_locksroot=EMPTY_HASH,
     )
     assert (token_proxy.balance_of(c2_client.sender) ==
             (initial_balance_c2 + transferred_amount_c1 - transferred_amount_c2))

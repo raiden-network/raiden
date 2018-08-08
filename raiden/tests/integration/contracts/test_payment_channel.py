@@ -86,7 +86,7 @@ def test_payment_channel_proxy_basics(
     # balance proof by c2
     transferred_amount = 3
     balance_proof = BalanceProof(
-        channel_identifier=encode_hex(channel_identifier),
+        channel_identifier=channel_identifier,
         token_network_address=to_checksum_address(token_network_address),
         nonce=1,
         chain_id=chain_id,
@@ -97,12 +97,12 @@ def test_payment_channel_proxy_basics(
     )
     # correct close
     c2_token_network_proxy.close(
-        channel_identifier,
-        c1_client.sender,
-        balance_proof.nonce,
-        decode_hex(balance_proof.balance_hash),
-        decode_hex(balance_proof.additional_hash),
-        decode_hex(balance_proof.signature),
+        channel_identifier=channel_identifier,
+        partner=c1_client.sender,
+        balance_hash=decode_hex(balance_proof.balance_hash),
+        nonce=balance_proof.nonce,
+        additional_hash=decode_hex(balance_proof.additional_hash),
+        signature=decode_hex(balance_proof.signature),
     )
     assert channel_proxy_1.closed() is True
     assert channel_proxy_2.closed() is True
@@ -118,14 +118,14 @@ def test_payment_channel_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     c2_token_network_proxy.settle(
-        channel_identifier,
-        0,
-        0,
-        EMPTY_HASH,
-        c1_client.sender,
-        transferred_amount,
-        0,
-        EMPTY_HASH,
+        channel_identifier=channel_identifier,
+        transferred_amount=0,
+        locked_amount=0,
+        locksroot=EMPTY_HASH,
+        partner=c1_client.sender,
+        partner_transferred_amount=transferred_amount,
+        partner_locked_amount=0,
+        partner_locksroot=EMPTY_HASH,
     )
     assert channel_proxy_1.settled() is True
     assert channel_proxy_2.settled() is True
@@ -172,7 +172,7 @@ def test_payment_channel_outdated_channel_close(
 
     # balance proof by c1
     balance_proof = BalanceProof(
-        channel_identifier=encode_hex(channel_identifier),
+        channel_identifier=channel_identifier,
         token_network_address=to_checksum_address(token_network_address),
         nonce=0,
         chain_id=chain_id,
@@ -183,12 +183,12 @@ def test_payment_channel_outdated_channel_close(
     )
     # correct close
     token_network_proxy.close(
-        channel_identifier,
-        partner,
-        balance_proof.nonce,
-        bytes(32),
-        bytes(32),
-        decode_hex(balance_proof.signature),
+        channel_identifier=channel_identifier,
+        partner=partner,
+        balance_hash=bytes(32),
+        nonce=balance_proof.nonce,
+        additional_hash=bytes(32),
+        signature=decode_hex(balance_proof.signature),
     )
     assert channel_proxy_1.closed() is True
 
@@ -202,14 +202,14 @@ def test_payment_channel_outdated_channel_close(
     wait_blocks(client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     token_network_proxy.settle(
-        channel_identifier,
-        0,
-        0,
-        EMPTY_HASH,
-        partner,
-        0,
-        0,
-        EMPTY_HASH,
+        channel_identifier=channel_identifier,
+        transferred_amount=0,
+        locked_amount=0,
+        locksroot=EMPTY_HASH,
+        partner=partner,
+        partner_transferred_amount=0,
+        partner_locked_amount=0,
+        partner_locksroot=EMPTY_HASH,
     )
     assert channel_proxy_1.settled() is True
 
@@ -232,10 +232,10 @@ def test_payment_channel_outdated_channel_close(
 
     with pytest.raises(ChannelOutdatedError):
         token_network_proxy.close(
-            channel_identifier,
-            partner,
-            balance_proof.nonce,
-            bytes(32),
-            bytes(32),
-            decode_hex(balance_proof.signature),
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=bytes(32),
+            nonce=balance_proof.nonce,
+            additional_hash=bytes(32),
+            signature=decode_hex(balance_proof.signature),
         )
