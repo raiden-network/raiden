@@ -195,10 +195,15 @@ def normalize_events_list(old_list):
         hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
-        if new_event['event'] == 'EventPaymentReceivedSuccess':
+
+        name = new_event['event']
+        if name == 'EventPaymentReceivedSuccess':
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
-        if new_event['event'] == 'EventPaymentSentSuccess':
+        if name == 'EventPaymentSentSuccess' or name == 'EventPaymentSentFailed':
             new_event['target'] = to_checksum_address(new_event['target'])
+
+        # Ensuring that payment network identifer and token_network identifer are encoded
+        encode_byte_values(new_event)
         new_list.append(new_event)
     return new_list
 
