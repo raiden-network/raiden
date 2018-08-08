@@ -163,7 +163,7 @@ It is possible for both parties to query the state of the specific payment chann
 
 This gives a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
-A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`transferring tokens <token-payments>` between each other.
+A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`sending payments <token-payments>` to each other.
 
 The above is not how a user would normally join an already existing token network. It is only included here to show how it works under the hood.
 
@@ -199,7 +199,7 @@ Connecting to an already existing token network is quite simple. All that is nee
 
 This automatically opens channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 
-The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <token-payments>` section for instructions on how to transfer tokens to other nodes.
+The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Token Payments <token-payments>` section for instructions on how to transfer tokens to other nodes.
 
 
 .. _leave-network:
