@@ -31,20 +31,14 @@ def test_initiator_log_directransfer_success(raiden_chain, token_addresses, depo
         identifier,
     )
 
-    app0_all_events = app0.raiden.wal.storage.get_events_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
-    )
+    app0_all_events = app0.raiden.wal.storage.get_events()
     assert must_contain_entry(app0_all_events, EventPaymentSentSuccess, {
         'identifier': identifier,
         'amount': amount,
         'target': app1.raiden.address,
     })
 
-    app1_all_events = app1.raiden.wal.storage.get_events_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
-    )
+    app1_all_events = app1.raiden.wal.storage.get_events()
     assert must_contain_entry(app1_all_events, EventPaymentReceivedSuccess, {
         'identifier': identifier,
         'amount': amount,

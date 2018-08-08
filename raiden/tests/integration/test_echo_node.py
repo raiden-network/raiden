@@ -46,7 +46,7 @@ def test_event_transfer_received_success(
 
     def test_events(amount, address):
         return must_contain_entry(
-            receiver_app.raiden.wal.storage.get_events_by_identifier(0, 'latest'),
+            receiver_app.raiden.wal.storage.get_events(),
             EventPaymentReceivedSuccess,
             {'amount': amount, 'initiator': address},
         )

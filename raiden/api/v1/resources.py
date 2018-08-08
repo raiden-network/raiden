@@ -2,12 +2,14 @@ from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
 from flask import Blueprint
 from raiden.api.v1.encoding import (
-    ChannelPutSchema,
     ChannelPatchSchema,
-    EventRequestSchema,
-    PaymentSchema,
+    ChannelPutSchema,
     ConnectionsConnectSchema,
     ConnectionsLeaveSchema,
+    BlockchainEventsRequestSchema,
+    RaidenEventsRequestSchema,
+    PaymentEventRequestSchema,
+    PaymentSchema,
 )
 from raiden.utils import typing
 
@@ -95,12 +97,13 @@ class PartnersResourceByTokenAddress(BaseResource):
 
 class NetworkEventsResource(BaseResource):
 
-    get_schema = EventRequestSchema()
+    get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, from_block, to_block):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
+
         return self.rest_api.get_network_events(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             from_block=from_block,
@@ -110,34 +113,29 @@ class NetworkEventsResource(BaseResource):
 
 class TokenBlockchainEventsResource(BaseResource):
 
-    get_schema = EventRequestSchema()
+    get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address):
+    def get(self, token_address, from_block, to_block):
+        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
+        to_block = to_block or 'latest'
+
         return self.rest_api.get_token_network_events_blockchain(
             token_address=token_address,
-        )
-
-
-class TokenRaidenEventsResource(BaseResource):
-
-    get_schema = EventRequestSchema()
-
-    @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address):
-        return self.rest_api.get_token_network_events_raiden(
-            token_address=token_address,
+            from_block=from_block,
+            to_block=to_block,
         )
 
 
 class ChannelBlockchainEventsResource(BaseResource):
 
-    get_schema = EventRequestSchema()
+    get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, partner_address=None, from_block=None, to_block=None):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
+
         return self.rest_api.get_channel_events_blockchain(
             token_address=token_address,
             partner_address=partner_address,
@@ -146,15 +144,30 @@ class ChannelBlockchainEventsResource(BaseResource):
         )
 
 
-class ChannelRaidenEventsResource(BaseResource):
+class TokenRaidenEventsResource(BaseResource):
 
-    get_schema = EventRequestSchema()
+    get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address, partner_address=None):
+    def get(self, token_address, limit, offset):
+        return self.rest_api.get_token_network_events_raiden(
+            token_address=token_address,
+            limit=limit,
+            offset=offset,
+        )
+
+
+class ChannelRaidenEventsResource(BaseResource):
+
+    get_schema = RaidenEventsRequestSchema()
+
+    @use_kwargs(get_schema, locations=('query',))
+    def get(self, token_address, partner_address=None, limit=None, offset=None):
         return self.rest_api.get_channel_events_raiden(
             token_address=token_address,
             partner_address=partner_address,
+            limit=limit,
+            offset=offset,
         )
 
 
@@ -209,15 +222,21 @@ class PaymentResource(BaseResource):
     post_schema = PaymentSchema(
         only=('amount', 'identifier'),
     )
+    get_schema = PaymentEventRequestSchema()
 
+    @use_kwargs(get_schema, locations=('query',))
     def get(
             self,
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
+            limit: int = None,
+            offset: int = None,
     ):
         return self.rest_api.get_payment_history(
             token_address=token_address,
             target_address=target_address,
+            limit=limit,
+            offset=offset,
         )
 
     @use_kwargs(post_schema, locations=('json',))

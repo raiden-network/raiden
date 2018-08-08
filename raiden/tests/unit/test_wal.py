@@ -145,10 +145,7 @@ def test_write_read_events():
             event_list,
         )
 
-    previous_events = wal.storage.get_events_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
-    )
+    previous_events = wal.storage.get_events()
 
     state_change_id = wal.storage.write_state_change('statechangedata')
     wal.storage.write_events(
@@ -156,10 +153,7 @@ def test_write_read_events():
         event_list,
     )
 
-    new_events = wal.storage.get_events_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
-    )
+    new_events = wal.storage.get_events()
     assert len(previous_events) + 1 == len(new_events)
 
     latest_event = new_events[-1]

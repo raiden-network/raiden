@@ -117,7 +117,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     assert transfer.wait()
 
     event = must_contain_entry(
-        app1.raiden.wal.storage.get_events_by_identifier(0, 'latest'),
+        app1.raiden.wal.storage.get_events(),
         SendRevealSecret,
         {},
     )
