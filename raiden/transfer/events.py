@@ -208,11 +208,11 @@ class EventPaymentSentSuccess(Event):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_network_identifier,
-            identifier,
-            amount,
-            target,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
+            identifier: typing.PaymentID,
+            amount: typing.TokenAmount,
+            target: typing.TargetAddress,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
@@ -229,8 +229,8 @@ class EventPaymentSentSuccess(Event):
             'target:{}'
             '>'
         ).format(
-            self.payment_network_identifier,
-            self.token_network_identifier,
+            pex(self.payment_network_identifier),
+            pex(self.token_network_identifier),
             self.identifier,
             self.amount,
             pex(self.target),
@@ -260,11 +260,11 @@ class EventPaymentSentFailed(Event):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_network_identifier,
-            identifier,
-            target,
-            reason,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
+            identifier: typing.PaymentID,
+            target: typing.TargetAddress,
+            reason: str,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
@@ -280,8 +280,8 @@ class EventPaymentSentFailed(Event):
             'id:{} target:{} reason:{} '
             '>'
         ).format(
-            self.payment_network_identifier,
-            self.token_network_identifier,
+            pex(self.payment_network_identifier),
+            pex(self.token_network_identifier),
             self.identifier,
             self.target,
             self.reason,
@@ -313,11 +313,11 @@ class EventPaymentReceivedSuccess(Event):
 
     def __init__(
             self,
-            payment_network_identifier,
-            token_network_identifier,
-            identifier,
-            amount,
-            initiator,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
+            identifier: typing.PaymentID,
+            amount: typing.TokenAmount,
+            initiator: typing.InitiatorAddress,
     ):
         if amount < 0:
             raise ValueError('transferred_amount cannot be negative')
@@ -339,8 +339,8 @@ class EventPaymentReceivedSuccess(Event):
             'amount:{} initiator:{} '
             '>'
         ).format(
-            self.payment_network_identifier,
-            self.token_network_identifier,
+            pex(self.payment_network_identifier),
+            pex(self.token_network_identifier),
             self.identifier,
             self.amount,
             pex(self.initiator),

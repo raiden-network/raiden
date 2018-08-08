@@ -102,11 +102,11 @@ def try_new_route(
             reason = 'none of the available routes could be used'
 
         transfer_failed = EventPaymentSentFailed(
-            transfer_description.payment_network_identifier,
-            transfer_description.token_network_identifier,
-            transfer_description.payment_identifier,
-            transfer_description.target,
-            reason,
+            payment_network_identifier=transfer_description.payment_network_identifier,
+            token_network_identifier=transfer_description.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            target=transfer_description.target,
+            reason=reason,
         )
         events.append(transfer_failed)
 
@@ -219,8 +219,8 @@ def handle_secretrequest(
 
     elif invalid_secretrequest:
         cancel = EventPaymentSentFailed(
-            channel_state.payment_network_identifier,
-            channel_state.token_network_identifer,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifer=channel_state.token_network_identifer,
             identifier=initiator_state.transfer_description.payment_identifier,
             target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',
@@ -266,11 +266,11 @@ def handle_secretreveal(
 
         # TODO: Emit these events after on-chain unlock
         payment_sent_success = EventPaymentSentSuccess(
-            channel_state.payment_network_identifier,
-            channel_state.token_network_identifier,
-            transfer_description.payment_identifier,
-            transfer_description.amount,
-            transfer_description.target,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            amount=transfer_description.amount,
+            target=transfer_description.target,
         )
 
         unlock_success = EventUnlockSuccess(

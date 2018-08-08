@@ -699,8 +699,10 @@ class RaidenAPI:
 
     def get_payment_history_for_token_and_target(self, token_address, target_address):
         if target_address and not is_binary_address(target_address):
-            raise InvalidAddress('Expected binary address format for '
-                                 'target_address in get_payment_history_partner')
+            raise InvalidAddress(
+                'Expected binary address format for '
+                'target_address in get_payment_history_partner',
+            )
 
         raiden_events = self.get_payment_history_for_token(token_address)
 

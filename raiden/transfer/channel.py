@@ -1458,22 +1458,22 @@ def handle_send_directtransfer(
     else:
         if not is_open:
             failure = EventPaymentSentFailed(
-                channel_state.payment_network_identifier,
-                channel_state.token_network_identifier,
-                payment_identifier,
-                target_address,
-                'Channel is not opened',
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                identifier=payment_identifier,
+                target=target_address,
+                reason='Channel is not opened',
             )
             events.append(failure)
 
         elif not is_valid:
             msg = 'Payment amount is invalid. Transfer: {}'.format(amount)
             failure = EventPaymentSentFailed(
-                channel_state.payment_network_identifier,
-                channel_state.token_network_identifier,
-                payment_identifier,
-                target_address,
-                msg,
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                identifier=payment_identifier,
+                target=target_address,
+                reason=msg,
             )
             events.append(failure)
 
@@ -1487,11 +1487,11 @@ def handle_send_directtransfer(
             )
 
             failure = EventPaymentSentFailed(
-                channel_state.payment_network_identifier,
-                channel_state.token_network_identifier,
-                payment_identifier,
-                target_address,
-                msg,
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                identifier=payment_identifier,
+                target=target_address,
+                reason=msg,
             )
             events.append(failure)
 
@@ -1534,11 +1534,11 @@ def handle_receive_directtransfer(
 
         channel_state.partner_state.balance_proof = direct_transfer.balance_proof
         payment_received_success = EventPaymentReceivedSuccess(
-            channel_state.payment_network_identifier,
-            channel_state.token_network_identifier,
-            direct_transfer.payment_identifier,
-            transfer_amount,
-            channel_state.partner_state.address,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            payment_identifier=direct_transfer.payment_identifier,
+            amount=transfer_amount,
+            initiator=channel_state.partner_state.address,
         )
 
         send_processed = SendProcessed(

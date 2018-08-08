@@ -155,11 +155,11 @@ def handle_cancelpayment(
     cancel_events = cancel_current_route(payment_state)
 
     cancel = EventPaymentSentFailed(
-        channel_state.payment_network_identifier,
-        channel_state.token_network_identifier,
-        transfer_description.payment_identifier,
-        transfer_description.target,
-        'user canceled payment',
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
+        identifier=transfer_description.payment_identifier,
+        target=transfer_description.target,
+        reason='user canceled payment',
     )
     cancel_events.append(cancel)
 
