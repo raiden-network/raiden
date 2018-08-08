@@ -883,14 +883,24 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
     # - A settle transaction can be sent by anyone
     # - A secret reveal can be done by anyone
 
+    # - A lower nonce is not a valid replacement, since that is an older balance
+    #   proof
+    # - A larger nonce is impossible, that would require the partner node to
+    #   produce and invalid balance proof, and this node to accept the invalid
+    #   balance proof and sign it
     is_valid_update_transfer = (
         isinstance(state_change, ContractReceiveUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
+        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.channel_identifier == transaction.channel_identifier and
         state_change.nonce == transaction.balance_proof.nonce
     )
     if is_valid_update_transfer:
         return True
 
+    # The balance proof data cannot be verified, the local close could have
+    # lost a race against a remote close, and the balance proof data would be
+    # the one provided by this node's partner
     is_valid_close = (
         isinstance(state_change, ContractReceiveChannelClosed) and
         isinstance(transaction, ContractSendChannelClose) and

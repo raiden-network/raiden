@@ -652,10 +652,14 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_from: typing.Address,
+            token_network_identifier: typing.TokenNetworkID,
+            channel_identifier: typing.ChannelID,
             nonce: typing.Nonce,
     ):
         super().__init__(transaction_from)
 
+        self.token_network_identifier = token_network_identifier
+        self.channel_identifier = channel_identifier
         self.nonce = nonce
 
     def __repr__(self):
