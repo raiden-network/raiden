@@ -186,7 +186,7 @@ class PaymentNetworkState(State):
 
 
 class TokenNetworkState(State):
-    """ Corresponds to a channel manager smart contract. """
+    """ Corresponds to a token network smart contract. """
 
     __slots__ = (
         'address',

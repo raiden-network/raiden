@@ -445,11 +445,18 @@ def handle_token_network_action(
         chain_state,
         state_change.token_network_identifier,
     )
+    payment_network_state = views.get_token_network_registry_by_token_network_identifier(
+        chain_state,
+        state_change.token_network_identifier,
+    )
+    assert payment_network_state, 'We should always get a payment_network_state'
+    payment_network_id = payment_network_state.address
 
     events = list()
     if token_network_state:
         pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = token_network.state_transition(
+            payment_network_id,
             token_network_state,
             state_change,
             pseudo_random_generator,
