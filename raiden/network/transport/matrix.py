@@ -74,6 +74,7 @@ from raiden.utils.typing import (
     Union,
     Type,
 )
+from raiden.utils.gevent_utils import RaidenAsyncResult
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
@@ -257,7 +258,7 @@ class MatrixTransport:
             )
 
         message_id = message.message_identifier
-        async_result = AsyncResult()
+        async_result = RaidenAsyncResult()
         if isinstance(message, Processed):
             async_result.set(True)  # processed messages shouldn't get a Delivered reply
             self._send_immediate(receiver_address, json.dumps(message.to_dict()))

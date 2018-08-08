@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import filelock
 import gevent
-from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
 import structlog
 from eth_utils import is_binary_address
@@ -53,6 +52,7 @@ from raiden.utils import (
     create_default_identifier,
     typing,
 )
+from raiden.utils.gevent_utils import RaidenAsyncResult, RaidenGreenletEvent
 from raiden.storage import wal, serialize, sqlite
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -163,8 +163,8 @@ class RaidenService:
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
-        self.stop_event = Event()
-        self.start_event = Event()
+        self.stop_event = RaidenGreenletEvent()
+        self.start_event = RaidenGreenletEvent()
         self.chain.client.inject_stop_event(self.stop_event)
 
         self.wal = None
@@ -187,7 +187,7 @@ class RaidenService:
 
         self.event_poll_lock = gevent.lock.Semaphore()
 
-    def start_async(self) -> Event:
+    def start_async(self) -> RaidenGreenletEvent:
         """ Start the node asynchronously. """
         self.start_event.clear()
         self.stop_event.clear()
@@ -284,7 +284,7 @@ class RaidenService:
 
         return self.start_event
 
-    def start(self) -> Event:
+    def start(self) -> RaidenGreenletEvent:
         """ Start the node. """
         self.start_async().wait()
 
@@ -557,7 +557,7 @@ class RaidenService:
 
         assert identifier not in self.identifier_to_results
 
-        async_result = AsyncResult()
+        async_result = RaidenAsyncResult()
         self.identifier_to_results[identifier].append(async_result)
 
         secret = random_secret()

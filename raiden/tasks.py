@@ -4,13 +4,12 @@ from pkg_resources import parse_version
 
 import click
 import gevent
-from gevent.event import AsyncResult
 import structlog
 from web3 import Web3
 
 from raiden.exceptions import RaidenShuttingDown
 from raiden.utils import get_system_spec, gas_reserve
-from raiden.utils.gevent_utils import RaidenGreenlet
+from raiden.utils.gevent_utils import RaidenGreenlet, RaidenAsyncResult
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 CHECK_GAS_RESERVE_INTERVAL = 60 * 60
@@ -91,7 +90,7 @@ class AlarmTask(RaidenGreenlet):
         self.chain = chain
         self.chain_id = None
         self.last_block_number = None
-        self.stop_event = AsyncResult()
+        self.stop_event = RaidenAsyncResult()
         self.sleep_time = sleep_time
 
     def _run(self):  # pylint: disable=method-hidden

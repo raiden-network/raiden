@@ -38,6 +38,7 @@ from raiden.network.transport.udp.udp_utils import (
     retry_with_recovery,
 )
 from raiden.raiden_service import RaidenService
+from raiden.utils.gevent_utils import RaidenAsyncResult, RaidenGreenletEvent
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -158,7 +159,7 @@ class UDPTransport:
         self.nat_keepalive_timeout = config['nat_keepalive_timeout']
         self.nat_invitation_timeout = config['nat_invitation_timeout']
 
-        self.event_stop = Event()
+        self.event_stop = RaidenGreenletEvent()
 
         self.greenlets = list()
         self.addresses_events = dict()
@@ -252,8 +253,8 @@ class UDPTransport:
             )
 
             events = healthcheck.HealthEvents(
-                event_healthy=Event(),
-                event_unhealthy=Event(),
+                event_healthy=RaidenGreenletEvent(),
+                event_unhealthy=RaidenGreenletEvent(),
             )
 
             self.addresses_events[recipient] = events
@@ -367,7 +368,7 @@ class UDPTransport:
 
         # ignore duplicates
         if message_id not in self.messageids_to_asyncresults:
-            self.messageids_to_asyncresults[message_id] = AsyncResult()
+            self.messageids_to_asyncresults[message_id] = RaidenAsyncResult()
 
             queue = self.get_queue_for(recipient, queue_name)
             queue.put((messagedata, message_id))
@@ -406,7 +407,7 @@ class UDPTransport:
         """
         async_result = self.messageids_to_asyncresults.get(message_id)
         if async_result is None:
-            async_result = AsyncResult()
+            async_result = RaidenAsyncResult()
             self.messageids_to_asyncresults[message_id] = async_result
 
         host_port = self.get_host_port(recipient)
