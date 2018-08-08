@@ -207,7 +207,7 @@ class RaidenService:
 
         # The database may be :memory:
         storage = sqlite.SQLiteStorage(self.database_path, serialize.PickleSerializer())
-        self.wal, unapplied_events = wal.restore_from_latest_snapshot(
+        self.wal = wal.restore_from_latest_snapshot(
             node.state_transition,
             storage,
         )
@@ -270,9 +270,6 @@ class RaidenService:
 
         # Health check needs the transport layer
         self.start_neighbours_healthcheck()
-
-        for event in unapplied_events:
-            on_raiden_event(self, event)
 
         if self.config['transport_type'] == 'udp':
             def set_start_on_registration(_):

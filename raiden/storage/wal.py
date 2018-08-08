@@ -6,7 +6,6 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_from_latest_snapshot(transition_function, storage):
-    events = list()
     snapshot = storage.get_latest_state_snapshot()
 
     if snapshot:
@@ -29,9 +28,9 @@ def restore_from_latest_snapshot(transition_function, storage):
 
     log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
     for state_change in unapplied_state_changes:
-        events.extend(state_manager.dispatch(state_change))
+        state_manager.dispatch(state_change)
 
-    return wal, events
+    return wal
 
 
 class WriteAheadLog:
