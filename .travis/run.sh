@@ -17,7 +17,6 @@ coverage run \
     --random \
     -v \
     --showlocals \
-    --tb=long \
     --blockchain-type=${BLOCKCHAIN_TYPE} \
     ${TRANSPORT_OPTIONS} \
     ${TEST}
