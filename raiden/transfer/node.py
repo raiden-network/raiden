@@ -834,16 +834,16 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
 
     This predicate is used to clear the transaction queue, this should only be
     done once the expected side effect of a transaction is achieved. This
-    doesn't necessarily means that the transaction sent by *this* node was
+    doesn't necessarily mean that the transaction sent by *this* node was
     mined, but only that *some* transaction which achieves the same side-effect
     was successfully executed. This distinction is important for restarts and
     to reduce the number of state changes.
 
     On restarts: The state of the on-chain channel could have changed while the
     node was offline. Once the node learns about the change (e.g. the channel
-    was settled), new transactions can be request as a side effect for the
+    was settled), new transactions can be dispatched by Raiden as a side effect for the
     on-chain *event* (e.g. do the batch unlock with the latest merkle tree),
-    but the requested action could have been completed by another agent (e.g.
+    but the dispatched transaction could have been completed by another agent (e.g.
     the partner node). For these cases, the transaction from a different
     address which achieves the same side-effect is sufficient, otherwise
     unnecessary transactions would be sent by the node.
@@ -852,7 +852,7 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
     a new *block*. On restart the node first synchronizes its state by querying
     for new events, only after the off-chain state is up-to-date a Block state
     change is dispatched, at this point some transactions are not required
-    anymore and therefore are not requested.
+    anymore and therefore are not dispatched.
 
     On the number of state changes: Accepting a transaction from another
     address removes the need for clearing state changes, e.g. when our the
