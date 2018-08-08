@@ -10,7 +10,6 @@ from eth_utils import (
     to_checksum_address,
     to_normalized_address,
 )
-from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 from raiden_contracts.constants import (
     CHANNEL_STATE_CLOSED,
@@ -48,6 +47,7 @@ from raiden.utils import (
     privatekey_to_address,
     typing,
 )
+from raiden.utils.gevent_utils import RaidenAsyncResult
 from raiden.transfer.utils import hash_balance_data
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -137,7 +137,7 @@ class TokenNetwork:
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
         if partner not in self.open_channel_transactions:
-            new_open_channel_transaction = AsyncResult()
+            new_open_channel_transaction = RaidenAsyncResult()
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:

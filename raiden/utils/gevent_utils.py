@@ -14,15 +14,49 @@ class RaidenGreenlet(gevent.Greenlet):
     """
     def link_safe(self, callable):
         self.is_safe_linked = True
-        super(RaidenGreenlet, self).link(self._wrap_linked_callable(callable))
+        super().link(self._wrap_linked_callable(callable))
 
     def link_exception_safe(self, callable):
         self.is_safe_linked = True
-        super(RaidenGreenlet, self).link_exception(self._wrap_linked_callable(callable))
+        super().link_exception(self._wrap_linked_callable(callable))
 
     def rawlink_safe(self, callable):
         self.is_safe_linked = True
-        super(RaidenGreenlet, self).rawlink(self._wrap_linked_callable(callable))
+        super().rawlink(self._wrap_linked_callable(callable))
+
+    @staticmethod
+    def _wrap_linked_callable(callable):
+        def wrapped_callable(greenlet):
+            try:
+                callable(greenlet)
+            except gevent.get_hub().SYSTEM_ERROR:
+                raise
+            except Exception as exception:
+                raise UnhandledExceptionInGreenlet(exception) from exception
+        return wrapped_callable
+
+
+class RaidenAsyncResult(gevent.event.AsyncResult):
+    def rawlink_safe(self, callable):
+        self.is_safe_linked = True
+        super().rawlink(self._wrap_linked_callable(callable))
+
+    @staticmethod
+    def _wrap_linked_callable(callable):
+        def wrapped_callable(greenlet):
+            try:
+                callable(greenlet)
+            except gevent.get_hub().SYSTEM_ERROR:
+                raise
+            except Exception as exception:
+                raise UnhandledExceptionInGreenlet(exception) from exception
+        return wrapped_callable
+
+
+class RaidenGreenletEvent(gevent._event.Event):
+    def rawlink_safe(self, callable):
+        self.is_safe_linked = True
+        super().rawlink(self._wrap_linked_callable(callable))
 
     @staticmethod
     def _wrap_linked_callable(callable):

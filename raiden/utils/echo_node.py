@@ -4,7 +4,6 @@ import random
 import gevent
 from gevent.queue import Queue
 from gevent.lock import BoundedSemaphore
-from gevent.event import Event
 from gevent.timeout import Timeout
 import structlog
 
@@ -13,6 +12,7 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import pex
+from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 
 log = structlog.get_logger(__name__)
@@ -25,7 +25,7 @@ class EchoNode:
 
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
-        self.ready = Event()
+        self.ready = RaidenGreenletEvent()
 
         self.api = api
         self.token_address = token_address

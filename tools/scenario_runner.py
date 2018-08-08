@@ -21,6 +21,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
+from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 gevent.monkey.patch_all()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -257,7 +258,7 @@ def run(
         if stage_prefix is not None:
             open('{}.stage1'.format(stage_prefix), 'a').close()
             log.warning('Done with initialization, waiting to continue...')
-            event = gevent.event.Event()
+            event = RaidenGreenletEvent()
             gevent.signal(signal.SIGUSR2, event.set)
             event.wait()
 
@@ -308,12 +309,12 @@ def run(
 
         open('{}.stage2'.format(stage_prefix), 'a').close()
         log.warning('Waiting for transfers to finish, will write results...')
-        event = gevent.event.Event()
+        event = RaidenGreenletEvent()
         gevent.signal(signal.SIGUSR2, event.set)
         event.wait()
 
         open('{}.stage3'.format(stage_prefix), 'a').close()
-        event = gevent.event.Event()
+        event = RaidenGreenletEvent()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
@@ -323,7 +324,7 @@ def run(
         log.warning('No scenario file supplied, doing nothing!')
 
         open('{}.stage2'.format(stage_prefix), 'a').close()
-        event = gevent.event.Event()
+        event = RaidenGreenletEvent()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)

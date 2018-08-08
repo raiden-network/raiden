@@ -1,8 +1,7 @@
 import gevent
-from gevent.event import Event
 from eth_utils import encode_hex, to_checksum_address
 from raiden.utils import privatekey_to_address
-from raiden.utils.gevent_utils import RaidenGreenlet
+from raiden.utils.gevent_utils import RaidenGreenlet, RaidenGreenletEvent
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE
 
@@ -29,7 +28,7 @@ class Miner(RaidenGreenlet):
         super().__init__()
         self.web3 = web3
         self.mine_sleep = mine_sleep
-        self.stop = Event()
+        self.stop = RaidenGreenletEvent()
 
     def _run(self):
         while self.stop.is_set() is False:

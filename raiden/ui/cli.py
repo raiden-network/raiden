@@ -81,7 +81,7 @@ from raiden.utils.cli import (
     option_group,
 )
 from raiden.utils.echo_node import EchoNode
-from raiden.utils.gevent_utils import configure_gevent
+from raiden.utils.gevent_utils import configure_gevent, RaidenGreenletEvent
 from raiden.utils.http import HTTPExecutor
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -983,7 +983,7 @@ class NodeRunner:
         self._startup_hook()
 
         # wait for interrupt
-        event = gevent.event.Event()
+        event = RaidenGreenletEvent()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
