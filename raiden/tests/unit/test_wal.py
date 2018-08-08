@@ -123,13 +123,13 @@ def test_write_read_log():
         wal.storage.write_state_snapshot(34, 'AAAA')
 
     # Make sure we can only have a single state snapshot
-    assert wal.storage.get_state_snapshot() is None
+    assert wal.storage.get_latest_state_snapshot() is None
 
     wal.storage.write_state_snapshot(1, 'AAAA')
-    assert wal.storage.get_state_snapshot() == (1, 'AAAA')
+    assert wal.storage.get_latest_state_snapshot() == (1, 'AAAA')
 
     wal.storage.write_state_snapshot(2, 'BBBB')
-    assert wal.storage.get_state_snapshot() == (2, 'BBBB')
+    assert wal.storage.get_latest_state_snapshot() == (2, 'BBBB')
 
 
 def test_write_read_events():

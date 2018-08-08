@@ -82,19 +82,12 @@ class SQLiteStorage:
         return last_id
 
     def write_state_snapshot(self, statechange_id, snapshot):
-        # TODO: Snapshotting is not yet implemented. This is just skeleton code
-        # (Issue #682)
-        #
-        # This skeleton code assumes we only keep a single snapshot and
-        # overwrite it each time.
         serialized_data = self.serializer.serialize(snapshot)
 
         with self.write_lock, self.conn:
             cursor = self.conn.execute(
-                'INSERT OR REPLACE INTO state_snapshot('
-                '    identifier, statechange_id, data'
-                ') VALUES(?, ?, ?)',
-                (1, statechange_id, serialized_data),
+                'INSERT INTO state_snapshot(statechange_id, data) VALUES(?, ?)',
+                (statechange_id, serialized_data),
             )
             last_id = cursor.lastrowid
 
@@ -121,9 +114,11 @@ class SQLiteStorage:
                 events_data,
             )
 
-    def get_state_snapshot(self) -> Optional[Tuple[int, Any]]:
+    def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
         """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
-        cursor = self.conn.execute('SELECT statechange_id, data from state_snapshot')
+        cursor = self.conn.execute(
+            'SELECT statechange_id, data from state_snapshot ORDER BY identifier DESC LIMIT 1',
+        )
         serialized = cursor.fetchall()
 
         result = None
