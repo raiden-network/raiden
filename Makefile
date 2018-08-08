@@ -39,6 +39,7 @@ clean-test:
 
 lint:
 	flake8 raiden/ tools/
+	pylint --disable=all --enable=no-value-for-parameter raiden
 	python setup.py check --restructuredtext --strict
 
 test:
