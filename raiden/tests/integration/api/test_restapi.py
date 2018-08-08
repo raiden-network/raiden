@@ -337,11 +337,12 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response, HTTPStatus.CREATED)
+    first_channel_id = 1
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = 1
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
     assert_dicts_are_equal(response, expected_response)
 
@@ -367,11 +368,12 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response, HTTPStatus.CREATED)
+    second_channel_id = 2
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = second_channel_id
     expected_response['token_network_identifier'] = token_network_identifier
     assert_dicts_are_equal(response, expected_response)
 
@@ -401,7 +403,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': first_channel_id,
         'partner_address': first_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -426,7 +428,7 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = response.json()
     expected_response = {
-        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': second_channel_id,
         'partner_address': second_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -487,12 +489,13 @@ def test_api_open_close_and_settle_channel(
 
     balance = 0
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
+    channel_identifier = 1
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
-    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
     assert_dicts_are_equal(response, expected_response)
 
@@ -512,7 +515,7 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response)
     expected_response = {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': assert_dicts_are_equal.IGNORE_VALUE,
+        'channel_identifier': channel_identifier,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
@@ -523,6 +526,8 @@ def test_api_open_close_and_settle_channel(
     assert_dicts_are_equal(response.json(), expected_response)
 
 
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_api_close_insufficient_eth(
         api_backend,
         token_addresses,
@@ -548,12 +553,13 @@ def test_api_close_insufficient_eth(
 
     balance = 0
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
+    channel_identifier = 1
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['reveal_timeout'] = reveal_timeout
-    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
     assert_dicts_are_equal(response, expected_response)
 
@@ -1179,11 +1185,12 @@ def test_api_deposit_limit(
     response = request.send().response
 
     assert_proper_response(response, HTTPStatus.CREATED)
+    first_channel_identifier = 1
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance_working
     expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['channel_identifier'] = first_channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
     assert_dicts_are_equal(response, expected_response)
 
