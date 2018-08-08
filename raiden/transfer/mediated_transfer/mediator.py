@@ -2,6 +2,7 @@ import itertools
 import random
 from typing import List, Dict
 
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
@@ -310,6 +311,10 @@ def next_channel_from_routes(
             continue
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+            continue
+
+        pending_transfers = channel.get_number_of_pending_transfers(channel_state.our_state)
+        if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
             continue
 
         distributable = channel.get_distributable(

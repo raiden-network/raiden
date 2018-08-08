@@ -4,7 +4,7 @@ from binascii import hexlify
 from collections import namedtuple
 from typing import Union
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
 from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
@@ -396,6 +396,7 @@ def valid_lockedtransfer_check(
         received_balance_proof: BalanceProofSignedState,
         lock: HashTimeLockState,
 ) -> MerkletreeOrError:
+
     current_balance_proof = get_current_balanceproof(sender_state)
     merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
 
@@ -414,6 +415,13 @@ def valid_lockedtransfer_check(
 
     if merkletree is None:
         msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
+        result = (False, msg, None)
+
+    elif _merkletree_width(merkletree) > MAXIMUM_PENDING_TRANSFERS:
+        msg = (
+            f'Invalid {message_name} message. Adding the transfer would exceed the allowed '
+            f'limit of {MAXIMUM_PENDING_TRANSFERS} pending transfers per channel.'
+        )
         result = (False, msg, None)
 
     else:
@@ -873,6 +881,14 @@ def get_next_nonce(end_state: NettingChannelEndState) -> typing.Nonce:
 
     # 0 must not be used since in the netting contract it represents null.
     return 1
+
+
+def _merkletree_width(merkletree: MerkleTreeState) -> int:
+    return len(merkletree.layers[LEAVES])
+
+
+def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -> int:
+    return _merkletree_width(channel_end_state.merkletree)
 
 
 def get_status(channel_state):

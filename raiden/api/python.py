@@ -30,7 +30,6 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     TokenNotRegistered,
     InsufficientGasReserve,
-    TooManyPendingTransfers,
 )
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import (
@@ -581,18 +580,14 @@ class RaidenAPI:
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
 
-        try:
-            async_result = self.transfer_async(
-                registry_address,
-                token_address,
-                amount,
-                target,
-                identifier,
-            )
-        except TooManyPendingTransfers:
-            log.exception('Transfer could not be started, too many pending transfers.')
-        else:
-            return async_result.wait(timeout=transfer_timeout)
+        async_result = self.transfer_async(
+            registry_address,
+            token_address,
+            amount,
+            target,
+            identifier,
+        )
+        return async_result.wait(timeout=transfer_timeout)
 
     def transfer_async(
             self,
