@@ -1,5 +1,8 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from dataclasses import dataclass
+
 from raiden.transfer.architecture import (
+    ContractReceiveRecoverableFailureStateChange,
     ContractReceiveStateChange,
     StateChange,
 )
@@ -786,3 +789,54 @@ class ReceiveProcessed(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+@dataclass
+class ContractReceiveRecoverableFailedChannelBatchUnlock(
+        ContractReceiveRecoverableFailureStateChange,
+):
+    transaction_from: typing.Address
+    token_network_identifier: typing.TokenNetworkIdentifier
+    participant: typing.Address
+    partner: typing.Address
+    locksroot: typing.Locksroot
+    unlocked_amount: typing.TokenAmount
+    returned_tokens: typing.TokenAmount
+
+
+@dataclass
+class ContractReceiveRecoverableFailedChannelClosed(
+        ContractReceiveRecoverableFailureStateChange,
+):
+    transaction_from: typing.Address
+    token_network_identifier: typing.TokenNetworkID
+    channel_identifier: typing.ChannelID
+    closed_block_number: typing.BlockNumber
+
+
+@dataclass
+class ContractReceiveRecoverableFailedChannelSettled(
+        ContractReceiveRecoverableFailureStateChange,
+):
+    transaction_from: typing.Address
+    token_network_identifier: typing.TokenNetworkID
+    channel_identifier: typing.ChannelID
+    settle_block_number: typing.BlockNumber
+
+
+@dataclass
+class ContractReceiveRecoverableFailedSecretReveal(
+        ContractReceiveRecoverableFailureStateChange,
+):
+    transaction_from: typing.Address
+    secret_registry_address: typing.SecretRegistryAddress
+    secrethash: typing.SecretHash
+    secret: typing.Secret
+
+
+@dataclass
+class ContractReceiveRecoverableFailedUpdateTransfer(
+        ContractReceiveRecoverableFailureStateChange,
+):
+    transaction_from: typing.Address
+    nonce: typing.Nonce

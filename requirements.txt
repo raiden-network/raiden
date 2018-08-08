@@ -3,6 +3,7 @@ git+https://github.com/LefterisJP/pystun@develop#egg=pystun
 
 cachetools==2.1.0
 coincurve==7.1.0
+dataclasses==0.6
 filelock==3.0.4
 Flask==1.0.2
 Flask-Cors==3.0.4

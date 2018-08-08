@@ -46,6 +46,12 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
+    ContractReceiveRecoverableFailedChannelBatchUnlock,
+    ContractReceiveRecoverableFailedChannelClosed,
+    ContractReceiveRecoverableFailedChannelSettled,
+    ContractReceiveRecoverableFailedSecretReveal,
+    ContractReceiveRecoverableFailedUpdateTransfer,
+    ContractReceiveRecoverableFailureStateChange,
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
@@ -828,8 +834,114 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def is_transaction_successful(chain_state, transaction, state_change):
+def is_transaction_effect_satisfied(chain_state, transaction, state_change):
+    """ True if the side-effect of `transaction` is satisfied by state_change.
+
+    This predicate is used to clear the transaction queue, this should only be
+    done once the expected side effect of a transaction is achieved. This
+    doesn't necessarily means that the transaction sent by *this* node was
+    mined, but only that *some* transaction which achieves the same side-effect
+    was successfully executed.
+
+    The above distinction is important for restarts. After a Raiden node was
+    temporarily off-line, the state of the on-chain channel could have changed.
+    Once the node learns about the change (e.g. the channel was closed), new
+    transactions will be request (e.g. update channel with the latest balance
+    proof), but the requested action could have been completed by another agent
+    (e.g. a monitoring service). For these cases, the transaction from a
+    different address which achieves the same side-effect is sufficient,
+    otherwise unecessary transactions would be sent by the node.
+    """
     # These transactions are not made atomic through the WAL, they are sent
+    # exclusively through the external APIs.
+    #
+    #  - ContractReceiveChannelNew
+    #  - ContractReceiveChannelNewBalance
+    #  - ContractReceiveNewPaymentNetwork
+    #  - ContractReceiveNewTokenNetwork
+    #  - ContractReceiveRouteNew
+
+    # Transactions are used to change the on-chain state of a channel, it
+    # doesn't matter if the sender of the transaction is the local node or
+    # another node authorized to perform the operation. So, for the following
+    # transactions, as long as the side-effects are the same, the local
+    # transaction can be removed from the queue.
+    #
+    # - An update transfer can be done by a monitoring service
+    # - A close transaction can be sent by our partner
+    # - A settle transaction can be sent by anyone
+    # - A secret reveal can be done by anyone
+
+    is_valid_update_transfer = (
+        isinstance(state_change, ContractReceiveUpdateTransfer) and
+        isinstance(transaction, ContractSendChannelUpdateTransfer) and
+        state_change.nonce == transaction.balance_proof.nonce
+    )
+    if is_valid_update_transfer:
+        return True
+
+    is_valid_close = (
+        isinstance(state_change, ContractReceiveChannelClosed) and
+        isinstance(transaction, ContractSendChannelClose) and
+        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.channel_identifier == transaction.channel_identifier
+    )
+    if is_valid_close:
+        return True
+
+    is_valid_settle = (
+        isinstance(state_change, ContractReceiveChannelSettled) and
+        isinstance(transaction, ContractSendChannelSettle) and
+        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.channel_identifier == transaction.channel_identifier
+    )
+    if is_valid_settle:
+        return True
+
+    is_valid_secret_reveal = (
+        isinstance(state_change, ContractReceiveSecretReveal) and
+        isinstance(transaction, ContractSendSecretReveal) and
+        state_change.secret == transaction.secret
+    )
+    if is_valid_secret_reveal:
+        return True
+
+    is_batch_unlock = (
+        isinstance(state_change, ContractReceiveChannelBatchUnlock) and
+        isinstance(transaction, ContractSendChannelBatchUnlock)
+    )
+    if is_batch_unlock:
+        our_address = chain_state.our_address
+
+        # Don't assume that because we sent the transaction, we are a
+        # participant
+        if state_change.participant == our_address:
+            partner_address = state_change.partner
+        elif state_change.partner == our_address:
+            partner_address = state_change.participant
+
+        # Use the second address as the partner address, but check that a
+        # channel exists for our_address and partner_address
+        if partner_address:
+            channel_state = views.get_channelstate_by_token_network_and_partner(
+                chain_state,
+                state_change.token_network_identifier,
+                partner_address,
+            )
+
+            if channel_state:
+                is_our_batch_unlock = (
+                    state_change.transaction_from == our_address and
+                    state_change.token_network_identifier == transaction.token_network_identifier
+                )
+                if is_our_batch_unlock:
+                    return True
+
+    return False
+
+
+def is_failed_transaction(chain_state, transaction, state_change):
+    # These transactions are not made atomic through the wall, they are sent
     # exclusively through the external APIs.
     #
     #  - ContractReceiveChannelNew
@@ -840,49 +952,51 @@ def is_transaction_successful(chain_state, transaction, state_change):
     #
     our_address = chain_state.our_address
 
-    is_our_update_transfer = (
-        isinstance(state_change, ContractReceiveUpdateTransfer) and
+    is_our_failed_update_transfer = (
+        isinstance(state_change, ContractReceiveRecoverableFailedUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
         state_change.transaction_from == our_address and
         state_change.nonce == transaction.balance_proof.nonce
     )
-    if is_our_update_transfer:
+    if is_our_failed_update_transfer:
         return True
 
-    is_our_close = (
-        isinstance(state_change, ContractReceiveChannelClosed) and
+    is_our_failed_close = (
+        isinstance(state_change, ContractReceiveRecoverableFailedChannelClosed) and
         isinstance(transaction, ContractSendChannelClose) and
         state_change.transaction_from == our_address and
         state_change.token_network_identifier == transaction.token_network_identifier and
         state_change.channel_identifier == transaction.channel_identifier
     )
-    if is_our_close:
+    if is_our_failed_close:
         return True
 
-    is_our_settled = (
-        isinstance(state_change, ContractReceiveChannelSettled) and
+    is_our_failed_settled = (
+        isinstance(state_change, ContractReceiveRecoverableFailedChannelSettled) and
         isinstance(transaction, ContractSendChannelSettle) and
         state_change.transaction_from == our_address and
         state_change.token_network_identifier == transaction.token_network_identifier and
         state_change.channel_identifier == transaction.channel_identifier
     )
-    if is_our_settled:
+    if is_our_failed_settled:
         return True
 
-    is_our_secret_reveal = (
-        isinstance(state_change, ContractReceiveSecretReveal) and
+    is_our_failed_secret_reveal = (
+        isinstance(state_change, ContractReceiveRecoverableFailedSecretReveal) and
         isinstance(transaction, ContractSendSecretReveal) and
         state_change.transaction_from == our_address and
+        state_change.secret_registry_address == transaction.secret_registry_address and
+        state_change.secrethash == transaction.secrethash and
         state_change.secret == transaction.secret
     )
-    if is_our_secret_reveal:
+    if is_our_failed_secret_reveal:
         return True
 
-    is_batch_unlock = (
-        isinstance(state_change, ContractReceiveChannelBatchUnlock) and
+    is_failed_batch_unlock = (
+        isinstance(state_change, ContractReceiveRecoverableFailedChannelBatchUnlock) and
         isinstance(transaction, ContractSendChannelBatchUnlock)
     )
-    if is_batch_unlock:
+    if is_failed_batch_unlock:
         # Don't assume that because we sent the transaction, we are a
         # participant
         if state_change.participant == our_address:
@@ -913,15 +1027,27 @@ def is_transaction_successful(chain_state, transaction, state_change):
 def update_queues(iteration: TransitionResult, state_change):
     chain_state = iteration.new_state
 
-    is_our_transaction = (
+    is_our_successful_transaction = (
         isinstance(state_change, ContractReceiveStateChange) and
         state_change.transaction_from == chain_state.our_address
     )
-    if is_our_transaction:
+    if is_our_successful_transaction:
         pending_transactions = [
             transaction
             for transaction in chain_state.pending_transactions
-            if not is_transaction_successful(chain_state, transaction, state_change)
+            if not is_transaction_effect_satisfied(chain_state, transaction, state_change)
+        ]
+        chain_state.pending_transactions = pending_transactions
+
+    is_our_failed_transaction = (
+        isinstance(state_change, ContractReceiveRecoverableFailureStateChange) and
+        state_change.transaction_from == chain_state.our_address
+    )
+    if is_our_failed_transaction:
+        pending_transactions = [
+            transaction
+            for transaction in chain_state.pending_transactions
+            if not is_failed_transaction(chain_state, transaction, state_change)
         ]
         chain_state.pending_transactions = pending_transactions
 

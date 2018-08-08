@@ -95,6 +95,11 @@ class ContractReceiveStateChange(StateChange):
         self.transaction_from = transaction_from
 
 
+class ContractReceiveRecoverableFailureStateChange(StateChange):
+    def __init__(self, transaction_from):
+        self.transaction_from = transaction_from
+
+
 class StateManager:
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
