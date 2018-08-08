@@ -1,6 +1,5 @@
 """ Utilities to set-up a Raiden network. """
 from binascii import hexlify
-import collections
 from collections import namedtuple
 from os import environ
 
@@ -8,14 +7,15 @@ import gevent
 from gevent import server
 import structlog
 
-from raiden import waiting
 from raiden.app import App
+from raiden import waiting
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.utils import merge_dict
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -29,19 +29,6 @@ BlockchainServices = namedtuple(
         'blockchain_services',
     ),
 )
-
-
-def dict_merge(to_update, other_dict):
-    for key, value in other_dict.items():
-        has_map = (
-            isinstance(value, collections.Mapping) and
-            isinstance(to_update.get(key, None), collections.Mapping)
-        )
-
-        if has_map:
-            dict_merge(to_update[key], value)
-        else:
-            to_update[key] = value
 
 
 def check_channel(
@@ -303,7 +290,7 @@ def create_apps(
 
         use_matrix = local_matrix_url is not None
         if use_matrix:
-            dict_merge(
+            merge_dict(
                 config,
                 {
                     'transport_type': 'matrix',
