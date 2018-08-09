@@ -509,7 +509,7 @@ class RestAPI:
                 errors=str(e),
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
-        except InvalidAmount as e:
+        except (InvalidAmount, InvalidAddress) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
