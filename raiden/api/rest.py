@@ -61,8 +61,13 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenBlockchainEventsResource,
     TokenRaidenEventsResource,
+<<<<<<< HEAD
     ChannelRaidenEventsResource,
     ChannelBlockchainEventsResource,
+=======
+    ChannelEventsResource,
+    ConnectionsResource,
+>>>>>>> 21ac6824... Changed token network event api
     ConnectionsInfoResource,
     ConnectionsResource,
     PaymentResource,
@@ -100,6 +105,7 @@ URLS_V1 = [
     ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
     ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
     ('/events/network', NetworkEventsResource),
+<<<<<<< HEAD
     ('/blockchain_events/tokens/<hexaddress:token_address>', TokenBlockchainEventsResource),
     (
         '/blockchain_events/payment_networks/<hexaddress:token_address>/channels/',
@@ -111,6 +117,10 @@ URLS_V1 = [
         ChannelBlockchainEventsResource,
     ),
     ('/raiden_events/tokens/<hexaddress:token_address>', TokenRaidenEventsResource),
+=======
+    ('/events/tokens/blockchain/<hexaddress:token_address>', TokenBlockchainEventsResource),
+    ('/events/tokens/raiden/<hexaddress:token_address>', TokenRaidenEventsResource),
+>>>>>>> 21ac6824... Changed token network event api
     (
         '/raiden_events/networks/<hexaddress:token_address>/channels/',
         ChannelRaidenEventsResource,

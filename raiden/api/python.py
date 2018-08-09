@@ -842,6 +842,7 @@ class RaidenAPI:
         return returned_events
 
     def get_token_network_events_blockchain(
+<<<<<<< HEAD
             self,
             token_address: typing.TokenAddress,
             from_block: typing.BlockSpecification = 0,
@@ -852,6 +853,19 @@ class RaidenAPI:
         if not is_binary_address(token_address):
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events_blockchain',
+=======
+        self,
+        token_address: typing.TokenAddress,
+        from_block: typing.BlockSpecification = 0,
+        to_block: typing.BlockSpecification = 'latest',
+    ):
+        """Returns a list of internal events
+        coresponding to the token_address.
+        """
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_token_network_events blockchain',
+>>>>>>> 21ac6824... Changed token network event api
             )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
@@ -877,6 +891,7 @@ class RaidenAPI:
             hexbytes_to_str(event)
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
+<<<<<<< HEAD
 
     def get_token_network_events_raiden(
             self,
@@ -889,6 +904,19 @@ class RaidenAPI:
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events_blockchain',
             )
+=======
+
+    def get_token_network_events_raiden(
+        self,
+        token_address,
+        from_block,
+        to_block='latest',
+    ):
+        """Returns a list of internal events
+        coresponding to the token_address.
+        """
+
+>>>>>>> 21ac6824... Changed token network event api
         returned_events = []
         raiden_events = self.raiden.wal.storage.get_events_by_block(
             from_block=from_block,
@@ -896,6 +924,7 @@ class RaidenAPI:
         )
 
         for block_number, event in raiden_events:
+<<<<<<< HEAD
             new_event = {
                 'block_number': block_number,
                 'event': type(event).__name__,
@@ -909,6 +938,16 @@ class RaidenAPI:
                     event.balance_proof = repr(event.balance_proof)
                     new_event.update(event.__dict__)
             returned_events.append(new_event)
+=======
+            if event['address'] == token_address:
+                new_event = {
+                    'block_number': block_number,
+                    'event': type(event).__name__,
+                }
+                new_event.update(event.__dict__)
+                returned_events.append(new_event)
+
+>>>>>>> 21ac6824... Changed token network event api
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 

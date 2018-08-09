@@ -103,6 +103,7 @@ class EchoNode:
                         from_block=self.last_poll_block,
                     )
 
+                    # received transfer is a tuple of (block_number, event)
                     received_transfers = [
                         (block_number, event)
                         for block_number, event in received_transfers
@@ -118,6 +119,7 @@ class EchoNode:
                             block_number
                             for block_number, _ in received_transfers
                         )
+
                     # increase last_poll_block if the blockchain proceeded
                     delta_blocks = self.api.raiden.get_block_number() - self.last_poll_block
                     if delta_blocks > 1:

@@ -295,7 +295,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         app0.raiden.address,
         from_block=0,
     )
-    assert must_have_event(app1_events, {'event': ChannelEvent.DEPOSIT})
+
     assert must_have_event(app1_events, {'event': 'EventPaymentReceivedSuccess'})
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events_blockchain(
