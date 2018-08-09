@@ -408,6 +408,27 @@ define a associated alias, which must start with `T_`.
 T_Address = bytes
 ```
 
+**typing.Optional convention**
+
+For typing.Optional we follow the convention that if the argument has a default value of `None` then we should omit
+the use of `typing.Optional[]`
+
+Good Example:
+
+```python
+
+def foo(a: int = None)
+```
+
+Bad Example:
+
+```python
+
+def foo(a: typing.Optional[int] = None)
+```
+
+
+
 ##### Particuliarities
 
 **Concurrency/Usage of gevent**
