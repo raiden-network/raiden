@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Dict, Optional
+from typing import List, Dict, NamedTuple, Optional
 
 import structlog
 from eth_utils import (
@@ -52,16 +52,31 @@ from raiden.transfer.utils import hash_balance_data
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
-ParticipantDetails = Dict[
-    str,
-    typing.Union[
-        typing.TokenAmount,
-        typing.TokenAmount,
-        bool,
-        typing.BalanceHash,
-        int,
-    ],
-]
+
+class ChannelData(NamedTuple):
+    channel_identifier: typing.ChannelID
+    settle_block_number: typing.BlockNumber
+    state: int
+
+
+class ParticipantDetails(NamedTuple):
+    address: typing.Address
+    deposit: typing.TokenAmount
+    withdrawn: typing.TokenAmount
+    is_closer: bool
+    balance_hash: typing.BalanceHash
+    nonce: typing.Nonce
+
+
+class ParticipantsDetails(NamedTuple):
+    our_details: ParticipantDetails
+    partner_details: ParticipantDetails
+
+
+class ChannelDetails(NamedTuple):
+    chain_id: typing.ChainID
+    channel_data: int
+    participants_data: ParticipantsDetails
 
 
 class TokenNetwork:
@@ -173,7 +188,7 @@ class TokenNetwork:
             )
             raise RuntimeError('creating new channel failed')
 
-        channel_identifier = self.detail_channel(self.node_address, partner)['channel_identifier']
+        channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
 
         log.info(
             'new_netting_channel called',
@@ -240,14 +255,14 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return False
 
-        if not isinstance(channel_data['state'], typing.T_ChannelState):
+        if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
         log.debug('channel data {}'.format(channel_data))
 
         exists_and_not_settled = (
-            channel_data['state'] > CHANNEL_STATE_NONEXISTENT and
-            channel_data['state'] < CHANNEL_STATE_SETTLED
+            channel_data.state > CHANNEL_STATE_NONEXISTENT and
+            channel_data.state < CHANNEL_STATE_SETTLED
         )
         return exists_and_not_settled
 
@@ -265,20 +280,21 @@ class TokenNetwork:
             to_checksum_address(participant),
             to_checksum_address(partner),
         )
-        return {
-            'deposit': data[0],
-            'withdrawn': data[1],
-            'is_closer': data[2],
-            'balance_hash': data[3],
-            'nonce': data[4],
-        }
+        return ParticipantDetails(
+            address=participant,
+            deposit=data[0],
+            withdrawn=data[1],
+            is_closer=data[2],
+            balance_hash=data[3],
+            nonce=data[4],
+        )
 
     def detail_channel(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
             channel_identifier: typing.Optional[typing.ChannelID] = None,
-    ) -> Dict[str, typing.Union[typing.ChannelID, typing.BlockNumber, str]]:
+    ) -> ChannelData:
         """ Returns a dictionary with the channel specific information.
 
         If no specific channel_identifier is given then it tries to see if there
@@ -299,18 +315,18 @@ class TokenNetwork:
             to_checksum_address(participant2),
         )
 
-        return {
-            'channel_identifier': channel_identifier,
-            'settle_block_number': channel_data[0],
-            'state': channel_data[1],
-        }
+        return ChannelData(
+            channel_identifier=channel_identifier,
+            settle_block_number=channel_data[0],
+            state=channel_data[1],
+        )
 
     def detail_participants(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
             channel_identifier: typing.Optional[typing.ChannelID] = None,
-    ) -> ParticipantDetails:
+    ) -> ParticipantsDetails:
         """ Returns a dictionary with the participants' channel information.
 
         Note:
@@ -331,27 +347,14 @@ class TokenNetwork:
 
         our_data = self.detail_participant(channel_identifier, participant1, participant2)
         partner_data = self.detail_participant(channel_identifier, participant2, participant1)
-        return {
-            'our_address': participant1,
-            'our_deposit': our_data['deposit'],
-            'our_withdrawn': our_data['withdrawn'],
-            'our_is_closer': our_data['is_closer'],
-            'our_balance_hash': our_data['balance_hash'],
-            'our_nonce': our_data['nonce'],
-            'partner_address': participant2,
-            'partner_deposit': partner_data['deposit'],
-            'partner_withdrawn': partner_data['withdrawn'],
-            'partner_is_closer': partner_data['is_closer'],
-            'partner_balance_hash': partner_data['balance_hash'],
-            'partner_nonce': partner_data['nonce'],
-        }
+        return ParticipantsDetails(our_details=our_data, partner_details=partner_data)
 
     def detail(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
             channel_identifier: typing.Optional[typing.ChannelID] = None,
-    ) -> Dict:
+    ) -> ChannelDetails:
         """ Returns a dictionary with all the details of the channel and the channel participants.
 
         Note:
@@ -371,11 +374,11 @@ class TokenNetwork:
         )
         chain_id = self.proxy.contract.functions.chain_id().call()
 
-        return {
-            'chain_id': chain_id,
-            **channel_data,
-            **participants_data,
-        }
+        return ChannelDetails(
+            chain_id=chain_id,
+            channel_data=channel_data,
+            participants_data=participants_data,
+        )
 
     def settlement_timeout_min(self) -> int:
         """ Returns the minimal settlement timeout for the token network. """
@@ -400,7 +403,7 @@ class TokenNetwork:
             )
         except ChannelIncorrectStateError:
             return None
-        return channel_data.get('settle_block_number')
+        return channel_data.settle_block_number
 
     def channel_is_opened(
             self,
@@ -414,10 +417,10 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return False
 
-        if not isinstance(channel_data['state'], typing.T_ChannelState):
+        if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.get('state') == CHANNEL_STATE_OPENED
+        return channel_data.state == CHANNEL_STATE_OPENED
 
     def channel_is_closed(
             self,
@@ -431,10 +434,10 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return False
 
-        if not isinstance(channel_data['state'], typing.T_ChannelState):
+        if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.get('state') == CHANNEL_STATE_CLOSED
+        return channel_data.state == CHANNEL_STATE_CLOSED
 
     def channel_is_settled(
             self,
@@ -448,10 +451,10 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return False
 
-        if not isinstance(channel_data['state'], typing.T_ChannelState):
+        if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.get('state') >= CHANNEL_STATE_SETTLED
+        return channel_data.state >= CHANNEL_STATE_SETTLED
 
     def closing_address(
             self,
@@ -471,19 +474,19 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return None
 
-        if channel_data['state'] >= CHANNEL_STATE_SETTLED:
+        if channel_data.state >= CHANNEL_STATE_SETTLED:
             return None
 
         participants_data = self.detail_participants(
             participant1=participant1,
             participant2=participant2,
-            channel_identifier=channel_data['channel_identifier'],
+            channel_identifier=channel_data.channel_identifier,
         )
 
-        if participants_data.get('our_is_closer'):
-            return participants_data.get('our_address')
-        elif participants_data.get('partner_is_closer'):
-            return participants_data.get('partner_address')
+        if participants_data.our_details.is_closer:
+            return participants_data.our_details.address
+        elif participants_data.partner_details.is_closer:
+            return participants_data.partner_details.address
 
         return None
 
@@ -507,7 +510,7 @@ class TokenNetwork:
             channel_identifier,
             participant1,
             participant2,
-        )['deposit']
+        ).deposit
         return deposit > 0
 
     def set_total_deposit(
@@ -551,7 +554,7 @@ class TokenNetwork:
                 channel_identifier,
                 self.node_address,
                 partner,
-            )['deposit']
+            ).deposit
             amount_to_deposit = total_deposit - current_deposit
             if total_deposit < current_deposit:
                 raise DepositMismatch(
@@ -988,17 +991,17 @@ class TokenNetwork:
         partner_locksroot: typing.Locksroot,
     ):
         """Check if our local state is up to date with on-chain state."""
-        channel_details = self.detail_participants(self.node_address, partner)
+        participant_data = self.detail_participants(self.node_address, partner)
         our_balance_hash_ok = hash_balance_data(
             transferred_amount,
             locked_amount,
             locksroot,
-        ) == channel_details['our_balance_hash']
+        ) == participant_data.our_details.balance_hash
         partner_balance_hash_ok = hash_balance_data(
             partner_transferred_amount,
             partner_locked_amount,
             partner_locksroot,
-        ) == channel_details['partner_balance_hash']
+        ) == participant_data.partner_details.balance_hash
         return our_balance_hash_ok and partner_balance_hash_ok
 
     def events_filter(
@@ -1073,9 +1076,7 @@ class TokenNetwork:
             participant2,
         )
 
-        onchain_channel_identifier = onchain_channel_details.get(
-            'channel_identifier',
-        )
+        onchain_channel_identifier = onchain_channel_details.channel_identifier
 
         if onchain_channel_identifier != channel_identifier:
             raise ChannelOutdatedError(
