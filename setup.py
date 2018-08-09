@@ -87,7 +87,7 @@ install_requires_replacements = {
     ): 'raiden-libs',
     (
         'git+https://github.com/raiden-network/'
-        'raiden-contracts.git@0dbe840c366841b414a11c78d8721046440b2a15'
+        'raiden-contracts.git@379ad1717d68f86b190e366a92ba8416d0922a3e'
     ): 'raiden-contracts',
 }
 
