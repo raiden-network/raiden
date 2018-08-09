@@ -151,10 +151,9 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
         token_network_identifier,
         app_chain[1].raiden.address,
     )
-    address = initiator_channel.identifier
     nonce_int = channel.get_next_nonce(initiator_channel.our_state)
     nonce_bytes = nonce_int.to_bytes(2, 'big')
-    secret = sha3(address + nonce_bytes)
+    secret = sha3(target + nonce_bytes)
 
     initiator_app = app_chain[0]
     init_initiator_statechange = initiator_init(
