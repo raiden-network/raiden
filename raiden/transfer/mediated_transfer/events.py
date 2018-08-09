@@ -13,7 +13,7 @@ from raiden.utils import typing
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
 # channel_identifier can never be 0. We make this a requirement in the client and use this fact
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
-# global queu
+# global queue
 CHANNEL_IDENTIFIER_GLOBAL_QUEUE = 0
 
 
