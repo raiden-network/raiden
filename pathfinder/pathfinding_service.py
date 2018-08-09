@@ -11,6 +11,7 @@ from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.transport import MatrixTransport
 from raiden_libs.types import Address
 from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.constants import ChannelEvent
 from matrix_client.errors import MatrixRequestError
 
 from pathfinder.model import TokenNetwork
@@ -80,15 +81,15 @@ class PathfindingService(gevent.Greenlet):
 
         # subscribe to event notifications from blockchain listener
         self.token_network_listener.add_confirmed_listener(
-            'ChannelOpened',
+            ChannelEvent.OPENED,
             self.handle_channel_opened
         )
         self.token_network_listener.add_confirmed_listener(
-            'ChannelNewDeposit',
+            ChannelEvent.DEPOSIT,
             self.handle_channel_new_deposit
         )
         self.token_network_listener.add_confirmed_listener(
-            'ChannelClosed',
+            ChannelEvent.CLOSED,
             self.handle_channel_closed
         )
 
