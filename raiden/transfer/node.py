@@ -971,11 +971,11 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
 def is_transaction_invalidated(transaction, state_change):
     """ True if the `transaction` is made invalid by `state_change`.
 
-    Some transactions will fail due to race conditions, the races are:
+    Some transactions will fail due to race conditions. The races are:
 
-    - Another transaction which does the same side effect is executed before.
-    - Another transaction  *invalidates* the state of the smart contract
-    required by the local transaction is executed before.
+    - Another transaction which has the same side effect is executed before.
+    - Another transaction which *invalidates* the state of the smart contract
+    required by the local transaction is executed before it.
 
     The first case is handled by the predicate `is_transaction_effect_satisfied`,
     where a transaction from a different source which does the same thing is
@@ -993,11 +993,11 @@ def is_transaction_invalidated(transaction, state_change):
 
     Invalid example:
 
-        A settle transaction cannot invalidate a deposit, because a settle is
-        only allowed for the closed state, and deposits are only allowed for
-        the open state, therefore a deposit should never been sent, the deposit
-        transaction for an invalid state is a bug and not a transaction which
-        was invalidated.
+        A settle transaction cannot invalidate a deposit because a settle is
+        only allowed for the closed state and deposits are only allowed for
+        the open state. In such a case a deposit should never have been sent.
+        The deposit transaction for an invalid state is a bug and not a
+        transaction which was invalidated.
     """
     # Most transactions cannot be invalidated by others. These are:
     #
