@@ -222,10 +222,10 @@ class TokenNetwork:
 
     def _inspect_channel_identifier(
             self,
-            channel_identifier: typing.Optional[typing.ChannelID],
             participant1: typing.Address,
             participant2: typing.Address,
             called_by_fn: str,
+            channel_identifier: typing.ChannelID = None,
     ) -> typing.ChannelID:
         if not channel_identifier:
             channel_identifier = self._call_and_check_result(
@@ -247,7 +247,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """Returns if the channel exists and is in a non-settled state"""
         try:
@@ -293,7 +293,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> ChannelData:
         """ Returns a dictionary with the channel specific information.
 
@@ -302,10 +302,10 @@ class TokenNetwork:
 
         """
         channel_identifier = self._inspect_channel_identifier(
-            channel_identifier=channel_identifier,
             participant1=participant1,
             participant2=participant2,
             called_by_fn='detail_channel',
+            channel_identifier=channel_identifier,
         )
 
         channel_data = self._call_and_check_result(
@@ -325,7 +325,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> ParticipantsDetails:
         """ Returns a dictionary with the participants' channel information.
 
@@ -339,10 +339,10 @@ class TokenNetwork:
             participant1, participant2 = participant2, participant1
 
         channel_identifier = self._inspect_channel_identifier(
-            channel_identifier=channel_identifier,
             participant1=participant1,
             participant2=participant2,
             called_by_fn='details_participants',
+            channel_identifier=channel_identifier,
         )
 
         our_data = self.detail_participant(channel_identifier, participant1, participant2)
@@ -353,7 +353,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> ChannelDetails:
         """ Returns a dictionary with all the details of the channel and the channel participants.
 
@@ -392,7 +392,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> typing.Optional[typing.BlockNumber]:
         """ Returns the channel settle_block_number if it is not yet settled and None Otherwise """
         try:
@@ -409,7 +409,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
         try:
@@ -426,7 +426,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
         try:
@@ -443,7 +443,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
         try:
@@ -460,7 +460,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> Optional[typing.Address]:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
@@ -494,7 +494,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.Optional[typing.ChannelID] = None,
+            channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
         it.
