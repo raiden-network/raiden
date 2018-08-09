@@ -1,3 +1,9 @@
+# pycodestyle==2.4.0
+# To avoid [this](https://github.com/PyCQA/pycodestyle/issues/635) bug
+# we need pycodestyle 2.4.0 but unfortunately this does not work with flake8
+# due to https://github.com/PyCQA/pycodestyle/issues/741
+# Once a new version of flake8 is released we can specify the latest pycodestyle
+# version here
 flake8==3.5.0
 flake8-bugbear==18.2.0
 flake8-coding==1.3.0
