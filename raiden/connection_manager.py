@@ -286,8 +286,8 @@ class ConnectionManager:
             log.exception('connection manager: deposit failed')
         except ChannelIncorrectStateError:
             log.exception('connection manager: channel not in opened state')
-        except InsufficientFunds:
-            log.error('connection manager: not enough funds to deposit')
+        except InsufficientFunds as e:
+            log.error(f'connection manager: {str(e)}')
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`

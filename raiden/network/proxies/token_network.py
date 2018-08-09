@@ -223,7 +223,7 @@ class TokenNetwork:
             raise ChannelIncorrectStateError(
                 f'When calling {called_by_fn} either 0 value was given for the '
                 'channel_identifier or getChannelIdentifier returned 0, meaning '
-                f'no channel is currently open between {pex(participant1)} and '
+                f'no channel currently exists between {pex(participant1)} and '
                 f'{pex(participant2)}',
             )
         return channel_identifier

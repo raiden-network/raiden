@@ -175,7 +175,7 @@ class BlockChainService:
         if not is_binary_address(token_network_address):
             raise ValueError('address must be a valid address')
         if not isinstance(channel_id, T_ChannelID):
-            raise ValueError('channel identifier must be a hash')
+            raise ValueError('channel identifier must be of type T_ChannelID')
 
         with self._payment_channel_creation_lock:
             dict_key = (token_network_address, channel_id)
