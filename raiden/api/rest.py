@@ -660,7 +660,6 @@ class RestAPI:
 
         return api_response(result=result)
 
-
     def get_token_network_events_raiden(self, token_address, from_block, to_block):
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_raiden(

@@ -1300,6 +1300,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     assert response[0]['event'] == 'EventPaymentSentSuccess'
 
 
+
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
     _, app1 = raiden_network

@@ -737,7 +737,6 @@ class RaidenAPI:
 
         return events
 
-
     def get_channel_history_events(
             self,
             token_address: typing.TokenAddress,
