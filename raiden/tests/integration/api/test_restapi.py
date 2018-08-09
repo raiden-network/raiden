@@ -1348,7 +1348,7 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
     request = grequests.post(
         api_url_for(
             api_backend,
-            'transfertotargetresource',
+            'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
