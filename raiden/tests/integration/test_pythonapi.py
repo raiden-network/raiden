@@ -3,7 +3,7 @@ import gevent
 
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
-    EVENT_CHANNEL_DEPOSIT,
+    ChannelEvent,
 )
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -274,7 +274,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         from_block=0,
     )
 
-    assert must_have_event(app0_events, {'event': EVENT_CHANNEL_DEPOSIT})
+    assert must_have_event(app0_events, {'event': ChannelEvent.DEPOSIT})
 
     # This event was temporarily removed. Confirmation from the transport layer
     # as a state change is necessary to properly fire this event.
@@ -295,7 +295,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         app0.raiden.address,
         from_block=0,
     )
-    assert must_have_event(app1_events, {'event': EVENT_CHANNEL_DEPOSIT})
+    assert must_have_event(app1_events, {'event': ChannelEvent.DEPOSIT})
     assert must_have_event(app1_events, {'event': 'EventPaymentReceivedSuccess'})
 
 

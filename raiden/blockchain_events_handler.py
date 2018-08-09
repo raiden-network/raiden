@@ -2,13 +2,7 @@ import gevent
 import structlog
 
 from raiden_contracts.constants import (
-    EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
-    EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_DEPOSIT,
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_SETTLED,
-    EVENT_CHANNEL_UNLOCKED,
-    EVENT_CHANNEL_WITHDRAW,
+    ChannelEvent,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
 )
@@ -280,32 +274,32 @@ def on_blockchain_event(raiden, event, current_block_number, chain_id):
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         handle_tokennetwork_new(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_OPENED:
+    elif data['event'] == ChannelEvent.OPENED:
         handle_channel_new(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_DEPOSIT:
+    elif data['event'] == ChannelEvent.DEPOSIT:
         handle_channel_new_balance(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_WITHDRAW:
+    elif data['event'] == ChannelEvent.WITHDRAW:
         # handle_channel_withdraw(raiden, event)
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
-    elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
+    elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
         # balance proof updates are handled by the function
         # raiden.transfer.channel::handle_channel_closed, so no action is
         # needed here
         pass
 
-    elif data['event'] == EVENT_CHANNEL_CLOSED:
+    elif data['event'] == ChannelEvent.CLOSED:
         handle_channel_closed(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_SETTLED:
+    elif data['event'] == ChannelEvent.SETTLED:
         handle_channel_settled(raiden, event, current_block_number)
 
     elif data['event'] == EVENT_SECRET_REVEALED:
         handle_secret_revealed(raiden, event, current_block_number)
 
-    elif data['event'] == EVENT_CHANNEL_UNLOCKED:
+    elif data['event'] == ChannelEvent.UNLOCKED:
         handle_channel_batch_unlock(raiden, event, current_block_number)
 
     else:

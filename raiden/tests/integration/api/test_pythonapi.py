@@ -1,10 +1,6 @@
 import pytest
 
-from raiden_contracts.constants import (
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_DEPOSIT,
-    EVENT_CHANNEL_CLOSED,
-)
+from raiden_contracts.constants import ChannelEvent
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.transfer import get_channelstate
@@ -66,7 +62,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     )
     assert any(
         (
-            event['event'] == EVENT_CHANNEL_OPENED and
+            event['event'] == ChannelEvent.OPENED and
             is_same_address(
                 event['args']['participant1'],
                 to_normalized_address(api1.address),
@@ -83,7 +79,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         token_address,
         channel12.open_transaction.finished_block_number,
     )
-    assert token_events[0]['event'] == EVENT_CHANNEL_OPENED
+    assert token_events[0]['event'] == ChannelEvent.OPENED
 
     registry_address = api1.raiden.default_registry.address
     # Load the new state with the deposit
@@ -120,7 +116,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     )
     assert any(
         (
-            event['event'] == EVENT_CHANNEL_DEPOSIT and
+            event['event'] == ChannelEvent.DEPOSIT and
             is_same_address(
                 event['args']['participant'],
                 to_normalized_address(api1.address),
@@ -143,7 +139,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     assert len(event_list3) > len(event_list2)
     assert any(
         (
-            event['event'] == EVENT_CHANNEL_CLOSED and
+            event['event'] == ChannelEvent.CLOSED and
             is_same_address(
                 event['args']['closing_participant'],
                 to_normalized_address(api1.address),

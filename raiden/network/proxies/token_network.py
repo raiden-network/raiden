@@ -14,7 +14,7 @@ from gevent.lock import RLock, Semaphore
 from raiden_contracts.constants import (
     ChannelState,
     CONTRACT_TOKEN_NETWORK,
-    EVENT_CHANNEL_OPENED,
+    ChannelEvent,
     ChannelInfoIndex,
     ParticipantInfoIndex,
 )
@@ -1039,7 +1039,7 @@ class TokenNetwork:
         Return:
             The filter instance.
         """
-        event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED)
+        event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.OPENED)
         event_id = encode_hex(event_abi_to_log_topic(event_abi))
         topics = [event_id]
         return self.events_filter(topics, from_block, to_block)
