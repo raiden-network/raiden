@@ -457,12 +457,7 @@ class RestAPI:
                     errors=str(e),
                     status_code=HTTPStatus.PAYMENT_REQUIRED,
                 )
-            except DepositOverLimit as e:
-                return api_error(
-                    errors=str(e),
-                    status_code=HTTPStatus.CONFLICT,
-                )
-            except DepositMismatch as e:
+            except (DepositOverLimit, DepositMismatch) as e:
                 return api_error(
                     errors=str(e),
                     status_code=HTTPStatus.CONFLICT,
