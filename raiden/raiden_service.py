@@ -269,14 +269,10 @@ class RaidenService:
 
         self.alarm.first_run()
 
-        self.alarm.start()
-
-        queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
-        self.transport.start(self, queueids_to_queues)
-
+        chain_state = views.state_from_raiden(self)
         # Dispatch pending transactions
         pending_transactions = views.get_pending_transactions(
-            self.wal.state_manager.current_state,
+            chain_state,
         )
         log.debug(
             'Processing pending transactions',
@@ -286,6 +282,11 @@ class RaidenService:
             on_raiden_event(self, transaction)
 
         self.dispatch_events = True
+
+        self.alarm.start()
+
+        queueids_to_queues = views.get_all_messagequeues(chain_state)
+        self.transport.start(self, queueids_to_queues)
 
         # Health check needs the transport layer
         self.start_neighbours_healthcheck()
