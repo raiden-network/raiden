@@ -124,7 +124,7 @@ Here it's interesting to notice that a ``channel_identifier`` has been generated
 
 Depositing to a channel
 ------------------------
-A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
+A payment channel is now open between the user's node and a counterparty. However, since only one of the nodes has deposited to the channel, only that node can make payments at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is to use the endpoint consisting of a combination of the ``token_address`` and the ``participant_address``:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -199,7 +199,7 @@ Connecting to an already existing token network is quite simple. All that is nee
 
 This automatically opens channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 
-The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can transfer tokens to all nodes participating in this network. See the :ref:`Token Payments <token-payments>` section for instructions on how to transfer tokens to other nodes.
+The user node is now connected to the token network for the RTT token. It should also have a path to all other nodes that have joined this token network. This means that it can pay tokens to all nodes participating in this network. See the :ref:`Token Payments <token-payments>` section for instructions on how to pay tokens to other nodes.
 
 
 .. _leave-network:
@@ -242,7 +242,7 @@ Paying tokens to another node is quite easy. The address of the token desired fo
 
 An ``"identifier": <some_integer>`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag payments.
 
-If there is a path in the network with enough capacity and the address sending the payment holds enough tokens to transfer the amount in the payload, the payment goes through. The receiving node should then be able to see incoming payments by querying all its open channels. This is done by doing the following for all addresses of open channels:
+If there is a path in the network with enough capacity and the address sending the payment holds enough tokens to pay the amount in the payload, the payment goes through. The receiving node should then be able to see incoming payments by querying all its open channels. This is done by doing the following for all addresses of open channels:
 
 .. http:example:: curl wget httpie python-requests
 
@@ -250,9 +250,9 @@ If there is a path in the network with enough capacity and the address sending t
    Host: localhost:5001
    Content-Type: application/json
 
-Which returns a list of events. All that then needs to be done is to filter for incoming transfers.
+Which returns a list of events. All that then needs to be done is to filter for incoming payments.
 
-Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
+Please note that one of the most powerful features of Raiden is that users can send payments to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called *mediated transfers*.
 
 
 .. _close:
@@ -301,13 +301,13 @@ The balance of the channel is now ``0`` and the state ``"settled"``. This means 
 
 Interacting with the Raiden Echo Node
 ======================================
-For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received transfers by sending a transfer back to the initiator. The echo transfer follows certain rules:
+For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received payments by sending a payment back to the initiator. The echo payment follows certain rules:
 
-- consecutive transfers with the same ``identifier`` and same ``amount`` from the same address are ignored (as in: the Echo Node just keeps your money)
-- the ``echo_identifier`` of all echo transfers is ``identifier + echo_amount``
-- transfers with an ``amount`` divisible by ``3`` will be answered with an echo transfer of ``echo_amount = amount - 1``
-- transfers with an ``amount = 7`` are special lottery transfers. They will go to a lottery pool. After the Echo Node has received seven lottery transfers, it will choose a winner that receives an echo transfer with ``echo_amount = 49`` and the pool is reset. To query the current number of tickets in the pool, a participant can send another transfer with ``amount = 7`` -- if the participant already takes part in the current draw, the Echo Node will respond with a transfer with ``echo_amount = number_of_tickets``, otherwise it will enter the pool.
-- for a transfer with any other ``amount`` it returns ``echo_amount = amount``
+- consecutive payments with the same ``identifier`` and same ``amount`` from the same address are ignored (as in: the Echo Node just keeps your money)
+- the ``echo_identifier`` of all echo payments is ``identifier + echo_amount``
+- payments with an ``amount`` divisible by ``3`` will be answered with an echo payment of ``echo_amount = amount - 1``
+- payments with an ``amount = 7`` are special lottery payments. They will go to a lottery pool. After the Echo Node has received seven lottery payments, it will choose a winner that receives an echo payment with ``echo_amount = 49`` and the pool is reset. To query the current number of tickets in the pool, a participant can send another payment with ``amount = 7`` -- if the participant already takes part in the current draw, the Echo Node will respond with a payment with ``echo_amount = number_of_tickets``, otherwise it will enter the pool.
+- for a payment with any other ``amount`` it returns ``echo_amount = amount``
 
 
 The address of the Echo Node is ``0x02f4b6BC65561A792836212Ebc54434Db0Ab759a`` and it is connected to the Raiden Testnet Token (RTT) with the address ``0x0f114a1e9db192502e7856309cc899952b3db1ed``. The RTT token contract is verified and can be seen in `etherscan <https://ropsten.etherscan.io/address/0x0f114A1E9Db192502E7856309cc899952b3db1ED#code>`_. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>`.
@@ -320,11 +320,11 @@ You can obtain RTT tokens by calling the ``mint()`` function of the token. In ja
     rtt_token.mint({from: eth.accounts[0]}); // adjust to your raiden account and unlock first!
 
 
-Then you can send a transfer to it via the transfer endpoint:
+Then you can send a payment to it via the payments endpoint:
 
 .. http:example:: curl wget httpie python-requests
 
-   POST /api/1/transfers/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x02f4b6BC65561A792836212Ebc54434Db0Ab759a HTTP/1.1
+   POST /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x02f4b6BC65561A792836212Ebc54434Db0Ab759a HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
