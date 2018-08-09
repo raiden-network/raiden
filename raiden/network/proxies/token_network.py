@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Dict, NamedTuple, Optional
+from typing import List, NamedTuple, Optional
 
 import structlog
 from eth_utils import (
@@ -18,6 +18,8 @@ from raiden_contracts.constants import (
     CHANNEL_STATE_SETTLED,
     CONTRACT_TOKEN_NETWORK,
     EVENT_CHANNEL_OPENED,
+    ChannelInfoIndex,
+    ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
@@ -282,11 +284,11 @@ class TokenNetwork:
         )
         return ParticipantDetails(
             address=participant,
-            deposit=data[0],
-            withdrawn=data[1],
-            is_closer=data[2],
-            balance_hash=data[3],
-            nonce=data[4],
+            deposit=data[ParticipantInfoIndex.DEPOSIT],
+            withdrawn=data[ParticipantInfoIndex.WITHDRAWN],
+            is_closer=data[ParticipantInfoIndex.IS_CLOSER],
+            balance_hash=data[ParticipantInfoIndex.BALANCE_HASH],
+            nonce=data[ParticipantInfoIndex.NONCE],
         )
 
     def detail_channel(
@@ -317,8 +319,8 @@ class TokenNetwork:
 
         return ChannelData(
             channel_identifier=channel_identifier,
-            settle_block_number=channel_data[0],
-            state=channel_data[1],
+            settle_block_number=channel_data[ChannelInfoIndex.SETTLE_BLOCK],
+            state=channel_data[ChannelInfoIndex.STATE],
         )
 
     def detail_participants(
@@ -370,7 +372,7 @@ class TokenNetwork:
         participants_data = self.detail_participants(
             participant1,
             participant2,
-            channel_data['channel_identifier'],
+            channel_data.channel_identifier,
         )
         chain_id = self.proxy.contract.functions.chain_id().call()
 
