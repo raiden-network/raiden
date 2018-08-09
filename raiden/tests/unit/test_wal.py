@@ -177,12 +177,10 @@ def test_restore_without_snapshot():
     wal.log_and_dispatch(Block(7), 7)
     wal.log_and_dispatch(Block(8), 8)
 
-    newwal, events = restore_from_latest_snapshot(
+    newwal = restore_from_latest_snapshot(
         state_transtion_acc,
         wal.storage,
     )
-
-    assert not events
 
     aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [Block(5), Block(7), Block(8)]

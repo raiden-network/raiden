@@ -360,7 +360,7 @@ class RaidenService:
 
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
-        if self.dispatch_events:
+        if not self.dispatch_events:
             return []
 
         for event in event_list:
