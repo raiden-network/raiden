@@ -12,10 +12,7 @@ from eth_utils import (
 )
 from gevent.lock import RLock, Semaphore
 from raiden_contracts.constants import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_NONEXISTENT,
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
+    ChannelState,
     CONTRACT_TOKEN_NETWORK,
     EVENT_CHANNEL_OPENED,
     ChannelInfoIndex,
@@ -263,8 +260,8 @@ class TokenNetwork:
         log.debug('channel data {}'.format(channel_data))
 
         exists_and_not_settled = (
-            channel_data.state > CHANNEL_STATE_NONEXISTENT and
-            channel_data.state < CHANNEL_STATE_SETTLED
+            channel_data.state > ChannelState.NONEXISTENT and
+            channel_data.state < ChannelState.SETTLED
         )
         return exists_and_not_settled
 
@@ -422,7 +419,7 @@ class TokenNetwork:
         if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.state == CHANNEL_STATE_OPENED
+        return channel_data.state == ChannelState.OPENED
 
     def channel_is_closed(
             self,
@@ -439,7 +436,7 @@ class TokenNetwork:
         if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.state == CHANNEL_STATE_CLOSED
+        return channel_data.state == ChannelState.CLOSED
 
     def channel_is_settled(
             self,
@@ -456,7 +453,7 @@ class TokenNetwork:
         if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
-        return channel_data.state >= CHANNEL_STATE_SETTLED
+        return channel_data.state >= ChannelState.SETTLED
 
     def closing_address(
             self,
@@ -476,7 +473,7 @@ class TokenNetwork:
         except ChannelIncorrectStateError:
             return None
 
-        if channel_data.state >= CHANNEL_STATE_SETTLED:
+        if channel_data.state >= ChannelState.SETTLED:
             return None
 
         participants_data = self.detail_participants(
