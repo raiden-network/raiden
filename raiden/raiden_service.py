@@ -281,6 +281,11 @@ class RaidenService:
         for transaction in pending_transactions:
             on_raiden_event(self, transaction)
 
+        #####
+        # To prevent any race conditions, this flag should be set
+        # where execution syncronous. Which means in this case,
+        # that we set the flag after making sure that the alarm
+        # task and the transport greenlets aren't yet started.
         self.dispatch_events = True
 
         self.alarm.start()
