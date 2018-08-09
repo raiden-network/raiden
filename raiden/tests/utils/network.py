@@ -60,18 +60,30 @@ def check_channel(
     app1_details = netcontract1.detail()
     app2_details = netcontract2.detail()
 
-    assert app1_details['our_address'] == app2_details['partner_address']
-    assert app1_details['partner_address'] == app2_details['our_address']
+    assert (
+        app1_details.participant_data.our_details.address ==
+        app2_details.participant_data.partner_details.address
+    )
+    assert (
+        app1_details.participant_data.partner_details.address ==
+        app2_details.participant_data.our_details.address
+    )
 
-    assert app1_details['our_deposit'] == app2_details['partner_deposit']
-    assert app1_details['partner_deposit'] == app2_details['our_deposit']
-    assert app1_details['chain_id'] == app2_details['chain_id']
+    assert (
+        app1_details.participant_data.our_details.deposit ==
+        app2_details.participant_data.partner_details.deposit
+    )
+    assert (
+        app1_details.participant_data.partner_details.deposit ==
+        app2_details.participant_data.our_details.deposit
+    )
+    assert app1_details.chain_id == app2_details.chain_id
 
-    assert app1_details['our_deposit'] == deposit_amount
-    assert app1_details['partner_deposit'] == deposit_amount
-    assert app2_details['our_deposit'] == deposit_amount
-    assert app2_details['partner_deposit'] == deposit_amount
-    assert app2_details['chain_id'] == UNIT_CHAIN_ID
+    assert app1_details.participant_data.our_details.deposit == deposit_amount
+    assert app1_details.participant_data.partner_details.deposit == deposit_amount
+    assert app2_details.participant_data.our_details.deposit == deposit_amount
+    assert app2_details.participant_data.partner_details.deposit == deposit_amount
+    assert app2_details.chain_id == UNIT_CHAIN_ID
 
 
 def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):

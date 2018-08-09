@@ -18,6 +18,7 @@ from raiden.utils.filters import (
     decode_event,
 )
 from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies.token_network import ChannelDetails
 
 
 class PaymentChannel:
@@ -65,7 +66,7 @@ class PaymentChannel:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
-    def detail(self) -> Dict:
+    def detail(self) -> ChannelDetails:
         """ Returns the channel details. """
         return self.token_network.detail(
             participant1=self.participant1,
