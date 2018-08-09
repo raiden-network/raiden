@@ -11,7 +11,7 @@ from pkg_resources import DistributionNotFound
 from gevent.lock import Semaphore
 
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, EVENT_CHANNEL_OPENED
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 
 from raiden.utils.typing import Address, ChannelID, BlockSpecification, Dict
 
@@ -62,7 +62,7 @@ def get_filter_args_for_all_events_from_channel(
     event_filter_params = get_filter_args_for_specific_event_from_channel(
         token_network_address=token_network_address,
         channel_identifier=channel_identifier,
-        event_name=EVENT_CHANNEL_OPENED,
+        event_name=ChannelEvent.OPENED,
         from_block=from_block,
         to_block=to_block,
     )

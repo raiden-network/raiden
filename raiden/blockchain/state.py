@@ -16,12 +16,12 @@ def get_channel_state(
     channel_details = payment_channel_proxy.detail()
 
     our_state = NettingChannelEndState(
-        channel_details.participant_data.our_details.address,
-        channel_details.participant_data.our_details.deposit,
+        channel_details.participants_data.our_details.address,
+        channel_details.participants_data.our_details.deposit,
     )
     partner_state = NettingChannelEndState(
-        channel_details.participant_data.partner_details.address,
-        channel_details.participant_data.partner_details.deposit,
+        channel_details.participants_data.partner_details.address,
+        channel_details.participants_data.partner_details.deposit,
     )
 
     identifier = payment_channel_proxy.channel_identifier

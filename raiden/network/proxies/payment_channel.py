@@ -1,12 +1,10 @@
 from contextlib import contextmanager
-from typing import Dict
 
 from eth_utils import encode_hex, decode_hex, event_abi_to_log_topic
 from gevent.lock import RLock
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_UNLOCKED,
+    ChannelEvent,
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
@@ -34,7 +32,7 @@ class PaymentChannel:
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
             channel_identifier=channel_identifier,
-            event_name=EVENT_CHANNEL_OPENED,
+            event_name=ChannelEvent.OPENED,
         )
 
         events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
@@ -82,7 +80,7 @@ class PaymentChannel:
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=self.token_network.address,
             channel_identifier=self.channel_identifier,
-            event_name=EVENT_CHANNEL_OPENED,
+            event_name=ChannelEvent.OPENED,
         )
 
         events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
@@ -233,7 +231,7 @@ class PaymentChannel:
 
         event_unlock_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_TOKEN_NETWORK,
-            EVENT_CHANNEL_UNLOCKED,
+            ChannelEvent.UNLOCKED,
         )
 
         event_unlock_topic = encode_hex(event_abi_to_log_topic(event_unlock_abi))

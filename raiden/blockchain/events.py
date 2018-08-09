@@ -8,16 +8,10 @@ from eth_utils import (
     to_canonical_address,
 )
 from raiden_contracts.constants import (
+    ChannelEvent,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_CHANNEL_BALANCE_PROOF_UPDATED,
-    EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_DEPOSIT,
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_SETTLED,
-    EVENT_CHANNEL_UNLOCKED,
-    EVENT_CHANNEL_WITHDRAW,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
 )
@@ -166,7 +160,7 @@ def get_netting_channel_closed_events(
 ) -> List[Dict]:
     closed_event_abi = CONTRACT_MANAGER.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
-        EVENT_CHANNEL_CLOSED,
+        ChannelEvent.CLOSED,
     )
     closed_event_id = encode_hex(event_abi_to_log_topic(closed_event_abi))
     closed_topics = [closed_event_id]
@@ -191,7 +185,7 @@ def get_netting_channel_deposit_events(
 ) -> List[Dict]:
     deposit_event_abi = CONTRACT_MANAGER.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
-        EVENT_CHANNEL_DEPOSIT,
+        ChannelEvent.DEPOSIT,
     )
     deposit_event_id = encode_hex(event_abi_to_log_topic(deposit_event_abi))
     deposit_topics = [deposit_event_id]
@@ -216,7 +210,7 @@ def get_netting_channel_settled_events(
 ) -> List[Dict]:
     settled_event_abi = CONTRACT_MANAGER.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
-        EVENT_CHANNEL_SETTLED,
+        ChannelEvent.SETTLED,
     )
     settled_event_id = encode_hex(event_abi_to_log_topic(settled_event_abi))
     settled_topics = [settled_event_id]
@@ -264,30 +258,30 @@ def decode_event_to_internal(event):
         data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
         data['token_address'] = to_canonical_address(data['args']['token_address'])
 
-    elif data['event'] == EVENT_CHANNEL_OPENED:
+    elif data['event'] == ChannelEvent.OPENED:
         data['participant1'] = to_canonical_address(data['args']['participant1'])
         data['participant2'] = to_canonical_address(data['args']['participant2'])
         data['settle_timeout'] = data['args']['settle_timeout']
 
-    elif data['event'] == EVENT_CHANNEL_DEPOSIT:
+    elif data['event'] == ChannelEvent.DEPOSIT:
         data['deposit'] = data['args']['total_deposit']
         data['participant'] = to_canonical_address(data['args']['participant'])
 
-    elif data['event'] == EVENT_CHANNEL_WITHDRAW:
+    elif data['event'] == ChannelEvent.WITHDRAW:
         data['withdrawn_amount'] = data['args']['withdrawn_amount']
         data['participant'] = to_canonical_address(data['args']['participant'])
 
-    elif data['event'] == EVENT_CHANNEL_BALANCE_PROOF_UPDATED:
+    elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
-    elif data['event'] == EVENT_CHANNEL_CLOSED:
+    elif data['event'] == ChannelEvent.CLOSED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
-    elif data['event'] == EVENT_CHANNEL_SETTLED:
+    elif data['event'] == ChannelEvent.SETTLED:
         data['participant1_amount'] = data['args']['participant1_amount']
         data['participant2_amount'] = data['args']['participant2_amount']
 
-    elif data['event'] == EVENT_CHANNEL_UNLOCKED:
+    elif data['event'] == ChannelEvent.UNLOCKED:
         data['unlocked_amount'] = data['args']['unlocked_amount']
         data['returned_tokens'] = data['args']['returned_tokens']
         data['participant'] = to_canonical_address(data['args']['participant'])

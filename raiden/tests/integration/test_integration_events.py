@@ -3,10 +3,7 @@ import pytest
 
 from eth_utils import to_checksum_address
 from raiden_contracts.constants import (
-    EVENT_CHANNEL_CLOSED,
-    EVENT_CHANNEL_DEPOSIT,
-    EVENT_CHANNEL_OPENED,
-    EVENT_CHANNEL_SETTLED,
+    ChannelEvent,
     EVENT_TOKEN_NETWORK_CREATED,
 )
 
@@ -257,7 +254,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     _event = must_have_event(
         events,
         {
-            'event': EVENT_CHANNEL_OPENED,
+            'event': ChannelEvent.OPENED,
             'args': {
                 'participant1': to_checksum_address(app0.raiden.address),
                 'participant2': to_checksum_address(app1.raiden.address),
@@ -311,7 +308,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     total_deposit_event = {
-        'event': EVENT_CHANNEL_DEPOSIT,
+        'event': ChannelEvent.DEPOSIT,
         'args': {
             'participant': to_checksum_address(app0.raiden.address),
             'total_deposit': deposit,
@@ -340,7 +337,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     closed_event = {
-        'event': EVENT_CHANNEL_CLOSED,
+        'event': ChannelEvent.CLOSED,
         'args': {
             'channel_identifier': channel_id,
             'closing_participant': to_checksum_address(app0.raiden.address),
@@ -365,7 +362,7 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     settled_event = {
-        'event': EVENT_CHANNEL_SETTLED,
+        'event': ChannelEvent.SETTLED,
         'args': {
             'channel_identifier': channel_id,
         },
