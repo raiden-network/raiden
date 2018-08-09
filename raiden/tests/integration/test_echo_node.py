@@ -18,8 +18,8 @@ log = structlog.get_logger(__name__)
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [18])
-@pytest.mark.parametrize('settle_timeout', [64])
+@pytest.mark.parametrize('reveal_timeout', [15])
+@pytest.mark.parametrize('settle_timeout', [120])
 def test_event_transfer_received_success(
     token_addresses,
     raiden_chain,
@@ -65,8 +65,8 @@ def test_event_transfer_received_success(
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [18])
-@pytest.mark.parametrize('settle_timeout', [64])
+@pytest.mark.parametrize('reveal_timeout', [15])
+@pytest.mark.parametrize('settle_timeout', [120])
 def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
@@ -122,7 +122,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 @pytest.mark.parametrize('number_of_nodes', [8])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [20])
+@pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
