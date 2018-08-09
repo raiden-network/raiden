@@ -169,6 +169,11 @@ class RaidenService:
 
         self.wal = None
 
+        # This flag will be used to prevent the service from processing
+        # state changes events until we know that pending transactions
+        # have been dispatched.
+        self.dispatch_events = False
+
         self.database_path = config['database_path']
         if self.database_path != ':memory:':
             database_dir = os.path.dirname(config['database_path'])
@@ -261,19 +266,26 @@ class RaidenService:
         # - The alarm must complete its first run  before the transport is started,
         #  to avoid rejecting messages for unknown channels.
         self.alarm.register_callback(self._callback_new_block)
+
         self.alarm.first_run()
 
         self.alarm.start()
+
+        queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
+        self.transport.start(self, queueids_to_queues)
 
         # Dispatch pending transactions
         pending_transactions = views.get_pending_transactions(
             self.wal.state_manager.current_state,
         )
+        log.debug(
+            'Processing pending transactions',
+            num_pending_transactions=len(pending_transactions),
+        )
         for transaction in pending_transactions:
-            on_raiden_event(transaction)
+            on_raiden_event(self, transaction)
 
-        queueids_to_queues = views.get_all_messagequeues(views.state_from_raiden(self))
-        self.transport.start(self, queueids_to_queues)
+        self.dispatch_events = True
 
         # Health check needs the transport layer
         self.start_neighbours_healthcheck()
@@ -342,6 +354,9 @@ class RaidenService:
 
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
+        if self.dispatch_events:
+            return []
+
         for event in event_list:
             log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
 
@@ -408,9 +423,9 @@ class RaidenService:
 
     def install_all_blockchain_filters(
             self,
-            token_network_registry_proxy,
-            secret_registry_proxy,
-            from_block,
+            token_network_registry_proxy: TokenNetworkRegistry,
+            secret_registry_proxy: SecretRegistry,
+            from_block: typing.BlockNumber,
     ):
         with self.event_poll_lock:
             node_state = views.state_from_raiden(self)
