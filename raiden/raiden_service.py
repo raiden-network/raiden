@@ -167,6 +167,7 @@ class RaidenService:
         self.chain.client.inject_stop_event(self.stop_event)
 
         self.wal = None
+        self.snapshot_group = 0
 
         # This flag will be used to prevent the service from processing
         # state changes events until we know that pending transactions
@@ -247,6 +248,9 @@ class RaidenService:
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
             log.debug('Restored state from WAL', last_restored_block=last_log_block_number)
+
+        # Restore the current snapshot group
+        self.snapshot_group = last_log_block_number // SNAPSHOT_BLOCK_COUNT
 
         # Install the filters using the correct from_block value, otherwise
         # blockchain logs can be lost.
@@ -355,8 +359,11 @@ class RaidenService:
         # TODO: Gather more data about storage requirements
         # and update the value to specify how often we need
         # capturing a snapshot should take place
-        if block_number % SNAPSHOT_BLOCK_COUNT == 0:
+        new_snapshot_group = block_number // SNAPSHOT_BLOCK_COUNT
+        if new_snapshot_group > self.snapshot_group:
+            log.debug(f'Storing snapshot at block: {block_number}')
             self.wal.snapshot()
+            self.snapshot_group = new_snapshot_group
 
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
