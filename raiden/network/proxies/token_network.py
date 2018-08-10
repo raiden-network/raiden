@@ -294,7 +294,7 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID = None,
     ) -> ChannelData:
-        """ Returns a dictionary with the channel specific information.
+        """ Returns a ChannelData instance with the channel specific information.
 
         If no specific channel_identifier is given then it tries to see if there
         is a currently open channel and uses that identifier.
@@ -326,7 +326,8 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID = None,
     ) -> ParticipantsDetails:
-        """ Returns a dictionary with the participants' channel information.
+        """ Returns a ParticipantsDetails instance with the participants'
+            channel information.
 
         Note:
             For now one of the participants has to be the node_address
@@ -354,7 +355,8 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID = None,
     ) -> ChannelDetails:
-        """ Returns a dictionary with all the details of the channel and the channel participants.
+        """ Returns a ChannelDetails instance with all the details of the
+            channel and the channel participants.
 
         Note:
             For now one of the participants has to be the node_address
