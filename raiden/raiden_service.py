@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import os
 import random
-from collections import defaultdict
 
 import filelock
 import gevent
@@ -144,7 +143,10 @@ class RaidenService:
             raise ValueError('invalid private_key')
 
         self.tokennetworkids_to_connectionmanagers = dict()
-        self.identifier_to_results = defaultdict(list)
+        self.identifier_to_results: typing.Dict[
+            typing.PaymentIdentifier,
+            RaidenAsyncResult
+        ] = dict()
 
         self.chain: BlockChainService = chain
         self.default_registry = default_registry
@@ -587,10 +589,11 @@ class RaidenService:
         if identifier is None:
             identifier = create_default_identifier()
 
-        assert identifier not in self.identifier_to_results
+        if identifier in self.identifier_to_results:
+            return self.identifier_to_results[identifier]
 
         async_result = RaidenAsyncResult()
-        self.identifier_to_results[identifier].append(async_result)
+        self.identifier_to_results[identifier] = async_result
 
         secret = random_secret()
         init_initiator_statechange = initiator_init(
