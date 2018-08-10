@@ -134,6 +134,9 @@ def handle_transfersentsuccess(
         raiden: RaidenService,
         transfer_sent_success_event: EventPaymentSentSuccess,
 ):
+    if transfer_sent_success_event.identifier not in raiden.identifier_to_results:
+        return
+
     result = raiden.identifier_to_results[transfer_sent_success_event.identifier]
     result.set(True)
 
@@ -144,6 +147,9 @@ def handle_paymentsentfailed(
         raiden: RaidenService,
         payment_sent_failed_event: EventPaymentSentFailed,
 ):
+    if payment_sent_failed_event.identifier not in raiden.identifier_to_results:
+        return
+
     result = raiden.identifier_to_results[payment_sent_failed_event.identifier]
     result.set(False)
     del raiden.identifier_to_results[payment_sent_failed_event.identifier]
