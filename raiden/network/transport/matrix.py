@@ -575,7 +575,7 @@ class MatrixTransport:
                 message = _event_to_message(event, node_address)
                 self._raiden_service.sign(message)
                 self.start_health_check(address)
-                self.send_async(address, queue_identifier, message)
+                self.send_async(queue_identifier, message)
 
     def _send_with_retry(
         self,
