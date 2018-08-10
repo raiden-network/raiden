@@ -26,25 +26,3 @@ class integer:  # pylint: disable=invalid-name
     @staticmethod
     def decode(value: bytes):
         return int.from_bytes(value, byteorder='big')  # pylint: disable=no-member
-
-
-class optional_bytes:  # pylint: disable=invalid-name
-    ''' This encoder assumes that a byte string full of NULL values is equal to
-    the value being absent. If any of the bytes is not \x00 then all full array
-    is considered part of the value.
-
-    This is useful for values of fixed length that are optional.
-    '''
-
-    def validate(self, value):
-        pass
-
-    @staticmethod
-    def encode(value: bytes, length: int):  # pylint: disable=unused-argument
-        return value
-
-    @staticmethod
-    def decode(value: bytes):
-        if value.lstrip(b'\x00') == b'':
-            return b''
-        return value
