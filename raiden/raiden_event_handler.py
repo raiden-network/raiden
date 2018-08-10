@@ -130,17 +130,17 @@ def handle_send_processed(
     )
 
 
-def handle_transfersentsuccess(
+def handle_paymentsentsuccess(
         raiden: RaidenService,
-        transfer_sent_success_event: EventPaymentSentSuccess,
+        payment_sent_success_event: EventPaymentSentSuccess,
 ):
-    if transfer_sent_success_event.identifier not in raiden.identifier_to_results:
+    if payment_sent_success_event.identifier not in raiden.identifier_to_results:
         return
 
-    result = raiden.identifier_to_results[transfer_sent_success_event.identifier]
+    result = raiden.identifier_to_results[payment_sent_success_event.identifier]
     result.set(True)
 
-    del raiden.identifier_to_results[transfer_sent_success_event.identifier]
+    del raiden.identifier_to_results[payment_sent_success_event.identifier]
 
 
 def handle_paymentsentfailed(
@@ -348,7 +348,7 @@ def on_raiden_event(raiden: RaidenService, event: Event):
     elif type(event) == SendProcessed:
         handle_send_processed(raiden, event)
     elif type(event) == EventPaymentSentSuccess:
-        handle_transfersentsuccess(raiden, event)
+        handle_paymentsentsuccess(raiden, event)
     elif type(event) == EventPaymentSentFailed:
         handle_paymentsentfailed(raiden, event)
     elif type(event) == EventUnlockFailed:
