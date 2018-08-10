@@ -5,29 +5,36 @@ from collections import defaultdict
 
 import filelock
 import gevent
-from coincurve import PrivateKey
 import structlog
-from eth_utils import is_binary_address
 
+from coincurve import PrivateKey
+from eth_utils import is_binary_address
+from gevent.lock import Semaphore
+
+from raiden import constants, routing, waiting
+from raiden.connection_manager import ConnectionManager
+from raiden.exceptions import InvalidAddress, RaidenShuttingDown
+from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import (
     SecretRegistry,
     TokenNetworkRegistry,
 )
-from raiden import (
-    constants,
-    routing,
-    waiting,
-)
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.blockchain.events import BlockchainEvents
 from raiden.raiden_event_handler import on_raiden_event
+from raiden.storage import wal, serialize, sqlite
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
 from raiden.transfer.state import RouteState, PaymentNetworkState
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfersigned_from_message,
     TransferDescriptionWithSecretState,
+)
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitInitiator,
+    ActionInitMediator,
+    ActionInitTarget,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -37,14 +44,6 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator,
-    ActionInitMediator,
-    ActionInitTarget,
-)
-from raiden.exceptions import InvalidAddress, RaidenShuttingDown
-from raiden.messages import (LockedTransfer, SignedMessage)
-from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     pex,
     privatekey_to_address,
@@ -53,7 +52,6 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.gevent_utils import RaidenAsyncResult, RaidenGreenletEvent
-from raiden.storage import wal, serialize, sqlite
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
