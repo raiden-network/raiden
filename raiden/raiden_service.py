@@ -283,7 +283,7 @@ class RaidenService:
 
         #####
         # To prevent any race conditions, this flag should be set
-        # where execution syncronous. Which means in this case,
+        # where execution is synchronous. Which means in this case,
         # that we set the flag after making sure that the alarm
         # task and the transport greenlets aren't yet started.
         self.dispatch_events = True
@@ -513,7 +513,7 @@ class RaidenService:
     ):
         """ Transfer `amount` between this node and `target`.
 
-        This method will start an asyncronous transfer, the transfer might fail
+        This method will start an asynchronous transfer, the transfer might fail
         or succeed depending on a couple of factors:
 
             - Existence of a path that can be used, through the usage of direct
