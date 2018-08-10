@@ -99,6 +99,17 @@ log = structlog.get_logger(__name__)
 configure_gevent()
 
 
+ETHEREUM_NODE_COMMUNICATION_ERROR = (
+    '\n'
+    'Could not contact the ethereum node through JSON-RPC.\n'
+    'Please make sure that JSON-RPC is enabled for these interfaces:\n'
+    '\n'
+    '    eth_*, net_*, web3_*\n'
+    '\n'
+    'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n'
+)
+
+
 def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
@@ -924,15 +935,7 @@ class NodeRunner:
         try:
             app_ = run_app(**self._options)
         except (EthNodeCommunicationError, RequestsConnectionError):
-            print(
-                '\n'
-                'Could not contact the ethereum node through JSON-RPC.\n'
-                'Please make sure that JSON-RPC is enabled for these interfaces:\n'
-                '\n'
-                '    eth_*, net_*, web3_*\n'
-                '\n'
-                'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n',
-            )
+            print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
 
         domain_list = []
@@ -995,6 +998,9 @@ class NodeRunner:
         try:
             event.wait()
             print('Signal received. Shutting down ...')
+        except (EthNodeCommunicationError, RequestsConnectionError):
+            print(ETHEREUM_NODE_COMMUNICATION_ERROR)
+            sys.exit(1)
         except RaidenError as ex:
             click.secho(f'FATAL: {ex}', fg='red')
         except Exception as ex:
