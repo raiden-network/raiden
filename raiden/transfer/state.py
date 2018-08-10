@@ -76,6 +76,23 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
+InitiatorTask = namedtuple('InitiatorTask', (
+    'token_network_identifier',
+    'manager_state',
+))
+
+MediatorTask = namedtuple('MediatorTask', (
+    'token_network_identifier',
+    'mediator_state',
+))
+
+TargetTask = namedtuple('TargetTask', (
+    'token_network_identifier',
+    'channel_identifier',
+    'target_state',
+))
+
+
 class ChainState(State):
     """ Umbrella object that stores the per blockchain state.
     For each registry smart contract there must be a payment network. Within the
@@ -277,22 +294,6 @@ class PaymentMappingState(State):
     __slots__ = (
         'secrethashes_to_task',
     )
-
-    InitiatorTask = namedtuple('InitiatorTask', (
-        'token_network_identifier',
-        'manager_state',
-    ))
-
-    MediatorTask = namedtuple('MediatorTask', (
-        'token_network_identifier',
-        'mediator_state',
-    ))
-
-    TargetTask = namedtuple('TargetTask', (
-        'token_network_identifier',
-        'channel_identifier',
-        'target_state',
-    ))
 
     def __init__(self):
         self.secrethashes_to_task = dict()
