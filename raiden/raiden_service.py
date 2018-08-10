@@ -170,7 +170,7 @@ class RaidenService:
         # This flag will be used to prevent the service from processing
         # state changes events until we know that pending transactions
         # have been dispatched.
-        self.dispatch_events = False
+        self.dispatch_events_lock = Semaphore(1)
 
         self.database_path = config['database_path']
         if self.database_path != ':memory:':
@@ -276,15 +276,9 @@ class RaidenService:
             'Processing pending transactions',
             num_pending_transactions=len(pending_transactions),
         )
-        for transaction in pending_transactions:
-            on_raiden_event(self, transaction)
-
-        #####
-        # To prevent any race conditions, this flag should be set
-        # where execution is synchronous. Which means in this case,
-        # that we set the flag after making sure that the alarm
-        # task and the transport greenlets aren't yet started.
-        self.dispatch_events = True
+        with self.dispatch_events_lock:
+            for transaction in pending_transactions:
+                on_raiden_event(self, transaction)
 
         self.alarm.start()
 
@@ -358,7 +352,7 @@ class RaidenService:
 
         event_list = self.wal.log_and_dispatch(state_change, block_number)
 
-        if not self.dispatch_events:
+        if self.dispatch_events_lock.locked():
             return []
 
         for event in event_list:
