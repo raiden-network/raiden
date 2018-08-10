@@ -7,6 +7,7 @@ Changelog
 * :feature:`682` Store a Snapshot of WAL state as recovery optimization.
 * :bug:`2125`: Show proper error message for invalid tokens on ``/connections``.
 * :feature:`1949` Add an endpoint to query the payment history.
+* :bug:`2027`: Raiden shoulw now be able to connect to Infura
 * :feature:`2084` Rename the ``/transfers/`` endpoint to ``/payments/``.
 * :feature:`1998` Add a strategy to make sure that the account Raiden runs on always has enough balance to settle all channels. No new channels can be openend when no sufficient balance for the whole channel lifecycle is available.
 * :feature:`1950` Breaking change: Better transaction handling on restart. This change breaks binary compatibility with the previous WAL.
