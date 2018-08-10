@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :release:`0.5.0 <2018-08-10>`
+* :bug:`2149`: Don't crash if reusing same payment identifier for a payment
 * :feature: `2090`: Rename transfers to payments in the webui.
 * :feature:`682` Store a Snapshot of WAL state as recovery optimization.
 * :bug:`2125`: Show proper error message for invalid tokens on ``/connections``.
