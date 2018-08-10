@@ -30,7 +30,11 @@ from eth_utils import (
     to_normalized_address,
 )
 from mirakuru import ProcessExitedWithError
-from requests.exceptions import ConnectTimeout, RequestException
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    ConnectTimeout,
+    RequestException,
+)
 from web3 import Web3, HTTPProvider
 
 from raiden import constants
@@ -919,7 +923,7 @@ class NodeRunner:
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
             app_ = run_app(**self._options)
-        except EthNodeCommunicationError:
+        except (EthNodeCommunicationError, RequestsConnectionError):
             print(
                 '\n'
                 'Could not contact the ethereum node through JSON-RPC.\n'
