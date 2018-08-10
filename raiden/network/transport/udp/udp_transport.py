@@ -11,7 +11,6 @@ from gevent.server import DatagramServer
 import structlog
 from eth_utils import is_binary_address
 
-from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.exceptions import (
     InvalidAddress,
@@ -184,7 +183,7 @@ class UDPTransport:
     def start(
             self,
             raiden: RaidenService,
-            queueids_to_queues: typing.List[SendMessageEvent],
+            queueids_to_queues: typing.Dict[typing.QueueIdentifier, typing.List[Event]],
     ):
         self.raiden = raiden
         self.queueids_to_queues = dict()

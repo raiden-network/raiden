@@ -191,7 +191,7 @@ class MatrixTransport:
     def start(
         self,
         raiden_service: RaidenService,
-        queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
+        queueids_to_queues: Dict[QueueIdentifier, List[Event]],
     ):
         self._running = True
         self._raiden_service = raiden_service
@@ -567,14 +567,14 @@ class MatrixTransport:
 
     def _send_queued_messages(
         self,
-        queueids_to_queues: Dict[Tuple[Address, str], List[Event]],
+        queueids_to_queues: Dict[QueueIdentifier, List[Event]],
     ):
-        for (address, queue_identifier), events in queueids_to_queues.items():
+        for queue_identifier, events in queueids_to_queues.items():
             node_address = self._raiden_service.address
             for event in events:
                 message = _event_to_message(event, node_address)
                 self._raiden_service.sign(message)
-                self.start_health_check(address)
+                self.start_health_check(queue_identifier.recipient)
                 self.send_async(queue_identifier, message)
 
     def _send_with_retry(
