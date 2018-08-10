@@ -19,7 +19,7 @@ import { TokenNetworkComponent } from './components/token-network/token-network.
 import { HomeComponent } from './components/home/home.component';
 import { LicenseComponent } from './components/license/license.component';
 import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
-import { TransferDialogComponent } from './components/transfer-dialog/transfer-dialog.component';
+import { PaymentDialogComponent } from './components/payment-dialog/payment-dialog.component';
 import { JoinDialogComponent } from './components/join-dialog/join-dialog.component';
 import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
 import { OpenDialogComponent } from './components/open-dialog/open-dialog.component';
@@ -55,7 +55,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         HomeComponent,
         LicenseComponent,
         SwapDialogComponent,
-        TransferDialogComponent,
+        PaymentDialogComponent,
         JoinDialogComponent,
         RegisterDialogComponent,
         OpenDialogComponent,

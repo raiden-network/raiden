@@ -33,4 +33,4 @@
 <app-register-dialog *ngIf="displayRegisterDialog" [(visible)]="displayRegisterDialog" (tokensChange)="refreshTokens()"></app-register-dialog>
 <app-swap-dialog *ngIf="displaySwapDialog" [(visible)]="displaySwapDialog"></app-swap-dialog>
 <app-join-dialog *ngIf="displayJoinDialog" [(visible)]="displayJoinDialog" [tokenAddress]="selectedToken?.address"></app-join-dialog>
-<app-transfer-dialog *ngIf="displayTransferDialog" [(visible)]="displayTransferDialog" [tokenAddress]="selectedToken?.address"></app-transfer-dialog>
+<app-payment-dialog *ngIf="displayPaymentDialog" [(visible)]="displayPaymentDialog" [tokenAddress]="selectedToken?.address"></app-payment-dialog>

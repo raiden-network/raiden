@@ -1,13 +1,12 @@
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 import { Component, OnInit, Input } from '@angular/core';
-import { FormControl } from '@angular/forms';
 import { MenuItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { UserToken } from '../../models/usertoken';
-import { Message, ConfirmationService } from 'primeng/primeng';
+import { ConfirmationService } from 'primeng/primeng';
 import { EventsParam } from '../../models/event';
 import { WithMenu } from '../../models/withmenu';
 
@@ -30,7 +29,7 @@ export class TokenNetworkComponent implements OnInit {
     public displayJoinDialog = false;
     public displayRegisterDialog = false;
     public displaySwapDialog = false;
-    public displayTransferDialog = false;
+    public displayPaymentDialog = false;
 
     constructor(private raidenService: RaidenService,
         private sharedService: SharedService,
@@ -65,10 +64,10 @@ export class TokenNetworkComponent implements OnInit {
                 command: () => this.showLeaveDialog(userToken),
             },
             {
-                label: 'Transfer',
+                label: 'Pay',
                 icon: 'fa fa-exchange',
                 disabled: !(userToken.connected && userToken.connected.sum_deposits > 0),
-                command: () => this.showTransferDialog(userToken),
+                command: () => this.showPaymentDialog(userToken),
             },
             {
                 label: 'Watch Events',
@@ -95,9 +94,9 @@ export class TokenNetworkComponent implements OnInit {
         this.displayJoinDialog = show;
     }
 
-    public showTransferDialog(userToken: UserToken, show: boolean = true) {
+    public showPaymentDialog(userToken: UserToken, show: boolean = true) {
         this.selectedToken = userToken;
-        this.displayTransferDialog = show;
+        this.displayPaymentDialog = show;
     }
 
     public showLeaveDialog(userToken: UserToken) {
