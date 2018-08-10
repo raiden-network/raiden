@@ -11,8 +11,10 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNKNOWN,
     ChainState,
     PaymentNetworkState,
-    PaymentMappingState,
     TokenNetworkState,
+    InitiatorTask,
+    MediatorTask,
+    TargetTask,
 )
 from raiden.utils import typing
 
@@ -455,11 +457,11 @@ def get_transfer_role(
     transfer_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     result = None
-    if isinstance(transfer_task, PaymentMappingState.InitiatorTask):
+    if isinstance(transfer_task, InitiatorTask):
         result = 'initiator'
-    elif isinstance(transfer_task, PaymentMappingState.MediatorTask):
+    elif isinstance(transfer_task, MediatorTask):
         result = 'mediator'
-    elif isinstance(transfer_task, PaymentMappingState.TargetTask):
+    elif isinstance(transfer_task, TargetTask):
         result = 'target'
 
     return result

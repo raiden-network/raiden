@@ -27,9 +27,11 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.state import (
     ChainState,
-    PaymentMappingState,
     PaymentNetworkState,
     TokenNetworkState,
+    InitiatorTask,
+    MediatorTask,
+    TargetTask,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -145,7 +147,7 @@ def subdispatch_to_paymenttask(
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
 
-        if isinstance(sub_task, PaymentMappingState.InitiatorTask):
+        if isinstance(sub_task, InitiatorTask):
             token_network_identifier = sub_task.token_network_identifier
             token_network_state = views.get_token_network_by_identifier(
                 chain_state,
@@ -161,7 +163,7 @@ def subdispatch_to_paymenttask(
                 )
                 events = sub_iteration.events
 
-        elif isinstance(sub_task, PaymentMappingState.MediatorTask):
+        elif isinstance(sub_task, MediatorTask):
             token_network_identifier = sub_task.token_network_identifier
             token_network_state = views.get_token_network_by_identifier(
                 chain_state,
@@ -178,7 +180,7 @@ def subdispatch_to_paymenttask(
                 )
                 events = sub_iteration.events
 
-        elif isinstance(sub_task, PaymentMappingState.TargetTask):
+        elif isinstance(sub_task, TargetTask):
             token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
             token_network_state = views.get_token_network_by_identifier(
@@ -222,7 +224,7 @@ def subdispatch_initiatortask(
         is_valid_subtask = True
         manager_state = None
 
-    elif sub_task and isinstance(sub_task, PaymentMappingState.InitiatorTask):
+    elif sub_task and isinstance(sub_task, InitiatorTask):
         is_valid_subtask = (
             token_network_identifier == sub_task.token_network_identifier
         )
@@ -248,7 +250,7 @@ def subdispatch_initiatortask(
         events = iteration.events
 
         if iteration.new_state:
-            sub_task = PaymentMappingState.InitiatorTask(
+            sub_task = InitiatorTask(
                 token_network_identifier,
                 iteration.new_state,
             )
@@ -273,7 +275,7 @@ def subdispatch_mediatortask(
         is_valid_subtask = True
         mediator_state = None
 
-    elif sub_task and isinstance(sub_task, PaymentMappingState.MediatorTask):
+    elif sub_task and isinstance(sub_task, MediatorTask):
         is_valid_subtask = (
             token_network_identifier == sub_task.token_network_identifier
         )
@@ -299,7 +301,7 @@ def subdispatch_mediatortask(
         events = iteration.events
 
         if iteration.new_state:
-            sub_task = PaymentMappingState.MediatorTask(
+            sub_task = MediatorTask(
                 token_network_identifier,
                 iteration.new_state,
             )
@@ -325,7 +327,7 @@ def subdispatch_targettask(
         is_valid_subtask = True
         target_state = None
 
-    elif sub_task and isinstance(sub_task, PaymentMappingState.TargetTask):
+    elif sub_task and isinstance(sub_task, TargetTask):
         is_valid_subtask = (
             token_network_identifier == sub_task.token_network_identifier
         )
@@ -355,7 +357,7 @@ def subdispatch_targettask(
         events = iteration.events
 
         if iteration.new_state:
-            sub_task = PaymentMappingState.TargetTask(
+            sub_task = TargetTask(
                 token_network_identifier,
                 channel_identifier,
                 iteration.new_state,
