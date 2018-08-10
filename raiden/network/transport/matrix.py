@@ -888,7 +888,8 @@ class MatrixTransport:
                 user.user_id.encode(),
                 decode_hex(displayname),
             )
-            assert address and recovered and recovered == address
+            if not (address and recovered and recovered == address):
+                return None
         except (DecodeError, TypeError, MatrixRequestError, AssertionError):
             return None
         return address
