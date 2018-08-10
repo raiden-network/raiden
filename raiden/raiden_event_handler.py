@@ -134,8 +134,8 @@ def handle_transfersentsuccess(
         raiden: RaidenService,
         transfer_sent_success_event: EventPaymentSentSuccess,
 ):
-    for result in raiden.identifier_to_results[transfer_sent_success_event.identifier]:
-        result.set(True)
+    result = raiden.identifier_to_results[transfer_sent_success_event.identifier]
+    result.set(True)
 
     del raiden.identifier_to_results[transfer_sent_success_event.identifier]
 
@@ -144,8 +144,8 @@ def handle_transfersentfailed(
         raiden: RaidenService,
         transfer_sent_failed_event: EventPaymentSentFailed,
 ):
-    for result in raiden.identifier_to_results[transfer_sent_failed_event.identifier]:
-        result.set(False)
+    result = raiden.identifier_to_results[transfer_sent_failed_event.identifier]
+    result.set(False)
     del raiden.identifier_to_results[transfer_sent_failed_event.identifier]
 
 
