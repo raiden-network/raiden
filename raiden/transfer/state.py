@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
 from binascii import hexlify
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from functools import total_ordering
 
 import networkx
@@ -76,21 +76,20 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
-InitiatorTask = namedtuple('InitiatorTask', (
-    'token_network_identifier',
-    'manager_state',
-))
+class InitiatorTask(typing.NamedTuple):
+    token_network_identifier: typing.TokenNetworkIdentifier
+    manager_state: 'InitiatorTransferState'
 
-MediatorTask = namedtuple('MediatorTask', (
-    'token_network_identifier',
-    'mediator_state',
-))
 
-TargetTask = namedtuple('TargetTask', (
-    'token_network_identifier',
-    'channel_identifier',
-    'target_state',
-))
+class MediatorTask(typing.NamedTuple):
+    token_network_identifier: typing.TokenNetworkIdentifier
+    mediator_state: 'MediatorTransferState'
+
+
+class TargetTask(typing.NamedTuple):
+    token_network_identifier: typing.TokenNetworkIdentifier
+    channel_identifier: typing.ChannelID
+    target_state: 'TargetTransferState'
 
 
 class ChainState(State):
