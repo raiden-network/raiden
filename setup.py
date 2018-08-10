@@ -85,10 +85,6 @@ install_requires_replacements = {
         'git+https://github.com/raiden-network/'
         'raiden-libs.git@93941b32b7cebf0cd1a286d38081eef91fd0f1f6'
     ): 'raiden-libs',
-    (
-        'git+https://github.com/raiden-network/'
-        'raiden-contracts.git@379ad1717d68f86b190e366a92ba8416d0922a3e'
-    ): 'raiden-contracts',
 }
 
 install_requires = list(set(
