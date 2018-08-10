@@ -128,7 +128,6 @@ class MatrixTransport:
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 
     def __init__(self, config: dict):
-        self._bound_logger = None
         self._raiden_service: RaidenService = None
         self._config = config
 
@@ -296,13 +295,15 @@ class MatrixTransport:
             self.log.critical(str(error))
 
     @property
+    def _user_id(self) -> Optional[str]:
+        return getattr(self, '_client', None) and getattr(self._client, 'user_id', None)
+
+    @property
+    @cachedmethod(_cachegetter('__log_cache', dict), key=attrgetter('_user_id'))
     def log(self):
-        if self._bound_logger:
-            return self._bound_logger
-        if not getattr(self, '_client', None) or not getattr(self._client, 'user_id', None):
+        if not self._user_id:
             return log
-        self._bound_logger = log.bind(current_user=self._client.user_id)
-        return self._bound_logger
+        return log.bind(current_user=self._user_id)
 
     @property
     def _network_name(self) -> str:
@@ -360,8 +361,8 @@ class MatrixTransport:
         else:
             raise ValueError('Could not register or login!')
         # TODO: persist access_token, to avoid generating a new login every time
-        name = encode_hex(self._sign(self._client.user_id.encode()))
-        self._get_user(self._client.user_id).set_display_name(name)
+        name = encode_hex(self._sign(self._user_id.encode()))
+        self._get_user(self._user_id).set_display_name(name)
 
     def _join_discovery_room(self):
         discovery_cfg = self._config['discovery_room']
@@ -441,7 +442,7 @@ class MatrixTransport:
 
         sender_id = event['sender']
 
-        if sender_id == self._client.user_id:
+        if sender_id == self._user_id:
             # Ignore our own messages
             return
 
@@ -616,7 +617,7 @@ class MatrixTransport:
             return
         address_hex = to_normalized_address(address)
         assert address and address in self._address_to_userids,\
-            f'address not health checked: me: {self._client.user_id}, peer: {address_hex}'
+            f'address not health checked: me: {self._user_id}, peer: {address_hex}'
         room_id = self._get_room_id_for_address(address)
         if room_id:
             return self._client.rooms[room_id]
@@ -731,7 +732,7 @@ class MatrixTransport:
         if not self._running:
             return
         user_id = event['sender']
-        if event['type'] != 'm.presence' or user_id == self._client.user_id:
+        if event['type'] != 'm.presence' or user_id == self._user_id:
             return
 
         user = self._get_user(user_id)
