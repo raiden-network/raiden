@@ -177,7 +177,6 @@ class MatrixTransport:
         self._userid_to_presence: Dict[str, UserPresence] = dict()
 
         self._discovery_room_alias = None
-        self._discovery_room_alias_full = None
         self._login_retry_wait = config.get('login_retry_wait', 0.5)
         self._logout_timeout = config.get('logout_timeout', 10)
 
@@ -195,22 +194,9 @@ class MatrixTransport:
         self._running = True
         self._raiden_service = raiden_service
 
-        self._discovery_room_alias = self._make_room_alias(
-            self._config['discovery_room']['alias_fragment'],
-        )
-        self._discovery_room_alias_full = (
-            f'#{self._discovery_room_alias}:{self._config["discovery_room"]["server"]}'
-        )
-
         self._login_or_register()
-        self._inventory_rooms()
-
         self._join_discovery_room()
-        if not self._discovery_room.listeners:
-            self._discovery_room.add_listener(
-                self._handle_discovery_membership_event,
-                'm.room.member',
-            )
+        self._inventory_rooms()
 
         # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
@@ -220,8 +206,7 @@ class MatrixTransport:
         # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        gevent.spawn_later(1, self._ensure_room_peers)
-        gevent.spawn_later(2, self._send_queued_messages, queueids_to_queues)
+        gevent.spawn_later(1, self._send_queued_messages, queueids_to_queues)
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
@@ -366,21 +351,28 @@ class MatrixTransport:
 
     def _join_discovery_room(self):
         discovery_cfg = self._config['discovery_room']
+        self._discovery_room_alias = self._make_room_alias(discovery_cfg['alias_fragment'])
+        discovery_room_alias_full = (
+            f'#{self._discovery_room_alias}:{discovery_cfg["server"]}'
+        )
+
         try:
-            discovery_room = self._client.join_room(self._discovery_room_alias_full)
+            discovery_room = self._client.join_room(discovery_room_alias_full)
         except MatrixRequestError as ex:
             if ex.code != 404:
                 raise
             # Room doesn't exist
             if discovery_cfg['server'] != self._server_name:
                 raise RuntimeError(
-                    f"Discovery room {self._discovery_room_alias_full} not found and can't be "
+                    f"Discovery room {discovery_room_alias_full} not found and can't be "
                     f"created on a federated homeserver {self._server_name!r}.",
                 )
             discovery_room = self._client.create_room(self._discovery_room_alias, is_public=True)
         self._discovery_room = discovery_room
         # Populate initial members
-        self._discovery_room.get_joined_members()
+        for user in self._discovery_room.get_joined_members():
+            self._get_user(user)  # cache known users
+            self._maybe_invite_user(user)
 
     def _inventory_rooms(self):
         for room in self._client.rooms.values():
@@ -736,6 +728,7 @@ class MatrixTransport:
             return
 
         user = self._get_user(user_id)
+        user.displayname = event['content'].get('displayname') or user.displayname
         address = self._validate_userid_signature(user)
         if not address:
             # Malformed address - skip
@@ -798,33 +791,6 @@ class MatrixTransport:
 
         state_change = ActionChangeNodeNetworkState(address, reachability)
         self._raiden_service.handle_state_change(state_change)
-
-    def _handle_discovery_membership_event(self, room, event):
-        if event['type'] != 'm.room.member' or not self._running:
-            return
-
-        state = event['content']['membership']
-        if state != 'join':
-            return
-        user_id = event['sender']
-        user = self._get_user(user_id)
-        address = self._validate_userid_signature(user)
-        if not address:
-            # Malformed address - skip
-            return
-
-        # not a user we've started healthcheck, skip
-        if address not in self._address_to_userids:
-            return
-        self._address_to_userids[address].add(user_id)
-        self.log.debug('discovery member change', state=state, user=user)
-        self._maybe_invite_user(user)
-
-    def _ensure_room_peers(self):
-        """ Check all members of discovery channel for matches to existing rooms """
-        for member in self._discovery_room.get_joined_members():
-            member = self._get_user(member)
-            self._maybe_invite_user(member)
 
     def _maybe_invite_user(self, user):
         address = self._validate_userid_signature(user)
@@ -912,18 +878,18 @@ class MatrixTransport:
         # display_name should be an address in the self._userid_re format
         match = MatrixTransport._userid_re.match(user.user_id)
         if not match:
-            return
+            return None
         encoded_address: str = match.group(1)
         address: Address = to_canonical_address(encoded_address)
         try:
+            displayname = user.get_display_name()
             recovered = MatrixTransport._recover(
                 user.user_id.encode(),
-                decode_hex(user.get_display_name()),
+                decode_hex(displayname),
             )
-            if not address or not recovered or recovered != address:
-                return
-        except (DecodeError, TypeError):
-            return
+            assert address and recovered and recovered == address
+        except (DecodeError, TypeError, MatrixRequestError, AssertionError):
+            return None
         return address
 
     @cachedmethod(
@@ -934,7 +900,6 @@ class MatrixTransport:
         """ Creates an User from an user_id, if none, or fetch a cached User """
         if not isinstance(user, User):
             user = self._client.get_user(user)
-            user.get_display_name()
         return user
 
     def _set_room_id_for_address(self, address: Address, room_id: Optional[str]):
