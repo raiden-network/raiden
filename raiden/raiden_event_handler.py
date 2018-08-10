@@ -140,13 +140,13 @@ def handle_transfersentsuccess(
     del raiden.identifier_to_results[transfer_sent_success_event.identifier]
 
 
-def handle_transfersentfailed(
+def handle_paymentsentfailed(
         raiden: RaidenService,
-        transfer_sent_failed_event: EventPaymentSentFailed,
+        payment_sent_failed_event: EventPaymentSentFailed,
 ):
-    result = raiden.identifier_to_results[transfer_sent_failed_event.identifier]
+    result = raiden.identifier_to_results[payment_sent_failed_event.identifier]
     result.set(False)
-    del raiden.identifier_to_results[transfer_sent_failed_event.identifier]
+    del raiden.identifier_to_results[payment_sent_failed_event.identifier]
 
 
 def handle_unlockfailed(
@@ -344,7 +344,7 @@ def on_raiden_event(raiden: RaidenService, event: Event):
     elif type(event) == EventPaymentSentSuccess:
         handle_transfersentsuccess(raiden, event)
     elif type(event) == EventPaymentSentFailed:
-        handle_transfersentfailed(raiden, event)
+        handle_paymentsentfailed(raiden, event)
     elif type(event) == EventUnlockFailed:
         handle_unlockfailed(raiden, event)
     elif type(event) == ContractSendSecretReveal:

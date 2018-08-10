@@ -145,7 +145,7 @@ class RaidenService:
         self.tokennetworkids_to_connectionmanagers = dict()
         self.identifier_to_results: typing.Dict[
             typing.PaymentIdentifier,
-            RaidenAsyncResult
+            RaidenAsyncResult,
         ] = dict()
 
         self.chain: BlockChainService = chain
