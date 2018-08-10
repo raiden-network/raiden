@@ -268,6 +268,7 @@ class MatrixTransport:
         self._running = False
         self._client.set_presence_state(UserPresence.OFFLINE.value)
         self._client.stop_listener_thread()
+        self._client.sync_thread = None
 
         # Set all the pending results to False, this will also
         # cause pending retries to be aborted
