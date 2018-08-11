@@ -401,7 +401,7 @@ class BlockchainEvents:
         payment_channel_proxy: PaymentChannel,
         from_block: typing.BlockSpecification = 'latest',
     ):
-        payment_channel_filter, unlock_filter = payment_channel_proxy.all_events_filter(
+        payment_channel_filter = payment_channel_proxy.all_events_filter(
             from_block=from_block,
         )
         channel_identifier = payment_channel_proxy.channel_identifier
@@ -411,11 +411,6 @@ class BlockchainEvents:
         self.add_event_listener(
             f'PaymentChannel event {channel_identifier} {token_network_id}',
             payment_channel_filter,
-            token_network_abi,
-        )
-        self.add_event_listener(
-            f'PaymentChannel unlock event {channel_identifier} {token_network_id}',
-            unlock_filter,
             token_network_abi,
         )
 
