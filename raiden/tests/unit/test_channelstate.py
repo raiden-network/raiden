@@ -45,6 +45,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveUpdateTransfer,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -1579,3 +1580,66 @@ def test_update_must_be_called_if_close_lost_race():
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
     assert must_contain_entry(iteration.events, ContractSendChannelUpdateTransfer, {})
+
+
+def test_update_transfer():
+    """ This tests that receiving an update transfer event for a
+    closed channel sets the update_transaction member
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    pseudo_random_generator = random.Random()
+    block_number = 10
+    state_change = ActionChannelClose(
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+    )
+    iteration = channel.state_transition(
+        channel_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    update_transfer_state_change = ContractReceiveUpdateTransfer(
+        partner_model1.participant_address,
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        23,
+    )
+
+    # update_transaction in channel state should not be set
+    channel_state = iteration.new_state
+    assert channel_state.update_transaction is None
+
+    update_block_number = 13
+    iteration2 = channel.handle_channel_updated_transfer(
+        channel_state,
+        update_transfer_state_change,
+        update_block_number,
+    )
+
+    # now update_transaction in channel state should be set
+    channel_state = iteration2.new_state
+    assert channel_state.update_transaction == TransactionExecutionStatus(
+        update_block_number,
+        update_block_number,
+        TransactionExecutionStatus.SUCCESS,
+    )
+
+    closed_block_number = 15
+    state_change = ContractReceiveChannelClosed(
+        partner_model1.participant_address,
+        channel_state.token_network_identifier,
+        channel_state.identifier,
+        closed_block_number,
+    )
+    iteration3 = channel.handle_channel_closed(
+        channel_state,
+        state_change,
+    )
+
+    # There should be no ContractSendChannelUpdateTransfer event emitted
+    assert len(iteration3.events) == 0

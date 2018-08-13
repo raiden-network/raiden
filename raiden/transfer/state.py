@@ -751,9 +751,9 @@ class TransactionExecutionStatus(State):
 
     def __init__(
             self,
-            started_block_number: typing.Optional[typing.BlockNumber],
-            finished_block_number: typing.Optional[typing.BlockNumber],
-            result,
+            started_block_number: typing.BlockNumber = None,
+            finished_block_number: typing.BlockNumber = None,
+            result: str = None,
     ):
 
         is_valid_start = (
@@ -776,8 +776,8 @@ class TransactionExecutionStatus(State):
                 ','.join(self.VALID_RESULT_VALUES),
             ))
 
-        self.started_block_number: typing.Optional[typing.BlockNumber] = started_block_number
-        self.finished_block_number: typing.Optional[typing.BlockNumber] = finished_block_number
+        self.started_block_number = started_block_number
+        self.finished_block_number = finished_block_number
         self.result = result
 
     def __repr__(self):
@@ -890,6 +890,7 @@ class NettingChannelState(State):
         'open_transaction',
         'close_transaction',
         'settle_transaction',
+        'update_transaction',
         'our_unlock_transaction',
     )
 
@@ -905,8 +906,9 @@ class NettingChannelState(State):
             our_state: NettingChannelEndState,
             partner_state: NettingChannelEndState,
             open_transaction: TransactionExecutionStatus,
-            close_transaction: typing.Optional[TransactionExecutionStatus],
-            settle_transaction: typing.Optional[TransactionExecutionStatus],
+            close_transaction: TransactionExecutionStatus = None,
+            settle_transaction: TransactionExecutionStatus = None,
+            update_transaction: TransactionExecutionStatus = None,
     ):
 
         if reveal_timeout >= settle_timeout:
@@ -960,15 +962,17 @@ class NettingChannelState(State):
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
+        self.update_transaction = update_transaction
         self.our_unlock_transaction = None
         self.chain_id = chain_id
 
     def __repr__(self):
-        return '<NettingChannelState id:{} opened:{} closed:{} settled:{}>'.format(
+        return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
             self.identifier,
             self.open_transaction,
             self.close_transaction,
             self.settle_transaction,
+            self.update_transaction,
         )
 
     def __eq__(self, other):
@@ -986,6 +990,7 @@ class NettingChannelState(State):
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
             self.settle_transaction == other.settle_transaction and
+            self.update_transaction == other.update_transaction and
             self.chain_id == other.chain_id
         )
 

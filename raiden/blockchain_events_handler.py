@@ -26,6 +26,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveRouteNew,
     ContractReceiveRouteClosed,
+    ContractReceiveUpdateTransfer,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -207,6 +208,27 @@ def handle_channel_closed(raiden, event, current_block_number):
         raiden.handle_state_change(channel_closed, current_block_number)
 
 
+def handle_channel_update_transfer(raiden, event, current_block_number):
+    token_network_identifier = event.originating_contract
+    data = event.event_data
+    channel_identifier = data['channel_identifier']
+
+    channel_state = views.get_channelstate_by_token_network_identifier(
+        views.state_from_raiden(raiden),
+        token_network_identifier,
+        channel_identifier,
+    )
+
+    if channel_state:
+        channel_transfer_updated = ContractReceiveUpdateTransfer(
+            transaction_from=data['closing_participant'],
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            nonce=data['args']['nonce'],
+        )
+        raiden.handle_state_change(channel_transfer_updated, current_block_number)
+
+
 def handle_channel_settled(raiden, event, current_block_number):
     data = event.event_data
     token_network_identifier = event.originating_contract
@@ -288,10 +310,7 @@ def on_blockchain_event(raiden, event, current_block_number, chain_id):
         raise NotImplementedError('handle_channel_withdraw not implemented yet')
 
     elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
-        # balance proof updates are handled by the function
-        # raiden.transfer.channel::handle_channel_closed, so no action is
-        # needed here
-        pass
+        handle_channel_update_transfer(raiden, event, current_block_number)
 
     elif data['event'] == ChannelEvent.CLOSED:
         handle_channel_closed(raiden, event, current_block_number)
