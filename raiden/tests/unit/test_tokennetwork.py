@@ -204,9 +204,9 @@ def test_multiple_channel_states(
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(
+        channel_state.partner_state.address,
         token_network_state.address,
         channel_state.identifier,
-        channel_state.partner_state.address,
         closed_block_number,
     )
 

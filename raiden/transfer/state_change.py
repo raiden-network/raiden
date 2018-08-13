@@ -167,6 +167,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
 
         self.token_network_identifier = token_network_identifier
         self.channel_state = channel_state
+        self.channel_identifier = channel_state.identifier
 
     def __repr__(self):
         return '<ContractReceiveChannelNew token_network:{} state:{}>'.format(
