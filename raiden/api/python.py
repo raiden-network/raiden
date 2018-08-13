@@ -654,10 +654,14 @@ class RaidenAPI:
             to_block=to_block,
         ), key=lambda evt: evt.get('block_number'), reverse=True)
 
-    def get_payment_history(self):
+    def get_payment_history(
+            self,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
         raiden_events = self.raiden.wal.storage.get_events_by_block(
-            from_block=0,
-            to_block='latest',
+            from_block=from_block,
+            to_block=to_block,
         )
 
         # filtering only for externally visible events
@@ -670,13 +674,21 @@ class RaidenAPI:
         events.sort(key=lambda event: event[0], reverse=True)
         return events
 
-    def get_payment_history_for_token(self, token_address):
+    def get_payment_history_for_token(
+            self,
+            token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
         if not is_binary_address(token_address):
             raise InvalidAddress(
                 'Expected binary address format for token in get_token_network_events',
             )
 
-        raiden_events = self.get_payment_history()
+        raiden_events = self.get_payment_history(
+            from_block=from_block,
+            to_block=to_block,
+        )
 
         events = []
         if len(raiden_events) > 0:
@@ -697,14 +709,24 @@ class RaidenAPI:
 
         return events
 
-    def get_payment_history_for_token_and_target(self, token_address, target_address):
+    def get_payment_history_for_token_and_target(
+            self,
+            token_address: typing.TokenAddress,
+            target_address: typing.Address,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
         if target_address and not is_binary_address(target_address):
             raise InvalidAddress(
                 'Expected binary address format for '
                 'target_address in get_payment_history_partner',
             )
 
-        raiden_events = self.get_payment_history_for_token(token_address)
+        raiden_events = self.get_payment_history_for_token(
+            token_address=token_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
 
         events = [
             (block_number, event)

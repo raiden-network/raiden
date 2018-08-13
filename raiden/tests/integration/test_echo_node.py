@@ -96,20 +96,25 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 
     # Check that all transfers were handled correctly
     def test_events(handled_transfer):
-        app = address_to_app[handled_transfer['initiator']]
-        events = RaidenAPI(app.raiden).get_channel_events(token_address)
+        app = address_to_app[handled_transfer.initiator]
+        events = RaidenAPI(app.raiden).get_payment_history_for_token(token_address)
+
         received = {
-            event['identifier']: event
-            for event in events
-            if event['event'] == 'EventPaymentReceivedSuccess'
+            event.identifier: event
+            for _, event in events
+            if type(event) == EventPaymentReceivedSuccess
         }
+
         if len(received) != 1:
             return
         transfer = received.popitem()[1]
-        if (
-                transfer['initiator'] != echo_app.raiden.address or
-                transfer['identifier'] != handled_transfer['identifier'] + transfer['amount']
-        ):
+
+        is_not_valid = (
+            transfer.initiator != echo_app.raiden.address or
+            transfer.identifier != handled_transfer.identifier + transfer.amount
+        )
+
+        if is_not_valid:
             return
         return transfer
 
@@ -184,15 +189,22 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
 
     def get_echoed_transfer(sent_transfer):
         """For a given transfer sent to echo node, get the corresponding echoed transfer"""
-        app = address_to_app[sent_transfer['initiator']]
-        events = RaidenAPI(app.raiden).get_channel_events(token_address)
+        app = address_to_app[sent_transfer.initiator]
+        events = RaidenAPI(app.raiden).get_payment_history_for_token(token_address)
+
+        def is_valid(event):
+            return (
+                type(event) == EventPaymentReceivedSuccess and
+                event.initiator == echo_app.raiden.address and
+                event.identifier == sent_transfer.identifier + event.amount
+            )
+
         received = {
-            event['identifier']: event
-            for event in events
-            if event['event'] == 'EventPaymentReceivedSuccess' and
-            event['initiator'] == echo_app.raiden.address and
-            event['identifier'] == sent_transfer['identifier'] + event['amount']
+            event.identifier: event
+            for _, event in events
+            if is_valid(event)
         }
+
         if len(received) != 1:
             return
         return received.popitem()[1]
@@ -205,7 +217,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
             event = get_echoed_transfer(handled_transfer)
             if not event:
                 continue
-            received[event['identifier']] = event
+            received[event.identifier] = event
         if len(received) == size:
             return received
 
@@ -213,15 +225,15 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     received = wait_until(lambda: received_is_of_size(2), 2 * network_wait)
     assert received
 
-    received = sorted(received.values(), key=lambda transfer: transfer['amount'])
+    received = sorted(received.values(), key=lambda transfer: transfer.amount)
 
     pool_query = received[0]
-    assert pool_query['amount'] == 6
-    assert pool_query['identifier'] == pool_query_identifier + 6
+    assert pool_query.amount == 6
+    assert pool_query.identifier == pool_query_identifier + 6
 
     winning_transfer = received[1]
-    assert winning_transfer['initiator'] == echo_app.raiden.address
-    assert winning_transfer['amount'] == 49
-    assert (winning_transfer['identifier'] - 49) % 10 == 0
+    assert winning_transfer.initiator == echo_app.raiden.address
+    assert winning_transfer.amount == 49
+    assert (winning_transfer.identifier - 49) % 10 == 0
 
     echo_node.stop()
