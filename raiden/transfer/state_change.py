@@ -612,6 +612,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             self,
             transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
+            channel_identifier: typing.ChannelID,
             participant1: typing.Address,
             participant2: typing.Address,
     ):
@@ -625,12 +626,14 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         super().__init__(transaction_from)
 
         self.token_network_identifier = token_network_identifier
+        self.channel_identifier = channel_identifier
         self.participant1 = participant1
         self.participant2 = participant2
 
     def __repr__(self):
-        return '<ContractReceiveRouteNew token_network:{} node1:{} node2:{}>'.format(
+        return '<ContractReceiveRouteNew token_network:{} id:{} node1:{} node2:{}>'.format(
             pex(self.token_network_identifier),
+            self.channel_identifier,
             pex(self.participant1),
             pex(self.participant2),
         )
@@ -640,6 +643,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             isinstance(other, ContractReceiveRouteNew) and
             self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
+            self.channel_identifier == other.channel_identifier and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2
         )

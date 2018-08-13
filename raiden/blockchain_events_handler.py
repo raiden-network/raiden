@@ -62,14 +62,16 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
 def handle_channel_new(raiden, event, current_block_number):
     data = event.event_data
     token_network_identifier = event.originating_contract
+    channel_identifier = data['channel_identifier']
     participant1 = data['participant1']
     participant2 = data['participant2']
     is_participant = raiden.address in (participant1, participant2)
 
+    # Raiden note is participant
     if is_participant:
         channel_proxy = raiden.chain.payment_channel(
             token_network_identifier,
-            data['channel_identifier'],
+            channel_identifier,
         )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
@@ -107,6 +109,7 @@ def handle_channel_new(raiden, event, current_block_number):
             from_block=data['blockNumber'] + 1,
         )
 
+    # Raiden node is not participant of channel
     else:
         from_address = raiden.chain.client.get_transaction_from(
             event.event_data['transactionHash'],
@@ -116,6 +119,7 @@ def handle_channel_new(raiden, event, current_block_number):
         new_route = ContractReceiveRouteNew(
             from_address,
             token_network_identifier,
+            channel_identifier,
             participant1,
             participant2,
         )
