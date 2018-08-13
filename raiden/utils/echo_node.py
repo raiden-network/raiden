@@ -1,5 +1,6 @@
 from collections import deque
 import random
+import copy
 
 import gevent
 from gevent.queue import Queue
@@ -10,6 +11,7 @@ import structlog
 from raiden.api.python import RaidenAPI
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
+from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import pex
 from raiden.utils.gevent_utils import RaidenGreenletEvent
@@ -96,23 +98,25 @@ class EchoNode:
                 if not locked:
                     return
                 else:
-                    received_transfers = self.api.get_channel_events(
+                    received_transfers = self.api.get_payment_history_for_token(
                         self.token_address,
                         from_block=self.last_poll_block,
                     )
+
                     received_transfers = [
-                        event for event in received_transfers
-                        if event['event'] == 'EventPaymentReceivedSuccess'
+                        (block_number, event)
+                        for block_number, event in received_transfers
+                        if type(event) == EventPaymentReceivedSuccess
                     ]
-                    for event in received_transfers:
-                        transfer = event.copy()
-                        transfer.pop('block_number')
+                    for _, event in received_transfers:
+                        transfer = copy.deepcopy(event)
                         self.received_transfers.put(transfer)
+
                     # set last_poll_block after events are enqueued (timeout safe)
                     if received_transfers:
                         self.last_poll_block = max(
-                            event['block_number']
-                            for event in received_transfers
+                            block_number
+                            for block_number, _ in received_transfers
                         )
                     # increase last_poll_block if the blockchain proceeded
                     delta_blocks = self.api.raiden.get_block_number() - self.last_poll_block
@@ -143,9 +147,9 @@ class EchoNode:
                 if transfer in self.seen_transfers:
                     log.debug(
                         'duplicate transfer ignored',
-                        initiator=pex(transfer['initiator']),
-                        amount=transfer['amount'],
-                        identifier=transfer['identifier'],
+                        initiator=pex(transfer.initiator),
+                        amount=transfer.amount,
+                        identifier=transfer.identifier,
                     )
                 else:
                     self.seen_transfers.append(transfer)
@@ -168,21 +172,21 @@ class EchoNode:
             - for all other transfers it sends a transfer with the same `amount` back to the
             initiator """
         echo_amount = 0
-        if transfer['amount'] % 3 == 0:
+        if transfer.amount % 3 == 0:
             log.info(
                 'ECHO amount - 1',
-                initiator=pex(transfer['initiator']),
-                amount=transfer['amount'],
-                identifier=transfer['identifier'],
+                initiator=pex(transfer.initiator),
+                amount=transfer.amount,
+                identifier=transfer.identifier,
             )
-            echo_amount = transfer['amount'] - 1
+            echo_amount = transfer.amount - 1
 
-        elif transfer['amount'] == 7:
+        elif transfer.amount == 7:
             log.info(
                 'ECHO lucky number draw',
-                initiator=pex(transfer['initiator']),
-                amount=transfer['amount'],
-                identifier=transfer['identifier'],
+                initiator=pex(transfer.initiator),
+                amount=transfer.amount,
+                identifier=transfer.identifier,
                 poolsize=self.lottery_pool.qsize(),
             )
 
@@ -192,12 +196,12 @@ class EchoNode:
             assert pool.empty()
             del pool
 
-            if any(ticket['initiator'] == transfer['initiator'] for ticket in tickets):
+            if any(ticket.initiator == transfer.initiator for ticket in tickets):
                 assert transfer not in tickets
                 log.debug(
                     'duplicate lottery entry',
-                    initiator=pex(transfer['initiator']),
-                    identifier=transfer['identifier'],
+                    initiator=pex(transfer.initiator),
+                    identifier=transfer.identifier,
                     poolsize=len(tickets),
                 )
                 # signal the poolsize to the participant
@@ -220,19 +224,19 @@ class EchoNode:
         else:
             log.debug(
                 'echo transfer received',
-                initiator=pex(transfer['initiator']),
-                amount=transfer['amount'],
-                identifier=transfer['identifier'],
+                initiator=pex(transfer.initiator),
+                amount=transfer.amount,
+                identifier=transfer.identifier,
             )
-            echo_amount = transfer['amount']
+            echo_amount = transfer.amount
 
         if echo_amount:
             log.debug(
                 'sending echo transfer',
-                target=pex(transfer['initiator']),
+                target=pex(transfer.initiator),
                 amount=echo_amount,
-                orig_identifier=transfer['identifier'],
-                echo_identifier=transfer['identifier'] + echo_amount,
+                orig_identifier=transfer.identifier,
+                echo_identifier=transfer.identifier + echo_amount,
                 token_address=pex(self.token_address),
                 num_handled_transfers=self.num_handled_transfers + 1,
             )
@@ -241,8 +245,8 @@ class EchoNode:
                 self.api.raiden.default_registry.address,
                 self.token_address,
                 echo_amount,
-                transfer['initiator'],
-                identifier=transfer['identifier'] + echo_amount,
+                transfer.initiator,
+                identifier=transfer.identifier + echo_amount,
             )
         self.num_handled_transfers += 1
 
