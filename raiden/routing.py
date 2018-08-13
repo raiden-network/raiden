@@ -1,9 +1,8 @@
-from typing import List, Tuple
+from typing import List
 from heapq import heappush, heappop
 
 import networkx
 import structlog
-from eth_utils import is_binary_address
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -96,8 +95,7 @@ def get_best_routes(
         if partner_address == previous_address:
             continue
 
-        if channel_state is None:
-            continue
+        assert channel_state is not None
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(

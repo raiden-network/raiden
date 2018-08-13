@@ -256,7 +256,7 @@ class TokenNetworkGraphState(State):
 
     __slots__ = (
         'network',
-        'channel_identifier_to_participants'
+        'channel_identifier_to_participants',
     )
 
     def __init__(self):

@@ -25,6 +25,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewTokenNetwork,
     ContractReceiveSecretReveal,
     ContractReceiveRouteNew,
+    ContractReceiveRouteClosed,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -198,10 +199,18 @@ def handle_channel_closed(raiden, event, current_block_number):
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
         channel_closed = ContractReceiveChannelClosed(
-            data['closing_participant'],
-            token_network_identifier,
-            channel_identifier,
-            data['block_number'],
+            transaction_from=data['closing_participant'],
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            closed_block_number=data['block_number'],
+        )
+        raiden.handle_state_change(channel_closed, current_block_number)
+    else:
+        # This is a channel close event of a channel we're not a participant of
+        channel_closed = ContractReceiveRouteClosed(
+            transaction_from=data['closing_participant'],
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
         )
         raiden.handle_state_change(channel_closed, current_block_number)
 
