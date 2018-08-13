@@ -1,6 +1,7 @@
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
     ContractSendEvent,
+    ContractSendExpirableEvent,
     Event,
     SendMessageEvent,
 )
@@ -102,10 +103,18 @@ class ContractSendChannelSettle(ContractSendEvent):
         return not self.__eq__(other)
 
 
-class ContractSendChannelUpdateTransfer(ContractSendEvent):
+class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
 
-    def __init__(self, channel_identifier, token_network_identifier, balance_proof):
+    def __init__(
+            self,
+            expiration: typing.BlockExpiration,
+            channel_identifier: typing.ChainID,
+            token_network_identifier: typing.TokenNetworkID,
+            balance_proof: BalanceProofSignedState,
+    ):
+        super().__init__(expiration)
+
         self.channel_identifier = channel_identifier
         self.token_network_identifier = token_network_identifier
         self.balance_proof = balance_proof
@@ -162,13 +171,14 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return not self.__eq__(other)
 
 
-class ContractSendSecretReveal(ContractSendEvent):
+class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
-    def __init__(self, secret: typing.Secret):
+    def __init__(self, expiration: typing.BlockExpiration, secret: typing.Secret):
         if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be a Secret instance')
 
+        super().__init__(expiration)
         self.secret = secret
 
     def __repr__(self):

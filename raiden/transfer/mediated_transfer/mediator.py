@@ -713,9 +713,10 @@ def events_for_onchain_secretreveal(
 
     for pair in reversed(pending_transfers_pairs):
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
+        expiration = pair.payer_transfer.lock.expiration
 
         safe_to_wait = is_safe_to_wait(
-            pair.payer_transfer.lock.expiration,
+            expiration,
             payer_channel.reveal_timeout,
             block_number,
         )
@@ -733,8 +734,8 @@ def events_for_onchain_secretreveal(
             )
             reveal_events = secret_registry.events_for_onchain_secretreveal(
                 payer_channel,
-                block_number,
                 secret,
+                expiration,
             )
             events.extend(reveal_events)
 

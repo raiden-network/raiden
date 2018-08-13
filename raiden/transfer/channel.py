@@ -1713,9 +1713,11 @@ def handle_channel_closed(
             balance_proof
         )
         if call_update:
+            expiration = state_change.closed_block_number + channel_state.settle_timeout
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
+                expiration,
                 channel_state.identifier,
                 channel_state.token_network_identifier,
                 balance_proof,

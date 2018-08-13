@@ -2,9 +2,10 @@
 from copy import deepcopy
 from raiden.utils.typing import (
     Address,
+    BlockExpiration,
+    ChannelID,
     List,
     MessageID,
-    ChannelID,
     QueueIdentifier,
     T_ChannelID,
 )
@@ -108,6 +109,11 @@ class SendMessageEvent(Event):
 
 class ContractSendEvent(Event):
     pass
+
+
+class ContractSendExpirableEvent(ContractSendEvent):
+    def __init__(self, expiration: BlockExpiration):
+        self.expiration = expiration
 
 
 class ContractReceiveStateChange(StateChange):

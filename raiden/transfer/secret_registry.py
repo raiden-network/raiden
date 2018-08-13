@@ -11,8 +11,8 @@ from raiden.transfer.state import (
 
 def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
         secret: typing.Secret,
+        expiration: typing.BlockExpiration,
 ) -> typing.List[Event]:
     events = list()
 
@@ -20,7 +20,7 @@ def events_for_onchain_secretreveal(
         raise ValueError('secret must be a Secret instance')
 
     if get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED + (CHANNEL_STATE_CLOSED, ):
-        reveal_event = ContractSendSecretReveal(secret)
+        reveal_event = ContractSendSecretReveal(expiration, secret)
         events.append(reveal_event)
 
     return events
