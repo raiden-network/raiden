@@ -1022,10 +1022,38 @@ def is_transaction_invalidated(transaction, state_change):
     return False
 
 
+def is_transaction_expired(transaction, block_number):
+    """ True if transaction cannot be mined because it has expired.
+
+    Some transactions are time dependent, e.g. the secret registration must be
+    done before the lock expiration, and the update transfer must be done
+    before the settlement window is over. If the current block is higher than
+    any of these expirations blocks, the transaction is expired and cannot be
+    successfully executed.
+    """
+
+    is_update_expired = (
+        isinstance(transaction, ContractSendChannelUpdateTransfer) and
+        transaction.expiration < block_number
+    )
+    if is_update_expired:
+        return True
+
+    is_secret_register_expired = (
+        isinstance(transaction, ContractSendSecretReveal) and
+        transaction.expiration < block_number
+    )
+    if is_secret_register_expired:
+        return True
+
+    return False
+
+
 def is_transaction_pending(chain_state, transaction, state_change):
     return not (
         is_transaction_effect_satisfied(chain_state, transaction, state_change) or
-        is_transaction_invalidated(transaction, state_change)
+        is_transaction_invalidated(transaction, state_change) or
+        is_transaction_expired(transaction, chain_state.block_number)
     )
 
 

@@ -53,9 +53,10 @@ def events_for_onchain_secretreveal(target_state, channel_state, block_number):
     to be settled off-chain.
     """
     transfer = target_state.transfer
+    expiration = transfer.lock.expiration
 
     safe_to_wait = is_safe_to_wait(
-        transfer.lock.expiration,
+        expiration,
         channel_state.reveal_timeout,
         block_number,
     )
@@ -71,8 +72,8 @@ def events_for_onchain_secretreveal(target_state, channel_state, block_number):
         )
         return secret_registry.events_for_onchain_secretreveal(
             channel_state,
-            block_number,
             secret,
+            expiration,
         )
 
     return list()
