@@ -68,7 +68,7 @@ def handle_channel_new(raiden, event, current_block_number):
     participant2 = data['participant2']
     is_participant = raiden.address in (participant1, participant2)
 
-    # Raiden note is participant
+    # Raiden node is participant
     if is_participant:
         channel_proxy = raiden.chain.payment_channel(
             token_network_identifier,
