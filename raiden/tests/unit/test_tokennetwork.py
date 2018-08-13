@@ -303,7 +303,7 @@ def test_routing_updates(
         block_number=open_block_number,
     )
 
-    graph_state = token_network_state.network_graph
+    graph_state = channel_new_iteration1.new_state.network_graph
     assert channel_state.identifier in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 1
     assert graph_state.network[our_address][address1] is not None
@@ -327,7 +327,7 @@ def test_routing_updates(
         block_number=open_block_number + 10,
     )
 
-    graph_state = token_network_state.network_graph
+    graph_state = channel_new_iteration2.new_state.network_graph
     assert channel_state.identifier in graph_state.channel_identifier_to_participants
     assert new_channel_identifier in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 2
@@ -352,7 +352,7 @@ def test_routing_updates(
         block_number=closed_block_number,
     )
 
-    graph_state = token_network_state.network_graph
+    graph_state = channel_closed_iteration1.new_state.network_graph
     assert channel_state.identifier not in graph_state.channel_identifier_to_participants
     assert new_channel_identifier in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 1
@@ -366,7 +366,7 @@ def test_routing_updates(
         channel_identifier=new_channel_identifier,
     )
 
-    channel_closed_iteration1 = token_network.state_transition(
+    channel_closed_iteration2 = token_network.state_transition(
         payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration1.new_state,
         state_change=channel_close_state_change2,
@@ -374,7 +374,7 @@ def test_routing_updates(
         block_number=closed_block_number + 10,
     )
 
-    graph_state = token_network_state.network_graph
+    graph_state = channel_closed_iteration2.new_state.network_graph
     assert channel_state.identifier not in graph_state.channel_identifier_to_participants
     assert new_channel_identifier not in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 0
