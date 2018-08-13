@@ -413,15 +413,8 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
-        try:
-            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
-        except ChannelIncorrectStateError:
-            return False
-
-        if not isinstance(channel_data.state, typing.T_ChannelState):
-            raise ValueError('channel state must be of type ChannelState')
-
-        return channel_data.state == ChannelState.OPENED
+        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        return channel_state == ChannelState.OPENED
 
     def channel_is_closed(
             self,
@@ -430,15 +423,8 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
-        try:
-            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
-        except ChannelIncorrectStateError:
-            return False
-
-        if not isinstance(channel_data.state, typing.T_ChannelState):
-            raise ValueError('channel state must be of type ChannelState')
-
-        return channel_data.state == ChannelState.CLOSED
+        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        return channel_state == ChannelState.CLOSED
 
     def channel_is_settled(
             self,
@@ -447,15 +433,8 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
-        try:
-            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
-        except ChannelIncorrectStateError:
-            return False
-
-        if not isinstance(channel_data.state, typing.T_ChannelState):
-            raise ValueError('channel state must be of type ChannelState')
-
-        return channel_data.state >= ChannelState.SETTLED
+        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        return channel_state >= ChannelState.SETTLED
 
     def closing_address(
             self,
@@ -965,15 +944,20 @@ class TokenNetwork:
                         'Channel already settled or non-existent',
                     )
 
-                channel_closed = self.channel_is_closed(
+                channel_state = self._get_channel_state(
                     participant1=self.node_address,
                     participant2=partner,
                     channel_identifier=channel_identifier,
                 )
-                if channel_closed is False:
+                if channel_state == ChannelState.SETTLED:
                     log.info('settle failed, channel is not closed', **log_details)
                     raise ChannelIncorrectStateError(
                         'Channel is not in a closed state. It cannot be settled',
+                    )
+                elif channel_state == ChannelState.REMOVED:
+                    log.info('settle failed, channel is already unlocked', **log_details)
+                    raise ChannelIncorrectStateError(
+                        'Channel is already unlocked. It cannot be settled',
                     )
 
                 log.info('settle failed', **log_details)
@@ -1085,3 +1069,14 @@ class TokenNetwork:
                 f'current={channel_identifier}, '
                 f'new={onchain_channel_identifier}',
             )
+
+    def _get_channel_state(self, participant1, participant2, channel_identifier):
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except ChannelIncorrectStateError:
+            return False
+
+        if not isinstance(channel_data.state, typing.T_ChannelState):
+            raise ValueError('channel state must be of type ChannelState')
+
+        return channel_data.state

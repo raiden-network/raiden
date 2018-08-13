@@ -21,7 +21,7 @@ from raiden.transfer.events import (
 )
 from raiden.exceptions import (
     RaidenRecoverableError,
-    RaidenUnrecoverableError
+    RaidenUnrecoverableError,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
