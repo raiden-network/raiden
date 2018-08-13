@@ -222,7 +222,7 @@ class TokenNetworkState(State):
 
         self.address = address
         self.token_address = token_address
-        self.network_graph = TokenNetworkGraphState(networkx.Graph())
+        self.network_graph = TokenNetworkGraphState()
 
         self.channelidentifiers_to_channels = dict()
         self.partneraddresses_to_channels = defaultdict(dict)
@@ -256,10 +256,12 @@ class TokenNetworkGraphState(State):
 
     __slots__ = (
         'network',
+        'channel_identifier_to_participants'
     )
 
-    def __init__(self, network: networkx.Graph):
-        self.network = network
+    def __init__(self):
+        self.network = networkx.Graph()
+        self.channel_identifier_to_participants = {}
 
     def __repr__(self):
         return '<TokenNetworkGraphState>'
@@ -267,7 +269,8 @@ class TokenNetworkGraphState(State):
     def __eq__(self, other):
         return (
             isinstance(other, TokenNetworkGraphState) and
-            self.network == other.network
+            self.network == other.network and
+            self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
 
     def __ne__(self, other):
