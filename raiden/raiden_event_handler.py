@@ -19,6 +19,10 @@ from raiden.transfer.events import (
     SendDirectTransfer,
     SendProcessed,
 )
+from raiden.exceptions import (
+    RaidenRecoverableError,
+    RaidenUnrecoverableError
+)
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
@@ -332,38 +336,44 @@ def handle_contract_send_channelsettle(
 
 def on_raiden_event(raiden: RaidenService, event: Event):
     # pylint: disable=too-many-branches
-
-    if type(event) == SendLockedTransfer:
-        handle_send_lockedtransfer(raiden, event)
-    elif type(event) == SendDirectTransfer:
-        handle_send_directtransfer(raiden, event)
-    elif type(event) == SendRevealSecret:
-        handle_send_revealsecret(raiden, event)
-    elif type(event) == SendBalanceProof:
-        handle_send_balanceproof(raiden, event)
-    elif type(event) == SendSecretRequest:
-        handle_send_secretrequest(raiden, event)
-    elif type(event) == SendRefundTransfer:
-        handle_send_refundtransfer(raiden, event)
-    elif type(event) == SendProcessed:
-        handle_send_processed(raiden, event)
-    elif type(event) == EventPaymentSentSuccess:
-        handle_paymentsentsuccess(raiden, event)
-    elif type(event) == EventPaymentSentFailed:
-        handle_paymentsentfailed(raiden, event)
-    elif type(event) == EventUnlockFailed:
-        handle_unlockfailed(raiden, event)
-    elif type(event) == ContractSendSecretReveal:
-        handle_contract_send_secretreveal(raiden, event)
-    elif type(event) == ContractSendChannelClose:
-        handle_contract_send_channelclose(raiden, event)
-    elif type(event) == ContractSendChannelUpdateTransfer:
-        handle_contract_send_channelupdate(raiden, event)
-    elif type(event) == ContractSendChannelBatchUnlock:
-        handle_contract_send_channelunlock(raiden, event)
-    elif type(event) == ContractSendChannelSettle:
-        handle_contract_send_channelsettle(raiden, event)
-    elif type(event) in UNEVENTFUL_EVENTS:
-        pass
-    else:
-        log.error('Unknown event {}'.format(type(event)))
+    try:
+        if type(event) == SendLockedTransfer:
+            handle_send_lockedtransfer(raiden, event)
+        elif type(event) == SendDirectTransfer:
+            handle_send_directtransfer(raiden, event)
+        elif type(event) == SendRevealSecret:
+            handle_send_revealsecret(raiden, event)
+        elif type(event) == SendBalanceProof:
+            handle_send_balanceproof(raiden, event)
+        elif type(event) == SendSecretRequest:
+            handle_send_secretrequest(raiden, event)
+        elif type(event) == SendRefundTransfer:
+            handle_send_refundtransfer(raiden, event)
+        elif type(event) == SendProcessed:
+            handle_send_processed(raiden, event)
+        elif type(event) == EventPaymentSentSuccess:
+            handle_paymentsentsuccess(raiden, event)
+        elif type(event) == EventPaymentSentFailed:
+            handle_paymentsentfailed(raiden, event)
+        elif type(event) == EventUnlockFailed:
+            handle_unlockfailed(raiden, event)
+        elif type(event) == ContractSendSecretReveal:
+            handle_contract_send_secretreveal(raiden, event)
+        elif type(event) == ContractSendChannelClose:
+            handle_contract_send_channelclose(raiden, event)
+        elif type(event) == ContractSendChannelUpdateTransfer:
+            handle_contract_send_channelupdate(raiden, event)
+        elif type(event) == ContractSendChannelBatchUnlock:
+            handle_contract_send_channelunlock(raiden, event)
+        elif type(event) == ContractSendChannelSettle:
+            handle_contract_send_channelsettle(raiden, event)
+        elif type(event) in UNEVENTFUL_EVENTS:
+            pass
+        else:
+            log.error('Unknown event {}'.format(type(event)))
+    except RaidenRecoverableError as e:
+        log.error(e)
+        # TODO: Dispatch a state change to remove transaction
+        # from the transaction queue
+    except RaidenUnrecoverableError as e:
+        log.error(e)
