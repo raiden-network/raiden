@@ -18,35 +18,6 @@ from raiden.transfer.state import RouteState
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def make_graph(
-        edge_list: List[Tuple[typing.Address, typing.Address]],
-) -> networkx.Graph:
-    """ Returns a graph that represents the connections among the netting
-    contracts.
-    Args:
-        edge_list: All the channels that compose the graph.
-    Returns:
-        A graph where the nodes are nodes in the network and the edges are
-        nodes that have a channel between them.
-    """
-
-    for edge in edge_list:
-        if len(edge) != 2:
-            raise ValueError('All values in edge_list must be of length two (origin, destination)')
-
-        origin, destination = edge
-
-        if not is_binary_address(origin) or not is_binary_address(destination):
-            raise ValueError('All values in edge_list must be valid addresses')
-
-    graph = networkx.Graph()  # undirected graph, for bidirectional channels
-
-    for first, second in edge_list:
-        graph.add_edge(first, second)
-
-    return graph
-
-
 def get_ordered_partners(
         network_graph: networkx.Graph,
         from_address: typing.Address,
