@@ -6,9 +6,11 @@ from raiden.tests.utils import factories
 from raiden.transfer import node, channel, token_network
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.state_change import (
-    ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
+    ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
+    ContractReceiveRouteNew,
+    ContractReceiveRouteClosed,
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
 from raiden.transfer.state import TokenNetworkState
@@ -264,3 +266,116 @@ def test_multiple_channel_states(
 
     assert len(ids_to_channels) == 2
     assert channel_state.identifier in ids_to_channels
+
+
+def test_routing_updates(
+        token_network_state,
+        our_address,
+):
+    open_block_number = 10
+    pseudo_random_generator = random.Random()
+    pkey1, address1 = factories.make_privkey_address()
+    pkey2, address2 = factories.make_privkey_address()
+    pkey3, address3 = factories.make_privkey_address()
+
+    amount = 30
+    our_balance = amount + 50
+    channel_state = factories.make_channel(
+        our_balance=our_balance,
+        our_address=our_address,
+        partner_balance=our_balance,
+        partner_address=address1,
+    )
+    payment_network_identifier = factories.make_payment_network_identifier()
+
+    # create a new channel as participant, check graph update
+    channel_new_state_change = ContractReceiveChannelNew(
+        transaction_from=our_address,
+        token_network_identifier=token_network_state.address,
+        channel_state=channel_state,
+    )
+
+    channel_new_iteration1 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=token_network_state,
+        state_change=channel_new_state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number,
+    )
+
+    graph_state = token_network_state.network_graph
+    assert channel_state.identifier in graph_state.channel_identifier_to_participants
+    assert len(graph_state.channel_identifier_to_participants) == 1
+    assert graph_state.network[our_address][address1] is not None
+    assert len(graph_state.network.edges()) == 1
+
+    # create a new channel without being participant, check graph update
+    new_channel_identifier = factories.make_channel_identifier()
+    channel_new_state_change = ContractReceiveRouteNew(
+        transaction_from=token_network_state.address,
+        token_network_identifier=token_network_state.address,
+        channel_identifier=new_channel_identifier,
+        participant1=address2,
+        participant2=address3,
+    )
+
+    channel_new_iteration2 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=channel_new_iteration1.new_state,
+        state_change=channel_new_state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number + 10,
+    )
+
+    graph_state = token_network_state.network_graph
+    assert channel_state.identifier in graph_state.channel_identifier_to_participants
+    assert new_channel_identifier in graph_state.channel_identifier_to_participants
+    assert len(graph_state.channel_identifier_to_participants) == 2
+    assert graph_state.network[our_address][address1] is not None
+    assert graph_state.network[address2][address3] is not None
+    assert len(graph_state.network.edges()) == 2
+
+    # close the channel the node is a participant of, check edge is removed from graph
+    closed_block_number = open_block_number + 20
+    channel_close_state_change1 = ContractReceiveChannelClosed(
+        transaction_from=channel_state.partner_state.address,
+        token_network_identifier=token_network_state.address,
+        channel_identifier=channel_state.identifier,
+        closed_block_number=closed_block_number,
+    )
+
+    channel_closed_iteration1 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=channel_new_iteration2.new_state,
+        state_change=channel_close_state_change1,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=closed_block_number,
+    )
+
+    graph_state = token_network_state.network_graph
+    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
+    assert new_channel_identifier in graph_state.channel_identifier_to_participants
+    assert len(graph_state.channel_identifier_to_participants) == 1
+    assert graph_state.network[address2][address3] is not None
+    assert len(graph_state.network.edges()) == 1
+
+    # close the channel the node is not a participant of, check edge is removed from graph
+    channel_close_state_change2 = ContractReceiveRouteClosed(
+        transaction_from=token_network_state.address,
+        token_network_identifier=token_network_state.address,
+        channel_identifier=new_channel_identifier,
+    )
+
+    channel_closed_iteration1 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=channel_closed_iteration1.new_state,
+        state_change=channel_close_state_change2,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=closed_block_number + 10,
+    )
+
+    graph_state = token_network_state.network_graph
+    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
+    assert new_channel_identifier not in graph_state.channel_identifier_to_participants
+    assert len(graph_state.channel_identifier_to_participants) == 0
+    assert len(graph_state.network.edges()) == 0
