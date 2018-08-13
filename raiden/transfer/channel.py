@@ -71,6 +71,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveUpdateTransfer,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -1726,7 +1727,8 @@ def handle_channel_closed(
         balance_proof = channel_state.partner_state.balance_proof
         call_update = (
             state_change.transaction_from != channel_state.our_state.address and
-            balance_proof
+            balance_proof and
+            channel_state.update_transaction is None
         )
         if call_update:
             expiration = state_change.closed_block_number + channel_state.settle_timeout
@@ -1738,9 +1740,30 @@ def handle_channel_closed(
                 channel_state.token_network_identifier,
                 balance_proof,
             )
+            channel_state.update_transaction = TransactionExecutionStatus(
+                started_block_number=state_change.closed_block_number,
+                finished_block_number=None,
+                result=None,
+            )
             events.append(update)
 
     return TransitionResult(channel_state, events)
+
+
+def handle_channel_updated_transfer(
+        channel_state: NettingChannelState,
+        state_change: ContractReceiveUpdateTransfer,
+        block_number: typing.BlockNumber,
+) -> TransitionResult:
+    if state_change.channel_identifier == channel_state.identifier:
+        # update transfer was called, make sure we don't call it again
+        channel_state.update_transaction = TransactionExecutionStatus(
+            started_block_number=block_number,
+            finished_block_number=block_number,
+            result=TransactionExecutionStatus.SUCCESS,
+        )
+
+    return TransitionResult(channel_state, list())
 
 
 def handle_channel_settled(
@@ -1862,6 +1885,12 @@ def state_transition(
         iteration = handle_channel_closed(
             channel_state,
             state_change,
+        )
+    elif type(state_change) == ContractReceiveUpdateTransfer:
+        iteration = handle_channel_updated_transfer(
+            channel_state,
+            state_change,
+            block_number,
         )
     elif type(state_change) == ContractReceiveChannelSettled:
         iteration = handle_channel_settled(

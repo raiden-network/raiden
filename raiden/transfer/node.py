@@ -793,6 +793,11 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             chain_state,
             state_change,
         )
+    elif type(state_change) == ContractReceiveUpdateTransfer:
+        iteration = handle_token_network_action(
+            chain_state,
+            state_change,
+        )
     elif type(state_change) == ReceiveDelivered:
         iteration = handle_delivered(
             chain_state,
