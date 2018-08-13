@@ -22,7 +22,6 @@ from raiden.utils import typing, compare_versions
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
     AddressWrongContract,
-    TransactionThrew,
     InvalidAddress,
     ContractVersionMismatch,
     TokenAlreadyRegistered,

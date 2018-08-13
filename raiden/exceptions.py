@@ -142,7 +142,7 @@ class DuplicatedChannelError(RaidenRecoverableError):
     """Raised if someone tries to create a channel that already exists."""
 
 
-class ChannelIncorrectStateError(RaidenError):
+class ChannelIncorrectStateError(RaidenRecoverableError):
     """Raised if someone tries to perform an operation on a channel that
     is in an incompatible state."""
 
