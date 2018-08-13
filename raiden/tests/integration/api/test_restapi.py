@@ -1144,7 +1144,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokenblockchaineventsresource',
+            'tokenchanneleventsresourceblockchain',
             token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             from_block=5,
             to_block=20,
@@ -1369,6 +1369,18 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
 
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
+    response = response.json()
+    assert len(response) > 0
+
+    events_list = []
+    for event in response:
+        # taking the name of the event
+        events_list.append(event['event'])
+
+    assert 'SendLockedTransfer' in events_list
+    assert 'EventPaymentSentSuccess' in events_list
+    assert 'SendRevealSecret' in events_list
+    assert 'SendBalanceProof' in events_list
 
     request = grequests.get(
         api_url_for(
@@ -1384,16 +1396,13 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
     assert_proper_response(response, status_code=HTTPStatus.OK)
 
     response = response.json()
-    assert len(response) == 5
+    assert len(response) > 0
     events_list = []
     for event in response:
         # taking the name of the event
         events_list.append(event['event'])
 
-    assert 'ChannelOpened' in events_list
-    assert 'ChannelNewDeposit' in events_list
+    assert 'SendLockedTransfer' in events_list
     assert 'EventPaymentSentSuccess' in events_list
-
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) > 0
+    assert 'SendRevealSecret' in events_list
+    assert 'SendBalanceProof' in events_list

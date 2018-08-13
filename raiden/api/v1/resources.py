@@ -116,9 +116,7 @@ class TokenBlockchainEventsResource(BaseResource):
     def get(self, token_address, from_block, to_block):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
-<<<<<<< HEAD
-        return self.rest_api.get_token_network_events_blockchain(
-=======
+
         return self.rest_api.raiden_api.get_token_network_events_blockchain(
             token_address=token_address,
             from_block=from_block,
@@ -135,7 +133,6 @@ class TokenRaidenEventsResource(BaseResource):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
         return self.rest_api.raiden_api.get_token_network_events_raiden(
->>>>>>> 21ac6824... Changed token network event api
             token_address=token_address,
             from_block=from_block,
             to_block=to_block,

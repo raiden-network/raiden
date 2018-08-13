@@ -61,15 +61,10 @@ from raiden.api.v1.resources import (
     RegisterTokenResource,
     TokenBlockchainEventsResource,
     TokenRaidenEventsResource,
-<<<<<<< HEAD
     ChannelRaidenEventsResource,
     ChannelBlockchainEventsResource,
-=======
-    ChannelEventsResource,
     ConnectionsResource,
->>>>>>> 21ac6824... Changed token network event api
     ConnectionsInfoResource,
-    ConnectionsResource,
     PaymentResource,
 )
 from raiden.transfer import channel, views
@@ -105,7 +100,6 @@ URLS_V1 = [
     ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
     ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
     ('/events/network', NetworkEventsResource),
-<<<<<<< HEAD
     ('/blockchain_events/tokens/<hexaddress:token_address>', TokenBlockchainEventsResource),
     (
         '/blockchain_events/payment_networks/<hexaddress:token_address>/channels/',
@@ -117,10 +111,6 @@ URLS_V1 = [
         ChannelBlockchainEventsResource,
     ),
     ('/raiden_events/tokens/<hexaddress:token_address>', TokenRaidenEventsResource),
-=======
-    ('/events/tokens/blockchain/<hexaddress:token_address>', TokenBlockchainEventsResource),
-    ('/events/tokens/raiden/<hexaddress:token_address>', TokenRaidenEventsResource),
->>>>>>> 21ac6824... Changed token network event api
     (
         '/raiden_events/networks/<hexaddress:token_address>/channels/',
         ChannelRaidenEventsResource,
@@ -212,6 +202,8 @@ def normalize_events_list(old_list):
         if new_event.get('args'):
             new_event['args'] = dict(new_event['args'])
             encode_byte_values(new_event['args'])
+        if new_event.get('queue_identifier'):
+            del new_event['queue_identifier']
 
         # the events contain HexBytes values, convert those to strings
         hexbytes_to_str(new_event)
