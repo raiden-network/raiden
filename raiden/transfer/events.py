@@ -68,16 +68,14 @@ class ContractSendChannelSettle(ContractSendEvent):
         if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
             raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
 
-        if our_balance_proof and not isinstance(
-            our_balance_proof,
-            (BalanceProofUnsignedState, BalanceProofSignedState),
-        ):
+        if our_balance_proof and not isinstance(our_balance_proof, BalanceProofUnsignedState):
             raise ValueError('our_balance_proof must be a BalanceProofSignedState instance')
 
-        if partner_balance_proof and not isinstance(
-            partner_balance_proof,
-            (BalanceProofUnsignedState, BalanceProofSignedState),
-        ):
+        is_valid_partner_bp = (
+            partner_balance_proof and
+            not isinstance(partner_balance_proof, BalanceProofSignedState)
+        )
+        if is_valid_partner_bp:
             raise ValueError('partner_balance_proof must be a BalanceProofSignedState instance')
 
         self.channel_identifier = channel_identifier
@@ -142,7 +140,11 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         self.merkle_treee_leaves = merkle_treee_leaves
 
     def __repr__(self):
-        return '<ContractSendChannelBatchUnlock channel:{} merkle_treee_leaves:{}>'.format(
+        return (
+            '<ContractSendChannelBatchUnlock '
+            'token_network_id:{} channel:{} merkle_treee_leaves:{}'
+            '>'
+        ).format(
             pex(self.token_network_identifier),
             self.channel_identifier,
             self.merkle_treee_leaves,
