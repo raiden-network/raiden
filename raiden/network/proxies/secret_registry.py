@@ -20,6 +20,7 @@ from raiden.exceptions import (
     ContractVersionMismatch,
     InvalidAddress,
     TransactionThrew,
+    SecretAlreadyRegistered,
 )
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
@@ -84,11 +85,8 @@ class SecretRegistry:
                     secret_batch.append(secret)
                     self.open_secret_transactions[secret] = secret_registry_transaction
             else:
-                log.info(
-                    'secret already registered',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    secrethash=encode_hex(secrethash),
+                raise SecretAlreadyRegistered(
+                    f'secret {encode_hex(secrethash)} already registered.',
                 )
 
         if not secret_batch:
