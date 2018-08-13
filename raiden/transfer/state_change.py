@@ -652,6 +652,38 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return not self.__eq__(other)
 
 
+class ContractReceiveRouteClosed(ContractReceiveStateChange):
+    """ A channel was closed and this node is NOT a participant. """
+
+    def __init__(
+            self,
+            transaction_from: typing.Address,
+            token_network_identifier: typing.TokenNetworkID,
+            channel_identifier: typing.ChannelID,
+    ):
+        super().__init__(transaction_from)
+
+        self.token_network_identifier = token_network_identifier
+        self.channel_identifier = channel_identifier
+
+    def __repr__(self):
+        return '<ContractReceiveRouteClosed token_network:{} id:{}>'.format(
+            pex(self.token_network_identifier),
+            self.channel_identifier,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveRouteClosed) and
+            self.transaction_from == other.transaction_from and
+            self.token_network_identifier == other.token_network_identifier and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __init__(
             self,
