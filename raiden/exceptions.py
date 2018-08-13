@@ -5,6 +5,14 @@ class RaidenError(Exception):
     pass
 
 
+class RaidenRecoverableError(RaidenError):
+    pass
+
+
+class RaidenUnrecoverableError(RaidenError):
+    pass
+
+
 # Exceptions raised due to programming errors
 
 class HashLengthNot32(RaidenError):
