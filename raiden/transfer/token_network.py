@@ -69,7 +69,7 @@ def handle_channelnew(token_network_state, state_change):
     events = list()
 
     channel_state = state_change.channel_state
-    channel_id = channel_state.identifier
+    channel_identifier = channel_state.identifier
     our_address = channel_state.our_state.address
     partner_address = channel_state.partner_state.address
 
@@ -77,15 +77,18 @@ def handle_channelnew(token_network_state, state_change):
         our_address,
         partner_address,
     )
+    token_network_state.network_graph.channel_identifier_to_participants[
+        state_change.channel_identifier
+    ] = (our_address, partner_address)
 
     # Ignore duplicated channelnew events. For this to work properly on channel
     # reopens the blockchain events ChannelSettled and ChannelOpened must be
     # processed in correct order, this should be guaranteed by the filters in
     # the ethereum node
-    if channel_id not in token_network_state.channelidentifiers_to_channels:
-        token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
+    if channel_identifier not in token_network_state.channelidentifiers_to_channels:
+        token_network_state.channelidentifiers_to_channels[channel_identifier] = channel_state
         partneraddresses_to_channels = token_network_state.partneraddresses_to_channels
-        partneraddresses_to_channels[partner_address][channel_id] = channel_state
+        partneraddresses_to_channels[partner_address][channel_identifier] = channel_state
 
     return TransitionResult(token_network_state, events)
 
@@ -110,6 +113,7 @@ def handle_closed(
         pseudo_random_generator,
         block_number,
 ):
+    # remove from token:network route state
     return subdispatch_to_channel_by_id(
         token_network_state,
         state_change,
@@ -186,6 +190,9 @@ def handle_newroute(token_network_state, state_change):
         state_change.participant1,
         state_change.participant2,
     )
+    token_network_state.network_graph.channel_identifier_to_participants[
+        state_change.channel_identifier
+    ] = (state_change.participant1, state_change.participant2)
 
     return TransitionResult(token_network_state, events)
 
