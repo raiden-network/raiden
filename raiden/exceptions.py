@@ -138,15 +138,6 @@ class AddressWrongContract(RaidenError):
     pass
 
 
-class DuplicatedChannelError(RaidenRecoverableError):
-    """Raised if someone tries to create a channel that already exists."""
-
-
-class ChannelIncorrectStateError(RaidenRecoverableError):
-    """Raised if someone tries to perform an operation on a channel that
-    is in an incompatible state."""
-
-
 class ContractVersionMismatch(RaidenError):
     """Raised if deployed version of the contract differs."""
 

@@ -24,7 +24,7 @@ from raiden.exceptions import (
     AddressWrongContract,
     InvalidAddress,
     ContractVersionMismatch,
-    TokenAlreadyRegistered,
+    RaidenRecoverableError,
 )
 from raiden.utils import (
     pex,
@@ -114,7 +114,8 @@ class TokenNetworkRegistry:
                 token_address=pex(token_address),
                 registry_address=pex(self.address),
             )
-            raise TokenAlreadyRegistered()
+            raise RaidenRecoverableError('Token already registered')
+
         token_network_address = self.get_token_network(token_address)
 
         if token_network_address is None:
