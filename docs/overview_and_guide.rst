@@ -5,7 +5,7 @@ System Requirements and Installation Guide
 
 Introduction
 ============
-Raiden is a payment channel implementation which provides scalable, low latency, and cheap token transfers for Ethereum.
+Raiden is a payment channel implementation which provides scalable, low latency, and cheap token payments for Ethereum.
 
 .. _binary_releases:
 
