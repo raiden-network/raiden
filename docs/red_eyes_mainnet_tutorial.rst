@@ -8,7 +8,7 @@ Introduction
 =============
 In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the Red Eyes (LINK TO RELEASE) release. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a bug bounty release(LINK TO BLOGPOST), certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
 
-Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version. (TODO: this part might be superfluous)
+Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
 Before getting started with this tutorial, please see the :doc:`Installation Guide <overview_and_guide>`, to make sure that Raiden is correctly installed and running.
 
@@ -16,82 +16,93 @@ Before getting started with this tutorial, please see the :doc:`Installation Gui
 
 Joining a token network
 ==============================
-The first thing we need to do is to join a token network. In this case we want to join the Raiden token (`RDN <https://etherscan.io/token/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6>`_) network.
+The first thing we need to do is to join a token network. In this case we want to join the Raiden token (`RDN <https://etherscan.io/token/0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6>`_) network.
 
 *Note*: 1 RDN == 2**18 Rei. For the sake of readability and simplicity all token values in this tutorial are denominated in Rei and not RDN.
 
-In order to do so, we need the address of the token and the initial amount of tokens that we want to join the network with::
+In order to do so, we need the address of the token and the initial amount of tokens that we want to join the network with:
 
-    PUT /api/v2/connections/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6
+.. http:example:: curl wget httpie python-requests
 
-TODO: check correctness of API
-With the payload::
+    PUT /api/1/connections/0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6 HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
     {
         "funds": 20000
     }
 
-This automatically connects our node to 3(TODO) other nodes in the network with 20000 / 5 Rei tokens in each channel.
+This automatically connects our node to 3 other nodes in the network with 20000 / 5 Rei tokens in each channel.
 
 We're now ready to start sending RDN tokens using the Raiden Network.
 
-In case we know of a specific address in the network that we will do frequent transfers with, we can open a channel directly to this address by doing the following::
+In case we know of a specific address in the network that we will do frequent payments to, we can open a channel directly to this address by doing the following:
 
-    PUT /api/v2/channels
+.. http:example:: curl wget httpie python-requests
 
-With the payload::
+   PUT /api/1/channels HTTP/1.1
+   Host: localhost:5001
+   Content-Type: application/json
 
-    {
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-        "token_address": "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6",
-        "balance": 2000,
-        "settle_timeout": 60
-    }
-TODO: Update to have correct values
+   {
+       "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+       "token_address": "0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6",
+       "balance": 2000,
+       "settle_timeout": 600
+   }
 
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <topping-up-a-channel>` to a channel if need be.
 
-Successfully opening a channel returns the following information::
+Successfully opening a channel returns the following information:
 
-    {
-        "channel_identifier": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-        "balance": 2000,
-        "state": "opened",
-        "settle_timeout": 60
-    }
+.. sourcecode:: http
 
-TODO: check correctness
+   HTTP/1.1 201 CREATED
+   Content-Type: application/json
+
+   {
+       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+       "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+       "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+       "token_address": "0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6",
+       "balance": 2000,
+       "state": "opened",
+       "settle_timeout": 600,
+       "reveal_timeout": 10
+   }
+TODO: update token_network_identifier once it's known
 
 .. _doing-payments:
 
 Payments
 ========
-Now that we have joined a token network, we can start making payments. For this, we need the address of the RDN token and the address of the recipient of the payment::
+Now that we have joined a token network, we can start making payments. For this, we need the address of the RDN token and the address of the recipient of the payment:
 
-    POST /api/v2/transfers/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61c808d82a3ac53231750dadc13c777b59310bd9
+.. http:example:: curl wget httpie python-requests
 
-In the payload we specify the amount of Rei of the payment::
+    POST /api/1/payments/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
     {
         "amount": 42
     }
-TODO: Check for correctness.
 
-In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. If we specify an address that we do not have a direct channel with, the Raiden Network finds a path to the target address and use mediated transfers to make a payment from our address to the target address.
+In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. If we specify an address that we do not have a direct channel with, the Raiden Network finds a path to the target address and use mediated transfers to make a payment from our address to the target address.
 
-It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the transfer. The third call to open a direct channel is optional.
+It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the payment. The third call to open a direct channel is optional.
 
-Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A``, who is also part of the RDN token network. Even though we do not have a channel with this person it is as easy as above to send a payment. All we need is the address::
+Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A``, who is also part of the RDN token network. Even though we do not have a channel with this person it is as easy as above to send a payment. All we need is the address:
 
-    POST /api/v2/transfers/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A
+.. http:example:: curl wget httpie python-requests
 
-With the payload of the amount of Rei tokens we want to pay::
+    POST /api/1/payments/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
     {
         "amount": 73
     }
-TODO: Check for correctness.
 
 Just like this we can send payments to anyone who is part of the token network for the RDN token.
 
@@ -99,16 +110,17 @@ Just like this we can send payments to anyone who is part of the token network f
 
 Depositing tokens
 =================
-If we are spending more tokens than we are receiving and hence depleting our channels, it it possible to "top up" channels. For this we need the channel identifier of the channel we want to top up::
+If we are spending more tokens than we are receiving and hence depleting our channels, it it possible to "top up" channels. For this we need the token address and the partner address:
 
-    PATCH /api/v2/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+.. http:example:: curl wget httpie python-requests
 
-with the payload::
+   PATCH /api/1/channels/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   Host: localhost:5001
+   Content-Type: application/json
 
-    {
+   {
         "total_deposit": 4000
-    }
-TODO: Check for correctness
+   }
 
 Notice that we need to specify the total deposit, not the amount we wish to top up: We initially deposited 2000 tokens and want to add 2000 more, so we give a ``total_deposit`` of 4000. This way the top-up request is idempotent - if it is sent repeatedly (by accident or as part of an attack) it will have no further effect.
 
@@ -116,20 +128,31 @@ Notice that we need to specify the total deposit, not the amount we wish to top 
 
 Channel status
 ==============
-We can at any point in time see things like how many tokens we have spent in a specific channel and how many tokens we have received. We do this by querying the status of a specific channel by it ``channel_identifier``::
+We can at any point in time see things like how many tokens we have spent in a specific channel and how many tokens we have received. We do this by querying the status of a specific channel by it's ``channel_identifier``:
 
-    GET /api/v2/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+.. http:example:: curl wget httpie python-requests
+
+    GET /api/1/channels/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    Host: localhost:5001
+    Content-Type: application/json
 
 This returns the following JSON response::
 
-    {
-        "channel_identifier": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-        "balance": 3958,
-        "state": "opened",
-        "settle_timeout": 60
-    }
-TODO: Check correctness
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6",
+          "balance": 3958,
+          "state": "open",
+          "settle_timeout": 600,
+          "reveal_timeout": 30
+      }
 
 We can see that the current balance of the channel is ``3958`` which matches with the two deposits and one payment we've made ``2000 + 2000 - 42``.
 
