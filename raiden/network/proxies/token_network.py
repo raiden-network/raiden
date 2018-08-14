@@ -875,7 +875,7 @@ class TokenNetwork:
 
             if channel_settled is False:
                 log.critical('unlock failed. Channel is not in a settled state', **log_details)
-                raise RaidenRecoverableError(
+                raise RaidenUnrecoverableError(
                     'Channel is not in a settled state. An unlock cannot be made',
                 )
 
@@ -981,6 +981,16 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(
                         'Channel is already unlocked. It cannot be settled',
                     )
+                elif channel_state == ChannelState.OPENED:
+                    log.info('settle failed, channel is still open', **log_details)
+                    raise RaidenUnrecoverableError(
+                        'Channel is still open. It cannot be settled',
+                    )
+                elif channel_state == ChannelState.CLOSED:
+                    if channel_state.settle_block_number < self.client.block_number():
+                        raise RaidenUnrecoverableError(
+                            'Channel cannot be settled before settlement window is over',
+                        )
 
                 log.info('settle failed', **log_details)
                 raise TransactionThrew('Settle', receipt_or_none)
@@ -1102,3 +1112,12 @@ class TokenNetwork:
             raise ValueError('channel state must be of type ChannelState')
 
         return channel_data.state
+
+    def _assert_larger_nonce(self, participant1, participant2, channel_identifier, nonce):
+        participant_details = self.detail_participants(
+            participant1,
+            participant2,
+            channel_identifier,
+        )
+        if nonce <= participant_details.partner_details.nonce:
+            raise RaidenUnrecoverableError('Nonce decreased and therefore considered invalid')
