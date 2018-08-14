@@ -1,8 +1,10 @@
-from eth_utils import keccak
-from raiden.tests.utils import get_random_bytes
+import gevent
 import pytest
 import types
-import gevent
+from eth_utils import keccak
+
+from raiden.exceptions import RaidenRecoverableError
+from raiden.tests.utils import get_random_bytes
 from raiden.network.proxies import SecretRegistry
 
 
@@ -57,7 +59,10 @@ def secret_registry_proxy_patched(secret_registry_proxy):
         for secret in secrets:
             assert secret not in self.trigger
             self.trigger[secret] = True
-        return _register_secret_batch(secrets)
+        try:
+            return _register_secret_batch(secrets)
+        except RaidenRecoverableError:
+            pass
 
     secret_registry_patched._register_secret_batch = types.MethodType(
         register_secret_batch_patched,
