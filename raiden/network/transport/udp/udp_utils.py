@@ -5,7 +5,6 @@ from gevent.event import (
     _AbstractLinkable,
     Event,
 )
-from raiden.utils.gevent_utils import RaidenGreenletEvent
 from raiden.utils import typing
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
@@ -17,13 +16,13 @@ def event_first_of(*events: _AbstractLinkable) -> Event:
     The event returned is /not/ cleared with any of the `events`, this value
     must not be reused if the clearing behavior is used.
     """
-    first_finished = RaidenGreenletEvent()
+    first_finished = Event()
 
     if not all(isinstance(e, _AbstractLinkable) for e in events):
         raise ValueError('all events must be linkable')
 
     for event in events:
-        event.rawlink_safe(lambda _: first_finished.set())
+        event.rawlink(lambda _: first_finished.set())
 
     return first_finished
 

@@ -26,13 +26,10 @@ from raiden.settings import (
     INITIAL_PORT,
 )
 from raiden.utils import pex
-from raiden.utils.gevent_utils import configure_gevent
 from raiden.utils import typing
 
 
 log = structlog.get_logger(__name__)
-
-configure_gevent()
 
 
 class App:  # pylint: disable=too-few-public-methods

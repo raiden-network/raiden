@@ -76,7 +76,6 @@ from raiden.utils.typing import (
     Type,
     Iterable,
 )
-from raiden.utils.gevent_utils import RaidenAsyncResult
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
@@ -200,7 +199,6 @@ class MatrixTransport:
 
         # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
-        self._client.sync_thread.link_exception_safe(self._client_exception_handler)
 
         # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
@@ -253,7 +251,7 @@ class MatrixTransport:
             )
 
         message_id = message.message_identifier
-        async_result = RaidenAsyncResult()
+        async_result = AsyncResult()
         if isinstance(message, Processed):
             async_result.set(True)  # processed messages shouldn't get a Delivered reply
             self._send_immediate(receiver_address, json.dumps(message.to_dict()))
@@ -844,18 +842,6 @@ class MatrixTransport:
             rtt=rtt,
         )
         return best_server
-
-    def _client_exception_handler(self, greenlet):
-        self._running = False
-        try:
-            greenlet.get()
-        except MatrixError as ex:
-            gevent.get_hub().handle_system_error(
-                TransportError,
-                TransportError(
-                    f'Unexpected error while communicating with Matrix homeserver: {ex}',
-                ),
-            )
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """

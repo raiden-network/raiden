@@ -3,6 +3,7 @@ import random
 import copy
 
 import gevent
+from gevent.event import Event
 from gevent.queue import Queue
 from gevent.lock import BoundedSemaphore
 from gevent.timeout import Timeout
@@ -14,7 +15,6 @@ from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import pex
-from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 
 log = structlog.get_logger(__name__)
@@ -27,7 +27,7 @@ class EchoNode:
 
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
-        self.ready = RaidenGreenletEvent()
+        self.ready = Event()
 
         self.api = api
         self.token_address = token_address

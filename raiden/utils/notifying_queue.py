@@ -1,8 +1,8 @@
+from gevent.event import Event
 from gevent.queue import Queue
-from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 
-class NotifyingQueue(RaidenGreenletEvent):
+class NotifyingQueue(Event):
     def __init__(self, maxsize=None, items=()):
         super().__init__()
         self._queue = Queue(maxsize, items)

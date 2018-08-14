@@ -1,6 +1,7 @@
 from binascii import unhexlify
 
 import gevent
+from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 from random import shuffle
 
@@ -18,7 +19,6 @@ from raiden.exceptions import (
 )
 from raiden.transfer import views
 from raiden.utils.typing import Address
-from raiden.utils.gevent_utils import RaidenAsyncResult
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -147,8 +147,8 @@ class ConnectionManager:
 
     def leave_async(self):
         """ Async version of `leave()` """
-        leave_result = RaidenAsyncResult()
-        gevent.spawn(self.leave).link_safe(leave_result)
+        leave_result = AsyncResult()
+        gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
     def leave(self, registry_address):
