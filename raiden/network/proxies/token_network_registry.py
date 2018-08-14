@@ -25,6 +25,7 @@ from raiden.exceptions import (
     InvalidAddress,
     ContractVersionMismatch,
     RaidenRecoverableError,
+    TransactionThrew,
 )
 from raiden.utils import (
     pex,
@@ -114,7 +115,9 @@ class TokenNetworkRegistry:
                 token_address=pex(token_address),
                 registry_address=pex(self.address),
             )
-            raise RaidenRecoverableError('Token already registered')
+            if self.get_token_network(token_address):
+                raise RaidenRecoverableError('Token already registered')
+            raise TransactionThrew('createERC20TokenNetwork', receipt_or_none)
 
         token_network_address = self.get_token_network(token_address)
 

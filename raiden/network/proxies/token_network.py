@@ -610,27 +610,12 @@ class TokenNetwork:
 
                 log.critical(log_msg, **log_details)
 
-                channel_state = self._get_channel_state(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
+                self._check_channel_state_for_deposit(
+                    self.node_address,
+                    partner,
+                    channel_identifier,
                 )
-                # Check if deposit is being mode on a nonexistent channel
-                if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-                    raise RaidenUnrecoverableError(
-                        f'Channel between participant {self.node_address} '
-                        f'and {partner} does not exist',
-                    )
-                # Deposit was prohibited because the channel is settled
-                elif channel_state == ChannelState.SETTLED:
-                    raise RaidenUnrecoverableError(
-                        'Channel is not in an settled state',
-                    )
-                # Deposit was prohibited because the channel is closed
-                elif channel_state == ChannelState.CLOSED:
-                    raise RaidenRecoverableError(
-                        'Channel is not in an open state',
-                    )
+
                 raise TransactionThrew('Deposit', receipt_or_none)
 
             log.info('deposit successful', **log_details)
@@ -669,10 +654,11 @@ class TokenNetwork:
             channel_identifier,
         )
 
-        if not self.channel_is_opened(self.node_address, partner, channel_identifier):
-            raise RaidenUnrecoverableError(
-                'Channel is not in an opened state. It cannot be closed.',
-            )
+        self._check_channel_state_for_close(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
 
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
@@ -689,27 +675,13 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical('close failed', **log_details)
-                channel_state = self._get_channel_state(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
+
+                self._check_channel_state_for_close(
+                    self.node_address,
+                    partner,
+                    channel_identifier,
                 )
 
-                if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-                    raise RaidenUnrecoverableError(
-                        f'Channel between participant {self.node_address} '
-                        f'and {partner} does not exist',
-                    )
-                # Deposit was prohibited because the channel is settled
-                elif channel_state == ChannelState.SETTLED:
-                    raise RaidenUnrecoverableError(
-                        'Channel is not in an settled state',
-                    )
-                # Deposit was prohibited because the channel is closed
-                elif channel_state == ChannelState.CLOSED:
-                    raise RaidenRecoverableError(
-                        'Channel is not in an open state',
-                    )
                 raise TransactionThrew('Close', receipt_or_none)
 
             log.info('close successful', **log_details)
@@ -809,27 +781,13 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical('withdraw failed', **log_details)
-                channel_state = self._get_channel_state(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
+
+                self._check_channel_state_for_withdraw(
+                    self.node_address,
+                    partner,
+                    channel_identifier,
                 )
 
-                if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-                    raise RaidenUnrecoverableError(
-                        f'Channel between participant {self.node_address} '
-                        f'and {partner} does not exist',
-                    )
-                # Deposit was prohibited because the channel is settled
-                elif channel_state == ChannelState.SETTLED:
-                    raise RaidenUnrecoverableError(
-                        'Channel is not in an settled state',
-                    )
-                # Deposit was prohibited because the channel is closed
-                elif channel_state == ChannelState.CLOSED:
-                    raise RaidenRecoverableError(
-                        'Channel is not in an open state',
-                    )
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
             log.info('withdraw successful', **log_details)
@@ -966,33 +924,12 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                channel_state = self._get_channel_state(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
-                )
-                if channel_state == ChannelState.SETTLED:
-                    log.info('settle failed, channel is not closed', **log_details)
-                    raise RaidenRecoverableError(
-                        'Channel is not in a closed state. It cannot be settled',
-                    )
-                elif channel_state == ChannelState.REMOVED:
-                    log.info('settle failed, channel is already unlocked', **log_details)
-                    raise RaidenUnrecoverableError(
-                        'Channel is already unlocked. It cannot be settled',
-                    )
-                elif channel_state == ChannelState.OPENED:
-                    log.info('settle failed, channel is still open', **log_details)
-                    raise RaidenUnrecoverableError(
-                        'Channel is still open. It cannot be settled',
-                    )
-                elif channel_state == ChannelState.CLOSED:
-                    if channel_state.settle_block_number < self.client.block_number():
-                        raise RaidenUnrecoverableError(
-                            'Channel cannot be settled before settlement window is over',
-                        )
-
                 log.info('settle failed', **log_details)
+                self._check_channel_state_for_settle(
+                    self.node_address,
+                    partner,
+                    channel_identifier,
+                )
                 raise TransactionThrew('Settle', receipt_or_none)
 
             log.info('settle successful', **log_details)
@@ -1121,3 +1058,96 @@ class TokenNetwork:
         )
         if nonce <= participant_details.partner_details.nonce:
             raise RaidenUnrecoverableError('Nonce decreased and therefore considered invalid')
+
+    def _check_channel_state_for_close(self, participant1, participant2, channel_identifier):
+        channel_state = self._get_channel_state(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
+
+        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+            raise RaidenUnrecoverableError(
+                f'Channel between participant {participant1} '
+                f'and {participant2} does not exist',
+            )
+        # Deposit was prohibited because the channel is settled
+        elif channel_state == ChannelState.SETTLED:
+            raise RaidenUnrecoverableError(
+                'Channel is not in an settled state',
+            )
+        # Deposit was prohibited because the channel is closed
+        elif channel_state == ChannelState.CLOSED:
+            raise RaidenRecoverableError(
+                'Channel is not in an open state',
+            )
+
+    def _check_channel_state_for_deposit(self, participant1, participant2, channel_identifier):
+        channel_state = self._get_channel_state(
+            participant1=self.node_address,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
+        # Check if deposit is being mode on a nonexistent channel
+        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+            raise RaidenUnrecoverableError(
+                f'Channel between participant {participant1} '
+                f'and {participant2} does not exist',
+            )
+        # Deposit was prohibited because the channel is settled
+        elif channel_state == ChannelState.SETTLED:
+            raise RaidenUnrecoverableError(
+                'Channel is not in an settled state',
+            )
+        # Deposit was prohibited because the channel is closed
+        elif channel_state == ChannelState.CLOSED:
+            raise RaidenRecoverableError(
+                'Channel is not in an open state',
+            )
+
+    def _check_channel_state_for_withdraw(self, participant1, participant2, channel_identifier):
+        channel_state = self._get_channel_state(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
+
+        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+            raise RaidenUnrecoverableError(
+                f'Channel between participant {participant1} '
+                f'and {participant2} does not exist',
+            )
+        # Deposit was prohibited because the channel is settled
+        elif channel_state == ChannelState.SETTLED:
+            raise RaidenUnrecoverableError(
+                'Channel is not in an settled state',
+            )
+        # Deposit was prohibited because the channel is closed
+        elif channel_state == ChannelState.CLOSED:
+            raise RaidenRecoverableError(
+                'Channel is not in an open state',
+            )
+
+    def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
+        channel_state = self._get_channel_state(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
+        if channel_state == ChannelState.SETTLED:
+            raise RaidenRecoverableError(
+                'Channel is not in a closed state. It cannot be settled',
+            )
+        elif channel_state == ChannelState.REMOVED:
+            raise RaidenUnrecoverableError(
+                'Channel is already unlocked. It cannot be settled',
+            )
+        elif channel_state == ChannelState.OPENED:
+            raise RaidenUnrecoverableError(
+                'Channel is still open. It cannot be settled',
+            )
+        elif channel_state == ChannelState.CLOSED:
+            if channel_state.settle_block_number < self.client.block_number():
+                raise RaidenUnrecoverableError(
+                    'Channel cannot be settled before settlement window is over',
+                )
