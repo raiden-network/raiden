@@ -29,7 +29,6 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     InvalidAddress,
     InvalidSettleTimeout,
-    NonSettledChannelExists,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
@@ -187,7 +186,7 @@ class TokenNetwork:
                 peer1=pex(self.node_address),
                 peer2=pex(partner),
             )
-            raise NonSettledChannelExists('creating new channel failed')
+            raise RaidenUnrecoverableError('creating new channel failed')
 
         channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
 
@@ -649,7 +648,8 @@ class TokenNetwork:
 
         Raises:
             ChannelBusyError: If the channel is busy with another operation.
-            ChannelIncorrectStateError: If the channel is not in the open state.
+            RaidenRecoverableError: If the channel is already closed.
+            RaidenUnrecoverableError: If the channel does not exist or is settled.
         """
 
         log_details = {

@@ -18,8 +18,9 @@ from raiden.exceptions import (
     SamePeerAddress,
     DuplicatedChannelError,
     TransactionThrew,
-    ChannelIncorrectStateError,
     DepositMismatch,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
 )
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
@@ -204,7 +205,7 @@ def test_token_network_proxy_basics(
         channel_identifier=channel_identifier,
     ) is True
     # closing already closed channel
-    with pytest.raises(ChannelIncorrectStateError):
+    with pytest.raises(RaidenRecoverableError):
         c2_token_network_proxy.close(
             channel_identifier=channel_identifier,
             partner=c1_client.sender,
@@ -217,7 +218,7 @@ def test_token_network_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # try to settle using incorrect data
-    with pytest.raises(ChannelIncorrectStateError):
+    with pytest.raises(RaidenUnrecoverableError):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=1,
@@ -359,7 +360,7 @@ def test_token_network_proxy_update_transfer(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # settling with an invalid amount
-    with pytest.raises(ChannelIncorrectStateError):
+    with pytest.raises(RaidenUnrecoverableError):
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,

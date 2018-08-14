@@ -1,8 +1,10 @@
 import structlog
 
 from raiden.exceptions import (
-    ChannelIncorrectStateError,
     ChannelOutdatedError,
+    RaidenError,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
 )
 from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
@@ -18,10 +20,6 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     SendDirectTransfer,
     SendProcessed,
-)
-from raiden.exceptions import (
-    RaidenRecoverableError,
-    RaidenUnrecoverableError,
 )
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
@@ -208,19 +206,7 @@ def handle_contract_send_channelclose(
             message_hash,
             signature,
         )
-    except ChannelIncorrectStateError:
-        # This may happen for two reasons:
-        # - The channel was also closed by the partner and this transaction
-        # lost the race
-        # - The ActionCloseChannel was processed in a previous run, and the the
-        # node was restarted, so the channel is already closed but the
-        # blockchain event to update the local state was not processed yet
-        msg = 'Channel with {partner_address} for token {token_address} is already closed'.format(
-            partner_address=pex(channel_proxy.participant2),
-            token_address=pex(channel_proxy.token_address()),
-        )
-        log.info(msg)
-    except ChannelOutdatedError as e:
+    except RaidenError as e:
         log.error(str(e))
 
 
@@ -325,12 +311,7 @@ def handle_contract_send_channelsettle(
             second_locked_amount,
             second_locksroot,
         )
-    except ChannelIncorrectStateError as e:
-        # Ignoring the exception as there might
-        # be a race condition when both nodes try to settle
-        # at the same time.
-        log.error('settle failed', reason=str(e))
-    except ChannelOutdatedError as e:
+    except RaidenError as e:
         log.error(str(e))
 
 
