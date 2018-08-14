@@ -32,7 +32,6 @@ def skip_if_not_udp(request):
 
 @pytest.fixture
 def local_matrix_server(transport_config):
-
     if not transport_config.protocol == TransportProtocol.MATRIX:
         yield None
         return
@@ -45,14 +44,11 @@ def local_matrix_server(transport_config):
         return
 
     # otherwise, run our own local server
-    matrix = HTTPExecutor(
+    with HTTPExecutor(
         transport_config.parameters.command,
         url=urljoin(server, '/_matrix/client/versions'),
         method='GET',
         timeout=30,
         shell=True,
-    )
-
-    matrix.start()
-    yield server
-    matrix.stop()
+    ):
+        yield server
