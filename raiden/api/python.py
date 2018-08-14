@@ -37,7 +37,6 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.gas_reserve import has_enough_gas_reserve
-from raiden.api.rest import hexbytes_to_str, encode_byte_values
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -771,8 +770,6 @@ class RaidenAPI:
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
-
-    # TODO: change the implementation
     def get_channel_events_raiden(
             self,
             token_address: typing.TokenAddress,
@@ -815,7 +812,6 @@ class RaidenAPI:
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
-    # TODO: has to be checked
     def get_token_network_events_blockchain(
             self,
             token_address: typing.TokenAddress,
@@ -847,10 +843,6 @@ class RaidenAPI:
             if event.get('args'):
                 event['args'] = dict(event['args'])
 
-                # the channel_identifier is a hash
-                encode_byte_values(event['args'])
-
-            hexbytes_to_str(event)
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
@@ -880,11 +872,10 @@ class RaidenAPI:
             if hasattr(event, 'transfer'):
                 if event.transfer.token == token_address:
                     event.transfer = repr(event.transfer)
-                    new_event.update(event.__dict__)
             elif hasattr(event, 'token'):
                 if event.token == token_address:
                     event.balance_proof = repr(event.balance_proof)
-                    new_event.update(event.__dict__)
+            new_event.update(event.__dict__)
             returned_events.append(new_event)
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events

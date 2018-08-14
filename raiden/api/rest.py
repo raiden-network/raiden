@@ -202,6 +202,8 @@ def normalize_events_list(old_list):
         if new_event.get('args'):
             new_event['args'] = dict(new_event['args'])
             encode_byte_values(new_event['args'])
+
+        # remove the queue identifier
         if new_event.get('queue_identifier'):
             del new_event['queue_identifier']
 

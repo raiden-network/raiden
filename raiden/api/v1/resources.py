@@ -117,22 +117,7 @@ class TokenBlockchainEventsResource(BaseResource):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
 
-        return self.rest_api.raiden_api.get_token_network_events_blockchain(
-            token_address=token_address,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-
-class TokenRaidenEventsResource(BaseResource):
-
-    get_schema = EventRequestSchema()
-
-    @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address, from_block, to_block):
-        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or 'latest'
-        return self.rest_api.raiden_api.get_token_network_events_raiden(
+        return self.rest_api.get_token_network_events_blockchain(
             token_address=token_address,
             from_block=from_block,
             to_block=to_block,

@@ -1153,6 +1153,19 @@ def test_token_events_errors_for_unregistered_token(api_backend):
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
 
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'channelblockchaineventsresource',
+            token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
+            partner_address='0x61C808D82A3Ac53231750daDc13c777b59313bD9',
+            from_block=5,
+            to_block=20,
+        ),
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
+
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -1300,7 +1313,6 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     assert response[0]['event'] == 'EventPaymentSentSuccess'
 
 
-
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
     _, app1 = raiden_network
@@ -1335,6 +1347,32 @@ def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
         json={'amount': amount, 'identifier': identifier},
     )
     request.send()
+
+    # testing the raiden events endpoint
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'tokenraideneventsresource',
+            token_address=token_address,
+            from_block=0,
+        ),
+    )
+
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+
+    response = response.json()
+    assert len(response) > 0
+
+    events_list = []
+    for event in response:
+        # taking the name of the event
+        events_list.append(event['event'])
+
+    assert 'SendLockedTransfer' in events_list
+    assert 'EventPaymentSentSuccess' in events_list
+    assert 'SendRevealSecret' in events_list
+    assert 'SendBalanceProof' in events_list
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
