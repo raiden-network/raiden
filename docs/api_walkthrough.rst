@@ -75,7 +75,7 @@ If successful this call returns the address of the freshly created Token Network
         "token_network_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"
     }
 
-The token is now registered. However, since the token was just registered, there are no other Raiden nodes connected to the token network. This means that there are no nodes to connect to. Due to this the token network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done by opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
+The token is now registered. However, since the token was just registered, there are no other Raiden nodes connected to the token network. This means that there are no nodes to connect to. Due to this the token network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known or it's simply desired to pay some tokens to another Raiden node in a one-way-channel, it can be done by opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
 
 .. _opening-a-channel:
@@ -148,7 +148,7 @@ This returns a list of events that has happened in the specific payment channel.
     {
         "amount": 682,
         "block_number": 3663408,
-        "event": "EventTransferSentSuccess",
+        "event": "EventPaymentSentSuccess",
         "identifier": 1531927405484,
         "target": "0x25511699C252eeA2678266857C98F459Df97B77c"
     },
@@ -296,7 +296,7 @@ Settle
 ------
 Once ``close`` has been called, the settle timeout period starts. The channel is automatically settled as soon as it is over.
 
-The balance of the channel is now ``0`` and the state ``"settled"``. This means that the net balances that the two parties participating in the channel owe each other has now been transferred on the blockchain. It also means that the life cycle of the payment channel has ended.
+The balance of the channel is now ``0`` and the state ``"settled"``. This means that the net balances that the two parties participating in the channel owe each other have now been transferred on the blockchain. It also means that the life cycle of the payment channel has ended.
 
 
 Interacting with the Raiden Echo Node
@@ -333,7 +333,7 @@ Then you can send a payment to it via the payments endpoint:
        "identifer": 42
    }
 
-Afterwards you can check your events and you should find an ``EventTransferReceivedSuccess`` event with::
+Afterwards you can check your events and you should find an ``EventPaymentReceivedSuccess`` event with::
 
     {
         "amount": 1,

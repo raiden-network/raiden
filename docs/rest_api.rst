@@ -481,8 +481,8 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
 
-Transfers
-=========
+Payments
+========
 
 .. http:post:: /api/(version)/payments/(token_address)/(target_address)
 
@@ -636,27 +636,32 @@ be rejected.
 
   .. sourcecode:: http
 
-     HTTP/1.1 200 OK
-     Content-Type: application/json
+    HTTP/1.1 200 OK
+    Content-Type: application/json
 
-     [
-         {
-             "event_type": "ChannelNewBalance",
-             "participant": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-             "balance": 150000,
-             "block_number": 54388
-         }, {
-             "event_type": "TransferUpdated",
-             "token_address": "0x91337A300e0361BDDb2e377DD4e88CCB7796663D",
-             "channel_manager_address": "0xC0ea08A2d404d3172d2AdD29A45be56dA40e2949"
-         }, {
-             "event_type": "EventPaymentSentSuccess",
-             "identifier": 14909067296492875713,
-             "block_number": 2226,
-             "amount": 7,
-             "target": "0xc7262f1447FCB2f75AB14B2A28DeEd6006eEA95B"
-         }
-     ]
+    [
+        {
+            "amount": 42,
+            "block_number": 3760179,
+            "event": "EventPaymentReceivedSuccess",
+            "identifier": 10358310507812090372,
+            "initiator": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
+        },
+        {
+            "amount": 1,
+            "block_number": 3760174,
+            "event": "EventPaymentSentSuccess",
+            "identifier": 1533231937481,
+            "target": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
+        },
+        {
+            "amount": 13,
+            "block_number": 3760173,
+            "event": "EventPaymentSentSuccess",
+            "identifier": 1533231931291,
+            "target": "0xEAe264f985CF80845A3efC20b53F915cf5D7C95D"
+        },
+    ]
 
   :statuscode 200: For successful query
   :statuscode 400: If the provided query string is malformed
