@@ -538,7 +538,8 @@ In Raiden we distinguish between two types of events: ``blockchain_events`` and 
 ``blockchain_events`` are events that are being emitted by the smart contracts.
 ``raiden_events`` are events happening in the Raiden nod. For now, it's being used for debugging purpose.
 
-**Be aware**: All raiden events endpoints might get removed in the future.
+.. NOTE::
+      All raiden events endpoints might get removed in the future.
 
 All events can be filtered down by providing the query string arguments ``from_block``
 and/or ``to_block`` to query only a events from a limited range of blocks. The block number
