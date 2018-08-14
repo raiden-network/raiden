@@ -201,7 +201,6 @@ class MatrixTransport:
         # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
         self._client.sync_thread.link_exception_safe(self._client_exception_handler)
-        self.greenlets.append(self._client.sync_thread)
 
         # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
@@ -266,19 +265,22 @@ class MatrixTransport:
         if not self._running:
             return
         self._running = False
-        self._client.set_presence_state(UserPresence.OFFLINE.value)
-        self._client.stop_listener_thread()
-        self._client.sync_thread = None
 
         # Set all the pending results to False, this will also
         # cause pending retries to be aborted
         for async_result in self._messageids_to_asyncresult.values():
             async_result.set(False)
+        gevent.wait(self.greenlets, timeout=self._logout_timeout)
 
         try:
-            self._client.join_and_logout(self.greenlets, timeout=self._logout_timeout)
-        except RuntimeError as error:
-            self.log.critical(str(error))
+            self._client.set_presence_state(UserPresence.OFFLINE.value)
+            with gevent.Timeout(self._logout_timeout, 'Logging out despite unjoined greenlets.'):
+                self._client.stop_listener_thread()
+        except gevent.Timeout as er:
+            self.log.warning('Matrix stop timeout', _error=er)
+        finally:
+            self._client.greenlets.clear()
+            self._client.logout()
 
     @property
     def _user_id(self) -> Optional[str]:
