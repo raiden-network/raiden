@@ -98,6 +98,9 @@ SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
 
+T_TransactionHash = bytes
+TransactionHash = NewType('TransactionHash', T_TransactionHash)
+
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
 

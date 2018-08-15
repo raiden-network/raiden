@@ -109,6 +109,10 @@ def make_payment_network_identifier():
     return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
 
 
+def make_transaction_hash():
+    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
+
+
 def make_privkey_address():
     private_key_bin = os.urandom(32)
     privkey = PrivateKey(private_key_bin)

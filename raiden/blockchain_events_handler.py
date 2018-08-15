@@ -49,11 +49,11 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
         token_address,
     )
 
-    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
-    assert from_address, 'A mined transaction must have the from field'
+    transaction_hash = event.event_data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     new_token_network = ContractReceiveNewTokenNetwork(
-        from_address,
+        transaction_hash,
         event.originating_contract,
         token_network_state,
     )
@@ -63,6 +63,8 @@ def handle_tokennetwork_new(raiden, event, current_block_number):
 def handle_channel_new(raiden, event, current_block_number):
     data = event.event_data
     token_network_identifier = event.originating_contract
+    transaction_hash = event.event_data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
     channel_identifier = data['channel_identifier']
     participant1 = data['participant1']
     participant2 = data['participant2']
@@ -84,13 +86,8 @@ def handle_channel_new(raiden, event, current_block_number):
             event.event_data['block_number'],
         )
 
-        from_address = raiden.chain.client.get_transaction_from(
-            event.event_data['transactionHash'],
-        )
-        assert from_address, 'A mined transaction must have the from field'
-
         new_channel = ContractReceiveChannelNew(
-            from_address,
+            transaction_hash,
             token_network_identifier,
             channel_state,
         )
@@ -112,13 +109,8 @@ def handle_channel_new(raiden, event, current_block_number):
 
     # Raiden node is not participant of channel
     else:
-        from_address = raiden.chain.client.get_transaction_from(
-            event.event_data['transactionHash'],
-        )
-        assert from_address, 'A mined transaction must have the from field'
-
         new_route = ContractReceiveRouteNew(
-            from_address,
+            transaction_hash,
             token_network_identifier,
             channel_identifier,
             participant1,
@@ -139,6 +131,8 @@ def handle_channel_new_balance(raiden, event, current_block_number):
     participant_address = data['participant']
     total_deposit = data['args']['total_deposit']
     deposit_block_number = data['block_number']
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     previous_channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -159,13 +153,8 @@ def handle_channel_new_balance(raiden, event, current_block_number):
             deposit_block_number,
         )
 
-        from_address = raiden.chain.client.get_transaction_from(
-            event.event_data['transactionHash'],
-        )
-        assert from_address, 'A mined transaction must have the from field'
-
         newbalance_statechange = ContractReceiveChannelNewBalance(
-            from_address,
+            transaction_hash,
             token_network_identifier,
             channel_identifier,
             deposit_transaction,
@@ -188,6 +177,8 @@ def handle_channel_closed(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -199,6 +190,7 @@ def handle_channel_closed(raiden, event, current_block_number):
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
         channel_closed = ContractReceiveChannelClosed(
+            transaction_hash=transaction_hash,
             transaction_from=data['closing_participant'],
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
@@ -208,7 +200,7 @@ def handle_channel_closed(raiden, event, current_block_number):
     else:
         # This is a channel close event of a channel we're not a participant of
         channel_closed = ContractReceiveRouteClosed(
-            transaction_from=data['closing_participant'],
+            transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
         )
@@ -220,6 +212,9 @@ def handle_channel_settled(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     channel_identifier = event.event_data['channel_identifier']
 
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
+
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
         token_network_identifier,
@@ -227,13 +222,8 @@ def handle_channel_settled(raiden, event, current_block_number):
     )
 
     if channel_state:
-        from_address = raiden.chain.client.get_transaction_from(
-            event.event_data['transactionHash'],
-        )
-        assert from_address, 'A mined transaction must have the from field'
-
         channel_settled = ContractReceiveChannelSettled(
-            from_address,
+            transaction_hash,
             token_network_identifier,
             channel_identifier,
             data['block_number'],
@@ -245,11 +235,11 @@ def handle_channel_batch_unlock(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
 
-    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
-    assert from_address, 'A mined transaction must have the from field'
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
-        from_address,
+        transaction_hash,
         token_network_identifier,
         data['participant'],
         data['partner'],
@@ -265,11 +255,11 @@ def handle_secret_revealed(raiden, event, current_block_number):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
-    from_address = raiden.chain.client.get_transaction_from(event.event_data['transactionHash'])
-    assert from_address, 'A mined transaction must have the from field'
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     registeredsecret_state_change = ContractReceiveSecretReveal(
-        from_address,
+        transaction_hash,
         secret_registry_address,
         data['secrethash'],
         data['secret'],
