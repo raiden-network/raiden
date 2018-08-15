@@ -34,7 +34,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
     channel_state2 = copy.deepcopy(channel_state1)
 
     state_change1 = ContractReceiveChannelNew(
-        channel_state1.our_state.address,
+        factories.make_transaction_hash(),
         token_network_id,
         channel_state1,
     )
@@ -58,7 +58,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
     )
 
     state_change2 = ContractReceiveChannelNew(
-        channel_state2.our_state.address,
+        factories.make_transaction_hash(),
         token_network_id,
         channel_state2,
     )
@@ -95,7 +95,7 @@ def test_channel_settle_must_properly_cleanup():
     channel_state = factories.make_channel(our_balance=our_balance)
 
     channel_new_state_change = ContractReceiveChannelNew(
-        channel_state.our_state.address,
+        factories.make_transaction_hash(),
         token_network_id,
         channel_state,
     )
@@ -110,6 +110,7 @@ def test_channel_settle_must_properly_cleanup():
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(
+        factories.make_transaction_hash(),
         channel_state.partner_state.address,
         token_network_id,
         channel_state.identifier,
@@ -126,7 +127,7 @@ def test_channel_settle_must_properly_cleanup():
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
-        channel_state.partner_state.address,
+        factories.make_transaction_hash(),
         token_network_id,
         channel_state.identifier,
         settle_block_number,
@@ -165,7 +166,7 @@ def test_channel_data_removed_after_unlock(
     payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
-        our_address,
+        factories.make_transaction_hash(),
         token_network_state.address,
         channel_state,
     )
@@ -207,6 +208,7 @@ def test_channel_data_removed_after_unlock(
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(
+        factories.make_transaction_hash(),
         channel_state.partner_state.address,
         token_network_state.address,
         channel_state.identifier,
@@ -223,7 +225,7 @@ def test_channel_data_removed_after_unlock(
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
-        our_address,
+        factories.make_transaction_hash(),
         token_network_state.address,
         channel_state.identifier,
         settle_block_number,
@@ -244,7 +246,7 @@ def test_channel_data_removed_after_unlock(
 
     unlock_blocknumber = settle_block_number + 5
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
-        transaction_from=address,
+        transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         participant=our_address,
         partner=address,
@@ -285,7 +287,7 @@ def test_multiple_channel_states(
     payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
-        our_address,
+        factories.make_transaction_hash(),
         token_network_state.address,
         channel_state,
     )
@@ -327,6 +329,7 @@ def test_multiple_channel_states(
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(
+        factories.make_transaction_hash(),
         channel_state.partner_state.address,
         token_network_state.address,
         channel_state.identifier,
@@ -343,7 +346,7 @@ def test_multiple_channel_states(
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
-        our_address,
+        factories.make_transaction_hash(),
         token_network_state.address,
         channel_state.identifier,
         settle_block_number,
@@ -369,7 +372,7 @@ def test_multiple_channel_states(
         partner_address=address,
     )
     channel_new_state_change = ContractReceiveChannelNew(
-        our_address,
+        factories.make_transaction_hash(),
         token_network_state.address,
         new_channel_state,
     )
@@ -411,7 +414,7 @@ def test_routing_updates(
 
     # create a new channel as participant, check graph update
     channel_new_state_change = ContractReceiveChannelNew(
-        transaction_from=our_address,
+        transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_state=channel_state,
     )
@@ -433,7 +436,7 @@ def test_routing_updates(
     # create a new channel without being participant, check graph update
     new_channel_identifier = factories.make_channel_identifier()
     channel_new_state_change = ContractReceiveRouteNew(
-        transaction_from=token_network_state.address,
+        transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_identifier=new_channel_identifier,
         participant1=address2,
@@ -459,6 +462,7 @@ def test_routing_updates(
     # close the channel the node is a participant of, check edge is removed from graph
     closed_block_number = open_block_number + 20
     channel_close_state_change1 = ContractReceiveChannelClosed(
+        transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
         token_network_identifier=token_network_state.address,
         channel_identifier=channel_state.identifier,
@@ -482,7 +486,7 @@ def test_routing_updates(
 
     # close the channel the node is not a participant of, check edge is removed from graph
     channel_close_state_change2 = ContractReceiveRouteClosed(
-        transaction_from=token_network_state.address,
+        transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_identifier=new_channel_identifier,
     )

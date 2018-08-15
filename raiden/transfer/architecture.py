@@ -8,6 +8,7 @@ from raiden.utils.typing import (
     MessageID,
     QueueIdentifier,
     T_ChannelID,
+    TransactionHash,
 )
 
 
@@ -117,8 +118,8 @@ class ContractSendExpirableEvent(ContractSendEvent):
 
 
 class ContractReceiveStateChange(StateChange):
-    def __init__(self, transaction_from):
-        self.transaction_from = transaction_from
+    def __init__(self, transaction_hash: TransactionHash):
+        self.transaction_hash = transaction_hash
 
 
 class StateManager:
