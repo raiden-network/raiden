@@ -138,7 +138,7 @@ class AddressWrongContract(RaidenError):
     pass
 
 
-class DuplicatedChannelError(RaidenError):
+class DuplicatedChannelError(RaidenRecoverableError):
     """Raised if someone tries to create a channel that already exists."""
 
 

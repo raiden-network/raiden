@@ -1097,7 +1097,7 @@ class TokenNetwork:
         # Deposit was prohibited because the channel is settled
         elif channel_state == ChannelState.SETTLED:
             raise RaidenUnrecoverableError(
-                'Channel is not in an settled state',
+                'Channel is settled',
             )
         # Deposit was prohibited because the channel is closed
         elif channel_state == ChannelState.CLOSED:
