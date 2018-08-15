@@ -5,6 +5,7 @@ import { BehaviorSubject, EMPTY } from 'rxjs';
 import { flatMap, switchMap, tap } from 'rxjs/operators';
 import { SortingData } from '../../models/sorting.data';
 import { UserToken } from '../../models/usertoken';
+import { RaidenConfig } from '../../services/raiden.config';
 
 import { RaidenService } from '../../services/raiden.service';
 import { StringUtils } from '../../utils/string.utils';
@@ -77,7 +78,8 @@ export class TokenNetworkComponent implements OnInit {
 
     constructor(
         public dialog: MatDialog,
-        private raidenService: RaidenService
+        private raidenService: RaidenService,
+        private raidenConfig: RaidenConfig
     ) {
     }
 
@@ -105,20 +107,26 @@ export class TokenNetworkComponent implements OnInit {
     }
 
     ngOnInit() {
+        let timeout;
         this.tokensSubject.pipe(
-            tap(() => this.refreshing = true),
+            tap(() => {
+                clearTimeout(timeout);
+                this.refreshing = true;
+            }),
             switchMap(() => this.raidenService.getTokens(true)),
-            tap(() => this.refreshing = false,
+            tap(() => {
+                    timeout = setTimeout(
+                        () => this.refreshTokens(),
+                        this.raidenConfig.config.poll_interval,
+                    );
+                    this.refreshing = false;
+                },
                 () => this.refreshing = false),
         ).subscribe((tokens: Array<UserToken>) => {
             this.tokens = tokens;
             this.totalTokens = tokens.length;
             this.applyFilters(this.sorting);
         });
-    }
-
-    public refreshTokens() {
-        this.tokensSubject.next(null);
     }
 
     public showJoinDialog(userToken: UserToken) {
@@ -247,6 +255,10 @@ export class TokenNetworkComponent implements OnInit {
         this.filter = '';
         this.applyFilters(this.sorting);
         this.paginator.firstPage();
+    }
+
+    private refreshTokens() {
+        this.tokensSubject.next(null);
     }
 
     private searchFilter(token: UserToken): boolean {
