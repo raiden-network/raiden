@@ -158,7 +158,7 @@ def get_token_network_identifier_by_token_address(
 def get_token_network_identifiers(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
-) -> typing.List[typing.TokenNetworkIdentifier]:
+) -> typing.List[typing.TokenNetworkID]:
     """ Return the list of token networks registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 

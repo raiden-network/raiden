@@ -118,7 +118,7 @@ class ActionCancelTransfer(StateChange):
 class ActionTransferDirect(StateChange):
     def __init__(
             self,
-            token_network_identifier: typing.TokenNetworkIdentifier,
+            token_network_identifier: typing.TokenNetworkID,
             receiver_address: typing.Address,
             payment_identifier: typing.PaymentID,
             amount: typing.PaymentAmount,
@@ -550,7 +550,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_from: typing.Address,
-            token_network_identifier: typing.TokenNetworkIdentifier,
+            token_network_identifier: typing.TokenNetworkID,
             participant: typing.Address,
             partner: typing.Address,
             locksroot: typing.Locksroot,
@@ -558,7 +558,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             returned_tokens: typing.TokenAmount,
     ):
 
-        if not isinstance(token_network_identifier, typing.T_TokenNetworkIdentifier):
+        if not isinstance(token_network_identifier, typing.T_TokenNetworkID):
             raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
 
         if not isinstance(participant, typing.T_Address):
