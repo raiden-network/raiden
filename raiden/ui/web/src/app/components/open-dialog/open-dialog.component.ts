@@ -54,7 +54,7 @@ export class OpenDialogComponent implements OnInit {
             partner_address: ['', (control) => control.value === data.ownAddress ? {ownAddress: true} : undefined],
             token: null,
             balance: [0, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
-            settle_timeout: [600, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
+            settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
         this.token = this.form.get('token') as FormControl;

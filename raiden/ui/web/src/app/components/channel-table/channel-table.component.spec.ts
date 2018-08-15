@@ -138,7 +138,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0x8A0cE8bDA200D64d858957080bf7eDDD3371135F',
             reveal_timeout: 600,
             balance: 60,
-            settle_timeout: 600,
+            settle_timeout: 500,
             userToken: token
 
         };

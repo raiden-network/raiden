@@ -105,7 +105,7 @@ describe('RaidenService', () => {
     it('Show a proper response when non-EIP addresses are passed in channel creation', () => {
         const partnerAddress = '0xc52952ebad56f2c5e5b42bb881481ae27d036475';
 
-        service.openChannel(tokenAddress, partnerAddress, 600, 10).subscribe(() => {
+        service.openChannel(tokenAddress, partnerAddress, 500, 10).subscribe(() => {
             fail('On next should not be called');
         }, (error) => {
             expect(error).toBeTruthy('An error was expected');
