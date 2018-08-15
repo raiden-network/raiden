@@ -30,6 +30,10 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
 
+class CustomException(Exception):
+    pass
+
+
 def assert_no_content_response(response):
     assert(
         response is not None and
@@ -149,6 +153,29 @@ def test_payload_with_address_without_prefix(api_backend):
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason='Crashed app also crashes on teardown',
+    raises=CustomException,
+)
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_crash_on_unhandled_exception(api_backend):
+    """ Addresses require leading 0x in the payload. """
+    api_server, _ = api_backend
+
+    # as we should not have unhandled exceptions in our endpoints, create one to test
+    @api_server.flask_app.route('/error_endpoint', methods=['GET'])
+    def error_endpoint():
+        raise CustomException('This is an unhandled error')
+
+    with api_server.flask_app.app_context():
+        url = url_for('error_endpoint')
+    request = grequests.get(url)
+    request.send()
+    api_server.join(timeout=5)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
