@@ -352,9 +352,5 @@ def on_raiden_event(raiden: RaidenService, event: Event):
             pass
         else:
             log.error('Unknown event {}'.format(type(event)))
-    except RaidenRecoverableError as e:
-        log.error(e)
-        # TODO: Dispatch a state change to remove transaction
-        # from the transaction queue
-    except RaidenUnrecoverableError as e:
+    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
         log.error(e)

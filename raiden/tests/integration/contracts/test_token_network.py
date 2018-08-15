@@ -146,10 +146,11 @@ def test_token_network_proxy_basics(
     # test deposits
     initial_token_balance = 100
     token_proxy.transfer(c1_client.sender, initial_token_balance)
+    token_proxy.transfer(c2_client.sender, initial_token_balance)
     initial_balance_c1 = token_proxy.balance_of(c1_client.sender)
     assert initial_balance_c1 == initial_token_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
-    assert initial_balance_c2 == 0
+    assert initial_balance_c2 == initial_token_balance
     # no negative deposit
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
@@ -214,6 +215,28 @@ def test_token_network_proxy_basics(
             additional_hash=decode_hex(balance_proof.additional_hash),
             signature=decode_hex(balance_proof.signature),
         )
+
+    with pytest.raises(RaidenRecoverableError) as exc:
+        c2_token_network_proxy.set_total_deposit(
+            channel_identifier,
+            20,
+            c1_client.sender,
+        )
+
+        assert 'not in an open state' in str(exc)
+
+    with pytest.raises(RaidenRecoverableError) as exc:
+        c2_token_network_proxy.close(
+            channel_identifier=channel_identifier,
+            partner=c1_client.sender,
+            balance_hash=decode_hex(balance_proof.balance_hash),
+            nonce=balance_proof.nonce,
+            additional_hash=decode_hex(balance_proof.additional_hash),
+            signature=decode_hex(balance_proof.signature),
+        )
+
+        assert 'not in an open state' in str(exc)
+
     # update transfer
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
@@ -246,6 +269,37 @@ def test_token_network_proxy_basics(
     ) is False
     assert token_proxy.balance_of(c1_client.sender) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.sender) == (initial_balance_c2 + transferred_amount)
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.set_total_deposit(
+            channel_identifier,
+            10,
+            c2_client.sender,
+        )
+        # No channel exists
+        assert 'getChannelIdentifier returned 0' in str(exc)
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.withdraw(
+            channel_identifier,
+            c2_client.sender,
+            5,
+            decode_hex(balance_proof.signature),
+            decode_hex(balance_proof.signature),
+        )
+        # No channel exists
+        assert 'getChannelIdentifier returned 0' in str(exc)
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.withdraw(
+            channel_identifier,
+            c2_client.sender,
+            5,
+            decode_hex(balance_proof.signature),
+            decode_hex(balance_proof.signature),
+        )
+        # No channel exists
+        assert 'getChannelIdentifier returned 0' in str(exc)
 
 
 def test_token_network_proxy_update_transfer(
@@ -371,6 +425,7 @@ def test_token_network_proxy_update_transfer(
             partner_locked_amount=0,
             partner_locksroot=EMPTY_HASH,
         )
+
     # proper settle
     c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
@@ -386,3 +441,21 @@ def test_token_network_proxy_update_transfer(
             (initial_balance_c2 + transferred_amount_c1 - transferred_amount_c2))
     assert (token_proxy.balance_of(c1_client.sender) ==
             (initial_balance_c1 + transferred_amount_c2 - transferred_amount_c1))
+
+    with pytest.raises(RaidenRecoverableError) as exc:
+        c2_token_network_proxy.set_total_deposit(
+            channel_identifier,
+            20,
+            c1_client.sender,
+        )
+
+        assert 'not in an open state' in str(exc)
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c2_token_network_proxy.set_total_deposit(
+            channel_identifier,
+            20,
+            c1_client.sender,
+        )
+
+        assert 'channel is settled' in str(exc)
