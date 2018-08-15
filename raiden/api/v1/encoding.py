@@ -69,30 +69,6 @@ class HexAddressConverter(BaseConverter):
         return to_checksum_address(value)
 
 
-# do this to make testing easier
-def decode_keccak(value: str) -> bytes:
-    if value[:2] != '0x':
-        raise ValidationError("Channel Id is missing the '0x' prefix")
-
-    try:
-        value = decode_hex(value)
-    except DecodeError:
-        raise ValidationError('Channel Id is not a valid hexadecimal value')
-
-    if len(value) != 32:
-        raise ValidationError('Channel Id is not valid')
-
-    return value
-
-
-class KeccakConverter(BaseConverter):
-    def to_python(self, value: str):
-        return decode_keccak(value)
-
-    def to_url(self, value):
-        return encode_hex(value)
-
-
 class AddressField(fields.Field):
     default_error_messages = {
         'missing_prefix': 'Not a valid hex encoded address, must be 0x prefixed.',

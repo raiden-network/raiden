@@ -296,7 +296,6 @@ class APIServer:
             flask_app,
             {
                 'hexaddress': HexAddressConverter,
-                'keccak': KeccakConverter,
             },
         )
 
