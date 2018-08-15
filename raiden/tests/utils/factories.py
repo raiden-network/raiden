@@ -106,7 +106,7 @@ def make_channel_identifier():
 
 
 def make_payment_network_identifier():
-    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
+    return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
 
 
 def make_privkey_address():
