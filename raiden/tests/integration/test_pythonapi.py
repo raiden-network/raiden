@@ -21,6 +21,7 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
+from raiden.transfer.events import EventPaymentReceivedSuccess
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
@@ -295,8 +296,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         app0.raiden.address,
         from_block=0,
     )
-
-    assert must_have_event(app1_events, {'event': 'EventPaymentReceivedSuccess'})
+    any(isinstance(event, EventPaymentReceivedSuccess) for _, event in app1_events)
 
     app1_events = RaidenAPI(app1.raiden).get_channel_events_blockchain(
         token_address,

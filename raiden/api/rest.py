@@ -194,6 +194,14 @@ def encode_byte_values(map: Dict):
             map[k] = encode_hex(v)
 
 
+def encode_object_to_str(map: Dict):
+    for k, v in map.items():
+        if isinstance(v, int) or k == 'args':
+            continue
+        if not isinstance(v, str):
+            map[k] = repr(v)
+
+
 def normalize_events_list(old_list):
     """Internally the `event_type` key is prefixed with underscore but the API
     returns an object without that prefix"""
@@ -206,7 +214,6 @@ def normalize_events_list(old_list):
         # remove the queue identifier
         if new_event.get('queue_identifier'):
             del new_event['queue_identifier']
-
         # the events contain HexBytes values, convert those to strings
         hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
@@ -216,19 +223,23 @@ def normalize_events_list(old_list):
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
         if name == 'EventPaymentSentSuccess' or name == 'EventPaymentSentFailed':
             new_event['target'] = to_checksum_address(new_event['target'])
-
-        # the following two were introduced temporary and will be removed
-        # when the raiden_endpoints will be removed
-        if name == 'ContractSendChannelSettle':
-            new_event['our_balance_proof'] = repr(new_event['our_balance_proof'])
-            new_event['partner_balance_proof'] = repr(new_event['partner_balance_proof'])
-        if name == 'ContractSendChannelClose':
-            new_event['balance_proof'] = repr(new_event['balance_proof'])
-        if name == 'SendRefundTransfer':
-            new_event['lock'] = repr(new_event['lock'])
         encode_byte_values(new_event)
+        # encode unserializable objects
+        encode_object_to_str(new_event)
         new_list.append(new_event)
     return new_list
+
+
+def convert_to_serializable(event_list):
+    returned_events = []
+    for block_number, event in event_list:
+        new_event = {
+            'block_number': block_number,
+            'event': type(event).__name__,
+        }
+        new_event.update(event.__dict__)
+        returned_events.append(new_event)
+    return returned_events
 
 
 def restapi_setup_urls(flask_api_context, rest_api, urls):
@@ -792,6 +803,7 @@ class RestAPI:
                 from_block,
                 to_block,
             )
+            raiden_service_result = convert_to_serializable(raiden_service_result)
             return api_response(result=normalize_events_list(raiden_service_result))
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
@@ -844,6 +856,7 @@ class RestAPI:
                 from_block,
                 to_block,
             )
+            raiden_service_result = convert_to_serializable(raiden_service_result)
             return api_response(result=normalize_events_list(raiden_service_result))
         except InvalidAddress as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
