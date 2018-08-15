@@ -481,8 +481,8 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 500: Internal Raiden node error
 
-Transfers
-=========
+Payments
+========
 
 .. http:post:: /api/(version)/payments/(token_address)/(target_address)
 
@@ -539,7 +539,7 @@ In Raiden we distinguish between two types of events: ``blockchain_events`` and 
 ``raiden_events`` are events happening in the Raiden nod. For now, it's being used for debugging purpose.
 
 .. NOTE::
-      All raiden events endpoints might get removed in the future.
+      All raiden event endpoints are for debugging only and might get removed in the future.
 
 All events can be filtered down by providing the query string arguments ``from_block``
 and/or ``to_block`` to query only a events from a limited range of blocks. The block number
@@ -819,15 +819,15 @@ Now for the raiden events:
         'token_network_identifier': '0xedf18937be4064dfbe3e307bd193e812b723ac6f'
      }, ...]
 
-    :statuscode 200: For successful query
-    :statuscode 400: If the provided query string is malformed
-    :statuscode 404: If the token at the given token_address does not exist
-    :statuscode 409: If the given block number or token_address arguments are invalid
-    :statuscode 500: Internal Raiden node error
+  :statuscode 200: For successful query
+  :statuscode 400: If the provided query string is malformed
+  :statuscode 404: If the token at the given token_address does not exist
+  :statuscode 409: If the given block number or token_address arguments are invalid
+  :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/raiden_events/payment_networks/(token_address)/channels/(partner_address)
 
-   Query f1or Raiden internal node events.
+   Query for Raiden internal node events.
 
    **Example Request**:
 
@@ -894,9 +894,8 @@ Now for the raiden events:
      }]
 
 
-    :statuscode 200: For successful query
-    :statuscode 400: If the provided query string is malformed
-    :statuscode 404: If the token at the given token_address does not exist
-    :statuscode 409: If the given token_address argument is invalid
-    :statuscode 500: Internal Raiden node error
-
+  :statuscode 200: For successful query
+  :statuscode 400: If the provided query string is malformed
+  :statuscode 404: If the token at the given token_address does not exist
+  :statuscode 409: If the given token_address argument is invalid
+  :statuscode 500: Internal Raiden node error
