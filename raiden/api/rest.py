@@ -42,7 +42,6 @@ from raiden.api.v1.encoding import (
     AddressListSchema,
     ChannelStateSchema,
     HexAddressConverter,
-    KeccakConverter,
     PartnersPerTokenListSchema,
     PaymentSchema,
     InvalidEndpoint,
@@ -71,6 +70,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
+    NettingChannelState,
 )
 from raiden.utils import create_default_identifier
 from raiden.api.objects import PartnersPerTokenList, AddressList
@@ -393,7 +393,16 @@ class RestAPI:
             result=dict(our_address=to_checksum_address(self.raiden_api.address)),
         )
 
-    def register_token(self, registry_address, token_address):
+    def register_token(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+    ):
+        log.debug(
+            '[REST API] Register token called',
+            registry_address=registry_address,
+            token_address=token_address,
+        )
         try:
             token_network_address = self.raiden_api.token_network_register(
                 registry_address,
@@ -422,14 +431,21 @@ class RestAPI:
 
     def open(
             self,
-            registry_address,
-            partner_address,
-            token_address,
-            settle_timeout=None,
-            reveal_timeout=None,
-            balance=None,
+            registry_address: typing.PaymentNetworkID,
+            partner_address: typing.Address,
+            token_address: typing.TokenAddress,
+            settle_timeout: typing.BlockTimeout = None,
+            reveal_timeout: typing.BlockTimeout = None,
+            balance: typing.TokenAmount = None,
     ):
-
+        log.debug(
+            '[REST API] Channel open called',
+            registry_address=registry_address,
+            partner_address=partner_address,
+            token_address=token_address,
+            settle_timeout=settle_timeout,
+            reveal_timeout=reveal_timeout,
+        )
         try:
             self.raiden_api.channel_open(
                 registry_address,
@@ -457,6 +473,13 @@ class RestAPI:
 
         if balance:
             # make initial deposit
+            log.debug(
+                'Depositing to new channel',
+                registry_address=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
+                amount=balance,
+            )
             try:
                 self.raiden_api.set_total_channel_deposit(
                     registry_address,
@@ -496,13 +519,20 @@ class RestAPI:
 
     def connect(
             self,
-            registry_address,
-            token_address,
-            funds,
-            initial_channel_target=None,
-            joinable_funds_target=None,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            funds: typing.TokenAmount,
+            initial_channel_target: int = None,
+            joinable_funds_target: float = None,
     ):
-
+        log.debug(
+            '[REST API] Connecting to token network',
+            registry_address=registry_address,
+            token_address=token_address,
+            funds=funds,
+            initial_channel_target=initial_channel_target,
+            joinable_funds_target=joinable_funds_target,
+        )
         try:
             self.raiden_api.token_network_connect(
                 registry_address,
@@ -532,7 +562,16 @@ class RestAPI:
             status_code=HTTPStatus.NO_CONTENT,
         )
 
-    def leave(self, registry_address, token_address):
+    def leave(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+    ):
+        log.debug(
+            '[REST API] Leaving token network',
+            registry_address=registry_address,
+            token_address=token_address,
+        )
         closed_channels = self.raiden_api.token_network_leave(
             registry_address,
             token_address,
@@ -543,7 +582,7 @@ class RestAPI:
         ]
         return api_response(result=closed_channels)
 
-    def get_connection_managers_info(self, registry_address):
+    def get_connection_managers_info(self, registry_address: typing.PaymentNetworkID):
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         connection_managers = dict()
@@ -580,7 +619,18 @@ class RestAPI:
 
         return connection_managers
 
-    def get_channel_list(self, registry_address, token_address=None, partner_address=None):
+    def get_channel_list(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress = None,
+            partner_address: typing.Address = None,
+    ):
+        log.debug(
+            '[REST API] Getting channel list',
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
         raiden_service_result = self.raiden_api.get_channel_list(
             registry_address,
             token_address,
@@ -593,14 +643,29 @@ class RestAPI:
         ]
         return api_response(result=result)
 
-    def get_tokens_list(self, registry_address):
+    def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
+        log.debug(
+            '[REST API] Getting token list',
+            registry_address=registry_address,
+        )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
         assert isinstance(raiden_service_result, list)
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
         return api_response(result=result.data)
 
-    def get_network_events(self, registry_address, from_block, to_block):
+    def get_network_events(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            from_block: typing.BlockSpecification,
+            to_block: typing.BlockSpecification,
+    ):
+        log.debug(
+            '[REST API] Getting network events',
+            registry_address=registry_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
         try:
             raiden_service_result = self.raiden_api.get_network_events(
                 registry_address,
@@ -612,7 +677,18 @@ class RestAPI:
 
         return api_response(result=normalize_events_list(raiden_service_result))
 
-    def get_token_network_events_blockchain(self, token_address, from_block, to_block):
+    def get_token_network_events_blockchain(
+            self,
+            token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification,
+            to_block: typing.BlockSpecification,
+    ):
+        log.debug(
+            '[REST API] Getting token network blockchain events',
+            token_address=token_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_blockchain(
                 token_address,
@@ -630,6 +706,11 @@ class RestAPI:
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
     ):
+        log.debug(
+            '[REST API] Getting payment history',
+            token_address=token_address,
+            target_address=target_address,
+        )
         try:
             if token_address is None and target_address is None:
                 raiden_service_result = self.raiden_api.get_payment_history()
@@ -663,7 +744,18 @@ class RestAPI:
 
         return api_response(result=result)
 
-    def get_token_network_events_raiden(self, token_address, from_block, to_block):
+    def get_token_network_events_raiden(
+            self,
+            token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification,
+            to_block: typing.BlockSpecification,
+    ):
+        log.debug(
+            '[REST API] Getting token network internal events',
+            token_address=token_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
         try:
             raiden_service_result = self.raiden_api.get_token_network_events_raiden(
                 token_address,
@@ -676,11 +768,18 @@ class RestAPI:
 
     def get_channel_events_blockchain(
             self,
-            token_address,
-            partner_address=None,
-            from_block=None,
-            to_block=None,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None,
     ):
+        log.debug(
+            '[REST API] Getting channel blockchain events',
+            token_address=token_address,
+            partner_address=partner_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
         try:
             raiden_service_result = self.raiden_api.get_channel_events_blockchain(
                 token_address,
@@ -696,11 +795,18 @@ class RestAPI:
 
     def get_channel_events_raiden(
             self,
-            token_address,
-            partner_address=None,
-            from_block=None,
-            to_block=None,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = None,
+            to_block: typing.BlockSpecification = None,
     ):
+        log.debug(
+            '[REST API] Getting channel internal events',
+            token_address=token_address,
+            partner_address=partner_address,
+            from_block=from_block,
+            to_block=to_block,
+        )
         try:
             raiden_service_result = self.raiden_api.get_channel_events_raiden(
                 token_address,
@@ -712,7 +818,18 @@ class RestAPI:
         except InvalidAddress as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
-    def get_channel(self, registry_address, token_address, partner_address):
+    def get_channel(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address,
+    ):
+        log.debug(
+            '[REST API] Getting channel',
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
         try:
             channel_state = self.raiden_api.get_channel(
                 registry_address=registry_address,
@@ -727,7 +844,16 @@ class RestAPI:
                 status_code=HTTPStatus.NOT_FOUND,
             )
 
-    def get_partners_by_token(self, registry_address, token_address):
+    def get_partners_by_token(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+    ):
+        log.debug(
+            '[REST API] Getting partners by token',
+            registry_address=registry_address,
+            token_address=token_address,
+        )
         return_list = []
         raiden_service_result = self.raiden_api.get_channel_list(
             registry_address,
@@ -750,12 +876,20 @@ class RestAPI:
 
     def initiate_payment(
             self,
-            registry_address,
-            token_address,
-            target_address,
-            amount,
-            identifier,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            target_address: typing.Address,
+            amount: typing.TokenAmount,
+            identifier: typing.PaymentID,
     ):
+        log.debug(
+            '[REST API] Initiating payment',
+            registry_address=registry_address,
+            token_address=token_address,
+            target_address=target_address,
+            amount=amount,
+            payment_identifier=identifier,
+        )
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -797,7 +931,19 @@ class RestAPI:
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)
 
-    def _deposit(self, registry_address, channel_state, total_deposit):
+    def _deposit(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            channel_state: NettingChannelState,
+            total_deposit: typing.TokenAmount,
+    ):
+        log.debug(
+            '[REST API] Depositing to channel',
+            registry_address=registry_address,
+            channel_identifier=channel_state.identifier,
+            total_deposit=total_deposit,
+        )
+
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
                 errors="Can't set total deposit on a closed channel",
@@ -841,7 +987,17 @@ class RestAPI:
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result.data)
 
-    def _close(self, registry_address, channel_state):
+    def _close(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            channel_state: NettingChannelState,
+    ):
+        log.debug(
+            '[REST API] Closing channel',
+            registry_address=registry_address,
+            channel_identifier=channel_state.identifier,
+        )
+
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
                 errors='Attempted to close an already closed channel',
@@ -876,12 +1032,21 @@ class RestAPI:
 
     def patch_channel(
             self,
-            registry_address,
-            token_address,
-            partner_address,
-            total_deposit=None,
-            state=None,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address,
+            total_deposit: typing.TokenAmount = None,
+            state: str = None,
     ):
+        log.debug(
+            '[REST API] Patching channel',
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+            total_deposit=total_deposit,
+            state=state,
+        )
+
         if total_deposit is not None and state is not None:
             return api_error(
                 errors="Can not update a channel's total deposit and state at the same time",

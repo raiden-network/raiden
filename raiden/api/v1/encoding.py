@@ -1,5 +1,3 @@
-from binascii import Error as DecodeError
-
 from marshmallow import (
     fields,
     post_dump,
@@ -10,16 +8,11 @@ from marshmallow import (
 )
 from webargs import validate
 from werkzeug.exceptions import NotFound
-from werkzeug.routing import (
-    BaseConverter,
-    ValidationError,
-)
+from werkzeug.routing import BaseConverter
 from eth_utils import (
     is_checksum_address,
     to_checksum_address,
     to_canonical_address,
-    decode_hex,
-    encode_hex,
 )
 
 from raiden.api.objects import (
