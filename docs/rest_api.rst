@@ -825,7 +825,7 @@ Now for the raiden events:
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/raiden_events/payment_networks/(token_address)/channels/(partner_address)
+.. http:get:: /api/(version)/raiden_events/networks/(token_address)/channels/(partner_address)
 
    Query for Raiden internal node events.
 
@@ -833,7 +833,7 @@ Now for the raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /raiden_events/payment_networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
+      GET /raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
