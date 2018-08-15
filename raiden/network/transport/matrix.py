@@ -270,11 +270,11 @@ class MatrixTransport:
         # cause pending retries to be aborted
         for async_result in self._messageids_to_asyncresult.values():
             async_result.set(False)
-        gevent.wait(self.greenlets, timeout=self._logout_timeout)
 
         try:
             self._client.set_presence_state(UserPresence.OFFLINE.value)
             with gevent.Timeout(self._logout_timeout, 'Logging out despite unjoined greenlets.'):
+                gevent.wait(self.greenlets, timeout=self._logout_timeout / 2)
                 self._client.stop_listener_thread()
         except gevent.Timeout as er:
             self.log.warning('Matrix stop timeout', _error=er)
