@@ -7,6 +7,7 @@ import structlog
 import sys
 from typing import Dict
 
+import gevent
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
@@ -318,6 +319,7 @@ class APIServer:
             self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
 
         self.flask_app.errorhandler(HTTPStatus.NOT_FOUND)(endpoint_not_found)
+        self.flask_app.errorhandler(Exception)(self.unhandled_exception)
 
         if web_ui:
             for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
@@ -345,10 +347,7 @@ class APIServer:
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
 
-    def run(self, host='127.0.0.1', port=5001, **kwargs):
-        self.flask_app.run(host=host, port=port, **kwargs)
-
-    def start(self, host='127.0.0.1', port=5001):
+    def run(self, host='127.0.0.1', port=5001):
         try:
             # WSGI expects a stdlib logger, with structlog there's conflict of method names
             wsgi_log = logging.getLogger(__name__ + '.pywsgi')
@@ -358,16 +357,38 @@ class APIServer:
                 log=wsgi_log,
                 error_log=wsgi_log,
             )
-            self.wsgiserver.start()
+            self.wsgiserver.serve_forever()
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise APIServerPortInUseError()
             raise
+        finally:
+            self.wsgiserver.stop()
+            self.wsgiserver = None
+
+    def start(self, host='127.0.0.1', port=5001):
+        self.greenlet = gevent.spawn(self.run, host, port)
+        return self.greenlet
 
     def stop(self, timeout=5):
-        if getattr(self, 'wsgiserver', None):
-            self.wsgiserver.stop(timeout)
-            self.wsgiserver = None
+        if getattr(self, 'greenlet', None):
+            self.wsgiserver.stop(timeout=timeout)
+            self.greenlet.get(timeout=timeout)
+            self.greenlet = None
+
+    def join(self, timeout=None):
+        return self.greenlet.get(timeout=timeout)
+
+    def unhandled_exception(self, exception: Exception):
+        """ Flask.errorhandler when an exception wasn't correctly handled """
+        log.critical(
+            'Unhandled exception when handling endpoint request',
+            exception=str(exception),
+        )
+        try:
+            self.greenlet.kill(exception)
+        finally:
+            raise exception  # re-raise to crash node
 
 
 class RestAPI:
