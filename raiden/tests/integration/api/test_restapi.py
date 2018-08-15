@@ -1371,7 +1371,6 @@ def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
 
     assert 'SendLockedTransfer' in events_list
     assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendRevealSecret' in events_list
     assert 'SendBalanceProof' in events_list
 
 
@@ -1417,7 +1416,6 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
 
     assert 'SendLockedTransfer' in events_list
     assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendRevealSecret' in events_list
     assert 'SendBalanceProof' in events_list
 
     request = grequests.get(
@@ -1442,5 +1440,4 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
 
     assert 'SendLockedTransfer' in events_list
     assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendRevealSecret' in events_list
     assert 'SendBalanceProof' in events_list

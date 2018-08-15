@@ -15,6 +15,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     EventPaymentSentFailed,
     EventPaymentReceivedSuccess,
+    ContractSendChannelSettle,
 )
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
@@ -681,7 +682,7 @@ class RaidenAPI:
     ):
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events',
+                'Expected binary address format for token in get_payment_history_for_token',
             )
 
         raiden_events = self.get_payment_history(
@@ -718,7 +719,7 @@ class RaidenAPI:
         if target_address and not is_binary_address(target_address):
             raise InvalidAddress(
                 'Expected binary address format for '
-                'target_address in get_payment_history_partner',
+                'target_address in get_payment_history_for_token_and_target',
             )
 
         raiden_events = self.get_payment_history_for_token(
@@ -745,7 +746,7 @@ class RaidenAPI:
     ):
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events_blockchain',
+                'Expected binary address format for token in get_channel_events_blockchain',
             )
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address,
@@ -780,7 +781,7 @@ class RaidenAPI:
 
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events_blockchain',
+                'Expected binary address format for token in get_channel_events_raiden',
             )
 
         returned_events = []
@@ -789,27 +790,33 @@ class RaidenAPI:
             to_block=to_block,
         )
         # Here choose which raiden internal events we want to expose to the end user
-        for block_number, event in raiden_events:
-            new_event = {
-                'block_number': block_number,
-                'event': type(event).__name__,
-            }
-            if partner_address:
-                if hasattr(event, 'recipient') and event.recipient == partner_address:
-                    if hasattr(event, 'transfer') and event.transfer.token == token_address:
-                        event.transfer = repr(event.transfer)
-                    elif hasattr(event, 'token') and event.token == token_address:
-                        event.balance_proof = repr(event.balance_proof)
+        if partner_address:
+            def _contains_partner_address(event):
+                if getattr(event, 'recipient', None) == partner_address:
+                    return True
+                elif getattr(event, 'initiator', None) == partner_address:
+                    return True
+                elif getattr(event, 'target', None) == partner_address:
+                    return True
+                elif hasattr(event, 'partner_balance_proof'):
+                    if event.partner_balance_proof.sender == partner_address:
+                        return True
+                return False
 
-            else:
-                if hasattr(event, 'transfer') and event.transfer.token == token_address:
-                    event.transfer = repr(event.transfer)
-                elif hasattr(event, 'token') and event.token == token_address:
-                    event.balance_proof = repr(event.balance_proof)
-            new_event.update(event.__dict__)
-            returned_events.append(new_event)
+            returned_events = [
+                (block_number, event)
+                for block_number, event in raiden_events
+                if _contains_partner_address(event) and
+                self._is_internal_event(event, token_address)
+            ]
+        else:
+            returned_events = [
+                (block_number, event)
+                for block_number, event in raiden_events
+                if self._is_internal_event(event, token_address)
+            ]
 
-        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        returned_events.sort(key=lambda event: event[0], reverse=True)
         return returned_events
 
     def get_token_network_events_blockchain(
@@ -855,7 +862,7 @@ class RaidenAPI:
         """Returns a list of internal events coresponding to the token_address."""
         if not is_binary_address(token_address):
             raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events_blockchain',
+                'Expected binary address format for token in get_token_network_events_raiden',
             )
 
         returned_events = []
@@ -864,20 +871,41 @@ class RaidenAPI:
             to_block=to_block,
         )
 
-        for block_number, event in raiden_events:
-            new_event = {
-                'block_number': block_number,
-                'event': type(event).__name__,
-            }
-            if hasattr(event, 'transfer'):
-                if event.transfer.token == token_address:
-                    event.transfer = repr(event.transfer)
-            elif hasattr(event, 'token'):
-                if event.token == token_address:
-                    event.balance_proof = repr(event.balance_proof)
-            new_event.update(event.__dict__)
-            returned_events.append(new_event)
-        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        returned_events = [
+            (block_number, event)
+            for block_number, event in raiden_events
+            if self._is_internal_event(event, token_address)
+        ]
+
+        returned_events.sort(key=lambda event: event[0], reverse=True)
         return returned_events
+
+    def _is_internal_event(
+            self,
+            event,
+            token_address,
+    ):
+        if hasattr(event, 'transfer') and event.transfer.token == token_address:
+            return True
+        elif getattr(event, 'token', None) == token_address:
+            return True
+        elif getattr(event, 'token_address', None) == token_address:
+            return True
+        elif isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
+            token_network_identifier = views.get_token_network_identifier_by_token_address(
+                views.state_from_raiden(self.raiden),
+                event.payment_network_identifier,
+                token_address,
+            )
+            if token_network_identifier == event.token_network_identifier:
+                return True
+        elif type(event) == ContractSendChannelSettle:
+            token_network_state = views.get_token_network_by_identifier(
+                views.state_from_raiden(self.raiden),
+                event.token_network_identifier,
+            )
+            if token_network_state.token_address == token_address:
+                return True
+        return False
 
     transfer = transfer_and_wait
