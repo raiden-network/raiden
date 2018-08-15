@@ -370,7 +370,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier,
             payment_identifier,
             amount: typing.TokenAmount,
-            token_network_identifier: typing.TokenNetworkIdentifier,
+            token_network_identifier: typing.TokenNetworkID,
             initiator: typing.Address,
             target: typing.Address,
             secret: typing.Secret,

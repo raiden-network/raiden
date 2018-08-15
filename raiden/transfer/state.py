@@ -77,17 +77,17 @@ def message_identifier_from_prng(prng):
 
 
 class InitiatorTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkIdentifier
+    token_network_identifier: typing.TokenNetworkID
     manager_state: 'InitiatorTransferState'
 
 
 class MediatorTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkIdentifier
+    token_network_identifier: typing.TokenNetworkID
     mediator_state: 'MediatorTransferState'
 
 
 class TargetTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkIdentifier
+    token_network_identifier: typing.TokenNetworkID
     channel_identifier: typing.ChannelID
     target_state: 'TargetTransferState'
 
