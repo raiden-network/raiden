@@ -97,6 +97,51 @@ def wait_for_participant_newbalance(
         )
 
 
+def wait_for_payment_balance(
+        raiden: RaidenService,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        partner_address: typing.Address,
+        target_address: typing.Address,
+        target_balance: typing.TokenAmount,
+        retry_timeout: float,
+) -> None:
+    """Wait until a given channels balance exceeds the target balance.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    def get_balance(end_state):
+        if end_state.balance_proof:
+            return end_state.balance_proof.transferred_amount
+        else:
+            return 0
+
+    if target_address == raiden.address:
+        balance = lambda channel_state: get_balance(channel_state.partner_state)
+    elif target_address == partner_address:
+        balance = lambda channel_state: get_balance(channel_state.our_state)
+    else:
+        raise ValueError('target_address must be one of the channel participants')
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(raiden),
+        payment_network_id,
+        token_address,
+        partner_address,
+    )
+
+    while balance(channel_state) < target_balance:
+        log.critical('wait', b=balance(channel_state), t=target_balance)
+        gevent.sleep(retry_timeout)
+        channel_state = views.get_channelstate_for(
+            views.state_from_raiden(raiden),
+            payment_network_id,
+            token_address,
+            partner_address,
+        )
+
+
 def wait_for_close(
         raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,

@@ -31,6 +31,14 @@ def skip_if_not_udp(request):
 
 
 @pytest.fixture
+def skip_if_not_matrix(request):
+    """Skip the test if not run with Matrix transport"""
+    if request.config.option.transport == 'matrix':
+        return
+    pytest.skip('This test works only with Matrix transport')
+
+
+@pytest.fixture
 def local_matrix_server(transport_config):
     if not transport_config.protocol == TransportProtocol.MATRIX:
         yield None
