@@ -203,7 +203,6 @@ def normalize_events_list(old_list):
         if new_event.get('args'):
             new_event['args'] = dict(new_event['args'])
             encode_byte_values(new_event['args'])
-
         # remove the queue identifier
         if new_event.get('queue_identifier'):
             del new_event['queue_identifier']
@@ -217,6 +216,16 @@ def normalize_events_list(old_list):
             new_event['initiator'] = to_checksum_address(new_event['initiator'])
         if name == 'EventPaymentSentSuccess' or name == 'EventPaymentSentFailed':
             new_event['target'] = to_checksum_address(new_event['target'])
+
+        # the following two were introduced temporary and will be removed
+        # when the raiden_endpoints will be removed
+        if name == 'ContractSendChannelSettle':
+            new_event['our_balance_proof'] = repr(new_event['our_balance_proof'])
+            new_event['partner_balance_proof'] = repr(new_event['partner_balance_proof'])
+        if name == 'ContractSendChannelClose':
+            new_event['balance_proof'] = repr(new_event['balance_proof'])
+        if name == 'SendRefundTransfer':
+            new_event['lock'] = repr(new_event['lock'])
         encode_byte_values(new_event)
         new_list.append(new_event)
     return new_list
