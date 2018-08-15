@@ -202,12 +202,13 @@ export class RaidenService {
         toBlock?: number,
     ): Observable<Array<Event>> {
         let path: string;
-        if (eventsParam.channel) {
-            path = `channels/${eventsParam.channel.token_address}/${eventsParam.channel.partner_address}`;
+        const channel = eventsParam.channel;
+        if (channel) {
+            path = `/blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
         } else if (eventsParam.token) {
-            path = `tokens/${eventsParam.token}`;
+            path = `/blockchain_events/tokens/${eventsParam.token}`;
         } else {
-            path = 'network';
+            path = 'events/network';
         }
         let params = new HttpParams();
         if (fromBlock) {
@@ -217,7 +218,7 @@ export class RaidenService {
             params = params.set('to_block', '' + toBlock);
         }
         return this.http.get<Array<Event>>(
-            `${this.raidenConfig.api}/events/${path}`,
+            `${this.raidenConfig.api}/${path}`,
             { params }
         ).pipe(
             catchError((error) => this.handleError(error)),
