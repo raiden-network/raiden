@@ -399,7 +399,7 @@ class RestAPI:
             token_address: typing.TokenAddress,
     ):
         log.debug(
-            '[REST API] Register token called',
+            'Registering token',
             registry_address=registry_address,
             token_address=token_address,
         )
@@ -439,7 +439,7 @@ class RestAPI:
             balance: typing.TokenAmount = None,
     ):
         log.debug(
-            '[REST API] Channel open called',
+            'Opening channel',
             registry_address=registry_address,
             partner_address=partner_address,
             token_address=token_address,
@@ -526,7 +526,7 @@ class RestAPI:
             joinable_funds_target: float = None,
     ):
         log.debug(
-            '[REST API] Connecting to token network',
+            'Connecting to token network',
             registry_address=registry_address,
             token_address=token_address,
             funds=funds,
@@ -568,7 +568,7 @@ class RestAPI:
             token_address: typing.TokenAddress,
     ):
         log.debug(
-            '[REST API] Leaving token network',
+            'Leaving token network',
             registry_address=registry_address,
             token_address=token_address,
         )
@@ -626,7 +626,7 @@ class RestAPI:
             partner_address: typing.Address = None,
     ):
         log.debug(
-            '[REST API] Getting channel list',
+            'Getting channel list',
             registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
@@ -645,7 +645,7 @@ class RestAPI:
 
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         log.debug(
-            '[REST API] Getting token list',
+            'Getting token list',
             registry_address=registry_address,
         )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
@@ -661,7 +661,7 @@ class RestAPI:
             to_block: typing.BlockSpecification,
     ):
         log.debug(
-            '[REST API] Getting network events',
+            'Getting network events',
             registry_address=registry_address,
             from_block=from_block,
             to_block=to_block,
@@ -684,7 +684,7 @@ class RestAPI:
             to_block: typing.BlockSpecification,
     ):
         log.debug(
-            '[REST API] Getting token network blockchain events',
+            'Getting token network blockchain events',
             token_address=token_address,
             from_block=from_block,
             to_block=to_block,
@@ -707,7 +707,7 @@ class RestAPI:
             target_address: typing.Address = None,
     ):
         log.debug(
-            '[REST API] Getting payment history',
+            'Getting payment history',
             token_address=token_address,
             target_address=target_address,
         )
@@ -751,7 +751,7 @@ class RestAPI:
             to_block: typing.BlockSpecification,
     ):
         log.debug(
-            '[REST API] Getting token network internal events',
+            'Getting token network internal events',
             token_address=token_address,
             from_block=from_block,
             to_block=to_block,
@@ -774,7 +774,7 @@ class RestAPI:
             to_block: typing.BlockSpecification = None,
     ):
         log.debug(
-            '[REST API] Getting channel blockchain events',
+            'Getting channel blockchain events',
             token_address=token_address,
             partner_address=partner_address,
             from_block=from_block,
@@ -801,7 +801,7 @@ class RestAPI:
             to_block: typing.BlockSpecification = None,
     ):
         log.debug(
-            '[REST API] Getting channel internal events',
+            'Getting channel internal events',
             token_address=token_address,
             partner_address=partner_address,
             from_block=from_block,
@@ -825,7 +825,7 @@ class RestAPI:
             partner_address: typing.Address,
     ):
         log.debug(
-            '[REST API] Getting channel',
+            'Getting channel',
             registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
@@ -850,7 +850,7 @@ class RestAPI:
             token_address: typing.TokenAddress,
     ):
         log.debug(
-            '[REST API] Getting partners by token',
+            'Getting partners by token',
             registry_address=registry_address,
             token_address=token_address,
         )
@@ -883,7 +883,7 @@ class RestAPI:
             identifier: typing.PaymentID,
     ):
         log.debug(
-            '[REST API] Initiating payment',
+            'Initiating payment',
             registry_address=registry_address,
             token_address=token_address,
             target_address=target_address,
@@ -938,7 +938,7 @@ class RestAPI:
             total_deposit: typing.TokenAmount,
     ):
         log.debug(
-            '[REST API] Depositing to channel',
+            'Depositing to channel',
             registry_address=registry_address,
             channel_identifier=channel_state.identifier,
             total_deposit=total_deposit,
@@ -993,7 +993,7 @@ class RestAPI:
             channel_state: NettingChannelState,
     ):
         log.debug(
-            '[REST API] Closing channel',
+            'Closing channel',
             registry_address=registry_address,
             channel_identifier=channel_state.identifier,
         )
@@ -1039,7 +1039,7 @@ class RestAPI:
             state: str = None,
     ):
         log.debug(
-            '[REST API] Patching channel',
+            'Patching channel',
             registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
