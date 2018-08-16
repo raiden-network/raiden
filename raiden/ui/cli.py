@@ -93,6 +93,7 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
+from raiden.storage.sqlite import RAIDEN_DB_VERSION
 
 
 log = structlog.get_logger(__name__)
@@ -654,7 +655,12 @@ def run_app(
     if sync_check:
         check_synced(blockchain_service)
 
-    database_path = os.path.join(datadir, 'netid_%s' % net_id, address_hex[:8], 'log.db')
+    database_path = os.path.join(
+        datadir,
+        'netid_%s' % net_id,
+        address_hex[:8],
+        f'v{RAIDEN_DB_VERSION}_log.db',
+    )
     config['database_path'] = database_path
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
