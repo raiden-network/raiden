@@ -49,7 +49,7 @@ class DepositOverLimit(RaidenError):
     pass
 
 
-class DepositMismatch(RaidenUnrecoverableError):
+class DepositMismatch(RaidenRecoverableError):
     """ Raised when the requested deposit is lower than actual channel deposit
 
     Used when a *user* tries to deposit a given amount of token in a channel,
@@ -58,7 +58,7 @@ class DepositMismatch(RaidenUnrecoverableError):
     pass
 
 
-class WithdrawMismatch(RaidenUnrecoverableError):
+class WithdrawMismatch(RaidenRecoverableError):
     """ Raised when the requested withdraw is lower than actual channel withdraw
 
     Used when a *user* tries to withdraw a given amount of token from a channel,

@@ -16,7 +16,6 @@ from raiden.exceptions import (
     TransactionThrew,
     InsufficientFunds,
     RaidenRecoverableError,
-    RaidenUnrecoverableError,
 )
 from raiden.transfer import views
 from raiden.utils.typing import Address
@@ -215,7 +214,7 @@ class ConnectionManager:
                     partner_address,
                     joining_funds,
                 )
-            except (RaidenRecoverableError, RaidenUnrecoverableError):
+            except RaidenRecoverableError:
                 log.exception('connection manager join: channel not in opened state')
             else:
                 log.debug(
@@ -285,7 +284,7 @@ class ConnectionManager:
             )
         except TransactionThrew:
             log.exception('connection manager: deposit failed')
-        except (RaidenRecoverableError, RaidenUnrecoverableError):
+        except RaidenRecoverableError:
             log.exception('connection manager: channel not in opened state')
         except InsufficientFunds as e:
             log.error(f'connection manager: {str(e)}')
