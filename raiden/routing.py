@@ -79,7 +79,9 @@ def get_best_routes(
 
     if not neighbors_heap:
         log.warning(
-            'No routes available from %s to %s' % (pex(from_address), pex(to_address)),
+            'No routes available',
+            from_address=pex(from_address),
+            to_address=pex(to_address),
         )
 
     while neighbors_heap:
@@ -99,8 +101,9 @@ def get_best_routes(
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
-                'channel %s - %s is not opened, ignoring' %
-                (pex(from_address), pex(partner_address)),
+                'channel is not opened, ignoring',
+                from_address=pex(from_address),
+                partner_address=pex(partner_address),
             )
             continue
 
@@ -111,16 +114,21 @@ def get_best_routes(
 
         if amount > distributable:
             log.info(
-                'channel %s - %s doesnt have enough funds [%s], ignoring' %
-                (pex(from_address), pex(partner_address), amount),
+                'channel doesnt have enough funds, ignoring',
+                from_address=pex(from_address),
+                partner_address=pex(partner_address),
+                amount=amount,
+                distributable=distributable,
             )
             continue
 
         network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
         if network_state != NODE_NETWORK_REACHABLE:
             log.info(
-                'partner for channel %s - %s is not %s, ignoring' %
-                (pex(from_address), pex(partner_address), NODE_NETWORK_REACHABLE),
+                'partner for channel state isn\'t reachable, ignoring',
+                from_address=pex(from_address),
+                partner_address=pex(partner_address),
+                status=network_state,
             )
             continue
 
