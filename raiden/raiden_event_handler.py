@@ -3,7 +3,6 @@ import structlog
 from raiden.exceptions import (
     ChannelOutdatedError,
     RaidenRecoverableError,
-    RaidenUnrecoverableError,
 )
 from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
@@ -198,15 +197,12 @@ def handle_contract_send_channelclose(
         channel_id=channel_close_event.channel_identifier,
     )
 
-    try:
-        channel_proxy.close(
-            nonce,
-            balance_hash,
-            message_hash,
-            signature,
-        )
-    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
-        log.error(str(e))
+    channel_proxy.close(
+        nonce,
+        balance_hash,
+        message_hash,
+        signature,
+    )
 
 
 def handle_contract_send_channelupdate(
@@ -248,7 +244,7 @@ def handle_contract_send_channelunlock(
     )
 
     try:
-        channel.unlock(channel_unlock_event.merkle_tree_leaves)
+        channel.unlock(channel_unlock_event.merkle_treee_leaves)
     except ChannelOutdatedError as e:
         log.error(str(e))
 
@@ -302,17 +298,14 @@ def handle_contract_send_channelsettle(
         second_locked_amount = our_locked_amount
         second_locksroot = our_locksroot
 
-    try:
-        channel.settle(
-            first_transferred_amount,
-            first_locked_amount,
-            first_locksroot,
-            second_transferred_amount,
-            second_locked_amount,
-            second_locksroot,
-        )
-    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
-        log.error(str(e))
+    channel.settle(
+        first_transferred_amount,
+        first_locked_amount,
+        first_locksroot,
+        second_transferred_amount,
+        second_locked_amount,
+        second_locksroot,
+    )
 
 
 def on_raiden_event(raiden: RaidenService, event: Event):
@@ -352,5 +345,5 @@ def on_raiden_event(raiden: RaidenService, event: Event):
             pass
         else:
             log.error('Unknown event {}'.format(type(event)))
-    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
+    except RaidenRecoverableError as e:
         log.error(e)

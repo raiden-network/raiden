@@ -236,7 +236,7 @@ class TokenNetwork:
             )
         assert isinstance(channel_identifier, typing.T_ChannelID)
         if channel_identifier == 0:
-            raise RaidenUnrecoverableError(
+            raise RaidenRecoverableError(
                 f'When calling {called_by_fn} either 0 value was given for the '
                 'channel_identifier or getChannelIdentifier returned 0, meaning '
                 f'no channel currently exists between {pex(participant1)} and '
@@ -250,8 +250,11 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
-        """Returns if the channel exists and is in a non-settled state"""
-        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        """Returns if the chann el exists and is in a non-settled state"""
+        try:
+            channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        except RaidenRecoverableError:
+            return False
         exists_and_not_settled = (
             channel_state > ChannelState.NONEXISTENT and
             channel_state < ChannelState.SETTLED
@@ -389,14 +392,11 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> typing.Optional[typing.BlockNumber]:
         """ Returns the channel settle_block_number if it is not yet settled and None Otherwise """
-        try:
-            channel_data = self.detail_channel(
-                participant1=participant1,
-                participant2=participant2,
-                channel_identifier=channel_identifier,
-            )
-        except RaidenUnrecoverableError:
-            return None
+        channel_data = self.detail_channel(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
         return channel_data.settle_block_number
 
     def channel_is_opened(
@@ -438,15 +438,11 @@ class TokenNetwork:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
 
-        try:
-            channel_data = self.detail_channel(
-                participant1=participant1,
-                participant2=participant2,
-                channel_identifier=channel_identifier,
-            )
-        except RaidenUnrecoverableError:
-            return None
-
+        channel_data = self.detail_channel(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
         if channel_data.state >= ChannelState.SETTLED:
             return None
 
@@ -775,7 +771,7 @@ class TokenNetwork:
         ).withdrawn
         amount_to_withdraw = total_withdraw - current_withdraw
         if total_withdraw < current_withdraw:
-            raise RaidenUnrecoverableError(
+            raise WithdrawMismatch(
                 f'Current withdraw ({current_withdraw}) is already larger '
                 f'than the requested total withdraw amount ({total_withdraw})',
             )
@@ -904,7 +900,7 @@ class TokenNetwork:
                 partner_locked_amount,
                 partner_locksroot,
             ) is False:
-                raise RaidenUnrecoverableError('local state can not be used to call settle')
+                raise RaidenRecoverableError('local state can not be used to call settle')
             our_maximum = transferred_amount + locked_amount
             partner_maximum = partner_transferred_amount + partner_locked_amount
 
@@ -1057,10 +1053,7 @@ class TokenNetwork:
             )
 
     def _get_channel_state(self, participant1, participant2, channel_identifier):
-        try:
-            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
-        except RaidenUnrecoverableError:
-            return False
+        channel_data = self.detail_channel(participant1, participant2, channel_identifier)
 
         if not isinstance(channel_data.state, typing.T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
@@ -1079,15 +1072,13 @@ class TokenNetwork:
                 f'Channel between participant {participant1} '
                 f'and {participant2} does not exist',
             )
-        # Deposit was prohibited because the channel is settled
         elif channel_state == ChannelState.SETTLED:
             raise RaidenUnrecoverableError(
-                'Channel is not in an settled state',
+                'A settled channel cannot be closed',
             )
-        # Deposit was prohibited because the channel is closed
         elif channel_state == ChannelState.CLOSED:
             raise RaidenRecoverableError(
-                'Channel is not in an open state',
+                'Channel is already closed',
             )
 
     def _check_channel_state_for_deposit(
@@ -1103,7 +1094,7 @@ class TokenNetwork:
             channel_identifier,
         )
 
-        if participant_details.our_details.deposit > deposit_amount:
+        if participant_details.our_details.deposit < deposit_amount:
             raise RaidenUnrecoverableError('Deposit amount decreased')
 
         channel_state = self._get_channel_state(
@@ -1120,12 +1111,12 @@ class TokenNetwork:
         # Deposit was prohibited because the channel is settled
         elif channel_state == ChannelState.SETTLED:
             raise RaidenUnrecoverableError(
-                'Channel is settled',
+                'Deposit is not possible due to channel being settled',
             )
         # Deposit was prohibited because the channel is closed
         elif channel_state == ChannelState.CLOSED:
             raise RaidenRecoverableError(
-                'Channel is not in an open state',
+                'Channel is already closed',
             )
 
     def _check_channel_state_for_withdraw(
@@ -1155,15 +1146,13 @@ class TokenNetwork:
                 f'Channel between participant {participant1} '
                 f'and {participant2} does not exist',
             )
-        # Deposit was prohibited because the channel is settled
         elif channel_state == ChannelState.SETTLED:
             raise RaidenUnrecoverableError(
-                'Channel is not in an settled state',
+                'A settled channel cannot be closed',
             )
-        # Deposit was prohibited because the channel is closed
         elif channel_state == ChannelState.CLOSED:
             raise RaidenRecoverableError(
-                'Channel is not in an open state',
+                'Channel is already closed',
             )
 
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
@@ -1173,7 +1162,7 @@ class TokenNetwork:
                 'Channel is not in a closed state. It cannot be settled',
             )
         elif channel_data.state == ChannelState.REMOVED:
-            raise RaidenUnrecoverableError(
+            raise RaidenRecoverableError(
                 'Channel is already unlocked. It cannot be settled',
             )
         elif channel_data.state == ChannelState.OPENED:
@@ -1185,3 +1174,7 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError(
                     'Channel cannot be settled before settlement window is over',
                 )
+
+            raise RaidenRecoverableError(
+                'Channel cannot be settled before closing',
+            )
