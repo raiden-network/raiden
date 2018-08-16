@@ -1167,25 +1167,21 @@ class TokenNetwork:
             )
 
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
-        channel_state = self._get_channel_state(
-            participant1=participant1,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-        )
-        if channel_state == ChannelState.SETTLED:
+        channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        if channel_data.state == ChannelState.SETTLED:
             raise RaidenRecoverableError(
                 'Channel is not in a closed state. It cannot be settled',
             )
-        elif channel_state == ChannelState.REMOVED:
+        elif channel_data.state == ChannelState.REMOVED:
             raise RaidenUnrecoverableError(
                 'Channel is already unlocked. It cannot be settled',
             )
-        elif channel_state == ChannelState.OPENED:
+        elif channel_data.state == ChannelState.OPENED:
             raise RaidenUnrecoverableError(
                 'Channel is still open. It cannot be settled',
             )
-        elif channel_state == ChannelState.CLOSED:
-            if channel_state.settle_block_number < self.client.block_number():
+        elif channel_data.state == ChannelState.CLOSED:
+            if self.client.block_number() < channel_data.settle_block_number:
                 raise RaidenUnrecoverableError(
                     'Channel cannot be settled before settlement window is over',
                 )

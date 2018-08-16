@@ -20,7 +20,6 @@ from raiden.exceptions import (
     ContractVersionMismatch,
     InvalidAddress,
     TransactionThrew,
-    # RaidenRecoverableError,
 )
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.transactions import (
@@ -91,9 +90,6 @@ class SecretRegistry:
                     contract=pex(self.address),
                     secrethash=encode_hex(secrethash),
                 )
-                # raise RaidenRecoverableError(
-                #     f'secret {encode_hex(secrethash)} already registered.',
-                # )
 
         if not secret_batch:
             return

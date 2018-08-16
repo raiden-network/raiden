@@ -389,7 +389,7 @@ def test_token_network_proxy_update_transfer(
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
-        TEST_SETTLE_TIMEOUT_MIN,
+        10,
     )
     # deposit to the channel
     initial_balance = 100
@@ -495,7 +495,22 @@ def test_token_network_proxy_update_transfer(
         decode_hex(balance_proof_c1.signature),
         non_closing_signature,
     )
-    wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.settle(
+            channel_identifier=channel_identifier,
+            transferred_amount=transferred_amount_c1,
+            locked_amount=0,
+            locksroot=EMPTY_HASH,
+            partner=c2_client.sender,
+            partner_transferred_amount=transferred_amount_c2,
+            partner_locked_amount=0,
+            partner_locksroot=EMPTY_HASH,
+        )
+
+        assert 'cannot be settled before settlement window is over' in str(exc)
+
+    wait_blocks(c1_client.web3, 10)
 
     # settling with an invalid amount
     with pytest.raises(RaidenUnrecoverableError):
