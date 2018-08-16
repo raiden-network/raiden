@@ -406,7 +406,10 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
-        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        try:
+            channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        except RaidenRecoverableError:
+            return False
         return channel_state == ChannelState.OPENED
 
     def channel_is_closed(
@@ -416,7 +419,10 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
-        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        try:
+            channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        except RaidenRecoverableError:
+            return False
         return channel_state == ChannelState.CLOSED
 
     def channel_is_settled(
@@ -426,7 +432,10 @@ class TokenNetwork:
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
-        channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        try:
+            channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
+        except RaidenRecoverableError:
+            return False
         return channel_state >= ChannelState.SETTLED
 
     def closing_address(
@@ -438,11 +447,11 @@ class TokenNetwork:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
 
-        channel_data = self.detail_channel(
-            participant1=participant1,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-        )
+        try:
+            channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        except RaidenRecoverableError:
+            return None
+
         if channel_data.state >= ChannelState.SETTLED:
             return None
 
@@ -1038,10 +1047,13 @@ class TokenNetwork:
         Checks whether an operation is being execute on a channel
         between two participants using an old channel identifier
         """
-        onchain_channel_details = self.detail_channel(
-            participant1,
-            participant2,
-        )
+        try:
+            onchain_channel_details = self.detail_channel(
+                participant1,
+                participant2,
+            )
+        except RaidenRecoverableError:
+            return
 
         onchain_channel_identifier = onchain_channel_details.channel_identifier
 
