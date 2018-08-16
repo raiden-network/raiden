@@ -2,12 +2,12 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MatDialog, MatPaginator, PageEvent } from '@angular/material';
 import { default as makeBlockie } from 'ethereum-blockies-base64';
-import { EMPTY } from 'rxjs';
-import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { EMPTY, Subscription } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
-import { flatMap, switchMap, tap } from 'rxjs/operators';
+import { flatMap } from 'rxjs/operators';
 import { Channel } from '../../models/channel';
 import { SortingData } from '../../models/sorting.data';
+import { ChannelPollingService } from '../../services/channel-polling.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { StringUtils } from '../../utils/string.utils';
@@ -80,46 +80,36 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         }
     ];
 
-    private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     private currentPage = 0;
 
     private channels: Channel[];
+    private subscription: Subscription;
+
 
     constructor(
         public dialog: MatDialog,
         private raidenConfig: RaidenConfig,
-        private raidenService: RaidenService
+        private raidenService: RaidenService,
+        private channelPollingService: ChannelPollingService
     ) {
     }
 
     ngOnInit() {
-        let timeout;
-        this.channels$ = this.channelsSubject.pipe(
-            tap(() => {
-                clearTimeout(timeout);
-                this.refreshing = true;
-            }),
-            switchMap(() => this.raidenService.getChannels()),
-            tap(() => {
-                    timeout = setTimeout(
-                        () => this.refresh(),
-                        this.raidenConfig.config.poll_interval,
-                    );
-                    this.refreshing = false;
-                }
-            ),
-        );
-        this.channels$.subscribe((channels: Channel[]) => {
+        this.channels$ = this.channelPollingService.channels();
+        this.subscription = this.channels$.subscribe((channels: Channel[]) => {
             this.channels = channels;
             this.totalChannels = channels.length;
             this.applyFilters(this.sorting);
         });
 
+        const refreshingSubscription = this.channelPollingService.refreshing().subscribe(value => this.refreshing = value);
+        this.subscription.add(refreshingSubscription);
         this.refresh();
     }
 
     ngOnDestroy() {
-        this.channelsSubject.complete();
+        this.subscription.unsubscribe();
+
     }
 
     onPageEvent(event: PageEvent) {
@@ -253,10 +243,6 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
             })).subscribe(() => this.refresh());
     }
 
-    private refresh() {
-        this.channelsSubject.next(null);
-    }
-
     applyFilters(sorting: ChannelSorting) {
         const channels: Array<Channel> = this.channels;
         let compareFn: (a: Channel, b: Channel) => number;
@@ -292,6 +278,10 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         this.visibleChannels = filteredChannels
             .sort(compareFn)
             .slice(start, start + this.pageSize);
+    }
+
+    private refresh() {
+        this.channelPollingService.refresh();
     }
 
     private searchFilter(channel: Channel): boolean {

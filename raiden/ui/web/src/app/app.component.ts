@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { Subscription } from 'rxjs';
+import { BalanceCheckerService } from './services/balance-checker.service';
 import { RaidenService } from './services/raiden.service';
 import { SharedService } from './services/shared.service';
 
@@ -9,7 +10,7 @@ import { SharedService } from './services/shared.service';
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css'],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
     public title = 'Raiden';
     public raidenAddress;
 
@@ -18,7 +19,8 @@ export class AppComponent implements OnInit {
 
     constructor(
         private sharedService: SharedService,
-        private raidenService: RaidenService
+        private raidenService: RaidenService,
+        private balanceCheckerService: BalanceCheckerService
     ) {
     }
 
@@ -29,6 +31,12 @@ export class AppComponent implements OnInit {
                 this.pendingRequests = pendingRequests;
             });
         });
+
+        this.balanceCheckerService.startMonitoring();
+    }
+
+    ngOnDestroy() {
+        this.balanceCheckerService.stopMonitoring();
     }
 
     // noinspection JSMethodCanBeStatic

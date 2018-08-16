@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
 import { bindNodeCallback, from, Observable, of, throwError, zip } from 'rxjs';
-import { catchError, combineLatest, first, flatMap, map, switchMap, tap, toArray } from 'rxjs/operators';
+import { catchError, combineLatest, first, flatMap, map, share, switchMap, tap, toArray } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { Connections } from '../models/connection';
 import { Event, EventsParam } from '../models/event';
@@ -15,7 +15,9 @@ import { tokenabi } from './tokenabi';
 
 export type CallbackFunc = (error: Error, result: any) => void;
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class RaidenService {
 
     public tokenContract: any;
