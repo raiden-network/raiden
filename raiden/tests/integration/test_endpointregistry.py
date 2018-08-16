@@ -32,16 +32,10 @@ def test_endpointregistry(private_keys, blockchain_services):
     with pytest.raises(UnknownAddress):
         contract_discovery.get(unregistered_address)
 
-    assert contract_discovery.nodeid_by_host_port(('127.0.0.1', 44444)) is None
-
     contract_discovery.register(my_address, '127.0.0.1', 44444)
-
-    assert contract_discovery.nodeid_by_host_port(('127.0.0.1', 44444)) == my_address
     assert contract_discovery.get(my_address) == ('127.0.0.1', 44444)
 
     contract_discovery.register(my_address, '127.0.0.1', 88888)
-
-    assert contract_discovery.nodeid_by_host_port(('127.0.0.1', 88888)) == my_address
     assert contract_discovery.get(my_address) == ('127.0.0.1', 88888)
 
     with pytest.raises(UnknownAddress):
