@@ -88,6 +88,14 @@ def test_token_network_proxy_basics(
         token_network_address,
     )
 
+    initial_token_balance = 100
+    token_proxy.transfer(c1_client.sender, initial_token_balance)
+    token_proxy.transfer(c2_client.sender, initial_token_balance)
+    initial_balance_c1 = token_proxy.balance_of(c1_client.sender)
+    assert initial_balance_c1 == initial_token_balance
+    initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
+    assert initial_balance_c2 == initial_token_balance
+
     # instantiating a new channel - test basic assumptions
     assert c1_token_network_proxy.channel_exists_and_not_settled(
         c1_client.sender,
@@ -179,14 +187,7 @@ def test_token_network_proxy_basics(
             10,
             c2_client.sender,
         )
-    # test deposits
-    initial_token_balance = 100
-    token_proxy.transfer(c1_client.sender, initial_token_balance)
-    token_proxy.transfer(c2_client.sender, initial_token_balance)
-    initial_balance_c1 = token_proxy.balance_of(c1_client.sender)
-    assert initial_balance_c1 == initial_token_balance
-    initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
-    assert initial_balance_c2 == initial_token_balance
+
     # no negative deposit
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
@@ -513,7 +514,7 @@ def test_token_network_proxy_update_transfer(
     wait_blocks(c1_client.web3, 10)
 
     # settling with an invalid amount
-    with pytest.raises(RaidenUnrecoverableError):
+    with pytest.raises(RaidenRecoverableError):
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,
