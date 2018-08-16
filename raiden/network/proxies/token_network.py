@@ -26,6 +26,7 @@ from raiden.exceptions import (
     ChannelOutdatedError,
     ContractVersionMismatch,
     DepositMismatch,
+    WithdrawMismatch,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidSettleTimeout,
@@ -614,6 +615,7 @@ class TokenNetwork:
                     self.node_address,
                     partner,
                     channel_identifier,
+                    total_deposit,
                 )
 
                 raise TransactionThrew('Deposit', receipt_or_none)
@@ -766,6 +768,20 @@ class TokenNetwork:
             channel_identifier,
         )
 
+        current_withdraw = self.detail_participant(
+            channel_identifier,
+            self.node_address,
+            partner,
+        ).withdrawn
+        amount_to_withdraw = total_withdraw - current_withdraw
+        if total_withdraw < current_withdraw:
+            raise RaidenUnrecoverableError(
+                f'Current withdraw ({current_withdraw}) is already larger '
+                f'than the requested total withdraw amount ({total_withdraw})',
+            )
+        if amount_to_withdraw <= 0:
+            raise ValueError(f'withdraw {amount_to_withdraw} must be greater than 0.')
+
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
@@ -786,6 +802,7 @@ class TokenNetwork:
                     self.node_address,
                     partner,
                     channel_identifier,
+                    total_withdraw,
                 )
 
                 raise TransactionThrew('Withdraw', receipt_or_none)
@@ -1050,15 +1067,6 @@ class TokenNetwork:
 
         return channel_data.state
 
-    def _assert_larger_nonce(self, participant1, participant2, channel_identifier, nonce):
-        participant_details = self.detail_participants(
-            participant1,
-            participant2,
-            channel_identifier,
-        )
-        if nonce <= participant_details.partner_details.nonce:
-            raise RaidenUnrecoverableError('Nonce decreased and therefore considered invalid')
-
     def _check_channel_state_for_close(self, participant1, participant2, channel_identifier):
         channel_state = self._get_channel_state(
             participant1=participant1,
@@ -1082,7 +1090,22 @@ class TokenNetwork:
                 'Channel is not in an open state',
             )
 
-    def _check_channel_state_for_deposit(self, participant1, participant2, channel_identifier):
+    def _check_channel_state_for_deposit(
+            self,
+            participant1,
+            participant2,
+            channel_identifier,
+            deposit_amount,
+    ):
+        participant_details = self.detail_participants(
+            participant1,
+            participant2,
+            channel_identifier,
+        )
+
+        if participant_details.our_details.deposit > deposit_amount:
+            raise RaidenUnrecoverableError('Deposit amount decreased')
+
         channel_state = self._get_channel_state(
             participant1=self.node_address,
             participant2=participant2,
@@ -1105,7 +1128,22 @@ class TokenNetwork:
                 'Channel is not in an open state',
             )
 
-    def _check_channel_state_for_withdraw(self, participant1, participant2, channel_identifier):
+    def _check_channel_state_for_withdraw(
+            self,
+            participant1,
+            participant2,
+            channel_identifier,
+            withdraw_amount,
+    ):
+        participant_details = self.detail_participants(
+            participant1,
+            participant2,
+            channel_identifier,
+        )
+
+        if participant_details.our_details.withdrawn > withdraw_amount:
+            raise WithdrawMismatch('Withdraw amount decreased')
+
         channel_state = self._get_channel_state(
             participant1=participant1,
             participant2=participant2,

@@ -112,6 +112,42 @@ def test_token_network_proxy_basics(
             c1_client.sender,
             TEST_SETTLE_TIMEOUT_MIN,
         )
+
+    # Channel is not open yet
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.set_total_deposit(
+            1,
+            1,
+            c2_client.sender,
+        )
+
+        assert 'does not exist' in str(exc)
+
+    # Channel is not open yet
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.close(
+            1,
+            c2_client.sender,
+            EMPTY_HASH,
+            0,
+            EMPTY_HASH,
+            EMPTY_HASH,
+        )
+
+        assert 'does not exist' in str(exc)
+
+    # Channel is not open yet
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.withdraw(
+            1,
+            c2_client.sender,
+            1,
+            EMPTY_HASH,
+            EMPTY_HASH,
+        )
+
+        assert 'does not exist' in str(exc)
+
     # actually create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
@@ -164,6 +200,17 @@ def test_token_network_proxy_basics(
         10,
         c2_client.sender,
     )
+
+    # no negative deposit
+    with pytest.raises(RaidenUnrecoverableError):
+        c1_token_network_proxy.withdraw(
+            channel_identifier,
+            c2_client.sender,
+            -1,
+            EMPTY_HASH,
+            EMPTY_HASH,
+        )
+
     # balance proof by c2
     transferred_amount = 3
     balance_proof = BalanceProof(
@@ -186,6 +233,21 @@ def test_token_network_proxy_basics(
             additional_hash=decode_hex(balance_proof.additional_hash),
             signature=b'\x11' * 65,
         )
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c1_token_network_proxy.settle(
+            channel_identifier=channel_identifier,
+            transferred_amount=transferred_amount,
+            locked_amount=0,
+            locksroot=EMPTY_HASH,
+            partner=c2_client.sender,
+            partner_transferred_amount=0,
+            partner_locked_amount=0,
+            partner_locksroot=EMPTY_HASH,
+        )
+
+        assert 'not in a closed state' in str(exc)
+
     # correct close
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
@@ -205,6 +267,7 @@ def test_token_network_proxy_basics(
         participant2=c2_client.sender,
         channel_identifier=channel_identifier,
     ) is True
+
     # closing already closed channel
     with pytest.raises(RaidenRecoverableError):
         c2_token_network_proxy.close(
@@ -252,6 +315,7 @@ def test_token_network_proxy_basics(
             partner_locked_amount=0,
             partner_locksroot=EMPTY_HASH,
         )
+
     c2_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=0,
@@ -369,6 +433,26 @@ def test_token_network_proxy_update_transfer(
     balance_proof_c2.signature = encode_hex(
         sign_data(encode_hex(private_keys[2]), balance_proof_c2.serialize_bin()),
     )
+
+    non_closing_data = balance_proof_c1.serialize_bin() + decode_hex(balance_proof_c1.signature)
+    non_closing_signature = sign_data(
+        encode_hex(c2_client.privkey),
+        non_closing_data,
+    )
+
+    with pytest.raises(RaidenUnrecoverableError) as exc:
+        c2_token_network_proxy.update_transfer(
+            channel_identifier,
+            c1_client.sender,
+            decode_hex(balance_proof_c1.balance_hash),
+            balance_proof_c1.nonce,
+            decode_hex(balance_proof_c1.additional_hash),
+            decode_hex(balance_proof_c1.signature),
+            non_closing_signature,
+        )
+
+        assert 'not in a closed state' in str(exc)
+
     # close by c1
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
