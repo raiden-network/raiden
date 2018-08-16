@@ -2,7 +2,6 @@ import structlog
 
 from raiden.exceptions import (
     ChannelOutdatedError,
-    RaidenError,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -206,7 +205,7 @@ def handle_contract_send_channelclose(
             message_hash,
             signature,
         )
-    except RaidenError as e:
+    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
         log.error(str(e))
 
 
@@ -312,7 +311,7 @@ def handle_contract_send_channelsettle(
             second_locked_amount,
             second_locksroot,
         )
-    except RaidenError as e:
+    except (RaidenRecoverableError, RaidenUnrecoverableError) as e:
         log.error(str(e))
 
 

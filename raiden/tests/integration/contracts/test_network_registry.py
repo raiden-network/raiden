@@ -5,7 +5,7 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
 )
 
-from raiden.exceptions import TransactionThrew
+from raiden.exceptions import RaidenRecoverableError, TransactionThrew
 from raiden.tests.utils.factories import make_address
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 
@@ -26,6 +26,14 @@ def test_network_registry(token_network_registry_proxy: TokenNetworkRegistry, de
     token_network_address = token_network_registry_proxy.add_token(
         test_token_address,
     )
+
+    with pytest.raises(RaidenRecoverableError) as exc:
+        token_network_address = token_network_registry_proxy.add_token(
+            test_token_address,
+        )
+
+        assert 'Token already registered' in str(exc)
+
     logs = event_filter.get_all_entries()
     assert len(logs) == 1
     decoded_event = token_network_registry_proxy.proxy.decode_event(logs[0])
