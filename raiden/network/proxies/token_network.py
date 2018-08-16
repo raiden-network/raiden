@@ -250,7 +250,7 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID = None,
     ) -> bool:
-        """Returns if the chann el exists and is in a non-settled state"""
+        """Returns if the channel exists and is in a non-settled state"""
         try:
             channel_state = self._get_channel_state(participant1, participant2, channel_identifier)
         except RaidenRecoverableError:
@@ -792,8 +792,8 @@ class TokenNetwork:
                 'setTotalWithdraw',
                 channel_identifier,
                 self.node_address,
-                partner,
                 total_withdraw,
+                partner,
                 partner_signature,
                 signature,
             )
@@ -1106,15 +1106,12 @@ class TokenNetwork:
             channel_identifier,
         )
 
-        if participant_details.our_details.deposit < deposit_amount:
-            raise RaidenUnrecoverableError('Deposit amount decreased')
-
         channel_state = self._get_channel_state(
             participant1=self.node_address,
             participant2=participant2,
             channel_identifier=channel_identifier,
         )
-        # Check if deposit is being mode on a nonexistent channel
+        # Check if deposit is being made on a nonexistent channel
         if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
             raise RaidenUnrecoverableError(
                 f'Channel between participant {participant1} '
@@ -1130,6 +1127,8 @@ class TokenNetwork:
             raise RaidenRecoverableError(
                 'Channel is already closed',
             )
+        elif participant_details.our_details.deposit < deposit_amount:
+            raise RaidenUnrecoverableError('Deposit amount decreased')
 
     def _check_channel_state_for_withdraw(
             self,
@@ -1170,7 +1169,7 @@ class TokenNetwork:
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)
         if channel_data.state == ChannelState.SETTLED:
-            raise RaidenRecoverableError(
+            raise RaidenUnrecoverableError(
                 'Channel is not in a closed state. It cannot be settled',
             )
         elif channel_data.state == ChannelState.REMOVED:
