@@ -1,7 +1,8 @@
 import logging
 import logging.config
-import re
+import os
 import sys
+import re
 from traceback import TracebackException
 from functools import wraps
 from typing import Dict, Callable, Pattern, Tuple, List
@@ -255,3 +256,11 @@ def configure_logging(
     # all messages, which are then be filtered by the `RaidenFilter`
     structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
     structlog.get_logger('raiden').setLevel('DEBUG')
+
+    # rollover RotatingFileHandler on startup, to split logs also per-session
+    root = logging.getLogger()
+    for handler in root.handlers:
+        if isinstance(handler, logging.handlers.RotatingFileHandler):
+            handler.flush()
+            if os.stat(handler.baseFilename).st_size > 0:
+                handler.doRollover()
