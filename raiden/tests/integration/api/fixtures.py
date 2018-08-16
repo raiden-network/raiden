@@ -6,7 +6,6 @@ import gevent
 
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import RestAPI, APIServer
-from raiden.utils.gevent_utils import RaidenGreenlet
 
 
 def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
@@ -34,14 +33,7 @@ def api_backend(raiden_network, rest_api_port_number):
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api)
     api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
-
-    # TODO: Find out why tests fail with debug=True
-    server = RaidenGreenlet.spawn(
-        api_server.run,
-        port=rest_api_port_number,
-        debug=False,
-        use_evalex=False,
-    )
+    api_server.start(port=rest_api_port_number)
 
     # Fixes flaky test, were requests are done prior to the server initializing
     # the listening socket.
@@ -50,4 +42,4 @@ def api_backend(raiden_network, rest_api_port_number):
 
     yield api_server, rest_api
 
-    server.kill(block=True, timeout=10)
+    api_server.stop(timeout=10)
