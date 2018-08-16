@@ -145,8 +145,9 @@ def handle_secretreveal(
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
+    should_send_secret = target_state.state == 'secret_request'
 
-    if valid_secret:
+    if valid_secret and should_send_secret:
         if isinstance(state_change, ReceiveSecretReveal):
             channel.register_secret(
                 channel_state,
