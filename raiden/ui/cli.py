@@ -16,6 +16,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
+from subprocess import DEVNULL
 
 import click
 import filelock
@@ -1235,6 +1236,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                 local_matrix,
                 url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
                 method='GET',
+                io=DEVNULL,
                 timeout=30,
                 shell=True,
             ):
