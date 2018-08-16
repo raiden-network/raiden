@@ -99,20 +99,24 @@
             </div>
 
             <div fxLayout="column" fxFlex="1 1 auto" fxLayoutAlign="center center">
-                <button mat-button
+                <button *ngIf="token.connected"
+                        class="match-parent-width"
+                        mat-raised-button
                         color="accent"
-                        [disabled]="token.connected"
+                        [disabled]="!(token.connected.sum_deposits > 0)"
+                        (click)="showPaymentDialog(token)">{{ 'Pay' | uppercase }}
+                </button>
+                <button *ngIf="!token.connected"
+                        class="match-parent-width"
+                        mat-stroked-button
+                        color="accent"
                         (click)="showJoinDialog(token)">{{ 'Join Network' | uppercase }}
                 </button>
-                <button mat-button
+                <button *ngIf="token.connected"
+                        class="match-parent-width"
+                        mat-button
                         color="accent"
-                        [disabled]="!(token.connected)"
                         (click)="showLeaveDialog(token)">{{ 'Leave Network' | uppercase }}
-                </button>
-                <button mat-button
-                        color="accent"
-                        [disabled]="!(token.connected && token.connected.sum_deposits > 0)"
-                        (click)="showPaymentDialog(token)">{{ 'Pay' | uppercase }}
                 </button>
             </div>
             <div fxLayout="column" fxFlex="1 1 auto" fxLayoutAlign="start end">

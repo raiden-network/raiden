@@ -40,6 +40,10 @@
     height: 100%;
 }
 
+.match-parent-width {
+    width: 100%;
+}
+
 .events {
     padding-top: 30px;
     margin-left: 30px;

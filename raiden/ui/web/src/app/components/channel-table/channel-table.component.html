@@ -95,17 +95,20 @@
             </div>
 
             <div fxLayout="column" fxFlex="0 0 auto" fxLayoutAlign="start">
-                <button id="pay-button" mat-button
+                <button class="match-parent-width"
+                        id="pay-button" mat-raised-button
                         color="accent"
                         [disabled]="channel.state !== 'opened' || channel.balance == 0"
                         (click)="onPay(channel)">{{ 'Pay' | uppercase }}
                 </button>
-                <button id="deposit-button" mat-button
+                <button class="match-parent-width"
+                        id="deposit-button" mat-button
                         color="accent"
                         [disabled]="channel.state !== 'opened'"
                         (click)="onDeposit(channel)">{{ 'Deposit' | uppercase }}
                 </button>
-                <button id="close-button" mat-button
+                <button class="match-parent-width"
+                        id="close-button" mat-button
                         color="accent"
                         [disabled]="channel.state !== 'opened'"
                         (click)="onClose(channel)">{{ 'Close' | uppercase }}
