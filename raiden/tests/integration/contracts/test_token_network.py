@@ -19,6 +19,7 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     TransactionThrew,
     DepositMismatch,
+    WithdrawMismatch,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -184,7 +185,7 @@ def test_token_network_proxy_basics(
     with pytest.raises(ValueError):
         c1_token_network_proxy.set_total_deposit(
             channel_identifier,
-            10,
+            101,
             c2_client.sender,
         )
 
@@ -203,7 +204,7 @@ def test_token_network_proxy_basics(
     )
 
     # no negative deposit
-    with pytest.raises(RaidenUnrecoverableError):
+    with pytest.raises(WithdrawMismatch):
         c1_token_network_proxy.withdraw(
             channel_identifier,
             c2_client.sender,
@@ -235,7 +236,7 @@ def test_token_network_proxy_basics(
             signature=b'\x11' * 65,
         )
 
-    with pytest.raises(RaidenUnrecoverableError) as exc:
+    with pytest.raises(RaidenRecoverableError) as exc:
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount,
@@ -305,7 +306,7 @@ def test_token_network_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # try to settle using incorrect data
-    with pytest.raises(RaidenUnrecoverableError):
+    with pytest.raises(RaidenRecoverableError):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=1,
