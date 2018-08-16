@@ -1,5 +1,4 @@
 from eth_utils import (
-    to_canonical_address,
     to_checksum_address,
     is_binary_address,
     to_normalized_address,
@@ -84,14 +83,6 @@ class Discovery:
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
-
-    def address_by_endpoint(self, endpoint):
-        address = self.proxy.contract.functions.findAddressByEndpoint(endpoint).call()
-
-        if address == self.not_found_address:  # the 0 address means nothing found
-            return None
-
-        return to_canonical_address(address)
 
     def version(self):
         return self.proxy.contract.functions.contract_version().call()

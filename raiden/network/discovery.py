@@ -1,5 +1,4 @@
 import socket
-from typing import Tuple
 from eth_utils import is_binary_address
 
 import structlog
@@ -41,12 +40,6 @@ class Discovery:
             return self.nodeid_to_hostport[node_address]
         except KeyError:
             raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
-
-    def nodeid_by_host_port(self, host_port):
-        for nodeid, value_hostport in self.nodeid_to_hostport.items():
-            if value_hostport == host_port:
-                return nodeid
-        return None
 
 
 class ContractDiscovery(Discovery):
@@ -107,11 +100,6 @@ class ContractDiscovery(Discovery):
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
         host_port = split_endpoint(endpoint)
         return host_port
-
-    def nodeid_by_host_port(self, host_port: Tuple[str, int]):
-        host, port = host_port
-        endpoint = host_port_to_endpoint(host, port)
-        return self.discovery_proxy.address_by_endpoint(endpoint)
 
     def version(self):
         return self.discovery_proxy.version()
