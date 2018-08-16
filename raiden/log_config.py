@@ -253,4 +253,5 @@ def configure_logging(
 
     # set logging level of the root logger to DEBUG, to be able to intercept
     # all messages, which are then be filtered by the `RaidenFilter`
-    structlog.get_logger('').setLevel('DEBUG')
+    structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
+    structlog.get_logger('raiden').setLevel('DEBUG')
