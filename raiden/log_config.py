@@ -133,7 +133,7 @@ def _get_log_file_handler() -> Dict:
     }
 
 
-def redactor(blacklist: Dict[Pattern, str]) -> Callable:
+def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
     def processor_wrapper(msg: str) -> str:
         for regex, repl in blacklist.items():
@@ -151,6 +151,7 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     else:
         prev_fmt = TracebackException._orig_format = TracebackException.format
 
+    @wraps(TracebackException._orig_format)
     def tracebackexception_format(self, *, chain=True):
         for line in prev_fmt(self, chain=chain):
             yield redact(line)
