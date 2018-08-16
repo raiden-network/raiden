@@ -526,15 +526,7 @@ def test_token_network_proxy_update_transfer(
     assert (token_proxy.balance_of(c1_client.sender) ==
             (initial_balance_c1 + transferred_amount_c2 - transferred_amount_c1))
 
-    with pytest.raises(RaidenRecoverableError) as exc:
-        c2_token_network_proxy.set_total_deposit(
-            channel_identifier,
-            20,
-            c1_client.sender,
-        )
-
-        assert 'not in an open state' in str(exc)
-
+    # Already settled
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c2_token_network_proxy.set_total_deposit(
             channel_identifier,
@@ -542,4 +534,4 @@ def test_token_network_proxy_update_transfer(
             c1_client.sender,
         )
 
-        assert 'channel is settled' in str(exc)
+        assert 'getChannelIdentifier returned 0' in str(exc)
