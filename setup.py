@@ -95,7 +95,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.5.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
+version = '0.5.1'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 
 setup(
     name='raiden',
