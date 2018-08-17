@@ -332,7 +332,7 @@ class RaidenService:
         """ Stop the node. """
         # Needs to come before any greenlets joining
         self.stop_event.set()
-        self.transport.stop_and_wait()
+        self.transport.stop()
         self.alarm.stop_async()
 
         wait_for = [self.alarm]
