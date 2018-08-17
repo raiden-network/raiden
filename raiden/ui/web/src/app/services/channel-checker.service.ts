@@ -8,7 +8,7 @@ import { SharedService } from './shared.service';
 @Injectable({
     providedIn: 'root'
 })
-export class BalanceCheckerService {
+export class ChannelChecker {
     private subscription: Subscription;
 
     constructor(
@@ -54,6 +54,7 @@ export class BalanceCheckerService {
         this.subscription.unsubscribe();
     }
 
+    // noinspection JSMethodCanBeStatic
     private isTheSameChannel(channel1: Channel, channel2: Channel): boolean {
         return channel1.channel_identifier === channel2.channel_identifier;
     }

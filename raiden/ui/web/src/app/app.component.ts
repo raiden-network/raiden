@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { Subscription } from 'rxjs';
-import { BalanceCheckerService } from './services/balance-checker.service';
+import { ChannelChecker } from './services/channel-checker.service';
 import { RaidenService } from './services/raiden.service';
 import { SharedService } from './services/shared.service';
 
@@ -20,7 +20,7 @@ export class AppComponent implements OnInit, OnDestroy {
     constructor(
         private sharedService: SharedService,
         private raidenService: RaidenService,
-        private balanceCheckerService: BalanceCheckerService
+        private balanceCheckerService: ChannelChecker
     ) {
     }
 
