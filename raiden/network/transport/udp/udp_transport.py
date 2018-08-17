@@ -206,7 +206,7 @@ class UDPTransport:
 
         self.server.start()
 
-    def stop_and_wait(self):
+    def stop(self):
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
         self.server.stop_accepting()

@@ -272,7 +272,7 @@ class MatrixTransport:
         else:
             self._send_with_retry(queue_identifier, message)
 
-    def stop_and_wait(self):
+    def stop(self):
         if not self._running:
             return
         self._running = False
@@ -289,6 +289,11 @@ class MatrixTransport:
     def _queueids_to_queues(self) -> QueueIdsToQueues:
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
+
+    @property
+    def greenlet(self) -> gevent.Greenlet:
+        """ Returns the long-lived transport greenlet """
+        return self._client.sync_thread
 
     @property
     def _user_id(self) -> Optional[str]:
