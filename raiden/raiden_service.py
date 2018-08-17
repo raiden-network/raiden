@@ -561,6 +561,9 @@ class RaidenService:
             amount,
         )
 
+        async_result = AsyncResult()
+        self.identifier_to_results[identifier] = async_result
+
         self.handle_state_change(direct_transfer)
 
     def start_mediated_transfer(
