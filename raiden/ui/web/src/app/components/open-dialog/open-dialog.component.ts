@@ -4,7 +4,6 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
-import { TokenPipe } from '../../pipes/token.pipe';
 import { RaidenService } from '../../services/raiden.service';
 
 export class OpenDialogPayload {
@@ -36,7 +35,6 @@ export class OpenDialogComponent implements OnInit {
     public settleTimeout: FormControl;
 
     public filteredOptions: Observable<UserToken[]>;
-    public tokenPipe: TokenPipe;
     private tokens: Observable<UserToken[]>;
 
     constructor(
@@ -44,15 +42,13 @@ export class OpenDialogComponent implements OnInit {
         public dialogRef: MatDialogRef<OpenDialogComponent>,
         public raidenService: RaidenService,
         private fb: FormBuilder,
-    ) {
-        this.tokenPipe = new TokenPipe();
-    }
+    ) { }
 
     ngOnInit() {
         const data = this.data;
         this.form = this.fb.group({
             partner_address: ['', (control) => control.value === data.ownAddress ? {ownAddress: true} : undefined],
-            token: null,
+            token: '',
             balance: [0, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
             settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
@@ -76,14 +72,10 @@ export class OpenDialogComponent implements OnInit {
         );
     }
 
-    displayFn(token) {
-        return !token ? '' : this.tokenPipe.transform(token);
-    }
-
     accept() {
         const value = this.form.value;
         const result: OpenDialogResult = {
-            tokenAddress: this.token.value.address,
+            tokenAddress: value.token,
             partnerAddress: value.partner_address,
             settleTimeout: value.settle_timeout,
             balance: value.balance,

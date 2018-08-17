@@ -27,14 +27,18 @@
 
         <input type="text" placeholder="Select Token" aria-label="Select Token"
                formControlName="token"
+               pattern="^0x[0-9a-fA-F]{40}$"
+               minlength="42"
+               maxlength="42"
                required
                matInput [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFn.bind(this)">
-            <mat-option *ngFor="let option of filteredOptions | async" [value]="option">
+        <mat-autocomplete #auto="matAutocomplete">
+            <mat-option *ngFor="let option of filteredOptions | async" [value]="option.address">
                 {{option | token }}
             </mat-option>
         </mat-autocomplete>
         <mat-error *ngIf="!token.value">Please select a token network</mat-error>
+        <mat-error *ngIf="token.invalid">This is not a valid token network address</mat-error>
 
     </mat-form-field>
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">

@@ -162,7 +162,7 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
 
     public showPaymentDialog(userToken: UserToken) {
         const payload: PaymentDialogPayload = {
-            userToken: userToken,
+            tokenAddress: userToken.address,
             targetAddress: '',
             amount: 0
         };
@@ -175,7 +175,7 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         paymentDialogRef.afterClosed().pipe(
             flatMap((result: PaymentDialogPayload) => {
                 if (result) {
-                    return this.raidenService.initiatePayment(result.userToken.address, result.targetAddress, result.amount);
+                    return this.raidenService.initiatePayment(result.tokenAddress, result.targetAddress, result.amount);
                 } else {
                     return EMPTY;
                 }

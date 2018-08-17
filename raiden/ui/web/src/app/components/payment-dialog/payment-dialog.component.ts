@@ -9,7 +9,7 @@ import { TokenPipe } from '../../pipes/token.pipe';
 import { RaidenService } from '../../services/raiden.service';
 
 export interface PaymentDialogPayload {
-    userToken: UserToken;
+    tokenAddress: string;
     targetAddress: string;
     amount: number;
 }
@@ -46,7 +46,7 @@ export class PaymentDialogComponent implements OnInit {
 
         this.form = this.fb.group({
             target_address: [data.targetAddress, (control) => control.value === raidenAddress ? {ownAddress: true} : undefined],
-            token: data.userToken,
+            token: data.tokenAddress,
             amount: [0, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
@@ -67,15 +67,11 @@ export class PaymentDialogComponent implements OnInit {
         );
     }
 
-    displayFn(token) {
-        return !token ? '' : this.tokenPipe.transform(token);
-    }
-
     public accept() {
         const value = this.form.value;
 
         const payload: PaymentDialogPayload = {
-            userToken: value['token'],
+            tokenAddress: value['token'],
             targetAddress: value['target_address'],
             amount: value['amount']
         };
@@ -86,11 +82,11 @@ export class PaymentDialogComponent implements OnInit {
     public reset() {
         this.form.reset();
 
-        const userToken = this.data.userToken;
+        const tokenAddress = this.data.tokenAddress;
         const targetAddress = this.data.targetAddress;
 
-        if (userToken) {
-            this.token.setValue(userToken);
+        if (tokenAddress) {
+            this.token.setValue(tokenAddress);
         }
 
         this.targetAddress.setValue(targetAddress ? targetAddress : '');

@@ -146,7 +146,7 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
     public onPay(channel: Channel) {
 
         const payload: PaymentDialogPayload = {
-            userToken: channel.userToken,
+            tokenAddress: channel.token_address,
             targetAddress: channel.partner_address,
             amount: this.amount
         };
@@ -163,7 +163,7 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                 }
 
                 return this.raidenService.initiatePayment(
-                    result.userToken.address,
+                    result.tokenAddress,
                     result.targetAddress,
                     result.amount,
                 );
