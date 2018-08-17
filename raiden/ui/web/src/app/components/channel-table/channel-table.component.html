@@ -51,13 +51,13 @@
     </mat-paginator>
 
     <div class="match-parent-height" fxLayout="column" fxLayoutAlign="center center"
-         *ngIf="totalChannels == 0 && !refreshing">
+         *ngIf="totalChannels == 0 && !(refreshing$ | async)">
         <mat-icon color="primary">info</mat-icon>
         <h2 class="mat-title">No channels found!</h2>
     </div>
 
     <div class="match-parent-height" fxLayout="column" fxLayoutAlign="center center"
-         *ngIf="totalChannels == 0 && refreshing">
+         *ngIf="!filter && totalChannels == 0 && (refreshing$ | async)">
         <mat-progress-spinner
                 [diameter]="60"
                 [color]="'primary'"

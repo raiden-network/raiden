@@ -50,7 +50,6 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
     visibleChannels: Channel[] = [];
     totalChannels = 0;
 
-    public refreshing = true;
 
     pageSize = 10;
     sorting = ChannelSorting.Balance;
@@ -80,11 +79,11 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         }
     ];
 
-    private currentPage = 0;
+    refreshing$ = this.channelPollingService.refreshing();
 
+    private currentPage = 0;
     private channels: Channel[];
     private subscription: Subscription;
-
 
     constructor(
         public dialog: MatDialog,
@@ -102,8 +101,6 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
             this.applyFilters(this.sorting);
         });
 
-        const refreshingSubscription = this.channelPollingService.refreshing().subscribe(value => this.refreshing = value);
-        this.subscription.add(refreshingSubscription);
         this.refresh();
     }
 
