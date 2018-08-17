@@ -1,4 +1,5 @@
 import structlog
+from gevent.event import AsyncResult
 from typing import List
 
 from web3.exceptions import BadFunctionCallOutput
@@ -34,7 +35,6 @@ from raiden.utils import (
     privatekey_to_address,
     compare_versions,
 )
-from raiden.utils.gevent_utils import RaidenAsyncResult
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -75,7 +75,7 @@ class SecretRegistry:
 
     def register_secret_batch(self, secrets: List[typing.Secret]):
         secret_batch = list()
-        secret_registry_transaction = RaidenAsyncResult()
+        secret_registry_transaction = AsyncResult()
 
         for secret in secrets:
             secrethash = sha3(secret)

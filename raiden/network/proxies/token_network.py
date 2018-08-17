@@ -1,4 +1,5 @@
 from collections import defaultdict
+from gevent.event import AsyncResult
 from typing import List, NamedTuple, Optional
 
 import structlog
@@ -46,7 +47,6 @@ from raiden.utils import (
     privatekey_to_address,
     typing,
 )
-from raiden.utils.gevent_utils import RaidenAsyncResult
 from raiden.transfer.utils import hash_balance_data
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -162,7 +162,7 @@ class TokenNetwork:
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
         if partner not in self.open_channel_transactions:
-            new_open_channel_transaction = RaidenAsyncResult()
+            new_open_channel_transaction = AsyncResult()
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:

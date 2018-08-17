@@ -21,6 +21,7 @@ from subprocess import DEVNULL
 import click
 import filelock
 import gevent
+from gevent.event import Event
 import requests
 import structlog
 from eth_utils import (
@@ -86,7 +87,6 @@ from raiden.utils.cli import (
     option_group,
 )
 from raiden.utils.echo_node import EchoNode
-from raiden.utils.gevent_utils import configure_gevent, RaidenGreenletEvent
 from raiden.utils.http import HTTPExecutor
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -96,8 +96,6 @@ from raiden_contracts.constants import (
 
 
 log = structlog.get_logger(__name__)
-
-configure_gevent()
 
 
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
@@ -991,7 +989,7 @@ class NodeRunner:
         self._startup_hook()
 
         # wait for interrupt
-        event = RaidenGreenletEvent()
+        event = Event()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)

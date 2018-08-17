@@ -8,6 +8,7 @@ import structlog
 
 from coincurve import PrivateKey
 from eth_utils import is_binary_address
+from gevent.event import AsyncResult, Event
 from gevent.lock import Semaphore
 
 from raiden import constants, routing, waiting
@@ -51,7 +52,6 @@ from raiden.utils import (
     create_default_identifier,
     typing,
 )
-from raiden.utils.gevent_utils import RaidenAsyncResult, RaidenGreenletEvent
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -145,7 +145,7 @@ class RaidenService:
         self.tokennetworkids_to_connectionmanagers = dict()
         self.identifier_to_results: typing.Dict[
             typing.PaymentIdentifier,
-            RaidenAsyncResult,
+            AsyncResult,
         ] = dict()
 
         self.chain: BlockChainService = chain
@@ -164,8 +164,8 @@ class RaidenService:
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
-        self.stop_event = RaidenGreenletEvent()
-        self.start_event = RaidenGreenletEvent()
+        self.stop_event = Event()
+        self.start_event = Event()
         self.chain.client.inject_stop_event(self.stop_event)
 
         self.wal = None
@@ -194,7 +194,7 @@ class RaidenService:
 
         self.event_poll_lock = gevent.lock.Semaphore()
 
-    def start_async(self) -> RaidenGreenletEvent:
+    def start_async(self) -> Event:
         """ Start the node asynchronously. """
         self.start_event.clear()
         self.stop_event.clear()
@@ -299,13 +299,13 @@ class RaidenService:
             def set_start_on_registration(_):
                 self.start_event.set()
 
-            endpoint_registration_greenlet.link_safe(set_start_on_registration)
+            endpoint_registration_greenlet.link(set_start_on_registration)
         else:
             self.start_event.set()
 
         return self.start_event
 
-    def start(self) -> RaidenGreenletEvent:
+    def start(self) -> Event:
         """ Start the node. """
         self.start_async().wait()
 
@@ -592,7 +592,7 @@ class RaidenService:
         if identifier in self.identifier_to_results:
             return self.identifier_to_results[identifier]
 
-        async_result = RaidenAsyncResult()
+        async_result = AsyncResult()
         self.identifier_to_results[identifier] = async_result
 
         secret = random_secret()

@@ -15,7 +15,6 @@ from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import get_contract_path, safe_address_decode, typing
 from raiden.utils.solc import compile_files_cwd
-from raiden.utils.gevent_utils import RaidenGreenlet
 
 GUI_GEVENT = 'gevent'
 
@@ -84,7 +83,7 @@ class GeventInputHook:
         self.manager.clear_inputhook()
 
 
-class Console(RaidenGreenlet):
+class Console(gevent.Greenlet):
     """ A service starting an interactive ipython session when receiving the
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """

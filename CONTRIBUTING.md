@@ -428,25 +428,6 @@ def foo(a: typing.Optional[int] = None)
 ```
 
 
-
-##### Particuliarities
-
-**Concurrency/Usage of gevent**
-
-Raiden uses a patched version of gevent for concurrency.
-
-The patching is necessary to enforce our security policy: Unhandled exceptions that occur inside a
-`gevent.Greenlet` are by default not propagated outside of it. However, we require Raiden to halt
-at every unhandled exception. To achieve this, the internal error handler of gevent is patched
-and the `Greenlet` class replaced with a customized `RaidenGreenlet` throughout the project.
-
-**The methods `link`, `link_exception`, `link_value` and `rawlink` of the `Greenlet` class are
-broken by the patching and must never be used.** For example, an exception handler linked to a
-greenlet by `link_exception` will not be called; the exception will instead be bubbled up and
-cause Raiden to crash. `RaidenGreenlet` provides the equivalent methods `link_safe`,
-`link_exception_safe` and `rawlink_safe` to be used instead.
-
-
 #### Solidity
 
 For solidity we generally follow the style guide as shown in the [solidity
