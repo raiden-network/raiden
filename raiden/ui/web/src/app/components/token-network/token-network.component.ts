@@ -1,7 +1,7 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MatDialog, MatPaginator, PageEvent } from '@angular/material';
-import { BehaviorSubject, EMPTY } from 'rxjs';
+import { BehaviorSubject, EMPTY, Subscription } from 'rxjs';
 import { flatMap, switchMap, tap } from 'rxjs/operators';
 import { SortingData } from '../../models/sorting.data';
 import { UserToken } from '../../models/usertoken';
@@ -38,7 +38,7 @@ import { TokenSorting } from './token.sorting.enum';
         ]),
     ]
 })
-export class TokenNetworkComponent implements OnInit {
+export class TokenNetworkComponent implements OnInit, OnDestroy {
 
     @Input() raidenAddress: string;
 
@@ -76,6 +76,8 @@ export class TokenNetworkComponent implements OnInit {
     ];
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
 
+    private subscription: Subscription;
+
     constructor(
         public dialog: MatDialog,
         private raidenService: RaidenService,
@@ -108,7 +110,7 @@ export class TokenNetworkComponent implements OnInit {
 
     ngOnInit() {
         let timeout;
-        this.tokensSubject.pipe(
+        this.subscription = this.tokensSubject.pipe(
             tap(() => {
                 clearTimeout(timeout);
                 this.refreshing = true;
@@ -127,6 +129,10 @@ export class TokenNetworkComponent implements OnInit {
             this.totalTokens = tokens.length;
             this.applyFilters(this.sorting);
         });
+    }
+
+    ngOnDestroy() {
+        this.subscription.unsubscribe();
     }
 
     public showJoinDialog(userToken: UserToken) {

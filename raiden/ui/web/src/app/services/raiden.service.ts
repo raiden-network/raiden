@@ -322,7 +322,8 @@ export class RaidenService {
         refresh: boolean = true,
     ): Observable<UserToken | null> {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
-        const userToken: UserToken | null | undefined = this.userTokens[tokenAddress];
+        const tokenMap = this.userTokens;
+        const userToken: UserToken | null | undefined = tokenMap[tokenAddress];
 
         const balanceObservable: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
             tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
@@ -343,10 +344,8 @@ export class RaidenService {
                 symbolObservable,
                 nameObservable,
                 balanceObservable,
-            ).pipe(map(([symbol, name, balance]): UserToken => {
-                    if (balance === null) {
-                        return null;
-                    }
+            ).pipe(
+                map(([symbol, name, balance]): UserToken => {
                     return {
                         address: tokenAddress,
                         symbol,
@@ -354,7 +353,8 @@ export class RaidenService {
                         balance
                     };
                 }),
-                tap((token) => this.userTokens[tokenAddress] = token),
+                tap((token) => tokenMap[tokenAddress] = token),
+                share(),
                 catchError((error) => {
                     const message = (error as Error).message;
                     if (message.startsWith('Invalid JSON RPC response')) {
