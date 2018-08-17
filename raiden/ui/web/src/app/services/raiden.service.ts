@@ -265,9 +265,9 @@ export class RaidenService {
         let path: string;
         const channel = eventsParam.channel;
         if (channel) {
-            path = `/blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
+            path = `blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
         } else if (eventsParam.token) {
-            path = `/blockchain_events/tokens/${eventsParam.token}`;
+            path = `blockchain_events/tokens/${eventsParam.token}`;
         } else {
             path = 'events/network';
         }
