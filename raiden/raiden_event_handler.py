@@ -258,7 +258,7 @@ def handle_contract_send_channelunlock(
         channel_unlock_event.channel_identifier,
     )
     try:
-        channel.unlock(channel_unlock_event.merkle_treee_leaves)
+        channel.unlock(channel_unlock_event.merkle_tree_leaves)
     except ChannelOutdatedError as e:
         log.error(str(e))
 
