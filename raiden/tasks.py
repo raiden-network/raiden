@@ -180,3 +180,7 @@ class AlarmTask(gevent.Greenlet):
 
     def stop_async(self):
         self.stop_event.set(True)
+
+    def stop(self, timeout=None):
+        self.stop_async()
+        return self.get(timeout=timeout)
