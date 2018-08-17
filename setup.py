@@ -38,6 +38,9 @@ class CompileWebUI(Command):
     def run(self):
         npm = find_executable('npm')
         if not npm:
+            if os.environ.get('RAIDEN_NPM_MISSING_FATAL') is not None:
+                # Used in the automatic deployment scripts to prevent builds with missing web-ui
+                raise RuntimeError('NPM not found. Aborting')
             self.announce('NPM not found. Skipping webUI compilation', level=distutils.log.WARN)
             return
         npm_run = 'build:prod'
