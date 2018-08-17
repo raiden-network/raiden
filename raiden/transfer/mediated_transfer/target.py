@@ -145,8 +145,9 @@ def handle_secretreveal(
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
+    waiting_for_secret = target_state.state == 'secret_request'
 
-    if valid_secret:
+    if valid_secret and waiting_for_secret:
         if isinstance(state_change, ReceiveSecretReveal):
             channel.register_secret(
                 channel_state,
@@ -167,6 +168,9 @@ def handle_secretreveal(
         target_state.state = 'reveal_secret'
         target_state.secret = state_change.secret
         recipient = route.node_address
+
+        # Send the secret reveal message only once, delivery is guaranteed by
+        # the transport and not by the state machine
         reveal = SendRevealSecret(
             recipient=recipient,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,

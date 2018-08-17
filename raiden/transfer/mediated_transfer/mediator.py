@@ -624,8 +624,9 @@ def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
     for pair in reversed(transfers_pair):
         payee_secret = pair.payee_state in STATE_SECRET_KNOWN
         payer_secret = pair.payer_state in STATE_SECRET_KNOWN
+        should_send_secret = pair.payer_state == 'payer_pending'
 
-        if payee_secret and not payer_secret:
+        if payee_secret and not payer_secret and should_send_secret:
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
