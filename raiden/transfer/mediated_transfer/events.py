@@ -36,33 +36,31 @@ class SendLockExpired(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
-            channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
+            channel_identifier: typing.ChannelID,
+            transfer: BalanceProofUnsignedState,
+            token_address: typing.TokenAddress,
             secrethash: typing.SecretHash,
-            block_number: typing.BlockNumber,
     ):
         super().__init__(recipient, channel_identifier, message_identifier)
 
+        self.transfer = transfer
         self.secrethash = secrethash
-        self.block_number = block_number
 
     def __repr__(self):
-        return (
-            '<'
-            'SendLockExpired msgid:{}'
-            ' secrethash:{}'
-            ' recipient:{}'
-            '>'
-        ).format(
+        return '<SendLockExpired msgid:{} transfer:{} secrethash:{} recipient:{}>'.format(
+            self.message_identifier,
+            self.transfer,
             self.secrethash,
             pex(self.recipient),
         )
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendLockExpired) and
-            self.recipient == other.recipient and
+            isinstance(other, SendLockedTransfer) and
             self.message_identifier == other.message_identifier and
+            self.transfer == other.transfer and
+            self.recipient == other.recipient and
             self.secrethash == other.secrethash
         )
 
