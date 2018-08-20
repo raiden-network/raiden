@@ -1455,71 +1455,133 @@ class RefundTransfer(LockedTransfer):
         return message
 
 
-class LockExpired(SignedMessage):
+class LockExpired(EnvelopeMessage):
     """Message used to notify opposite channel participant that a lock has
     expired.
     """
     cmdid = messages.LOCKEXPIRED
 
     def __init__(
-            self, message_identifier: MessageID,
+            self,
+            chain_id: ChainID,
+            nonce: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
+            locksroot: Locksroot,
+            channel_identifier: ChannelID,
+            token_network_address: TokenNetworkAddress,
+            recipient: Address,
             secrethash: SecretHash,
-            block_number: BlockNumber,
     ):
-        super().__init__()
-        self.message_identifier = message_identifier
-        self.secrethash = secrethash
-        self.block_number
 
-    def __repr__(self):
-        return '<{} [msgid:{} secrethash:{}]>'.format(
-            self.__class__.__name__,
-            self.message_identifier,
-            pex(self.secrethash),
+        super().__init__(
+            chain_id=chain_id,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            locksroot=locksroot,
+            channel_identifier=channel_identifier,
+            token_network_address=token_network_address,
         )
+        self.recipient = recipient  #: partner's address
+        self.secrethash = secrethash
 
     @classmethod
     def unpack(cls, packed):
-        lock_expired = LockExpired(
-            message_identifier=packed.message_identifier,
+        transfer = cls(
+            chain_id=packed.chain_id,
+            nonce=packed.nonce,
+            token_network_address=packed.token_network_address,
+            channel_identifier=packed.channel_identifier,
+            transferred_amount=packed.transferred_amount,
+            recipient=packed.recipient,
+            locked_amount=packed.locked_amount,
+            locksroot=packed.locksroot,
             secrethash=packed.secrethash,
-            block_number=packed.block_number,
         )
-        lock_expired.signature = packed.signature
-        return lock_expired
+        transfer.signature = packed.signature
+
+        return transfer
 
     def pack(self, packed):
-        packed.message_identifier = self.message_identifier
-        packed.secret = self.secret
+        packed.chain_id = self.chain_id
+        packed.nonce = self.nonce
+        packed.token_network_address = self.token_network_address
+        packed.channel_identifier = self.channel_identifier
+        packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+        packed.secrethash = self.secrethash
         packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
+        balance_proof = event.transfer
+
         return cls(
-            message_identifier=event.message_identifier,
+            chain_id=balance_proof.chain_id,
+            nonce=balance_proof.nonce,
+            token_network_address=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+            transferred_amount=balance_proof.transferred_amount,
+            locked_amount=balance_proof.locked_amount,
+            recipient=balance_proof.recipient,
+            locksroot=balance_proof.locksroot,
             secrethash=event.secrethash,
-            block_number=event.block_number,
         )
+
+    def __repr__(self):
+        representation = (
+            '<{} ['
+            'chainid:{} token_network:{} channel_identifier:{} nonce:{} '
+            'transferred_amount:{} locked_amount:{} locksroot:{} secrethash:{}'
+            ']>'
+        ).format(
+            self.__class__.__name__,
+            self.chain_id,
+            pex(self.token_network_address),
+            self.channel_identifier,
+            self.nonce,
+            self.transferred_amount,
+            self.locked_amount,
+            pex(self.locksroot),
+            pex(self.secrethash),
+        )
+
+        return representation
 
     def to_dict(self):
         return {
             'type': self.__class__.__name__,
-            'message_identifier': self.message_identifier,
+            'chain_id': self.chain_id,
+            'nonce': self.nonce,
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'channel_identifier': self.channel_identifier,
             'secrethash': self.secrethash,
-            'block_number': self.block_number,
+            'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
+            'recipient': to_normalized_address(self.recipient),
+            'locksroot': encode_hex(self.locksroot),
             'signature': encode_hex(self.signature),
         }
 
     @classmethod
     def from_dict(cls, data):
         assert data['type'] == cls.__name__
-        lock_expired = cls(
-            message_identifier=data['message_identifier'],
+        expired_lock = cls(
+            chain_id=data['chain_id'],
+            nonce=data['nonce'],
+            token_network_address=to_canonical_address(data['token_network_address']),
+            channel_identifier=data['channel_identifier'],
+            transferred_amount=data['transferred_amount'],
             secrethash=data['secrethash'],
-            block_number=data['block_number'],
+            recipient=to_canonical_address(data['recipient']),
+            locked_amount=data['locked_amount'],
+            locksroot=decode_hex(data['locksroot']),
         )
-        lock_expired.signature = decode_hex(data['signature'])
-        return lock_expired
+        expired_lock.signature = decode_hex(data['signature'])
+        return expired_lock
 
 
 CMDID_TO_CLASS = {
