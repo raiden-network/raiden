@@ -212,6 +212,8 @@ def handle_channel_update_transfer(raiden, event, current_block_number):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
+    transaction_hash = data['transactionHash']
+    assert transaction_hash, 'A mined transaction must have the hash field'
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -221,7 +223,7 @@ def handle_channel_update_transfer(raiden, event, current_block_number):
 
     if channel_state:
         channel_transfer_updated = ContractReceiveUpdateTransfer(
-            transaction_from=data['closing_participant'],
+            transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             nonce=data['args']['nonce'],
