@@ -1727,7 +1727,7 @@ def handle_channel_closed(
         balance_proof = channel_state.partner_state.balance_proof
         call_update = (
             state_change.transaction_from != channel_state.our_state.address and
-            balance_proof and
+            balance_proof is not None and
             channel_state.update_transaction is None
         )
         if call_update:
@@ -1758,7 +1758,7 @@ def handle_channel_updated_transfer(
     if state_change.channel_identifier == channel_state.identifier:
         # update transfer was called, make sure we don't call it again
         channel_state.update_transaction = TransactionExecutionStatus(
-            started_block_number=block_number,
+            started_block_number=None,
             finished_block_number=block_number,
             result=TransactionExecutionStatus.SUCCESS,
         )
