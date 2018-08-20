@@ -1430,7 +1430,7 @@ def remove_expired_locks(channel_state: NettingChannelState, block_number: typin
 
     lock: HashTimeLockState
     for lock in channel_state.our_state.secrethashes_to_lockedlocks.values():
-        if block_number <= lock.expiration + HTLC_BLOCK_CONFIRMATION_COUNT:
+        if block_number <= lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
             # Lock expired, remove
             register_secret_endstate(
                 channel_state.our_state,
