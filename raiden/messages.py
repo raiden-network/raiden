@@ -37,12 +37,14 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    SendLockExpired,
 )
 from raiden.utils.typing import (
     Optional,
     Address,
     BlockExpiration,
     ChainID,
+    BlockNumber,
     MessageID,
     SecretHash,
     PaymentID,
@@ -160,6 +162,8 @@ def message_from_sendevent(send_event, our_address):
         message = SecretRequest.from_event(send_event)
     elif type(send_event) == SendRefundTransfer:
         message = RefundTransfer.from_event(send_event)
+    elif type(send_event) == SendLockExpired:
+        message = LockExpired.from_event(send_event)
     elif type(send_event) == SendProcessed:
         message = Processed.from_event(send_event)
     else:
@@ -1451,6 +1455,73 @@ class RefundTransfer(LockedTransfer):
         return message
 
 
+class LockExpired(SignedMessage):
+    """Message used to notify opposite channel participant that a lock has
+    expired.
+    """
+    cmdid = messages.LOCKEXPIRED
+
+    def __init__(
+            self, message_identifier: MessageID,
+            secrethash: SecretHash,
+            block_number: BlockNumber,
+    ):
+        super().__init__()
+        self.message_identifier = message_identifier
+        self.secrethash = secrethash
+        self.block_number
+
+    def __repr__(self):
+        return '<{} [msgid:{} secrethash:{}]>'.format(
+            self.__class__.__name__,
+            self.message_identifier,
+            pex(self.secrethash),
+        )
+
+    @classmethod
+    def unpack(cls, packed):
+        lock_expired = LockExpired(
+            message_identifier=packed.message_identifier,
+            secrethash=packed.secrethash,
+            block_number=packed.block_number,
+        )
+        lock_expired.signature = packed.signature
+        return lock_expired
+
+    def pack(self, packed):
+        packed.message_identifier = self.message_identifier
+        packed.secret = self.secret
+        packed.signature = self.signature
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(
+            message_identifier=event.message_identifier,
+            secrethash=event.secrethash,
+            block_number=event.block_number,
+        )
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'message_identifier': self.message_identifier,
+            'secrethash': self.secrethash,
+            'block_number': self.block_number,
+            'signature': encode_hex(self.signature),
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        assert data['type'] == cls.__name__
+        lock_expired = cls(
+            message_identifier=data['message_identifier'],
+            secrethash=data['secrethash'],
+            block_number=data['block_number'],
+        )
+        lock_expired.signature = decode_hex(data['signature'])
+        return lock_expired
+
+
 CMDID_TO_CLASS = {
     messages.DELIVERED: Delivered,
     messages.DIRECTTRANSFER: DirectTransfer,
@@ -1462,6 +1533,7 @@ CMDID_TO_CLASS = {
     messages.REVEALSECRET: RevealSecret,
     messages.SECRET: Secret,
     messages.SECRETREQUEST: SecretRequest,
+    messages.LOCKEXPIRED: LockExpired,
 }
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
