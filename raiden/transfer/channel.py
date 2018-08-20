@@ -21,6 +21,7 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     SendDirectTransfer,
+    SendLockExpired,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -1424,6 +1425,29 @@ def register_onchain_secret(
     register_onchain_secret_endstate(partner_state, secret, secrethash)
 
 
+def remove_expired_locks(channel_state: NettingChannelState, block_number: typing.BlockNumber):
+    expired_locks = []
+
+    lock: HashTimeLockState
+    for lock in channel_state.secrethashes_to_lockedlocks.values():
+        if block_number <= lock.expiration + HTLC_BLOCK_CONFIRMATION_COUNT:
+            # Lock expired, remove
+            register_secret_endstate(
+                channel_state.our_state,
+                lock.secret,
+                lock.secrethash,
+            )
+
+            expired_locks.append(SendLockExpired(
+                channel_state.partner_state.address,
+                channel_state.identifier,
+                lock.secrethash,
+                block_number,
+            ))
+
+    return expired_locks
+
+
 def handle_send_directtransfer(
         channel_state: NettingChannelState,
         state_change: ActionTransferDirect,
@@ -1695,6 +1719,13 @@ def handle_block(
                 channel_state.partner_state.balance_proof,
             )
             events.append(event)
+
+    expired_locks_events = remove_expired_locks(
+        channel_state,
+        block_number,
+    )
+
+    events.extend(expired_locks_events)
 
     while is_deposit_confirmed(channel_state, block_number):
         order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
