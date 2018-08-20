@@ -32,6 +32,44 @@ def refund_from_sendmediated(send_lockedtransfer_event):
     )
 
 
+class SendLockExpired(SendMessageEvent):
+    def __init__(
+            self,
+            recipient: typing.Address,
+            channel_identifier: typing.ChannelID,
+            message_identifier: typing.MessageID,
+            secrethash: typing.SecretHash,
+            block_number: typing.BlockNumber,
+    ):
+        super().__init__(recipient, channel_identifier, message_identifier)
+
+        self.secrethash = secrethash
+        self.block_number = block_number
+
+    def __repr__(self):
+        return (
+            '<'
+            'SendLockExpired msgid:{}'
+            ' secrethash:{}'
+            ' recipient:{}'
+            '>'
+        ).format(
+            self.secrethash,
+            pex(self.recipient),
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendLockExpired) and
+            self.recipient == other.recipient and
+            self.message_identifier == other.message_identifier and
+            self.secrethash == other.secrethash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
 
