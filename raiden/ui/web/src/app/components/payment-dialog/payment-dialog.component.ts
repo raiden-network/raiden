@@ -1,8 +1,10 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
+import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, toArray } from 'rxjs/operators';
+import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
 import { TokenPipe } from '../../pipes/token.pipe';
 
@@ -91,6 +93,14 @@ export class PaymentDialogComponent implements OnInit {
 
         this.targetAddress.setValue(targetAddress ? targetAddress : '');
         this.amount.setValue(0);
+    }
+
+    // noinspection JSMethodCanBeStatic
+    identicon(address?: string): string {
+        if (!address) {
+            return '';
+        }
+        return makeBlockie(address);
     }
 
     private _filter(value: string): Observable<UserToken[]> {
