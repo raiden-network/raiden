@@ -283,7 +283,7 @@ class JSONRPCClient:
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
 
     def get_transaction_from(self, tx_hash: bytes) -> Optional[Address]:
-        receipt = self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
+        receipt = self.web3.eth.getTransaction(encode_hex(tx_hash))
 
         if receipt:
             return to_canonical_address(receipt['from'])
