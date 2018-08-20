@@ -75,26 +75,30 @@
             <div fxLayout="column" fxFlex="0 0 4em" fxLayoutAlign="center">
                 <img class="identicon" src="{{identicon(channel)}}"/>
             </div>
-            <div fxLayout="column" fxFlex="1 1 auto" fxLayoutAlign="center" fxLayoutGap="10px">
-                <div>
-                    <strong>Channel:</strong> {{channel.channel_identifier}}
+            <div class="can-shrink" fxLayout="column" fxFlex="1 1 100%" fxLayoutAlign="center" fxLayoutGap="5px">
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Channel:</strong>
+                    <span>{{channel.channel_identifier}}</span>
                 </div>
-                <div>
-                    <strong>Partner:</strong> {{channel.partner_address}}
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Partner:</strong>
+                    <span class="truncate">{{channel.partner_address}}</span>
                 </div>
-                <div>
-                    <strong>Balance:</strong> {{channel.balance}}
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Balance:</strong>
+                    <span>{{channel.balance}}</span>
                     <sup matTooltip="{{channel.userToken | token}}" matTooltipPosition="above"
                          class="token-symbol">
                         {{channel.userToken.symbol}}
                     </sup>
                 </div>
-                <div>
-                    <strong>State:</strong> {{channel.state}}
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>State:</strong>
+                    <span class="truncate">{{channel.state}}</span>
                 </div>
             </div>
 
-            <div fxLayout="column" fxFlex="0 0 auto" fxLayoutAlign="start">
+            <div fxLayout="column" fxFlex="0 0 5em" fxLayoutAlign="start">
                 <button class="match-parent-width"
                         id="pay-button" mat-raised-button
                         color="accent"
@@ -114,7 +118,7 @@
                         (click)="onClose(channel)">{{ 'Close' | uppercase }}
                 </button>
             </div>
-            <div fxLayout="column" fxFlex="0 0 auto" fxLayoutAlign="start end">
+            <div fxLayout="column" fxFlex="0 0 1em" fxLayoutAlign="start end">
                 <button mat-icon-button color="accent" [matMenuTriggerFor]="menu">
                     <mat-icon>more_vert</mat-icon>
                 </button>

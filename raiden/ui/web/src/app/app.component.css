@@ -44,3 +44,7 @@ mat-sidenav-content {
 mat-nav-list a {
     margin-top: 40px;
 }
+
+.account {
+    font-size: medium;
+}

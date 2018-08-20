@@ -53,3 +53,13 @@
 .card {
     min-height: 9em;
 }
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.can-shrink {
+    min-width: 20px !important;
+}

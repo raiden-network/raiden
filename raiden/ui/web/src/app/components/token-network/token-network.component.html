@@ -6,12 +6,13 @@
      fxFlexOffset="5"
      fxFlexOffset.xl="20"
      fxFlexOffset.lg="15">
-    <mat-card fxLayout="column" class="card">
+    <mat-card fxLayout="column" class="card" fxLayoutGap.lt-sm="30px">
         <div fxLayout="row">
             <mat-card-title fxLayoutAlign="start" fxFlex="50">
                 Tokens: {{ totalTokens }}
             </mat-card-title>
-            <div fxLayout="row" fxLayoutAlign="end" fxFlex="50">
+            <div fxLayout="row"
+                 fxLayoutAlign="end" fxFlex="50">
                 <button mat-icon-button color="accent" (click)="showRegisterDialog()"
                         matTooltip="Register a new token">
                     <mat-icon aria-label="Register a new token">add_circle</mat-icon>
@@ -27,26 +28,45 @@
             </mat-menu>
         </div>
 
-        <mat-card-content fxLayout="row" fxLayoutGap="20px">
-            <mat-icon fxLayout="column" fxFlexAlign="center">search</mat-icon>
-            <mat-form-field class="example-form-field" fxFlex="45" fxLayout="column">
-                <input matInput type="text" placeholder="Filter" [(ngModel)]="filter" (keyup)="applyKeywordFilter()">
-                <button mat-button *ngIf="filter" matSuffix mat-icon-button aria-label="Clear" (click)="clearFilter()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </mat-form-field>
-            <mat-icon fxLayout="column" fxFlexAlign="center">sort</mat-icon>
-            <mat-form-field fxLayout="column" fxFlex="45">
-                <mat-select placeholder="Sort by" [(value)]="sorting" (selectionChange)="applyFilters($event.value)">
-                    <mat-option *ngFor="let option of sortingOptions" [value]="option.value">{{option.label}}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
-            <button mat-icon-button (click)="changeOrder()" matTooltip="Change the sorting order">
-                <mat-icon
-                        aria-label="Change sorting order">{{ ascending ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}
-                </mat-icon>
-            </button>
+        <mat-card-content fxLayout="row"
+                          fxLayout.lt-sm="column"
+                          fxLayoutGap="20px">
+
+            <div fxLayout="column" fxFlex="50" fxLayout.lt-sm="row" fxFlex.lt-sm="100">
+                <div fxLayout="row" fxLayoutGap="15px" fxFlex="100" fxLayoutAlign.lt-sm="center">
+                    <mat-icon fxLayout="column" fxFlexAlign="center">search</mat-icon>
+                    <mat-form-field class="example-form-field" fxFlex="1 1 auto" fxLayout="column">
+                        <input matInput type="text" placeholder="Filter" [(ngModel)]="filter"
+                               (keyup)="applyKeywordFilter()">
+                        <button mat-button *ngIf="filter" matSuffix mat-icon-button aria-label="Clear"
+                                (click)="clearFilter()">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <div fxLayout="column" fxFlex="50" fxLayout.lt-sm="row" fxFlex.lt-sm="100">
+                <div fxLayout="row" fxLayoutGap="15px" fxFlex="100">
+                    <mat-icon fxLayout="column" fxFlexAlign="center">sort</mat-icon>
+                    <mat-form-field fxLayout="column" fxFlex="1 1 auto">
+                        <mat-select placeholder="Sort by" [(value)]="sorting"
+                                    (selectionChange)="applyFilters($event.value)">
+                            <mat-option *ngFor="let option of sortingOptions" [value]="option.value">{{option.label}}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    <button mat-icon-button (click)="changeOrder()"
+                            fxFlexAlign="center"
+                            matTooltip="Change the sorting order">
+                        <mat-icon
+                                aria-label="Change sorting order">{{ ascending ? 'keyboard_arrow_up' :
+                            'keyboard_arrow_down' }}
+                        </mat-icon>
+                    </button>
+                </div>
+            </div>
+
         </mat-card-content>
     </mat-card>
 
@@ -84,7 +104,7 @@
                   fxLayout="row"
                   fxLayoutGap="30px">
 
-            <div fxLayout="column" fxFlex="15" fxLayoutAlign="center center">
+            <div fxLayout="column" fxFlex="0 0 8em" fxLayoutAlign="center center">
                 <div class="token-network-symbol"
                      fxFlexOffset="10"
                      fxFlex="row">{{token.symbol}}
@@ -93,12 +113,20 @@
                      fxFlex="row">{{token.name}}
                 </div>
             </div>
-            <div fxLayout="column" fxFlex="60" fxLayoutAlign="center" fxLayoutGap="10px">
-                <div><strong>Address:</strong> {{token.address}}</div>
-                <div><strong>Balance:</strong> {{token.balance}}</div>
+            <div class="can-shrink" fxLayout="column" fxFlex="1 2 100%" fxLayoutAlign="center" fxLayoutGap="10px">
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Address:</strong>
+                    <span class="truncate" [matTooltip]="token.address">
+                        {{token.address}}
+                    </span>
+                </div>
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Balance:</strong>
+                    <span>{{token.balance}}</span>
+                </div>
             </div>
 
-            <div fxLayout="column" fxFlex="1 1 auto" fxLayoutAlign="center center">
+            <div fxLayout="column" fxFlex="0 0 8.5em" fxLayoutAlign="center center">
                 <button *ngIf="token.connected"
                         class="match-parent-width"
                         mat-raised-button
@@ -119,7 +147,7 @@
                         (click)="showLeaveDialog(token)">{{ 'Leave Network' | uppercase }}
                 </button>
             </div>
-            <div fxLayout="column" fxFlex="1 1 auto" fxLayoutAlign="start end">
+            <div fxLayout="column" fxFlex="0 0 1em" fxLayoutAlign="start end">
                 <button mat-icon-button color="accent" [matMenuTriggerFor]="menu">
                     <mat-icon>more_vert</mat-icon>
                 </button>
