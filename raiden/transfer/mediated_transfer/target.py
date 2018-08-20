@@ -236,15 +236,16 @@ def handle_block(target_state, channel_state, block_number):
     )
 
     if not secret_known and block_number > transfer.lock.expiration:
-        # XXX: emit the event only once
-        failed = EventUnlockClaimFailed(
-            identifier=transfer.payment_identifier,
-            secrethash=transfer.lock.secrethash,
-            reason='lock expired',
-        )
-        target_state.state = 'expired'
-        events = [failed]
-
+        if target_state.state != 'expired':
+            failed = EventUnlockClaimFailed(
+                identifier=transfer.payment_identifier,
+                secrethash=transfer.lock.secrethash,
+                reason='lock expired',
+            )
+            target_state.state = 'expired'
+            events = [failed]
+        else:
+            events = list()
     elif target_state.state != 'waiting_close':  # only emit the close event once
         events = events_for_onchain_secretreveal(target_state, channel_state, block_number)
     else:
