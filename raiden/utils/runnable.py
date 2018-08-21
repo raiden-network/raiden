@@ -49,7 +49,9 @@ class Runnable:
     def stop(self):
         """ Synchronous stop, gracefully tells run() to exit
 
-        Stop-time exceptions may be raised"""
+        May wait subtasks to finish.
+        Stop-time exceptions may be raised, run exceptions should not (accessible via get())
+        """
         raise NotImplementedError
 
     def on_error(self, subtask: Greenlet):

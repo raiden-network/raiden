@@ -75,6 +75,7 @@ from raiden.utils.typing import (
     Type,
     Iterable,
 )
+from raiden.utils.runnable import Runnable
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 
@@ -120,14 +121,15 @@ class UserPresence(Enum):
     UNKNOWN = 'unknown'
 
 
-class MatrixTransport:
+class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 
     def __init__(self, config: dict):
-        self._raiden_service: RaidenService = None
+        super().__init__()
         self._config = config
+        self._raiden_service: RaidenService = None
 
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
@@ -175,7 +177,8 @@ class MatrixTransport:
 
         self._discovery_room_alias = None
 
-        self._running = False
+        self._stop_event = gevent.event.Event()
+        self._stop_event.set()
         self._health_semaphore = gevent.lock.Semaphore()
 
         self._client.add_invite_listener(self._handle_invite)
@@ -186,24 +189,74 @@ class MatrixTransport:
         raiden_service: RaidenService,
         initial_queues: QueueIdsToQueues,
     ):
-        self._running = True
+        if not self._stop_event.ready():
+            return  # already started
+        self._stop_event.clear()
         self._raiden_service = raiden_service
 
         self._login_or_register()
         self._join_discovery_room()
         self._inventory_rooms()
 
-        # TODO: Add (better) error handling strategy
         self._client.start_listener_thread()
+        self._client.sync_thread.link_exception(self.on_error)
+        # no need to link_value on long-lived sync_thread, as it shouldn't succeed but on stop
+        # cleint's sync thread may also crash self/main greenlet
+        self.greenlets = [self._client.sync_thread]
 
-        # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
         self._send_queued_messages()  # uses property instead of initial_queues
 
         self.log.info('TRANSPORT STARTED', config=self._config)
 
+        super().start()  # start greenlet
+
+    def run(self):
+        """ Runnable main method, perform wait on long-running subtasks """
+        try:
+            # children crashes should throw an exception here
+            self._stop_event.wait()
+        except gevent.GreenletExit:  # killed without exception
+            self._stop_event.set()
+            gevent.killall(self.greenlets)  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()  # ensure cleanup and wait on subtasks
+            raise
+
+    def stop(self):
+        """ Try to gracefully stop the greenlet synchronously
+
+        Stop isn't expected to re-raise greenlet _run exception
+        (use self.greenlet.get() for that),
+        but it should raise any stop-time exception """
+        if self._stop_event.ready():
+            return
+        self._stop_event.set()
+        self._client.set_presence_state(UserPresence.OFFLINE.value)
+
+        self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
+        # wait own greenlets, no need to get on them, exceptions should be raised in run()
+        gevent.wait(self.greenlets)
+        self._client.logout()
+        # parent may want to call get() after stop(), to ensure _run errors are re-raised
+        # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
+
+    def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
+        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
+
+        def on_success(greenlet):
+            if greenlet in self.greenlets:
+                self.greenlets.remove(greenlet)
+
+        greenlet = gevent.spawn(func, *args, **kwargs)
+        greenlet.link_exception(self.on_error)
+        greenlet.link_value(on_success)
+        self.greenlets.append(greenlet)
+        return greenlet
+
     def start_health_check(self, node_address):
-        if not self._running:
+        if self._stop_event.ready():
             return
 
         with self._health_semaphore:
@@ -233,7 +286,7 @@ class MatrixTransport:
         queue_identifier: QueueIdentifier,
         message: Message,
     ):
-        if not self._running:
+        if self._stop_event.ready():
             return
 
         message_id = message.message_identifier
@@ -272,28 +325,10 @@ class MatrixTransport:
         else:
             self._send_with_retry(queue_identifier, message)
 
-    def stop(self):
-        if not self._running:
-            return
-        self._running = False
-
-        # this should simply raise GrenletExit on the retry's gevent.sleep
-        gevent.killall(self.greenlets)
-        self.greenlets.clear()
-
-        self._client.set_presence_state(UserPresence.OFFLINE.value)
-        self._client.stop_listener_thread()
-        self._client.logout()
-
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
-
-    @property
-    def greenlet(self) -> gevent.Greenlet:
-        """ Returns the long-lived transport greenlet """
-        return self._client.sync_thread
 
     @property
     def _user_id(self) -> Optional[str]:
@@ -424,7 +459,7 @@ class MatrixTransport:
 
     def _handle_invite(self, room_id: str, state: dict):
         """ Join all invited rooms """
-        if not self._running:
+        if self._stop_event.ready():
             return
         invite_event = [
             event
@@ -465,7 +500,7 @@ class MatrixTransport:
         if (
                 event['type'] != 'm.room.message' or
                 event['content']['msgtype'] != 'm.text' or
-                not self._running
+                self._stop_event.ready()
         ):
             # Ignore non-messages and non-text messages
             return False
@@ -634,7 +669,7 @@ class MatrixTransport:
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
             if not isinstance(message, Processed):
-                self.greenlets.append(gevent.spawn(send_delivered_for, message))
+                self._spawn(send_delivered_for, message)
 
             on_message(self._raiden_service, message)
 
@@ -679,9 +714,9 @@ class MatrixTransport:
                         message=message,
                         queue=queue_identifier,
                     )
-                gevent.sleep(delay)  # kill should exit here
-                if not self._running:
-                    return
+                # equivalent of gevent.sleep, but bails out when stopping
+                if self._stop_event.wait(delay):
+                    break
                 # retry while our queue is valid
                 if queue_identifier not in self._queueids_to_queues:
                     self.log.debug(
@@ -700,7 +735,7 @@ class MatrixTransport:
                 if not message_in_queue:
                     break
 
-        self.greenlets.append(gevent.spawn(retry))
+        self._spawn(retry)
 
     def _send_immediate(
         self,
@@ -716,7 +751,7 @@ class MatrixTransport:
         room = self._get_room_for_address(receiver_address)
         if not room:
             return
-        self.log.debug('SEND', room=room, data=data)
+        self.log.debug('SEND', receiver=pex(receiver_address), room=room, data=data)
         room.send_text(data)
 
     def _get_room_for_address(
@@ -724,7 +759,7 @@ class MatrixTransport:
         address: Address,
         allow_missing_peers=False,
     ) -> Optional[Room]:
-        if not self._running:
+        if self._stop_event.ready():
             return
         address_hex = to_normalized_address(address)
         assert address and address in self._address_to_userids,\
@@ -840,7 +875,7 @@ class MatrixTransport:
         Due to the possibility of nodes using accounts on multiple homeservers a composite
         address state is synthesised from the cached individual user presence state.
         """
-        if not self._running:
+        if self._stop_event.ready():
             return
         user_id = event['sender']
         if event['type'] != 'm.presence' or user_id == self._user_id:
