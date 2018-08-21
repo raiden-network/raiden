@@ -588,6 +588,7 @@ class MatrixTransport:
         data = json.dumps(message.to_dict())
         message_id = message.message_identifier
         receiver_address = queue_identifier.recipient
+        reachable = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
 
         def retry():
             timeout_generator = udp_utils.timeout_exponential_backoff(
@@ -596,7 +597,17 @@ class MatrixTransport:
                 self._config['retry_interval'] * 10,
             )
             for delay in timeout_generator:
-                self._send_raw(receiver_address, data)
+                status = self._address_to_presence.get(receiver_address)
+                if status in reachable:
+                    self._send_raw(receiver_address, data)
+                else:
+                    self.log.debug(
+                        'Skipping SEND to unreachable node',
+                        receiver=pex(receiver_address),
+                        status=status,
+                        message=message,
+                        queue=queue_identifier,
+                    )
                 gevent.sleep(delay)  # kill should exit here
                 if not self._running:
                     return
