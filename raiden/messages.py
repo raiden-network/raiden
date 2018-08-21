@@ -1578,6 +1578,7 @@ class LockExpired(EnvelopeMessage):
         expired_lock = cls(
             chain_id=data['chain_id'],
             nonce=data['nonce'],
+            message_identifier=data['message_identifier'],
             token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
