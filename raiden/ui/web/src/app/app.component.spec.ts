@@ -1,32 +1,64 @@
-import { TestBed, async } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { AppComponent } from './app.component';
+import { MockConfig } from './components/channel-table/channel-table.component.spec';
+import { MaterialComponentsModule } from './modules/material-components/material-components.module';
+import { ChannelPollingService } from './services/channel-polling.service';
+import { RaidenConfig } from './services/raiden.config';
+import { RaidenService } from './services/raiden.service';
+import { SharedService } from './services/shared.service';
 
 describe('AppComponent', () => {
-  beforeEach(async(() => {
-    TestBed.configureTestingModule({
-      declarations: [
-        AppComponent
-      ],
-    }).compileComponents();
-  }));
+    let fixture: ComponentFixture<AppComponent>;
+    let app: AppComponent;
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            declarations: [
+                AppComponent
+            ],
+            providers: [
+                {
+                    provide: RaidenConfig,
+                    useClass: MockConfig
+                },
+                SharedService,
+                RaidenService,
+                ChannelPollingService
+            ],
+            imports: [
+                MaterialComponentsModule,
+                RouterTestingModule,
+                HttpClientTestingModule,
+                NoopAnimationsModule
+            ]
+        }).compileComponents();
 
-  it('should create the app', async(() => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.debugElement.componentInstance;
-    expect(app).toBeTruthy();
-  }));
+        const fn = () => {
+        };
 
-  it(`should have as title 'app works!'`, async(() => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.debugElement.componentInstance;
-    expect(app.title).toEqual('app works!');
-  }));
+        const pollingService = TestBed.get(ChannelPollingService);
+        spyOn(pollingService, 'startMonitoring').and.callFake(fn);
+        spyOn(pollingService, 'stopMonitoring').and.callFake(fn);
 
-  it('should render title in a h1 tag', async(() => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    const compiled = fixture.debugElement.nativeElement;
-    expect(compiled.querySelector('h1').textContent).toContain('app works!');
-  }));
+        fixture = TestBed.createComponent(AppComponent);
+        fixture.detectChanges();
+        app = fixture.debugElement.componentInstance;
+    });
+
+    afterEach(() => {
+        fixture.destroy();
+    });
+
+    it('should create the app', async(() => {
+        expect(app).toBeTruthy();
+        fixture.destroy();
+    }));
+
+    it(`should have as title 'Raiden!'`, async(() => {
+        expect(app.title).toEqual('Raiden');
+        fixture.destroy();
+    }));
 });

@@ -4,7 +4,10 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
+import { EMPTY } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
+import { delay, startWith } from 'rxjs/operators';
 import { AllowedDecimalsDirective } from '../../directives/allowed-decimals.directive';
 import { CdkDetailRowDirective } from '../../directives/cdk-detail-row.directive';
 import { Channel } from '../../models/channel';
@@ -30,6 +33,9 @@ export class MockConfig extends RaidenConfig {
         eth: {
             latestBlock: 3694423,
             contract: () => {
+            },
+            getBlockNumber: () => {
+
             }
         }
     };
@@ -38,7 +44,8 @@ export class MockConfig extends RaidenConfig {
 describe('ChannelTableComponent', () => {
     let component: ChannelTableComponent;
     let fixture: ComponentFixture<ChannelTableComponent>;
-    let pollingServiceSpy: Spy;
+    let channelsSpy: Spy;
+    let refreshingSpy: Spy;
     let tokenSpy: Spy;
 
     beforeEach(async(() => {
@@ -63,6 +70,7 @@ describe('ChannelTableComponent', () => {
                 },
                 RaidenService,
                 ChannelPollingService,
+                ToastrService,
                 HttpClient,
                 HttpHandler
             ],
@@ -72,6 +80,7 @@ describe('ChannelTableComponent', () => {
                 MaterialComponentsModule,
                 RouterTestingModule,
                 FormsModule,
+                ToastrModule.forRoot(),
                 NoopAnimationsModule
             ]
         }).compileComponents();
@@ -81,13 +90,22 @@ describe('ChannelTableComponent', () => {
         fixture = TestBed.createComponent(ChannelTableComponent);
         const service: RaidenService = TestBed.get(RaidenService);
         const channelPollingService: ChannelPollingService = TestBed.get(ChannelPollingService);
-        pollingServiceSpy = spyOn(channelPollingService, 'channels');
+        channelsSpy = spyOn(channelPollingService, 'channels');
+        refreshingSpy = spyOn(channelPollingService, 'refreshing');
         tokenSpy = spyOn(service, 'getUserToken');
+
         component = fixture.componentInstance;
-        fixture.detectChanges();
     });
 
     it('should create', () => {
+
+        channelsSpy
+            .and
+            .returnValues(EMPTY);
+        refreshingSpy.and.returnValue(of(false));
+
+        fixture.detectChanges();
+
         expect(component).toBeTruthy();
     });
 
@@ -157,20 +175,21 @@ describe('ChannelTableComponent', () => {
 
         };
 
-        pollingServiceSpy
+        const mockResponse = of([channel1, channel2Balance, channel3, channel4]).pipe(
+            delay(5000),
+            startWith([channel1, channel2, channel3, channel4])
+        );
+        channelsSpy
             .and
-            .returnValues(
-                of([channel1, channel2, channel3, channel4]),
-                of([channel1, channel2Balance, channel3, channel4])
-            );
+            .returnValues(mockResponse);
 
         tokenSpy.and.returnValue(of(token));
 
-        component.ngOnInit();
         tick(5000);
         fixture.detectChanges();
 
-        let button = fixture.debugElement.query(By.css('#pay-button'));
+        let channel = fixture.debugElement.query(By.css('#channel_2'));
+        let button = channel.query(By.css('#pay-button'));
         let payButton = button.componentInstance as HTMLButtonElement;
 
         expect(payButton.disabled).toBe(true, 'Payment should be disabled with 0 balance');
@@ -178,7 +197,8 @@ describe('ChannelTableComponent', () => {
         tick(5000);
         fixture.detectChanges();
 
-        button = fixture.debugElement.query(By.css('#pay-button'));
+        channel = fixture.debugElement.query(By.css('#channel_2'));
+        button = channel.query(By.css('#pay-button'));
         payButton = button.componentInstance as HTMLButtonElement;
 
         expect(payButton.disabled).toBe(false, 'Payment option should be enabled with positive balance');

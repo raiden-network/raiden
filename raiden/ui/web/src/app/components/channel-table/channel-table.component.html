@@ -67,6 +67,7 @@
 
     <div class="channel-list" fxLayout="column" fxLayoutGap="15px">
         <mat-card *ngFor="let channel of visibleChannels; trackBy: trackByFn"
+                  [id]="'channel_'+channel.channel_identifier"
                   class="card"
                   [@flyInOut]="'in'"
                   fxLayout="row"

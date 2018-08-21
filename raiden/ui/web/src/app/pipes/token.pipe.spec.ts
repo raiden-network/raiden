@@ -5,15 +5,17 @@ describe('TokenPipe', () => {
 
     let pipe: TokenPipe;
 
-    const token: UserToken = {
-        address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
-        symbol: 'TST',
-        name: 'Test Suite Token',
-        balance: 20
-    };
+    let token: UserToken;
 
-    beforeAll(() => {
+    beforeEach(() => {
         pipe = new TokenPipe();
+        token = {
+            address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
+            symbol: 'TST',
+            name: 'Test Suite Token',
+            balance: 20,
+            decimals: 8
+        };
     });
 
     it('create an instance', () => {

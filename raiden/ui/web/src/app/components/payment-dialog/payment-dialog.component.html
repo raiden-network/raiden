@@ -50,8 +50,7 @@
                           [autoActiveFirstOption]="'true'"
                           (optionSelected)="tokenSelected($event.option.value)">
             <mat-option *ngFor="let option of filteredOptions | async"
-                        [value]="option"
-                        onselect="updateStep(option.decimals)">
+                        [value]="option">
                 {{option | token }}
             </mat-option>
         </mat-autocomplete>
