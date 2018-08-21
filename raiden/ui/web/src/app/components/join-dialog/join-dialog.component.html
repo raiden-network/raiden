@@ -6,10 +6,16 @@
                type="number"
                [formControl]="funds"
                matInput
-               min="0"/>
+               [appAllowedDecimals]="decimals()"
+               min="0"
+               (input)="precise($event)"
+               [step]="step()"/>
     </mat-form-field>
-    <mat-error *ngIf="funds.value == 0">
-
+    <mat-error *ngIf="funds.invalid && funds.hasError('invalidAmount') && (funds.dirty || funds.touched)">
+        The funds should be a positive number
+    </mat-error>
+    <mat-error *ngIf="funds.invalid && funds.hasError('tooManyDecimals') && (funds.dirty || funds.touched)">
+        This token network only supports up to {{ decimals() }} decimals
     </mat-error>
 </div>
 <div mat-dialog-actions>

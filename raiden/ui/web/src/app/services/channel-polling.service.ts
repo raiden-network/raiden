@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { scan, share, switchMap, tap } from 'rxjs/operators';
 import { Channel } from '../models/channel';
+import { amountToDecimal } from '../utils/amount.converter';
 import { RaidenConfig } from './raiden.config';
 import { RaidenService } from './raiden.service';
 import { SharedService } from './shared.service';
@@ -112,9 +113,10 @@ export class ChannelPollingService {
         const symbol = channel.userToken.symbol;
         const channelId = channel.channel_identifier;
         const partnerAddress = channel.partner_address;
+        const balance = amountToDecimal(amount, channel.userToken.decimals);
         this.sharedService.info({
             title: 'Balance Update',
-            description: `The balance of channel ${channelId} with ${partnerAddress} was updated by ${amount} ${symbol} tokens`
+            description: `The balance of channel ${channelId} with ${partnerAddress} was updated by ${balance} ${symbol} tokens`
         });
     }
 }

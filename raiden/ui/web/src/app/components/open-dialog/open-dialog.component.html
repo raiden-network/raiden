@@ -32,19 +32,32 @@
                maxlength="42"
                required
                matInput [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete">
-            <mat-option *ngFor="let option of filteredOptions | async" [value]="option.address">
+        <mat-autocomplete #auto="matAutocomplete"
+                          [autoActiveFirstOption]="'true'"
+                          (optionSelected)="tokenSelected($event.option.value)">
+            <mat-option *ngFor="let option of filteredOptions | async" [value]="option">
                 {{option | token }}
             </mat-option>
         </mat-autocomplete>
-        <mat-error *ngIf="!token.value">Please select a token network</mat-error>
-        <mat-error *ngIf="token.invalid">This is not a valid token network address</mat-error>
+        <mat-error *ngIf="!token.value && (token.dirty || token.touched)">Please select a token network</mat-error>
+        <mat-error *ngIf="token.invalid && (token.dirty || token.touched)">This is not a valid token network address
+        </mat-error>
 
     </mat-form-field>
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
-        <input matInput type="number" placeholder="Balance" formControlName="balance" required min="0"/>
-        <mat-error *ngIf="balance.invalid">
+        <input matInput type="number"
+               placeholder="Balance"
+               formControlName="balance"
+               required
+               [appAllowedDecimals]="decimals()"
+               min="0"
+               (input)="precise($event)"
+               [step]="step()"/>
+        <mat-error *ngIf="balance.invalid && balance.hasError('invalidAmount') && (balance.dirty || balance.touched)">
             The channel balance has to be a number greater than zero
+        </mat-error>
+        <mat-error *ngIf="balance.invalid && balance.hasError('tooManyDecimals') && (balance.dirty || balance.touched)">
+            This token network only supports up to {{ decimals() }} decimals
         </mat-error>
     </mat-form-field>
 

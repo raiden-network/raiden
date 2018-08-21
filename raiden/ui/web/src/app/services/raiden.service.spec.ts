@@ -1,6 +1,7 @@
 import { HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
+import { BigNumber } from 'bignumber.js';
 import { MockConfig } from '../components/channel-table/channel-table.component.spec';
 import { Channel } from '../models/channel';
 import { UserToken } from '../models/usertoken';
@@ -105,7 +106,7 @@ describe('RaidenService', () => {
     it('Show a proper response when non-EIP addresses are passed in channel creation', () => {
         const partnerAddress = '0xc52952ebad56f2c5e5b42bb881481ae27d036475';
 
-        service.openChannel(tokenAddress, partnerAddress, 500, 10).subscribe(() => {
+        service.openChannel(tokenAddress, partnerAddress, 500, 10, 8).subscribe(() => {
             fail('On next should not be called');
         }, (error) => {
             expect(error).toBeTruthy('An error was expected');
@@ -139,6 +140,7 @@ describe('RaidenService', () => {
             address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             symbol: 'TST',
             name: 'Test Suite Token',
+            decimals: 8,
             balance: 20
         };
 
@@ -154,6 +156,9 @@ describe('RaidenService', () => {
                 },
                 symbol: (callback: CallbackFunc) => {
                     callback(null, token.symbol);
+                },
+                decimals: (callback: CallbackFunc) => {
+                    callback(null, new BigNumber(token.decimals));
                 }
             })
         };

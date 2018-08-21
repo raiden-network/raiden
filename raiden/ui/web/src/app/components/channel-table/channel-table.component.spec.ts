@@ -3,13 +3,19 @@ import { async, ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angul
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs/internal/observable/of';
+import { AllowedDecimalsDirective } from '../../directives/allowed-decimals.directive';
+import { CdkDetailRowDirective } from '../../directives/cdk-detail-row.directive';
 import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
+import { MaterialComponentsModule } from '../../modules/material-components/material-components.module';
+import { DecimalPipe } from '../../pipes/decimal.pipe';
 import { EllipsisPipe } from '../../pipes/ellipsis.pipe';
 import { KeysPipe } from '../../pipes/keys.pipe';
 import { SubsetPipe } from '../../pipes/subset.pipe';
 import { TokenPipe } from '../../pipes/token.pipe';
+import { ChannelPollingService } from '../../services/channel-polling.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
@@ -32,7 +38,7 @@ export class MockConfig extends RaidenConfig {
 describe('ChannelTableComponent', () => {
     let component: ChannelTableComponent;
     let fixture: ComponentFixture<ChannelTableComponent>;
-    let raidenServiceSpy: Spy;
+    let pollingServiceSpy: Spy;
     let tokenSpy: Spy;
 
     beforeEach(async(() => {
@@ -44,7 +50,10 @@ describe('ChannelTableComponent', () => {
                 TokenPipe,
                 EllipsisPipe,
                 KeysPipe,
-                SubsetPipe
+                SubsetPipe,
+                DecimalPipe,
+                CdkDetailRowDirective,
+                AllowedDecimalsDirective
             ],
             providers: [
                 SharedService,
@@ -53,12 +62,15 @@ describe('ChannelTableComponent', () => {
                     useClass: MockConfig
                 },
                 RaidenService,
+                ChannelPollingService,
                 HttpClient,
                 HttpHandler
             ],
             imports: [
                 FormsModule,
                 ReactiveFormsModule,
+                MaterialComponentsModule,
+                RouterTestingModule,
                 FormsModule,
                 NoopAnimationsModule
             ]
@@ -68,7 +80,8 @@ describe('ChannelTableComponent', () => {
     beforeEach(() => {
         fixture = TestBed.createComponent(ChannelTableComponent);
         const service: RaidenService = TestBed.get(RaidenService);
-        raidenServiceSpy = spyOn(service, 'getChannels');
+        const channelPollingService: ChannelPollingService = TestBed.get(ChannelPollingService);
+        pollingServiceSpy = spyOn(channelPollingService, 'channels');
         tokenSpy = spyOn(service, 'getUserToken');
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -84,6 +97,7 @@ describe('ChannelTableComponent', () => {
             address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             symbol: 'TST',
             name: 'Test Suite Token',
+            decimals: 8,
             balance: 20
         };
 
@@ -143,7 +157,7 @@ describe('ChannelTableComponent', () => {
 
         };
 
-        raidenServiceSpy
+        pollingServiceSpy
             .and
             .returnValues(
                 of([channel1, channel2, channel3, channel4]),

@@ -3,10 +3,11 @@
     <div fxLayout="row" fxLayoutGap="10px">
         <div fxLayout="column" fxFlex="0 0 30px" fxLayoutAlign="center center">
             <img class="identicon no-margin"
-                 *ngIf="!targetAddress.invalid"
+                 *ngIf="(targetAddress.value && !targetAddress.invalid); else placeholder"
                  src="{{identicon(targetAddress.value)}}"/>
-
-            <mat-icon *ngIf="targetAddress.invalid">person</mat-icon>
+            <ng-template #placeholder>
+                <mat-icon >person</mat-icon>
+            </ng-template>
         </div>
 
         <mat-form-field fxLayout="column" fxFlex="1 1 auto" [hideRequiredMarker]="true">
@@ -15,13 +16,15 @@
                    placeholder="Receiver Address" required pattern="^0x[0-9a-fA-F]{40}$"
                    minlength="42" maxlength="42" autofocus
             />
-            <mat-error *ngIf="targetAddress.value.length == 0">
+            <mat-error *ngIf="targetAddress.value.length == 0 && (targetAddress.dirty || targetAddress.touched)">
                 The receiver address cannot be empty
             </mat-error>
-            <mat-error *ngIf="targetAddress.value.length > 0 && targetAddress.value.length < 42">
+            <mat-error
+                    *ngIf="targetAddress.value.length > 0 && targetAddress.value.length < 42 && (targetAddress.dirty || targetAddress.touched)">
                 Invalid receiver address length
             </mat-error>
-            <mat-error *ngIf="targetAddress.value.length == 42 && targetAddress.invalid">
+            <mat-error
+                    *ngIf="targetAddress.value.length == 42 && targetAddress.invalid && (targetAddress.dirty || targetAddress.touched)">
             <span *ngIf="targetAddress.hasError('ownAddress')">
                 You cannot start a payment to your own address
             </span>
@@ -43,19 +46,36 @@
                maxlength="42"
                required
                matInput [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete">
-            <mat-option *ngFor="let option of filteredOptions | async" [value]="option.address">
+        <mat-autocomplete #auto="matAutocomplete"
+                          [autoActiveFirstOption]="'true'"
+                          (optionSelected)="tokenSelected($event.option.value)">
+            <mat-option *ngFor="let option of filteredOptions | async"
+                        [value]="option"
+                        onselect="updateStep(option.decimals)">
                 {{option | token }}
             </mat-option>
         </mat-autocomplete>
-        <mat-error *ngIf="!token.value">Please select a token network</mat-error>
-        <mat-error *ngIf="token.invalid">This is not a valid token network address</mat-error>
+        <mat-error *ngIf="!token.value && (token.dirty || token.touched)">Please select a token network</mat-error>
+        <mat-error *ngIf="token.invalid && (token.dirty || token.touched)">This is not a valid token network address
+        </mat-error>
 
     </mat-form-field>
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
-        <input matInput type="number" id="amount" placeholder="Amount" formControlName="amount" required min="0"/>
-        <mat-error *ngIf="amount.invalid">
-            The tranfer amount should be a positive number
+        <input matInput type="number"
+               id="amount"
+               placeholder="Amount"
+               formControlName="amount"
+               required
+               [appAllowedDecimals]="decimals()"
+               min="0"
+               (input)="precise($event)"
+               [step]="step()"
+        />
+        <mat-error *ngIf="amount.invalid && amount.hasError('invalidAmount') && (amount.dirty || amount.touched)">
+            The transfer amount should be a positive number
+        </mat-error>
+        <mat-error *ngIf="amount.invalid && amount.hasError('tooManyDecimals') && (amount.dirty || amount.touched)">
+            This token network only supports up to {{ decimals() }} decimals
         </mat-error>
     </mat-form-field>
 

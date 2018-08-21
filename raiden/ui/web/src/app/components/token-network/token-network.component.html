@@ -122,7 +122,7 @@
                 </div>
                 <div fxLayout="row" fxLayoutGap="4px">
                     <strong>Balance:</strong>
-                    <span>{{token.balance}}</span>
+                    <span>{{token.balance | decimal: token.decimals}}</span>
                 </div>
             </div>
 

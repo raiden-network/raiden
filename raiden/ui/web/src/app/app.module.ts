@@ -34,6 +34,8 @@ import { RaidenService } from './services/raiden.service';
 import { SharedService } from './services/shared.service';
 import { DepositDialogComponent } from './components/deposit-dialog/deposit-dialog.component';
 import { ChannelEventsComponent } from './components/channel-events/channel-events.component';
+import { AllowedDecimalsDirective } from './directives/allowed-decimals.directive';
+import { DecimalPipe } from './pipes/decimal.pipe';
 
 const appRoutes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -72,7 +74,9 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         CdkDetailRowDirective,
         ConfirmationDialogComponent,
         DepositDialogComponent,
-        ChannelEventsComponent
+        ChannelEventsComponent,
+        AllowedDecimalsDirective,
+        DecimalPipe
     ],
     imports: [
         RouterModule.forRoot(appRoutes),

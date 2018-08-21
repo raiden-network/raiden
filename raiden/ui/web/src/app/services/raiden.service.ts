@@ -8,10 +8,12 @@ import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
 
 import { UserToken } from '../models/usertoken';
+import { amountFromDecimal, amountToDecimal } from '../utils/amount.converter';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
+import { BigNumber } from 'bignumber.js';
 
 export type CallbackFunc = (error: Error, result: any) => void;
 
@@ -114,13 +116,14 @@ export class RaidenService {
         partnerAddress: string,
         settleTimeout: number,
         balance: number,
+        decimals: number
     ): Observable<Channel> {
         console.log('Inside the open channel service');
         const data = {
             'token_address': tokenAddress,
             'partner_address': partnerAddress,
             'settle_timeout': settleTimeout,
-            'balance': balance,
+            'balance': amountFromDecimal(balance, decimals),
         };
         return this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data).pipe(
             catchError((error) => this.handleError(error)),
@@ -131,10 +134,16 @@ export class RaidenService {
         tokenAddress: string,
         targetAddress: string,
         amount: number,
+        decimals: number
     ): Observable<any> {
+        const raidenAmount = amountFromDecimal(amount, decimals);
+
         return this.http.post(
             `${this.raidenConfig.api}/payments/${tokenAddress}/${targetAddress}`,
-            {amount, identifier: this.identifier},
+            {
+                amount: raidenAmount,
+                identifier: this.identifier
+            },
         ).pipe(
             tap((response) => {
                 if ('target_address' in response && 'identifier' in response) {
@@ -157,18 +166,23 @@ export class RaidenService {
         tokenAddress: string,
         partnerAddress: string,
         amount: number,
+        decimals: number
     ): Observable<Channel> {
+
+        const depositIncrement = amountFromDecimal(amount, decimals);
+
         return this.getChannel(tokenAddress, partnerAddress).pipe(
             switchMap((channel) => this.http.patch<Channel>(
                 `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-                {total_deposit: channel.balance + amount},
+                {total_deposit: channel.balance + depositIncrement},
             )),
             tap((response) => {
                 const action = 'Deposit';
                 if ('balance' in response && 'state' in response) {
+                    const balance = amountToDecimal(response.balance, decimals);
                     this.sharedService.info({
                         title: action,
-                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${response.balance}`
+                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${balance}`
                     });
                 } else {
                     this.sharedService.error({
@@ -228,10 +242,10 @@ export class RaidenService {
         );
     }
 
-    public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
+    public connectTokenNetwork(funds: number, tokenAddress: string, decimals: number): Observable<any> {
         return this.http.put(
             `${this.raidenConfig.api}/connections/${tokenAddress}`,
-            {funds},
+            {funds: amountFromDecimal(funds, decimals)},
         ).pipe(
             tap(() => {
                 this.sharedService.success({
@@ -304,10 +318,6 @@ export class RaidenService {
         );
     }
 
-    public sha3(data: string): string {
-        return this.raidenConfig.web3.sha3(data, {encoding: 'hex'});
-    }
-
     public blocknumberToDate(block: number): Observable<Date> {
         return bindNodeCallback((b: number, cb: CallbackFunc) =>
             this.raidenConfig.web3.eth.getBlock(b, this.zoneEncap(cb))
@@ -325,33 +335,39 @@ export class RaidenService {
         const tokenMap = this.userTokens;
         const userToken: UserToken | null | undefined = tokenMap[tokenAddress];
 
-        const balanceObservable: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
+        const balance$: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
             tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
         )(this.raidenAddress).pipe(
             map((balance) => balance.toNumber())
         );
 
         if (userToken === undefined) {
-            const symbolObservable = bindNodeCallback((cb: CallbackFunc) =>
+            const decimals$: Observable<BigNumber> = bindNodeCallback((cb: CallbackFunc) =>
+                tokenContractInstance.decimals(this.zoneEncap(cb))
+            )();
+
+            const symbol$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
             )();
 
-            const nameObservable = bindNodeCallback((cb: CallbackFunc) =>
+            const name$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.name(this.zoneEncap(cb))
             )();
 
             return zip(
-                symbolObservable,
-                nameObservable,
-                balanceObservable,
+                symbol$,
+                name$,
+                balance$,
+                decimals$
             ).pipe(
-                map(([symbol, name, balance]): UserToken => {
-                    return {
+                map(([symbol, name, balance, decimals]): UserToken => {
+                    return ({
                         address: tokenAddress,
                         symbol,
                         name,
-                        balance
-                    };
+                        balance,
+                        decimals: decimals.toNumber()
+                    });
                 }),
                 tap((token) => tokenMap[tokenAddress] = token),
                 share(),
@@ -367,7 +383,7 @@ export class RaidenService {
             );
 
         } else if (refresh && userToken !== null) {
-            return balanceObservable.pipe(
+            return balance$.pipe(
                 map((balance) => {
                     if (balance === null) {
                         return null;

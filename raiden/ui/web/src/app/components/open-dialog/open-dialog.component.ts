@@ -1,6 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
+import { BigNumber } from 'bignumber.js';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
@@ -19,6 +20,7 @@ export interface OpenDialogResult {
     partnerAddress: string;
     settleTimeout: number;
     balance: number;
+    decimals: number;
 }
 
 @Component({
@@ -36,20 +38,22 @@ export class OpenDialogComponent implements OnInit {
 
     public filteredOptions: Observable<UserToken[]>;
     private tokens: Observable<UserToken[]>;
+    private _decimals = 0;
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: OpenDialogPayload,
         public dialogRef: MatDialogRef<OpenDialogComponent>,
         public raidenService: RaidenService,
         private fb: FormBuilder,
-    ) { }
+    ) {
+    }
 
     ngOnInit() {
         const data = this.data;
         this.form = this.fb.group({
             partner_address: ['', (control) => control.value === data.ownAddress ? {ownAddress: true} : undefined],
             token: '',
-            balance: [0, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
+            balance: [0],
             settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
@@ -79,13 +83,33 @@ export class OpenDialogComponent implements OnInit {
             partnerAddress: value.partner_address,
             settleTimeout: value.settle_timeout,
             balance: value.balance,
+            decimals: this._decimals
         };
 
         this.dialogRef.close(result);
     }
 
-    private _filter(value: string): Observable<UserToken[]> {
+    public step(): string {
+        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
+    }
+
+    public decimals(): number {
+        return this._decimals;
+    }
+
+    public precise(value) {
+        if (value.type === 'input' && !value.inputType) {
+            this.balance.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
+        }
+    }
+
+    private _filter(value?: string): Observable<UserToken[]> {
+        if (!value) {
+            return this.tokens;
+        }
+
         const keyword = value.toLowerCase();
+
         return this.tokens.pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
             filter((token: UserToken) => {
@@ -96,5 +120,10 @@ export class OpenDialogComponent implements OnInit {
             }),
             toArray()
         );
+    }
+
+    tokenSelected(value: UserToken) {
+        this._decimals = value.decimals;
+        this.token.setValue(value.address);
     }
 }

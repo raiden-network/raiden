@@ -12,7 +12,7 @@ import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { StringUtils } from '../../utils/string.utils';
 import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
-import { DepositDialogComponent } from '../deposit-dialog/deposit-dialog.component';
+import { DepositDialogComponent, DepositDialogPayload } from '../deposit-dialog/deposit-dialog.component';
 import { OpenDialogComponent, OpenDialogPayload, OpenDialogResult } from '../open-dialog/open-dialog.component';
 import { PaymentDialogComponent, PaymentDialogPayload } from '../payment-dialog/payment-dialog.component';
 import { ChannelSorting } from './channel.sorting.enum';
@@ -145,7 +145,8 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         const payload: PaymentDialogPayload = {
             tokenAddress: channel.token_address,
             targetAddress: channel.partner_address,
-            amount: this.amount
+            amount: this.amount,
+            decimals: channel.userToken.decimals
         };
 
         const dialog = this.dialog.open(PaymentDialogComponent, {
@@ -163,15 +164,20 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                     result.tokenAddress,
                     result.targetAddress,
                     result.amount,
+                    result.decimals
                 );
             })
         ).subscribe(() => this.refresh());
     }
 
     public onDeposit(channel: Channel) {
+        const payload: DepositDialogPayload = {
+            decimals: channel.userToken.decimals
+        };
 
         const dialog = this.dialog.open(DepositDialogComponent, {
-            width: '500px'
+            width: '500px',
+            data: payload
         });
 
         dialog.afterClosed().pipe(
@@ -184,6 +190,7 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                     channel.token_address,
                     channel.partner_address,
                     deposit,
+                    channel.userToken.decimals
                 );
             })
         ).subscribe(() => this.refresh());
@@ -235,7 +242,8 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                     result.tokenAddress,
                     result.partnerAddress,
                     result.settleTimeout,
-                    result.balance
+                    result.balance,
+                    result.decimals
                 );
             })).subscribe(() => this.refresh());
     }

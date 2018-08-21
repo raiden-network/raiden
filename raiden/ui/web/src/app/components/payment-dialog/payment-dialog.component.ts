@@ -1,10 +1,10 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
+import { BigNumber } from 'bignumber.js';
 import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, toArray } from 'rxjs/operators';
-import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
 import { TokenPipe } from '../../pipes/token.pipe';
 
@@ -14,6 +14,7 @@ export interface PaymentDialogPayload {
     tokenAddress: string;
     targetAddress: string;
     amount: number;
+    decimals: number;
 }
 
 @Component({
@@ -33,6 +34,8 @@ export class PaymentDialogComponent implements OnInit {
     public tokenPipe: TokenPipe;
     private tokens: Observable<UserToken[]>;
 
+    private _decimals = 0;
+
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: PaymentDialogPayload,
         public dialogRef: MatDialogRef<PaymentDialogComponent>,
@@ -40,6 +43,7 @@ export class PaymentDialogComponent implements OnInit {
         private fb: FormBuilder
     ) {
         this.tokenPipe = new TokenPipe();
+        this._decimals = this.data.decimals;
     }
 
     ngOnInit() {
@@ -49,7 +53,7 @@ export class PaymentDialogComponent implements OnInit {
         this.form = this.fb.group({
             target_address: [data.targetAddress, (control) => control.value === raidenAddress ? {ownAddress: true} : undefined],
             token: data.tokenAddress,
-            amount: [0, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
+            amount: [0]
         });
 
         this.token = this.form.get('token') as FormControl;
@@ -69,12 +73,27 @@ export class PaymentDialogComponent implements OnInit {
         );
     }
 
+    public step(): string {
+        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
+    }
+
+    public decimals(): number {
+        return this._decimals;
+    }
+
+    public precise(value) {
+        if (value.type === 'input' && !value.inputType) {
+            this.amount.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
+        }
+    }
+
     public accept() {
         const value = this.form.value;
 
         const payload: PaymentDialogPayload = {
             tokenAddress: value['token'],
             targetAddress: value['target_address'],
+            decimals: this._decimals,
             amount: value['amount']
         };
 
@@ -93,6 +112,7 @@ export class PaymentDialogComponent implements OnInit {
 
         this.targetAddress.setValue(targetAddress ? targetAddress : '');
         this.amount.setValue(0);
+        this._decimals = this.data.decimals;
     }
 
     // noinspection JSMethodCanBeStatic
@@ -103,7 +123,11 @@ export class PaymentDialogComponent implements OnInit {
         return makeBlockie(address);
     }
 
-    private _filter(value: string): Observable<UserToken[]> {
+    private _filter(value?: string): Observable<UserToken[]> {
+        if (!value) {
+            return this.tokens;
+        }
+
         const keyword = value.toLowerCase();
         return this.tokens.pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
@@ -117,4 +141,8 @@ export class PaymentDialogComponent implements OnInit {
         );
     }
 
+    tokenSelected(value: UserToken) {
+        this._decimals = value.decimals;
+        this.token.setValue(value.address);
+    }
 }

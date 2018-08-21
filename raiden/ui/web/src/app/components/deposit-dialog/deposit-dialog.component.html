@@ -7,8 +7,12 @@
                [formControl]="depositControl"
                matInput
                value="0"
-               min="0"/>
-        <mat-error *ngIf="depositControl.invalid">
+               min="0"
+               (input)="precise($event)"
+               [appAllowedDecimals]="decimals()"
+               [step]="step()"/>
+
+        <mat-error *ngIf="depositControl.invalid && (depositControl.dirty || depositControl.touched)">
             The deposit must me a positive number
         </mat-error>
     </mat-form-field>

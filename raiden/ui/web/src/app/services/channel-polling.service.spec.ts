@@ -1,7 +1,7 @@
 import { HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
-import { from, of } from 'rxjs';
+import { from } from 'rxjs';
 import { MockConfig } from '../components/channel-table/channel-table.component.spec';
 import { Channel } from '../models/channel';
 import { UserToken } from '../models/usertoken';
@@ -39,7 +39,8 @@ describe('ChannelPollingService', () => {
         address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
         symbol: 'TST',
         name: 'Test Suite Token',
-        balance: 20
+        balance: 20,
+        decimals: 8
     };
 
     const channel1: Channel = {

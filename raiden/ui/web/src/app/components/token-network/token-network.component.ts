@@ -138,7 +138,8 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
     public showJoinDialog(userToken: UserToken) {
         const payload: JoinDialogPayload = {
             tokenAddress: userToken.address,
-            funds: 0
+            funds: 0,
+            decimals: userToken.decimals
         };
 
         const joinDialogRef = this.dialog.open(JoinDialogComponent, {
@@ -149,7 +150,7 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         joinDialogRef.afterClosed().pipe(
             flatMap((result: JoinDialogPayload) => {
                 if (result) {
-                    return this.raidenService.connectTokenNetwork(result.funds, result.tokenAddress);
+                    return this.raidenService.connectTokenNetwork(result.funds, result.tokenAddress, result.decimals);
                 } else {
                     return EMPTY;
                 }
@@ -164,7 +165,8 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         const payload: PaymentDialogPayload = {
             tokenAddress: userToken.address,
             targetAddress: '',
-            amount: 0
+            amount: 0,
+            decimals: userToken.decimals
         };
 
         const paymentDialogRef = this.dialog.open(PaymentDialogComponent, {
@@ -175,7 +177,7 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         paymentDialogRef.afterClosed().pipe(
             flatMap((result: PaymentDialogPayload) => {
                 if (result) {
-                    return this.raidenService.initiatePayment(result.tokenAddress, result.targetAddress, result.amount);
+                    return this.raidenService.initiatePayment(result.tokenAddress, result.targetAddress, result.amount, result.decimals);
                 } else {
                     return EMPTY;
                 }
