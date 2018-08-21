@@ -9,13 +9,14 @@ import networkx
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
-from raiden.transfer.architecture import State
+from raiden.transfer.architecture import State, SendMessageEvent
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3, typing
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
+QueueIdsToQueues = typing.Dict[typing.QueueIdentifier, typing.List[SendMessageEvent]]
 
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'
@@ -133,7 +134,7 @@ class ChainState(State):
         self.payment_mapping = PaymentMappingState()
         self.pending_transactions = list()
         self.pseudo_random_generator = pseudo_random_generator
-        self.queueids_to_queues = dict()
+        self.queueids_to_queues: QueueIdsToQueues = dict()
 
     def __repr__(self):
         return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
