@@ -7,6 +7,10 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden import waiting, message_handler
 from raiden.messages import RevealSecret
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+    DEFAULT_RETRY_TIMEOUT,
+)
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -124,6 +128,74 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
     })
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, deposit):
+    """Test lock expiry and removal."""
+    alice_app, bob_app = raiden_network
+    token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(alice_app),
+        alice_app.raiden.default_registry.address,
+        token_address,
+    )
+
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(alice_app),
+        token_network_identifier,
+    )
+
+    channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    channel_identifier = channel_state.identifier
+
+    assert channel_identifier in token_network.partneraddresses_to_channels[
+        bob_app.raiden.address
+    ]
+
+    alice_to_bob_amount = 10
+    identifier = 1
+    secret = pending_mediated_transfer(
+        raiden_network,
+        token_network_identifier,
+        alice_to_bob_amount,
+        identifier,
+    )
+    secrethash = sha3(secret)
+
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
+
+    # This is the current state of the protocol:
+    #
+    #    A -> B LockedTransfer
+    #    B -> A SecretRequest
+    #    - protocol didn't continue
+    assert_synced_channel_state(
+        token_network_identifier,
+        alice_app, deposit, [lock],
+        bob_app, deposit, [],
+    )
+
+    # Verify lock is registered in both channel states
+    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    assert secrethash in alice_channel_state.our_state.secrethashes_to_lockedlocks
+
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    assert secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
+
+    waiting.wait_for_block(
+        alice_app.raiden,
+        lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+        DEFAULT_RETRY_TIMEOUT,
+    )
+
+    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    assert secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
+
+    # Verify bob received the message and processed the LockExpired message
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    assert secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
