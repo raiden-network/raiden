@@ -25,6 +25,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     SendBalanceProof,
+    SendLockExpired,
     SendLockedTransfer,
     SendRefundTransfer,
     SendRevealSecret,
@@ -45,6 +46,18 @@ UNEVENTFUL_EVENTS = (
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
 )
+
+
+def handle_send_lockexpired(
+        raiden: RaidenService,
+        send_lock_expired: SendLockExpired,
+):
+    mediated_transfer_message = message_from_sendevent(send_lock_expired, raiden.address)
+    raiden.sign(mediated_transfer_message)
+    raiden.transport.send_async(
+        send_lock_expired.queue_identifier,
+        mediated_transfer_message,
+    )
 
 
 def handle_send_lockedtransfer(
@@ -316,7 +329,9 @@ def handle_contract_send_channelsettle(
 def on_raiden_event(raiden: RaidenService, event: Event):
     # pylint: disable=too-many-branches
     try:
-        if type(event) == SendLockedTransfer:
+        if type(event) == SendLockExpired:
+            handle_send_lockexpired(raiden, event)
+        elif type(event) == SendLockedTransfer:
             handle_send_lockedtransfer(raiden, event)
         elif type(event) == SendDirectTransfer:
             handle_send_directtransfer(raiden, event)
