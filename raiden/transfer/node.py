@@ -61,6 +61,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
+    ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
@@ -632,6 +633,17 @@ def handle_init_target(
     )
 
 
+def handle_receive_lock_expired(
+        chain_state: ChainState,
+        state_change: ReceiveLockExpired,
+) -> TransitionResult:
+    return subdispatch_to_paymenttask(
+        chain_state,
+        state_change,
+        state_change.transfer.secrethash,
+    )
+
+
 def handle_receive_transfer_refund(
         chain_state: ChainState,
         state_change: ReceiveTransferRefund,
@@ -851,6 +863,11 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ReceiveUnlock:
+        iteration = handle_receive_unlock(
+            chain_state,
+            state_change,
+        )
+    elif type(state_change) == ReceiveLockExpired:
         iteration = handle_receive_unlock(
             chain_state,
             state_change,

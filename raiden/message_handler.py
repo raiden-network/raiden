@@ -12,6 +12,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.messages import (
     DirectTransfer,
+    LockExpired,
     LockedTransfer,
     Message,
     Processed,
@@ -22,6 +23,7 @@ from raiden.messages import (
 )
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
@@ -56,6 +58,15 @@ def handle_message_secret(raiden: RaidenService, message: Secret):
         message_identifier=message.message_identifier,
         secret=message.secret,
         balance_proof=balance_proof,
+    )
+    raiden.handle_state_change(state_change)
+
+
+def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
+    state_change = ReceiveLockExpired(
+        message.sender,
+        message.transfer,
+        message.secret,
     )
     raiden.handle_state_change(state_change)
 
@@ -132,6 +143,8 @@ def on_message(raiden: RaidenService, message: Message):
         handle_message_revealsecret(raiden, message)
     elif type(message) == Secret:
         handle_message_secret(raiden, message)
+    elif type(message) == LockExpired:
+        handle_message_lockexpired(raiden, message)
     elif type(message) == DirectTransfer:
         handle_message_directtransfer(raiden, message)
     elif type(message) == RefundTransfer:

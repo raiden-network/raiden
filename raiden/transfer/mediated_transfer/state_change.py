@@ -154,6 +154,34 @@ class ActionCancelRoute(StateChange):
         return not self.__eq__(other)
 
 
+class ReceiveLockExpired(StateChange):
+    """ A LockExpired message received. """
+
+    def __init__(self, sender, transfer, secrethash):
+        self.sender = sender
+        self.transfer = transfer
+        self.secrethash = secrethash
+
+    def __repr__(self):
+        return '<ReceiveLockExpired sender:{} transfer:{}>'.format(
+            pex(self.sender),
+            self.transfer,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReceiveLockExpired) and
+            self.sender == other.sender and
+            self.transfer == other.transfer and
+            self.routes == other.routes and
+            self.secret == other.secret and
+            self.secrethash == other.secrethash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
