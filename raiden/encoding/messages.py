@@ -107,6 +107,7 @@ SecretRequest = namedbuffer(
         payment_identifier,
         secrethash,
         amount,
+        expiration,
         signature,
     ],
 )

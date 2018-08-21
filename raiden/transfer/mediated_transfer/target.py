@@ -117,6 +117,7 @@ def handle_inittarget(
             message_identifier=message_identifier,
             payment_identifier=transfer.payment_identifier,
             amount=transfer.lock.amount,
+            expiration=transfer.lock.expiration,
             secrethash=transfer.lock.secrethash,
         )
 

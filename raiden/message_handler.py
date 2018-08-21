@@ -35,6 +35,7 @@ def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest):
     secret_request = ReceiveSecretRequest(
         message.payment_identifier,
         message.amount,
+        message.expiration,
         message.secrethash,
         message.sender,
     )

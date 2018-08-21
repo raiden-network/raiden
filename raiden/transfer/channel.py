@@ -568,18 +568,13 @@ def refund_transfer_matches_received(
         received_transfer.lock.amount == refund_transfer.lock.amount and
         received_transfer.lock.secrethash == refund_transfer.lock.secrethash and
         received_transfer.target == refund_transfer.target and
+        received_transfer.lock.expiration == refund_transfer.lock.expiration and
 
         # The refund transfer is not tied to the other direction of the same
         # channel, it may reach this node through a different route depending
         # on the path finding strategy
         # original_receiver == refund_transfer_sender and
-        received_transfer.token == refund_transfer.token and
-
-        # A larger-or-equal expiration is byzantine behavior that favors the
-        # receiver node, nevertheless it's being ignored since the only reason
-        # for the other node to use an invalid expiration is to try to game the
-        # protocol.
-        received_transfer.lock.expiration > refund_transfer.lock.expiration
+        received_transfer.token == refund_transfer.token
     )
 
 

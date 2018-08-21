@@ -43,15 +43,6 @@ from raiden.transfer.state_change import (
 from raiden.transfer.mediated_transfer import initiator
 from raiden.utils import typing
 
-# Reduce the lock expiration by some additional blocks to prevent this exploit:
-# The payee could reveal the secret on it's lock expiration block, the lock
-# would be valid and the previous lock can be safely unlocked so the mediator
-# would follow the secret reveal with a balance-proof, at this point the secret
-# is known, the payee transfer is payed, and if the payer expiration is exactly
-# reveal_timeout blocks away the mediator will be forced to close the channel
-# to be safe.
-TRANSIT_BLOCKS = 2  # TODO: make this a configuration variable
-
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
@@ -86,17 +77,36 @@ def is_lock_valid(expiration, block_number):
 
 
 def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
-    """ True if there are more than enough blocks to safely settle on chain and
-    waiting is safe.
+    """ True if there are more than enough blocks to safely unlock on chain,
+    making waiting is safe.
     """
     # reveal timeout will not ever be larger than the lock_expiration otherwise
     # the expected block_number is negative
     assert block_number > 0
-    assert lock_expiration > reveal_timeout > 0
+    assert reveal_timeout > 0
+    assert lock_expiration > reveal_timeout
 
     # A node may wait for a new balance proof while there are reveal_timeout
     # blocks left, at that block and onwards it is not safe to wait.
     return block_number < lock_expiration - reveal_timeout
+
+
+def is_channel_usable(candidate_channel_state, transfer_amount, lock_timeout):
+    pending_transfers = channel.get_number_of_pending_transfers(candidate_channel_state.our_state)
+    distributable = channel.get_distributable(
+        candidate_channel_state.our_state,
+        candidate_channel_state.partner_state,
+    )
+
+    return (
+        lock_timeout > 0 and
+        channel.get_status(candidate_channel_state) == CHANNEL_STATE_OPENED and
+        candidate_channel_state.settle_timeout >= lock_timeout and
+        candidate_channel_state.reveal_timeout < lock_timeout and
+        pending_transfers < MAXIMUM_PENDING_TRANSFERS and
+        transfer_amount <= distributable and
+        channel.is_valid_amount(candidate_channel_state.our_state, transfer_amount)
+    )
 
 
 def is_channel_close_needed(payer_channel, transfer_pair, block_number):
@@ -132,13 +142,14 @@ def is_send_transfer_almost_equal(
         received: LockedTransferSignedState,
 ):
     """ True if both transfers are for the same mediated transfer. """
-    # the only value that may change for each hop is the expiration
+    # The only thing that may change is the direction of the transfer
     return (
         isinstance(send, LockedTransferUnsignedState) and
         isinstance(received, LockedTransferSignedState) and
         send.payment_identifier == received.payment_identifier and
         send.token == received.token and
         send.lock.amount == received.lock.amount and
+        send.lock.expiration == received.lock.expiration and
         send.lock.secrethash == received.lock.secrethash and
         send.initiator == received.initiator and
         send.target == received.target
@@ -198,40 +209,6 @@ def get_pending_transfer_pairs(transfers_pair):
     return pending_pairs
 
 
-def get_timeout_blocks(settle_timeout, closed_block_number, payer_lock_expiration, block_number):
-    """ Return the timeout blocks, it's the base value from which the payees
-    lock timeout must be computed.
-    The payee lock timeout is crucial for safety of the mediated transfer, the
-    value must be chosen so that the payee hop is forced to reveal the secret
-    with sufficient time for this node to claim the received lock from the
-    payer hop.
-    The timeout blocks must be the smallest of:
-    - payer_lock_expiration: The payer lock expiration, to force the payee
-      to reveal the secret before the lock expires.
-    - settle_timeout: Lock expiration must be lower than
-      the settlement period since the lock cannot be claimed after the channel is
-      settled.
-    - closed_block_number: If the channel is closed then the settlement
-      period is running and the lock expiration must be lower than number of
-      blocks left.
-    """
-    blocks_until_settlement = settle_timeout
-
-    if closed_block_number is not None:
-        assert block_number >= closed_block_number > 0
-
-        elapsed_blocks = block_number - closed_block_number
-        blocks_until_settlement -= elapsed_blocks
-
-    safe_payer_timeout = min(
-        blocks_until_settlement,
-        payer_lock_expiration - block_number,
-    )
-    timeout_blocks = safe_payer_timeout - TRANSIT_BLOCKS
-
-    return timeout_blocks
-
-
 def sanity_check(state):
     """ Check invariants that must hold. """
 
@@ -251,15 +228,13 @@ def sanity_check(state):
 
     for pair in state.transfers_pair:
         assert is_send_transfer_almost_equal(pair.payee_transfer, pair.payer_transfer)
-        assert pair.payer_transfer.lock.expiration > pair.payee_transfer.lock.expiration
-
         assert pair.payer_state in pair.valid_payer_states
         assert pair.payee_state in pair.valid_payee_states
 
     for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
         assert is_send_transfer_almost_equal(original.payee_transfer, refund.payer_transfer)
         assert original.payee_address == refund.payer_address
-        assert original.payee_transfer.lock.expiration > refund.payer_transfer.lock.expiration
+        assert original.payee_transfer.lock.expiration == refund.payer_transfer.lock.expiration
 
 
 def clear_if_finalized(iteration):
@@ -285,7 +260,7 @@ def next_channel_from_routes(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         transfer_amount: int,
-        timeout_blocks: int,
+        lock_timeout: int,
 ) -> NettingChannelState:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
@@ -298,37 +273,18 @@ def next_channel_from_routes(
             to NettingChannelState.
         transfer_amount: The amount of tokens that will be transferred
             through the given route.
-        timeout_blocks: Base number of available blocks used to compute
-            the lock timeout.
+        lock_timeout: Number of blocks until the lock expires, used to filter
+            out channels that have a smaller settlement window.
     Returns:
         The next route.
     """
     for route in available_routes:
-        channel_identifier = route.channel_identifier
-        channel_state = channelidentifiers_to_channels.get(channel_identifier)
+        channel_state = channelidentifiers_to_channels.get(route.channel_identifier)
 
         if not channel_state:
             continue
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
-            continue
-
-        pending_transfers = channel.get_number_of_pending_transfers(channel_state.our_state)
-        if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
-            continue
-
-        distributable = channel.get_distributable(
-            channel_state.our_state,
-            channel_state.partner_state,
-        )
-        if transfer_amount > distributable:
-            continue
-
-        lock_timeout = timeout_blocks - channel_state.reveal_timeout
-        if lock_timeout <= 0:
-            continue
-
-        if channel.is_valid_amount(channel_state.our_state, transfer_amount):
+        if is_channel_usable(channel_state, transfer_amount, lock_timeout):
             return channel_state
 
     return None
@@ -339,37 +295,32 @@ def next_transfer_pair(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         pseudo_random_generator: random.Random,
-        timeout_blocks: int,
-        block_number: int,
+        block_number: typing.BlockNumber,
 ):
     """ Given a payer transfer tries a new route to proceed with the mediation.
     Args:
         payer_transfer: The transfer received from the payer_channel.
-        routes: Current available routes that may be used, it's assumed that
-            the routes list is ordered from best to worst.
-        timeout_blocks: Base number of available blocks used to compute
-            the lock timeout.
+        available_routes: Current available routes that may be used, it's
+            assumed that the routes list is ordered from best to worst.
+        channelidentifiers_to_channels: All the channels available for this
+            transfer.
+        pseudo_random_generator: Number generator to generate a message id.
         block_number: The current block number.
     """
-    assert timeout_blocks > 0
-    assert timeout_blocks <= payer_transfer.lock.expiration - block_number
-
     transfer_pair = None
     mediated_events = list()
+    lock_timeout = payer_transfer.lock.expiration - block_number
 
     payee_channel = next_channel_from_routes(
         available_routes,
         channelidentifiers_to_channels,
         payer_transfer.lock.amount,
-        timeout_blocks,
+        lock_timeout,
     )
 
     if payee_channel:
-        assert payee_channel.reveal_timeout < timeout_blocks
+        assert payee_channel.settle_timeout >= lock_timeout
         assert payee_channel.token_address == payer_transfer.token
-
-        lock_timeout = timeout_blocks - payee_channel.reveal_timeout
-        lock_expiration = lock_timeout + block_number
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = channel.send_lockedtransfer(
@@ -379,7 +330,7 @@ def next_transfer_pair(
             payer_transfer.lock.amount,
             message_identifier,
             payer_transfer.payment_identifier,
-            lock_expiration,
+            payer_transfer.lock.expiration,
             payer_transfer.lock.secrethash,
         )
         assert lockedtransfer_event
@@ -525,7 +476,7 @@ def set_expired_pairs(transfers_pair, block_number):
             )
             events.append(unlock_failed)
 
-        elif has_payee_transfer_expired:
+        if has_payee_transfer_expired:
             pair.payee_state = 'payee_expired'
             unlock_failed = EventUnlockFailed(
                 pair.payee_transfer.payment_identifier,
@@ -539,16 +490,15 @@ def set_expired_pairs(transfers_pair, block_number):
 
 def events_for_refund_transfer(
         refund_channel,
-        refund_transfer,
+        transfer_to_refund,
         pseudo_random_generator,
-        timeout_blocks,
         block_number,
 ):
     """ Refund the transfer.
     Args:
         refund_route (RouteState): The original route that sent the mediated
             transfer to this node.
-        refund_transfer (LockedTransferSignedState): The original mediated transfer
+        transfer_to_refund (LockedTransferSignedState): The original mediated transfer
             from the refund_route.
         timeout_blocks (int): The number of blocks available from the /latest
             transfer/ received by this node, this transfer might be the
@@ -558,35 +508,20 @@ def events_for_refund_transfer(
     Returns:
         An empty list if there are not enough blocks to safely create a refund,
         or a list with a refund event."""
-    # A refund transfer works like a special SendLockedTransfer, so it must
-    # follow the same rules and decrement reveal_timeout from the
-    # payee_transfer.
-    new_lock_timeout = timeout_blocks - refund_channel.reveal_timeout
+    lock_timeout = transfer_to_refund.lock.expiration - block_number
+    transfer_amount = transfer_to_refund.lock.amount
 
-    distributable = channel.get_distributable(
-        refund_channel.our_state,
-        refund_channel.partner_state,
-    )
-
-    is_valid = (
-        new_lock_timeout > 0 and
-        refund_transfer.lock.amount <= distributable and
-        channel.is_valid_amount(refund_channel.our_state, refund_transfer.lock.amount)
-    )
-
-    if is_valid:
-        new_lock_expiration = new_lock_timeout + block_number
-
+    if is_channel_usable(refund_channel, transfer_amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         refund_transfer = channel.send_refundtransfer(
             refund_channel,
-            refund_transfer.initiator,
-            refund_transfer.target,
-            refund_transfer.lock.amount,
+            transfer_to_refund.initiator,
+            transfer_to_refund.target,
+            transfer_to_refund.lock.amount,
             message_identifier,
-            refund_transfer.payment_identifier,
-            new_lock_expiration,
-            refund_transfer.lock.secrethash,
+            transfer_to_refund.payment_identifier,
+            transfer_to_refund.lock.expiration,
+            transfer_to_refund.lock.secrethash,
         )
 
         return [refund_transfer]
@@ -613,12 +548,8 @@ def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
     forward. Even if D sent a reveal secret at about the same time, the secret
     will only be revealed to B upon confirmation from C.
 
-    Even though B somehow learnt the secret out-of-order N is safe to proceed
-    with the protocol, the TRANSIT_BLOCKS configuration adds enough time for
-    the reveal secrets to propagate backwards and for B to send the balance
-    proof. If the proof doesn't arrive in time and the lock's expiration is at
-    risk, N won't lose tokens since it knows the secret can go on-chain at any
-    time.
+    If the proof doesn't arrive in time and the lock's expiration is at risk, N
+    won't lose tokens since it knows the secret can go on-chain at any time.
     """
     events = list()
     for pair in reversed(transfers_pair):
@@ -650,7 +581,7 @@ def events_for_balanceproof(
         secret,
         secrethash,
 ):
-    """ Send the balance proof to nodes that know the secret. """
+    """ While it's safe do the off-chain unlock. """
 
     events = list()
     for pair in reversed(transfers_pair):
@@ -660,14 +591,27 @@ def events_for_balanceproof(
         payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
         payee_channel_open = channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
 
-        # XXX: All nodes must close the channel and unlock on-chain if the
-        # lock is nearing it's expiration block, what should be the strategy
-        # for sending a balance proof to a node that knowns the secret but has
-        # not gone on-chain while near the expiration? (The problem is how to
-        # define the unsafe region, since that is a local configuration)
-        lock_valid = is_lock_valid(pair.payee_transfer.lock.expiration, block_number)
+        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
 
-        if payee_channel_open and payee_knows_secret and not payee_payed and lock_valid:
+        # The mediator must not send to the payee a balance proof if the lock
+        # is in the danger zone, because the payer may not do the same and the
+        # on-chain unlock may fail. If the lock is nearing it's expiration
+        # block, then on-chain unlock should be done, and if successfull it can
+        # be unlocked off-chain.
+        is_safe_to_send_balanceproof = is_safe_to_wait(
+            pair.payer_transfer.lock.expiration,
+            payer_channel.reveal_timeout,
+            block_number,
+        )
+
+        should_send_balanceproof_to_payee = (
+            payee_channel_open and
+            payee_knows_secret and
+            not payee_payed and
+            is_safe_to_send_balanceproof
+        )
+
+        if should_send_balanceproof_to_payee:
             pair.payee_state = 'payee_balance_proof'
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -712,8 +656,7 @@ def events_for_onchain_secretreveal(
         transfers_pair,
         block_number,
 ):
-    """ Reveal secrets for transfer locks that are in the unsafe region.
-    """
+    """ Reveal the secret if a locks is in the unsafe region. """
     events = list()
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
@@ -727,7 +670,7 @@ def events_for_onchain_secretreveal(
             block_number,
         )
 
-        # We check if the secret is already known by receiving a  ReceiveSecretReveal state change
+        # We check if the secret is already known by receiving a ReceiveSecretReveal state change
         secret_known = channel.is_secret_known(
             payer_channel.partner_state,
             pair.payer_transfer.lock.secrethash,
@@ -743,7 +686,9 @@ def events_for_onchain_secretreveal(
                 secret,
                 expiration,
             )
-            events.extend(reveal_events)
+            # short circuit because the secret needs to be revealed on-chain
+            # only once
+            return reveal_events
 
     return events
 
@@ -752,7 +697,8 @@ def events_for_unlock_if_closed(
         channelidentifiers_to_channels,
         transfers_pair,
         secret,
-        secrethash):
+        secrethash,
+):
     """ Unlock on chain if the payer channel is closed and the secret is known.
     If a channel is closed because of another task a balance proof will not be
     received, so there is no reason to wait for the unsafe region before
@@ -880,6 +826,7 @@ def mediate_transfer(
         block_number,
 ):
     """ Try a new route or fail back to a refund.
+
     The mediator can safely try a new route knowing that the tokens from
     payer_transfer will cover the expenses of the mediation. If there is no
     route available that may be used at the moment of the call the mediator may
@@ -889,34 +836,20 @@ def mediate_transfer(
     transfer_pair = None
     mediated_events = list()
 
-    if payer_channel.close_transaction:
-        closed_block_number = payer_channel.close_transaction.finished_block_number
-    else:
-        closed_block_number = None
-
-    timeout_blocks = get_timeout_blocks(
-        payer_channel.settle_timeout,
-        closed_block_number,
-        payer_transfer.lock.expiration,
-        block_number,
-    )
-
     available_routes = filter_used_routes(
         state.transfers_pair,
         possible_routes,
     )
 
-    if timeout_blocks > 0:
-        assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
+    assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
 
-        transfer_pair, mediated_events = next_transfer_pair(
-            payer_transfer,
-            available_routes,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
-            timeout_blocks,
-            block_number,
-        )
+    transfer_pair, mediated_events = next_transfer_pair(
+        payer_transfer,
+        available_routes,
+        channelidentifiers_to_channels,
+        pseudo_random_generator,
+        block_number,
+    )
 
     # If none of the available_routes could be used, try a refund
     if transfer_pair is None:
@@ -935,7 +868,6 @@ def mediate_transfer(
             original_channel,
             original_transfer,
             pseudo_random_generator,
-            timeout_blocks,
             block_number,
         )
 

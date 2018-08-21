@@ -23,6 +23,7 @@ from raiden.utils import (
     ishash,
     pex,
     sha3,
+    typing,
 )
 from raiden.transfer.events import (
     SendDirectTransfer,
@@ -465,21 +466,28 @@ class SecretRequest(SignedMessage):
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             secrethash: SecretHash,
-            amount: int,
+            amount: typing.TokenAmount,
+            expiration: typing.BlockExpiration,
     ):
         super().__init__()
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.secrethash = secrethash
         self.amount = amount
+        self.expiration = expiration
 
     def __repr__(self):
-        return '<{} [msgid:{} paymentid:{} secrethash:{} amount:{} hash:{}]>'.format(
+        return (
+            '<{} '
+            '[msgid:{} paymentid:{} secrethash:{} amount:{} expiration:{} hash:{}'
+            ']>'
+        ).format(
             self.__class__.__name__,
             self.message_identifier,
             self.payment_identifier,
             pex(self.secrethash),
             self.amount,
+            self.expiration,
             pex(self.hash),
         )
 
@@ -490,6 +498,7 @@ class SecretRequest(SignedMessage):
             payment_identifier=packed.payment_identifier,
             secrethash=packed.secrethash,
             amount=packed.amount,
+            expiration=packed.expiration,
         )
         secret_request.signature = packed.signature
         return secret_request
@@ -499,6 +508,7 @@ class SecretRequest(SignedMessage):
         packed.payment_identifier = self.payment_identifier
         packed.secrethash = self.secrethash
         packed.amount = self.amount
+        packed.expiration = self.expiration
         packed.signature = self.signature
 
     @classmethod
@@ -508,6 +518,7 @@ class SecretRequest(SignedMessage):
             payment_identifier=event.payment_identifier,
             secrethash=event.secrethash,
             amount=event.amount,
+            expiration=event.expiration,
         )
 
     def to_dict(self):
@@ -517,6 +528,7 @@ class SecretRequest(SignedMessage):
             'payment_identifier': self.payment_identifier,
             'secrethash': encode_hex(self.secrethash),
             'amount': self.amount,
+            'expiration': self.expiration,
             'signature': encode_hex(self.signature),
         }
 
@@ -528,6 +540,7 @@ class SecretRequest(SignedMessage):
             payment_identifier=data['payment_identifier'],
             secrethash=decode_hex(data['secrethash']),
             amount=data['amount'],
+            expiration=data['expiration'],
         )
         secret_request.signature = decode_hex(data['signature'])
         return secret_request

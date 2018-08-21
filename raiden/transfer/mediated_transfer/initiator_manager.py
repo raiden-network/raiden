@@ -9,7 +9,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import EventUnlockFailed
-from raiden.transfer.mediated_transfer import initiator, mediator
+from raiden.transfer.mediated_transfer import initiator
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
     ActionInitInitiator,
@@ -179,26 +179,10 @@ def handle_transferrefundcancelroute(
     refund_transfer = state_change.transfer
     original_transfer = payment_state.initiator.transfer
 
-    if channel_state.close_transaction:
-        closed_block_number = channel_state.close_transaction.finished_block_number
-    else:
-        closed_block_number = None
-
-    # This is overcommiting, since the initiator knows the secret it doesn't
-    # need to wait for reveal_timeout blocks.
-    timeout_blocks = mediator.get_timeout_blocks(
-        channel_state.settle_timeout,
-        closed_block_number,
-        original_transfer.lock.expiration,
-        block_number,
-    )
-    lock_timeout = timeout_blocks - channel_state.reveal_timeout
-    maximum_expiration = lock_timeout + block_number
-
     is_valid_lock = (
         refund_transfer.lock.secrethash == original_transfer.lock.secrethash and
         refund_transfer.lock.amount == original_transfer.lock.amount and
-        refund_transfer.lock.expiration <= maximum_expiration
+        refund_transfer.lock.expiration == original_transfer.lock.expiration
     )
 
     is_valid_refund = channel.refund_transfer_matches_received(

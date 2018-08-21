@@ -1402,7 +1402,7 @@ def test_refund_transfer_matches_received():
         UNIT_SECRET,
     )
 
-    assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is True
+    assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is False
 
     refund_same_expiration = factories.make_signed_transfer(
         amount,
@@ -1411,7 +1411,7 @@ def test_refund_transfer_matches_received():
         expiration,
         UNIT_SECRET,
     )
-    assert channel.refund_transfer_matches_received(refund_same_expiration, transfer) is False
+    assert channel.refund_transfer_matches_received(refund_same_expiration, transfer) is True
 
 
 def test_refund_transfer_does_not_match_received():

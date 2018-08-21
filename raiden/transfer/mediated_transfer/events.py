@@ -207,6 +207,7 @@ class SendSecretRequest(SendMessageEvent):
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
             amount: typing.TokenAmount,
+            expiration: typing.BlockExpiration,
             secrethash: typing.SecretHash,
     ):
 
@@ -214,15 +215,19 @@ class SendSecretRequest(SendMessageEvent):
 
         self.payment_identifier = payment_identifier
         self.amount = amount
+        self.expiration = expiration
         self.secrethash = secrethash
 
     def __repr__(self):
         return (
-            '<SendSecretRequest msgid:{} paymentid:{} amount:{} secrethash:{} recipient:{}>'
+            '<SendSecretRequest '
+            'msgid:{} paymentid:{} amount:{} expiration:{} secrethash:{} recipient:{}'
+            '>'
         ).format(
             self.message_identifier,
             self.payment_identifier,
             self.amount,
+            self.expiration,
             pex(self.secrethash),
             pex(self.recipient),
         )
@@ -235,6 +240,7 @@ class SendSecretRequest(SendMessageEvent):
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
+            self.expiration == other.expiration and
             self.secrethash == other.secrethash and
             self.recipient == other.recipient
         )

@@ -409,7 +409,7 @@ def test_state_transition():
         partner_balance=partner_balance,
     )
     from_route = factories.route_from_channel(from_channel)
-    expiration = block_number + from_channel.settle_timeout
+    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
         from_channel,

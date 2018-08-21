@@ -71,6 +71,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         payment_identifier=1,
         secrethash=UNIT_SECRETHASH,
         amount=1,
+        expiration=refund_transfer_message.lock.expiration,
     )
     sign_and_inject(secret_request_message, other_key, other_address, app0)
 

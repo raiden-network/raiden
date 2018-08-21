@@ -75,7 +75,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     lock_expiration = send_transfer.transfer.lock.expiration
 
     new_state = initial_iteration.new_state
-    for block_number in range(block_number, lock_expiration + 1):
+    for block_number in range(block_number, lock_expiration - channel1.reveal_timeout):
         block_state_change = Block(block_number)
 
         block_iteration = mediator.handle_block(

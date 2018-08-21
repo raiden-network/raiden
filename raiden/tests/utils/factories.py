@@ -151,8 +151,8 @@ def make_channel(
         payment_network_identifier=None,
         token_network_identifier=None,
         channel_identifier=None,
-        reveal_timeout=10,
-        settle_timeout=50,
+        reveal_timeout=UNIT_REVEAL_TIMEOUT,
+        settle_timeout=UNIT_SETTLE_TIMEOUT,
 ):
 
     our_address = our_address or make_address()
@@ -371,6 +371,12 @@ def make_signed_transfer_for(
         compute_locksroot=False,
         allow_invalid=False,
 ):
+
+    if not allow_invalid:
+        msg = 'expiration must be lower than settle_timeout'
+        assert expiration < channel_state.settle_timeout, msg
+        msg = 'expiration must be larger than settle_timeout'
+        assert expiration > channel_state.reveal_timeout, msg
 
     pubkey = pkey.public_key.format(compressed=False)
     assert publickey_to_address(pubkey) == sender

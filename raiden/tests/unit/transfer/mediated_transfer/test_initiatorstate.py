@@ -9,7 +9,6 @@ from raiden.tests.utils.factories import (
     make_transfer_description,
     UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRET,
-    UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
     UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
@@ -22,8 +21,9 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     EventPaymentSentFailed,
 )
+from raiden.transfer import channel
 from raiden.transfer.state import RouteState
-from raiden.transfer.mediated_transfer import initiator_manager
+from raiden.transfer.mediated_transfer import initiator_manager, initiator
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
@@ -40,7 +40,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendRevealSecret,
 )
-from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.transfer.state_change import ActionCancelPayment
 
 
@@ -165,7 +164,7 @@ def test_init_with_usable_routes():
 
     send_mediated_transfer = mediated_transfers[0]
     transfer = send_mediated_transfer.transfer
-    expiration = block_number + channel1.settle_timeout
+    expiration = initiator.get_initial_lock_expiration(block_number, channel1.settle_timeout)
 
     assert transfer.balance_proof.token_network_identifier == channel1.token_network_identifier
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
@@ -220,10 +219,16 @@ def test_state_wait_secretrequest_valid():
         block_number,
     )
 
+    lock = channel.get_lock(
+        channel1.our_state,
+        current_state.initiator.transfer_description.secrethash,
+    )
+
     state_change = ReceiveSecretRequest(
         UNIT_TRANSFER_IDENTIFIER,
-        UNIT_TRANSFER_AMOUNT,
-        UNIT_SECRETHASH,
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
         UNIT_TRANSFER_TARGET,
     )
 
@@ -391,12 +396,11 @@ def test_refund_transfer_next_route():
     channel_identifier = current_state.initiator.channel_identifier
     channel_state = channelmap[channel_identifier]
 
-    expiration = original_transfer.lock.expiration - channel_state.reveal_timeout - TRANSIT_BLOCKS
     refund_transfer = factories.make_signed_transfer(
         amount,
         our_address,
         original_transfer.target,
-        expiration,
+        original_transfer.lock.expiration,
         UNIT_SECRET,
         payment_identifier=original_transfer.payment_identifier,
         channel_identifier=channel1.identifier,
@@ -460,12 +464,11 @@ def test_refund_transfer_no_more_routes():
     channel_identifier = current_state.initiator.channel_identifier
     channel_state = channelmap[channel_identifier]
 
-    expiration = original_transfer.lock.expiration - channel_state.reveal_timeout - TRANSIT_BLOCKS
     refund_transfer = factories.make_signed_transfer(
         amount,
         original_transfer.initiator,
         original_transfer.target,
-        expiration,
+        original_transfer.lock.expiration,
         UNIT_SECRET,
         payment_identifier=original_transfer.payment_identifier,
         channel_identifier=channel1.identifier,
@@ -519,15 +522,11 @@ def test_refund_transfer_invalid_sender():
     )
 
     original_transfer = current_state.initiator.transfer
-    channel_identifier = current_state.initiator.channel_identifier
-    channel_state = channelmap[channel_identifier]
-
-    expiration = original_transfer.lock.expiration - channel_state.reveal_timeout - TRANSIT_BLOCKS
     refund_transfer = factories.make_signed_transfer(
         amount,
         original_transfer.initiator,
         original_transfer.target,
-        expiration,
+        original_transfer.lock.expiration,
         UNIT_SECRET,
     )
 

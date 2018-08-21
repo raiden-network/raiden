@@ -15,7 +15,6 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
-from raiden.transfer.mediated_transfer.mediator import TRANSIT_BLOCKS
 from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 
@@ -28,13 +27,13 @@ DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 
 @pytest.fixture
-def settle_timeout(number_of_nodes, reveal_timeout):
+def settle_timeout(reveal_timeout):
     """
     NettingChannel default settle timeout for tests.
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    return number_of_nodes * (reveal_timeout + TRANSIT_BLOCKS)
+    return reveal_timeout * 2
 
 
 @pytest.fixture

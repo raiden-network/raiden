@@ -36,17 +36,14 @@ def get_initial_lock_expiration(
         block_number: typing.BlockNumber,
         settle_timeout: typing.BlockTimeout,
 ) -> typing.BlockExpiration:
-    """ Returns the expiration for first hash-time-lock in a mediated transfer. """
-    # The initiator doesn't need to learn the secret, so there is no need to
-    # decrement reveal_timeout from the settle_timeout.
+    """ Returns the expiration used for all hash-time-locks in transfer. """
+    # The lock_expiration always must be smaller than the settle_timeout,
+    # otherwise a node will reject the lock, therefor the initiator must choose
+    # a value which is likely to be accepted by most nodes.
     #
-    # The lock_expiration could be set to a value larger than settle_timeout,
-    # this is not useful since the next hop will use the channel settle_timeout
-    # as an upper limit for expiration.
-    #
-    # The two nodes will most likely disagree on the latest block number, as
-    # far as the expiration goes this is no problem.
-    lock_expiration = block_number + settle_timeout
+    # This assumes most nodes will use the default configuration for
+    # settle_timeout
+    lock_expiration = block_number + settle_timeout - 5
     return lock_expiration
 
 
@@ -182,27 +179,24 @@ def handle_secretrequest(
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
 
-    request_from_target = (
+    is_message_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
-        state_change.secrethash == initiator_state.transfer_description.secrethash
-    )
-
-    is_valid_payment_id = (
+        state_change.secrethash == initiator_state.transfer_description.secrethash and
         state_change.payment_identifier == initiator_state.transfer_description.payment_identifier
     )
 
-    valid_secretrequest = (
-        request_from_target and
-        is_valid_payment_id and
-        state_change.amount == initiator_state.transfer_description.amount
+    lock = channel.get_lock(
+        channel_state.our_state,
+        initiator_state.transfer_description.secrethash,
     )
 
-    invalid_secretrequest = request_from_target and (
-        is_valid_payment_id or
-        state_change.amount != initiator_state.transfer_description.amount
+    is_valid_secretrequest = (
+        is_message_from_target and
+        state_change.amount == initiator_state.transfer_description.amount and
+        state_change.expiration == lock.expiration
     )
 
-    if valid_secretrequest:
+    if is_valid_secretrequest:
         # Reveal the secret to the target node and wait for its confirmation.
         # At this point the transfer is not cancellable anymore as either the lock
         # timeouts or a secret reveal is received.
@@ -222,7 +216,7 @@ def handle_secretrequest(
         initiator_state.revealsecret = revealsecret
         iteration = TransitionResult(initiator_state, [revealsecret])
 
-    elif invalid_secretrequest:
+    elif not is_valid_secretrequest and is_message_from_target:
         cancel = EventPaymentSentFailed(
             payment_network_identifier=channel_state.payment_network_identifier,
             token_network_identifier=channel_state.token_network_identifer,
