@@ -49,7 +49,8 @@ arguments as the ``raiden`` script.
 
 Dependencies
 ************
-You will need to have an Ethereum client installed in your system.
+You will need to have an Ethereum client installed in your system. Alternatively, you can skip
+the setup of an ethereum node and use the :ref:`--eth-rpc-endpoint <using_rpc-endpoint>` argument to remotely use an ethereum node of your choice.
 
 - Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
 - Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for  the parity client.
@@ -151,6 +152,15 @@ After syncing the chain, an existing Ethereum account can be used or a new one c
 After account creation, launch Raiden with the path of your keystore supplied::
 
     raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
+
+.. _using_rpc-endpoint:
+
+Using --eth-rpc-endpoint/Infura
+*******************************
+
+In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
+
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>"
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
