@@ -215,6 +215,26 @@ RefundTransfer = namedbuffer(
     ],
 )
 
+LockExpired = namedbuffer(
+    'lock_expired',
+    [
+        cmdid(LOCKEXPIRED),
+        pad(3),
+        nonce,
+        chain_id,
+        message_identifier,
+        token_network_address,
+        channel_identifier,
+        recipient,
+        locksroot,
+        secrethash,
+        transferred_amount,
+        locked_amount,
+        signature,
+    ],
+)
+
+
 Lock = namedbuffer(
     'lock',
     [
@@ -236,6 +256,7 @@ CMDID_MESSAGE = {
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
     DELIVERED: Delivered,
+    LOCKEXPIRED: LockExpired,
 }
 
 
