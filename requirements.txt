@@ -10,5 +10,5 @@ gevent
 networkx
 requests
 
-git+https://github.com/raiden-network/raiden-libs.git
-git+https://github.com/raiden-network/raiden-contracts.git
+raiden-libs==0.1.3
+raiden-contracts==0.2.0
