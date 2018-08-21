@@ -44,7 +44,6 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     ChainID,
-    BlockNumber,
     MessageID,
     SecretHash,
     PaymentID,

@@ -22,7 +22,6 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     SendDirectTransfer,
-    SendLockExpired,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -37,6 +36,7 @@ from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     refund_from_sendmediated,
     SendBalanceProof,
+    SendLockExpired,
     SendLockedTransfer,
     SendRefundTransfer,
 )
@@ -1469,7 +1469,7 @@ def remove_expired_locks(
                 recipient=channel_state.partner_state.address,
                 channel_identifier=channel_state.identifier,
                 message_identifier=next(pseudo_random_generator),
-                balance_proof=balance_proof,
+                transfer=balance_proof,
                 token_address=channel_state.token_address,
                 secrethash=lock.secrethash,
             ))
