@@ -19,7 +19,7 @@ import gevent
 import structlog
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
-from cachetools import cachedmethod
+from cachetools import cachedmethod, TTLCache
 from operator import attrgetter, itemgetter
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
@@ -434,6 +434,10 @@ class MatrixTransport:
             peer=to_checksum_address(peer_address),
         )
 
+    @cachedmethod(
+        _cachegetter('__messages_cache', lambda: TTLCache(32, 4)),
+        key=lambda _, room, event: (room.room_id, event['type'], event['content'].get('body')),
+    )
     def _handle_message(self, room, event):
         """ Handle text messages sent to listening rooms """
         if (
@@ -486,7 +490,6 @@ class MatrixTransport:
         else:
             try:
                 message_dict = json.loads(data)
-                self.log.debug('MESSAGE_DATA', data=message_dict)
                 message = message_from_dict(message_dict)
             except (UnicodeDecodeError, JSONDecodeError) as ex:
                 self.log.warning(
@@ -496,6 +499,14 @@ class MatrixTransport:
                     exception=ex,
                 )
                 return
+
+        self.log.debug(
+            'MESSAGE_DATA',
+            data=data,
+            sender=pex(peer_address),
+            sender_user=user,
+            room=room,
+        )
 
         if isinstance(message, Ping):
             self.log.warning(
@@ -533,7 +544,6 @@ class MatrixTransport:
             self.log.debug(
                 'DELIVERED MESSAGE UNKNOWN',
                 sender=pex(delivered.sender),
-                message_identifier=delivered.delivered_message_identifier,
                 message=delivered,
             )
             return
@@ -557,15 +567,17 @@ class MatrixTransport:
         )
 
         try:
-            if on_message(self._raiden_service, message) and not isinstance(message, Processed):
-                # TODO: Maybe replace with Matrix read receipts.
-                #       Unfortunately those work on an 'up to' basis, not on individual messages
-                #       which means that message order is important which isn't guaranteed between
-                #       federated servers.
-                #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
+            # TODO: Maybe replace with Matrix read receipts.
+            #       Unfortunately those work on an 'up to' basis, not on individual messages
+            #       which means that message order is important which isn't guaranteed between
+            #       federated servers.
+            #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
+            if not isinstance(message, Processed):
                 delivered_message = Delivered(message.message_identifier)
                 self._raiden_service.sign(delivered_message)
                 self._send_raw(message.sender, json.dumps(delivered_message.to_dict()))
+
+            on_message(self._raiden_service, message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)
