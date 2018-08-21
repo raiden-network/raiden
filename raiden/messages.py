@@ -1464,6 +1464,7 @@ class LockExpired(EnvelopeMessage):
             self,
             chain_id: ChainID,
             nonce: int,
+            message_identifier: MessageID,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
@@ -1482,6 +1483,7 @@ class LockExpired(EnvelopeMessage):
             channel_identifier=channel_identifier,
             token_network_address=token_network_address,
         )
+        self.message_identifier = message_identifier
         self.recipient = recipient  #: partner's address
         self.secrethash = secrethash
 
@@ -1490,6 +1492,7 @@ class LockExpired(EnvelopeMessage):
         transfer = cls(
             chain_id=packed.chain_id,
             nonce=packed.nonce,
+            message_identifier=packed.message_identifier,
             token_network_address=packed.token_network_address,
             channel_identifier=packed.channel_identifier,
             transferred_amount=packed.transferred_amount,
@@ -1505,6 +1508,7 @@ class LockExpired(EnvelopeMessage):
     def pack(self, packed):
         packed.chain_id = self.chain_id
         packed.nonce = self.nonce
+        packed.message_identifier = self.message_identifier
         packed.token_network_address = self.token_network_address
         packed.channel_identifier = self.channel_identifier
         packed.transferred_amount = self.transferred_amount
@@ -1525,21 +1529,23 @@ class LockExpired(EnvelopeMessage):
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
-            recipient=balance_proof.recipient,
             locksroot=balance_proof.locksroot,
+            message_identifier=event.message_identifier,
+            recipient=event.recipient,
             secrethash=event.secrethash,
         )
 
     def __repr__(self):
         representation = (
             '<{} ['
-            'chainid:{} token_network:{} channel_identifier:{} nonce:{} '
+            'chainid:{} token_network:{} msg:{} channel_identifier:{} nonce:{} '
             'transferred_amount:{} locked_amount:{} locksroot:{} secrethash:{}'
             ']>'
         ).format(
             self.__class__.__name__,
             self.chain_id,
             pex(self.token_network_address),
+            self.message_identifier,
             self.channel_identifier,
             self.nonce,
             self.transferred_amount,
@@ -1556,6 +1562,7 @@ class LockExpired(EnvelopeMessage):
             'chain_id': self.chain_id,
             'nonce': self.nonce,
             'token_network_address': to_normalized_address(self.token_network_address),
+            'message_identifier': self.message_identifier,
             'channel_identifier': self.channel_identifier,
             'secrethash': self.secrethash,
             'transferred_amount': self.transferred_amount,

@@ -63,10 +63,11 @@ def handle_message_secret(raiden: RaidenService, message: Secret):
 
 
 def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
+    balance_proof = balanceproof_from_envelope(message)
     state_change = ReceiveLockExpired(
         message.sender,
-        message.transfer,
-        message.secret,
+        balance_proof,
+        message.secrethash,
     )
     raiden.handle_state_change(state_change)
 
