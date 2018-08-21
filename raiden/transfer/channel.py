@@ -29,6 +29,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferUnsignedState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveLockExpired,
     ReceiveTransferRefundCancelRoute,
     ReceiveTransferRefund,
 )
@@ -1662,6 +1663,21 @@ def handle_refundtransfer(
     return is_valid, events, msg
 
 
+def handle_receive_lock_expired(
+        channel_state: NettingChannelState,
+        state_change: ReceiveLockExpired,
+):
+    """Remove expired locks from channel states."""
+    if state_change.transfer.channel_identifier != channel_state.identifier:
+        return TransitionResult(channel_state, [])
+
+    secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
+    if state_change.secrethash in secrethashes_to_lockedlocks:
+        del secrethashes_to_lockedlocks[state_change.secrethash]
+
+    return TransitionResult(channel_state, [])
+
+
 def handle_receive_lockedtransfer(
         channel_state: NettingChannelState,
         mediated_transfer: LockedTransferSignedState,
@@ -1974,6 +1990,11 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         iteration = handle_channel_batch_unlock(
+            channel_state,
+            state_change,
+        )
+    elif type(state_change) == ReceiveLockExpired:
+        iteration = handle_receive_lock_expired(
             channel_state,
             state_change,
         )

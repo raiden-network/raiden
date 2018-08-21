@@ -239,7 +239,7 @@ def assert_synced_channel_state(
         balance1,
         pending_locks1,
 ):
-    """ Assert the values of two synched channels.
+    """ Assert the values of two synced channels.
 
     Note:
         This assert does not work for an intermediate state, where one message
