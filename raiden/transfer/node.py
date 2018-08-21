@@ -640,10 +640,10 @@ def handle_receive_lock_expired(
         chain_state: ChainState,
         state_change: ReceiveLockExpired,
 ) -> TransitionResult:
-    return subdispatch_to_paymenttask(
+    return subdispatch_to_all_channels(
         chain_state,
         state_change,
-        state_change.transfer.secrethash,
+        chain_state.block_number,
     )
 
 
@@ -871,7 +871,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ReceiveLockExpired:
-        iteration = handle_receive_unlock(
+        iteration = handle_receive_lock_expired(
             chain_state,
             state_change,
         )
