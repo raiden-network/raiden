@@ -1445,7 +1445,7 @@ def remove_expired_locks(
 
     lock: HashTimeLockState
     for lock in channel_state.our_state.secrethashes_to_lockedlocks.values():
-        if block_number <= lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
+        if block_number > lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
             expired_locks.append(lock)
 
     for lock in expired_locks:
