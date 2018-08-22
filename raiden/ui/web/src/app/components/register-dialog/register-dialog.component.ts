@@ -1,20 +1,9 @@
 import { Component } from '@angular/core';
-import { FormControl, FormGroupDirective, NgForm } from '@angular/forms';
-import { ErrorStateMatcher, MatDialogRef } from '@angular/material';
+import { FormControl, Validators } from '@angular/forms';
+import { MatDialogRef } from '@angular/material';
 
 import { RaidenService } from '../../services/raiden.service';
-
-export class InvalidTokenErrorStateMatcher implements ErrorStateMatcher {
-
-    constructor(private raidenService: RaidenService) {
-    }
-
-    isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
-        const isSubmitted = form && form.submitted;
-        const isValidChecksum = control.value ? this.raidenService.checkChecksumAddress(control.value) : false;
-        return !!(control && control.invalid && (control.dirty || control.touched || isSubmitted) && !isValidChecksum);
-    }
-}
+import { addressValidator } from '../../shared/address.validator';
 
 @Component({
     selector: 'app-register-dialog',
@@ -23,10 +12,12 @@ export class InvalidTokenErrorStateMatcher implements ErrorStateMatcher {
 })
 export class RegisterDialogComponent {
 
-    public tokenAddressControl: FormControl = new FormControl();
-    public tokenAddress = '';
-
-    invalidTokenErrorStateMatcher = new InvalidTokenErrorStateMatcher(this.raidenService);
+    public tokenAddress: FormControl = new FormControl('',
+        [
+            Validators.minLength(42),
+            Validators.maxLength(42),
+            addressValidator()
+        ]);
 
     constructor(
         public dialogRef: MatDialogRef<RegisterDialogComponent>,
@@ -35,10 +26,10 @@ export class RegisterDialogComponent {
     }
 
     public notAChecksumAddress() {
-        const formControl = this.tokenAddressControl;
-        const tokenAddress = formControl.value;
+        const control = this.tokenAddress;
+        const tokenAddress = control.value;
 
-        if (formControl.valid && tokenAddress && tokenAddress.length > 0) {
+        if (control.valid && tokenAddress && tokenAddress.length > 0) {
             return !this.raidenService.checkChecksumAddress(tokenAddress);
         } else {
             return false;
@@ -46,11 +37,13 @@ export class RegisterDialogComponent {
     }
 
     public convertToChecksum(): string {
-        return this.raidenService.toChecksumAddress(this.tokenAddress);
+        const control = this.tokenAddress;
+        const tokenAddress = control.value;
+        return this.raidenService.toChecksumAddress(tokenAddress);
     }
 
     public registerToken() {
-        const tokenAddress = this.tokenAddressControl.value;
+        const tokenAddress = this.tokenAddress.value;
         if (this.tokenAddressMatchesPattern(tokenAddress)) {
             this.dialogRef.close(tokenAddress);
         }
