@@ -10,6 +10,7 @@ from web3 import Web3
 
 from raiden.exceptions import RaidenShuttingDown
 from raiden.utils import get_system_spec, gas_reserve
+from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 CHECK_GAS_RESERVE_INTERVAL = 60 * 60
@@ -76,24 +77,23 @@ def check_gas_reserve(raiden):
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-class AlarmTask(gevent.Greenlet):
+class AlarmTask(Runnable):
     """ Task to notify when a block is mined. """
 
     def __init__(self, chain):
         super().__init__()
 
-        # TODO: Start with a larger sleep_time and decrease it as the
-        # probability of a new block increases.
-        sleep_time = 0.5
-
         self.callbacks = list()
         self.chain = chain
         self.chain_id = None
         self.last_block_number = None
-        self.stop_event = AsyncResult()
-        self.sleep_time = sleep_time
+        self._stop_event = AsyncResult()
 
-    def _run(self):  # pylint: disable=method-hidden
+        # TODO: Start with a larger sleep_time and decrease it as the
+        # probability of a new block increases.
+        self.sleep_time = 0.5
+
+    def run(self):  # pylint: disable=method-hidden
         try:
             self.loop_until_stop()
         except RaidenShuttingDown:
@@ -131,7 +131,7 @@ class AlarmTask(gevent.Greenlet):
         chain_id = self.chain_id
 
         sleep_time = self.sleep_time
-        while self.stop_event.wait(sleep_time) is not True:
+        while self._stop_event.wait(sleep_time) is not True:
             last_block_number = self.last_block_number
             current_block = self.chain.block_number()
 
@@ -152,7 +152,7 @@ class AlarmTask(gevent.Greenlet):
                         current_block=current_block,
                     )
 
-                self.run_callbacks(current_block)
+                self._run_callbacks(current_block)
 
     def first_run(self):
         # callbacks must be executed during the first run to update the node state
@@ -163,10 +163,10 @@ class AlarmTask(gevent.Greenlet):
 
         log.debug('starting at block number', current_block=current_block)
 
-        self.run_callbacks(current_block)
+        self._run_callbacks(current_block)
         self.chain_id = chain_id
 
-    def run_callbacks(self, current_block):
+    def _run_callbacks(self, current_block):
         remove = list()
         for callback in self.callbacks:
             result = callback(current_block)
@@ -179,8 +179,8 @@ class AlarmTask(gevent.Greenlet):
         self.last_block_number = current_block
 
     def stop_async(self):
-        self.stop_event.set(True)
+        self._stop_event.set(True)
 
-    def stop(self, timeout=None):
+    def stop(self):
         self.stop_async()
-        return self.get(timeout=timeout)
+        return self.get()
