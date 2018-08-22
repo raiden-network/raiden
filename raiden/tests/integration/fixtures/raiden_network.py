@@ -67,8 +67,9 @@ def raiden_chain(
         local_matrix_server,
     )
 
-    start_events = [app.raiden.start_async() for app in raiden_apps]
-    gevent.wait(start_events)
+    start_tasks = [app.raiden.start_async() for app in raiden_apps]
+    for task in gevent.iwait(start_tasks):
+        task.get()  # wait for start_async greenlets, re-raise if start failed
 
     from_block = 0
     for app in raiden_apps:
@@ -153,8 +154,9 @@ def raiden_network(
         local_matrix_server,
     )
 
-    start_events = [app.raiden.start_async() for app in raiden_apps]
-    gevent.wait(start_events)
+    start_tasks = [app.raiden.start_async() for app in raiden_apps]
+    for task in gevent.iwait(start_tasks):
+        task.get()  # wait for start_async greenlets, re-raise if start failed
 
     app_channels = create_network_channels(
         raiden_apps,
