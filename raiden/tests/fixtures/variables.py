@@ -33,7 +33,7 @@ def settle_timeout(reveal_timeout):
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    return reveal_timeout * 2
+    return reveal_timeout * 3
 
 
 @pytest.fixture

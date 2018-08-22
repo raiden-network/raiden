@@ -86,9 +86,19 @@ def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
     assert reveal_timeout > 0
     assert lock_expiration > reveal_timeout
 
+    lock_timeout = lock_expiration - block_number
+
     # A node may wait for a new balance proof while there are reveal_timeout
     # blocks left, at that block and onwards it is not safe to wait.
-    return block_number < lock_expiration - reveal_timeout
+    if lock_timeout > reveal_timeout:
+        return True, None
+
+    msg = (
+        f'lock timeout is unsafe.'
+        f' timeout must be larger than {reveal_timeout}, but it is {lock_timeout}.'
+        f' expiration: {lock_expiration} block_number: {block_number}'
+    )
+    return False, msg
 
 
 def is_channel_usable(candidate_channel_state, transfer_amount, lock_timeout):
@@ -121,7 +131,7 @@ def is_channel_close_needed(payer_channel, transfer_pair, block_number):
     payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
     already_closing = channel.get_status(payer_channel) == CHANNEL_STATE_CLOSING
 
-    safe_to_wait = is_safe_to_wait(
+    safe_to_wait, _ = is_safe_to_wait(
         transfer_pair.payer_transfer.lock.expiration,
         payer_channel.reveal_timeout,
         block_number,
@@ -598,7 +608,7 @@ def events_for_balanceproof(
         # on-chain unlock may fail. If the lock is nearing it's expiration
         # block, then on-chain unlock should be done, and if successfull it can
         # be unlocked off-chain.
-        is_safe_to_send_balanceproof = is_safe_to_wait(
+        is_safe_to_send_balanceproof, _ = is_safe_to_wait(
             pair.payer_transfer.lock.expiration,
             payer_channel.reveal_timeout,
             block_number,
@@ -664,7 +674,7 @@ def events_for_onchain_secretreveal(
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
         expiration = pair.payer_transfer.lock.expiration
 
-        safe_to_wait = is_safe_to_wait(
+        safe_to_wait, _ = is_safe_to_wait(
             expiration,
             payer_channel.reveal_timeout,
             block_number,

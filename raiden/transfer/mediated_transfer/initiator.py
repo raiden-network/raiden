@@ -34,17 +34,10 @@ ChannelMap = typing.Dict[typing.ChannelID, NettingChannelState]
 
 def get_initial_lock_expiration(
         block_number: typing.BlockNumber,
-        settle_timeout: typing.BlockTimeout,
+        reveal_timeout: typing.BlockTimeout,
 ) -> typing.BlockExpiration:
     """ Returns the expiration used for all hash-time-locks in transfer. """
-    # The lock_expiration always must be smaller than the settle_timeout,
-    # otherwise a node will reject the lock, therefor the initiator must choose
-    # a value which is likely to be accepted by most nodes.
-    #
-    # This assumes most nodes will use the default configuration for
-    # settle_timeout
-    lock_expiration = block_number + settle_timeout - 5
-    return lock_expiration
+    return block_number + reveal_timeout * 2
 
 
 def next_channel_from_routes(
@@ -152,7 +145,7 @@ def send_lockedtransfer(
     transfer_description = initiator_state.transfer_description
     lock_expiration = get_initial_lock_expiration(
         block_number,
-        channel_state.settle_timeout,
+        channel_state.reveal_timeout,
     )
 
     lockedtransfer_event = channel.send_lockedtransfer(
