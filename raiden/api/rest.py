@@ -326,7 +326,7 @@ class APIServer(Runnable):
         # Otherwise there is no guarantee that the node is in a valid state and
         # that the actions are valid, e.g. deposit in a channel that has closed
         # while the node was offline.
-        if not rest_api.raiden_api.raiden.start_event.is_set():
+        if not rest_api.raiden_api.raiden:
             raise RuntimeError(
                 'The RaidenService must be started before the API can be used',
             )

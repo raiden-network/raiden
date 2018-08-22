@@ -23,7 +23,6 @@ import structlog
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
-    RaidenShuttingDown,
 )
 from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import (
@@ -65,10 +64,6 @@ def make_connection_test_middleware(client):
         """ Creates middleware that checks if the provider is connected. """
 
         def middleware(method, params):
-            # raise exception when shutting down
-            if client.stop_event and client.stop_event.is_set():
-                raise RaidenShuttingDown()
-
             try:
                 if web3.isConnected():
                     return make_request(method, params)
@@ -212,9 +207,6 @@ class JSONRPCClient:
         self.given_gas_price = gasprice
         self.privkey = privkey
         self.sender = sender
-        # Needs to be initialized to None in the beginning since JSONRPCClient
-        # gets constructed before the RaidenService Object.
-        self.stop_event = None
         self.web3 = web3
 
         self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
@@ -235,9 +227,6 @@ class JSONRPCClient:
     def block_number(self):
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
-
-    def inject_stop_event(self, event):
-        self.stop_event = event
 
     def balance(self, account: Address):
         """ Return the balance of the account of given address. """
