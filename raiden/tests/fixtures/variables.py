@@ -53,13 +53,24 @@ def settle_timeout_max():
 
 
 @pytest.fixture
-def reveal_timeout():
-    """
-    NettingChannel default reveal timeout for tests.
+def reveal_timeout(number_of_nodes):
+    """ NettingChannel default reveal timeout for tests.
+
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    return 8
+    # The tests use a private chain with proof-of-authority, this kind of chain
+    # will mine a new block every second.
+    #
+    # When a node `A` needs to send a message to a node `B` for the first time,
+    # `A` has to create a matrix room and invite `B` into it. The room creation
+    # will take 2 seconds, and the invite 1 second to complete, this adds 3
+    # seconds/blocks of latency to the first message.
+    #
+    # Because the lock expiration is fixed, and it's computed based on the
+    # reveal timeout value, we need to make it large enough to accomodate for
+    # the room creation and invite, the formula bellow is used for that:
+    return number_of_nodes * 4
 
 
 @pytest.fixture
