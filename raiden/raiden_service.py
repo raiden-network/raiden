@@ -405,7 +405,6 @@ class RaidenService(Runnable):
 
         for event in event_list:
             log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
-
             on_raiden_event(self, event)
 
         return event_list
