@@ -368,18 +368,36 @@ class MatrixTransport:
             f'#{self._discovery_room_alias}:{discovery_cfg["server"]}'
         )
 
-        try:
-            discovery_room = self._client.join_room(discovery_room_alias_full)
-        except MatrixRequestError as ex:
-            if ex.code != 404:
-                raise
-            # Room doesn't exist
+        last_ex = None
+        for _ in range(10):
+            # try join room
+            try:
+                discovery_room = self._client.join_room(discovery_room_alias_full)
+                break
+            except MatrixRequestError as ex:
+                if ex.code not in (404, 403):
+                    raise
+                last_ex = ex
+
+            # if can't, room doesn't exist, try creating
             if discovery_cfg['server'] != self._server_name:
                 raise RuntimeError(
                     f"Discovery room {discovery_room_alias_full} not found and can't be "
                     f"created on a federated homeserver {self._server_name!r}.",
+                ) from last_ex
+            try:
+                discovery_room = self._client.create_room(
+                    self._discovery_room_alias,
+                    is_public=True,
                 )
-            discovery_room = self._client.create_room(self._discovery_room_alias, is_public=True)
+                break
+            except MatrixRequestError as ex:
+                if ex.code not in (400, 409):
+                    raise
+                last_ex = ex
+        else:
+            raise last_ex
+
         self._discovery_room = discovery_room
         # Populate initial members
         for user in self._discovery_room.get_joined_members():
