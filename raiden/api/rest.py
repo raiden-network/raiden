@@ -6,17 +6,16 @@ import socket
 import sys
 from typing import Dict
 
-from eth_utils import encode_hex
-from eth_utils import to_checksum_address
-from flask_cors import CORS
+import gevent
+from gevent.pywsgi import WSGIServer
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
-import gevent
-from gevent.pywsgi import WSGIServer
-from hexbytes import HexBytes
+from flask_cors import CORS
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
+from eth_utils import to_checksum_address, encode_hex
+from hexbytes import HexBytes
 import structlog
 
 from raiden.exceptions import (
@@ -78,6 +77,7 @@ from raiden.transfer.state import (
     NettingChannelState,
 )
 from raiden.utils import create_default_identifier
+from raiden.utils.runnable import Runnable
 from raiden.api.objects import PartnersPerTokenList, AddressList
 from raiden.utils import (
     split_endpoint,
@@ -293,7 +293,7 @@ def restapi_setup_type_converters(flask_app, names_to_converters):
         flask_app.url_map.converters[key] = value
 
 
-class APIServer:
+class APIServer(Runnable):
     """
     Runs the API-server that routes the endpoint to the resources.
     The API is wrapped in multiple layers, and the Server should be invoked this way::
@@ -307,14 +307,15 @@ class APIServer:
         # create the server and link the api-endpoints with flask / flask-restful middleware
         api_server = APIServer(rest_api)
 
-        # run the server
-        api_server.run('127.0.0.1', 5001, debug=True)
-
+        # run the server greenlet
+        api_server.start('127.0.0.1', 5001)
     """
 
     _api_prefix = '/api/1'
+    kwargs = {'host': '127.0.0.1', 'port': 5001}
 
     def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
+        super().__init__()
         if rest_api.version != 1:
             raise ValueError(
                 'Invalid api version: {}'.format(rest_api.version),
@@ -361,7 +362,6 @@ class APIServer:
         self.flask_api_context = flask_api_context
 
         self.wsgiserver = None
-        self.greenlet = None
         self.flask_app.register_blueprint(self.blueprint)
 
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
@@ -408,38 +408,42 @@ class APIServer:
                 log=wsgi_log,
                 error_log=wsgi_log,
             )
+            # rest unhandled exception will be re-raised here:
             self.wsgiserver.serve_forever()
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise APIServerPortInUseError()
             raise
-        finally:
-            self.wsgiserver.stop()
-            self.wsgiserver = None
+        except gevent.GreenletExit:  # killed without exception
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()  # ensure cleanup and wait on subtasks
+            raise
+
+    def serve_forever(self, host='127.0.0.1', port=5001):
+        self.start(host, port)
+        return self.get()  # block here
 
     def start(self, host='127.0.0.1', port=5001):
-        self.greenlet = gevent.spawn(self.run, host, port)
-        return self.greenlet
+        self.kwargs = {'host': host, 'port': port}
+        super().start()
 
-    def stop(self, timeout=5):
-        if getattr(self, 'greenlet', None):
-            self.wsgiserver.stop(timeout=timeout)
-            self.greenlet.get(timeout=timeout)
-            self.greenlet = None
-
-    def join(self, timeout=None):
-        return self.greenlet.get(timeout=timeout)
+    def stop(self):
+        if self.wsgiserver is not None:
+            self.wsgiserver.stop()
+            self.wsgiserver = None
 
     def unhandled_exception(self, exception: Exception):
         """ Flask.errorhandler when an exception wasn't correctly handled """
         log.critical(
-            'Unhandled exception when handling endpoint request',
+            'Unhandled exception when processing endpoint request',
+            exc_type=exception.__class__,
             exception=str(exception),
         )
         try:
             self.greenlet.kill(exception)
         finally:
-            raise exception  # re-raise to crash node
+            raise exception  # re-raise to avoid further handling
 
 
 class RestAPI:
