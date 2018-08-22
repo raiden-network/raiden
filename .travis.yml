@@ -192,7 +192,7 @@ jobs:
         - .travis/install.sh
       before_script:
         - python setup.py build
-        - python setup.py compile_webui
+        - RAIDEN_NPM_MISSING_FATAL=1 python setup.py compile_webui
       script:
         # pdbpp interferes with pyinstaller, uninstall it
         - pip uninstall -y pdbpp
