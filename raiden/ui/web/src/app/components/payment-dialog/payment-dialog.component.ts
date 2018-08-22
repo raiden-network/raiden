@@ -60,7 +60,7 @@ export class PaymentDialogComponent implements OnInit {
         this.targetAddress = this.form.get('target_address') as FormControl;
         this.amount = this.form.get('amount') as FormControl;
 
-        this.tokens = this.raidenService.getTokens().pipe(
+        this.tokens = this.raidenService.getTokens(true).pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
             filter((token: UserToken) => !!token.connected),
             toArray(),
@@ -124,7 +124,7 @@ export class PaymentDialogComponent implements OnInit {
     }
 
     private _filter(value?: string): Observable<UserToken[]> {
-        if (!value) {
+        if (!value || typeof value !== 'string') {
             return this.tokens;
         }
 

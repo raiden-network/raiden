@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { bindNodeCallback, from, Observable, of, throwError, zip } from 'rxjs';
-import { catchError, combineLatest, first, flatMap, map, share, switchMap, tap, toArray } from 'rxjs/operators';
+import { bindNodeCallback, combineLatest, from, Observable, of, throwError, zip } from 'rxjs';
+import { catchError, first, flatMap, map, share, switchMap, tap, toArray } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { Connections } from '../models/connection';
 import { Event, EventsParam } from '../models/event';
@@ -78,11 +78,12 @@ export class RaidenService {
     }
 
     public getTokens(refresh: boolean = false): Observable<Array<UserToken>> {
-        return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`).pipe(
-            combineLatest(refresh ?
-                this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
-                of(null)
-            ),
+        const tokens$ = this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`);
+        const connections$ = refresh ?
+            this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
+            of(null);
+
+        return combineLatest(tokens$, connections$).pipe(
             map(([tokenArray, connections]): Array<Observable<UserToken>> =>
                 tokenArray.map((token) =>
                     this.getUserToken(token, refresh).pipe(

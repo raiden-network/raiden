@@ -2,7 +2,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { BigNumber } from 'bignumber.js';
-import { default as makeBlockie } from "ethereum-blockies-base64";
+import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
@@ -105,7 +105,7 @@ export class OpenDialogComponent implements OnInit {
     }
 
     private _filter(value?: string): Observable<UserToken[]> {
-        if (!value) {
+        if (!value || typeof value !== 'string') {
             return this.tokens;
         }
 
