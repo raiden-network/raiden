@@ -68,6 +68,7 @@ def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
         message.sender,
         balance_proof,
         message.secrethash,
+        message.message_identifier,
     )
     raiden.handle_state_change(state_change)
 
