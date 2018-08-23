@@ -85,7 +85,7 @@ def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Ev
 def handle_block(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
@@ -103,7 +103,7 @@ def handle_block(
 def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -129,7 +129,7 @@ def handle_init(
 def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -187,7 +187,7 @@ def handle_cancelpayment(
 def handle_transferrefundcancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
@@ -250,7 +250,7 @@ def handle_transferrefundcancelroute(
 def handle_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
@@ -268,7 +268,7 @@ def handle_secretreveal(
 def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:

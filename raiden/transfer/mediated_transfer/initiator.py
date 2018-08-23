@@ -34,8 +34,6 @@ from raiden.transfer.state_change import Block
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
-ChannelMap = typing.Dict[typing.ChannelID, NettingChannelState]
-
 
 def handle_block(
         initiator_state: InitiatorTransferState,
@@ -133,7 +131,7 @@ def next_channel_from_routes(
 
 
 def try_new_route(
-        channelidentifiers_to_channels: ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
         pseudo_random_generator: random.Random,
