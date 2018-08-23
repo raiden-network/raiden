@@ -25,6 +25,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
+    ReceiveLockExpired,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
@@ -911,7 +912,7 @@ def handle_block(
             pseudo_random_generator,
         )
 
-        iteration = TransitionResult(None, expired_lock_event)
+        iteration = TransitionResult(None, [expired_lock_event])
         return iteration
 
     secret_reveal_events = events_for_onchain_secretreveal(
@@ -1063,6 +1064,22 @@ def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifier
     return iteration
 
 
+def handle_lock_expired(
+        mediator_state: MediatorTransferState,
+        state_change: ReceiveLockExpired,
+        channelidentifiers_to_channels: typing.ChannelMap,
+):
+    from_route = state_change.from_route
+    channel_state = channelidentifiers_to_channels.get(from_route.channel_identifier)
+
+    result = channel.handle_receive_lock_expired(channel_state, state_change)
+
+    return TransitionResult(
+        None,
+        result.events,
+    )
+
+
 def state_transition(
         mediator_state,
         state_change,
@@ -1127,6 +1144,13 @@ def state_transition(
 
     elif isinstance(state_change, ReceiveUnlock):
         iteration = handle_unlock(
+            mediator_state,
+            state_change,
+            channelidentifiers_to_channels,
+        )
+
+    elif isinstance(state_change, ReceiveLockExpired):
+        iteration = handle_lock_expired(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,

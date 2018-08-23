@@ -38,7 +38,7 @@ def handle_block(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
-    secrethash = initiator_state.transfer.secrethash
+    secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
     if state_change.block_number < locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
         # Lock still valid
@@ -52,7 +52,7 @@ def handle_block(
         pseudo_random_generator,
     )
 
-    iteration = TransitionResult(None, expired_lock_event)
+    iteration = TransitionResult(None, [expired_lock_event])
     return iteration
 
 
