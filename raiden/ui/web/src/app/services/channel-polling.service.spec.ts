@@ -1,6 +1,6 @@
 import { HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
+import { fakeAsync, flush, inject, TestBed } from '@angular/core/testing';
 import { from } from 'rxjs';
 import { MockConfig } from '../components/channel-table/channel-table.component.spec';
 import { Channel } from '../models/channel';
@@ -51,6 +51,7 @@ describe('ChannelPollingService', () => {
         partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
         reveal_timeout: 600,
         balance: 10,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: token
     };
@@ -62,6 +63,7 @@ describe('ChannelPollingService', () => {
         partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
         reveal_timeout: 600,
         balance: 20,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: token
     };
@@ -73,6 +75,7 @@ describe('ChannelPollingService', () => {
         partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
         reveal_timeout: 600,
         balance: 5,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: token
     };
@@ -84,6 +87,7 @@ describe('ChannelPollingService', () => {
         partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
         reveal_timeout: 600,
         balance: 0,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: token
     };

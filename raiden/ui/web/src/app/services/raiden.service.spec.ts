@@ -27,6 +27,7 @@ describe('RaidenService', () => {
         partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
         reveal_timeout: 600,
         balance: 10,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: null
     };
@@ -38,6 +39,7 @@ describe('RaidenService', () => {
         partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
         reveal_timeout: 600,
         balance: 0,
+        total_deposit: 10,
         settle_timeout: 500,
         userToken: null
     };
