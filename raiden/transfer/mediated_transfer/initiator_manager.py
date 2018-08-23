@@ -21,7 +21,7 @@ from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.state_change import ActionCancelPayment
+from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.transfer.state import NettingChannelState
 
 # TODO:
@@ -80,6 +80,24 @@ def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Ev
     payment_state.initiator = None
 
     return events_for_cancel_current_route(transfer_description)
+
+
+def handle_block(
+        payment_state: InitiatorPaymentState,
+        state_change: ReceiveSecretReveal,
+        channelidentifiers_to_channels: initiator.ChannelMap,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    channel_identifier = payment_state.initiator.channel_identifier
+    channel_state = channelidentifiers_to_channels[channel_identifier]
+    sub_iteration = initiator.handle_block(
+        payment_state.initiator,
+        state_change,
+        channel_state,
+        pseudo_random_generator,
+    )
+    iteration = iteration_from_sub(payment_state, sub_iteration)
+    return iteration
 
 
 def handle_init(
@@ -255,7 +273,14 @@ def state_transition(
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     # pylint: disable=unidiomatic-typecheck
-    if type(state_change) == ActionInitInitiator:
+    if type(state_change) == Block:
+        iteration = handle_block(
+            payment_state,
+            state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ActionInitInitiator:
         iteration = handle_init(
             payment_state,
             state_change,

@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines
 import heapq
-import random
 from binascii import hexlify
 from collections import namedtuple
 from typing import Union
@@ -37,7 +36,6 @@ from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     refund_from_sendmediated,
     SendBalanceProof,
-    SendLockExpired,
     SendLockedTransfer,
     SendRefundTransfer,
 )
@@ -1354,7 +1352,7 @@ def events_for_close(
 
 
 def delete_secrethash_endstate(
-        end_state: NettingChannelState,
+        end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
 ):
     if is_lock_locked(end_state, secrethash):
@@ -1433,60 +1431,6 @@ def register_onchain_secret(
 
     register_onchain_secret_endstate(our_state, secret, secrethash)
     register_onchain_secret_endstate(partner_state, secret, secrethash)
-
-
-def remove_expired_locks(
-        channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
-        pseudo_random_generator,
-):
-    expired_locks = []
-    expired_locks_events = []
-
-    lock: HashTimeLockState
-    for lock in channel_state.our_state.secrethashes_to_lockedlocks.values():
-        if block_number > lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
-            expired_locks.append(lock)
-
-    for lock in expired_locks:
-        # Lock expired, remove
-        delete_secrethash_endstate(
-            channel_state.our_state,
-            lock.secrethash,
-        )
-
-        nonce = get_next_nonce(channel_state.our_state)
-        locked_amount = get_amount_locked(channel_state.our_state)
-
-        our_balance_proof = channel_state.our_state.balance_proof
-
-        if our_balance_proof:
-            transferred_amount = our_balance_proof.transferred_amount
-            locksroot = our_balance_proof.locksroot
-        else:
-            transferred_amount = 0
-            locksroot = EMPTY_MERKLE_ROOT
-
-        balance_proof = BalanceProofUnsignedState(
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            token_network_identifier=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-            chain_id=channel_state.chain_id,
-        )
-
-        expired_locks_events.append(SendLockExpired(
-            recipient=channel_state.partner_state.address,
-            channel_identifier=channel_state.identifier,
-            message_identifier=message_identifier_from_prng(pseudo_random_generator),
-            transfer=balance_proof,
-            token_address=channel_state.token_address,
-            secrethash=lock.secrethash,
-        ))
-
-    return expired_locks_events
 
 
 def handle_send_directtransfer(
@@ -1775,14 +1719,6 @@ def handle_block(
                 channel_state.partner_state.balance_proof,
             )
             events.append(event)
-
-    expired_locks_events = remove_expired_locks(
-        channel_state,
-        block_number,
-        random.Random(),
-    )
-
-    events.extend(expired_locks_events)
 
     while is_deposit_confirmed(channel_state, block_number):
         order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)

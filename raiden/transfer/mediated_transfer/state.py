@@ -94,7 +94,7 @@ class InitiatorTransferState(State):
         # balance proof and it's not related to any channel.
         self.transfer_description = transfer_description
 
-        # This it the channel used to satisfy the above transfer.
+        # This is the channel used to satisfy the above transfer.
         self.channel_identifier = channel_identifier
         self.transfer = None
         self.secretrequest = None
