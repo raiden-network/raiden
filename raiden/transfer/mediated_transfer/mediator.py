@@ -39,7 +39,6 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
 
@@ -902,21 +901,21 @@ def handle_block(
     channel_identifier = balance_proof.channel_identifier
     channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
-    secrethash = mediator_state.secrethash
-    if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
-        locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
-        lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
-        if state_change.block_number > lock_expiration_threshold:
-            # Lock has expired, cleanup...
-            channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
-            expired_lock_event = channel.events_for_expired_lock(
-                channel_state,
-                locked_lock,
-                pseudo_random_generator,
-            )
+    assert channel_state
 
-            iteration = TransitionResult(None, [expired_lock_event])
-            return iteration
+    secrethash = mediator_state.secrethash
+    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
+    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
+        # Lock has expired, cleanup...
+        expired_lock_event = channel.events_for_expired_lock(
+            channel_state,
+            secrethash,
+            locked_lock,
+            pseudo_random_generator,
+        )
+
+        iteration = TransitionResult(None, [expired_lock_event])
+        return iteration
 
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,
@@ -1072,8 +1071,11 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channelidentifiers_to_channels: typing.ChannelMap,
 ):
-    from_route = state_change.from_route
-    channel_state = channelidentifiers_to_channels.get(from_route.channel_identifier)
+    balance_proof = mediator_state.transfers_pair[0].payer_transfer.balance_proof
+    channel_state = channelidentifiers_to_channels.get(balance_proof.channel_identifier)
+
+    if not channel_state:
+        return TransitionResult(mediator_state, list())
 
     result = channel.handle_receive_lock_expired(channel_state, state_change)
 

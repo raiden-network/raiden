@@ -28,7 +28,6 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
 
@@ -39,15 +38,16 @@ def handle_block(
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     secrethash = initiator_state.transfer.lock.secrethash
-    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
-    if state_change.block_number < locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
+    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
+
+    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, state_change.block_number):
         # Lock still valid
         return TransitionResult(initiator_state, list())
 
     # Lock has expired, cleanup...
-    channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
     expired_lock_event = channel.events_for_expired_lock(
         channel_state,
+        secrethash,
         locked_lock,
         pseudo_random_generator,
     )

@@ -89,7 +89,10 @@ def handle_block(
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
-    channel_state = channelidentifiers_to_channels[channel_identifier]
+    channel_state = channelidentifiers_to_channels.get(channel_identifier)
+    if not channel_state:
+        return TransitionResult(payment_state, list())
+
     sub_iteration = initiator.handle_block(
         payment_state.initiator,
         state_change,
