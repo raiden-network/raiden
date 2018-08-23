@@ -379,13 +379,13 @@ def test_api_open_and_deposit_channel(
 
     # now let's open a channel and make a deposit too
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
-    balance = 100
+    total_deposit = 100
     channel_data_obj = {
         'partner_address': second_partner_address,
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
-        'balance': balance,
+        'total_deposit': total_deposit,
     }
     request = grequests.put(
         api_url_for(
@@ -400,11 +400,11 @@ def test_api_open_and_deposit_channel(
     second_channel_id = 2
     response = response.json()
     expected_response = channel_data_obj
-    expected_response['balance'] = balance
+    expected_response['balance'] = total_deposit
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = second_channel_id
     expected_response['token_network_identifier'] = token_network_identifier
-    expected_response['total_deposit'] = balance
+    expected_response['total_deposit'] = total_deposit
     assert_dicts_are_equal(response, expected_response)
 
     # assert depositing negative amount fails
@@ -427,7 +427,7 @@ def test_api_open_and_deposit_channel(
             token_address=token_address,
             partner_address=first_partner_address,
         ),
-        json={'total_deposit': balance},
+        json={'total_deposit': total_deposit},
     )
     response = request.send().response
     assert_proper_response(response)
@@ -439,8 +439,8 @@ def test_api_open_and_deposit_channel(
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
-        'balance': balance,
-        'total_deposit': balance,
+        'balance': total_deposit,
+        'total_deposit': total_deposit,
         'token_network_identifier': token_network_identifier,
     }
     assert_dicts_are_equal(response, expected_response)
@@ -465,8 +465,8 @@ def test_api_open_and_deposit_channel(
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
-        'balance': balance,
-        'total_deposit': balance,
+        'balance': total_deposit,
+        'total_deposit': total_deposit,
         'token_network_identifier': token_network_identifier,
     }
     assert_dicts_are_equal(response, expected_response)
@@ -1220,7 +1220,7 @@ def test_api_deposit_limit(
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
-        'balance': balance_working,
+        'total_deposit': balance_working,
     }
 
     request = grequests.put(
@@ -1251,7 +1251,7 @@ def test_api_deposit_limit(
         'token_address': to_checksum_address(token_address),
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
-        'balance': balance_failing,
+        'total_deposit': balance_failing,
     }
     request = grequests.put(
         api_url_for(

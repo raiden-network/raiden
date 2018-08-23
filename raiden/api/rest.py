@@ -477,7 +477,7 @@ class RestAPI:
             token_address: typing.TokenAddress,
             settle_timeout: typing.BlockTimeout = None,
             reveal_timeout: typing.BlockTimeout = None,
-            balance: typing.TokenAmount = None,
+            total_deposit: typing.TokenAmount = None,
     ):
         log.debug(
             'Opening channel',
@@ -512,21 +512,21 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        if balance:
+        if total_deposit:
             # make initial deposit
             log.debug(
                 'Depositing to new channel',
                 registry_address=registry_address,
                 token_address=token_address,
                 partner_address=partner_address,
-                amount=balance,
+                total_deposit=total_deposit,
             )
             try:
                 self.raiden_api.set_total_channel_deposit(
-                    registry_address,
-                    token_address,
-                    partner_address,
-                    balance,
+                    registry_address=registry_address,
+                    token_address=token_address,
+                    partner_address=partner_address,
+                    total_deposit=total_deposit,
                 )
             except EthNodeCommunicationError:
                 return api_response(
