@@ -878,7 +878,7 @@ class MatrixTransport:
             )
             if not (address and recovered and recovered == address):
                 return None
-        except (DecodeError, TypeError, MatrixRequestError, AssertionError):
+        except (DecodeError, TypeError, MatrixRequestError, json.decoder.JSONDecodeError):
             return None
         return address
 
