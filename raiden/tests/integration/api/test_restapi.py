@@ -306,6 +306,7 @@ def test_api_get_channel_list(
     channel_info = response.json()[0]
     assert channel_info['partner_address'] == partner_address
     assert channel_info['token_address'] == to_checksum_address(token_address)
+    assert channel_info['total_deposit'] == 0
     assert 'token_network_identifier' in channel_info
 
 
@@ -371,6 +372,7 @@ def test_api_open_and_deposit_channel(
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = 1
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['total_deposit'] = 0
     assert_dicts_are_equal(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
@@ -402,6 +404,7 @@ def test_api_open_and_deposit_channel(
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = second_channel_id
     expected_response['token_network_identifier'] = token_network_identifier
+    expected_response['total_deposit'] = balance
     assert_dicts_are_equal(response, expected_response)
 
     # assert depositing negative amount fails
@@ -437,6 +440,7 @@ def test_api_open_and_deposit_channel(
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
+        'total_deposit': balance,
         'token_network_identifier': token_network_identifier,
     }
     assert_dicts_are_equal(response, expected_response)
@@ -462,6 +466,7 @@ def test_api_open_and_deposit_channel(
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_OPENED,
         'balance': balance,
+        'total_deposit': balance,
         'token_network_identifier': token_network_identifier,
     }
     assert_dicts_are_equal(response, expected_response)
@@ -524,6 +529,7 @@ def test_api_open_close_and_settle_channel(
     expected_response['reveal_timeout'] = reveal_timeout
     expected_response['channel_identifier'] = channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['total_deposit'] = 0
     assert_dicts_are_equal(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
@@ -549,6 +555,7 @@ def test_api_open_close_and_settle_channel(
         'reveal_timeout': reveal_timeout,
         'state': CHANNEL_STATE_CLOSED,
         'balance': balance,
+        'total_deposit': balance,
     }
     assert_dicts_are_equal(response.json(), expected_response)
 
@@ -588,6 +595,7 @@ def test_api_close_insufficient_eth(
     expected_response['reveal_timeout'] = reveal_timeout
     expected_response['channel_identifier'] = channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['total_deposit'] = 0
     assert_dicts_are_equal(response, expected_response)
 
     # let's burn all eth and try to close the channel
@@ -1232,6 +1240,7 @@ def test_api_deposit_limit(
     expected_response['state'] = CHANNEL_STATE_OPENED
     expected_response['channel_identifier'] = first_channel_identifier
     expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
+    expected_response['total_deposit'] = balance_working
     assert_dicts_are_equal(response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit

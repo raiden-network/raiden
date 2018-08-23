@@ -194,6 +194,7 @@ class ChannelStateSchema(BaseSchema):
     reveal_timeout = fields.Integer()
     balance = fields.Method('get_balance')
     state = fields.Method('get_state')
+    total_deposit = fields.Method('get_total_deposit')
 
     def get_partner_address(self, channel_state):  # pylint: disable=no-self-use
         return to_checksum_address(channel_state.partner_state.address)
@@ -206,6 +207,10 @@ class ChannelStateSchema(BaseSchema):
 
     def get_state(self, channel_state):
         return channel.get_status(channel_state)
+
+    def get_total_deposit(self, channel_state):
+        """Return our total deposit in the contract for this channel"""
+        return channel_state.our_total_deposit
 
     class Meta:
         strict = True
