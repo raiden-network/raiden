@@ -640,10 +640,10 @@ def handle_receive_lock_expired(
         chain_state: ChainState,
         state_change: ReceiveLockExpired,
 ) -> TransitionResult:
-    return subdispatch_to_all_channels(
+    return subdispatch_to_paymenttask(
         chain_state,
         state_change,
-        chain_state.block_number,
+        state_change.secrethash,
     )
 
 

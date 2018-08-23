@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines
 import heapq
+import random
+
 from binascii import hexlify
 from collections import namedtuple
 from typing import Union
@@ -37,6 +39,7 @@ from raiden.transfer.mediated_transfer.events import (
     refund_from_sendmediated,
     SendBalanceProof,
     SendLockedTransfer,
+    SendLockExpired,
     SendRefundTransfer,
 )
 from raiden.transfer.merkle_tree import (
@@ -1349,6 +1352,43 @@ def events_for_close(
         events.append(close_event)
 
     return events
+
+
+def events_for_expired_lock(
+        channel_state: NettingChannelState,
+        locked_lock: LockedTransferUnsignedState,
+        pseudo_random_generator: random.Random,
+):
+    nonce = get_next_nonce(channel_state.our_state)
+    locked_amount = get_amount_locked(channel_state.our_state)
+
+    our_balance_proof = channel_state.our_state.balance_proof
+
+    if our_balance_proof:
+        transferred_amount = our_balance_proof.transferred_amount
+        locksroot = our_balance_proof.locksroot
+    else:
+        transferred_amount = 0
+        locksroot = EMPTY_MERKLE_ROOT
+
+    balance_proof = BalanceProofUnsignedState(
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_identifier=channel_state.identifier,
+        chain_id=channel_state.chain_id,
+    )
+
+    return SendLockExpired(
+        recipient=channel_state.partner_state.address,
+        channel_identifier=channel_state.identifier,
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        transfer=balance_proof,
+        token_address=channel_state.token_address,
+        secrethash=locked_lock.secrethash,
+    )
 
 
 def delete_secrethash_endstate(
