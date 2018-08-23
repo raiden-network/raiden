@@ -3,13 +3,19 @@ Changelog
 =========
 
 * :feature:`2034` Update WebUI's design.
+
+* :release:`0.5.1 <2018-08-17>`
+
+* :feature:`1898` Improve the event formatting in the REST API
 * :feature:`439` Limit the number of pending transfers per channel.
+* :bug:`2164` Update echo node to work with the new endpoint for channel history
+* :bug:`2111` Correctly update network graph for non-participating channels
 
 * :release:`0.5.0 <2018-08-10>`
-* :bug:`2149`: Don't crash if reusing same payment identifier for a payment
-* :feature: `2090`: Rename transfers to payments in the webui.
+* :bug:`2149` Don't crash if reusing same payment identifier for a payment
+* :feature:`2090` Rename transfers to payments in the webui.
 * :feature:`682` Store a Snapshot of WAL state as recovery optimization.
-* :bug:`2125`: Show proper error message for invalid tokens on ``/connections``.
+* :bug:`2125` Show proper error message for invalid tokens on ``/connections``.
 * :feature:`1949` Add an endpoint to query the payment history.
 * :bug:`2027` Raiden should now be able to connect to Infura.
 * :feature:`2084` Rename the ``/transfers/`` endpoint to ``/payments/``.
