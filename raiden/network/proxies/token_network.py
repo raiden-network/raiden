@@ -1134,8 +1134,8 @@ class TokenNetwork:
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)
         if channel_data.state == ChannelState.SETTLED:
-            raise RaidenUnrecoverableError(
-                'Channel is not in a closed state. It cannot be settled',
+            raise RaidenRecoverableError(
+                'Channel is already settled',
             )
         elif channel_data.state == ChannelState.REMOVED:
             raise RaidenRecoverableError(
