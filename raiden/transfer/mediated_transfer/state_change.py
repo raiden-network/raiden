@@ -157,10 +157,11 @@ class ActionCancelRoute(StateChange):
 class ReceiveLockExpired(StateChange):
     """ A LockExpired message received. """
 
-    def __init__(self, sender, transfer, secrethash):
+    def __init__(self, sender, transfer, secrethash, message_identifier):
         self.sender = sender
         self.transfer = transfer
         self.secrethash = secrethash
+        self.message_identifier = message_identifier
 
     def __repr__(self):
         return '<ReceiveLockExpired sender:{} transfer:{}>'.format(

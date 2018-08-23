@@ -184,6 +184,9 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
     assert secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
+    alice_chain_state = views.state_from_raiden(alice_app.raiden)
+    assert secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
+
     waiting.wait_for_block(
         alice_app.raiden,
         lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
@@ -196,6 +199,9 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     # Verify bob received the message and processed the LockExpired message
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
     assert secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
+
+    alice_chain_state = views.state_from_raiden(alice_app.raiden)
+    assert secrethash not in alice_chain_state.payment_mapping.secrethashes_to_task
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

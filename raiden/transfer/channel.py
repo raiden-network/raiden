@@ -1530,12 +1530,8 @@ def events_for_expired_lock(
 
     our_balance_proof = channel_state.our_state.balance_proof
 
-    if our_balance_proof:
-        transferred_amount = our_balance_proof.transferred_amount
-        locksroot = our_balance_proof.locksroot
-    else:
-        transferred_amount = 0
-        locksroot = EMPTY_MERKLE_ROOT
+    transferred_amount = our_balance_proof.transferred_amount
+    locksroot = EMPTY_MERKLE_ROOT
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1832,9 +1828,9 @@ def handle_receive_lock_expired(
     if is_valid:
         delete_secrethash_endstate(channel_state.partner_state, state_change.secrethash)
         send_processed = SendProcessed(
-            recipient=state_change.transfer.balance_proof.sender,
+            recipient=state_change.transfer.sender,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-            message_identifier=state_change.transfer.message_identifier,
+            message_identifier=state_change.message_identifier,
         )
         events = [send_processed]
 

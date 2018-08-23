@@ -898,22 +898,25 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
-    from_route = state_change.from_route
-    channel_state = channelidentifiers_to_channels.get(from_route.channel_identifier)
+    balance_proof = mediator_state.transfers_pair[0].payee_transfer.balance_proof
+    channel_identifier = balance_proof.channel_identifier
+    channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
     secrethash = mediator_state.secrethash
-    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
-    if state_change.block_number > locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
-        # Lock has expired, cleanup...
-        channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
-        expired_lock_event = channel.events_for_expired_lock(
-            channel_state,
-            locked_lock,
-            pseudo_random_generator,
-        )
+    if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
+        locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
+        lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+        if state_change.block_number > lock_expiration_threshold:
+            # Lock has expired, cleanup...
+            channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
+            expired_lock_event = channel.events_for_expired_lock(
+                channel_state,
+                locked_lock,
+                pseudo_random_generator,
+            )
 
-        iteration = TransitionResult(None, [expired_lock_event])
-        return iteration
+            iteration = TransitionResult(None, [expired_lock_event])
+            return iteration
 
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,

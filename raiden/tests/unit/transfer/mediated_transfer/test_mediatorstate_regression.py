@@ -79,9 +79,9 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         block_state_change = Block(block_number)
 
         block_iteration = mediator.handle_block(
-            channelmap,
             new_state,
             block_state_change,
+            channelmap,
             pseudo_random_generator,
             block_number,
         )
@@ -108,9 +108,9 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     expired_block_number = lock_expiration + 1
     expired_block_state_change = Block(expired_block_number)
     block_iteration = mediator.handle_block(
-        channelmap,
         paid_state,
         expired_block_state_change,
+        channelmap,
         pseudo_random_generator,
         expired_block_number,
     )
