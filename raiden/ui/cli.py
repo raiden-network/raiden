@@ -21,7 +21,7 @@ from subprocess import DEVNULL
 import click
 import filelock
 import gevent
-from gevent.event import Event
+from gevent.event import AsyncResult
 import requests
 import structlog
 from eth_utils import (
@@ -62,6 +62,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
+    DEFAULT_SHUTDOWN_TIMEOUT,
     ETHERSCAN_API,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
@@ -88,6 +89,7 @@ from raiden.utils.cli import (
 )
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import HTTPExecutor
+from raiden.utils.runnable import Runnable
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -944,6 +946,8 @@ class NodeRunner:
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
 
+        tasks = [app_.raiden]  # RaidenService takes care of Transport and AlarmTask
+
         domain_list = []
         if self._options['rpccorsdomain']:
             if ',' in self._options['rpccorsdomain']:
@@ -983,26 +987,32 @@ class NodeRunner:
                     api_port,
                 ),
             )
+            tasks.append(api_server)
 
         if self._options['console']:
             console = Console(app_)
             console.start()
+            tasks.append(console)
 
         # spawn a greenlet to handle the version checking
-        gevent.spawn(check_version)
+        tasks.append(gevent.spawn(check_version))
         # spawn a greenlet to handle the gas reserve check
-        gevent.spawn(check_gas_reserve, app_.raiden)
+        tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
 
         self._startup_hook()
 
         # wait for interrupt
-        event = Event()
+        event = AsyncResult()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
 
+        # quit if any task exits, successfully or not
+        for task in tasks:
+            task.link(event)
+
         try:
-            event.wait()
+            event.get()
             print('Signal received. Shutting down ...')
         except (EthNodeCommunicationError, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
@@ -1025,8 +1035,21 @@ class NodeRunner:
                 )
         finally:
             self._shutdown_hook()
-            if api_server:
-                api_server.stop()
+
+            def stop_task(task):
+                try:
+                    if isinstance(task, Runnable):
+                        task.stop()
+                    else:
+                        task.kill()
+                finally:
+                    task.get()  # re-raise
+
+            stop_tasks = [
+                gevent.spawn(stop_task, task)
+                for task in tasks
+            ]
+            gevent.joinall(stop_tasks, DEFAULT_SHUTDOWN_TIMEOUT, raise_error=True)
 
         return app_
 
