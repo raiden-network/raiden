@@ -98,7 +98,7 @@ class App:  # pylint: disable=too-few-public-methods
         invalid_settle_timeout = (
             config['settle_timeout'] < default_registry.settlement_timeout_min() or
             config['settle_timeout'] > default_registry.settlement_timeout_max() or
-            config['settle_timeout'] < config['reveal_timeout'] // 2
+            config['settle_timeout'] < config['reveal_timeout'] * 2
         )
         if invalid_settle_timeout:
             raise InvalidSettleTimeout(
