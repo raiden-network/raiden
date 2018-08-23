@@ -236,20 +236,6 @@ def test_token_network_proxy_basics(
             signature=b'\x11' * 65,
         )
 
-    with pytest.raises(RaidenRecoverableError) as exc:
-        c1_token_network_proxy.settle(
-            channel_identifier=channel_identifier,
-            transferred_amount=transferred_amount,
-            locked_amount=0,
-            locksroot=EMPTY_HASH,
-            partner=c2_client.sender,
-            partner_transferred_amount=0,
-            partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
-        )
-
-        assert 'not in a closed state' in str(exc)
-
     # correct close
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
