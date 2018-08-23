@@ -548,7 +548,7 @@ In Raiden we distinguish between two types of events: ``blockchain_events`` and 
       All raiden event endpoints are for debugging only and might get removed in the future.
 
 All events can be filtered down by providing the query string arguments ``from_block``
-and/or ``to_block`` to query only an events from a limited range of blocks. The block number
+and/or ``to_block`` to only query events from a limited range of blocks. The block number
 argument needs to be in the range of 0 to UINT64_MAX. Any block number outside this range will
 be rejected.
 
