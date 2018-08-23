@@ -222,7 +222,7 @@ class ChannelPutSchema(BaseSchema):
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
     reveal_timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
-    balance = fields.Integer(default=None, missing=None)
+    total_deposit = fields.Integer(default=None, missing=None)
 
     class Meta:
         strict = True
