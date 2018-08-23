@@ -11,7 +11,6 @@ from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockSuccess,
     SendLockedTransfer,
-    SendLockExpired,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -24,8 +23,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
-    EMPTY_MERKLE_ROOT,
-    BalanceProofUnsignedState,
     RouteState,
     NettingChannelState,
     message_identifier_from_prng,
@@ -47,42 +44,15 @@ def handle_block(
         # Lock still valid
         return TransitionResult(initiator_state, list())
 
-    expired_locks_events = list()
     # Lock has expired, cleanup...
     channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
-    nonce = channel.get_next_nonce(channel_state.our_state)
-    locked_amount = channel.get_amount_locked(channel_state.our_state)
-
-    our_balance_proof = channel_state.our_state.balance_proof
-
-    if our_balance_proof:
-        transferred_amount = our_balance_proof.transferred_amount
-        locksroot = our_balance_proof.locksroot
-    else:
-        transferred_amount = 0
-        locksroot = EMPTY_MERKLE_ROOT
-
-    balance_proof = BalanceProofUnsignedState(
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
-        chain_id=channel_state.chain_id,
+    expired_lock_event = channel.events_for_expired_lock(
+        channel_state,
+        locked_lock,
+        pseudo_random_generator,
     )
 
-    expired_locks_events.append(SendLockExpired(
-        recipient=channel_state.partner_state.address,
-        channel_identifier=channel_state.identifier,
-        message_identifier=message_identifier_from_prng(pseudo_random_generator),
-        transfer=balance_proof,
-        token_address=channel_state.token_address,
-        secrethash=locked_lock.secrethash,
-    ))
-
-    iteration = TransitionResult(None, expired_locks_events)
-
+    iteration = TransitionResult(None, expired_lock_event)
     return iteration
 
 
@@ -96,7 +66,7 @@ def get_initial_lock_expiration(
 
 def next_channel_from_routes(
         available_routes: typing.List[RouteState],
-        channelidentifiers_to_channels: ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         transfer_amount: typing.TokenAmount,
 ) -> typing.Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.

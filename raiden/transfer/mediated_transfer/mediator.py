@@ -38,8 +38,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-
-from raiden.transfer.mediated_transfer import initiator
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
 
@@ -898,27 +897,36 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
-    assert state_change.block_number == block_number
+    from_route = state_change.from_route
+    channel_state = channelidentifiers_to_channels.get(from_route.channel_identifier)
+
+    secrethash = mediator_state.secrethash
+    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
+    if state_change.block_number > locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK:
+        # Lock has expired, cleanup...
+        channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
+        expired_lock_event = channel.events_for_expired_lock(
+            channel_state,
+            locked_lock,
+            pseudo_random_generator,
+        )
+
+        iteration = TransitionResult(None, expired_lock_event)
+        return iteration
 
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,
-        state.transfers_pair,
+        mediator_state.transfers_pair,
         block_number,
     )
 
-    # unlock is handled by the channel once the close transaction is mined
-    # unlock_events = events_for_unlock(
-    #     channelidentifiers_to_channels,
-    #     state.transfers_pair,
-    # )
-
     unlock_fail_events = set_expired_pairs(
-        state.transfers_pair,
+        mediator_state.transfers_pair,
         block_number,
     )
 
     iteration = TransitionResult(
-        state,
+        mediator_state,
         unlock_fail_events + secret_reveal_events,
     )
 
