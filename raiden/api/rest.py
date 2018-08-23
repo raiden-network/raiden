@@ -103,7 +103,7 @@ URLS_V1 = [
     ('/events/network', NetworkEventsResource),
     ('/blockchain_events/tokens/<hexaddress:token_address>', TokenBlockchainEventsResource),
     (
-        '/blockchain_events/payment_networks/<hexaddress:token_address>/channels/',
+        '/blockchain_events/payment_networks/<hexaddress:token_address>/channels',
         ChannelBlockchainEventsResource,
         'tokenchanneleventsresourceblockchain',
     ),
@@ -113,7 +113,7 @@ URLS_V1 = [
     ),
     ('/raiden_events/tokens/<hexaddress:token_address>', TokenRaidenEventsResource),
     (
-        '/raiden_events/networks/<hexaddress:token_address>/channels/',
+        '/raiden_events/networks/<hexaddress:token_address>/channels',
         ChannelRaidenEventsResource,
         'tokenchanneleventsresourceraiden',
     ),
