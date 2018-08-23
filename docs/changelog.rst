@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.
+
 * :release:`0.6.0 <2018-08-24>`
 * :feature:`2034` Update WebUI's design
 * :feature:`2192` Show notification on the WebUI when transfer is received or when channel is opened
