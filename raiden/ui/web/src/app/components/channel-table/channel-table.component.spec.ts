@@ -126,6 +126,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
             reveal_timeout: 600,
             balance: 10,
+            total_deposit: 10,
             settle_timeout: 500,
             userToken: token
         };
@@ -137,6 +138,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
             balance: 0,
+            total_deposit: 10,
             settle_timeout: 500,
             userToken: token
         };
@@ -148,6 +150,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
             balance: 10,
+            total_deposit: 10,
             settle_timeout: 500,
             userToken: token
         };
@@ -159,6 +162,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0xfB398E621c15E2BC5Ae6A508D8D89AF1f88c93e8',
             reveal_timeout: 600,
             balance: 10,
+            total_deposit: 10,
             settle_timeout: 500,
             userToken: token
         };
@@ -170,6 +174,7 @@ describe('ChannelTableComponent', () => {
             partner_address: '0x8A0cE8bDA200D64d858957080bf7eDDD3371135F',
             reveal_timeout: 600,
             balance: 60,
+            total_deposit: 60,
             settle_timeout: 500,
             userToken: token
 

@@ -119,12 +119,11 @@ export class RaidenService {
         balance: number,
         decimals: number
     ): Observable<Channel> {
-        console.log('Inside the open channel service');
         const data = {
             'token_address': tokenAddress,
             'partner_address': partnerAddress,
             'settle_timeout': settleTimeout,
-            'balance': amountFromDecimal(balance, decimals),
+            'total_deposit': amountFromDecimal(balance, decimals),
         };
         return this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data).pipe(
             catchError((error) => this.handleError(error)),
@@ -175,7 +174,7 @@ export class RaidenService {
         return this.getChannel(tokenAddress, partnerAddress).pipe(
             switchMap((channel) => this.http.patch<Channel>(
                 `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-                {total_deposit: channel.balance + depositIncrement},
+                {total_deposit: channel.total_deposit + depositIncrement},
             )),
             tap((response) => {
                 const action = 'Deposit';
