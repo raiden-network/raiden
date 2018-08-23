@@ -994,6 +994,14 @@ class NettingChannelState(State):
             self.chain_id == other.chain_id
         )
 
+    @property
+    def our_total_deposit(self):
+        return self.our_state.contract_balance
+
+    @property
+    def partner_total_deposit(self):
+        return self.partner_state.contract_balance
+
     def __ne__(self, other):
         return not self.__eq__(other)
 

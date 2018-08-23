@@ -155,6 +155,9 @@ def create_channel_from_models(our_model, partner_model):
         settle_transaction=settled_transaction,
     )
 
+    assert channel_state.our_total_deposit == our_model.contract_balance
+    assert channel_state.partner_total_deposit == partner_model.contract_balance
+
     assert_partner_state(
         channel_state.our_state,
         channel_state.partner_state,
