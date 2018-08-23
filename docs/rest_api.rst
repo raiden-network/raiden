@@ -25,7 +25,8 @@ Channel Object
        "token_network_identifier": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-       "balance": 35000000,
+       "balance": 25000000,
+       "total_deposit": 35000000,
        "state": "opened",
        "settle_timeout": 500,
        "reveal_timeout": 40
@@ -48,6 +49,8 @@ A channel object consists of a
   token network the channel is part of.
 
 - ``balance`` should be an integer of the amount of the ``token_address`` token we have available for payments.
+
+- ``total_deposit`` should be an integer of the amount of the ``token_address`` token we have deposited into the contract for this channel.
 
 - ``state`` should be the current state of the channel represented by a string.
   Possible value are:
@@ -161,7 +164,8 @@ Querying Information About Channels and Tokens
               "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "balance": 35000000,
+              "balance": 25000000,
+              "total_deposit": 35000000,
               "state": "open",
               "settle_timeout": 100,
               "reveal_timeout": 30
@@ -194,7 +198,8 @@ Querying Information About Channels and Tokens
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 35000000,
+          "balance": 25000000,
+          "total_deposit": 35000000,
           "state": "open",
           "settle_timeout": 100,
           "reveal_timeout": 30
@@ -282,13 +287,13 @@ Channel Management
       {
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 35000000,
+          "total_deposit": 35000000,
           "settle_timeout": 500
       }
 
    :reqjson address partner_address: The partner we want to open a channel with.
    :reqjson address token_address: The token we want to be used in the channel.
-   :reqjson int balance: Initial deposit to make to the channel.
+   :reqjson int total_deposit: Total amount of tokens to be deposited to the channel
    :reqjson int settle_timeout: The amount of blocks that the settle timeout should have.
 
    The request's payload is a channel object; since it is a new channel, its ``channel_address``
@@ -308,7 +313,8 @@ Channel Management
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 35000000,
+          "balance": 25000000,
+          "total_deposit": 35000000,
           "state": "opened",
           "settle_timeout": 500,
           "reveal_timeout": 30
@@ -365,7 +371,8 @@ Channel Management
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 35000000,
+          "balance": 25000000,
+          "total_deposit": 35000000,
           "state": "closed",
           "settle_timeout": 500,
           "reveal_timeout": 30
