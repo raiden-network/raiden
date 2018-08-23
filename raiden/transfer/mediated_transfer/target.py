@@ -27,7 +27,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
     ContractReceiveSecretReveal,
 )
-
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
 
@@ -251,6 +251,7 @@ def handle_block(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
+        pseudo_random_generator: random.Random,
 ):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
@@ -261,7 +262,17 @@ def handle_block(
         transfer.lock.secrethash,
     )
 
-    if not secret_known and block_number > transfer.lock.expiration:
+    secrethash = transfer.secrethash
+    if (not secret_known and
+            block_number > transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK):
+        # Lock has expired, cleanup...
+        channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
+
+        # Target emits no events here.
+        iteration = TransitionResult(None, list())
+        return iteration
+
+    elif not secret_known and block_number > transfer.lock.expiration:
         if target_state.state != 'expired':
             failed = EventUnlockClaimFailed(
                 identifier=transfer.payment_identifier,
@@ -306,6 +317,7 @@ def state_transition(
             target_state,
             channel_state,
             state_change.block_number,
+            pseudo_random_generator,
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secretreveal(
