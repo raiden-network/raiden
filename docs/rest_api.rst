@@ -21,7 +21,7 @@ Channel Object
 ::
 
     {
-       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+       "channel_identifier": 21,
        "token_network_identifier": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -35,7 +35,7 @@ Channel Object
 
 A channel object consists of a
 
-- ``channel_identifier`` should be a ``string`` containing the hexadecimal identifier of the
+- ``channel_identifier`` should be an ``integer`` containing the identifier of the
   channel.
 
 - ``partner_address`` should be a ``string`` containing the EIP55-encoded address of the
@@ -62,7 +62,7 @@ A channel object consists of a
 Event Object
 ==============
 
-Channels events are encoded as json objects with the event arguments as attributes
+Channel events are encoded as json objects with the event arguments as attributes
 of the dictionary, with one difference. The ``event_type`` and the ``block_number`` are also added for all events to easily distinguish between events.
 
 Errors
@@ -158,7 +158,7 @@ Querying Information About Channels and Tokens
       [
           {
               "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-              "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
+              "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 35000000,
@@ -191,7 +191,7 @@ Querying Information About Channels and Tokens
 
       {
           "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
+          "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
@@ -252,8 +252,8 @@ Querying Information About Channels and Tokens
 
       [
          {
-             "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-             "channel": "/api/<version>/channels/0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
+             "partner_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+             "channel": "/api/<version>/channels/0x61C808D82A3Ac53231750daDc13c777b59310bD9/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
          }
       ]
 
@@ -286,13 +286,15 @@ Channel Management
           "settle_timeout": 500
       }
 
+   :reqjson address partner_address: The partner we want to open a channel with.
+   :reqjson address token_address: The token we want to be used in the channel.
    :reqjson int balance: Initial deposit to make to the channel.
+   :reqjson int settle_timeout: The amount of blocks that the settle timeout should have.
 
    The request's payload is a channel object; since it is a new channel, its ``channel_address``
    and ``status`` fields will be ignored and can be omitted.
 
-   The request to the endpoint should later return the fully created channel object
-   from which we can find the address of the channel.
+   The request to the endpoint will later return the fully created channel object.
 
    **Example Response**:
 
@@ -302,11 +304,12 @@ Channel Management
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
-          "state": "open",
+          "state": "opened",
           "settle_timeout": 500,
           "reveal_timeout": 30
       }
@@ -358,12 +361,13 @@ Channel Management
       Content-Type: application/json
 
       {
-          "channel_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 35000000,
           "state": "closed",
-          "settle_timeout": 100,
+          "settle_timeout": 500,
           "reveal_timeout": 30
       }
 
@@ -418,16 +422,18 @@ Connection Management
           }
       }
 
+   :statuscode 200: For a successful query
+   :statuscode 500: Internal Raiden node error
    :resjsonarr int funds: Funds from last connect request
    :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
    :resjsonarr int channels: Number of channels currently open for that token
-   :statuscode 200: For a successful query
-   :statuscode 500: Internal Raiden node error
 
 .. http:put:: /api/(version)/connections/(token_address)
 
    Automatically join a token network. The request will only return once all blockchain calls for
    opening and/or depositing to a channel have completed.
+
+   The request's payload has ``initial_channel_target`` and ``joinable_funds_target`` as optional arguments. If not provided they default to ``initial_channel_target = 3`` and ``joinable_funds_target = 0.4``.
 
    **Example Request**:
 
@@ -441,15 +447,15 @@ Connection Management
           "funds": 1337
       }
 
-   :reqjson int funds: amount of funding you want to put into the network
-   :reqjson int initial_channel_target: number of channels to open proactively
-   :reqjson float joinable_funds_target: fraction of funds that will be used to join channels opened by other participants
    :statuscode 202: The joining of the token network for the token has been started but did not finish yet. Please check again once the related transaction has been mined.
-   :statuscode 204: For a successful connection creation
-   :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions
-   :statuscode 408: If a timeout happened during any of the transactions
+   :statuscode 204: For a successful connection creation.
+   :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
+   :statuscode 408: If a timeout happened during any of the transactions.
    :statuscode 409: If any of the provided input to the call is invalid.
-   :statuscode 500: Internal Raiden node error
+   :statuscode 500: Internal Raiden node error.
+   :reqjson int funds: Amount of funding you want to put into the network.
+   :reqjson int initial_channel_target: Number of channels to open proactively.
+   :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
 
 .. http:delete:: /api/(version)/connections/(token_address)
 
@@ -459,7 +465,7 @@ Connection Management
 
    .. http:example:: curl wget httpie python-requests
 
-      DELETE /api/1/connection HTTP/1.1
+      DELETE /api/1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -488,7 +494,7 @@ Payments
 
    Initiate a payment.
 
-   The request will only return once the payment either succeeded or failed. A payment can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the payment to be propagated safely e.t.c
+   The request will only return once the payment either succeeded or failed. A payment can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the payment to be propagated safely, not enough funds etc.
 
    **Example Request**:
 
@@ -536,14 +542,14 @@ from either the beginning of time or the given block are returned. Events are re
 
 In Raiden we distinguish between two types of events: ``blockchain_events`` and ``raiden_events``.
 ``blockchain_events`` are events that are being emitted by the smart contracts.
-``raiden_events`` are events happening in the Raiden nod. For now, it's being used for debugging purpose.
+``raiden_events`` are events happening in the Raiden node. For now, it's being used for debugging purpose.
 
 .. NOTE::
       All raiden event endpoints are for debugging only and might get removed in the future.
 
 All events can be filtered down by providing the query string arguments ``from_block``
-and/or ``to_block`` to query only a events from a limited range of blocks. The block number
-argument needs to be in the range of 0 to UINT64_MAX. Any blocknumber outside this range will
+and/or ``to_block`` to only query events from a limited range of blocks. The block number
+argument needs to be in the range of 0 to UINT64_MAX. Any block number outside this range will
 be rejected.
 
 .. http:get:: /api/(version)/events/network
@@ -655,7 +661,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
+      GET /api/1/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -687,7 +693,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
+      GET /api/1/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -730,7 +736,7 @@ be rejected.
 
     .. http:example:: curl wget httpie python-requests
 
-       GET /payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
+       GET /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
        Host: localhost:5001
 
     **Example Response**:
@@ -767,7 +773,7 @@ be rejected.
   :statuscode 500: Internal Raiden node error
 
 
-Now for the raiden events:
+Now for the Raiden events:
 
 .. http:get:: /api/(version)/raiden_events/tokens/(token_address)
 
@@ -777,7 +783,7 @@ Now for the raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
+      GET /api/1/raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -833,7 +839,7 @@ Now for the raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
+      GET /api/1/raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
