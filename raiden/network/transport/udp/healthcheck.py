@@ -31,7 +31,7 @@ HealthEvents = namedtuple('HealthEvents', (
 def healthcheck(
         transport: UDPTransport,
         recipient: typing.Address,
-        event_stop: Event,
+        stop_event: Event,
         event_healthy: Event,
         event_unhealthy: Event,
         nat_keepalive_retries: int,
@@ -79,7 +79,7 @@ def healthcheck(
         )
         sleep = next(backoff)
 
-        while not event_stop.wait(sleep):
+        while not stop_event.wait(sleep):
             try:
                 transport.get_host_port(recipient)
             except UnknownAddress:
@@ -93,7 +93,7 @@ def healthcheck(
     event_unhealthy.clear()
     event_healthy.set()
 
-    while not event_stop.wait(sleep):
+    while not stop_event.wait(sleep):
         sleep = nat_keepalive_timeout
 
         ping_nonce['nonce'] += 1
@@ -107,13 +107,13 @@ def healthcheck(
                 messagedata,
                 message_id,
                 recipient,
-                event_stop,
+                stop_event,
                 [nat_keepalive_timeout] * nat_keepalive_retries,
             )
         except RaidenShuttingDown:  # For a clean shutdown process
             return
 
-        if event_stop.is_set():
+        if stop_event.is_set():
             return
 
         if not acknowledged:
@@ -146,7 +146,7 @@ def healthcheck(
                     messagedata,
                     message_id,
                     recipient,
-                    event_stop,
+                    stop_event,
                     repeat(nat_invitation_timeout),
                 )
             except RaidenShuttingDown:  # For a clean shutdown process
