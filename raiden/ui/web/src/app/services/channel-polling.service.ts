@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { scan, share, switchMap, tap } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { amountToDecimal } from '../utils/amount.converter';
@@ -12,7 +12,6 @@ import { SharedService } from './shared.service';
 })
 export class ChannelPollingService {
 
-    private subscription: Subscription;
     private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     private refreshingSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     private readonly channels$: Observable<Channel[]>;
@@ -37,10 +36,14 @@ export class ChannelPollingService {
                     this.refreshingSubject.next(false);
                 }
             ),
+            scan((oldChannels: Channel[], newChannels: Channel[]) => {
+                this.checkForBalanceChanges(oldChannels, newChannels);
+                this.checkForNewChannels(oldChannels, newChannels);
+                return newChannels;
+            }, []),
+            tap(console.log),
             share()
         );
-
-        this.refresh();
     }
 
     public refreshing(): Observable<boolean> {
@@ -53,21 +56,6 @@ export class ChannelPollingService {
 
     public refresh() {
         this.channelsSubject.next(null);
-    }
-
-    public startMonitoring() {
-        const checkForUpdatedBalance = scan((oldChannels: Channel[], newChannels: Channel[]) => {
-            this.checkForBalanceChanges(oldChannels, newChannels);
-            this.checkForNewChannels(oldChannels, newChannels);
-            return newChannels;
-        }, []);
-        this.subscription = this.channels()
-            .pipe(checkForUpdatedBalance)
-            .subscribe();
-    }
-
-    public stopMonitoring() {
-        this.subscription.unsubscribe();
     }
 
     private checkForNewChannels(oldChannels: Channel[], newChannels: Channel[]) {

@@ -36,13 +36,6 @@ describe('AppComponent', () => {
             ]
         }).compileComponents();
 
-        const fn = () => {
-        };
-
-        const pollingService = TestBed.get(ChannelPollingService);
-        spyOn(pollingService, 'startMonitoring').and.callFake(fn);
-        spyOn(pollingService, 'stopMonitoring').and.callFake(fn);
-
         fixture = TestBed.createComponent(AppComponent);
         fixture.detectChanges();
         app = fixture.debugElement.componentInstance;

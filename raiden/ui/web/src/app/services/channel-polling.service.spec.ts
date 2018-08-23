@@ -31,9 +31,10 @@ describe('ChannelPollingService', () => {
         });
     });
 
-    let sharedService: SharedService;
     let pollingService: ChannelPollingService;
-    let pollingServiceSpy: Spy;
+    let sharedService: SharedService;
+    let raidenService: RaidenService;
+    let raidenServiceSpy: Spy;
 
     const token: UserToken = {
         address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
@@ -91,14 +92,16 @@ describe('ChannelPollingService', () => {
         TestBed.configureTestingModule({
             providers: [
                 ChannelPollingService,
+                RaidenService,
                 SharedService,
             ]
         });
 
-        pollingService = TestBed.get(ChannelPollingService);
+        raidenService = TestBed.get(RaidenService);
         sharedService = TestBed.get(SharedService);
+        pollingService = TestBed.get(ChannelPollingService);
 
-        pollingServiceSpy = spyOn(pollingService, 'channels');
+        raidenServiceSpy = spyOn(raidenService, 'getChannels');
         spyOn(sharedService, 'info').and.callFake(() => {
         });
     });
@@ -108,60 +111,48 @@ describe('ChannelPollingService', () => {
     }));
 
     it('should show a notification on balance increases', fakeAsync(() => {
-        pollingServiceSpy.and.returnValues(from([[channel1], [channel1Updated]]));
-        pollingService.startMonitoring();
-        tick(5000);
-        tick(5000);
-        tick(5000);
-
+        raidenServiceSpy.and.returnValues(from([[channel1], [channel1Updated]]));
+        const subcription = pollingService.channels().subscribe();
         expect(sharedService.info).toHaveBeenCalledTimes(1);
         // @ts-ignore
         const payload = sharedService.info.calls.first().args[0];
         expect(payload.title).toBe('Balance Update');
+        subcription.unsubscribe();
         flush();
-        pollingService.stopMonitoring();
     }));
 
     it('should not show a notification on when balance is reduced', fakeAsync(() => {
-        pollingServiceSpy.and.returnValues(from([[channel1], [channel1UpdatedNegative]]));
-        pollingService.startMonitoring();
-        tick(5000);
-        tick(5000);
+        raidenServiceSpy.and.returnValues(from([[channel1], [channel1UpdatedNegative]]));
+        const subcription = pollingService.channels().subscribe();
         expect(sharedService.info).toHaveBeenCalledTimes(0);
+        subcription.unsubscribe();
         flush();
-        pollingService.stopMonitoring();
     }));
 
     it('should not send notification about channel the first time loading the channels', fakeAsync(() => {
-        pollingServiceSpy.and.returnValues(from([[], [channel1]]));
-        pollingService.startMonitoring();
-        tick(5000);
-        tick(5000);
+        raidenServiceSpy.and.returnValues(from([[], [channel1]]));
+        const subcription = pollingService.channels().subscribe();
         expect(sharedService.info).toHaveBeenCalledTimes(0);
+        subcription.unsubscribe();
         flush();
-        pollingService.stopMonitoring();
     }));
 
     it('should show notification if new channels are detected', fakeAsync(() => {
-        pollingServiceSpy.and.returnValues(from([[channel1], [channel1, channel2]]));
-        pollingService.startMonitoring();
-        tick(5000);
-        tick(5000);
+        raidenServiceSpy.and.returnValues(from([[channel1], [channel1, channel2]]));
+        const subcription = pollingService.channels().subscribe();
         expect(sharedService.info).toHaveBeenCalledTimes(1);
         // @ts-ignore
         const payload = sharedService.info.calls.first().args[0];
         expect(payload.title).toBe('New channel');
+        subcription.unsubscribe();
         flush();
-        pollingService.stopMonitoring();
     }));
 
     it('should not show a notification if no new channels are detected', fakeAsync(() => {
-        pollingServiceSpy.and.returnValues(from([[channel1], [channel1]]));
-        pollingService.startMonitoring();
-        tick(5000);
-        tick(5000);
+        raidenServiceSpy.and.returnValues(from([[channel1], [channel1]]));
+        const subcription = pollingService.channels().subscribe();
         expect(sharedService.info).toHaveBeenCalledTimes(0);
+        subcription.unsubscribe();
         flush();
-        pollingService.stopMonitoring();
     }));
 });

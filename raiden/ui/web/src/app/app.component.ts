@@ -20,7 +20,7 @@ export class AppComponent implements OnInit, OnDestroy {
     constructor(
         private sharedService: SharedService,
         private raidenService: RaidenService,
-        private balanceCheckerService: ChannelPollingService
+        private channelPollingService: ChannelPollingService
     ) {
     }
 
@@ -31,12 +31,12 @@ export class AppComponent implements OnInit, OnDestroy {
                 this.pendingRequests = pendingRequests;
             });
         });
-
-        this.balanceCheckerService.startMonitoring();
+        const pollingSubscription = this.channelPollingService.channels().subscribe();
+        this.sub.add(pollingSubscription);
     }
 
     ngOnDestroy() {
-        this.balanceCheckerService.stopMonitoring();
+        this.sub.unsubscribe();
     }
 
     // noinspection JSMethodCanBeStatic
