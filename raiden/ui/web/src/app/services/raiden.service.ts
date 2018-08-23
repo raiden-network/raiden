@@ -1,22 +1,25 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { bindNodeCallback, Observable, of, throwError, zip } from 'rxjs';
-import { fromArray } from 'rxjs/internal/observable/fromArray';
-import { catchError, combineLatest, first, flatMap, map, switchMap, tap, toArray } from 'rxjs/operators';
+import { bindNodeCallback, combineLatest, from, Observable, of, throwError, zip } from 'rxjs';
+import { catchError, first, flatMap, map, share, switchMap, tap, toArray } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { Connections } from '../models/connection';
 import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
 
 import { UserToken } from '../models/usertoken';
+import { amountFromDecimal, amountToDecimal } from '../utils/amount.converter';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
+import { BigNumber } from 'bignumber.js';
 
 export type CallbackFunc = (error: Error, result: any) => void;
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class RaidenService {
 
     public tokenContract: any;
@@ -32,9 +35,7 @@ export class RaidenService {
         this.tokenContract = this.raidenConfig.web3.eth.contract(tokenabi);
     }
 
-    private zoneEncap(cb: CallbackFunc): CallbackFunc {
-        return (err, res) => this.zone.run(() => cb(err, res));
-    }
+    // noinspection JSMethodCanBeStatic
 
     get identifier(): number {
         return Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
@@ -62,7 +63,7 @@ export class RaidenService {
 
     public getChannels(): Observable<Array<Channel>> {
         return this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`).pipe(
-            flatMap((channels: Array<Channel>) => fromArray(channels)),
+            flatMap((channels: Array<Channel>) => from(channels)),
             flatMap((channel: Channel) => {
                 return this.getUserToken(channel.token_address, false).pipe(
                     map((token: UserToken | null) => {
@@ -77,18 +78,19 @@ export class RaidenService {
     }
 
     public getTokens(refresh: boolean = false): Observable<Array<UserToken>> {
-        return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`).pipe(
-            combineLatest(refresh ?
-                this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
-                of(null)
-            ),
+        const tokens$ = this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`);
+        const connections$ = refresh ?
+            this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
+            of(null);
+
+        return combineLatest(tokens$, connections$).pipe(
             map(([tokenArray, connections]): Array<Observable<UserToken>> =>
                 tokenArray.map((token) =>
                     this.getUserToken(token, refresh).pipe(
                         map((userToken) => userToken && connections ?
                             Object.assign(
                                 userToken,
-                                { connected: connections[token] }
+                                {connected: connections[token]}
                             ) : userToken
                         ))
                 )
@@ -115,13 +117,14 @@ export class RaidenService {
         partnerAddress: string,
         settleTimeout: number,
         balance: number,
+        decimals: number
     ): Observable<Channel> {
         console.log('Inside the open channel service');
         const data = {
             'token_address': tokenAddress,
             'partner_address': partnerAddress,
             'settle_timeout': settleTimeout,
-            'balance': balance,
+            'balance': amountFromDecimal(balance, decimals),
         };
         return this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data).pipe(
             catchError((error) => this.handleError(error)),
@@ -132,11 +135,30 @@ export class RaidenService {
         tokenAddress: string,
         targetAddress: string,
         amount: number,
+        decimals: number
     ): Observable<any> {
+        const raidenAmount = amountFromDecimal(amount, decimals);
+
         return this.http.post(
             `${this.raidenConfig.api}/payments/${tokenAddress}/${targetAddress}`,
-            { amount, identifier: this.identifier },
+            {
+                amount: raidenAmount,
+                identifier: this.identifier
+            },
         ).pipe(
+            tap((response) => {
+                if ('target_address' in response && 'identifier' in response) {
+                    this.sharedService.success({
+                        title: 'Transfer successful',
+                        description: `A payment of ${amount} was successfully sent to the partner ${targetAddress}`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: 'Payment error',
+                        description: JSON.stringify(response),
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -145,12 +167,31 @@ export class RaidenService {
         tokenAddress: string,
         partnerAddress: string,
         amount: number,
+        decimals: number
     ): Observable<Channel> {
+
+        const depositIncrement = amountFromDecimal(amount, decimals);
+
         return this.getChannel(tokenAddress, partnerAddress).pipe(
             switchMap((channel) => this.http.patch<Channel>(
                 `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-                { total_deposit: channel.balance + amount },
+                {total_deposit: channel.balance + depositIncrement},
             )),
+            tap((response) => {
+                const action = 'Deposit';
+                if ('balance' in response && 'state' in response) {
+                    const balance = amountToDecimal(response.balance, decimals);
+                    this.sharedService.info({
+                        title: action,
+                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${balance}`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: action,
+                        description: JSON.stringify(response)
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -158,8 +199,23 @@ export class RaidenService {
     public closeChannel(tokenAddress: string, partnerAddress: string): Observable<Channel> {
         return this.http.patch<Channel>(
             `${this.raidenConfig.api}/channels/${tokenAddress}/${partnerAddress}`,
-            { state: 'closed' },
+            {state: 'closed'},
         ).pipe(
+            tap(response => {
+                const action = 'Close';
+                if ('state' in response && response.state === 'closed') {
+                    this.sharedService.info({
+                        title: action,
+                        description: `The channel ${response.channel_identifier} with partner
+                    ${response.partner_address} has been closed successfully`
+                    });
+                } else {
+                    this.sharedService.error({
+                        title: action,
+                        description: JSON.stringify(response)
+                    });
+                }
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -177,21 +233,41 @@ export class RaidenService {
                     return userToken;
                 }),
             )),
+            tap((userToken: UserToken) => {
+                this.sharedService.success({
+                    title: 'Token registered',
+                    description: `Your token was successfully registered: ${userToken.address}`
+                });
+            }),
             catchError((error) => this.handleError(error))
         );
     }
 
-    public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
+    public connectTokenNetwork(funds: number, tokenAddress: string, decimals: number): Observable<any> {
         return this.http.put(
             `${this.raidenConfig.api}/connections/${tokenAddress}`,
-            { funds },
+            {funds: amountFromDecimal(funds, decimals)},
         ).pipe(
+            tap(() => {
+                this.sharedService.success({
+                    title: 'Joined Token Network',
+                    description: `You have successfully Joined the Network of Token ${tokenAddress}`
+                });
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
 
-    public leaveTokenNetwork(tokenAddress: string): Observable<any> {
-        return this.http.delete(`${this.raidenConfig.api}/connections/${tokenAddress}`).pipe(
+    public leaveTokenNetwork(userToken: UserToken): Observable<any> {
+        return this.http.delete(`${this.raidenConfig.api}/connections/${userToken}`).pipe(
+            map(() => true),
+            tap(() => {
+                const description = `Successfully closed and settled all channels in ${userToken.name} <${userToken.address}> token`;
+                this.sharedService.success({
+                    title: 'Left Token Network',
+                    description: description,
+                });
+            }),
             catchError((error) => this.handleError(error)),
         );
     }
@@ -204,9 +280,9 @@ export class RaidenService {
         let path: string;
         const channel = eventsParam.channel;
         if (channel) {
-            path = `/blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
+            path = `blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
         } else if (eventsParam.token) {
-            path = `/blockchain_events/tokens/${eventsParam.token}`;
+            path = `blockchain_events/tokens/${eventsParam.token}`;
         } else {
             path = 'events/network';
         }
@@ -219,7 +295,7 @@ export class RaidenService {
         }
         return this.http.get<Array<Event>>(
             `${this.raidenConfig.api}/${path}`,
-            { params }
+            {params}
         ).pipe(
             catchError((error) => this.handleError(error)),
         );
@@ -236,15 +312,11 @@ export class RaidenService {
         return this.http.put(
             `${this.raidenConfig.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
             data,
-            { observe: 'response'},
+            {observe: 'response'},
         ).pipe(
             switchMap((response) => response.ok ? of(true) : throwError(response.toString())),
             catchError((error) => this.handleError(error)),
         );
-    }
-
-    public sha3(data: string): string {
-        return this.raidenConfig.web3.sha3(data, { encoding: 'hex' });
     }
 
     public blocknumberToDate(block: number): Observable<Date> {
@@ -261,39 +333,45 @@ export class RaidenService {
         refresh: boolean = true,
     ): Observable<UserToken | null> {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
-        const userToken: UserToken | null | undefined = this.userTokens[tokenAddress];
+        const tokenMap = this.userTokens;
+        const userToken: UserToken | null | undefined = tokenMap[tokenAddress];
 
-        const balanceObservable: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
+        const balance$: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
             tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
         )(this.raidenAddress).pipe(
             map((balance) => balance.toNumber())
         );
 
         if (userToken === undefined) {
-            const symbolObservable = bindNodeCallback((cb: CallbackFunc) =>
+            const decimals$: Observable<BigNumber> = bindNodeCallback((cb: CallbackFunc) =>
+                tokenContractInstance.decimals(this.zoneEncap(cb))
+            )();
+
+            const symbol$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
             )();
 
-            const nameObservable = bindNodeCallback((cb: CallbackFunc) =>
+            const name$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.name(this.zoneEncap(cb))
             )();
 
             return zip(
-                symbolObservable,
-                nameObservable,
-                balanceObservable,
-            ).pipe(map(([symbol, name, balance]): UserToken => {
-                    if (balance === null) {
-                        return null;
-                    }
-                    return {
+                symbol$,
+                name$,
+                balance$,
+                decimals$
+            ).pipe(
+                map(([symbol, name, balance, decimals]): UserToken => {
+                    return ({
                         address: tokenAddress,
                         symbol,
                         name,
-                        balance
-                    };
+                        balance,
+                        decimals: decimals.toNumber()
+                    });
                 }),
-                tap((token) => this.userTokens[tokenAddress] = token),
+                tap((token) => tokenMap[tokenAddress] = token),
+                share(),
                 catchError((error) => {
                     const message = (error as Error).message;
                     if (message.startsWith('Invalid JSON RPC response')) {
@@ -306,7 +384,7 @@ export class RaidenService {
             );
 
         } else if (refresh && userToken !== null) {
-            return balanceObservable.pipe(
+            return balance$.pipe(
                 map((balance) => {
                     if (balance === null) {
                         return null;
@@ -318,6 +396,10 @@ export class RaidenService {
         } else {
             return of(userToken);
         }
+    }
+
+    private zoneEncap(cb: CallbackFunc): CallbackFunc {
+        return (err, res) => this.zone.run(() => cb(err, res));
     }
 
     private handleError(error: Response | Error | any) {
@@ -357,10 +439,9 @@ export class RaidenService {
             errMsg = error.message ? error.message : error.toString();
         }
         console.error(errMsg);
-        this.sharedService.msg({
-            severity: 'error',
-            summary: 'Raiden Error',
-            detail: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg),
+        this.sharedService.error({
+            title: 'Raiden Error',
+            description: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)
         });
         return throwError(errMsg);
     }

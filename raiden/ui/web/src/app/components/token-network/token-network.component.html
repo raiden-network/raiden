@@ -1,36 +1,165 @@
-<p-tabView *ngIf="(tokensBalances$ | async) || []; let tokens" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
-  <p-tabPanel header="Tokens [{{ tokens.length }}]" [headerStyle]="{'font-weight': 'bold'}">
-    <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
-      <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
-      <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
-      <button type="button" pButton icon="fa fa-plus-circle" (click)="showRegisterDialog()" label="Register New Token"></button>
-      <!-- <button type="button" pButton icon="fa fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button> -->
-      <button type="button" pButton icon="fa fa-refresh" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
+<div class="token-network"
+     fxLayout='column'
+     fxFlex="90"
+     fxFlex.lg="70"
+     fxFlex.xl="60"
+     fxFlexOffset="5"
+     fxFlexOffset.xl="20"
+     fxFlexOffset.lg="15">
+    <mat-card fxLayout="column" class="card" fxLayoutGap.lt-sm="30px">
+        <div fxLayout="row">
+            <mat-card-title fxLayoutAlign="start" fxFlex="50">
+                Tokens: {{ totalTokens }}
+            </mat-card-title>
+            <div fxLayout="row"
+                 fxLayoutAlign="end" fxFlex="50">
+                <button mat-icon-button color="accent" (click)="showRegisterDialog()"
+                        matTooltip="Register a new token">
+                    <mat-icon aria-label="Register a new token">add_circle</mat-icon>
+                </button>
+            </div>
+            <button mat-icon-button color="accent" [matMenuTriggerFor]="menu">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+                <button mat-menu-item [routerLink]="['/events/network']">
+                    <span>View network events</span>
+                </button>
+            </mat-menu>
+        </div>
+
+        <mat-card-content fxLayout="row"
+                          fxLayout.lt-sm="column"
+                          fxLayoutGap="20px">
+
+            <div fxLayout="column" fxFlex="50" fxLayout.lt-sm="row" fxFlex.lt-sm="100">
+                <div fxLayout="row" fxLayoutGap="15px" fxFlex="100" fxLayoutAlign.lt-sm="center">
+                    <mat-icon fxLayout="column" fxFlexAlign="center">search</mat-icon>
+                    <mat-form-field class="example-form-field" fxFlex="1 1 auto" fxLayout="column">
+                        <input matInput type="text" placeholder="Filter" [(ngModel)]="filter"
+                               (keyup)="applyKeywordFilter()">
+                        <button mat-button *ngIf="filter" matSuffix mat-icon-button aria-label="Clear"
+                                (click)="clearFilter()">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <div fxLayout="column" fxFlex="50" fxLayout.lt-sm="row" fxFlex.lt-sm="100">
+                <div fxLayout="row" fxLayoutGap="15px" fxFlex="100">
+                    <mat-icon fxLayout="column" fxFlexAlign="center">sort</mat-icon>
+                    <mat-form-field fxLayout="column" fxFlex="1 1 auto">
+                        <mat-select placeholder="Sort by" [(value)]="sorting"
+                                    (selectionChange)="applyFilters($event.value)">
+                            <mat-option *ngFor="let option of sortingOptions" [value]="option.value">{{option.label}}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    <button mat-icon-button (click)="changeOrder()"
+                            fxFlexAlign="center"
+                            matTooltip="Change the sorting order">
+                        <mat-icon
+                                aria-label="Change sorting order">{{ ascending ? 'keyboard_arrow_up' :
+                            'keyboard_arrow_down' }}
+                        </mat-icon>
+                    </button>
+                </div>
+            </div>
+
+        </mat-card-content>
+    </mat-card>
+
+    <mat-paginator class="mat-elevation-z1 paginator"
+                   fxLayout="row" fxLayoutAlign="end"
+                   [length]="totalTokens"
+                   [pageSize]="pageSize"
+                   [pageSizeOptions]="pageSizeOptions"
+                   (page)="onPageEvent($event)">
+    </mat-paginator>
+
+    <div class="match-parent-height"
+         fxLayout="column"
+         fxLayoutAlign="center center"
+         *ngIf="totalTokens == 0 && !refreshing">
+        <mat-icon color="primary">info</mat-icon>
+        <h2 class="mat-title">No tokens found!</h2>
     </div>
-    <p-dataTable [value]="tokens" dataKey="address" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
-      <p-column field="symbol" header="Symbol" [style]="{'width':'7em', 'text-align': 'center'}" [sortable]="true"></p-column>
-      <p-column field="address" header="Address" [sortable]="true">
-        <ng-template let-col let-data="rowData" pTemplate="body">
-          <span [title]="data[col.field]">{{ data[col.field] }}</span>
-        </ng-template>
-      </p-column>
-      <p-column field="name" header="Name" [sortable]="true"></p-column>
-      <p-column field="balance" header="Balance" [style]="{width: '10em', 'text-align': 'center'}" [sortable]="true"></p-column>
-      <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
-        <ng-template let-token="rowData" pTemplate="body">
-          <p-menu #menu popup="popup" [model]="token.menu" appendTo="body"></p-menu>
-          <button pButton #menuButton type="button" icon="fa fa-ellipsis-v" [ngClass]="token.connected ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
-        </ng-template>
-      </p-column>
-    </p-dataTable>
-  </p-tabPanel>
 
-  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="eventsParam.token ? 'Token Events: '+eventsParam.token : 'Network Events'" [closable]="!!eventsParam.token" [leftIcon]="eventsParam.activity ? 'fa fa-bell' : ''">
-    <app-event-list [eventsParam]="eventsParam" (activity)="handleActivity(eventsParam)"></app-event-list>
-  </p-tabPanel>
-</p-tabView>
+    <div class="match-parent-height"
+         fxLayout="column"
+         fxLayoutAlign="center center"
+         *ngIf="totalTokens == 0 && refreshing">
+        <mat-progress-spinner
+                [diameter]="60"
+                [color]="'primary'"
+                [mode]="'indeterminate'">
+        </mat-progress-spinner>
+    </div>
 
-<app-register-dialog *ngIf="displayRegisterDialog" [(visible)]="displayRegisterDialog" (tokensChange)="refreshTokens()"></app-register-dialog>
-<app-swap-dialog *ngIf="displaySwapDialog" [(visible)]="displaySwapDialog"></app-swap-dialog>
-<app-join-dialog *ngIf="displayJoinDialog" [(visible)]="displayJoinDialog" [tokenAddress]="selectedToken?.address"></app-join-dialog>
-<app-payment-dialog *ngIf="displayPaymentDialog" [(visible)]="displayPaymentDialog" [tokenAddress]="selectedToken?.address"></app-payment-dialog>
+    <div class="token-list" fxLayout="column" fxLayoutGap="15px">
+        <mat-card *ngFor="let token of visibleTokens; trackBy: trackByFn"
+                  class="card"
+                  [@flyInOut]="'in'"
+                  fxLayout="row"
+                  fxLayoutGap="30px">
+
+            <div fxLayout="column" fxFlex="0 0 8em" fxLayoutAlign="center center">
+                <div class="token-network-symbol"
+                     fxFlexOffset="10"
+                     fxFlex="row">{{token.symbol}}
+                </div>
+                <div class="token-network-name"
+                     fxFlex="row">{{token.name}}
+                </div>
+            </div>
+            <div class="can-shrink" fxLayout="column" fxFlex="1 2 100%" fxLayoutAlign="center" fxLayoutGap="10px">
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Address:</strong>
+                    <span class="truncate" [matTooltip]="token.address">
+                        {{token.address}}
+                    </span>
+                </div>
+                <div fxLayout="row" fxLayoutGap="4px">
+                    <strong>Balance:</strong>
+                    <span>{{token.balance | decimal: token.decimals}}</span>
+                </div>
+            </div>
+
+            <div fxLayout="column" fxFlex="0 0 8.5em" fxLayoutAlign="center center">
+                <button *ngIf="token.connected"
+                        class="match-parent-width"
+                        mat-raised-button
+                        color="accent"
+                        [disabled]="!(token.connected.sum_deposits > 0)"
+                        (click)="showPaymentDialog(token)">{{ 'Pay' | uppercase }}
+                </button>
+                <button *ngIf="!token.connected"
+                        class="match-parent-width"
+                        mat-stroked-button
+                        color="accent"
+                        (click)="showJoinDialog(token)">{{ 'Join Network' | uppercase }}
+                </button>
+                <button *ngIf="token.connected"
+                        class="match-parent-width"
+                        mat-button
+                        color="accent"
+                        (click)="showLeaveDialog(token)">{{ 'Leave Network' | uppercase }}
+                </button>
+            </div>
+            <div fxLayout="column" fxFlex="0 0 1em" fxLayoutAlign="start end">
+                <button mat-icon-button color="accent" [matMenuTriggerFor]="menu">
+                    <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                    <button mat-menu-item [routerLink]="['/events/tokens/' + token.address]">
+                        <span>View token events</span>
+                    </button>
+                </mat-menu>
+            </div>
+        </mat-card>
+    </div>
+</div>
+
+
+

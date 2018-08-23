@@ -1,7 +1,7 @@
 import { UserToken } from './usertoken';
 
 export interface Channel {
-    channel_identifier: string;
+    channel_identifier: number;
     token_address: string;
     partner_address: string;
     state: string;

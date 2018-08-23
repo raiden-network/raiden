@@ -1,74 +1,55 @@
-import { Observable, Subscription } from 'rxjs';
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { Component } from '@angular/core';
+import { FormControl, Validators } from '@angular/forms';
+import { MatDialogRef } from '@angular/material';
 
 import { RaidenService } from '../../services/raiden.service';
-import { SharedService } from '../../services/shared.service';
-import { UserToken } from '../../models/usertoken';
+import { addressValidator } from '../../shared/address.validator';
 
 @Component({
     selector: 'app-register-dialog',
     templateUrl: './register-dialog.component.html',
     styleUrls: ['./register-dialog.component.css']
 })
-export class RegisterDialogComponent implements OnInit, OnDestroy {
-    private subs: Subscription[] = [];
+export class RegisterDialogComponent {
 
-    private _visible = false;
-    @Output() visibleChange: EventEmitter<boolean> = new EventEmitter<boolean>();
-    @Output() tokensChange: EventEmitter<void> = new EventEmitter<void>(null);
-
-    public tokenAddress: FormControl = new FormControl();
-
-    public notAChecksumAddress() {
-        if (this.tokenAddress.valid && this.tokenAddress.value.length > 0) {
-            return !this.raidenService.checkChecksumAddress(this.tokenAddress.value);
-        }
-    }
+    public tokenAddress: FormControl = new FormControl('',
+        [
+            Validators.minLength(42),
+            Validators.maxLength(42),
+            addressValidator()
+        ]);
 
     constructor(
-        private raidenService: RaidenService,
-        private sharedService: SharedService,
-    ) { }
-
-    ngOnInit() {
+        public dialogRef: MatDialogRef<RegisterDialogComponent>,
+        private raidenService: RaidenService
+    ) {
     }
 
-    ngOnDestroy() {
-        this.subs.forEach((sub) => sub.unsubscribe());
-    }
+    public notAChecksumAddress() {
+        const control = this.tokenAddress;
+        const tokenAddress = control.value;
 
-    get visible(): boolean {
-        return this._visible;
-    }
-
-    @Input()
-    set visible(v: boolean) {
-        if (v === this._visible) {
-            return;
+        if (control.valid && tokenAddress && tokenAddress.length > 0) {
+            return !this.raidenService.checkChecksumAddress(tokenAddress);
+        } else {
+            return false;
         }
-        this._visible = v;
-        this.visibleChange.emit(v);
     }
 
     public convertToChecksum(): string {
-        return 'Not a checksum address, try \n"' + this.raidenService.toChecksumAddress(this.tokenAddress.value) + '" instead.';
+        const control = this.tokenAddress;
+        const tokenAddress = control.value;
+        return this.raidenService.toChecksumAddress(tokenAddress);
     }
 
     public registerToken() {
-        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
-            this.raidenService.registerToken(
-                this.tokenAddress.value,
-            ).subscribe((userToken: UserToken) => {
-                this.tokensChange.emit(null);
-                this.sharedService.msg({
-                    severity: 'success',
-                    summary: 'Token registered',
-                    detail: 'Your token was successfully registered: ' + userToken.address,
-                });
-            });
+        const tokenAddress = this.tokenAddress.value;
+        if (this.tokenAddressMatchesPattern(tokenAddress)) {
+            this.dialogRef.close(tokenAddress);
         }
-        this.visible = false;
     }
 
+    private tokenAddressMatchesPattern(tokenAddress) {
+        return tokenAddress && /^0x[0-9a-f]{40}$/i.test(tokenAddress);
+    }
 }

@@ -1,155 +1,278 @@
-import { Observable, BehaviorSubject } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
-import { Component, OnInit, Input } from '@angular/core';
-import { MenuItem } from 'primeng/primeng';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { MatDialog, MatPaginator, PageEvent } from '@angular/material';
+import { BehaviorSubject, EMPTY, Subscription } from 'rxjs';
+import { flatMap, switchMap, tap } from 'rxjs/operators';
+import { SortingData } from '../../models/sorting.data';
+import { UserToken } from '../../models/usertoken';
+import { RaidenConfig } from '../../services/raiden.config';
 
 import { RaidenService } from '../../services/raiden.service';
-import { SharedService } from '../../services/shared.service';
-import { UserToken } from '../../models/usertoken';
-import { ConfirmationService } from 'primeng/primeng';
-import { EventsParam } from '../../models/event';
-import { WithMenu } from '../../models/withmenu';
+import { StringUtils } from '../../utils/string.utils';
+import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
+import { JoinDialogComponent, JoinDialogPayload } from '../join-dialog/join-dialog.component';
+import { PaymentDialogComponent, PaymentDialogPayload } from '../payment-dialog/payment-dialog.component';
+import { RegisterDialogComponent } from '../register-dialog/register-dialog.component';
+import { TokenSorting } from './token.sorting.enum';
 
 @Component({
     selector: 'app-token-network',
     templateUrl: './token-network.component.html',
-    styleUrls: ['./token-network.component.css']
+    styleUrls: ['./token-network.component.css'],
+    animations: [
+        trigger('flyInOut', [
+            state('in', style({opacity: 1, transform: 'translateX(0)'})),
+            transition('void => *', [
+                style({
+                    opacity: 0,
+                    transform: 'translateX(+100%)'
+                }),
+                animate('0.2s ease-in')
+            ]),
+            transition('* => void', [
+                animate('0.2s 0.1s ease-out', style({
+                    opacity: 0,
+                    transform: 'translateX(100%)'
+                }))
+            ])
+        ]),
+    ]
 })
-export class TokenNetworkComponent implements OnInit {
+export class TokenNetworkComponent implements OnInit, OnDestroy {
 
     @Input() raidenAddress: string;
 
-    private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
-    public tokensBalances$: Observable<Array<WithMenu<UserToken>>>;
-    public selectedToken: UserToken;
+    @ViewChild(MatPaginator) paginator: MatPaginator;
+
     public refreshing = true;
-    public watchEvents: EventsParam[] = [{}];
-    public tabIndex = 0;
 
-    public displayJoinDialog = false;
-    public displayRegisterDialog = false;
-    public displaySwapDialog = false;
-    public displayPaymentDialog = false;
+    currentPage = 0;
+    pageSize = 10;
+    readonly pageSizeOptions: number[] = [5, 10, 25, 50, 100];
+    visibleTokens: Array<UserToken> = [];
+    tokens: Array<UserToken> = [];
+    totalTokens = 0;
+    sorting = TokenSorting.Balance;
+    ascending = false;
+    filter = '';
 
-    constructor(private raidenService: RaidenService,
-        private sharedService: SharedService,
-        private confirmationService: ConfirmationService) { }
+    readonly sortingOptions: SortingData[] = [
+        {
+            value: TokenSorting.Balance,
+            label: 'Balance'
+        },
+        {
+            value: TokenSorting.Symbol,
+            label: 'Symbol'
+        },
+        {
+            value: TokenSorting.Address,
+            label: 'Address'
+        },
+        {
+            value: TokenSorting.Name,
+            label: 'Name'
+        },
+    ];
+    private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
 
-    ngOnInit() {
-        this.tokensBalances$ = this.tokensSubject.pipe(
-            tap(() => this.refreshing = true),
-            switchMap(() => this.raidenService.getTokens(true)),
-            map((userTokens) => userTokens.map((userToken) =>
-                Object.assign(
-                    userToken,
-                    { menu: this.menuFor(userToken) }
-                ) as WithMenu<UserToken>
-            )),
-            tap(() => this.refreshing = false,
-                () => this.refreshing = false),
-        );
+    private subscription: Subscription;
+
+    constructor(
+        public dialog: MatDialog,
+        private raidenService: RaidenService,
+        private raidenConfig: RaidenConfig
+    ) {
     }
 
-    private menuFor(userToken: UserToken): MenuItem[] {
-        return [
-            {
-                label: 'Join Network',
-                icon: 'fa fa-sign-in',
-                command: () => this.showJoinDialog(userToken),
-            },
-            {
-                label: 'Leave Network',
-                icon: 'fa fa-sign-out',
-                disabled: !(userToken.connected),
-                command: () => this.showLeaveDialog(userToken),
-            },
-            {
-                label: 'Pay',
-                icon: 'fa fa-exchange',
-                disabled: !(userToken.connected && userToken.connected.sum_deposits > 0),
-                command: () => this.showPaymentDialog(userToken),
-            },
-            {
-                label: 'Watch Events',
-                icon: 'fa fa-clock-o',
-                command: () => this.watchTokenEvents(userToken)
-            },
-        ];
-    }
+    showRegisterDialog() {
+        const registerDialogRef = this.dialog.open(RegisterDialogComponent, {
+            width: '400px'
+        });
 
-    public showRegisterDialog(show: boolean = true) {
-        this.displayRegisterDialog = show;
-    }
-
-    public showSwapDialog(show: boolean = true) {
-        this.displaySwapDialog = show;
-    }
-
-    public refreshTokens() {
-        this.tokensSubject.next(null);
-    }
-
-    public showJoinDialog(userToken: UserToken, show: boolean = true) {
-        this.selectedToken = userToken;
-        this.displayJoinDialog = show;
-    }
-
-    public showPaymentDialog(userToken: UserToken, show: boolean = true) {
-        this.selectedToken = userToken;
-        this.displayPaymentDialog = show;
-    }
-
-    public showLeaveDialog(userToken: UserToken) {
-        this.confirmationService.confirm({
-            header: 'Leave Token Network',
-            message: `Are you sure that you want to close and settle all channels for token
-            <p><strong>${userToken.name} <${userToken.address}></strong>?</p>`,
-            accept: () =>
-                this.raidenService.leaveTokenNetwork(userToken.address)
-                    .subscribe((response) => {
-                        this.sharedService.msg({
-                            severity: 'success',
-                            summary: 'Left Token Network',
-                            detail: `Successfuly closed and settled all channels
-                                in ${userToken.name} <${userToken.address}> token`,
-                        });
-                        this.refreshTokens();
-                    })
+        registerDialogRef.afterClosed().pipe(
+            flatMap((tokenAddress: string) => {
+                if (tokenAddress) {
+                    return this.raidenService.registerToken(tokenAddress);
+                } else {
+                    return EMPTY;
+                }
+            })
+        ).subscribe(() => {
+            this.refreshTokens();
         });
     }
 
-    public watchTokenEvents(token: UserToken) {
-        let index = this.watchEvents
-            .map((event) => event.token)
-            .indexOf(token.address);
-        if (index < 0) {
-            this.watchEvents = [...this.watchEvents, { token: token.address }];
-            index = this.watchEvents.length - 1;
-        }
-        setTimeout(() => this.tabIndex = index + 1, 100);
+    // noinspection JSMethodCanBeStatic
+    trackByFn(index, item: UserToken) {
+        return item.address;
     }
 
-    public handleCloseTab($event) {
-        const newEvents = this.watchEvents.filter((e, i) =>
-            i === $event.index - 1 ? false : true);
-        $event.close();
-        setTimeout(() => this.watchEvents = newEvents, 0);
+    ngOnInit() {
+        let timeout;
+        this.subscription = this.tokensSubject.pipe(
+            tap(() => {
+                clearTimeout(timeout);
+                this.refreshing = true;
+            }),
+            switchMap(() => this.raidenService.getTokens(true)),
+            tap(() => {
+                    timeout = setTimeout(
+                        () => this.refreshTokens(),
+                        this.raidenConfig.config.poll_interval,
+                    );
+                    this.refreshing = false;
+                },
+                () => this.refreshing = false),
+        ).subscribe((tokens: Array<UserToken>) => {
+            this.tokens = tokens;
+            this.totalTokens = tokens.length;
+            this.applyFilters(this.sorting);
+        });
     }
 
-    public handleChangeTab($event) {
-        if ($event.index >= 1) {
-            this.watchEvents[$event.index - 1].activity = false;
-        }
-        this.tabIndex = $event.index;
+    ngOnDestroy() {
+        this.subscription.unsubscribe();
     }
 
-    public handleActivity(eventsParam: EventsParam) {
-        const index = this.watchEvents
-            .indexOf(eventsParam);
-        if (index >= 0 && this.tabIndex - 1 === index) {
-            eventsParam.activity = false;
-        } else {
-            eventsParam.activity = true;
+    public showJoinDialog(userToken: UserToken) {
+        const payload: JoinDialogPayload = {
+            tokenAddress: userToken.address,
+            funds: 0,
+            decimals: userToken.decimals
+        };
+
+        const joinDialogRef = this.dialog.open(JoinDialogComponent, {
+            width: '400px',
+            data: payload
+        });
+
+        joinDialogRef.afterClosed().pipe(
+            flatMap((result: JoinDialogPayload) => {
+                if (result) {
+                    return this.raidenService.connectTokenNetwork(result.funds, result.tokenAddress, result.decimals);
+                } else {
+                    return EMPTY;
+                }
+            })
+        ).subscribe(() => {
+            this.refreshTokens();
+        });
+
+    }
+
+    public showPaymentDialog(userToken: UserToken) {
+        const payload: PaymentDialogPayload = {
+            tokenAddress: userToken.address,
+            targetAddress: '',
+            amount: 0,
+            decimals: userToken.decimals
+        };
+
+        const paymentDialogRef = this.dialog.open(PaymentDialogComponent, {
+            width: '400px',
+            data: payload
+        });
+
+        paymentDialogRef.afterClosed().pipe(
+            flatMap((result: PaymentDialogPayload) => {
+                if (result) {
+                    return this.raidenService.initiatePayment(result.tokenAddress, result.targetAddress, result.amount, result.decimals);
+                } else {
+                    return EMPTY;
+                }
+            })
+        ).subscribe(() => {
+            this.refreshTokens();
+        });
+    }
+
+    public showLeaveDialog(userToken: UserToken) {
+
+        const payload: ConfirmationDialogPayload = {
+            title: 'Leave Token Network',
+            message: `Are you sure that you want to close and settle all channels for token
+            <p><strong>${userToken.name} <${userToken.address}></strong>?</p>`
+        };
+
+        const dialog = this.dialog.open(ConfirmationDialogComponent, {
+            width: '500px',
+            data: payload
+        });
+
+        dialog.afterClosed().pipe(
+            flatMap(result => {
+                if (!result) {
+                    return EMPTY;
+                }
+
+                return this.raidenService.leaveTokenNetwork(userToken);
+            })
+        ).subscribe(() => {
+            this.refreshTokens();
+        });
+    }
+
+    onPageEvent(event: PageEvent) {
+        this.currentPage = event.pageIndex;
+        this.pageSize = event.pageSize;
+        this.applyFilters(this.sorting);
+    }
+
+    applyFilters(sorting: number) {
+        const userTokens: Array<UserToken> = this.tokens;
+        let compareFn: (a, b) => number;
+
+        switch (sorting) {
+            case TokenSorting.Name:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.name, b.name);
+                break;
+            case TokenSorting.Symbol:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.symbol, b.symbol);
+                break;
+            case TokenSorting.Address:
+                compareFn = (a, b) => StringUtils.compare(this.ascending, a.address, b.address);
+                break;
+            default:
+                compareFn = (a, b) => this.ascending ? a.balance - b.balance : b.balance - a.balance;
+                break;
         }
+
+        const start = this.pageSize * this.currentPage;
+
+        const filteredTokens = userTokens.filter((value: UserToken) => this.searchFilter(value));
+
+        this.totalTokens = this.filter ? filteredTokens.length : this.tokens.length;
+
+        this.visibleTokens = filteredTokens
+            .sort(compareFn)
+            .slice(start, start + this.pageSize);
+    }
+
+    changeOrder() {
+        this.ascending = !this.ascending;
+        this.applyFilters(this.sorting);
+    }
+
+    applyKeywordFilter() {
+        this.applyFilters(this.sorting);
+        this.paginator.firstPage();
+    }
+
+    clearFilter() {
+        this.filter = '';
+        this.applyFilters(this.sorting);
+        this.paginator.firstPage();
+    }
+
+    private refreshTokens() {
+        this.tokensSubject.next(null);
+    }
+
+    private searchFilter(token: UserToken): boolean {
+        const searchString = this.filter.toLocaleLowerCase();
+        const tokenName = token.name.toLocaleLowerCase();
+        const tokenSymbol = token.symbol.toLocaleLowerCase();
+        return tokenName.startsWith(searchString) || tokenSymbol.startsWith(searchString);
     }
 }

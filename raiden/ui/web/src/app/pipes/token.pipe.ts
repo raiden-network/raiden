@@ -1,18 +1,10 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { SelectItem } from 'primeng/primeng';
 import { UserToken } from '../models/usertoken';
 
 @Pipe({
     name: 'token'
 })
 export class TokenPipe implements PipeTransform {
-
-    tokensToSelectItems(tokens: Array<UserToken>): Array<SelectItem> {
-        return tokens.map((token) => ({
-            value: token.address,
-            label: this.tokenToString(token)
-        }));
-    }
 
     transform(token?: UserToken): string {
         return this.tokenToString(token);

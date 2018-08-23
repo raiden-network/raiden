@@ -1,9 +1,8 @@
-
-import { of, Observable } from 'rxjs';
-
-import {finalize, tap, switchMap, timeout} from 'rxjs/operators';
+import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpEvent, HttpInterceptor, HttpHandler, HttpRequest } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+
+import { finalize, switchMap, tap, timeout } from 'rxjs/operators';
 
 import { SharedService } from './shared.service';
 
@@ -14,13 +13,13 @@ export class RaidenInterceptor implements HttpInterceptor {
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         let obs = of(true).pipe(
-            tap(() => this.sharedService.requestStarted(req)),
+            tap(() => this.sharedService.requestStarted()),
             switchMap(() => next.handle(req)),
         );
         if (this.sharedService.httpTimeout) {
             obs = obs.pipe(timeout(this.sharedService.httpTimeout));
         }
-        return obs.pipe(finalize(() => this.sharedService.requestFinished(req)));
+        return obs.pipe(finalize(() => this.sharedService.requestFinished()));
     }
 
 }

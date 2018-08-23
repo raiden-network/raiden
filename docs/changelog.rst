@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2034` Update WebUI's design.
 * :feature:`439` Limit the number of pending transfers per channel.
 
 * :release:`0.5.0 <2018-08-10>`

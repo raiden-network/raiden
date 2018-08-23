@@ -1,47 +1,55 @@
-<div class="topnav" id="myTopnav">
-  <img src="assets/favicon.png">
-  <a target="_blank" href="http://raiden.network/">Raiden Network</a>
-  <strong class="address">{{raidenAddress}}</strong>
-  <i class="fa fa-bars fa-2x toggle-btn pull-right" (click)="menuCollapsed=!menuCollapsed"></i>
-  <a class="busy pull-right" *ngIf="sharedService.requests$ | async; let reqCount">
-    <span class="fa-stack">
-      <i class="fa fa-spinner fa-pulse fa-fw fa-stack-2x"></i>
-      <i class="fa fa-stack-1x counter">{{ reqCount }}</i>
+<mat-toolbar color="primary" class="toolbar">
+    <span fxLayoutAlign="center center" fxFlex="70px">
+        <img src="assets/favicon.png" class="inverted" style="height:40px">
     </span>
-  </a>
-</div>
-<div class="nav-side-menu" [class.collapsed]="menuCollapsed">
-  <div class="menu-list">
-    <ul id="menu-content" class="menu-content out" [class.collapse]="menuCollapsed">
-      <li routerLink='/home' routerLinkActive="active">
-        <a>
-          <i class="fa fa-dashboard fa-lg"></i>Home
-        </a>
-      </li>
-      <li routerLink='/tokens' routerLinkActive="active">
-        <a>
-          <i class="fa fa-money fa-lg"></i>Tokens
-        </a>
-      </li>
-      <li routerLink='/channels' routerLinkActive="active">
-        <a>
-          <i class="fa fa-user-plus fa-lg"></i>Channels
-        </a>
-      </li>
-      <li routerLink='/license' routerLinkActive="active">
-        <a>
-          <i class="fa fa-book fa-lg"></i>About
-        </a>
-      </li>
-    </ul>
-  </div>
-</div>
-<div class="ui-g" id="main">
-  <div class="ui-g-12">
-    <router-outlet></router-outlet>
-  </div>
-  <!-- Routed views go here -->
+    <span>
+        <a class="rn" target="_blank" href="http://raiden.network/">Raiden Network</a>
+    </span>
+    <span class="toolbar-spacer"></span>
+    <span class="truncate account">
+        {{raidenAddress}}
+    </span>
+    <span style="width: 36px; margin-right: 25px">
+        <img class="round identicon" src="{{identicon(raidenAddress)}}"/>
+    </span>
+    <span [matBadge]="pendingRequests"
+          style="margin-right: 10px"
+          matBadgeOverlap="false"
+          matBadgeColor="primary"
+          matBadgePosition="after"></span>
+</mat-toolbar>
 
-  <p-growl [(value)]="sharedService.messages" [life]="10000"></p-growl>
-  <p-confirmDialog header="Confirmation" icon="fa fa-question-circle" width="500"></p-confirmDialog>
-</div>
+<mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #sidenav mode="side" opened
+                 class="dark-theme">
+        <mat-nav-list>
+            <a mat-list-item routerLink='/home' routerLinkActive="active" fxLayoutAlign="center center">
+                <div fxLayout="column" fxLayoutAlign="center center" fxFlexOffset="0.2em">
+                    <mat-icon class="navigation-icon" fxLayout="row">home</mat-icon>
+                    <div class="mat-small" fxLayout="row">Home</div>
+                </div>
+            </a>
+            <a mat-list-item routerLink='/tokens' routerLinkActive="active" fxLayoutAlign="center center">
+                <div fxLayout="column" fxLayoutAlign="center center" fxFlexOffset="0.2em">
+                    <mat-icon class="navigation-icon" fxLayout="row">account_balance_wallet</mat-icon>
+                    <div class="mat-small" fxLayout="row">Wallet</div>
+                </div>
+            </a>
+            <a mat-list-item routerLink='/channels' routerLinkActive="active" fxLayoutAlign="center center">
+                <div fxLayout="column" fxLayoutAlign="center center" fxFlexOffset="0.2em">
+                    <mat-icon class="navigation-icon" fxLayout="row">compare_arrows</mat-icon>
+                    <div class="mat-small" fxLayout="row">Channels</div>
+                </div>
+            </a>
+            <a mat-list-item routerLink='/license' routerLinkActive="active" fxLayoutAlign="center center">
+                <div fxLayout="column" fxLayoutAlign="center center" fxFlexOffset="0.2em">
+                    <mat-icon class="navigation-icon" fxLayout="row">info</mat-icon>
+                    <div class="mat-small" fxLayout="row">About</div>
+                </div>
+            </a>
+        </mat-nav-list>
+    </mat-sidenav>
+    <mat-sidenav-content class="container-content">
+        <router-outlet></router-outlet>
+    </mat-sidenav-content>
+</mat-sidenav-container>

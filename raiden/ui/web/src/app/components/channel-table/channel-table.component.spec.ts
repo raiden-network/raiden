@@ -3,23 +3,22 @@ import { async, ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angul
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import {
-    ButtonModule,
-    DataTableModule,
-    DialogModule,
-    DropdownModule,
-    Menu,
-    MenuItem,
-    MenuModule,
-    TabViewModule
-} from 'primeng/primeng';
+import { RouterTestingModule } from '@angular/router/testing';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
+import { EMPTY } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
+import { delay, startWith } from 'rxjs/operators';
+import { AllowedDecimalsDirective } from '../../directives/allowed-decimals.directive';
+import { CdkDetailRowDirective } from '../../directives/cdk-detail-row.directive';
 import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
+import { MaterialComponentsModule } from '../../modules/material-components/material-components.module';
+import { DecimalPipe } from '../../pipes/decimal.pipe';
 import { EllipsisPipe } from '../../pipes/ellipsis.pipe';
 import { KeysPipe } from '../../pipes/keys.pipe';
 import { SubsetPipe } from '../../pipes/subset.pipe';
 import { TokenPipe } from '../../pipes/token.pipe';
+import { ChannelPollingService } from '../../services/channel-polling.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
@@ -34,6 +33,9 @@ export class MockConfig extends RaidenConfig {
         eth: {
             latestBlock: 3694423,
             contract: () => {
+            },
+            getBlockNumber: () => {
+
             }
         }
     };
@@ -42,7 +44,8 @@ export class MockConfig extends RaidenConfig {
 describe('ChannelTableComponent', () => {
     let component: ChannelTableComponent;
     let fixture: ComponentFixture<ChannelTableComponent>;
-    let raidenServiceSpy: Spy;
+    let channelsSpy: Spy;
+    let refreshingSpy: Spy;
     let tokenSpy: Spy;
 
     beforeEach(async(() => {
@@ -54,7 +57,10 @@ describe('ChannelTableComponent', () => {
                 TokenPipe,
                 EllipsisPipe,
                 KeysPipe,
-                SubsetPipe
+                SubsetPipe,
+                DecimalPipe,
+                CdkDetailRowDirective,
+                AllowedDecimalsDirective
             ],
             providers: [
                 SharedService,
@@ -63,19 +69,18 @@ describe('ChannelTableComponent', () => {
                     useClass: MockConfig
                 },
                 RaidenService,
+                ChannelPollingService,
+                ToastrService,
                 HttpClient,
                 HttpHandler
             ],
             imports: [
-                DataTableModule,
-                TabViewModule,
-                MenuModule,
                 FormsModule,
                 ReactiveFormsModule,
-                DialogModule,
+                MaterialComponentsModule,
+                RouterTestingModule,
                 FormsModule,
-                ButtonModule,
-                DropdownModule,
+                ToastrModule.forRoot(),
                 NoopAnimationsModule
             ]
         }).compileComponents();
@@ -84,13 +89,23 @@ describe('ChannelTableComponent', () => {
     beforeEach(() => {
         fixture = TestBed.createComponent(ChannelTableComponent);
         const service: RaidenService = TestBed.get(RaidenService);
-        raidenServiceSpy = spyOn(service, 'getChannels');
+        const channelPollingService: ChannelPollingService = TestBed.get(ChannelPollingService);
+        channelsSpy = spyOn(channelPollingService, 'channels');
+        refreshingSpy = spyOn(channelPollingService, 'refreshing');
         tokenSpy = spyOn(service, 'getUserToken');
+
         component = fixture.componentInstance;
-        fixture.detectChanges();
     });
 
     it('should create', () => {
+
+        channelsSpy
+            .and
+            .returnValues(EMPTY);
+        refreshingSpy.and.returnValue(of(false));
+
+        fixture.detectChanges();
+
         expect(component).toBeTruthy();
     });
 
@@ -100,12 +115,13 @@ describe('ChannelTableComponent', () => {
             address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             symbol: 'TST',
             name: 'Test Suite Token',
+            decimals: 8,
             balance: 20
         };
 
         const channel1: Channel = {
             state: 'opened',
-            channel_identifier: '0xc0ecf413bfc8fc6b0e313b5ae231084e1c397b96ed5c0ec3d5ee3b5558ab20be',
+            channel_identifier: 1,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
             reveal_timeout: 600,
@@ -116,7 +132,7 @@ describe('ChannelTableComponent', () => {
 
         const channel2: Channel = {
             state: 'opened',
-            channel_identifier: '0xcf4f8999d22fd1a783fc6236b1ba1599cdc26ebedb36e053b973fc56a3280d0e',
+            channel_identifier: 2,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
@@ -127,7 +143,7 @@ describe('ChannelTableComponent', () => {
 
         const channel2Balance: Channel = {
             state: 'opened',
-            channel_identifier: '0xcf4f8999d22fd1a783fc6236b1ba1599cdc26ebedb36e053b973fc56a3280d0e',
+            channel_identifier: 2,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
             reveal_timeout: 600,
@@ -138,7 +154,7 @@ describe('ChannelTableComponent', () => {
 
         const channel3: Channel = {
             state: 'opened',
-            channel_identifier: '0x82852927dd7fb86339af0c57566b0068e3341615a759950ea7de9a64f63f7d2a',
+            channel_identifier: 3,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0xfB398E621c15E2BC5Ae6A508D8D89AF1f88c93e8',
             reveal_timeout: 600,
@@ -149,43 +165,43 @@ describe('ChannelTableComponent', () => {
 
         const channel4: Channel = {
             state: 'closed',
-            channel_identifier: '0xa152038763d73b05df7b036f477236b527ad14a249e4077fb4048d845226ac43',
+            channel_identifier: 4,
             token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             partner_address: '0x8A0cE8bDA200D64d858957080bf7eDDD3371135F',
             reveal_timeout: 600,
             balance: 60,
-            settle_timeout: 600,
+            settle_timeout: 500,
             userToken: token
 
         };
 
-        raidenServiceSpy
+        const mockResponse = of([channel1, channel2Balance, channel3, channel4]).pipe(
+            delay(5000),
+            startWith([channel1, channel2, channel3, channel4])
+        );
+        channelsSpy
             .and
-            .returnValues(
-                of([channel1, channel2, channel3, channel4]),
-                of([channel1, channel2Balance, channel3, channel4])
-            );
+            .returnValues(mockResponse);
 
         tokenSpy.and.returnValue(of(token));
 
-        component.ngOnInit();
         tick(5000);
         fixture.detectChanges();
 
-        let menus = fixture.debugElement.queryAll(By.css('.ui-menu'));
-        let menu: Menu = menus[1].componentInstance;
-        let menuItem: MenuItem = menu.model[0];
+        let channel = fixture.debugElement.query(By.css('#channel_2'));
+        let button = channel.query(By.css('#pay-button'));
+        let payButton = button.componentInstance as HTMLButtonElement;
 
-        expect(menuItem.disabled).toBe(true, 'Payment should be disabled with 0 balance');
+        expect(payButton.disabled).toBe(true, 'Payment should be disabled with 0 balance');
 
         tick(5000);
         fixture.detectChanges();
 
-        menus = fixture.debugElement.queryAll(By.css('.ui-menu'));
-        menu = menus[1].componentInstance;
-        menuItem = menu.model[0];
+        channel = fixture.debugElement.query(By.css('#channel_2'));
+        button = channel.query(By.css('#pay-button'));
+        payButton = button.componentInstance as HTMLButtonElement;
 
-        expect(menuItem.disabled).toBe(false, 'Payment option should be enabled with positive balance');
+        expect(payButton.disabled).toBe(false, 'Payment option should be enabled with positive balance');
 
         component.ngOnDestroy();
         flush();

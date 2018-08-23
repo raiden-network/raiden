@@ -1,6 +1,7 @@
 import { HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
+import { BigNumber } from 'bignumber.js';
 import { MockConfig } from '../components/channel-table/channel-table.component.spec';
 import { Channel } from '../models/channel';
 import { UserToken } from '../models/usertoken';
@@ -21,7 +22,7 @@ describe('RaidenService', () => {
 
     const channel1: Channel = {
         state: 'opened',
-        channel_identifier: '0xc0ecf413bfc8fc6b0e313b5ae231084e1c397b96ed5c0ec3d5ee3b5558ab20be',
+        channel_identifier: 1,
         token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
         partner_address: '0x774aFb0652ca2c711fD13e6E9d51620568f6Ca82',
         reveal_timeout: 600,
@@ -32,7 +33,7 @@ describe('RaidenService', () => {
 
     const channel2: Channel = {
         state: 'opened',
-        channel_identifier: '0xcf4f8999d22fd1a783fc6236b1ba1599cdc26ebedb36e053b973fc56a3280d0e',
+        channel_identifier: 2,
         token_address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
         partner_address: '0xFC57d325f23b9121a8488fFdE2E6b3ef1208a20b',
         reveal_timeout: 600,
@@ -63,7 +64,7 @@ describe('RaidenService', () => {
         sharedService = TestBed.get(SharedService);
         service = TestBed.get(RaidenService);
 
-        spyOn(sharedService, 'msg');
+        spyOn(sharedService, 'error');
     });
 
     afterEach(inject([HttpTestingController], (backend: HttpTestingController) => {
@@ -93,20 +94,19 @@ describe('RaidenService', () => {
             statusText: ''
         });
 
-        expect(sharedService.msg).toHaveBeenCalledTimes(1);
+        expect(sharedService.error).toHaveBeenCalledTimes(1);
 
         // @ts-ignore
-        const payload = sharedService.msg.calls.first().args[0];
+        const payload = sharedService.error.calls.first().args[0];
 
-        expect(payload.severity).toBe('error', 'Severity should be error');
-        expect(payload.summary).toBe('Raiden Error', 'It should be a Raiden Error');
-        expect(payload.detail).toBe(errorMessage);
+        expect(payload.title).toBe('Raiden Error', 'It should be a Raiden Error');
+        expect(payload.description).toBe(errorMessage);
     });
 
     it('Show a proper response when non-EIP addresses are passed in channel creation', () => {
         const partnerAddress = '0xc52952ebad56f2c5e5b42bb881481ae27d036475';
 
-        service.openChannel(tokenAddress, partnerAddress, 600, 10).subscribe(() => {
+        service.openChannel(tokenAddress, partnerAddress, 500, 10, 8).subscribe(() => {
             fail('On next should not be called');
         }, (error) => {
             expect(error).toBeTruthy('An error was expected');
@@ -124,14 +124,13 @@ describe('RaidenService', () => {
             statusText: ''
         });
 
-        expect(sharedService.msg).toHaveBeenCalledTimes(1);
+        expect(sharedService.error).toHaveBeenCalledTimes(1);
 
         // @ts-ignore
-        const payload = sharedService.msg.calls.first().args[0];
+        const payload = sharedService.error.calls.first().args[0];
 
-        expect(payload.severity).toBe('error', 'Severity should be error');
-        expect(payload.summary).toBe('Raiden Error', 'It should be a Raiden Error');
-        expect(payload.detail).toBe('partner_address: Not a valid EIP55 encoded address');
+        expect(payload.title).toBe('Raiden Error', 'It should be a Raiden Error');
+        expect(payload.description).toBe('partner_address: Not a valid EIP55 encoded address');
 
     });
 
@@ -141,6 +140,7 @@ describe('RaidenService', () => {
             address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
             symbol: 'TST',
             name: 'Test Suite Token',
+            decimals: 8,
             balance: 20
         };
 
@@ -156,6 +156,9 @@ describe('RaidenService', () => {
                 },
                 symbol: (callback: CallbackFunc) => {
                     callback(null, token.symbol);
+                },
+                decimals: (callback: CallbackFunc) => {
+                    callback(null, new BigNumber(token.decimals));
                 }
             })
         };
@@ -221,14 +224,13 @@ describe('RaidenService', () => {
             statusText: 'All good'
         });
 
-        expect(sharedService.msg).toHaveBeenCalledTimes(1);
+        expect(sharedService.error).toHaveBeenCalledTimes(1);
 
         // @ts-ignore
-        const payload = sharedService.msg.calls.first().args[0];
+        const payload = sharedService.error.calls.first().args[0];
 
-        expect(payload.severity).toBe('error', 'Severity should be error');
-        expect(payload.summary).toBe('Raiden Error', 'It should be a Raiden Error');
-        expect(payload.detail).toContain('Could not access the JSON-RPC endpoint');
+        expect(payload.title).toBe('Raiden Error', 'It should be a Raiden Error');
+        expect(payload.description).toContain('Could not access the JSON-RPC endpoint');
     });
 
 

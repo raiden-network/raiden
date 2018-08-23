@@ -1,44 +1,51 @@
-import { BrowserModule } from '@angular/platform-browser';
-import { NgModule, APP_INITIALIZER } from '@angular/core';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { DataTableModule, SharedModule, DataListModule, CarouselModule,
-    ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
-    TabViewModule, DropdownModule, MessagesModule, MenuModule,
-    TooltipModule, RadioButtonModule,  ConfirmDialogModule,
-    ConfirmationService } from 'primeng/primeng';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 import { ClipboardModule } from 'ngx-clipboard';
+import { ToastrModule } from 'ngx-toastr';
 
 import { environment } from '../environments/environment';
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
+import { ConfirmationDialogComponent } from './components/confirmation-dialog/confirmation-dialog.component';
 import { EventListComponent } from './components/event-list/event-list.component';
-import { TokenNetworkComponent } from './components/token-network/token-network.component';
 import { HomeComponent } from './components/home/home.component';
-import { LicenseComponent } from './components/license/license.component';
-import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
-import { PaymentDialogComponent } from './components/payment-dialog/payment-dialog.component';
 import { JoinDialogComponent } from './components/join-dialog/join-dialog.component';
-import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
+import { LicenseComponent } from './components/license/license.component';
+import { NetworkEventsComponent } from './components/network-events/network-events.component';
 import { OpenDialogComponent } from './components/open-dialog/open-dialog.component';
-
-import { SharedService } from './services/shared.service';
-import { RaidenInterceptor } from './services/raiden.interceptor';
-import { RaidenConfig } from './services/raiden.config';
-import { RaidenService } from './services/raiden.service';
+import { PaymentDialogComponent } from './components/payment-dialog/payment-dialog.component';
+import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
+import { TokenEventsComponent } from './components/token-events/token-events.component';
+import { TokenNetworkComponent } from './components/token-network/token-network.component';
+import { CdkDetailRowDirective } from './directives/cdk-detail-row.directive';
+import { MaterialComponentsModule } from './modules/material-components/material-components.module';
+import { EllipsisPipe } from './pipes/ellipsis.pipe';
 import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
 import { TokenPipe } from './pipes/token.pipe';
-import { EllipsisPipe } from './pipes/ellipsis.pipe';
+import { RaidenConfig } from './services/raiden.config';
+import { RaidenInterceptor } from './services/raiden.interceptor';
+import { RaidenService } from './services/raiden.service';
+
+import { SharedService } from './services/shared.service';
+import { DepositDialogComponent } from './components/deposit-dialog/deposit-dialog.component';
+import { ChannelEventsComponent } from './components/channel-events/channel-events.component';
+import { AllowedDecimalsDirective } from './directives/allowed-decimals.directive';
+import { DecimalPipe } from './pipes/decimal.pipe';
 
 const appRoutes: Routes = [
-    { path: '', redirectTo: '/home', pathMatch: 'full' },
-    { path: 'home', component: HomeComponent },
-    { path: 'license', component: LicenseComponent },
-    { path: 'tokens', component: TokenNetworkComponent },
-    { path: 'channels', component: ChannelTableComponent },
+    {path: '', redirectTo: '/home', pathMatch: 'full'},
+    {path: 'home', component: HomeComponent},
+    {path: 'license', component: LicenseComponent},
+    {path: 'tokens', component: TokenNetworkComponent},
+    {path: 'channels', component: ChannelTableComponent},
+    {path: 'events/network', component: NetworkEventsComponent},
+    {path: 'events/tokens/:address', component: TokenEventsComponent},
+    {path: 'events/channels/:channel_identifier', component: ChannelEventsComponent}
 ];
 
 export function ConfigLoader(raidenConfig: RaidenConfig) {
@@ -54,7 +61,6 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         TokenNetworkComponent,
         HomeComponent,
         LicenseComponent,
-        SwapDialogComponent,
         PaymentDialogComponent,
         JoinDialogComponent,
         RegisterDialogComponent,
@@ -63,6 +69,14 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         SubsetPipe,
         TokenPipe,
         EllipsisPipe,
+        NetworkEventsComponent,
+        TokenEventsComponent,
+        CdkDetailRowDirective,
+        ConfirmationDialogComponent,
+        DepositDialogComponent,
+        ChannelEventsComponent,
+        AllowedDecimalsDirective,
+        DecimalPipe
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
@@ -70,23 +84,9 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         FormsModule,
         ReactiveFormsModule,
         HttpClientModule,
-        DataTableModule,
-        SharedModule,
-        DataListModule,
-        CarouselModule,
-        ButtonModule,
-        AccordionModule,
-        GrowlModule,
-        DialogModule,
-        SplitButtonModule,
-        TabViewModule,
-        DropdownModule,
-        MessagesModule,
-        MenuModule,
-        TooltipModule,
-        RadioButtonModule,
-        ConfirmDialogModule,
-        NoopAnimationsModule,
+        BrowserAnimationsModule,
+        MaterialComponentsModule,
+        ToastrModule.forRoot(),
         ClipboardModule,
     ],
     providers: [
@@ -105,9 +105,17 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
             multi: true
         },
         RaidenService,
-        ConfirmationService,
         TokenPipe,
+    ],
+    entryComponents: [
+        RegisterDialogComponent,
+        JoinDialogComponent,
+        PaymentDialogComponent,
+        ConfirmationDialogComponent,
+        DepositDialogComponent,
+        OpenDialogComponent
     ],
     bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {
+}

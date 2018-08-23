@@ -1,61 +1,52 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { Observable ,  Subscription } from 'rxjs';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
+import { BigNumber } from 'bignumber.js';
 
-import { RaidenService } from '../../services/raiden.service';
-import { SharedService } from '../../services/shared.service';
+export interface JoinDialogPayload {
+    tokenAddress: string;
+    funds: number;
+    decimals: number;
+}
 
 @Component({
     selector: 'app-join-dialog',
     templateUrl: './join-dialog.component.html',
     styleUrls: ['./join-dialog.component.css']
 })
-export class JoinDialogComponent implements OnInit, OnDestroy {
-    private subs: Subscription[] = [];
+export class JoinDialogComponent {
 
-    private _visible = false;
-    @Output() visibleChange: EventEmitter<boolean> = new EventEmitter<boolean>();
-    @Input() tokenAddress: string;
+    private _decimals = 0;
+    public funds: FormControl = new FormControl(0);
 
-    public funds: FormControl = new FormControl(null,
-        (control) => control.value > 0 ? undefined : { invalidFund: true });
-
-    constructor(private raidenService: RaidenService,
-        private sharedService: SharedService) { }
-
-    ngOnInit() {
-    }
-
-    ngOnDestroy() {
-        this.subs.forEach((sub) => sub.unsubscribe());
-    }
-
-    get visible(): boolean {
-        return this._visible;
-    }
-
-    @Input()
-    set visible(v: boolean) {
-        if (v === this._visible) {
-            return;
-        }
-        this._visible = v;
-        this.visibleChange.emit(v);
+    constructor(
+        @Inject(MAT_DIALOG_DATA) public data: JoinDialogPayload,
+        public dialogRef: MatDialogRef<JoinDialogComponent>
+    ) {
+        this._decimals = data.decimals;
     }
 
     public joinTokenNetwork() {
-        this.raidenService.connectTokenNetwork(
-            this.funds.value,
-            this.tokenAddress,
-        ).subscribe((response) =>
-            this.sharedService.msg({
-                severity: 'success',
-                summary: 'Joined Token Network',
-                detail: 'You have successfully Joined the Network' +
-                ' of Token ' + this.tokenAddress
-            })
-        );
-        this.visible = false;
+        const payload: JoinDialogPayload = {
+            tokenAddress: this.data.tokenAddress,
+            funds: this.funds.value,
+            decimals: this._decimals
+        };
+        this.dialogRef.close(payload);
+    }
+
+    public step(): string {
+        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
+    }
+
+    public decimals(): number {
+        return this._decimals;
+    }
+
+    public precise(value) {
+        if (value.type === 'input' && !value.inputType) {
+            this.funds.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
+        }
     }
 
 }
