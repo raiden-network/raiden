@@ -846,10 +846,10 @@ def mediate_transfer(
 
 
 def handle_init(
-        state_change,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
-        block_number,
+        state_change: MediatorTransferState,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
 ):
     routes = state_change.routes
 
@@ -884,7 +884,13 @@ def handle_init(
     return TransitionResult(iteration.new_state, events)
 
 
-def handle_block(channelidentifiers_to_channels, state, state_change, block_number):
+def handle_block(
+        mediator_state: MediatorTransferState,
+        state_change: Block,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
+):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time locks.
     Args:
@@ -922,7 +928,7 @@ def handle_block(channelidentifiers_to_channels, state, state_change, block_numb
 def handle_refundtransfer(
         mediator_state: MediatorTransferState,
         mediator_state_change: ReceiveTransferRefund,
-        channelidentifiers_to_channels: initiator.ChannelMap,
+        channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ):
@@ -1077,9 +1083,10 @@ def state_transition(
 
     elif isinstance(state_change, Block):
         iteration = handle_block(
-            channelidentifiers_to_channels,
             mediator_state,
             state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
             block_number,
         )
 
