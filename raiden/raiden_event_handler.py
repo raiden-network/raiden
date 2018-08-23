@@ -346,4 +346,4 @@ def on_raiden_event(raiden: RaidenService, event: Event):
         else:
             log.error('Unknown event {}'.format(type(event)))
     except RaidenRecoverableError as e:
-        log.error(e)
+        log.error(str(e))
