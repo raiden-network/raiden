@@ -1520,7 +1520,7 @@ class LockExpired(EnvelopeMessage):
 
     @classmethod
     def from_event(cls, event):
-        balance_proof = event.transfer
+        balance_proof = event.balance_proof
 
         return cls(
             chain_id=balance_proof.chain_id,

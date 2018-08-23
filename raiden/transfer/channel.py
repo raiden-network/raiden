@@ -135,6 +135,19 @@ def is_lock_locked(
     return secrethash in end_state.secrethashes_to_lockedlocks
 
 
+def is_lock_expired(
+        locked_lock: LockedTransferSignedState,
+        secrethash: typing.SecretHash,
+        block_number: typing.BlockNumber,
+):
+    if locked_lock:
+        lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+        if block_number < lock_expiration_threshold:
+            return False
+
+    return True
+
+
 def is_secret_known(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
@@ -344,7 +357,7 @@ def is_valid_directtransfer(
 
     elif received_balance_proof.channel_identifier != channel_state.identifier:
         # The balance proof must be tied to this channel, otherwise the
-        # on-chain contract would be sucesstible to replay attacks across
+        # on-chain contract would be susceptible to replay attacks across
         # channels.
         msg = (
             'Invalid DirectTransfer message. '
@@ -400,14 +413,19 @@ def is_valid_lockexpired(
         receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
     message_name = 'LockExpired'
-    received_balance_proof = state_change.transfer
-    lock = channel_state.partner_state.secrethashes_to_lockedlocks[state_change.secrethash]
+    received_balance_proof = state_change.balance_proof
+    lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(state_change.secrethash)
+
+    if not lock:
+        # If we don't find the lock,
+        # it must have been removed earlier.
+        msg = 'Lock with secrethash {} does not exist'.format(state_change.secrethash)
+        return (False, msg, None)
 
     current_balance_proof = get_current_balanceproof(sender_state)
     merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
-    distributable = get_distributable(sender_state, receiver_state)
     expected_nonce = get_next_nonce(sender_state)
     expected_locked_amount = current_locked_amount - lock.amount
     transferred_amount_after_unlock = (
@@ -421,13 +439,6 @@ def is_valid_lockexpired(
 
     elif merkletree is None:
         msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
-        result = (False, msg, None)
-
-    elif _merkletree_width(merkletree) > MAXIMUM_PENDING_TRANSFERS:
-        msg = (
-            f'Invalid {message_name} message. Adding the transfer would exceed the allowed '
-            f'limit of {MAXIMUM_PENDING_TRANSFERS} pending transfers per channel.'
-        )
         result = (False, msg, None)
 
     else:
@@ -485,7 +496,7 @@ def is_valid_lockexpired(
             result = (False, msg, None)
 
         elif received_balance_proof.transferred_amount != current_transferred_amount:
-            # Mediated transfers must not change transferred_amount
+            # Given an expired lock, transferred amount should stay the same
             msg = (
                 'Invalid {} message. '
                 "Balance proof's transferred_amount changed, expected: {} got: {}."
@@ -498,8 +509,7 @@ def is_valid_lockexpired(
             result = (False, msg, None)
 
         elif not is_valid_amount(sender_state, lock.amount):
-            # We can validate that the Unlock message will have a transferred
-            # amount, accepting a lock that cannot be unlocked is useless
+            # We can validate that the Expired message will have a transferred amount
             msg = (
                 "Invalid {} message. "
                 "Unlocking the lock would result in an overflow. max: {} result would be: {}"
@@ -512,7 +522,7 @@ def is_valid_lockexpired(
             result = (False, msg, None)
 
         elif received_balance_proof.locked_amount != expected_locked_amount:
-            # Mediated transfers must increase the locked_amount by lock.amount
+            # locked amount should be be the same as BP given the current lock expiry
             msg = (
                 'Invalid {} message. '
                 "Balance proof's locked_amount is invalid, expected: {} got: {}."
@@ -526,7 +536,7 @@ def is_valid_lockexpired(
 
         elif received_balance_proof.channel_identifier != channel_state.identifier:
             # The balance proof must be tied to this channel, otherwise the
-            # on-chain contract would be sucesstible to replay attacks across
+            # on-chain contract would be susceptible to replay attacks across
             # channels.
             msg = (
                 'Invalid {} message. '
@@ -536,21 +546,6 @@ def is_valid_lockexpired(
                 channel_state.identifier,
                 received_balance_proof.channel_identifier,
             )
-            result = (False, msg, None)
-
-        # the locked amount is limited to the current available balance, otherwise
-        # the sender is attempting to game the protocol and do a double spend
-        elif lock.amount > distributable:
-            msg = (
-                'Invalid {} message. '
-                'Lock amount larger than the available distributable, '
-                'lock amount: {} maximum distributable: {}'
-            ).format(
-                message_name,
-                lock.amount,
-                distributable,
-            )
-
             result = (False, msg, None)
 
         else:
@@ -692,7 +687,7 @@ def valid_lockedtransfer_check(
 
         elif received_balance_proof.channel_identifier != channel_state.identifier:
             # The balance proof must be tied to this channel, otherwise the
-            # on-chain contract would be sucesstible to replay attacks across
+            # on-chain contract would be susceptible to replay attacks across
             # channels.
             msg = (
                 'Invalid {} message. '
@@ -890,7 +885,7 @@ def is_valid_unlock(
 
     elif received_balance_proof.channel_identifier != channel_state.identifier:
         # The balance proof must be tied to this channel, otherwise the
-        # on-chain contract would be sucesstible to replay attacks across
+        # on-chain contract would be susceptible to replay attacks across
         # channels.
         msg = (
             'Invalid Unlock message. '
@@ -1522,33 +1517,39 @@ def events_for_close(
 
 def events_for_expired_lock(
         channel_state: NettingChannelState,
+        secrethash: typing.SecretHash,
         locked_lock: LockedTransferUnsignedState,
         pseudo_random_generator: random.Random,
 ):
     nonce = get_next_nonce(channel_state.our_state)
     locked_amount = get_amount_locked(channel_state.our_state)
-
     our_balance_proof = channel_state.our_state.balance_proof
+    updated_locked_amount = locked_amount - locked_lock.amount
+    transferred_amount = our_balance_proof.transferred_amount + updated_locked_amount
 
-    transferred_amount = our_balance_proof.transferred_amount
-    locksroot = EMPTY_MERKLE_ROOT
+    sender_state = channel_state.partner_state
+    merkletree = compute_merkletree_without(sender_state.merkletree, locked_lock.lockhash)
+    if merkletree:
+        locksroot = merkleroot(merkletree)
+    else:
+        locksroot = EMPTY_MERKLE_ROOT
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
         transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
+        locked_amount=updated_locked_amount,
         locksroot=locksroot,
         token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
 
+    delete_secrethash_endstate(channel_state.our_state, secrethash)
+
     return SendLockExpired(
         recipient=channel_state.partner_state.address,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
-        transfer=balance_proof,
-        token_address=channel_state.token_address,
+        balance_proof=balance_proof,
         secrethash=locked_lock.secrethash,
     )
 
@@ -1814,9 +1815,6 @@ def handle_receive_lock_expired(
         state_change: ReceiveLockExpired,
 ):
     """Remove expired locks from channel states."""
-    if state_change.transfer.channel_identifier != channel_state.identifier:
-        return TransitionResult(channel_state, [])
-
     is_valid, msg, merkletree = is_valid_lockexpired(
         state_change,
         channel_state,
@@ -1824,17 +1822,19 @@ def handle_receive_lock_expired(
         channel_state.our_state,
     )
 
+    new_state = channel_state
     events = list()
     if is_valid:
         delete_secrethash_endstate(channel_state.partner_state, state_change.secrethash)
+        new_state = None
         send_processed = SendProcessed(
-            recipient=state_change.transfer.sender,
+            recipient=state_change.balance_proof.sender,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=state_change.message_identifier,
         )
         events = [send_processed]
 
-    return TransitionResult(channel_state, events)
+    return TransitionResult(new_state, events)
 
 
 def handle_receive_lockedtransfer(

@@ -28,7 +28,6 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
     ContractReceiveSecretReveal,
 )
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import typing
 
 
@@ -264,10 +263,15 @@ def handle_block(
     )
 
     secrethash = transfer.lock.secrethash
-    if (not secret_known and
-            block_number > transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK):
+    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
+    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
         # Lock has expired, cleanup...
-        channel.delete_secrethash_endstate(channel_state.our_state, secrethash)
+        channel.events_for_expired_lock(
+            channel_state,
+            secrethash,
+            locked_lock,
+            pseudo_random_generator,
+        )
 
         # Target emits no events here.
         iteration = TransitionResult(None, list())
@@ -298,12 +302,8 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
 ):
-    result = channel.handle_receive_lock_expired(channel_state, state_change)
-
-    return TransitionResult(
-        None,
-        result.events,
-    )
+    """Remove expired locks from channel states."""
+    return channel.handle_receive_lock_expired(channel_state, state_change)
 
 
 def state_transition(
