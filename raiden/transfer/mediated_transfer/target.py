@@ -1,3 +1,4 @@
+import random
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import (
@@ -17,15 +18,24 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
     ReceiveSecretReveal,
 )
-from raiden.transfer.state import message_identifier_from_prng
+from raiden.transfer.state import (
+    NettingChannelState,
+    message_identifier_from_prng,
+)
 from raiden.transfer.state_change import (
     Block,
     ReceiveUnlock,
     ContractReceiveSecretReveal,
 )
 
+from raiden.utils import typing
 
-def events_for_close(target_state, channel_state, block_number):
+
+def events_for_close(
+        target_state: TargetTransferState,
+        channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
+):
     """ Emits the event for closing the netting channel if the transfer needs
     to be settled on-chain.
     """
@@ -48,7 +58,11 @@ def events_for_close(target_state, channel_state, block_number):
     return list()
 
 
-def events_for_onchain_secretreveal(target_state, channel_state, block_number):
+def events_for_onchain_secretreveal(
+        target_state: TargetTransferState,
+        channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
+):
     """ Emits the event for revealing the secret on-chain if the transfer cannot
     to be settled off-chain.
     """
@@ -80,10 +94,10 @@ def events_for_onchain_secretreveal(target_state, channel_state, block_number):
 
 
 def handle_inittarget(
-        state_change,
-        channel_state,
-        pseudo_random_generator,
-        block_number,
+        state_change: ActionInitTarget,
+        channel_state: NettingChannelState,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
 ):
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
@@ -142,10 +156,10 @@ def handle_inittarget(
 
 
 def handle_secretreveal(
-        target_state,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
+        target_state: TargetTransferState,
+        state_change: ReceiveSecretReveal,
+        channel_state: NettingChannelState,
+        pseudo_random_generator: random.Random,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
@@ -191,7 +205,11 @@ def handle_secretreveal(
     return iteration
 
 
-def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
+def handle_unlock(
+        target_state: TargetTransferState,
+        state_change: ReceiveUnlock,
+        channel_state: NettingChannelState,
+):
     """ Handles a ReceiveUnlock state change. """
     iteration = TransitionResult(target_state, list())
     balance_proof_sender = state_change.balance_proof.sender
@@ -229,7 +247,11 @@ def handle_unlock(target_state, state_change: ReceiveUnlock, channel_state):
     return iteration
 
 
-def handle_block(target_state, channel_state, block_number):
+def handle_block(
+        target_state: TargetTransferState,
+        channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
+):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
     """
