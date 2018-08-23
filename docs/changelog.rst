@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`2034` Update WebUI's design.
+* :bug:`2176` Expose total_deposit in the Rest API and fix depositing in the WebUI
 
 * :release:`0.5.1 <2018-08-17>`
 
