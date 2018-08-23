@@ -29,6 +29,7 @@ from raiden.messages import (
 from raiden.settings import CACHE_TTL
 from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.utils.runnable import Runnable
 from raiden.message_handler import on_message
 from raiden.transfer.state_change import ReceiveDelivered
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
@@ -60,7 +61,7 @@ def single_queue_send(
         transport: 'UDPTransport',
         recipient: typing.Address,
         queue: Queue_T,
-        event_stop: Event,
+        stop_event: Event,
         event_healthy: Event,
         event_unhealthy: Event,
         message_retries: int,
@@ -72,7 +73,7 @@ def single_queue_send(
     Notes:
     - This task must be the only consumer of queue.
     - This task can be killed at any time, but the intended usage is to stop it
-      with the event_stop.
+      with the stop_event.
     - If there are many queues for the same recipient, it is the
       caller's responsibility to not start them together to avoid congestion.
     - This task assumes the endpoint is never cleared after it's first known.
@@ -89,19 +90,19 @@ def single_queue_send(
     # Reusing the event, clear must be carefully done
     data_or_stop = event_first_of(
         queue,
-        event_stop,
+        stop_event,
     )
 
     # Wait for the endpoint registration or to quit
     event_first_of(
         event_healthy,
-        event_stop,
+        stop_event,
     ).wait()
 
     while True:
         data_or_stop.wait()
 
-        if event_stop.is_set():
+        if stop_event.is_set():
             return
 
         # The queue is not empty at this point, so this won't raise Empty.
@@ -120,7 +121,7 @@ def single_queue_send(
                 messagedata,
                 message_id,
                 recipient,
-                event_stop,
+                stop_event,
                 event_healthy,
                 event_unhealthy,
                 backoff,
@@ -138,14 +139,15 @@ def single_queue_send(
             if not queue:
                 data_or_stop.clear()
 
-                if event_stop.is_set():
+                if stop_event.is_set():
                     return
 
 
-class UDPTransport:
+class UDPTransport(Runnable):
     UDP_MAX_MESSAGE_SIZE = 1200
 
     def __init__(self, discovery, udpsocket, throttle_policy, config):
+        super().__init__()
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
         self.raiden: RaidenService
@@ -159,7 +161,8 @@ class UDPTransport:
         self.nat_keepalive_timeout = config['nat_keepalive_timeout']
         self.nat_invitation_timeout = config['nat_invitation_timeout']
 
-        self.event_stop = Event()
+        self.stop_event = Event()
+        self.stop_event.set()
 
         self.greenlets = list()
         self.addresses_events = dict()
@@ -185,6 +188,10 @@ class UDPTransport:
             raiden: RaidenService,
             queueids_to_queues: typing.Dict[typing.QueueIdentifier, typing.List[Event]],
     ):
+        if not self.stop_event.ready():
+            raise RuntimeError('UDPTransport started while running')
+
+        self.stop_event.clear()
         self.raiden = raiden
         self.queueids_to_queues = dict()
 
@@ -205,14 +212,31 @@ class UDPTransport:
             self.init_queue_for(queue_identifier, encoded_queue)
 
         self.server.start()
+        super().start()
+
+    def run(self):
+        """ Runnable main method, perform wait on long-running subtasks """
+        try:
+            self.stop_event.wait()
+        except gevent.GreenletExit:  # killed without exception
+            self.stop_event.set()
+            gevent.killall(self.greenlets)  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()  # ensure cleanup and wait on subtasks
+            raise
 
     def stop(self):
+        if self.stop_event.ready():
+            return  # double call, happens on normal stop, ignore
+
+        self.stop_event.set()
+
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
         self.server.stop_accepting()
 
         # Stop processing the outgoing queues
-        self.event_stop.set()
         gevent.wait(self.greenlets)
 
         # All outgoing tasks are stopped. Now it's safe to close the socket. At
@@ -263,7 +287,7 @@ class UDPTransport:
                 healthcheck.healthcheck,
                 self,
                 recipient,
-                self.event_stop,
+                self.stop_event,
                 events.event_healthy,
                 events.event_unhealthy,
                 self.nat_keepalive_retries,
@@ -272,6 +296,7 @@ class UDPTransport:
                 ping_nonce,
             )
             greenlet_healthcheck.name = f'Healthcheck for {pex(recipient)}'
+            greenlet_healthcheck.link_exception(self.on_error)
             self.greenlets.append(greenlet_healthcheck)
 
     def init_queue_for(
@@ -296,7 +321,7 @@ class UDPTransport:
             self,
             recipient,
             queue,
-            self.event_stop,
+            self.stop_event,
             events.event_healthy,
             events.event_unhealthy,
             self.retries_before_backoff,
@@ -311,6 +336,7 @@ class UDPTransport:
                 f'Queue for {pex(recipient)} - {queue_identifier.channel_identifier}'
             )
 
+        greenlet_queue.link_exception(self.on_error)
         self.greenlets.append(greenlet_queue)
 
         log.debug(
