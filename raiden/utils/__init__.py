@@ -10,7 +10,7 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, is_checksum_address
+from eth_utils import remove_0x_prefix, keccak, is_checksum_address, to_checksum_address
 
 import raiden
 from raiden import constants
@@ -289,3 +289,10 @@ def merge_dict(to_update: dict, other_dict: dict):
             merge_dict(to_update[key], value)
         else:
             to_update[key] = value
+
+
+def optional_address_to_string(address: typing.Address = None) -> typing.Optional[str]:
+    if address is None:
+        return None
+
+    return to_checksum_address(address)
