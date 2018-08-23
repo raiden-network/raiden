@@ -47,7 +47,7 @@
         <mat-autocomplete #auto="matAutocomplete"
                           [autoActiveFirstOption]="'true'"
                           (optionSelected)="tokenSelected($event.option.value)">
-            <mat-option *ngFor="let option of filteredOptions | async" [value]="option">
+            <mat-option *ngFor="let option of filteredOptions$ | async" [value]="option">
                 {{option | token }}
             </mat-option>
         </mat-autocomplete>

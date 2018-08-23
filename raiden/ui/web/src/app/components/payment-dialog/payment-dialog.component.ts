@@ -30,9 +30,9 @@ export class PaymentDialogComponent implements OnInit {
     public targetAddress: FormControl;
     public amount: FormControl;
 
-    public filteredOptions: Observable<UserToken[]>;
+    public filteredOptions$: Observable<UserToken[]>;
     public tokenPipe: TokenPipe;
-    private tokens: Observable<UserToken[]>;
+    private tokens$: Observable<UserToken[]>;
 
     private _decimals = 0;
 
@@ -60,14 +60,14 @@ export class PaymentDialogComponent implements OnInit {
         this.targetAddress = this.form.get('target_address') as FormControl;
         this.amount = this.form.get('amount') as FormControl;
 
-        this.tokens = this.raidenService.getTokens(true).pipe(
+        this.tokens$ = this.raidenService.getTokens(true).pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
             filter((token: UserToken) => !!token.connected),
             toArray(),
             share()
         );
 
-        this.filteredOptions = this.form.controls['token'].valueChanges.pipe(
+        this.filteredOptions$ = this.form.controls['token'].valueChanges.pipe(
             startWith(''),
             flatMap(value => this._filter(value))
         );
@@ -125,11 +125,11 @@ export class PaymentDialogComponent implements OnInit {
 
     private _filter(value?: string): Observable<UserToken[]> {
         if (!value || typeof value !== 'string') {
-            return this.tokens;
+            return this.tokens$;
         }
 
         const keyword = value.toLowerCase();
-        return this.tokens.pipe(
+        return this.tokens$.pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
             filter((token: UserToken) => {
                 const name = token.name.toLocaleLowerCase();

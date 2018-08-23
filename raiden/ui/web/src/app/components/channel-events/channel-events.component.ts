@@ -12,16 +12,16 @@ import { ChannelInformation, EventsParam } from '../../models/event';
 })
 export class ChannelEventsComponent implements OnInit {
 
-    public eventsParam: Observable<EventsParam>;
-    public channelIdentifier: Observable<number>;
+    public eventsParam$: Observable<EventsParam>;
+    public channelIdentifier$: Observable<number>;
 
     constructor(private route: ActivatedRoute) {
     }
 
     ngOnInit() {
         const channelIdentifierOperator = map((params: ParamMap) => parseInt(params.get('channel_identifier'), 10));
-        this.channelIdentifier = this.route.paramMap.pipe(channelIdentifierOperator);
-        this.eventsParam = this.route.queryParamMap.pipe(
+        this.channelIdentifier$ = this.route.paramMap.pipe(channelIdentifierOperator);
+        this.eventsParam$ = this.route.queryParamMap.pipe(
             map((params: ParamMap) => {
                 const channelInformation: ChannelInformation = {
                     token_address: params.get('token_address'),
@@ -31,8 +31,7 @@ export class ChannelEventsComponent implements OnInit {
                 return {
                     channel: channelInformation
                 };
-            }),
-            tap((eventsParam: EventsParam) => console.log(eventsParam))
+            })
         );
     }
 

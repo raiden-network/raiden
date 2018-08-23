@@ -11,15 +11,15 @@ import { EventsParam } from '../../models/event';
 })
 export class TokenEventsComponent implements OnInit {
 
-    public eventsParam: Observable<EventsParam>;
-    public tokenAddress: Observable<String>;
+    public eventsParam$: Observable<EventsParam>;
+    public tokenAddress$: Observable<String>;
 
     constructor(private route: ActivatedRoute) {
     }
 
     ngOnInit() {
-        this.tokenAddress = this.route.paramMap.pipe(map((params: ParamMap) => params.get('address')));
-        this.eventsParam = this.route.paramMap.pipe(
+        this.tokenAddress$ = this.route.paramMap.pipe(map((params: ParamMap) => params.get('address')));
+        this.eventsParam$ = this.route.paramMap.pipe(
             map((params: ParamMap) => ({
                 token: params.get('address')
             }), tap((events: EventsParam) => console.log(events)))
