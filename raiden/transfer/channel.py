@@ -394,14 +394,14 @@ def is_valid_lockedtransfer(
 
 
 def is_valid_lockexpired(
-        mediated_transfer: ReceiveLockExpired,
+        state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
-        message_name: str,
-        received_balance_proof: BalanceProofSignedState,
-        lock: HashTimeLockState,
 ) -> MerkletreeOrError:
+    message_name = 'LockExpired'
+    received_balance_proof = state_change.transfer
+    lock = channel_state.partner_state.secrethashes_to_lockedlocks[state_change.secrethash]
 
     current_balance_proof = get_current_balanceproof(sender_state)
     merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
@@ -1828,12 +1828,17 @@ def handle_receive_lock_expired(
         channel_state.our_state,
     )
 
+    events = list()
     if is_valid:
-        secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
-        if state_change.secrethash in secrethashes_to_lockedlocks:
-            del secrethashes_to_lockedlocks[state_change.secrethash]
+        delete_secrethash_endstate(channel_state.partner_state, state_change.secrethash)
+        send_processed = SendProcessed(
+            recipient=state_change.transfer.balance_proof.sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=state_change.transfer.message_identifier,
+        )
+        events = [send_processed]
 
-    return TransitionResult(channel_state, [])
+    return TransitionResult(channel_state, events)
 
 
 def handle_receive_lockedtransfer(
@@ -2140,11 +2145,6 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         iteration = handle_channel_batch_unlock(
-            channel_state,
-            state_change,
-        )
-    elif type(state_change) == ReceiveLockExpired:
-        iteration = handle_receive_lock_expired(
             channel_state,
             state_change,
         )

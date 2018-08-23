@@ -16,6 +16,7 @@ from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_Q
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
+    ReceiveLockExpired,
     ReceiveSecretReveal,
 )
 from raiden.transfer.state import (
@@ -262,7 +263,7 @@ def handle_block(
         transfer.lock.secrethash,
     )
 
-    secrethash = transfer.secrethash
+    secrethash = transfer.lock.secrethash
     if (not secret_known and
             block_number > transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK):
         # Lock has expired, cleanup...
@@ -290,6 +291,19 @@ def handle_block(
 
     iteration = TransitionResult(target_state, events)
     return iteration
+
+
+def handle_lock_expired(
+        target_state: TargetTransferState,
+        state_change: ReceiveLockExpired,
+        channel_state: NettingChannelState,
+):
+    result = channel.handle_receive_lock_expired(channel_state, state_change)
+
+    return TransitionResult(
+        None,
+        result.events,
+    )
 
 
 def state_transition(
@@ -335,6 +349,12 @@ def state_transition(
         )
     elif type(state_change) == ReceiveUnlock:
         iteration = handle_unlock(
+            target_state,
+            state_change,
+            channel_state,
+        )
+    elif type(state_change) == ReceiveLockExpired:
+        iteration = handle_lock_expired(
             target_state,
             state_change,
             channel_state,
