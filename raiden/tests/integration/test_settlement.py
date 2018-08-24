@@ -187,9 +187,11 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
+    # Wait for the expiration to trigger with some additional buffer
+    # time for processing (+2) blocks.
     waiting.wait_for_block(
         alice_app.raiden,
-        lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+        lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 2,
         DEFAULT_RETRY_TIMEOUT,
     )
 
