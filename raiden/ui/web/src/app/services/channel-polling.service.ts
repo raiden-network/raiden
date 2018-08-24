@@ -102,9 +102,10 @@ export class ChannelPollingService {
         const channelId = channel.channel_identifier;
         const partnerAddress = channel.partner_address;
         const balance = amountToDecimal(amount, channel.userToken.decimals);
+        const formattedBalance = balance.toFixed(channel.userToken.decimals);
         this.sharedService.info({
             title: 'Balance Update',
-            description: `The balance of channel ${channelId} with ${partnerAddress} was updated by ${balance} ${symbol} tokens`
+            description: `The balance of channel ${channelId} with ${partnerAddress} was updated by ${formattedBalance} ${symbol} tokens`
         });
     }
 }

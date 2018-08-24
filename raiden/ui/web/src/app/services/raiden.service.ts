@@ -147,9 +147,10 @@ export class RaidenService {
         ).pipe(
             tap((response) => {
                 if ('target_address' in response && 'identifier' in response) {
+                    const formattedAmount = amount.toFixed(decimals).toString();
                     this.sharedService.success({
                         title: 'Transfer successful',
-                        description: `A payment of ${amount} was successfully sent to the partner ${targetAddress}`
+                        description: `A payment of ${formattedAmount} was successfully sent to the partner ${targetAddress}`
                     });
                 } else {
                     this.sharedService.error({
@@ -180,9 +181,10 @@ export class RaidenService {
                 const action = 'Deposit';
                 if ('balance' in response && 'state' in response) {
                     const balance = amountToDecimal(response.balance, decimals);
+                    const formattedBalance = balance.toFixed(decimals).toString();
                     this.sharedService.info({
                         title: action,
-                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${balance}`
+                        description: `The channel ${response.channel_identifier} has been modified with a deposit of ${formattedBalance}`
                     });
                 } else {
                     this.sharedService.error({
