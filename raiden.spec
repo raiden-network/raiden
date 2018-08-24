@@ -63,7 +63,7 @@ def Entrypoint(dist, group, name, scripts=None, pathex=None, hiddenimports=None,
 # We don't need Tk and friends
 sys.modules['FixTk'] = None
 
-executable_name = 'raiden-{}-{}'.format(
+executable_name = 'raiden-v{}-{}'.format(
     get_system_spec()['raiden'],
     'macOS' if platform.system() == 'Darwin' else platform.system().lower()
 )

@@ -198,6 +198,8 @@ jobs:
         - pip uninstall -y pdbpp
         - pyinstaller --noconfirm --clean raiden.spec
         - cd dist && zip -9 -r raiden-${TRAVIS_TAG}-macOS.zip raiden*
+        # "Fix" Travis issues #6307 #6522 #9486
+        - shell_session_update() { :; };
       deploy:
         - provider: releases
           api_key:
