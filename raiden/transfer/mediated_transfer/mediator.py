@@ -31,7 +31,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     NettingChannelState,
     message_identifier_from_prng,
-    CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_OPENED,
 )
 from raiden.transfer.state_change import (
@@ -116,34 +115,6 @@ def is_channel_usable(candidate_channel_state, transfer_amount, lock_timeout):
         pending_transfers < MAXIMUM_PENDING_TRANSFERS and
         transfer_amount <= distributable and
         channel.is_valid_amount(candidate_channel_state.our_state, transfer_amount)
-    )
-
-
-def is_channel_close_needed(payer_channel, transfer_pair, block_number):
-    """ True if this node needs to close the channel to unlock on-chain.
-    Only close the channel to unlock on chain if the corresponding payee node
-    has received, this prevents attacks were the payee node burns it's payment
-    to force a close with the payer channel.
-    """
-    payee_received = transfer_pair.payee_state in STATE_TRANSFER_PAID
-    payer_payed = transfer_pair.payer_state in STATE_TRANSFER_PAID
-
-    payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
-    already_closing = channel.get_status(payer_channel) == CHANNEL_STATE_CLOSING
-
-    safe_to_wait, _ = is_safe_to_wait(
-        transfer_pair.payer_transfer.lock.expiration,
-        payer_channel.reveal_timeout,
-        block_number,
-    )
-
-    return (
-        payee_received and
-        not payer_payed and
-
-        payer_channel_open and
-        not already_closing and
-        not safe_to_wait
     )
 
 
@@ -639,24 +610,6 @@ def events_for_balanceproof(
             )
             events.append(unlock_lock)
             events.append(unlock_success)
-
-    return events
-
-
-def events_for_close(channelidentifiers_to_channels, transfers_pair, block_number):
-    """ Close the channels that are in the unsafe region prior to an on-chain
-    unlock.
-    """
-    events = list()
-    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
-
-    for pair in reversed(pending_transfers_pairs):
-        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
-
-        if is_channel_close_needed(payer_channel, pair, block_number):
-            pair.payer_state = 'payer_waiting_close'
-            close_events = channel.events_for_close(payer_channel, block_number)
-            events.extend(close_events)
 
     return events
 

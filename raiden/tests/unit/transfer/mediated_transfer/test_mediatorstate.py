@@ -29,7 +29,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
     message_identifier_from_prng,
-    TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import Block
 from raiden.transfer.events import ContractSendSecretReveal
@@ -207,136 +206,57 @@ def test_is_safe_to_wait():
     assert not is_safe, 'this is expiration must not be safe'
 
 
-def test_is_channel_close_needed_unpaid():
-    """ Don't close the channel if the payee transfer is not paid. """
-    amount = 10
-    expiration = 10
-    reveal_timeout = 5
-    safe_block = expiration - reveal_timeout - 1
-    unsafe_block = expiration - reveal_timeout
-    channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
+def test_get_timeout_blocks():
+    settle_timeout = 30
+    block_number = 5
+    not_closed = None
 
-    # even if the secret is known by the payee, the transfer is paid only if a
-    # unlock on-chain happened or if the mediator has sent a balance proof
-    for unpaid_state in ('payee_pending', 'payee_secret_revealed'):
-        unpaid_pair = make_transfer_pair(
-            payee=HOP2,
-            initiator=HOP3,
-            target=HOP4,
-            amount=amount,
-            expiration=expiration,
-            reveal_timeout=reveal_timeout,
-            secret=UNIT_SECRET,
-        )
-
-        unpaid_pair.payer_state = unpaid_state
-        assert mediator.is_channel_close_needed(channel_state, unpaid_pair, safe_block) is False
-        assert mediator.is_channel_close_needed(channel_state, unpaid_pair, unsafe_block) is False
-
-
-def test_is_channel_close_needed_paid():
-    """ Close the channel if the payee transfer is paid but the payer has not paid. """
-    amount = 10
-    expiration = 10
-    reveal_timeout = 5
-    safe_block = expiration - reveal_timeout - 1
-    unsafe_block = expiration - reveal_timeout
-    channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
-
-    for paid_state in ('payee_contract_unlock', 'payee_balance_proof'):
-        paid_pair = make_transfer_pair(
-            payee=HOP2,
-            initiator=HOP3,
-            target=HOP4,
-            amount=amount,
-            expiration=expiration,
-            reveal_timeout=reveal_timeout,
-            secret=UNIT_SECRET,
-        )
-
-        paid_pair.payee_state = paid_state
-        assert mediator.is_channel_close_needed(channel_state, paid_pair, safe_block) is False
-        assert mediator.is_channel_close_needed(channel_state, paid_pair, unsafe_block) is True
-
-
-def test_is_channel_close_needed_channel_closing():
-    """ If the channel is already closing the answer is always no. """
-    amount = 10
-    expiration = 10
-    reveal_timeout = 5
-    safe_block = expiration - reveal_timeout - 1
-    unsafe_block = expiration - reveal_timeout
-
-    channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
-    channel_state.close_transaction = TransactionExecutionStatus(5, None, None)
-
-    for state in MediationPairState.valid_payee_states:
-        pair = make_transfer_pair(
-            payee=HOP2,
-            initiator=HOP3,
-            target=HOP4,
-            amount=amount,
-            expiration=expiration,
-            reveal_timeout=reveal_timeout,
-            secret=UNIT_SECRET,
-        )
-
-        pair.payee_state = state
-        assert mediator.is_channel_close_needed(channel_state, pair, safe_block) is False
-        assert mediator.is_channel_close_needed(channel_state, pair, unsafe_block) is False
-
-
-def test_is_channel_close_needed_channel_closed():
-    """ If the channel is already closed the answer is always no. """
-    amount = 10
-    expiration = 10
-    reveal_timeout = 5
-    safe_block = expiration - reveal_timeout - 1
-    unsafe_block = expiration - reveal_timeout
-    channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
-    channel_state.close_transaction = TransactionExecutionStatus(
-        None,
-        5,
-        TransactionExecutionStatus.SUCCESS,
+    early_expire = 10
+    early_block = mediator.get_timeout_blocks(
+        settle_timeout,
+        not_closed,
+        early_expire,
+        block_number,
     )
+    assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
 
-    for state in MediationPairState.valid_payee_states:
-        pair = make_transfer_pair(
-            payee=HOP2,
-            initiator=HOP3,
-            target=HOP4,
-            amount=amount,
-            expiration=expiration,
-            reveal_timeout=reveal_timeout,
-            secret=UNIT_SECRET,
-        )
-
-        pair.payee_state = state
-        assert mediator.is_channel_close_needed(channel_state, pair, safe_block) is False
-        assert mediator.is_channel_close_needed(channel_state, pair, unsafe_block) is False
-
-
-def test_is_channel_close_needed_closed():
-    amount = 10
-    expiration = 10
-    reveal_timeout = 5
-    safe_block = expiration - reveal_timeout - 1
-    unsafe_block = expiration - reveal_timeout
-    channel_state = factories.make_channel(reveal_timeout=reveal_timeout)
-
-    paid_pair = make_transfer_pair(
-        payee=HOP2,
-        initiator=HOP3,
-        target=HOP4,
-        amount=amount,
-        expiration=expiration,
-        reveal_timeout=reveal_timeout,
-        secret=UNIT_SECRET,
+    equal_expire = 30
+    equal_block = mediator.get_timeout_blocks(
+        settle_timeout,
+        not_closed,
+        equal_expire,
+        block_number,
     )
-    paid_pair.payee_state = 'payee_balance_proof'
+    assert equal_block == 25 - mediator.TRANSIT_BLOCKS
 
-    assert mediator.is_channel_close_needed(channel_state, paid_pair, safe_block) is False
-    assert mediator.is_channel_close_needed(channel_state, paid_pair, unsafe_block) is True
+    # This is the fix for test_lock_timeout_lower_than_previous_channel_settlement_period
+    large_expire = 70
+    large_block = mediator.get_timeout_blocks(
+        settle_timeout,
+        not_closed,
+        large_expire,
+        block_number,
+    )
+    assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
+
+    closed_block_number = 2
+    large_block = mediator.get_timeout_blocks(
+        settle_timeout,
+        closed_block_number,
+        large_expire,
+        block_number,
+    )
+    assert large_block == 27 - mediator.TRANSIT_BLOCKS, 'must use the close block'
+
+    # the computed timeout may be negative, in which case the calling code must /not/ use it
+    negative_block_number = large_expire
+    negative_block = mediator.get_timeout_blocks(
+        settle_timeout,
+        not_closed,
+        large_expire,
+        negative_block_number,
+    )
+    assert negative_block == -mediator.TRANSIT_BLOCKS
 
 
 def test_next_route_amount():
