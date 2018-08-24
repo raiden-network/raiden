@@ -277,7 +277,6 @@ class MatrixTransport:
         except gevent.Timeout as er:
             self.log.warning('Matrix stop timeout', _error=er)
         finally:
-            self._client.greenlets.clear()
             self._client.logout()
 
     @property
