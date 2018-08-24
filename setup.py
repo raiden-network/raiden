@@ -84,11 +84,6 @@ history = ''
 
 install_requires_replacements = {
     'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
-    (
-        'git+https://github.com/raiden-network/raiden-libs.git'
-        '@3b0c83f99c6f5994d3db74fe78ded0feb13f1350'
-        '#egg=raiden-libs'
-    ): 'raiden-libs',
 }
 
 install_requires = list(set(
@@ -98,7 +93,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.5.1'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
+version = '0.6.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 
 setup(
     name='raiden',

@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.6.0 <2018-08-24>`
 * :feature:`2034` Update WebUI's design
 * :feature:`2192` Show notification on the WebUI when transfer is received or when channel is opened
 * :feature:`2134` Database is now versioned and the DB directory path now uses that version
@@ -12,7 +13,6 @@ Changelog
 * :bug:`2197` WebUI now handles token decimals
 
 * :release:`0.5.1 <2018-08-17>`
-
 * :feature:`1898` Improve the event formatting in the REST API
 * :feature:`439` Limit the number of pending transfers per channel.
 * :bug:`2164` Update echo node to work with the new endpoint for channel history
