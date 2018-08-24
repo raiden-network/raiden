@@ -303,7 +303,7 @@ def get_channelstate_by_token_network_and_partner(
 def get_channelstate_by_token_network_identifier(
         chain_state: ChainState,
         token_network_id: typing.Address,
-        channel_id: typing.Address,
+        channel_id: typing.ChannelID,
 ) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
@@ -322,7 +322,7 @@ def get_channelstate_by_id(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
-        channel_id: typing.Address,
+        channel_id: typing.ChannelID,
 ) -> typing.Optional[NettingChannelState]:
     token_network = get_token_network_by_token_address(
         chain_state,

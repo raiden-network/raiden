@@ -20,7 +20,7 @@ from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import PaymentChannel, SecretRegistry
+from raiden.network.proxies import SecretRegistry
 from raiden.utils import pex, typing
 from raiden.utils.filters import (
     decode_event,
@@ -388,31 +388,13 @@ class BlockchainEvents:
             token_network_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        channel_new_filter = token_network_proxy.channelnew_filter(from_block=from_block)
+        _filter = token_network_proxy.all_events_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
 
         self.add_event_listener(
             'TokenNetwork {}'.format(pex(token_network_address)),
-            channel_new_filter,
+            _filter,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        )
-
-    def add_payment_channel_listener(
-        self,
-        payment_channel_proxy: PaymentChannel,
-        from_block: typing.BlockSpecification = 'latest',
-    ):
-        payment_channel_filter = payment_channel_proxy.all_events_filter(
-            from_block=from_block,
-        )
-        channel_identifier = payment_channel_proxy.channel_identifier
-        token_network_id = payment_channel_proxy.token_network.address
-        token_network_abi = CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK)
-
-        self.add_event_listener(
-            f'PaymentChannel event {channel_identifier} {token_network_id}',
-            payment_channel_filter,
-            token_network_abi,
         )
 
     def add_secret_registry_listener(

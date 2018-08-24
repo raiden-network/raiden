@@ -98,16 +98,6 @@ def handle_channel_new(raiden, event, current_block_number):
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
-        # Start the listener *after* the channel is registered, to avoid None
-        # exceptions (and not applying the event state change).
-        #
-        # TODO: install the filter on the same block or previous block in which
-        # the channel state was queried
-        raiden.blockchain_events.add_payment_channel_listener(
-            channel_proxy,
-            from_block=data['blockNumber'] + 1,
-        )
-
     # Raiden node is not participant of channel
     else:
         new_route = ContractReceiveRouteNew(

@@ -444,7 +444,6 @@ class RaidenService:
     ):
         with self.event_poll_lock:
             node_state = views.state_from_raiden(self)
-            channels = views.list_all_channelstate(node_state)
             token_networks = views.get_token_network_identifiers(
                 node_state,
                 token_network_registry_proxy.address,
@@ -463,16 +462,6 @@ class RaidenService:
                 token_network_proxy = self.chain.token_network(token_network)
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy,
-                    from_block,
-                )
-
-            for channel_state in channels:
-                channel_proxy = self.chain.payment_channel(
-                    channel_state.token_network_identifier,
-                    channel_state.identifier,
-                )
-                self.blockchain_events.add_payment_channel_listener(
-                    channel_proxy,
                     from_block,
                 )
 

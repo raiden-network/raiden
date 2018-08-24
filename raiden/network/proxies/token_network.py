@@ -5,7 +5,6 @@ from typing import List, NamedTuple, Optional
 import structlog
 from eth_utils import (
     encode_hex,
-    event_abi_to_log_topic,
     is_binary_address,
     to_canonical_address,
     to_checksum_address,
@@ -15,7 +14,6 @@ from gevent.lock import RLock, Semaphore
 from raiden_contracts.constants import (
     ChannelState,
     CONTRACT_TOKEN_NETWORK,
-    ChannelEvent,
     ChannelInfoIndex,
     ParticipantInfoIndex,
 )
@@ -966,25 +964,6 @@ class TokenNetwork:
             from_block=from_block,
             to_block=to_block,
         )
-
-    def channelnew_filter(
-            self,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
-    ) -> Filter:
-        """ Install a new filter for ChannelNew events.
-
-        Args:
-            from_block: Create filter starting from this block number (default: 0).
-            to_block: Create filter stopping at this block number (default: 'latest').
-
-        Return:
-            The filter instance.
-        """
-        event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.OPENED)
-        event_id = encode_hex(event_abi_to_log_topic(event_abi))
-        topics = [event_id]
-        return self.events_filter(topics, from_block, to_block)
 
     def all_events_filter(
             self,
