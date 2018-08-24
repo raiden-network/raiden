@@ -49,6 +49,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
+    ContractReceiveRouteClosed,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
     ReceiveDelivered,
@@ -788,6 +789,11 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             chain_state,
             state_change,
         )
+    elif type(state_change) == ContractReceiveRouteClosed:
+        iteration = handle_token_network_action(
+            chain_state,
+            state_change,
+        )
     elif type(state_change) == ContractReceiveSecretReveal:
         iteration = handle_secret_reveal(
             chain_state,
@@ -838,6 +844,8 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             chain_state,
             state_change,
         )
+    else:
+        raise ValueError(f'Unknown state change: {state_change!r}')
 
     return iteration
 
