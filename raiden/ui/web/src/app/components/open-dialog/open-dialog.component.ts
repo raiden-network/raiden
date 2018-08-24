@@ -2,10 +2,10 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { BigNumber } from 'bignumber.js';
-import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
+import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenService } from '../../services/raiden.service';
 
 export class OpenDialogPayload {
@@ -45,6 +45,7 @@ export class OpenDialogComponent implements OnInit {
         @Inject(MAT_DIALOG_DATA) public data: OpenDialogPayload,
         public dialogRef: MatDialogRef<OpenDialogComponent>,
         public raidenService: RaidenService,
+        private identiconCacheService: IdenticonCacheService,
         private fb: FormBuilder,
     ) {
     }
@@ -128,7 +129,7 @@ export class OpenDialogComponent implements OnInit {
         if (!address) {
             return '';
         }
-        return makeBlockie(address);
+        return this.identiconCacheService.getIdenticon(address);
     }
 
     tokenSelected(value: UserToken) {

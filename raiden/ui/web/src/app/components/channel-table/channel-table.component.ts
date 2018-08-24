@@ -1,13 +1,13 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MatDialog, MatPaginator, PageEvent } from '@angular/material';
-import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { EMPTY, Subscription } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
 import { flatMap } from 'rxjs/operators';
 import { Channel } from '../../models/channel';
 import { SortingData } from '../../models/sorting.data';
 import { ChannelPollingService } from '../../services/channel-polling.service';
+import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { StringUtils } from '../../utils/string.utils';
@@ -89,7 +89,8 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         public dialog: MatDialog,
         private raidenConfig: RaidenConfig,
         private raidenService: RaidenService,
-        private channelPollingService: ChannelPollingService
+        private channelPollingService: ChannelPollingService,
+        private identiconCacheService: IdenticonCacheService
     ) {
     }
 
@@ -137,7 +138,7 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
 
     // noinspection JSMethodCanBeStatic
     identicon(channel: Channel): string {
-        return makeBlockie(channel.partner_address);
+        return this.identiconCacheService.getIdenticon(channel.partner_address);
     }
 
     public onPay(channel: Channel) {

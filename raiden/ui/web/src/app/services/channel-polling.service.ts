@@ -41,7 +41,6 @@ export class ChannelPollingService {
                 this.checkForNewChannels(oldChannels, newChannels);
                 return newChannels;
             }, []),
-            tap(console.log),
             share()
         );
     }
