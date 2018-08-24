@@ -354,13 +354,11 @@ class RaidenService:
     def handle_state_change(self, state_change):
         log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
 
-        if block_number is None:
-            block_number = self.get_block_number()
-
         # Take a snapshot every SNAPSHOT_BLOCK_COUNT
         # TODO: Gather more data about storage requirements
         # and update the value to specify how often we need
         # capturing a snapshot should take place
+        block_number = self.get_block_number()
         new_snapshot_group = block_number // SNAPSHOT_BLOCK_COUNT
         if new_snapshot_group > self.snapshot_group:
             log.debug(f'Storing snapshot at block: {block_number}')
