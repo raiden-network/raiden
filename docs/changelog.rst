@@ -2,8 +2,13 @@
 Changelog
 =========
 
-* :feature:`2034` Update WebUI's design.
+* :feature:`2034` Update WebUI's design
+* :feature:`2192` Show notification on the WebUI when transfer is received or when channel is opened
+* :feature:`2134` Database is now versioned and the DB directory path now uses that version
+* :bug:`2198` Fix building of the WebUI in the linux bundle.
 * :bug:`2176` Expose total_deposit in the Rest API and fix depositing in the WebUI
+* :bug:`2233` Fix MatrixTransport exception for invalid user displayname
+* :bug:`2197` WebUI now handles token decimals
 
 * :release:`0.5.1 <2018-08-17>`
 
