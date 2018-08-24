@@ -308,18 +308,14 @@ def test_api_channel_events(raiden_chain, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-@pytest.mark.xfail
 def test_insufficient_funds(raiden_network, token_addresses, deposit):
-    """Test transfer on a channel with insufficient funds. It is expected to
-    fail, as at the moment RaidenAPI is mocked and will always succeed."""
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    with pytest.raises(InsufficientFunds):
-        RaidenAPI(app0.raiden).transfer(
-            app0.raiden.default_registry.address,
-            token_address,
-            deposit + 1,
-            target=app1.raiden.address,
-            timeout=10,
-        )
+    result = RaidenAPI(app0.raiden).transfer(
+        app0.raiden.default_registry.address,
+        token_address,
+        deposit + 1,
+        target=app1.raiden.address,
+    )
+    assert not result
