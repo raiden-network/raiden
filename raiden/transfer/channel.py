@@ -1559,6 +1559,11 @@ def delete_secrethash_endstate(
         secrethash: typing.SecretHash,
 ):
     if is_lock_locked(end_state, secrethash):
+        lockhash = end_state.secrethashes_to_lockedlocks[secrethash].lockhash
+        end_state.merkletree = compute_merkletree_without(
+            end_state.merkletree,
+            lockhash,
+        )
         del end_state.secrethashes_to_lockedlocks[secrethash]
 
 
