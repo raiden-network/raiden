@@ -4,7 +4,6 @@ from collections import defaultdict
 from enum import Enum
 from json import JSONDecodeError
 from binascii import Error as DecodeError
-from operator import itemgetter
 from random import Random
 from urllib.parse import urlparse
 from eth_utils import (
@@ -18,11 +17,10 @@ from eth_utils import (
 
 import gevent
 import structlog
-from gevent.event import AsyncResult
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 from cachetools import cachedmethod
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
 from raiden import messages
@@ -47,8 +45,8 @@ from raiden.messages import (
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
-from raiden.transfer import events as transfer_events
-from raiden.transfer.architecture import Event
+from raiden.transfer import events as transfer_events, views
+from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -169,7 +167,6 @@ class MatrixTransport:
 
         self._discovery_room: Room = None
 
-        self._messageids_to_asyncresult: Dict[Address, AsyncResult] = dict()
         # partner need to be in this dict to be listened on
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_presence: Dict[Address, UserPresence] = dict()
@@ -188,7 +185,7 @@ class MatrixTransport:
     def start(
         self,
         raiden_service: RaidenService,
-        queueids_to_queues: Dict[QueueIdentifier, List[Event]],
+        initial_queues: Dict[QueueIdentifier, List[SendMessageEvent]],
     ):
         self._running = True
         self._raiden_service = raiden_service
@@ -202,8 +199,8 @@ class MatrixTransport:
 
         # TODO: Add greenlet that regularly refreshes our presence state
         self._client.set_presence_state(UserPresence.ONLINE.value)
+        self._send_queued_messages()  # uses property instead of initial_queues
 
-        gevent.spawn_later(1, self._send_queued_messages, queueids_to_queues)
         self.log.info('TRANSPORT STARTED')
 
     def start_health_check(self, node_address):
@@ -239,13 +236,22 @@ class MatrixTransport:
     ):
         if not self._running:
             return
+
+        message_id = message.message_identifier
         receiver_address = queue_identifier.recipient
-        self.log.info(
-            'SEND ASYNC',
-            receiver_address=to_normalized_address(receiver_address),
-            message=message,
-            queue_identifier=queue_identifier,
+
+        assert queue_identifier in self._queueids_to_queues
+        message_in_queue = any(
+            message_id == event.message_identifier
+            for event in self._queueids_to_queues[queue_identifier]
         )
+        if not message_in_queue:
+            self.log.warning(
+                'Message not in queue',
+                message=message,
+                queue=queue_identifier,
+            )
+
         if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
@@ -255,34 +261,35 @@ class MatrixTransport:
                 'Do not use send_async for {} messages'.format(message.__class__.__name__),
             )
 
-        message_id = message.message_identifier
-        async_result = AsyncResult()
+        self.log.info(
+            'SEND ASYNC',
+            receiver_address=pex(receiver_address),
+            message=message,
+            queue_identifier=queue_identifier,
+        )
+
         if isinstance(message, Processed):
-            async_result.set(True)  # processed messages shouldn't get a Delivered reply
-            self._send_immediate(receiver_address, json.dumps(message.to_dict()))
+            self._send_immediate(queue_identifier, message)
         else:
-            self._messageids_to_asyncresult[message_id] = async_result
-            self._send_with_retry(receiver_address, async_result, json.dumps(message.to_dict()))
+            self._send_with_retry(queue_identifier, message)
 
     def stop_and_wait(self):
         if not self._running:
             return
         self._running = False
 
-        # Set all the pending results to False, this will also
-        # cause pending retries to be aborted
-        for async_result in self._messageids_to_asyncresult.values():
-            async_result.set(False)
+        # this should simply raise GrenletExit on the retry's gevent.sleep
+        gevent.killall(self.greenlets)
+        self.greenlets.clear()
 
-        try:
-            self._client.set_presence_state(UserPresence.OFFLINE.value)
-            with gevent.Timeout(self._logout_timeout, 'Logging out despite unjoined greenlets.'):
-                gevent.wait(self.greenlets, timeout=self._logout_timeout / 2)
-                self._client.stop_listener_thread()
-        except gevent.Timeout as er:
-            self.log.warning('Matrix stop timeout', _error=er)
-        finally:
-            self._client.logout()
+        self._client.set_presence_state(UserPresence.OFFLINE.value)
+        self._client.stop_listener_thread()
+        self._client.logout()
+
+    @property
+    def _queueids_to_queues(self) -> Dict[QueueIdentifier, List[SendMessageEvent]]:
+        chain_state = views.state_from_raiden(self._raiden_service)
+        return views.get_all_messagequeues(chain_state)
 
     @property
     def _user_id(self) -> Optional[str]:
@@ -490,9 +497,7 @@ class MatrixTransport:
                 )
                 return
 
-        if isinstance(message, Delivered):
-            self._receive_delivered(message)
-        elif isinstance(message, Ping):
+        if isinstance(message, Ping):
             self.log.warning(
                 'Not required Ping received',
                 message=data,
@@ -506,7 +511,10 @@ class MatrixTransport:
                     peer_address=peer_address,
                 )
                 return
-            self._receive_message(message)
+            if isinstance(message, Delivered):
+                self._receive_delivered(message)
+            else:
+                self._receive_message(message)
         else:
             self.log.error(
                 'Invalid message',
@@ -514,31 +522,31 @@ class MatrixTransport:
             )
 
     def _receive_delivered(self, delivered: Delivered):
-        # FIXME: The signature doesn't seem to be verified - check in UDPTransport as well
+        # FIXME: check if UDPTransport also checks Delivered sender and message presence
+        # checks there's a respective message on sender's queue
+        for queue_identifier, events in self._queueids_to_queues.items():
+            if delivered.sender != queue_identifier.recipient:
+                continue
+            if any(delivered.sender == event.recipient for event in events):
+                break
+        else:
+            self.log.debug(
+                'DELIVERED MESSAGE UNKNOWN',
+                sender=pex(delivered.sender),
+                message_identifier=delivered.delivered_message_identifier,
+                message=delivered,
+            )
+            return
+
         self._raiden_service.handle_state_change(
             ReceiveDelivered(delivered.delivered_message_identifier),
         )
 
-        async_result = self._messageids_to_asyncresult.pop(
-            delivered.delivered_message_identifier,
-            None,
+        self.log.debug(
+            'DELIVERED MESSAGE RECEIVED',
+            sender=pex(delivered.sender),
+            message=delivered,
         )
-
-        if async_result is not None:
-            async_result.set(True)
-            self.log.debug(
-                'DELIVERED MESSAGE RECEIVED',
-                node=pex(self._raiden_service.address),
-                receiver=pex(delivered.sender),
-                message_identifier=delivered.delivered_message_identifier,
-            )
-
-        else:
-            self.log.debug(
-                'DELIVERED MESSAGE UNKNOWN',
-                node=pex(self._raiden_service.address),
-                message_identifier=delivered.delivered_message_identifier,
-            )
 
     def _receive_message(self, message):
         self.log.info(
@@ -557,17 +565,14 @@ class MatrixTransport:
                 #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
                 delivered_message = Delivered(message.message_identifier)
                 self._raiden_service.sign(delivered_message)
-                self._send_immediate(message.sender, json.dumps(delivered_message.to_dict()))
+                self._send_raw(message.sender, json.dumps(delivered_message.to_dict()))
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)
             return
 
-    def _send_queued_messages(
-        self,
-        queueids_to_queues: Dict[QueueIdentifier, List[Event]],
-    ):
-        for queue_identifier, events in queueids_to_queues.items():
+    def _send_queued_messages(self):
+        for queue_identifier, events in self._queueids_to_queues.items():
             node_address = self._raiden_service.address
             for event in events:
                 message = _event_to_message(event, node_address)
@@ -577,28 +582,55 @@ class MatrixTransport:
 
     def _send_with_retry(
         self,
-        receiver_address: Address,
-        async_result: AsyncResult,
-        data: str,
+        queue_identifier: QueueIdentifier,
+        message: Message,
     ):
+        data = json.dumps(message.to_dict())
+        message_id = message.message_identifier
+        receiver_address = queue_identifier.recipient
+
         def retry():
-            if not self._running:
-                return
             timeout_generator = udp_utils.timeout_exponential_backoff(
                 self._config['retries_before_backoff'],
                 self._config['retry_interval'],
                 self._config['retry_interval'] * 10,
             )
-            while async_result.value is None:
-                self._send_immediate(receiver_address, data)
-                gevent.sleep(next(timeout_generator))
+            for delay in timeout_generator:
+                self._send_raw(receiver_address, data)
+                gevent.sleep(delay)  # kill should exit here
+                if not self._running:
+                    return
+                # retry while our queue is valid
+                if queue_identifier not in self._queueids_to_queues:
+                    self.log.debug(
+                        'Queue cleaned, stop retrying',
+                        message=message,
+                        queue=queue_identifier,
+                        queueids_to_queues=self._queueids_to_queues,
+                    )
+                    break
+                # retry while the message is in queue
+                # Delivered and Processed messages should eventually remove them
+                message_in_queue = any(
+                    message_id == event.message_identifier
+                    for event in self._queueids_to_queues[queue_identifier]
+                )
+                if not message_in_queue:
+                    break
 
         self.greenlets.append(gevent.spawn(retry))
 
-    def _send_immediate(self, receiver_address, data):
-        # FIXME: Send message to all matching rooms
-        if not self._running:
-            return
+    def _send_immediate(
+        self,
+        queue_identifier: QueueIdentifier,
+        message: Message,
+    ):
+        data = json.dumps(message.to_dict())
+        receiver_address = queue_identifier.recipient
+
+        self._send_raw(receiver_address, data)
+
+    def _send_raw(self, receiver_address, data):
         room = self._get_room_for_address(receiver_address)
         if not room:
             return
