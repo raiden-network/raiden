@@ -63,3 +63,7 @@
 .can-shrink {
     min-width: 20px !important;
 }
+
+.toast-container {
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+}
