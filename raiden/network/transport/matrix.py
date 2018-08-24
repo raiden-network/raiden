@@ -209,9 +209,14 @@ class MatrixTransport:
     def start_health_check(self, node_address):
         if not self._running:
             return
-        node_address_hex = to_normalized_address(node_address)
-        self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
+
         with self._health_semaphore:
+            if node_address in self._address_to_userids:
+                return  # already healthchecked
+
+            node_address_hex = to_normalized_address(node_address)
+            self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
+
             candidates = [
                 self._get_user(user)
                 for user in self._client.search_user_directory(node_address_hex)
@@ -750,9 +755,13 @@ class MatrixTransport:
 
     def _get_user_presence(self, user_id: str) -> UserPresence:
         if user_id not in self._userid_to_presence:
-            self._userid_to_presence[user_id] = UserPresence(
-                self._client.get_user_presence(user_id),
-            )
+            try:
+                presence = UserPresence(
+                    self._client.get_user_presence(user_id),
+                )
+            except MatrixRequestError:
+                presence = UserPresence.UNKNOWN
+            self._userid_to_presence[user_id] = presence
         return self._userid_to_presence[user_id]
 
     def _update_address_presence(self, address):
