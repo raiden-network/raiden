@@ -1544,7 +1544,7 @@ def events_for_expired_lock(
         chain_id=channel_state.chain_id,
     )
 
-    delete_secrethash_endstate(channel_state.our_state, secrethash)
+    delete_secrethash_endstate(channel_state.our_state, secrethash, locked_lock)
 
     return SendLockExpired(
         recipient=channel_state.partner_state.address,
@@ -1557,12 +1557,12 @@ def events_for_expired_lock(
 def delete_secrethash_endstate(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
+        lock: LockedTransferUnsignedState,
 ):
     if is_lock_locked(end_state, secrethash):
-        lockhash = end_state.secrethashes_to_lockedlocks[secrethash].lockhash
         end_state.merkletree = compute_merkletree_without(
             end_state.merkletree,
-            lockhash,
+            lock.lockhash,
         )
         del end_state.secrethashes_to_lockedlocks[secrethash]
 
@@ -1830,7 +1830,13 @@ def handle_receive_lock_expired(
     new_state = channel_state
     events = list()
     if is_valid:
-        delete_secrethash_endstate(channel_state.partner_state, state_change.secrethash)
+        secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
+        locked_lock = secrethashes_to_lockedlocks.get(state_change.secrethash)
+        delete_secrethash_endstate(
+            channel_state.partner_state,
+            state_change.secrethash,
+            locked_lock,
+        )
         new_state = None
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
