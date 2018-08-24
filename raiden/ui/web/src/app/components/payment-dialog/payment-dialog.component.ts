@@ -2,11 +2,11 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { BigNumber } from 'bignumber.js';
-import { default as makeBlockie } from 'ethereum-blockies-base64';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
 import { TokenPipe } from '../../pipes/token.pipe';
+import { IdenticonCacheService } from '../../services/identicon-cache.service';
 
 import { RaidenService } from '../../services/raiden.service';
 
@@ -40,6 +40,7 @@ export class PaymentDialogComponent implements OnInit {
         @Inject(MAT_DIALOG_DATA) public data: PaymentDialogPayload,
         public dialogRef: MatDialogRef<PaymentDialogComponent>,
         private raidenService: RaidenService,
+        private identiconCacheService: IdenticonCacheService,
         private fb: FormBuilder
     ) {
         this.tokenPipe = new TokenPipe();
@@ -120,7 +121,12 @@ export class PaymentDialogComponent implements OnInit {
         if (!address) {
             return '';
         }
-        return makeBlockie(address);
+        return this.identiconCacheService.getIdenticon(address);
+    }
+
+    // noinspection JSMethodCanBeStatic
+    trackByFn(token: UserToken): string {
+        return token.address;
     }
 
     private _filter(value?: string): Observable<UserToken[]> {
