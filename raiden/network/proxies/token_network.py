@@ -794,7 +794,6 @@ class TokenNetwork:
                 channel_identifier,
                 self.node_address,
                 total_withdraw,
-                partner,
                 partner_signature,
                 signature,
             )
