@@ -902,60 +902,6 @@ def test_onchain_secretreveal_must_be_emitted_only_once():
     assert not events
 
 
-def test_events_for_close_hold_for_unpaid_payee():
-    """ If the secret is known but the payee transfer has not been paid the
-    node must not settle on-chain, otherwise the payee can burn tokens to
-    force the mediator to close a channel.
-    """
-
-    amount = 10
-    channelmap, transfers_pair = make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY],
-        amount,
-    )
-    pair = transfers_pair[0]
-
-    for channel_state in channelmap.values():
-        channel.register_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
-
-    # preconditions
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
-
-    # do not generate events if the secret is known AND the payee is not paid
-    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
-    channel_state = channelmap[channel_identifier]
-    first_unsafe_block = pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
-    events = mediator.events_for_close(
-        channelmap,
-        transfers_pair,
-        first_unsafe_block,
-    )
-
-    assert not events
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
-
-    payer_expiration_block = pair.payer_transfer.lock.expiration
-    events = mediator.events_for_close(
-        channelmap,
-        transfers_pair,
-        payer_expiration_block,
-    )
-    assert not events
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
-
-    payer_expiration_block = pair.payer_transfer.lock.expiration
-    events = mediator.events_for_close(
-        channelmap,
-        transfers_pair,
-        payer_expiration_block + 1,
-    )
-    assert not events
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
-
-
 def test_secret_learned():
     amount = UNIT_TRANSFER_AMOUNT
     target = HOP2
