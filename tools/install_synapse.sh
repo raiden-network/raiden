@@ -66,7 +66,11 @@ cp "${BASEDIR}/tools/synapse-config.yaml" "${DESTDIR}/"
 cat > "${DESTDIR}/run_synapse.sh" << EOF
 #!/usr/bin/env bash
 # redirect synapse stderr logs to stdout
-exec 2>&1
+if [[ -n "\${STDOUT_SYNAPSE}" ]]; then
+  exec 2>&1
+else
+  exec &> /dev/null
+fi
 SYNAPSEDIR=\$( dirname "\$0" )
 exec "\${SYNAPSEDIR}/synapse" \
   --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
