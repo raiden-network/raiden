@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.
+* :bug:`2264` Notification fonts are now aligned with the rest of the WebUI.
 
 * :release:`0.6.0 <2018-08-24>`
 * :feature:`2034` Update WebUI's design
