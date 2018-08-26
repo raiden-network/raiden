@@ -206,59 +206,6 @@ def test_is_safe_to_wait():
     assert not is_safe, 'this is expiration must not be safe'
 
 
-def test_get_timeout_blocks():
-    settle_timeout = 30
-    block_number = 5
-    not_closed = None
-
-    early_expire = 10
-    early_block = mediator.get_timeout_blocks(
-        settle_timeout,
-        not_closed,
-        early_expire,
-        block_number,
-    )
-    assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
-
-    equal_expire = 30
-    equal_block = mediator.get_timeout_blocks(
-        settle_timeout,
-        not_closed,
-        equal_expire,
-        block_number,
-    )
-    assert equal_block == 25 - mediator.TRANSIT_BLOCKS
-
-    # This is the fix for test_lock_timeout_lower_than_previous_channel_settlement_period
-    large_expire = 70
-    large_block = mediator.get_timeout_blocks(
-        settle_timeout,
-        not_closed,
-        large_expire,
-        block_number,
-    )
-    assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
-
-    closed_block_number = 2
-    large_block = mediator.get_timeout_blocks(
-        settle_timeout,
-        closed_block_number,
-        large_expire,
-        block_number,
-    )
-    assert large_block == 27 - mediator.TRANSIT_BLOCKS, 'must use the close block'
-
-    # the computed timeout may be negative, in which case the calling code must /not/ use it
-    negative_block_number = large_expire
-    negative_block = mediator.get_timeout_blocks(
-        settle_timeout,
-        not_closed,
-        large_expire,
-        negative_block_number,
-    )
-    assert negative_block == -mediator.TRANSIT_BLOCKS
-
-
 def test_next_route_amount():
     """ Routes that dont have enough available_balance must be ignored. """
     amount = 10
