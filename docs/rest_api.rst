@@ -166,7 +166,7 @@ Querying Information About Channels and Tokens
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 25000000,
               "total_deposit": 35000000,
-              "state": "open",
+              "state": "opened",
               "settle_timeout": 100,
               "reveal_timeout": 30
           }
@@ -200,7 +200,7 @@ Querying Information About Channels and Tokens
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 25000000,
           "total_deposit": 35000000,
-          "state": "open",
+          "state": "opened",
           "settle_timeout": 100,
           "reveal_timeout": 30
       }
