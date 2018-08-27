@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2285` Request user acknowledgement for the experimental software disclaimer.
 * :bug:`2277` Fixes sorting by balance for tokens and channels.
 * :bug:`2278` Fixes leave network button request.
 * :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.
