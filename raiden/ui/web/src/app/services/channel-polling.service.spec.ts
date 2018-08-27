@@ -159,4 +159,12 @@ describe('ChannelPollingService', () => {
         subcription.unsubscribe();
         flush();
     }));
+
+    it('should not throw if a channel is removed from the list', fakeAsync(() => {
+        raidenServiceSpy.and.returnValues(from([[channel1, channel2], [channel1]]));
+        const subcription = pollingService.channels().subscribe();
+        expect(sharedService.info).toHaveBeenCalledTimes(0);
+        subcription.unsubscribe();
+        flush();
+    }));
 });

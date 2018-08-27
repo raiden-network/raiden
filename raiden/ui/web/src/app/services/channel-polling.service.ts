@@ -72,7 +72,7 @@ export class ChannelPollingService {
     private checkForBalanceChanges(oldChannels: Channel[], newChannels: Channel[]) {
         for (const oldChannel of oldChannels) {
             const newChannel = newChannels.find(channel => this.isTheSameChannel(oldChannel, channel));
-            if (newChannel.balance <= oldChannel.balance) {
+            if (!newChannel || newChannel.balance <= oldChannel.balance) {
                 continue;
             }
             this.informAboutBalanceUpdate(newChannel, oldChannel.balance);
