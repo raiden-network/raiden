@@ -72,7 +72,7 @@ export class ChannelPollingService {
     private checkForBalanceChanges(oldChannels: Channel[], newChannels: Channel[]) {
         for (const oldChannel of oldChannels) {
             const newChannel = newChannels.find(channel => this.isTheSameChannel(oldChannel, channel));
-            if (newChannel.balance <= oldChannel.balance) {
+            if (!newChannel || newChannel.balance <= oldChannel.balance) {
                 continue;
             }
             this.informAboutBalanceUpdate(newChannel, oldChannel.balance);
@@ -81,7 +81,7 @@ export class ChannelPollingService {
 
     // noinspection JSMethodCanBeStatic
     private isTheSameChannel(channel1: Channel, channel2: Channel): boolean {
-        return channel1.channel_identifier === channel2.channel_identifier;
+        return channel1.channel_identifier === channel2.channel_identifier && channel1.token_address === channel2.token_address;
     }
 
     private informAboutNewChannel(channel: Channel) {
