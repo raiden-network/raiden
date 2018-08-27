@@ -264,3 +264,10 @@ def configure_logging(
             handler.flush()
             if os.stat(handler.baseFilename).st_size > 0:
                 handler.doRollover()
+
+    # fix logging of py-evm (it uses a custom Trace logger from logging library)
+    try:
+        from eth.utils.logging import setup_trace_logging
+        setup_trace_logging()
+    except ModuleNotFoundError:
+        pass
