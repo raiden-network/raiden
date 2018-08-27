@@ -29,10 +29,10 @@ def test_compute_layers_empty():
 
 def test_compute_layers_invalid_length():
     with pytest.raises(HashLengthNot32):
-        compute_layers(['not32bytes', 'neither'])
+        compute_layers([b'not32bytes', b'neither'])
 
     with pytest.raises(HashLengthNot32):
-        compute_layers([''])
+        compute_layers([b''])
 
 
 def test_compute_layers_duplicated():
