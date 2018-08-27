@@ -5,7 +5,7 @@ from collections import defaultdict
 from functools import total_ordering
 
 import networkx
-from eth_utils import to_checksum_address, to_canonical_address, to_hex, to_bytes
+from eth_utils import to_checksum_address, to_canonical_address
 
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
@@ -166,7 +166,7 @@ class ChainState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'block_number': self.block_number,
@@ -247,7 +247,7 @@ class PaymentNetworkState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
@@ -318,12 +318,12 @@ class TokenNetworkState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
-            'network_graph': self.network_graph.from_dict(),
+            'network_graph': self.network_graph.to_dict(),
             'channelidentifiers_to_channels': {},  # TODO
             'partneraddresses_to_channels': {},  # TODO
         }
@@ -371,7 +371,7 @@ class TokenNetworkGraphState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'network': serialization.serialize_networkx_graph(self.network),
@@ -433,7 +433,7 @@ class PaymentMappingState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'network': None,  # TODO
@@ -490,7 +490,7 @@ class RouteState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'node_address': to_checksum_address(self.node_address),
@@ -614,7 +614,7 @@ class BalanceProofUnsignedState(State):
             locksroot=self.locksroot,
         )
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'nonce': self.nonce,
@@ -633,7 +633,7 @@ class BalanceProofUnsignedState(State):
             nonce=data['nonce'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            locksroot=data['locksroot'],
+            locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=to_canonical_address(data['channel_identifier']),
             chain_id=data['chain_id'],
@@ -784,7 +784,7 @@ class BalanceProofSignedState(State):
             locksroot=self.locksroot,
         )
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'nonce': self.nonce,
@@ -877,12 +877,12 @@ class HashTimeLockState(State):
     def __hash__(self):
         return self.lockhash
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'amount': self.amount,
             'expiration': self.expiration,
-            'secrethash': to_hex(self.secrethash),
+            'secrethash': serialization.serialize_bytes(self.secrethash),
             # 'encoded' not needed as it is created from the above data
             # 'lockhash' not needed as it is created from the above data
         }
@@ -893,7 +893,7 @@ class HashTimeLockState(State):
         restored = cls(
             amount=data['amount'],
             expiration=data['expiration'],
-            secrethash=to_bytes(hexstr=data['secrethash']),
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
 
         return restored
@@ -932,11 +932,11 @@ class UnlockPartialProofState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'lock': self.lock.to_dict(),
-            'secret': to_hex(self.secret),
+            'secret': serialization.serialize_bytes(self.secret),
         }
 
     @classmethod
@@ -944,7 +944,7 @@ class UnlockPartialProofState(State):
         assert data['type'] == cls.__name__
         restored = cls(
             lock=HashTimeLockState.from_dict(data['lock']),
-            secret=to_bytes(hexstr=data['secret']),
+            secret=serialization.deserialize_bytes(data['secret']),
         )
 
         return restored
@@ -988,7 +988,7 @@ class UnlockProofState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'merkle_proof': map_list(serialization.serialize_bytes, self.merkle_proof),
@@ -1015,7 +1015,6 @@ class TransactionExecutionStatus(State):
     VALID_RESULT_VALUES = (
         SUCCESS,
         FAILURE,
-        None,
     )
 
     def __init__(
@@ -1033,6 +1032,10 @@ class TransactionExecutionStatus(State):
             finished_block_number is None or
             isinstance(finished_block_number, typing.T_BlockNumber)
         )
+        is_valid_result = (
+            result is None or
+            result in self.VALID_RESULT_VALUES
+        )
 
         if not is_valid_start:
             raise ValueError('started_block_number must be None or a block_number')
@@ -1040,10 +1043,8 @@ class TransactionExecutionStatus(State):
         if not is_valid_finish:
             raise ValueError('finished_block_number must be None or a block_number')
 
-        if result not in self.VALID_RESULT_VALUES:
-            raise ValueError('result must be one of {}'.format(
-                ','.join(self.VALID_RESULT_VALUES),
-            ))
+        if not is_valid_result:
+            raise ValueError(f"result must be one of '{self.SUCCESS}', '{self.FAILURE}' or 'None'")
 
         self.started_block_number = started_block_number
         self.finished_block_number = finished_block_number
@@ -1066,6 +1067,30 @@ class TransactionExecutionStatus(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'type': self.__class__.__name__,
+        }
+        if self.started_block_number is not None:
+            result['started_block_number'] = self.started_block_number
+        if self.finished_block_number is not None:
+            result['finished_block_number'] = self.finished_block_number
+        if self.result is not None:
+            result['result'] = self.result
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionExecutionStatus':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            started_block_number=data.get('started_block_number'),
+            finished_block_number=data.get('finished_block_number'),
+            result=data.get('result'),
+        )
+
+        return restored
 
 
 class MerkleTreeState(State):
@@ -1160,17 +1185,32 @@ class NettingChannelEndState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
-        return {
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
             'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'contract_balance': self.contract_balance,
-            # 'secrethashes_to_lockedlocks',  # TODO
-            # 'secrethashes_to_unlockedlocks',  # TODO
-            # 'secrethashes_to_onchain_unlockedlocks',  # TODO
+            'secrethashes_to_lockedlocks': map_dict(
+                serialization.serialize_bytes,
+                lambda lock: lock.to_dict(),
+                self.secrethashes_to_lockedlocks,
+            ),
+            'secrethashes_to_unlockedlocks': map_dict(
+                serialization.serialize_bytes,
+                lambda lock: lock.to_dict(),
+                self.secrethashes_to_unlockedlocks,
+            ),
+            'secrethashes_to_onchain_unlockedlocks': map_dict(
+                serialization.serialize_bytes,
+                lambda lock: lock.to_dict(),
+                self.secrethashes_to_onchain_unlockedlocks,
+            ),
             'merkletree': self.merkletree.to_dict(),
-            # 'balance_proof',  # TODO
         }
+        if self.balance_proof is not None:
+            result['balance_proof'] = self.balance_proof.to_dict()
+
+        return result
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
@@ -1179,11 +1219,26 @@ class NettingChannelEndState(State):
             address=to_canonical_address(data['address']),
             balance=data['balance'],
         )
-        restored.secrethashes_to_lockedlocks = None  # TODO
-        restored.secrethashes_to_unlockedlocks = None  # TODO
-        restored.secrethashes_to_onchain_unlockedlocks = None  # TODO
+        restored.secrethashes_to_lockedlocks = map_dict(
+            serialization.deserialize_bytes,
+            lambda lock: HashTimeLockState.from_dict(lock),
+            data['secrethashes_to_lockedlocks'],
+        )
+        restored.secrethashes_to_unlockedlocks = map_dict(
+            serialization.deserialize_bytes,
+            lambda lock: UnlockPartialProofState.from_dict(lock),
+            data['secrethashes_to_unlockedlocks'],
+        )
+        restored.secrethashes_to_onchain_unlockedlocks = map_dict(
+            serialization.deserialize_bytes,
+            lambda lock: UnlockPartialProofState.from_dict(lock),
+            data['secrethashes_to_onchain_unlockedlocks'],
+        )
         restored.merkletree = MerkleTreeState.from_dict(data['merkletree'])
-        restored.balance_proof = None  # TODO
+
+        balance_proof = data.get('balance_proof')
+        if data is not None:
+            restored.balance_proof = BalanceProofSignedState.from_dict(balance_proof)
 
         return restored
 
@@ -1306,6 +1361,7 @@ class NettingChannelState(State):
             self.close_transaction == other.close_transaction and
             self.settle_transaction == other.settle_transaction and
             self.update_transaction == other.update_transaction and
+            self.our_unlock_transaction == other.our_unlock_transaction and
             self.chain_id == other.chain_id
         )
 
@@ -1320,8 +1376,8 @@ class NettingChannelState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
-        return {
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
             'type': self.__class__.__name__,
             'identifier': self.identifier,
             'chain_id': self.chain_id,
@@ -1330,15 +1386,21 @@ class NettingChannelState(State):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'reveal_timeout': self.reveal_timeout,
             'settle_timeout': self.settle_timeout,
-            'our_state': None,  # TODO
-            'partner_state': None,  # TODO
-            'open_transaction': None,  # TODO
-            'close_transaction': None,  # TODO
-            'settle_transaction': None,  # TODO
-            'update_transaction': None,  # TODO
+            'our_state': self.our_state.to_dict(),
+            'partner_state': self.partner_state.to_dict(),
+            'open_transaction': self.open_transaction.to_dict(),
             'deposit_transaction_queue': None,  # TODO
             'our_unlock_transaction': None,  # TODO
         }
+
+        if self.close_transaction is not None:
+            result['close_transaction'] = self.close_transaction.to_dict()
+        if self.settle_transaction is not None:
+            result['settle_transaction'] = self.settle_transaction.to_dict()
+        if self.update_transaction is not None:
+            result['update_transaction'] = self.update_transaction.to_dict()
+
+        return result
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
@@ -1351,13 +1413,20 @@ class NettingChannelState(State):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             reveal_timeout=data['reveal_timeout'],
             settle_timeout=data['settle_timeout'],
-            our_state=data['our_state'],
-            partner_state=data['partner_state'],
-            open_transaction=data['open_transaction'],
-            close_transaction=data['close_transaction'],
-            settle_transaction=data['settle_transaction'],
-            update_transaction=data['update_transaction'],
+            our_state=NettingChannelEndState.from_dict(data['our_state']),
+            partner_state=NettingChannelEndState.from_dict(data['partner_state']),
+            open_transaction=TransactionExecutionStatus.from_dict(data['open_transaction']),
         )
+        close_transaction = data.get('close_transaction')
+        if close_transaction is not None:
+            restored.close_transaction = TransactionExecutionStatus.from_dict(close_transaction)
+        settle_transaction = data.get('settle_transaction')
+        if settle_transaction is not None:
+            restored.settle_transaction = TransactionExecutionStatus.from_dict(settle_transaction)
+        update_transaction = data.get('update_transaction')
+        if update_transaction is not None:
+            restored.update_transaction = TransactionExecutionStatus.from_dict(update_transaction)
+
         restored.deposit_transaction_queue = None  # TODO
         restored.our_unlock_transaction = None  # TODO
 
@@ -1417,7 +1486,7 @@ class TransactionChannelNewBalance(State):
             self.deposit_block_number < other.deposit_block_number
         )
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'participant_address': to_checksum_address(self.participant_address),

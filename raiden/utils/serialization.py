@@ -19,7 +19,7 @@ def map_dict(
     key_func: typing.Callable,
     value_func: typing.Callable,
     dict: typing.Dict,
-) -> typing.Dict[str, str]:
+) -> typing.Dict[str, typing.Any]:
     return {
         key_func(k): value_func(v)
         for k, v in dict.items()
@@ -29,7 +29,7 @@ def map_dict(
 def map_list(
     value_func: typing.Callable,
     list: typing.List,
-) -> typing.List[str]:
+) -> typing.List[typing.Any]:
     return [
         value_func(v)
         for v in list
