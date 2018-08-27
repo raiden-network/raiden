@@ -5,7 +5,11 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.transfer import channel
-from raiden.transfer.events import ContractSendChannelClose, ContractSendSecretReveal
+from raiden.transfer.events import (
+    ContractSendChannelClose,
+    ContractSendSecretReveal,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -223,14 +227,13 @@ def test_handle_inittarget():
         block_number,
     )
 
-    events = iteration.events
-    assert events
-    assert isinstance(events[0], SendSecretRequest)
-
-    assert events[0].payment_identifier == from_transfer.payment_identifier
-    assert events[0].amount == from_transfer.lock.amount
-    assert events[0].secrethash == from_transfer.lock.secrethash
-    assert events[0].recipient == initiator
+    assert must_contain_entry(iteration.events, SendSecretRequest, {
+        'payment_identifier': from_transfer.payment_identifier,
+        'amount': from_transfer.lock.amount,
+        'secrethash': from_transfer.lock.secrethash,
+        'recipient': initiator,
+    })
+    assert must_contain_entry(iteration.events, SendProcessed, {})
 
 
 def test_handle_inittarget_bad_expiration():
