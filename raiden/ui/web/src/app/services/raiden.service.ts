@@ -260,7 +260,7 @@ export class RaidenService {
     }
 
     public leaveTokenNetwork(userToken: UserToken): Observable<any> {
-        return this.http.delete(`${this.raidenConfig.api}/connections/${userToken}`).pipe(
+        return this.http.delete(`${this.raidenConfig.api}/connections/${userToken.address}`).pipe(
             map(() => true),
             tap(() => {
                 const description = `Successfully closed and settled all channels in ${userToken.name} <${userToken.address}> token`;
