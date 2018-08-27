@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2277` Fixes sorting by balance for tokens and channels.
 * :bug:`2278` Fixes leave network button request.
 * :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.
 * :bug:`2264` Notification fonts are now aligned with the rest of the WebUI.
