@@ -8,6 +8,7 @@ import { UserToken } from '../../models/usertoken';
 import { RaidenConfig } from '../../services/raiden.config';
 
 import { RaidenService } from '../../services/raiden.service';
+import { amountToDecimal } from '../../utils/amount.converter';
 import { StringUtils } from '../../utils/string.utils';
 import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
 import { JoinDialogComponent, JoinDialogPayload } from '../join-dialog/join-dialog.component';
@@ -234,7 +235,11 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
                 compareFn = (a, b) => StringUtils.compare(this.ascending, a.address, b.address);
                 break;
             default:
-                compareFn = (a, b) => this.ascending ? a.balance - b.balance : b.balance - a.balance;
+                compareFn = (a, b) => {
+                    const aBalance = amountToDecimal(a.balance, a.decimals);
+                    const bBalance = amountToDecimal(b.balance, b.decimals);
+                    return this.ascending ? aBalance - bBalance : bBalance - aBalance;
+                };
                 break;
         }
 
