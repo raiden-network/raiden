@@ -66,7 +66,7 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses, deposi
 
     app1.raiden.start()
     exception = ValueError('Waiting for transfer received success in the WAL timed out')
-    with gevent.Timeout(seconds=5, exception=exception):
+    with gevent.Timeout(seconds=60, exception=exception):
         wait_for_transfer_success(
             app1.raiden,
             payment_identifier,
