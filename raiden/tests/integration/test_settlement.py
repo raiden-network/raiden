@@ -155,16 +155,16 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
 
     alice_to_bob_amount = 10
     identifier = 1
-    secret = pending_mediated_transfer(
+    transfer_1_secret = pending_mediated_transfer(
         raiden_network,
         token_network_identifier,
         alice_to_bob_amount,
         identifier,
     )
-    secrethash = sha3(secret)
+    transfer_1_secrethash = sha3(transfer_1_secret)
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
-    lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
+    lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
 
     # This is the current state of the protocol:
     #
@@ -179,31 +179,50 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
 
     # Verify lock is registered in both channel states
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
-    assert secrethash in alice_channel_state.our_state.secrethashes_to_lockedlocks
+    assert transfer_1_secrethash in alice_channel_state.our_state.secrethashes_to_lockedlocks
 
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
-    assert secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
+    assert transfer_1_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
-    assert secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
+    assert transfer_1_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
     # Wait for the expiration to trigger with some additional buffer
     # time for processing (+2) blocks.
     waiting.wait_for_block(
         alice_app.raiden,
-        lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 2,
+        lock.expiration + (DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 2),
         DEFAULT_RETRY_TIMEOUT,
     )
 
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
-    assert secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
+    assert transfer_1_secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
 
     # Verify bob received the message and processed the LockExpired message
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
-    assert secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
+    assert transfer_1_secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
-    assert secrethash not in alice_chain_state.payment_mapping.secrethashes_to_task
+    assert transfer_1_secrethash not in alice_chain_state.payment_mapping.secrethashes_to_task
+
+    # Make another transfer
+    alice_to_bob_amount = 10
+    identifier = 2
+    transfer_2_secret = pending_mediated_transfer(
+        raiden_network,
+        token_network_identifier,
+        alice_to_bob_amount,
+        identifier,
+    )
+    transfer_2_secrethash = sha3(transfer_2_secret)
+
+    # Make sure the other transfer still exists
+    alice_chain_state = views.state_from_raiden(alice_app.raiden)
+    assert transfer_2_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
+
+    # Verify bob received the message and processed the LockExpired message
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    assert transfer_2_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
