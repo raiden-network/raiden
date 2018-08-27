@@ -173,7 +173,6 @@ class MatrixTransport:
         self._userid_to_presence: Dict[str, UserPresence] = dict()
 
         self._discovery_room_alias = None
-        self._login_retry_wait = config.get('login_retry_wait', 0.5)
         self._logout_timeout = config.get('logout_timeout', 10)
 
         self._running = False
@@ -201,7 +200,7 @@ class MatrixTransport:
         self._client.set_presence_state(UserPresence.ONLINE.value)
         self._send_queued_messages()  # uses property instead of initial_queues
 
-        self.log.info('TRANSPORT STARTED')
+        self.log.info('TRANSPORT STARTED', config=self._config)
 
     def start_health_check(self, node_address):
         if not self._running:
@@ -735,58 +734,58 @@ class MatrixTransport:
         )
         return room
 
-    def _get_unlisted_room(self, room_name, invitees):
+    def _get_unlisted_room(self, room_name, invitees: List[User]):
         """Obtain a room that cannot be found by search_room_directory."""
         room_name_full = f'#{room_name}:{self._server_name}'
-        room_not_found = False
+        invitees_uids = [user.user_id for user in invitees]
 
-        for _ in range(10):
-            if room_not_found:
-                try:
-                    room = self._client.create_room(
-                        room_name,
-                        invitees=[user.user_id for user in invitees],
-                        is_public=True,  # FIXME: debug only
+        for _ in range(5):
+            # try joining room
+            try:
+                room = self._client.join_room(room_name_full)
+            except MatrixRequestError as error:
+                if error.code == 404:
+                    self.log.info(
+                        f'Room {room_name_full} not found, trying to create it.',
+                        error=error,
                     )
-                except MatrixRequestError as error:
-                    if error.code == 409:
-                        message = 'seems to have been created by peer meanwhile.'
-                    else:
-                        message = f'{error.code} {error.content}'
-                    self.log.info(f'Error creating room {room_name}: {message}. '
-                                  f'Retrying to join...')
-                    room_not_found = False
                 else:
-                    self.log.info('Room created successfully', room=room, invitees=invitees)
-                    return room
+                    self.log.info(f'Error joining room {room_name}: '
+                                  f'{error.content} {error.code}')
             else:
-                try:
-                    room = self._client.join_room(room_name_full)
-                except MatrixRequestError as error:
-                    if error.code == 404:
-                        self.log.info(
-                            f'Room {room_name_full} not found, trying to create it.',
-                            error=error,
-                        )
-                        room_not_found = True
-                    else:
-                        self.log.info(f'Error joining room {room_name}: '
-                                      f'{error.content} {error.code}')
-                else:
-                    self.log.info('Room joined successfully', room=room)
-                    return room
-            gevent.sleep(self._login_retry_wait)
+                self.log.info('Room joined successfully', room=room)
+                break
 
-        room = self._client.create_room(
-            None,
-            invitees=[user.user_id for user in invitees],
-            is_public=True,  # FIXME: debug only
-        )
-        log.warning(
-            'Could not create nor join a named room. Successfuly created an unnamed one',
-            room=room,
-            invitees=invitees,
-        )
+            # if can't, try creating it
+            try:
+                room = self._client.create_room(
+                    room_name,
+                    invitees=invitees_uids,
+                    is_public=True,  # FIXME: debug only
+                )
+            except MatrixRequestError as error:
+                if error.code == 409:
+                    message = 'seems to have been created by peer meanwhile.'
+                else:
+                    message = f'{error.code} {error.content}'
+                self.log.info(f'Error creating room {room_name}: {message}. '
+                              f'Retrying to join...')
+            else:
+                self.log.info('Room created successfully', room=room, invitees=invitees)
+                break
+        else:
+            # if can't join nor create, create an unnamed one
+            room = self._client.create_room(
+                None,
+                invitees=invitees_uids,
+                is_public=True,  # FIXME: debug only
+            )
+            log.warning(
+                'Could not create nor join a named room. Successfuly created an unnamed one',
+                room=room,
+                invitees=invitees,
+            )
+
         return room
 
     def _make_room_alias(self, *parts):
