@@ -95,7 +95,7 @@ def handle_inittarget(
     )
 
     assert channel_state.identifier == transfer.balance_proof.channel_identifier
-    is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
+    is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )
@@ -121,7 +121,8 @@ def handle_inittarget(
             secrethash=transfer.lock.secrethash,
         )
 
-        iteration = TransitionResult(target_state, [secret_request])
+        channel_events.append(secret_request)
+        iteration = TransitionResult(target_state, channel_events)
     else:
         if not is_valid:
             failure_reason = errormsg
@@ -133,7 +134,9 @@ def handle_inittarget(
             secrethash=transfer.lock.secrethash,
             reason=failure_reason,
         )
-        iteration = TransitionResult(target_state, [unlock_failed])
+
+        channel_events.append(unlock_failed)
+        iteration = TransitionResult(target_state, channel_events)
 
     return iteration
 
