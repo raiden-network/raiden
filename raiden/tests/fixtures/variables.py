@@ -131,8 +131,11 @@ def channels_per_node():
 
 
 @pytest.fixture
-def retry_interval():
-    return 0.5
+def retry_interval(request):
+    if request.config.option.transport == 'matrix':
+        return 5
+    else:
+        return 0.5
 
 
 @pytest.fixture
