@@ -10,6 +10,7 @@ import { ChannelPollingService } from '../../services/channel-polling.service';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
+import { amountToDecimal } from '../../utils/amount.converter';
 import { StringUtils } from '../../utils/string.utils';
 import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
 import { DepositDialogComponent, DepositDialogPayload } from '../deposit-dialog/deposit-dialog.component';
@@ -271,7 +272,11 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                 compareFn = (a, b) => compareNumbers(this.ascending, a.channel_identifier, b.channel_identifier);
                 break;
             default:
-                compareFn = (a, b) => compareNumbers(this.ascending, a.balance, b.balance);
+                compareFn = (a, b) => {
+                    const aBalance = amountToDecimal(a.balance, a.userToken.decimals);
+                    const bBalance = amountToDecimal(b.balance, b.userToken.decimals);
+                    return compareNumbers(this.ascending, aBalance, bBalance);
+                };
                 break;
         }
 
