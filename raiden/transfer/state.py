@@ -5,7 +5,7 @@ from collections import defaultdict
 from functools import total_ordering
 
 import networkx
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import to_checksum_address, to_canonical_address, to_hex, to_bytes
 
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
@@ -166,7 +166,6 @@ class ChainState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-
     def to_dict(self):
         return {
             'type': self.__class__.__name__,
@@ -175,11 +174,11 @@ class ChainState(State):
             'identifiers_to_paymentnetworks': map_dict(
                 to_checksum_address,
                 PaymentNetworkState.to_dict,
-                self.identifiers_to_paymentnetworks
+                self.identifiers_to_paymentnetworks,
             ),
             'nodeaddresses_to_networkstates': {},  # TODO
             'our_address': to_checksum_address(self.our_address),
-            'payment_mapping': None,  # TODO
+            'payment_mapping': self.payment_mapping.to_dict(),
             'pending_transactions': [],  # TODO
             'queueids_to_queues': {},  # TODO
         }
@@ -197,14 +196,15 @@ class ChainState(State):
         restored.identifiers_to_paymentnetworks = map_dict(
             to_canonical_address,
             PaymentNetworkState.from_dict,
-            data['identifiers_to_paymentnetworks']
+            data['identifiers_to_paymentnetworks'],
         )
         restored.nodeaddresses_to_networkstates = {}  # TODO
-        restored.payment_mapping = None  # TODO
+        restored.payment_mapping = PaymentMappingState.from_dict(data['payment_mapping'])
         restored.pending_transactions = []  # TODO
         restored.queueids_to_queues = {}  # TODO
 
         return restored
+
 
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
@@ -218,7 +218,7 @@ class PaymentNetworkState(State):
     def __init__(
             self,
             address: typing.Address,
-            token_network_list: typing.List['TokenNetworkState']
+            token_network_list: typing.List['TokenNetworkState'],
     ):
         if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
@@ -255,6 +255,8 @@ class PaymentNetworkState(State):
                 network.to_dict()
                 for network in self.tokenidentifiers_to_tokennetworks.values()
             ],
+            # 'tokenidentifiers_to_tokennetworks' can be reconstructed
+            # 'tokenaddresses_to_tokennetworks' can be reconstructed
         }
 
     @classmethod
@@ -335,7 +337,7 @@ class TokenNetworkState(State):
         )
         restored.network_graph = TokenNetworkGraphState.from_dict(data['network_graph'])
         restored.channelidentifiers_to_channels = {}  # TODO
-        self.partneraddresses_to_channels = {}  # TODO
+        restored.partneraddresses_to_channels = {}  # TODO
 
         return restored
 
@@ -377,7 +379,7 @@ class TokenNetworkGraphState(State):
                 str,
                 serialization.serialize_participants_tuple,
                 self.channel_identifier_to_participants,
-            )
+            ),
         }
 
     @classmethod
@@ -388,7 +390,7 @@ class TokenNetworkGraphState(State):
         restored.channel_identifier_to_participants = map_dict(
             int,
             serialization.deserialize_participants_tuple,
-            data['channel_identifier_to_participants']
+            data['channel_identifier_to_participants'],
         )
 
         return restored
@@ -612,6 +614,33 @@ class BalanceProofUnsignedState(State):
             locksroot=self.locksroot,
         )
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'nonce': self.nonce,
+            'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
+            'locksroot': serialization.serialize_bytes(self.locksroot),
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'channel_identifier': self.channel_identifier,
+            'chain_id': self.chain_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofUnsignedState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            nonce=data['nonce'],
+            transferred_amount=data['transferred_amount'],
+            locked_amount=data['locked_amount'],
+            locksroot=data['locksroot'],
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=to_canonical_address(data['channel_identifier']),
+            chain_id=data['chain_id'],
+        )
+
+        return restored
+
 
 class BalanceProofSignedState(State):
     """ Proof of a channel balance that can be used on-chain to resolve
@@ -755,6 +784,39 @@ class BalanceProofSignedState(State):
             locksroot=self.locksroot,
         )
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'nonce': self.nonce,
+            'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
+            'locksroot': serialization.serialize_bytes(self.locksroot),
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'channel_identifier': self.channel_identifier,
+            'message_hash': serialization.serialize_bytes(self.message_hash),
+            'signature': serialization.serialize_bytes(self.signature),
+            'sender': to_checksum_address(self.sender),
+            'chain_id': self.chain_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofSignedState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            nonce=data['nonce'],
+            transferred_amount=data['transferred_amount'],
+            locked_amount=data['locked_amount'],
+            locksroot=serialization.deserialize_bytes(data['locksroot']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=to_canonical_address(data['channel_identifier']),
+            message_hash=serialization.deserialize_bytes(data['message_hash']),
+            signature=serialization.deserialize_bytes(data['signature']),
+            sender=to_canonical_address(data['sender']),
+            chain_id=data['chain_id'],
+        )
+
+        return restored
+
 
 class HashTimeLockState(State):
     """ Represents a hash time lock. """
@@ -771,8 +833,8 @@ class HashTimeLockState(State):
             self,
             amount: typing.TokenAmount,
             expiration: typing.BlockNumber,
-            secrethash: typing.Keccak256):
-
+            secrethash: typing.Keccak256,
+    ):
         if not isinstance(amount, typing.T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
 
@@ -815,6 +877,27 @@ class HashTimeLockState(State):
     def __hash__(self):
         return self.lockhash
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'amount': self.amount,
+            'expiration': self.expiration,
+            'secrethash': to_hex(self.secrethash),
+            # 'encoded' not needed as it is created from the above data
+            # 'lockhash' not needed as it is created from the above data
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'HashTimeLockState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            amount=data['amount'],
+            expiration=data['expiration'],
+            secrethash=to_bytes(hexstr=data['secrethash']),
+        )
+
+        return restored
+
 
 class UnlockPartialProofState(State):
     """ Stores the lock along with its unlocking secret. """
@@ -849,6 +932,23 @@ class UnlockPartialProofState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'lock': self.lock.to_dict(),
+            'secret': to_hex(self.secret),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            lock=HashTimeLockState.from_dict(data['lock']),
+            secret=to_bytes(hexstr=data['secret']),
+        )
+
+        return restored
+
 
 class UnlockProofState(State):
     """ An unlock proof for a given lock. """
@@ -862,7 +962,7 @@ class UnlockProofState(State):
     def __init__(
             self,
             merkle_proof: typing.List[typing.Keccak256],
-            lock_encoded,
+            lock_encoded: bytes,
             secret: typing.Secret,
     ):
 
@@ -887,6 +987,25 @@ class UnlockProofState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'merkle_proof': map_list(serialization.serialize_bytes, self.merkle_proof),
+            'lock_encoded': serialization.serialize_bytes(self.lock_encoded),
+            'secret': serialization.serialize_bytes(self.secret),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            merkle_proof=map_list(serialization.deserialize_bytes, data['merkle_proof']),
+            lock_encoded=serialization.deserialize_bytes(data['lock_encoded']),
+            secret=serialization.deserialize_bytes(data['secret']),
+        )
+
+        return restored
 
 
 class TransactionExecutionStatus(State):
@@ -950,7 +1069,11 @@ class TransactionExecutionStatus(State):
 
 
 class MerkleTreeState(State):
-    def __init__(self, layers):
+    __slots__ = (
+        'layers',
+    )
+
+    def __init__(self, layers: typing.List[typing.List[typing.Keccak256]]):
         self.layers = layers
 
     def __repr__(self):
@@ -966,6 +1089,21 @@ class MerkleTreeState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'layers': serialization.serialize_merkletree_layers(self.layers),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MerkleTreeState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            layers=serialization.deserialize_merkletree_layers(data['layers']),
+        )
+
+        return restored
 
 
 class NettingChannelEndState(State):
@@ -1022,6 +1160,33 @@ class NettingChannelEndState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'address': to_checksum_address(self.address),
+            'contract_balance': self.contract_balance,
+            # 'secrethashes_to_lockedlocks',  # TODO
+            # 'secrethashes_to_unlockedlocks',  # TODO
+            # 'secrethashes_to_onchain_unlockedlocks',  # TODO
+            'merkletree': self.merkletree.to_dict(),
+            # 'balance_proof',  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            address=to_canonical_address(data['address']),
+            balance=data['balance'],
+        )
+        restored.secrethashes_to_lockedlocks = None  # TODO
+        restored.secrethashes_to_unlockedlocks = None  # TODO
+        restored.secrethashes_to_onchain_unlockedlocks = None  # TODO
+        restored.merkletree = MerkleTreeState.from_dict(data['merkletree'])
+        restored.balance_proof = None  # TODO
+
+        return restored
+
 
 class NettingChannelState(State):
     """ The state of a netting channel. """
@@ -1029,13 +1194,13 @@ class NettingChannelState(State):
     __slots__ = (
         'identifier',
         'chain_id',
-        'our_state',
-        'partner_state',
         'token_address',
         'payment_network_identifier',
         'token_network_identifier',
         'reveal_timeout',
         'settle_timeout',
+        'our_state',
+        'partner_state',
         'deposit_transaction_queue',
         'open_transaction',
         'close_transaction',
@@ -1050,7 +1215,7 @@ class NettingChannelState(State):
             chain_id: typing.ChainID,
             token_address: typing.Address,
             payment_network_identifier: typing.PaymentNetworkID,
-            token_network_identifier: typing.Address,
+            token_network_identifier: typing.TokenNetworkID,
             reveal_timeout: typing.BlockNumber,
             settle_timeout: typing.BlockNumber,
             our_state: NettingChannelEndState,
@@ -1101,6 +1266,7 @@ class NettingChannelState(State):
             )
 
         self.identifier = identifier
+        self.chain_id = chain_id
         self.token_address = token_address
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
@@ -1114,7 +1280,6 @@ class NettingChannelState(State):
         self.settle_transaction = settle_transaction
         self.update_transaction = update_transaction
         self.our_unlock_transaction = None
-        self.chain_id = chain_id
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
@@ -1155,9 +1320,59 @@ class NettingChannelState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'identifier': self.identifier,
+            'chain_id': self.chain_id,
+            'token_address': to_checksum_address(self.token_address),
+            'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'reveal_timeout': self.reveal_timeout,
+            'settle_timeout': self.settle_timeout,
+            'our_state': None,  # TODO
+            'partner_state': None,  # TODO
+            'open_transaction': None,  # TODO
+            'close_transaction': None,  # TODO
+            'settle_transaction': None,  # TODO
+            'update_transaction': None,  # TODO
+            'deposit_transaction_queue': None,  # TODO
+            'our_unlock_transaction': None,  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            identifier=data['identifier'],
+            chain_id=data['chain_id'],
+            token_address=to_canonical_address(data['token_address']),
+            payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            reveal_timeout=data['reveal_timeout'],
+            settle_timeout=data['settle_timeout'],
+            our_state=data['our_state'],
+            partner_state=data['partner_state'],
+            open_transaction=data['open_transaction'],
+            close_transaction=data['close_transaction'],
+            settle_transaction=data['settle_transaction'],
+            update_transaction=data['update_transaction'],
+        )
+        restored.deposit_transaction_queue = None  # TODO
+        restored.our_unlock_transaction = None  # TODO
+
+        return restored
+
 
 @total_ordering
 class TransactionChannelNewBalance(State):
+
+    __slots__ = (
+        'participant_address',
+        'contract_balance',
+        'deposit_block_number',
+    )
+
     def __init__(
             self,
             participant_address: typing.Address,
@@ -1202,8 +1417,27 @@ class TransactionChannelNewBalance(State):
             self.deposit_block_number < other.deposit_block_number
         )
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'participant_address': to_checksum_address(self.participant_address),
+            'contract_balance': self.contract_balance,
+            'deposit_block_number': self.deposit_block_number,
+        }
 
-EMPTY_MERKLE_ROOT = b'\x00' * 32
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            to_canonical_address(data['participant_address']),
+            data['contract_balance'],
+            data['deposit_block_number'],
+        )
+
+        return restored
+
+
+EMPTY_MERKLE_ROOT = bytes(32)
 EMPTY_MERKLE_TREE = MerkleTreeState([
     [],                   # the leaves are empty
     [EMPTY_MERKLE_ROOT],  # the root is the constant 0
