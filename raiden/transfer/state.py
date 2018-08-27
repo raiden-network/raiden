@@ -5,6 +5,7 @@ from collections import defaultdict
 from functools import total_ordering
 
 import networkx
+from eth_utils import to_checksum_address, to_canonical_address
 
 from raiden.constants import UINT256_MAX, UINT64_MAX
 from raiden.encoding.format import buffer_for
@@ -12,8 +13,13 @@ from raiden.encoding import messages
 from raiden.transfer.architecture import State, SendMessageEvent
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import lpex, pex, sha3, typing
+from raiden.utils import lpex, pex, sha3, typing, serialization
 from raiden.utils.notifying_queue import QueueIdentifier
+from raiden.utils.serialization import (
+    map_dict,
+    map_list,
+)
+
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
@@ -161,6 +167,45 @@ class ChainState(State):
         return not self.__eq__(other)
 
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'block_number': self.block_number,
+            'chain_id': self.chain_id,
+            'identifiers_to_paymentnetworks': map_dict(
+                to_checksum_address,
+                PaymentNetworkState.to_dict,
+                self.identifiers_to_paymentnetworks
+            ),
+            'nodeaddresses_to_networkstates': {},  # TODO
+            'our_address': to_checksum_address(self.our_address),
+            'payment_mapping': None,  # TODO
+            'pending_transactions': [],  # TODO
+            'queueids_to_queues': {},  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ChainState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            pseudo_random_generator=random.Random(),
+            block_number=data['block_number'],
+            our_address=to_canonical_address(data['our_address']),
+            chain_id=data['chain_id'],
+        )
+
+        restored.identifiers_to_paymentnetworks = map_dict(
+            to_canonical_address,
+            PaymentNetworkState.from_dict,
+            data['identifiers_to_paymentnetworks']
+        )
+        restored.nodeaddresses_to_networkstates = {}  # TODO
+        restored.payment_mapping = None  # TODO
+        restored.pending_transactions = []  # TODO
+        restored.queueids_to_queues = {}  # TODO
+
+        return restored
+
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
 
@@ -173,8 +218,8 @@ class PaymentNetworkState(State):
     def __init__(
             self,
             address: typing.Address,
-            token_network_list: typing.List['TokenNetworkState']):
-
+            token_network_list: typing.List['TokenNetworkState']
+    ):
         if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
@@ -201,6 +246,29 @@ class PaymentNetworkState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'address': to_checksum_address(self.address),
+            'tokennetworks': [
+                network.to_dict()
+                for network in self.tokenidentifiers_to_tokennetworks.values()
+            ],
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentNetworkState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            address=to_canonical_address(data['address']),
+            token_network_list=[
+                TokenNetworkState.from_dict(network)
+                for network in data['tokennetworks']
+            ],
+        )
+
+        return restored
 
 
 class TokenNetworkState(State):
@@ -248,6 +316,29 @@ class TokenNetworkState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'address': to_checksum_address(self.address),
+            'token_address': to_checksum_address(self.token_address),
+            'network_graph': self.network_graph.from_dict(),
+            'channelidentifiers_to_channels': {},  # TODO
+            'partneraddresses_to_channels': {},  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            address=to_canonical_address(data['address']),
+            token_address=to_canonical_address(data['token_address']),
+        )
+        restored.network_graph = TokenNetworkGraphState.from_dict(data['network_graph'])
+        restored.channelidentifiers_to_channels = {}  # TODO
+        self.partneraddresses_to_channels = {}  # TODO
+
+        return restored
+
 
 # This is necessary for the routing only, maybe it should be transient state
 # outside of the state tree.
@@ -277,6 +368,30 @@ class TokenNetworkGraphState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'network': serialization.serialize_networkx_graph(self.network),
+            'channel_identifier_to_participants': map_dict(
+                str,
+                serialization.serialize_participants_tuple,
+                self.channel_identifier_to_participants,
+            )
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkGraphState':
+        assert data['type'] == cls.__name__
+        restored = cls()
+        restored.network = serialization.deserialize_networkx_graph(data['network'])
+        restored.channel_identifier_to_participants = map_dict(
+            int,
+            serialization.deserialize_participants_tuple,
+            data['channel_identifier_to_participants']
+        )
+
+        return restored
 
 
 class PaymentMappingState(State):
@@ -316,12 +431,28 @@ class PaymentMappingState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'network': None,  # TODO
+            'channel_identifier_to_participants': {},  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentMappingState':
+        assert data['type'] == cls.__name__
+        restored = cls()
+        restored.network = None  # TODO
+        restored.channel_identifier_to_participants = {}  # TODO
+
+        return restored
+
 
 class RouteState(State):
     """ A possible route provided by a routing service.
 
     Args:
-        node_address (address): The address of the next_hop.
+        node_address: The address of the next_hop.
         channel_identifier: The channel identifier.
     """
 
@@ -356,6 +487,23 @@ class RouteState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'node_address': to_checksum_address(self.node_address),
+            'channel_identifier': self.channel_identifier,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            to_canonical_address(data['node_address']),
+            data['channel_identifier'],
+        )
+
+        return restored
 
 
 class BalanceProofUnsignedState(State):
