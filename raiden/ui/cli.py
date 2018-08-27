@@ -888,6 +888,7 @@ class NodeRunner:
             ),
             fg='yellow',
         )
+        click.confirm('\nHave you read and acknowledge the above disclaimer?', abort=True)
         configure_logging(
             self._options['log_config'],
             log_json=self._options['log_json'],
