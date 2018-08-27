@@ -941,8 +941,6 @@ def handle_refundtransfer(
     Returns:
         TransitionResult: The resulting iteration.
     """
-    iteration = TransitionResult(mediator_state, list())
-
     if mediator_state.secret is None:
         # The last sent transfer is the only one that may be refunded, all the
         # previous ones are refunded already.
@@ -968,7 +966,10 @@ def handle_refundtransfer(
             payer_transfer,
             block_number,
         )
+    else:
+        events = list()
 
+    iteration = TransitionResult(mediator_state, events)
     return iteration
 
 
