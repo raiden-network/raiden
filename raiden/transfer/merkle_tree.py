@@ -39,8 +39,8 @@ def compute_layers(elements):
     elements = list(elements)  # consume generators
     assert elements, 'Use EMPTY_MERKLE_TREE if there are no elements'
 
-    if not all(isinstance(item, (str, bytes)) for item in elements):
-        raise ValueError('all elements must be str')
+    if not all(isinstance(item, bytes) for item in elements):
+        raise ValueError('all elements must be bytes')
 
     if any(len(item) != 32 for item in elements):
         raise HashLengthNot32()

@@ -1,9 +1,18 @@
 import json
 
 import networkx
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import (
+    to_checksum_address,
+    to_canonical_address,
+    to_bytes,
+    to_hex,
+)
 
 from raiden.utils import typing
+from raiden.transfer.merkle_tree import (
+    LEAVES,
+    compute_layers,
+)
 
 
 def map_dict(
@@ -21,10 +30,18 @@ def map_list(
     value_func: typing.Callable,
     list: typing.List,
 ) -> typing.List[str]:
-    return {
+    return [
         value_func(v)
         for v in list
-    }
+    ]
+
+
+def serialize_bytes(data: bytes) -> str:
+    return to_hex(data)
+
+
+def deserialize_bytes(data: str) -> bytes:
+    return to_bytes(hexstr=data)
 
 
 def serialize_networkx_graph(graph: networkx.Graph) -> str:
@@ -54,3 +71,12 @@ def deserialize_participants_tuple(
         to_canonical_address(data[0]),
         to_canonical_address(data[1]),
     )
+
+
+def serialize_merkletree_layers(data) -> typing.List[str]:
+    return map_list(serialize_bytes, data[LEAVES])
+
+
+def deserialize_merkletree_layers(data: typing.List[str]):
+    elements = map_list(deserialize_bytes, data)
+    return compute_layers(elements)
