@@ -98,7 +98,7 @@ class EchoNode:
                 if not locked:
                     return
                 else:
-                    received_transfers = self.api.get_payment_history_for_token(
+                    received_transfers = self.api.get_raiden_events_payment_history(
                         token_address=self.token_address,
                         offset=self.last_poll_offset,
                     )

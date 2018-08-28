@@ -755,7 +755,7 @@ class RestAPI:
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
-    def get_payment_history(
+    def get_raiden_events_payment_history(
             self,
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
@@ -768,24 +768,12 @@ class RestAPI:
             target_address=optional_address_to_string(target_address),
         )
         try:
-            if token_address is None and target_address is None:
-                raiden_service_result = self.raiden_api.get_payment_history(
-                    limit=limit,
-                    offset=offset,
-                )
-            elif target_address is None:
-                raiden_service_result = self.raiden_api.get_payment_history_for_token(
-                    token_address=token_address,
-                    limit=limit,
-                    offset=offset,
-                )
-            else:
-                raiden_service_result = self.raiden_api.get_payment_history_for_token_and_target(
-                    token_address,
-                    target_address,
-                    limit=limit,
-                    offset=offset,
-                )
+            raiden_service_result = self.raiden_api.get_raiden_events_payment_history(
+                token_address=token_address,
+                target_address=target_address,
+                limit=limit,
+                offset=offset,
+            )
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
@@ -803,7 +791,7 @@ class RestAPI:
             result.append(serialized_event.data)
         return api_response(result=result)
 
-    def get_token_network_events_raiden(
+    def get_raiden_events_token_network(
             self,
             token_address: typing.TokenAddress,
             limit: int = None,
@@ -814,7 +802,7 @@ class RestAPI:
             token_address=token_address,
         )
         try:
-            raiden_service_result = self.raiden_api.get_token_network_events_raiden(
+            raiden_service_result = self.raiden_api.get_raiden_events_token_network(
                 token_address=token_address,
                 limit=limit,
                 offset=offset,
@@ -849,7 +837,7 @@ class RestAPI:
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
-    def get_channel_events_raiden(
+    def get_raiden_events_channel(
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
@@ -864,7 +852,7 @@ class RestAPI:
             offset=offset,
         )
         try:
-            raiden_service_result = self.raiden_api.get_channel_events_raiden(
+            raiden_service_result = self.raiden_api.get_raiden_events_channel(
                 token_address=token_address,
                 partner_address=partner_address,
                 limit=limit,
