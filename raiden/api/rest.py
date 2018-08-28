@@ -710,7 +710,7 @@ class RestAPI:
         result = self.address_list_schema.dump(tokens_list)
         return api_response(result=result.data)
 
-    def get_network_events(
+    def get_blockchain_events_network(
             self,
             registry_address: typing.PaymentNetworkID,
             from_block: typing.BlockSpecification = 0,
@@ -733,7 +733,7 @@ class RestAPI:
 
         return api_response(result=normalize_events_list(raiden_service_result))
 
-    def get_token_network_events_blockchain(
+    def get_blockchain_events_token_network(
             self,
             token_address: typing.TokenAddress,
             from_block: typing.BlockSpecification = 0,
@@ -744,7 +744,7 @@ class RestAPI:
             token_address=token_address,
         )
         try:
-            raiden_service_result = self.raiden_api.get_token_network_events_blockchain(
+            raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
                 token_address=token_address,
                 from_block=from_block,
                 to_block=to_block,
@@ -824,7 +824,7 @@ class RestAPI:
         except InvalidAddress as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
-    def get_channel_events_blockchain(
+    def get_blockchain_events_channel(
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
@@ -837,7 +837,7 @@ class RestAPI:
             partner_address=partner_address,
         )
         try:
-            raiden_service_result = self.raiden_api.get_channel_events_blockchain(
+            raiden_service_result = self.raiden_api.get_blockchain_events_channel(
                 token_address=token_address,
                 partner_address=partner_address,
                 from_block=from_block,

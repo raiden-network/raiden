@@ -4,12 +4,7 @@ import structlog
 from eth_utils import is_binary_address, to_checksum_address
 
 from raiden import waiting
-from raiden.blockchain.events import (
-    ALL_EVENTS,
-    get_all_netting_channel_events,
-    get_token_network_events,
-    get_token_network_registry_events,
-)
+import raiden.blockchain.events as blockchain_events
 from raiden.transfer import views
 from raiden.transfer.events import (
     EventPaymentSentSuccess,
@@ -659,26 +654,6 @@ class RaidenAPI:
         )
         return async_result
 
-    def get_network_events(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
-    ):
-        events = get_token_network_registry_events(
-            chain=self.raiden.chain,
-            token_network_registry_address=registry_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        return sorted(
-            events,
-            key=lambda evt: evt.get('block_number'),
-            reverse=True,
-        )
-
     def get_payment_history(
             self,
             limit: int = None,
@@ -770,40 +745,6 @@ class RaidenAPI:
 
         return events[offset:absolute_limit]
 
-    def get_channel_events_blockchain(
-            self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
-    ):
-        if not is_binary_address(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_channel_events_blockchain',
-            )
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address,
-        )
-        if token_network_address is None:
-            raise UnknownTokenAddress('Token address is not known.')
-
-        channel_list = self.get_channel_list(
-            registry_address=self.raiden.default_registry.address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
-        returned_events = []
-        for channel in channel_list:
-            returned_events.extend(get_all_netting_channel_events(
-                chain=self.raiden.chain,
-                token_network_address=token_network_address,
-                netting_channel_identifier=channel.identifier,
-                from_block=from_block,
-                to_block=to_block,
-            ))
-        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
-        return returned_events
-
     def get_channel_events_raiden(
             self,
             token_address: typing.TokenAddress,
@@ -835,41 +776,6 @@ class RaidenAPI:
                 if self._is_internal_event(event, token_address)
             ]
 
-        return returned_events
-
-    def get_token_network_events_blockchain(
-            self,
-            token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
-    ):
-        """Returns a list of blockchain events coresponding to the token_address."""
-
-        if not is_binary_address(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events_blockchain',
-            )
-
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address,
-        )
-
-        if token_network_address is None:
-            raise UnknownTokenAddress('Token address is not known.')
-
-        returned_events = get_token_network_events(
-            chain=self.raiden.chain,
-            token_network_address=token_network_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        for event in returned_events:
-            if event.get('args'):
-                event['args'] = dict(event['args'])
-
-        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 
     def get_token_network_events_raiden(
@@ -927,3 +833,92 @@ class RaidenAPI:
         return False
 
     transfer = transfer_and_wait
+
+    def get_blockchain_events_network(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
+        events = blockchain_events.get_token_network_registry_events(
+            chain=self.raiden.chain,
+            token_network_registry_address=registry_address,
+            events=blockchain_events.ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
+        )
+
+        return sorted(
+            events,
+            key=lambda evt: evt.get('block_number'),
+            reverse=True,
+        )
+
+    def get_blockchain_events_token_network(
+            self,
+            token_address: typing.TokenAddress,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
+        """Returns a list of blockchain events coresponding to the token_address."""
+
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_blockchain_events_token_network',
+            )
+
+        token_network_address = self.raiden.default_registry.get_token_network(
+            token_address,
+        )
+
+        if token_network_address is None:
+            raise UnknownTokenAddress('Token address is not known.')
+
+        returned_events = blockchain_events.get_token_network_events(
+            chain=self.raiden.chain,
+            token_network_address=token_network_address,
+            events=blockchain_events.ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
+        )
+
+        for event in returned_events:
+            if event.get('args'):
+                event['args'] = dict(event['args'])
+
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        return returned_events
+
+    def get_blockchain_events_channel(
+            self,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ):
+        if not is_binary_address(token_address):
+            raise InvalidAddress(
+                'Expected binary address format for token in get_blockchain_events_channel',
+            )
+        token_network_address = self.raiden.default_registry.get_token_network(
+            token_address,
+        )
+        if token_network_address is None:
+            raise UnknownTokenAddress('Token address is not known.')
+
+        channel_list = self.get_channel_list(
+            registry_address=self.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+        returned_events = []
+        for channel in channel_list:
+            returned_events.extend(blockchain_events.get_all_netting_channel_events(
+                chain=self.raiden.chain,
+                token_network_address=token_network_address,
+                netting_channel_identifier=channel.identifier,
+                from_block=from_block,
+                to_block=to_block,
+            ))
+        returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
+        return returned_events

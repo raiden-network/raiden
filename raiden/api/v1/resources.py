@@ -104,7 +104,7 @@ class NetworkEventsResource(BaseResource):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
 
-        return self.rest_api.get_network_events(
+        return self.rest_api.get_blockchain_events_network(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             from_block=from_block,
             to_block=to_block,
@@ -120,7 +120,7 @@ class TokenBlockchainEventsResource(BaseResource):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
 
-        return self.rest_api.get_token_network_events_blockchain(
+        return self.rest_api.get_blockchain_events_token_network(
             token_address=token_address,
             from_block=from_block,
             to_block=to_block,
@@ -136,7 +136,7 @@ class ChannelBlockchainEventsResource(BaseResource):
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or 'latest'
 
-        return self.rest_api.get_channel_events_blockchain(
+        return self.rest_api.get_blockchain_events_channel(
             token_address=token_address,
             partner_address=partner_address,
             from_block=from_block,

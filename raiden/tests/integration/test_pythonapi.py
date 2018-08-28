@@ -269,7 +269,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         identifier=1,
     )
 
-    app0_events = RaidenAPI(app0.raiden).get_channel_events_blockchain(
+    app0_events = RaidenAPI(app0.raiden).get_blockchain_events_channel(
         token_address,
         app1.raiden.address,
     )
@@ -281,7 +281,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     # assert must_have_event(results, {'event': 'EventTransferSentSuccess'})
 
     app0_events = app0.raiden.wal.storage.get_events_by_identifier(0, 'latest')
-    results = RaidenAPI(app0.raiden).get_channel_events_blockchain(
+    results = RaidenAPI(app0.raiden).get_blockchain_events_channel(
         token_address,
         app1.raiden.address,
     )
@@ -294,7 +294,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
     any(isinstance(event, EventPaymentReceivedSuccess) for _, event in app1_events)
 
-    app1_events = RaidenAPI(app1.raiden).get_channel_events_blockchain(
+    app1_events = RaidenAPI(app1.raiden).get_blockchain_events_channel(
         token_address,
         app0.raiden.address,
     )
