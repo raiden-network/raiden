@@ -16,7 +16,7 @@ def pytest_generate_tests(metafunc):
         transport = metafunc.config.getoption('transport')
         transport_config = list()
 
-        if transport in ('udp', 'all'):
+        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
             transport_config.append(
                 TransportConfig(protocol=TransportProtocol.UDP, parameters=None),
             )
