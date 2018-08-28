@@ -163,7 +163,7 @@ def test_payload_with_address_without_prefix(api_backend):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_crash_on_unhandled_exception(api_backend):
-    """ Addresses require leading 0x in the payload. """
+    """ Crash when an unhandled exception happens on APIServer. """
     api_server, _ = api_backend
 
     # as we should not have unhandled exceptions in our endpoints, create one to test
@@ -175,7 +175,7 @@ def test_crash_on_unhandled_exception(api_backend):
         url = url_for('error_endpoint')
     request = grequests.get(url)
     request.send()
-    api_server.join(timeout=5)
+    api_server.get(timeout=10)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
