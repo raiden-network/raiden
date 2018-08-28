@@ -1,5 +1,5 @@
 from raiden.transfer import channel
-from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent
+from raiden.transfer.architecture import ContractSendEvent
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSING,
@@ -15,6 +15,7 @@ from raiden.transfer.state import (
     InitiatorTask,
     MediatorTask,
     TargetTask,
+    QueueIdsToQueues,
 )
 from raiden.utils import typing
 
@@ -74,7 +75,7 @@ def get_pending_transactions(chain_state: ChainState) -> typing.List[ContractSen
 
 def get_all_messagequeues(
         chain_state: ChainState,
-) -> typing.Dict[typing.QueueIdentifier, typing.List[SendMessageEvent]]:
+) -> QueueIdsToQueues:
     return chain_state.queueids_to_queues
 
 

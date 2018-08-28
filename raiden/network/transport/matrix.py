@@ -46,12 +46,12 @@ from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.transfer import events as transfer_events, views
-from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
+    QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.message_handler import on_message
@@ -173,7 +173,6 @@ class MatrixTransport:
         self._userid_to_presence: Dict[str, UserPresence] = dict()
 
         self._discovery_room_alias = None
-        self._logout_timeout = config.get('logout_timeout', 10)
 
         self._running = False
         self._health_semaphore = gevent.lock.Semaphore()
@@ -184,7 +183,7 @@ class MatrixTransport:
     def start(
         self,
         raiden_service: RaidenService,
-        initial_queues: Dict[QueueIdentifier, List[SendMessageEvent]],
+        initial_queues: QueueIdsToQueues,
     ):
         self._running = True
         self._raiden_service = raiden_service
@@ -286,7 +285,7 @@ class MatrixTransport:
         self._client.logout()
 
     @property
-    def _queueids_to_queues(self) -> Dict[QueueIdentifier, List[SendMessageEvent]]:
+    def _queueids_to_queues(self) -> QueueIdsToQueues:
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
 
@@ -368,7 +367,7 @@ class MatrixTransport:
         )
 
         last_ex = None
-        for _ in range(10):
+        for _ in range(5):
             # try join room
             try:
                 discovery_room = self._client.join_room(discovery_room_alias_full)
@@ -575,13 +574,18 @@ class MatrixTransport:
             message=delivered,
         )
 
-    def _receive_message(self, message):
+    def _receive_message(self, message: SignedMessage):
         self.log.info(
             'MESSAGE RECEIVED',
             node=pex(self._raiden_service.address),
             message=message,
             sender=pex(message.sender),
         )
+
+        def send_delivered_for(message: SignedMessage):
+            delivered_message = Delivered(message.message_identifier)
+            self._raiden_service.sign(delivered_message)
+            self._send_raw(message.sender, json.dumps(delivered_message.to_dict()))
 
         try:
             # TODO: Maybe replace with Matrix read receipts.
@@ -590,9 +594,7 @@ class MatrixTransport:
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
             if not isinstance(message, Processed):
-                delivered_message = Delivered(message.message_identifier)
-                self._raiden_service.sign(delivered_message)
-                self._send_raw(message.sender, json.dumps(delivered_message.to_dict()))
+                self.greenlets.append(gevent.spawn(send_delivered_for, message))
 
             on_message(self._raiden_service, message)
 
