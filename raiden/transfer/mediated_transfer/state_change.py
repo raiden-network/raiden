@@ -23,7 +23,11 @@ class ActionInitInitiator(StateChange):
         secret: The secret that must be used with the transfer.
     """
 
-    def __init__(self, transfer_description, routes):
+    def __init__(
+            self,
+            transfer_description: TransferDescriptionWithSecretState,
+            routes: typing.List[RouteState],
+    ):
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
 
@@ -44,6 +48,13 @@ class ActionInitInitiator(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transfer_description'],
+            data['routes'],
+        )
 
 
 class ActionInitMediator(StateChange):
@@ -89,6 +100,14 @@ class ActionInitMediator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['routes'],
+            data['from_route'],
+            data['from_transfer'],
+        )
+
 
 class ActionInitTarget(StateChange):
     """ Initial state for a new target.
@@ -98,7 +117,11 @@ class ActionInitTarget(StateChange):
         transfer: The payee transfer.
     """
 
-    def __init__(self, route, transfer):
+    def __init__(
+            self,
+            route: RouteState,
+            transfer: LockedTransferSignedState,
+    ):
         if not isinstance(route, RouteState):
             raise ValueError('route must be a RouteState instance')
 
@@ -123,6 +146,10 @@ class ActionInitTarget(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['route'], data['transfer'])
 
 
 class ActionCancelRoute(StateChange):
@@ -187,11 +214,26 @@ class ReceiveLockExpired(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['registry_address'],
+            data['identifier'],
+            data['routes'],
+        )
+
 
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
-    def __init__(self, payment_identifier, amount, expiration, secrethash, sender):
+    def __init__(
+            self,
+            payment_identifier: typing.PaymentID,
+            amount: typing.PaymentAmount,
+            expiration: typing.BlockExpiration,
+            secrethash: typing.SecretHash,
+            sender: typing.Address,
+    ):
         self.payment_identifier = payment_identifier
         self.amount = amount
         self.expiration = expiration
@@ -220,11 +262,27 @@ class ReceiveSecretRequest(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        instance = cls(
+            data['payment_identifier'],
+            data['amount'],
+            data['expiration'],
+            data['secrethash'],
+            data['sender'],
+        )
+        instance.revealsecret = data['revealsecret']
+        return instance
+
 
 class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
 
-    def __init__(self, secret, sender):
+    def __init__(
+            self,
+            secret: typing.Secret,
+            sender: typing.Address,
+    ):
         secrethash = sha3(secret)
 
         self.secret = secret
@@ -248,13 +306,28 @@ class ReceiveSecretReveal(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        instance = cls(
+            data['secret'],
+            data['sender'],
+        )
+        instance.secrethash = data['secrethash']
+        return instance
+
 
 class ReceiveTransferRefundCancelRoute(StateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
     """
 
-    def __init__(self, sender, routes, transfer, secret):
+    def __init__(
+            self,
+            sender: typing.Address,
+            routes: typing.List[RouteState],
+            transfer: LockedTransferSignedState,
+            secret: typing.Secret,
+    ):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
@@ -284,6 +357,17 @@ class ReceiveTransferRefundCancelRoute(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        instance = cls(
+            data['sender'],
+            data['routes'],
+            data['transfer'],
+            data['secret'],
+        )
+        instance.secrethash = data['secrethash']
+        return instance
 
 
 class ReceiveTransferRefund(StateChange):
@@ -318,3 +402,11 @@ class ReceiveTransferRefund(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['sender'],
+            data['transfer'],
+            data['routes'],
+        )
