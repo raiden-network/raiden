@@ -176,11 +176,15 @@ class ChainState(State):
                 PaymentNetworkState.to_dict,
                 self.identifiers_to_paymentnetworks,
             ),
-            'nodeaddresses_to_networkstates': {},  # TODO
+            'nodeaddresses_to_networkstates': map_dict(
+                to_checksum_address,
+                lambda state: state,
+                self.nodeaddresses_to_networkstates,
+            ),
             'our_address': to_checksum_address(self.our_address),
             'payment_mapping': self.payment_mapping.to_dict(),
-            'pending_transactions': [],  # TODO
-            'queueids_to_queues': {},  # TODO
+            'pending_transactions': self.pending_transactions,
+            'queueids_to_queues': self.queueids_to_queues,
         }
 
     @classmethod
@@ -198,10 +202,14 @@ class ChainState(State):
             PaymentNetworkState.from_dict,
             data['identifiers_to_paymentnetworks'],
         )
-        restored.nodeaddresses_to_networkstates = {}  # TODO
+        restored.nodeaddresses_to_networkstates = map_dict(
+            to_canonical_address,
+            lambda state: state,
+            data['nodeaddresses_to_networkstates'],
+        )
         restored.payment_mapping = PaymentMappingState.from_dict(data['payment_mapping'])
-        restored.pending_transactions = []  # TODO
-        restored.queueids_to_queues = {}  # TODO
+        restored.pending_transactions = data['pending_transactions']
+        restored.queueids_to_queues = data['queueids_to_queues']
 
         return restored
 
@@ -296,8 +304,8 @@ class TokenNetworkState(State):
         self.token_address = token_address
         self.network_graph = TokenNetworkGraphState()
 
-        self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channels = defaultdict(dict)
+        self.channelidentifiers_to_channels: IdToChannelStateDict = dict()
+        self.partneraddresses_to_channels: PartnerToChannelsDict = defaultdict(dict)
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
@@ -436,16 +444,14 @@ class PaymentMappingState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
-            'network': None,  # TODO
-            'channel_identifier_to_participants': {},  # TODO
+            'secrethashes_to_task': None,  # TODO
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentMappingState':
         assert data['type'] == cls.__name__
         restored = cls()
-        restored.network = None  # TODO
-        restored.channel_identifier_to_participants = {}  # TODO
+        restored.secrethashes_to_task = {}  # TODO
 
         return restored
 
@@ -1329,7 +1335,7 @@ class NettingChannelState(State):
         self.settle_timeout = settle_timeout
         self.our_state = our_state
         self.partner_state = partner_state
-        self.deposit_transaction_queue = list()
+        self.deposit_transaction_queue: typing.List[TransactionOrder] = list()
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
@@ -1389,8 +1395,7 @@ class NettingChannelState(State):
             'our_state': self.our_state.to_dict(),
             'partner_state': self.partner_state.to_dict(),
             'open_transaction': self.open_transaction.to_dict(),
-            'deposit_transaction_queue': None,  # TODO
-            'our_unlock_transaction': None,  # TODO
+            'deposit_transaction_queue': self.deposit_transaction_queue,
         }
 
         if self.close_transaction is not None:
@@ -1399,6 +1404,8 @@ class NettingChannelState(State):
             result['settle_transaction'] = self.settle_transaction.to_dict()
         if self.update_transaction is not None:
             result['update_transaction'] = self.update_transaction.to_dict()
+        if self.our_unlock_transaction is not None:
+            result['our_unlock_transaction'] = self.our_unlock_transaction.to_dict()
 
         return result
 
@@ -1426,9 +1433,13 @@ class NettingChannelState(State):
         update_transaction = data.get('update_transaction')
         if update_transaction is not None:
             restored.update_transaction = TransactionExecutionStatus.from_dict(update_transaction)
+        our_unlock_transaction = data.get('our_unlock_transaction')
+        if our_unlock_transaction is not None:
+            restored.our_unlock_transaction = TransactionExecutionStatus.from_dict(
+                our_unlock_transaction,
+            )
 
-        restored.deposit_transaction_queue = None  # TODO
-        restored.our_unlock_transaction = None  # TODO
+        restored.deposit_transaction_queue = data['deposit_transaction_queue']
 
         return restored
 
@@ -1501,6 +1512,50 @@ class TransactionChannelNewBalance(State):
             to_canonical_address(data['participant_address']),
             data['contract_balance'],
             data['deposit_block_number'],
+        )
+
+        return restored
+
+
+class TransactionOrder(State):
+    def __init__(
+            self,
+            block_number: typing.BlockNumber,
+            transaction: TransactionChannelNewBalance,
+    ):
+        self.block_number = block_number
+        self.transaction = transaction
+
+    def __repr__(self):
+        return '<TransactionOrder block_number:{} transaction:{}>'.format(
+            self.block_number,
+            self.transaction,
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, TransactionOrder):
+            return NotImplemented
+        return (
+            self.block_number == other.block_number and
+            self.transaction == other.transaction
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'block_number': self.block_number,
+            'transaction': self.transaction,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            data['block_number'],
+            data['transaction'],
         )
 
         return restored
