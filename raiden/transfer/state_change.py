@@ -487,7 +487,7 @@ class ActionChangeNodeNetworkState(StateChange):
     def __init__(
             self,
             node_address: typing.Address,
-            network_state,
+            network_state: str,
     ):
         if not isinstance(node_address, typing.T_Address):
             raise ValueError('node_address must be an address instance')

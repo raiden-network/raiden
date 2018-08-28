@@ -3,7 +3,6 @@ import heapq
 import random
 
 from binascii import hexlify
-from collections import namedtuple
 from typing import Union
 
 from eth_utils import to_canonical_address
@@ -69,6 +68,7 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     UnlockPartialProofState,
     UnlockProofState,
+    TransactionOrder,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -92,12 +92,6 @@ MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
 EventsOrError = typing.Tuple[bool, typing.List[Event], typing.Any]
 BalanceProofData = typing.Tuple[typing.Locksroot, typing.Nonce, typing.TokenAmount, typing.TokenAmount]  # noqa
 SendUnlockAndMerkleTree = typing.Tuple[SendBalanceProof, MerkleTreeState]
-
-
-TransactionOrder = namedtuple(
-    'TransactionOrder',
-    ('block_number', 'transaction'),
-)
 
 
 def is_lock_pending(
