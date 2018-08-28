@@ -94,3 +94,16 @@ def test_udp_decode_invalid_message(mock_udp):
     data = message.encode()
     wrong_command_id_data = b'\x99' + data[1:]
     assert not mock_udp.receive(wrong_command_id_data)
+
+
+def test_udp_decode_invalid_size_message(mock_udp):
+    message = SecretRequest(
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=1,
+        secrethash=UNIT_SECRETHASH,
+        amount=1,
+        expiration=10,
+    )
+    data = message.encode()
+    wrong_command_id_data = data[:-1]
+    assert not mock_udp.receive(wrong_command_id_data)
