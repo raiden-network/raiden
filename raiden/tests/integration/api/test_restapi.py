@@ -1091,7 +1091,7 @@ def test_network_events(api_backend, token_addresses):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'networkeventsresource',
+            'blockchaineventsnetworkresource',
             from_block=0,
         ),
     )
@@ -1126,7 +1126,7 @@ def test_token_events(api_backend, token_addresses):
     request = grequests.get(
         api_url_for(
             api_backend,
-            'tokenblockchaineventsresource',
+            'blockchaineventstokenresource',
             token_address=token_address,
             from_block=0,
         ),
@@ -1350,67 +1350,6 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_channel_transfer_events(api_backend, raiden_network, token_addresses):
-    _, app1 = raiden_network
-    amount = 200
-    identifier = 43
-    token_address = token_addresses[0]
-
-    target1_address = app1.raiden.address
-
-    api_server, _ = api_backend
-
-    # payment 1
-    request = grequests.post(
-        api_url_for(
-            api_backend,
-            'token_target_paymentresource',
-            token_address=to_checksum_address(token_address),
-            target_address=to_checksum_address(target1_address),
-        ),
-        json={'amount': amount, 'identifier': identifier},
-    )
-    request.send()
-
-    # payment 2
-    request = grequests.post(
-        api_url_for(
-            api_backend,
-            'token_target_paymentresource',
-            token_address=to_checksum_address(token_address),
-            target_address=to_checksum_address(target1_address),
-        ),
-        json={'amount': amount, 'identifier': identifier},
-    )
-    request.send()
-
-    # testing the raiden events endpoint
-    request = grequests.get(
-        api_url_for(
-            api_backend,
-            'tokenraideneventsresource',
-            token_address=token_address,
-            from_block=0,
-        ),
-    )
-
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-
-    response = response.json()
-    assert len(response) > 0
-
-    events_list = []
-    for event in response:
-        # taking the name of the event
-        events_list.append(event['event'])
-
-    assert 'SendLockedTransfer' in events_list
-    assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendBalanceProof' in events_list
-
-
-@pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 200
@@ -1429,51 +1368,3 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
     )
     response = request.send().response
     assert_proper_response(response)
-
-    request = grequests.get(
-        api_url_for(
-            api_backend,
-            'tokenchanneleventsresourceraiden',
-            partner_address=None,
-            token_address=token_address,
-            from_block=0,
-        ),
-    )
-
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    response = response.json()
-    assert len(response) > 0
-
-    events_list = []
-    for event in response:
-        # taking the name of the event
-        events_list.append(event['event'])
-
-    assert 'SendLockedTransfer' in events_list
-    assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendBalanceProof' in events_list
-
-    request = grequests.get(
-        api_url_for(
-            api_backend,
-            'tokenchanneleventsresourceraiden',
-            partner_address=target_address,
-            token_address=token_address,
-            from_block=0,
-        ),
-    )
-
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-
-    response = response.json()
-    assert len(response) > 0
-    events_list = []
-    for event in response:
-        # taking the name of the event
-        events_list.append(event['event'])
-
-    assert 'SendLockedTransfer' in events_list
-    assert 'EventPaymentSentSuccess' in events_list
-    assert 'SendBalanceProof' in events_list

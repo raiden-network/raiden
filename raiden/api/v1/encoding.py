@@ -162,16 +162,6 @@ class RaidenEventsRequestSchema(BaseSchema):
         decoding_class = dict
 
 
-class PaymentEventRequestSchema(BaseSchema):
-    from_block = fields.Integer(missing=None)
-    to_block = fields.Integer(missing=None)
-
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs
-        decoding_class = dict
-
-
 class AddressSchema(BaseSchema):
     address = AddressField()
 
