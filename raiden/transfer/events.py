@@ -722,7 +722,7 @@ class SendProcessed(SendMessageEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendDirectTransfer':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendProcessed':
         assert data['type'] == cls.__name__
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
