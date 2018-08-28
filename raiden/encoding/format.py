@@ -105,8 +105,8 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
 
     def __init__(self, data):
         if len(data) < size:
-            raise InvalidProtocolMessage('data buffer has less than the expected size {}'.format(
-                size)
+            raise InvalidProtocolMessage(
+                'data buffer has less than the expected size {}'.format(size),
             )
 
         object.__setattr__(self, 'data', data)
