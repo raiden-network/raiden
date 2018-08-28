@@ -287,7 +287,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
     assert not results
 
-    app1_events = RaidenAPI(app1.raiden).get_channel_events_raiden(
+    app1_events = RaidenAPI(app1.raiden).get_raiden_events_channel(
         token_address,
         app0.raiden.address,
         from_block=0,

@@ -150,7 +150,7 @@ class TokenRaidenEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, limit, offset):
-        return self.rest_api.get_token_network_events_raiden(
+        return self.rest_api.get_raiden_events_token_network(
             token_address=token_address,
             limit=limit,
             offset=offset,
@@ -163,7 +163,7 @@ class ChannelRaidenEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, partner_address=None, limit=None, offset=None):
-        return self.rest_api.get_channel_events_raiden(
+        return self.rest_api.get_raiden_events_channel(
             token_address=token_address,
             partner_address=partner_address,
             limit=limit,
@@ -232,7 +232,7 @@ class PaymentResource(BaseResource):
             limit: int = None,
             offset: int = None,
     ):
-        return self.rest_api.get_payment_history(
+        return self.rest_api.get_raiden_events_payment_history(
             token_address=token_address,
             target_address=target_address,
             limit=limit,
