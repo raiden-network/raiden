@@ -169,7 +169,10 @@ class SQLiteStorage:
 
         return result
 
-    def get_events(self, limit: int = -1, offset: int = 0):
+    def get_events(self, limit: int = None, offset: int = None):
+        limit = -1 if limit is None else limit
+        offset = 0 if offset is None else offset
+
         if not isinstance(limit, int):
             raise ValueError('limit must be an integer')
 
