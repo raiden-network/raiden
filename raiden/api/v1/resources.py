@@ -8,7 +8,6 @@ from raiden.api.v1.encoding import (
     ConnectionsLeaveSchema,
     BlockchainEventsRequestSchema,
     RaidenEventsRequestSchema,
-    PaymentEventRequestSchema,
     PaymentSchema,
 )
 from raiden.utils import typing
@@ -95,7 +94,7 @@ class PartnersResourceByTokenAddress(BaseResource):
         )
 
 
-class NetworkEventsResource(BaseResource):
+class BlockchainEventsNetworkResource(BaseResource):
 
     get_schema = BlockchainEventsRequestSchema()
 
@@ -111,7 +110,7 @@ class NetworkEventsResource(BaseResource):
         )
 
 
-class TokenBlockchainEventsResource(BaseResource):
+class BlockchainEventsTokenResource(BaseResource):
 
     get_schema = BlockchainEventsRequestSchema()
 
@@ -144,26 +143,13 @@ class ChannelBlockchainEventsResource(BaseResource):
         )
 
 
-class TokenRaidenEventsResource(BaseResource):
-
-    get_schema = RaidenEventsRequestSchema()
-
-    @use_kwargs(get_schema, locations=('query',))
-    def get(self, token_address, limit, offset):
-        return self.rest_api.get_raiden_events_token_network(
-            token_address=token_address,
-            limit=limit,
-            offset=offset,
-        )
-
-
-class ChannelRaidenEventsResource(BaseResource):
+class RaidenInternalEventsResource(BaseResource):
 
     get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, partner_address=None, limit=None, offset=None):
-        return self.rest_api.get_raiden_events_channel(
+        return self.rest_api.get_raiden_internal_events(
             token_address=token_address,
             partner_address=partner_address,
             limit=limit,
@@ -222,7 +208,7 @@ class PaymentResource(BaseResource):
     post_schema = PaymentSchema(
         only=('amount', 'identifier'),
     )
-    get_schema = PaymentEventRequestSchema()
+    get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=('query',))
     def get(

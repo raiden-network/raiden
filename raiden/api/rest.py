@@ -51,21 +51,20 @@ from raiden.api.v1.encoding import (
     EventPaymentSentFailedSchema,
 )
 from raiden.api.v1.resources import (
-    create_blueprint,
     AddressResource,
+    ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAndPartnerAddress,
-    TokensResource,
-    PartnersResourceByTokenAddress,
-    NetworkEventsResource,
-    RegisterTokenResource,
-    TokenBlockchainEventsResource,
-    TokenRaidenEventsResource,
-    ChannelRaidenEventsResource,
-    ChannelBlockchainEventsResource,
-    ConnectionsResource,
     ConnectionsInfoResource,
+    ConnectionsResource,
+    create_blueprint,
+    BlockchainEventsNetworkResource,
+    PartnersResourceByTokenAddress,
     PaymentResource,
+    RaidenInternalEventsResource,
+    RegisterTokenResource,
+    BlockchainEventsTokenResource,
+    TokensResource,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.events import (
@@ -98,44 +97,29 @@ ERROR_STATUS_CODES = [
 ]
 
 URLS_V1 = [
-    ('/address', AddressResource),
-    ('/channels', ChannelsResource),
+    (
+        '/address',
+        AddressResource,
+    ),
+    (
+        '/channels',
+        ChannelsResource,
+    ),
     (
         '/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
-        ChannelsResourceByTokenAndPartnerAddress),
-    ('/tokens', TokensResource),
-    ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
-    ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
-    ('/events/network', NetworkEventsResource),
-    ('/blockchain_events/tokens/<hexaddress:token_address>', TokenBlockchainEventsResource),
-    (
-        '/blockchain_events/payment_networks/<hexaddress:token_address>/channels',
-        ChannelBlockchainEventsResource,
-        'tokenchanneleventsresourceblockchain',
+        ChannelsResourceByTokenAndPartnerAddress,
     ),
     (
-        (
-            '/blockchain_events/payment_networks/'
-            '<hexaddress:token_address>/channels/<hexaddress:partner_address>'
-        ),
-        ChannelBlockchainEventsResource,
-    ),
-    ('/raiden_events/tokens/<hexaddress:token_address>', TokenRaidenEventsResource),
-    (
-        '/raiden_events/networks/<hexaddress:token_address>/channels',
-        ChannelRaidenEventsResource,
-        'tokenchanneleventsresourceraiden',
+        '/connections/<hexaddress:token_address>',
+        ConnectionsResource,
     ),
     (
-        '/raiden_events/networks/<hexaddress:token_address>/channels/<hexaddress:partner_address>',
-        ChannelRaidenEventsResource,
+        '/connections',
+        ConnectionsInfoResource,
     ),
-    ('/connections/<hexaddress:token_address>', ConnectionsResource),
-    ('/connections', ConnectionsInfoResource),
     (
         '/payments',
         PaymentResource,
-        'paymentresource',
     ),
     (
         '/payments/<hexaddress:token_address>',
@@ -146,6 +130,43 @@ URLS_V1 = [
         '/payments/<hexaddress:token_address>/<hexaddress:target_address>',
         PaymentResource,
         'token_target_paymentresource',
+    ),
+    (
+        '/tokens',
+        TokensResource,
+    ),
+    (
+        '/tokens/<hexaddress:token_address>/partners',
+        PartnersResourceByTokenAddress,
+    ),
+    (
+        '/tokens/<hexaddress:token_address>',
+        RegisterTokenResource,
+    ),
+
+    (
+        '/_debug/blockchain_events/network',
+        BlockchainEventsNetworkResource,
+    ),
+    (
+        '/_debug/blockchain_events/tokens/<hexaddress:token_address>',
+        BlockchainEventsTokenResource,
+    ),
+    (
+        '/_debug/blockchain_events/payment_networks/<hexaddress:token_address>/channels',
+        ChannelBlockchainEventsResource,
+        'tokenchanneleventsresourceblockchain',
+    ),
+    (
+        (
+            '/_debug/blockchain_events/payment_networks/'
+            '<hexaddress:token_address>/channels/<hexaddress:partner_address>'
+        ),
+        ChannelBlockchainEventsResource,
+    ),
+    (
+        '/_debug/raiden_events',
+        RaidenInternalEventsResource,
     ),
 ]
 
@@ -241,9 +262,8 @@ def normalize_events_list(old_list):
 
 def convert_to_serializable(event_list):
     returned_events = []
-    for block_number, event in event_list:
+    for event in event_list:
         new_event = {
-            'block_number': block_number,
             'event': type(event).__name__,
         }
         new_event.update(event.__dict__)
@@ -723,7 +743,7 @@ class RestAPI:
             to_block=to_block,
         )
         try:
-            raiden_service_result = self.raiden_api.get_network_events(
+            raiden_service_result = self.raiden_api.get_blockchain_events_network(
                 registry_address=registry_address,
                 from_block=from_block,
                 to_block=to_block,
@@ -791,26 +811,11 @@ class RestAPI:
             result.append(serialized_event.data)
         return api_response(result=result)
 
-    def get_raiden_events_token_network(
-            self,
-            token_address: typing.TokenAddress,
-            limit: int = None,
-            offset: int = None,
-    ):
-        log.debug(
-            'Getting token network internal events',
-            token_address=token_address,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_raiden_events_token_network(
-                token_address=token_address,
-                limit=limit,
-                offset=offset,
-            )
-            raiden_service_result = convert_to_serializable(raiden_service_result)
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except InvalidAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+    def get_raiden_internal_events(self, limit, offset):
+        return [
+            str(e)
+            for e in self.raiden_api.raiden.wal.storage.get_events(limit=limit, offset=offset)
+        ]
 
     def get_blockchain_events_channel(
             self,
@@ -836,32 +841,6 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-
-    def get_raiden_events_channel(
-            self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
-            limit: int = None,
-            offset: int = None,
-    ):
-        log.debug(
-            'Getting channel internal events',
-            token_address=token_address,
-            partner_address=partner_address,
-            limit=limit,
-            offset=offset,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_raiden_events_channel(
-                token_address=token_address,
-                partner_address=partner_address,
-                limit=limit,
-                offset=offset,
-            )
-            raiden_service_result = convert_to_serializable(raiden_service_result)
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except InvalidAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_channel(
             self,

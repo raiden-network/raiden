@@ -13,7 +13,6 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     EventPaymentSentFailed,
     EventPaymentReceivedSuccess,
-    ContractSendChannelSettle,
 )
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
@@ -44,17 +43,6 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
     EventPaymentSentFailed,
     EventPaymentReceivedSuccess,
 )
-
-
-def contains_partner_address(event, address):
-    if hasattr(event, 'partner_balance_proof'):
-        return event.partner_balance_proof.sender == address
-
-    return (
-        getattr(event, 'recipient', None) == address or
-        getattr(event, 'initiator', None) == address or
-        getattr(event, 'target', None) == address
-    )
 
 
 def event_filter(
@@ -703,92 +691,8 @@ class RaidenAPI:
 
         return events
 
-    def get_raiden_events_token_network(
-            self,
-            token_address,
-            limit: int = None,
-            offset: int = None,
-    ):
-        """Returns a list of internal events coresponding to the token_address."""
-        if not is_binary_address(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_raiden_events_token_network',
-            )
-
-        raiden_events = self.raiden.wal.storage.get_events(limit=limit, offset=offset)
-
-        # Here choose which raiden internal events we want to expose to the end user
-        returned_events = list()
-        for event in raiden_events:
-            if isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
-                new_event = {
-                    'event': type(event).__name__,
-                }
-                new_event.update(event.__dict__)
-                returned_events.append(new_event)
-
-        return returned_events
-
-    def get_raiden_events_channel(
-            self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
-            limit: int = None,
-            offset: int = None,
-    ):
-
-        if not is_binary_address(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_raiden_events_channel',
-            )
-
-        returned_events = []
-        raiden_events = self.raiden.wal.storage.get_events(limit=limit, offset=offset)
-
-        # Here choose which raiden internal events we want to expose to the end user
-        if partner_address:
-            returned_events = [
-                event
-                for event in raiden_events
-                if contains_partner_address(event, partner_address) and
-                self._is_internal_event(event, token_address)
-            ]
-        else:
-            returned_events = [
-                event
-                for event in raiden_events
-                if self._is_internal_event(event, token_address)
-            ]
-
-        return returned_events
-
-    def _is_internal_event(
-            self,
-            event,
-            token_address,
-    ):
-        if hasattr(event, 'transfer') and event.transfer.token == token_address:
-            return True
-        elif getattr(event, 'token', None) == token_address:
-            return True
-        elif getattr(event, 'token_address', None) == token_address:
-            return True
-        elif isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED):
-            token_network_identifier = views.get_token_network_identifier_by_token_address(
-                views.state_from_raiden(self.raiden),
-                event.payment_network_identifier,
-                token_address,
-            )
-            if token_network_identifier == event.token_network_identifier:
-                return True
-        elif type(event) == ContractSendChannelSettle:
-            token_network_state = views.get_token_network_by_identifier(
-                views.state_from_raiden(self.raiden),
-                event.token_network_identifier,
-            )
-            if token_network_state.token_address == token_address:
-                return True
-        return False
+    def get_raiden_internal_events(self, limit: int = None, offset: int = None):
+        return self.raiden.wal.storage.get_events(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
 
