@@ -1,4 +1,60 @@
+import pytest
+import random
+from gevent import server
+
+from raiden.constants import UINT64_MAX
+from raiden.messages import SecretRequest
 from raiden.network.throttle import TokenBucket
+from raiden.network.transport.udp import UDPTransport
+
+from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH
+
+
+class MockRaidenService(object):
+
+    def __init__(self, address):
+        self.address = address
+
+
+class MockDiscovery(object):
+
+    def get(self, node_address: bytes):
+        return '127.0.0.1:5252'
+
+
+@pytest.fixture
+def mock_udp(
+        raiden_udp_ports,
+        throttle_capacity,
+        throttle_fill_rate,
+        retry_interval,
+        retries_before_backoff,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout,
+):
+    throttle_policy = TokenBucket(throttle_capacity, throttle_fill_rate)
+    host = '127.0.0.1'
+    port = raiden_udp_ports[0]
+
+    config = dict(
+        retry_interval=retry_interval,
+        retries_before_backoff=retries_before_backoff,
+        nat_invitation_timeout=nat_invitation_timeout,
+        nat_keepalive_retries=nat_keepalive_retries,
+        nat_keepalive_timeout=nat_keepalive_timeout,
+    )
+
+    transport = UDPTransport(
+        MockDiscovery,
+        server._udp_socket((host, port)),  # pylint: disable=protected-access
+        throttle_policy,
+        config,
+    )
+
+    transport.raiden = MockRaidenService(ADDR)
+
+    return transport
 
 
 def test_token_bucket():
@@ -20,3 +76,21 @@ def test_token_bucket():
 
     for num in range(1, 9):
         assert num * token_refill == bucket.consume(1)
+
+
+def test_udp_receive_invalid_length(mock_udp):
+    data = bytearray(random.getrandbits(8) for _ in range(mock_udp.UDP_MAX_MESSAGE_SIZE + 1))
+    assert not mock_udp.receive(data)
+
+
+def test_udp_decode_invalid_message(mock_udp):
+    message = SecretRequest(
+        message_identifier=random.randint(0, UINT64_MAX),
+        payment_identifier=1,
+        secrethash=UNIT_SECRETHASH,
+        amount=1,
+        expiration=10,
+    )
+    data = message.encode()
+    wrong_command_id_data = b'\x99' + data[1:]
+    assert not mock_udp.receive(wrong_command_id_data)
