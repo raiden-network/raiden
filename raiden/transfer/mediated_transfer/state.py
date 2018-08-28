@@ -1,6 +1,8 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from eth_utils import encode_hex, to_checksum_address, to_canonical_address
+
 from raiden.transfer.architecture import State
-from raiden.utils import pex, sha3, typing
+from raiden.utils import pex, sha3, typing, serialization
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     balanceproof_from_envelope,
@@ -9,8 +11,6 @@ from raiden.transfer.state import (
     HashTimeLockState,
     RouteState,
 )
-
-from eth_utils import encode_hex
 
 
 def lockedtransfersigned_from_message(message):
@@ -67,6 +67,23 @@ class InitiatorPaymentState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'initiator': self.initiator.to_dict(),
+            'cancelled_channels': [],  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorPaymentState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            initiator=InitiatorTransferState.from_dict(data['initiator']),
+        )
+        restored.cancelled_channels = []  # TODO
+
+        return restored
+
 
 class InitiatorTransferState(State):
     """ State of a transfer for the initiator node. """
@@ -82,7 +99,7 @@ class InitiatorTransferState(State):
     def __init__(
             self,
             transfer_description: 'TransferDescriptionWithSecretState',
-            channel_identifier,
+            channel_identifier: typing.ChannelID,
     ):
 
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
@@ -118,6 +135,31 @@ class InitiatorTransferState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'transfer_description': self.transfer_description.to_dict(),
+            'channel_identifier': self.channel_identifier,
+            'transfer': None,  # TODO
+            'secretrequest': None,  # TODO
+            'revealsecret': None,  # TODO
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTransferState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            transfer_description=TransferDescriptionWithSecretState.from_dict(
+                data['transfer_description'],
+            ),
+            channel_identifier=data['channel_identifier'],
+        )
+        restored.transfer = None  # TODO
+        restored.secretrequest = None  # TODO
+        restored.revealsecret = None  # TODO
+
+        return restored
 
 
 class MediatorTransferState(State):
@@ -156,6 +198,32 @@ class MediatorTransferState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'type': self.__class__.__name__,
+            'secrethash': serialization.serialize_bytes(self.secrethash),
+            'transfers_pair': None,  # TODO
+        }
+
+        if self.secret is not None:
+            result['secret'] = serialization.serialize_bytes(self.secret)
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTransferState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
+        )
+        restored.transfers_pair = []  # TODO
+
+        secret = data.get('secret')
+        if secret is not None:
+            restored.secret = serialization.deserialize_bytes(secret)
+
+        return restored
 
 
 class TargetTransferState(State):
@@ -200,6 +268,34 @@ class TargetTransferState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'type': self.__class__.__name__,
+            'route': self.route,
+            'transfer': self.transfer,
+            'state': self.state,
+        }
+
+        if self.secret is not None:
+            result['secret'] = serialization.serialize_bytes(self.secret)
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTransferState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            route=data['route'],
+            transfer=data['transfer'],
+        )
+        restored.state = data['state']
+
+        secret = data.get('secret')
+        if secret is not None:
+            restored.secret = serialization.deserialize_bytes(secret)
+
+        return restored
+
 
 class LockedTransferUnsignedState(State):
     """ State for a transfer created by the local node which contains a hash
@@ -217,13 +313,13 @@ class LockedTransferUnsignedState(State):
 
     def __init__(
             self,
-            payment_identifier,
+            payment_identifier: typing.PaymentID,
             token: typing.Address,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
             initiator: typing.Address,
-            target: typing.Address):
-
+            target: typing.Address,
+    ):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
@@ -270,6 +366,31 @@ class LockedTransferUnsignedState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'token': to_checksum_address(self.token),
+            'balance_proof': self.balance_proof,
+            'lock': self.lock,
+            'initiator': to_checksum_address(self.initiator),
+            'target': to_checksum_address(self.target),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            token=to_canonical_address(data['token']),
+            balance_proof=data['token'],
+            lock=data['token'],
+            initiator=to_canonical_address(data['initiator']),
+            target=to_canonical_address(data['target']),
+        )
+
+        return restored
+
 
 class LockedTransferSignedState(State):
     """ State for a received transfer which contains a hash time lock and a
@@ -288,14 +409,14 @@ class LockedTransferSignedState(State):
 
     def __init__(
             self,
-            message_identifier,
-            payment_identifier,
+            message_identifier: typing.MessageID,
+            payment_identifier: typing.PaymentID,
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
             initiator: typing.Address,
-            target: typing.Address):
-
+            target: typing.Address,
+    ):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
@@ -348,6 +469,33 @@ class LockedTransferSignedState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'message_identifier': self.message_identifier,
+            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'token': to_checksum_address(self.token),
+            'balance_proof': self.balance_proof,
+            'lock': self.lock,
+            'initiator': to_checksum_address(self.initiator),
+            'target': to_checksum_address(self.target),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            message_identifier=data['message_identifier'],
+            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            token=to_canonical_address(data['token']),
+            balance_proof=data['token'],
+            lock=data['token'],
+            initiator=to_canonical_address(data['initiator']),
+            target=to_canonical_address(data['target']),
+        )
+
+        return restored
+
 
 class TransferDescriptionWithSecretState(State):
     """ Describes a transfer (target, amount, and token) and contains an
@@ -367,15 +515,14 @@ class TransferDescriptionWithSecretState(State):
 
     def __init__(
             self,
-            payment_network_identifier,
-            payment_identifier,
+            payment_network_identifier: typing.PaymentNetworkID,
+            payment_identifier: typing.PaymentID,
             amount: typing.TokenAmount,
             token_network_identifier: typing.TokenNetworkID,
             initiator: typing.Address,
             target: typing.Address,
             secret: typing.Secret,
     ):
-
         secrethash = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
@@ -411,6 +558,34 @@ class TransferDescriptionWithSecretState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
+            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'amount': self.amount,
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'initiator': to_checksum_address(self.initiator),
+            'target': to_checksum_address(self.target),
+            'secret': serialization.serialize_bytes(self.secret),
+            # 'secrethash' not needed, get recreated by constructor
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransferDescriptionWithSecretState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
+            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            amount=data['amount'],
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            initiator=to_canonical_address(data['initiator']),
+            target=to_canonical_address(data['target']),
+            secret=serialization.deserialize_bytes(data['secret']),
+        )
+
+        return restored
 
 
 class MediationPairState(State):
@@ -465,8 +640,8 @@ class MediationPairState(State):
             self,
             payer_transfer: LockedTransferSignedState,
             payee_address: typing.Address,
-            payee_transfer: LockedTransferUnsignedState):
-
+            payee_transfer: LockedTransferUnsignedState,
+    ):
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
@@ -508,3 +683,26 @@ class MediationPairState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'payee_address': to_checksum_address(self.payee_address),
+            'payee_transfer': self.payee_transfer,
+            'payee_state': self.payee_state,
+            'payer_transfer': self.payer_state,
+            'payer_state': self.payer_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediationPairState':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            payer_transfer=data['payer_transfer'],
+            payee_address=to_canonical_address(data['payee_address']),
+            payee_transfer=data['payee_transfer'],
+        )
+        restored.payer_state = data['payer_state']
+        restored.payee_state = data['payee_state']
+
+        return restored
