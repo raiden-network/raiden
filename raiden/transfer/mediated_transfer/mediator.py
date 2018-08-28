@@ -949,13 +949,13 @@ def handle_refundtransfer(
         payer_transfer = mediator_state_change.transfer
         channel_identifier = payer_transfer.balance_proof.channel_identifier
         payer_channel = channelidentifiers_to_channels[channel_identifier]
-        is_valid, events, _ = channel.handle_refundtransfer(
+        is_valid, channel_events, _ = channel.handle_refundtransfer(
             received_transfer=payee_transfer,
             channel_state=payer_channel,
             refund=mediator_state_change,
         )
         if not is_valid:
-            return TransitionResult(None, events)
+            return TransitionResult(None, channel_events)
 
         iteration = mediate_transfer(
             mediator_state,
@@ -966,6 +966,10 @@ def handle_refundtransfer(
             payer_transfer,
             block_number,
         )
+
+        events = list()
+        events.extend(channel_events)
+        events.extend(iteration.events)
     else:
         events = list()
 
