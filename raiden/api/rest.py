@@ -116,7 +116,7 @@ URLS_V1 = [
     (
         (
             '/blockchain_events/payment_networks/'
-            '<hexaddress:token_address>/channels/<hexaddress:partner_address>',
+            '<hexaddress:token_address>/channels/<hexaddress:partner_address>'
         ),
         ChannelBlockchainEventsResource,
     ),
@@ -343,6 +343,7 @@ class APIServer:
         self.wsgiserver = None
         self.greenlet = None
         self.flask_app.register_blueprint(self.blueprint)
+
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
         if is_frozen():
             # Inside frozen pyinstaller image
