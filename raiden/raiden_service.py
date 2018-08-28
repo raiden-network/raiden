@@ -52,6 +52,7 @@ from raiden.utils import (
     create_default_identifier,
     typing,
 )
+from raiden.transfer.events import SendDirectTransfer
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -290,6 +291,11 @@ class RaidenService:
         self.alarm.start()
 
         queueids_to_queues = views.get_all_messagequeues(chain_state)
+        # repopulate identifier_to_results for pending transfers
+        for queue_messages in queueids_to_queues.values():
+            for message in queue_messages:
+                if isinstance(message, SendDirectTransfer):
+                    self.identifier_to_results[message.payment_identifier] = AsyncResult()
         self.transport.start(self, queueids_to_queues)
 
         # Health check needs the transport layer
