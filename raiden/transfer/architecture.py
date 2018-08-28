@@ -70,6 +70,13 @@ class StateChange:
     """
     __slots__ = ()
 
+    def to_dict(self):
+        return {
+            attr: value
+            for attr, value in self.__dict__.items()
+            if not attr.startswith('_')
+        }
+
 
 class Event:
     """ Events produced by the execution of a state change.

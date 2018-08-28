@@ -1,4 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+import random
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     StateChange,
@@ -38,6 +39,10 @@ class Block(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['block_number'])
+
 
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
@@ -61,6 +66,10 @@ class ActionCancelPayment(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['payment_identifier'])
 
 
 class ActionChannelClose(StateChange):
@@ -89,6 +98,13 @@ class ActionChannelClose(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['token_network_identifier'],
+            data['channel_identifier'],
+        )
+
 
 class ActionCancelTransfer(StateChange):
     """ The user requests the transfer to be cancelled.
@@ -113,6 +129,10 @@ class ActionCancelTransfer(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['transfer_identifier'])
 
 
 class ActionTransferDirect(StateChange):
@@ -153,6 +173,15 @@ class ActionTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['token_network_identifier'],
+            data['receiver_address'],
+            data['payment_identifier'],
+            data['amount'],
+        )
+
 
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
@@ -185,6 +214,14 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['channel_state'],
+        )
 
 
 class ContractReceiveChannelClosed(ContractReceiveStateChange):
@@ -233,6 +270,16 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['transaction_from'],
+            data['token_network_identifier'],
+            data['channel_identifier'],
+            data['closed_block_number'],
+        )
+
 
 class ActionInitChain(StateChange):
     def __init__(
@@ -270,6 +317,15 @@ class ActionInitChain(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            random.Random(),
+            data['block_number'],
+            data['our_address'],
+            data['chain_id'],
+        )
+
 
 class ActionNewTokenNetwork(StateChange):
     """ Registers a new token network.
@@ -302,6 +358,13 @@ class ActionNewTokenNetwork(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['payment_network_identifier'],
+            data['token_network'],
+        )
 
 
 class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
@@ -340,6 +403,15 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['channel_identifier'],
+            data['deposit_transaction'],
+        )
 
 
 class ContractReceiveChannelSettled(ContractReceiveStateChange):
@@ -382,6 +454,15 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['payment_network_identifier'],
+            data['channel_identifier'],
+            data['settle_block_number'],
+        )
+
 
 class ActionLeaveAllNetworks(StateChange):
     """ User is quitting all payment networks. """
@@ -394,6 +475,10 @@ class ActionLeaveAllNetworks(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls()
 
 
 class ActionChangeNodeNetworkState(StateChange):
@@ -425,6 +510,13 @@ class ActionChangeNodeNetworkState(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['node_address'],
+            data['network_state'],
+        )
 
 
 class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
@@ -458,6 +550,13 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['payment_network'],
+        )
 
 
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
@@ -493,6 +592,14 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['payment_network_identifier'],
+            data['token_network'],
+        )
 
 
 class ContractReceiveSecretReveal(ContractReceiveStateChange):
@@ -536,6 +643,15 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['secret_registry_address'],
+            data['secrethash'],
+            data['secret'],
+        )
 
 
 class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
@@ -607,6 +723,18 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['participant'],
+            data['partner'],
+            data['locksroot'],
+            data['unlocked_amount'],
+            data['returned_tokens'],
+        )
+
 
 class ContractReceiveRouteNew(ContractReceiveStateChange):
     """ New channel was created and this node is NOT a participant. """
@@ -654,6 +782,16 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['channel_identifier'],
+            data['participant1'],
+            data['participant2'],
+        )
+
 
 class ContractReceiveRouteClosed(ContractReceiveStateChange):
     """ A channel was closed and this node is NOT a participant. """
@@ -686,6 +824,14 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['channel_identifier'],
+        )
+
 
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __init__(
@@ -715,6 +861,15 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['transaction_hash'],
+            data['token_network_identifier'],
+            data['channel_identifier'],
+            data['nonce'],
+        )
 
 
 class ReceiveTransferDirect(StateChange):
@@ -757,6 +912,15 @@ class ReceiveTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['token_network_identifier'],
+            data['message_identifier'],
+            data['payment_identifier'],
+            data['balance_proof'],
+        )
+
 
 class ReceiveUnlock(StateChange):
     def __init__(
@@ -794,6 +958,14 @@ class ReceiveUnlock(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['message_identifier'],
+            data['secret'],
+            data['balance_proof'],
+        )
+
 
 class ReceiveDelivered(StateChange):
     def __init__(self, message_identifier: typing.MessageID):
@@ -813,6 +985,10 @@ class ReceiveDelivered(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['message_identifier'])
+
 
 class ReceiveProcessed(StateChange):
     def __init__(self, message_identifier: typing.MessageID):
@@ -831,3 +1007,7 @@ class ReceiveProcessed(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['message_identifier'])
