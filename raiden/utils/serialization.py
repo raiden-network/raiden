@@ -25,7 +25,8 @@ class ReferenceCache:
         """ Register an instance of a certain class
         into the cache.
         """
-        self._cache[import_path].append(obj)
+        if obj not in self._cache[import_path]:
+            self._cache[import_path].append(obj)
 
     def get(self, import_path, obj):
         """ Check if a certain obj exists for reuse.
@@ -56,10 +57,13 @@ class RaidenJSONDecoder(json.JSONDecoder):
     specific object type invocation to restore
     it's state.
     """
+
+    # Maintain a global cache instance
+    # which lives across different decoder instances
+    _ref_cache = ReferenceCache()
+
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
-
-        self._ref_cache = ReferenceCache()
 
     def object_hook(self, data):
         """
@@ -75,8 +79,10 @@ class RaidenJSONDecoder(json.JSONDecoder):
                 obj = klass.from_dict(data)
 
             candidate = self._ref_cache.get(obj_type, obj)
-
-            return candidate if candidate else obj
+            if not candidate:
+                self._ref_cache.add(obj_type, obj)
+                return obj
+            return candidate
 
         return json.JSONDecoder.object_hook(data)
 
@@ -130,12 +136,18 @@ def deserialize_bytes(data: str) -> bytes:
 
 def serialize_networkx_graph(graph: networkx.Graph) -> str:
     return json.dumps([
-        edge for edge in graph.edges
+        (to_checksum_address(edge[0]), to_checksum_address(edge[1]))
+        for edge in graph.edges
     ])
 
 
 def deserialize_networkx_graph(data: str) -> networkx.Graph:
-    return networkx.Graph(json.loads(data))
+    raw_data = json.loads(data)
+    data = [
+        (to_canonical_address(edge[0]), to_canonical_address(edge[1]))
+        for edge in raw_data
+    ]
+    return networkx.Graph(data)
 
 
 def serialize_participants_tuple(

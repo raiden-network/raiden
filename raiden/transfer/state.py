@@ -332,8 +332,12 @@ class TokenNetworkState(State):
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph.to_dict(),
-            'channelidentifiers_to_channels': {},  # TODO
-            'partneraddresses_to_channels': {},  # TODO
+            # 'channelidentifiers_to_channels' can be recovered from partneraddresses
+            'partneraddresses_to_channels': map_dict(
+                to_checksum_address,
+                lambda item: item,
+                self.partneraddresses_to_channels,
+            ),
         }
 
     @classmethod
@@ -344,8 +348,16 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = TokenNetworkGraphState.from_dict(data['network_graph'])
-        restored.channelidentifiers_to_channels = {}  # TODO
-        restored.partneraddresses_to_channels = {}  # TODO
+        restored.partneraddresses_to_channels = map_dict(
+            to_canonical_address,
+            lambda item: item,
+            data['partneraddresses_to_channels'],
+        )
+        restored.channelidentifiers_to_channels = {}
+        # recover id -> channel map
+        for channelmap in restored.partneraddresses_to_channels.values():
+            for id, channel in channelmap.items():
+                restored.channelidentifiers_to_channels[id] = channel
 
         return restored
 
