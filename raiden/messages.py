@@ -126,7 +126,7 @@ def decode(data):
     try:
         klass = CMDID_TO_CLASS[data[0]]
     except KeyError:
-        raise InvalidProtocolMessage('Invalid message type (data[0] = {})'.format(hex(data[0])))
+        raise InvalidProtocolMessage('Invalid message type (CMDID = {})'.format(hex(data[0])))
     return klass.decode(data)
 
 

@@ -14,6 +14,7 @@ from eth_utils import is_binary_address
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.exceptions import (
     InvalidAddress,
+    InvalidProtocolMessage,
     UnknownAddress,
     RaidenShuttingDown,
 )
@@ -433,7 +434,7 @@ class UDPTransport:
         except RaidenShuttingDown:  # For a clean shutdown
             return
 
-    def receive(self, messagedata: bytes):
+    def receive(self, messagedata: bytes) -> bool:
         """ Handle an UDP packet. """
         # pylint: disable=unidiomatic-typecheck
 
@@ -444,9 +445,18 @@ class UDPTransport:
                 message=hexlify(messagedata),
                 length=len(messagedata),
             )
-            return
+            return False
 
-        message = decode(messagedata)
+        try:
+            message = decode(messagedata)
+        except InvalidProtocolMessage as e:
+            log.error(
+                'INVALID PROTOCOL MESSAGE',
+                error=str(e),
+                node=pex(self.raiden.address),
+                message=hexlify(messagedata),
+            )
+            return False
 
         if type(message) == Pong:
             self.receive_pong(message)
@@ -462,6 +472,9 @@ class UDPTransport:
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
             )
+            return False
+
+        return True
 
     def receive_message(self, message: Message):
         """ Handle a Raiden protocol message.
