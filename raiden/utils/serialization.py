@@ -1,5 +1,6 @@
 import json
 import importlib
+from collections import defaultdict
 
 import networkx
 from eth_utils import (
@@ -14,6 +15,25 @@ from raiden.transfer.merkle_tree import (
     LEAVES,
     compute_layers,
 )
+
+
+class ReferenceCache:
+    def __init__(self):
+        self._cache = defaultdict(list)
+
+    def add(self, import_path, obj):
+        """ Register an instance of a certain class
+        into the cache.
+        """
+        self._cache[import_path].append(obj)
+
+    def get(self, import_path, obj):
+        """ Check if a certain obj exists for reuse.
+        """
+        for candidate in self._cache[import_path]:
+            if obj == candidate:
+                return candidate
+        return None
 
 
 class RaidenJSONEncoder(json.JSONEncoder):
@@ -39,22 +59,32 @@ class RaidenJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
+        self._ref_cache = ReferenceCache()
+
     def object_hook(self, data):
         """
         detects the type of a JSON object, imports the class
         of that type and calls `to_dict`
         """
         if '_type' in data:
-            _type = data['_type']
-            klass = self._import_type(_type)
+            obj = None
+            obj_type = data['_type']
+
+            klass = self._import_type(obj_type)
             if hasattr(klass, 'from_dict'):
-                return klass.from_dict(data)
+                obj = klass.from_dict(data)
+
+            candidate = self._ref_cache.get(obj_type, obj)
+
+            return candidate if candidate else obj
+
         return json.JSONDecoder.object_hook(data)
 
     def _import_type(self, type_name):
         *module_name, klass_name = type_name.split('.')
         module_name = '.'.join(module_name)
         module = importlib.import_module(module_name, None)
+
         if not hasattr(module, klass_name):
             raise TypeError(f'Could not find {module_name}.{klass_name}')
         klass = getattr(module, klass_name)
