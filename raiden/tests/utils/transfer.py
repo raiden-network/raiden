@@ -125,7 +125,7 @@ def mediated_transfer(
         target_app.raiden.address,
         identifier,
     )
-    assert async_result.wait(timeout)
+    assert async_result.wait(timeout), f'timeout for transfer id={identifier}'
     gevent.sleep(0.3)  # let the other nodes synch
 
 
