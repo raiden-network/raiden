@@ -249,11 +249,11 @@ def handle_secretreveal(
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         unlock_lock = channel.send_unlock(
-            channel_state,
-            transfer_description.payment_identifier,
-            message_identifier,
-            state_change.secret,
-            state_change.secrethash,
+            channel_state=channel_state,
+            message_identifier=message_identifier,
+            payment_identifier=transfer_description.payment_identifier,
+            secret=state_change.secret,
+            secrethash=state_change.secrethash,
         )
 
         # TODO: Emit these events after on-chain unlock

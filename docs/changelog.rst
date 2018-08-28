@@ -2,10 +2,11 @@
 Changelog
 =========
 
+* :bug:`2293` Initiator had the payment and message identifiers swapped.
 * :bug:`2275` Adds scientific notation for really small fractions when displaying balances.
 * :bug:`2282` Fixes internal webui error that would not propagate channel updates.
 * :bug:`2284` Fixes balance notifications showing for wrong channels.
-* :bug:`2285` Request user acknowledgement for the experimental software disclaimer.
+* :feature:`2285` Request user acknowledgement for the experimental software disclaimer.
 * :bug:`2277` Fixes sorting by balance for tokens and channels.
 * :bug:`2278` Fixes leave network button request.
 * :feature:`2225` Using a constant expiration for lock, making sure that on-chain unlocks are atomic.

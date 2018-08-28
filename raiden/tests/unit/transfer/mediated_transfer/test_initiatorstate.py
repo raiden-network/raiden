@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.utils import random_secret
-from raiden.tests.utils import factories
+from raiden.tests.utils import factories, events
 from raiden.tests.utils.factories import (
     make_transfer_description,
     UNIT_REGISTRY_IDENTIFIER,
@@ -22,7 +22,10 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
 )
 from raiden.transfer import channel
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import (
+    RouteState,
+    message_identifier_from_prng,
+)
 from raiden.transfer.mediated_transfer import initiator_manager, initiator
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -43,7 +46,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state_change import ActionCancelPayment
 
 
-def make_initiator_state(
+def make_initiator_manager_state(
         routes,
         transfer_description,
         channelmap,
@@ -100,7 +103,7 @@ def test_next_route():
     ]
 
     block_number = 10
-    state = make_initiator_state(
+    state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -211,7 +214,7 @@ def test_state_wait_secretrequest_valid():
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -256,7 +259,7 @@ def test_state_wait_unlock_valid():
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -310,7 +313,7 @@ def test_state_wait_unlock_invalid():
     )
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -384,7 +387,7 @@ def test_refund_transfer_next_route():
     ]
 
     block_number = 10
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -452,7 +455,7 @@ def test_refund_transfer_no_more_routes():
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -513,7 +516,7 @@ def test_refund_transfer_invalid_sender():
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -565,7 +568,7 @@ def test_cancel_transfer():
     channelmap = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    current_state = make_initiator_state(
+    current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
         channelmap,
@@ -639,3 +642,42 @@ def test_init_with_maximum_pending_transfers_exceeded():
     assert failed_transition.new_state is None
     assert len(failed_transition.events) == 1
     assert isinstance(failed_transition.events[0], EventPaymentSentFailed)
+
+
+def test_handle_secretreveal():
+    channel1 = factories.make_channel(
+        our_balance=UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channelmap = {channel1.identifier: channel1}
+    available_routes = [factories.route_from_channel(channel1)]
+    pseudo_random_generator = random.Random()
+    block_number = 10
+
+    manager_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channelmap,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    secret_reveal = ReceiveSecretReveal(
+        secret=UNIT_SECRET,
+        sender=channel1.partner_state.address,
+    )
+
+    message_identifier = message_identifier_from_prng(deepcopy(pseudo_random_generator))
+
+    iteration = initiator.handle_secretreveal(
+        initiator_state=manager_state.initiator,
+        state_change=secret_reveal,
+        channel_state=channel1,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert events.must_contain_entry(iteration.events, SendBalanceProof, {
+        'message_identifier': message_identifier,
+        'payment_identifier': manager_state.initiator.transfer_description.payment_identifier,
+    })
