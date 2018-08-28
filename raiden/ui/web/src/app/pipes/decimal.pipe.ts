@@ -1,4 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import BigNumber from 'bignumber.js';
 import { amountToDecimal } from '../utils/amount.converter';
 
 @Pipe({
@@ -7,9 +8,8 @@ import { amountToDecimal } from '../utils/amount.converter';
 export class DecimalPipe implements PipeTransform {
 
     transform(value: any, decimals: number): string {
-        return amountToDecimal(value, decimals).toFixed(decimals)
-            .replace(/(\.\d+?)0+(?=e|$)/, '$1')
-            .replace(/\.(?=e|$)/, '');
+        const amount = new BigNumber(amountToDecimal(value, decimals));
+        return !amount.isZero() ? amount.toString() : '0';
     }
 
 }
