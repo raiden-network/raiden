@@ -27,16 +27,33 @@ def test_cli_version():
         assert expected_key in result_json
 
 
+def expect_cli_until_acknowledgment(child):
+    child.expect('Welcome to Raiden')
+    child.expect('Have you read and acknowledge the above disclaimer')
+    child.sendline('y')
+
+
+def expect_cli_until_account_selection(child):
+    expect_cli_until_acknowledgment(child)
+    child.expect('The following accounts were found in your machine:')
+    child.expect('Select one of them by index to continue: ')
+    child.sendline('0')
+
+
+def expect_cli_normal_startup(child):
+    expect_cli_until_acknowledgment(child)
+    child.expect('The following accounts were found in your machine:')
+    child.expect('Select one of them by index to continue: ')
+    child.sendline('0')
+    child.expect('You are connected')
+    child.expect('The Raiden API RPC server is now running')
+
+
 @pytest.mark.timeout(25)
 def test_cli_full_init(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
-        child.expect('You are connected')
-        child.expect('The Raiden API RPC server is now running')
+        expect_cli_normal_startup(child)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -48,6 +65,7 @@ def test_cli_full_init(cli_args):
 def test_cli_wrong_keystore_path(cli_args):
     child = spawn_raiden(cli_args)
     try:
+        expect_cli_until_acknowledgment(child)
         child.expect('No Ethereum accounts found in the provided keystore directory')
     except pexpect.TIMEOUT as e:
         print('PEXPECT timed out at', e)
@@ -60,10 +78,7 @@ def test_cli_wrong_keystore_path(cli_args):
 def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
+        expect_cli_until_account_selection(child)
         child.expect('Enter the password to unlock')
         with open(blockchain_provider['password_file'], 'r') as password_file:
             password = password_file.readline()
@@ -81,12 +96,7 @@ def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args)
 def test_cli_missing_data_dir(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
-        child.expect('You are connected')
-        child.expect('The Raiden API RPC server is now running')
+        expect_cli_normal_startup(child)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -98,10 +108,7 @@ def test_cli_missing_data_dir(cli_args):
 def test_cli_wrong_rpc_endpoint(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
+        expect_cli_until_account_selection(child)
         child.expect('Could not contact the ethereum node through JSON-RPC')
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
@@ -114,13 +121,11 @@ def test_cli_wrong_rpc_endpoint(cli_args):
 def test_cli_wrong_network_id_try_mainnet(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
+        expect_cli_until_account_selection(child)
         child.expect(
             "The chosen ethereum network 'mainnet' differs from the ethereum "
-            "client 'smoketest'")
+            "client 'smoketest'",
+        )
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -151,10 +156,7 @@ def test_cli_malformed_registry_address(cli_args):
 def test_cli_registry_address_without_deployed_contract(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        child.expect('Welcome to Raiden')
-        child.expect('The following accounts were found in your machine:')
-        child.expect('Select one of them by index to continue: ')
-        child.sendline('0')
+        expect_cli_until_account_selection(child)
         child.expect('You are connected')
         child.expect('contract does not contain code')
     except pexpect.TIMEOUT as e:
