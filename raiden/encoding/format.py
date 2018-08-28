@@ -1,4 +1,5 @@
 from collections import namedtuple, Counter
+from raiden.exceptions import InvalidProtocolMessage
 
 __all__ = ('Field', 'namedbuffer', 'buffer_for')
 
@@ -103,8 +104,10 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
         return buffer_[slice_]
 
     def __init__(self, data):
-        if len(data) != size:
-            raise ValueError('data buffer has the wrong size, expected {}'.format(size))
+        if len(data) < size:
+            raise InvalidProtocolMessage('data buffer has less than the expected size {}'.format(
+                size)
+            )
 
         object.__setattr__(self, 'data', data)
 
