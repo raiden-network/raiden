@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2275` Adds scientific notation for really small fractions when displaying balances.
 * :bug:`2282` Fixes internal webui error that would not propagate channel updates.
 * :bug:`2284` Fixes balance notifications showing for wrong channels.
 * :bug:`2285` Request user acknowledgement for the experimental software disclaimer.
