@@ -19,7 +19,7 @@ raiden-libs==0.1.4
 raiden-contracts==0.2.0
 webargs==1.8.1
 eth-keyfile==0.5.1
-eth_utils==1.0.3
+eth-utils==1.2.0
 structlog
 colorama
 py-solc
