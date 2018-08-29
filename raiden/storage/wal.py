@@ -80,7 +80,7 @@ def restore_from_latest_snapshot(transition_function, storage):
     wal = WriteAheadLog(state_manager, storage)
 
     log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
-    for state_change in unapplied_state_changes:
+    for i, state_change in enumerate(unapplied_state_changes):
 
         # FIXME: This is just temporary to make sure our json serialization code works
         # check state serialization
@@ -94,7 +94,7 @@ def restore_from_latest_snapshot(transition_function, storage):
                 compare_state_trees(state, restored)
                 import pdb; pdb.set_trace()  # noqa
             else:
-                print('State serialisation round-trip successful')
+                print(f'{i:>3}: State serialisation round-trip successful')
 
         # check state change serialization
         if state_change is not None:
