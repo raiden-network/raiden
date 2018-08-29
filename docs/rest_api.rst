@@ -544,22 +544,24 @@ Payments
 Querying Events
 ===============
 
-Events are kept by the node. Once an event endpoint is queried the relevant events
-from either the beginning of time or the given block are returned. Events are returned in a sorted list with the most recent events on the top of the list.
+Events are kept by the node. A normal user should only care about the events exposed for payments. Those events show if a payment failed or if it was successful. But at the moment we expose all of the events in the REST api mainly for debugging purposes. 
 
 In Raiden we distinguish between two types of events: ``blockchain_events`` and ``raiden_events``.
 ``blockchain_events`` are events that are being emitted by the smart contracts.
-``raiden_events`` are events happening in the Raiden node. For now, it's being used for debugging purpose.
+``raiden_events`` are events happening in the Raiden node.
+
+The payment events are a very small subset of ``raiden_events``.
 
 .. NOTE::
-      All raiden event endpoints are for debugging only and might get removed in the future.
+      All raiden event endpoints are for debugging only and might get removed in the future. They are placed under the ``_debug`` document in the REST URI.
 
-All events can be filtered down by providing the query string arguments ``from_block``
+Blockchain events can be filtered down by providing the query string arguments ``from_block``
 and/or ``to_block`` to only query events from a limited range of blocks. The block number
 argument needs to be in the range of 0 to UINT64_MAX. Any block number outside this range will
 be rejected.
+For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which would define the limit of results to return and the offset from which to return results respectively.
 
-.. http:get:: /api/(version)/events/network
+.. http:get:: /api/(version)/_debug/blockchain_events/network
 
    Query for token network creations.
 
@@ -571,7 +573,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/events/network HTTP/1.1
+      GET /api/1/_debug/blockchain_events/network HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -602,7 +604,7 @@ be rejected.
    :statuscode 409: If the given block number argument is invalid
    :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/blockchain_events/tokens/(token_address)
+.. http:get:: /api/(version)/_debug/blockchain_events/tokens/(token_address)
 
    Query for all blockchain events happening on a token network.
 
@@ -610,7 +612,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/blockchain_events/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+      GET /api/1/_debug/blockchain_events/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -659,7 +661,7 @@ be rejected.
    :statuscode 409: If the given block number or token_address arguments are invalid
    :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/blockchain_events/payment_networks/(token_address)/channels/(partner_address)
+.. http:get:: /api/(version)/_debug/blockchain_events/payment_networks/(token_address)/channels/(partner_address)
 
    Query for ``blockchain_events`` tied to all the channels which are part of the token network.
    If the partner_address is not provided it will show the events for all the channels.
@@ -668,7 +670,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
+      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -700,7 +702,7 @@ be rejected.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
+      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -755,19 +757,16 @@ be rejected.
 
      [
          {
-             block_number: 3694255,
              event: "EventPaymentReceivedSuccess",
              amount: 5,
              initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7"
          },
          {
-             block_number: 3694245,
              event: "EventPaymentSentSuccess",
              amount: 35,
              target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
          },
          {
-             block_number: 3694216,
              event: "EventPaymentSentSuccess",
              amount: 20,
              target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
@@ -780,9 +779,9 @@ be rejected.
   :statuscode 500: Internal Raiden node error
 
 
-Now for the Raiden events:
+Now for the internal Raiden events:
 
-.. http:get:: /api/(version)/raiden_events/tokens/(token_address)
+.. http:get:: /api/(version)/_debug/raiden_events/tokens/(token_address)
 
    Query for Raiden internal node events.
 
@@ -790,7 +789,7 @@ Now for the Raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
+      GET /api/1/_debug/raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -801,7 +800,6 @@ Now for the Raiden events:
      Content-Type: application/json
 
     [{
-        'block_number': 36,
         'event': 'SendLockedTransfer',
         'message_identifier': 17084435898865420397,
         'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
@@ -815,7 +813,6 @@ Now for the Raiden events:
                       'target:0x636f37d785257d919931acff318f70fb7da4f903>'
      },
      {
-        'block_number': 36,
         'event': 'SendRevealSecret',
         'message_identifier': 9182020688704924936,
         'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
@@ -824,7 +821,6 @@ Now for the Raiden events:
      },
      {
         'amount': 200,
-        'block_number': 36,
         'event': 'EventPaymentSentSuccess',
         'identifier': 43,
         'payment_network_identifier': '0x41ac2632d8c233784783e50ec6678cdc43f74c76',
@@ -838,7 +834,7 @@ Now for the Raiden events:
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/(version)/raiden_events/networks/(token_address)/channels/(partner_address)
+.. http:get:: /api/(version)/_debug/raiden_events/networks/(token_address)/channels/(partner_address)
 
    Query for Raiden internal node events.
 
@@ -846,7 +842,7 @@ Now for the Raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
+      GET /api/1/_debug/raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -857,7 +853,6 @@ Now for the Raiden events:
      Content-Type: application/json
 
     [{
-        'block_number': 36,
         'event': 'SendLockedTransfer',
         'message_identifier': 16700893459475179678,
         'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
@@ -871,7 +866,6 @@ Now for the Raiden events:
                   'target:0x1d2cb001f807882c4a862731cbb77390e641a8fd>'
      },
      {
-        'block_number': 36,
         'event': 'SendRevealSecret',
         'message_identifier': 17638248769110067506,
         'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
@@ -880,7 +874,6 @@ Now for the Raiden events:
      },
      {
         'amount': 200,
-        'block_number': 36,
         'event': 'EventPaymentSentSuccess',
         'identifier': 42,
         'payment_network_identifier': '0xf6febb9ca9efab37e495612dff0e30964cbb2c15',
@@ -888,7 +881,6 @@ Now for the Raiden events:
         'token_network_identifier': '0xb12596e59a7fa29c0f7c349261cd91148a496dc8'
      },
      {
-        'block_number': 36,
         'event': 'EventUnlockSuccess',
         'identifier': 42,
         'secrethash': '0x8ee5cb32c24203b9d62dd55359c3494f4a1694039fb0ce7c2c46bdf619b54c76'
@@ -897,7 +889,6 @@ Now for the Raiden events:
         'balance_proof': '<BalanceProofUnsignedState nonce:2 transferred_amount:200 '
                        'locked_amount:0 locksroot:00000000 token_network:b12596e5 '
                        'channel_identifier:1 chain_id: 337>',
-        'block_number': 36,
         'event': 'SendBalanceProof',
         'message_identifier': 42,
         'payment_identifier': 5518212473974981549,
