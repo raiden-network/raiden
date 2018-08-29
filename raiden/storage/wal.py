@@ -1,5 +1,6 @@
 import structlog
 
+from raiden.utils.serialization import json_encode, json_decode
 from raiden.transfer.architecture import StateManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -28,6 +29,14 @@ def restore_from_latest_snapshot(transition_function, storage):
 
     log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
     for state_change in unapplied_state_changes:
+
+        state = state_manager.current_state
+        if state is not None:
+            json = json_encode(state.to_dict())
+            restored = json_decode(json)
+
+            print(state == restored)
+
         state_manager.dispatch(state_change)
 
     return wal
