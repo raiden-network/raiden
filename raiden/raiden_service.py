@@ -303,7 +303,6 @@ class RaidenService(Runnable):
         self.alarm.first_run()
 
         chain_state = views.state_from_raiden(self)
-        # Dispatch pending transactions
         pending_transactions = views.get_pending_transactions(
             chain_state,
         )
@@ -439,7 +438,13 @@ class RaidenService(Runnable):
         self.wal.log_and_dispatch(state_change)
 
     def start_health_check_for(self, node_address):
-        self.transport.start_health_check(node_address)
+        # UDP's healthcheck requires the transport to be fully started, but
+        # this function may be called while the service is being started.
+        #
+        # The healthcheck's that are not started in this fuction during startup
+        # are handled by self.start_neighbours_healthcheck()
+        if self.transport:
+            self.transport.start_health_check(node_address)
 
     def _callback_new_block(self, current_block_number):
         """Called once a new block is detected by the alarm task.
