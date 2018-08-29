@@ -1484,7 +1484,7 @@ class LockExpired(EnvelopeMessage):
             token_network_address=token_network_address,
         )
         self.message_identifier = message_identifier
-        self.recipient = recipient  #: partner's address
+        self.recipient = recipient
         self.secrethash = secrethash
 
     @classmethod
@@ -1538,7 +1538,7 @@ class LockExpired(EnvelopeMessage):
     def __repr__(self):
         representation = (
             '<{} ['
-            'chainid:{} token_network:{} msg:{} channel_identifier:{} nonce:{} '
+            'chainid:{} token_network_address:{} msg_id:{} channel_identifier:{} nonce:{} '
             'transferred_amount:{} locked_amount:{} locksroot:{} secrethash:{}'
             ']>'
         ).format(

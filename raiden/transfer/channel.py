@@ -136,7 +136,7 @@ def is_lock_locked(
 
 
 def is_lock_expired(
-        locked_lock: LockedTransferSignedState,
+        locked_lock: typing.Optional[LockedTransferSignedState],
         secrethash: typing.SecretHash,
         block_number: typing.BlockNumber,
 ):
@@ -412,7 +412,6 @@ def is_valid_lockexpired(
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
-    message_name = 'LockExpired'
     received_balance_proof = state_change.balance_proof
     lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(state_change.secrethash)
 
@@ -434,11 +433,11 @@ def is_valid_lockexpired(
     )
 
     if get_status(channel_state) != CHANNEL_STATE_OPENED:
-        msg = 'Invalid {} message. The channel is already closed.'.format(message_name)
+        msg = 'Invalid LockExpired message. The channel is already closed.'
         result = (False, msg, None)
 
     elif merkletree is None:
-        msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
+        msg = 'Invalid LockExpired message. Same lockhash handled twice.'
         result = (False, msg, None)
 
     else:
@@ -452,16 +451,15 @@ def is_valid_lockexpired(
         if not is_valid:
             # The signature must be valid, otherwise the balance proof cannot be
             # used onchain
-            msg = 'Invalid {} message. {}'.format(message_name, signature_msg)
+            msg = 'Invalid LockExpired message. {}'.format(signature_msg)
 
             result = (False, msg, None)
 
         elif received_balance_proof.chain_id != channel_state.chain_id:
             msg = (
-                "Invalid {} message. "
+                "Invalid LockExpired message. "
                 "Chain id does not match channel's chain_id, expected: {} got: {}."
             ).format(
-                message_name,
                 channel_state.chain_id,
                 received_balance_proof.chain_id,
             )
@@ -472,10 +470,9 @@ def is_valid_lockexpired(
             # The nonces must increase sequentially, otherwise there is a
             # synchronization problem
             msg = (
-                'Invalid {} message. '
+                'Invalid LockExpired message. '
                 'Nonce did not change sequentially, expected: {} got: {}.'
             ).format(
-                message_name,
                 expected_nonce,
                 received_balance_proof.nonce,
             )
@@ -485,10 +482,9 @@ def is_valid_lockexpired(
         elif received_balance_proof.locksroot != locksroot_without_lock:
             # The locksroot must be updated to include the new lock
             msg = (
-                'Invalid {} message. '
+                'Invalid LockExpired message. '
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
-                message_name,
                 hexlify(locksroot_without_lock).decode(),
                 hexlify(received_balance_proof.locksroot).decode(),
             )
@@ -498,10 +494,9 @@ def is_valid_lockexpired(
         elif received_balance_proof.transferred_amount != current_transferred_amount:
             # Given an expired lock, transferred amount should stay the same
             msg = (
-                'Invalid {} message. '
+                'Invalid LockExpired message. '
                 "Balance proof's transferred_amount changed, expected: {} got: {}."
             ).format(
-                message_name,
                 current_transferred_amount,
                 received_balance_proof.transferred_amount,
             )
@@ -511,10 +506,9 @@ def is_valid_lockexpired(
         elif not is_valid_amount(sender_state, lock.amount):
             # We can validate that the Expired message will have a transferred amount
             msg = (
-                "Invalid {} message. "
+                "Invalid LockExpired message. "
                 "Unlocking the lock would result in an overflow. max: {} result would be: {}"
             ).format(
-                message_name,
                 UINT256_MAX,
                 transferred_amount_after_unlock,
             )
@@ -524,10 +518,9 @@ def is_valid_lockexpired(
         elif received_balance_proof.locked_amount != expected_locked_amount:
             # locked amount should be be the same as BP given the current lock expiry
             msg = (
-                'Invalid {} message. '
+                'Invalid LockExpired message. '
                 "Balance proof's locked_amount is invalid, expected: {} got: {}."
             ).format(
-                message_name,
                 expected_locked_amount,
                 received_balance_proof.locked_amount,
             )
@@ -539,10 +532,9 @@ def is_valid_lockexpired(
             # on-chain contract would be susceptible to replay attacks across
             # channels.
             msg = (
-                'Invalid {} message. '
+                'Invalid LockExpired message. '
                 'Balance proof is tied to the wrong channel, expected: {} got: {}'
             ).format(
-                message_name,
                 channel_state.identifier,
                 received_balance_proof.channel_identifier,
             )
@@ -1520,19 +1512,20 @@ def events_for_expired_lock(
         secrethash: typing.SecretHash,
         locked_lock: LockedTransferUnsignedState,
         pseudo_random_generator: random.Random,
-):
+) -> SendLockExpired:
     nonce = get_next_nonce(channel_state.our_state)
     locked_amount = get_amount_locked(channel_state.our_state)
     our_balance_proof = channel_state.our_state.balance_proof
     updated_locked_amount = locked_amount - locked_lock.amount
-    transferred_amount = our_balance_proof.transferred_amount + updated_locked_amount
+    transferred_amount = our_balance_proof.transferred_amount
 
-    sender_state = channel_state.partner_state
+    sender_state = channel_state.our_state
     merkletree = compute_merkletree_without(sender_state.merkletree, locked_lock.lockhash)
-    if merkletree:
-        locksroot = merkleroot(merkletree)
-    else:
-        locksroot = EMPTY_MERKLE_ROOT
+
+    if not merkletree:
+        return []
+
+    locksroot = merkleroot(merkletree)
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1546,12 +1539,12 @@ def events_for_expired_lock(
 
     delete_secrethash_endstate(channel_state.our_state, secrethash, locked_lock)
 
-    return SendLockExpired(
+    return [SendLockExpired(
         recipient=channel_state.partner_state.address,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         balance_proof=balance_proof,
         secrethash=locked_lock.secrethash,
-    )
+    )]
 
 
 def delete_secrethash_endstate(
@@ -1827,7 +1820,6 @@ def handle_receive_lock_expired(
         channel_state.our_state,
     )
 
-    new_state = channel_state
     events = list()
     if is_valid:
         secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
@@ -1837,7 +1829,6 @@ def handle_receive_lock_expired(
             state_change.secrethash,
             locked_lock,
         )
-        new_state = None
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
@@ -1845,7 +1836,7 @@ def handle_receive_lock_expired(
         )
         events = [send_processed]
 
-    return TransitionResult(new_state, events)
+    return TransitionResult(channel_state, events)
 
 
 def handle_receive_lockedtransfer(

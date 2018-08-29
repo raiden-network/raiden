@@ -262,22 +262,7 @@ def handle_block(
         transfer.lock.secrethash,
     )
 
-    secrethash = transfer.lock.secrethash
-    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
-    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
-        # Lock has expired, cleanup...
-        channel.events_for_expired_lock(
-            channel_state,
-            secrethash,
-            locked_lock,
-            pseudo_random_generator,
-        )
-
-        # Target emits no events here.
-        iteration = TransitionResult(None, list())
-        return iteration
-
-    elif not secret_known and block_number > transfer.lock.expiration:
+    if not secret_known and block_number > transfer.lock.expiration:
         if target_state.state != 'expired':
             failed = EventUnlockClaimFailed(
                 identifier=transfer.payment_identifier,
@@ -303,7 +288,11 @@ def handle_lock_expired(
         channel_state: NettingChannelState,
 ):
     """Remove expired locks from channel states."""
-    return channel.handle_receive_lock_expired(channel_state, state_change)
+    result = channel.handle_receive_lock_expired(channel_state, state_change)
+    if channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
+        return TransitionResult(None, result.events)
+
+    return TransitionResult(target_state, result.events)
 
 
 def state_transition(
