@@ -1,3 +1,4 @@
+import pytest
 from networkx import Graph
 from eth_utils import to_canonical_address
 
@@ -106,6 +107,28 @@ def test_decode_with_ref_cache():
     # Make sure that the original decoded A
     # is returned
     assert id(decoded_A) == id(decoded_B)
+
+
+def test_decode_with_unknown_type():
+    test_str = """
+{
+    "_type": "some.non.existent.package",
+    "attr1": "test"
+}
+"""
+    with pytest.raises(TypeError) as m:
+        serialization.json_decode(test_str)
+        assert str(m) == 'Module some.non.existent.package does not exist'
+
+    test_str = """
+{
+    "_type": "raiden.tests.unit.test_serialization.NonExistentClass",
+    "attr1": "test"
+}
+"""
+    with pytest.raises(TypeError) as m:
+        serialization.json_decode(test_str)
+        assert str(m) == 'raiden.tests.unit.test_serialization.NonExistentClass'
 
 
 def test_serialization_networkx_graph():
