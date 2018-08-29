@@ -266,6 +266,8 @@ def configure_logging(
                 handler.doRollover()
 
     # fix logging of py-evm (it uses a custom Trace logger from logging library)
+    # if py-evm is not used this will throw, hence the try-catch block
+    # for some reason it didn't work to put this into conftest.py
     try:
         from eth.utils.logging import setup_trace_logging
         setup_trace_logging()
