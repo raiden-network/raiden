@@ -84,12 +84,16 @@ class RaidenJSONDecoder(json.JSONDecoder):
                 return obj
             return candidate
 
-        return json.JSONDecoder.object_hook(data)
+        return data
 
     def _import_type(self, type_name):
         *module_name, klass_name = type_name.split('.')
         module_name = '.'.join(module_name)
-        module = importlib.import_module(module_name, None)
+
+        try:
+            module = importlib.import_module(module_name, None)
+        except ModuleNotFoundError:
+            raise TypeError(f'Module {module_name} does not exist')
 
         if not hasattr(module, klass_name):
             raise TypeError(f'Could not find {module_name}.{klass_name}')

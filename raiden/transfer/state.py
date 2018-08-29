@@ -84,20 +84,148 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
-class InitiatorTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkID
-    manager_state: 'InitiatorTransferState'
+class InitiatorTask(State):
+    __slots__ = (
+        'token_network_identifier',
+        'manager_state',
+    )
+
+    def __init__(
+            self,
+            token_network_identifier: typing.TokenNetworkID,
+            manager_state: 'InitiatorTransferState',
+    ):
+        self.token_network_identifier = token_network_identifier
+        self.manager_state = manager_state
+
+    def __repr__(self):
+        return '<InitiatorTask token_network_identifier:{} state:{}>'.format(
+            self.token_network_identifier,
+            self.manager_state,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, InitiatorTask) and
+            self.token_network_identifier == other.token_network_identifier and
+            self.manager_state == other.manager_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'manager_state': self.manager_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTask':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            manager_state=data['manager_task'],
+        )
+
+        return restored
 
 
-class MediatorTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkID
-    mediator_state: 'MediatorTransferState'
+class MediatorTask(State):
+    __slots__ = (
+        'token_network_identifier',
+        'manager_state',
+    )
+
+    def __init__(
+            self,
+            token_network_identifier: typing.TokenNetworkID,
+            manager_state: 'MediatorTransferState',
+    ):
+        self.token_network_identifier = token_network_identifier
+        self.manager_state = manager_state
+
+    def __repr__(self):
+        return '<MediatorTask token_network_identifier:{} state:{}>'.format(
+            self.token_network_identifier,
+            self.manager_state,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MediatorTask) and
+            self.token_network_identifier == other.token_network_identifier and
+            self.manager_state == other.manager_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'manager_state': self.manager_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTask':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            manager_state=data['manager_task'],
+        )
+
+        return restored
 
 
-class TargetTask(typing.NamedTuple):
-    token_network_identifier: typing.TokenNetworkID
-    channel_identifier: typing.ChannelID
-    target_state: 'TargetTransferState'
+class TargetTask(State):
+    __slots__ = (
+        'token_network_identifier',
+        'manager_state',
+    )
+
+    def __init__(
+            self,
+            token_network_identifier: typing.TokenNetworkID,
+            manager_state: 'TargetTransferState',
+    ):
+        self.token_network_identifier = token_network_identifier
+        self.manager_state = manager_state
+
+    def __repr__(self):
+        return '<TargetTask token_network_identifier:{} state:{}>'.format(
+            self.token_network_identifier,
+            self.manager_state,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TargetTask) and
+            self.token_network_identifier == other.token_network_identifier and
+            self.manager_state == other.manager_state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'type': self.__class__.__name__,
+            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'manager_state': self.manager_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
+        assert data['type'] == cls.__name__
+        restored = cls(
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            manager_state=data['manager_task'],
+        )
+
+        return restored
 
 
 class ChainState(State):
@@ -456,14 +584,22 @@ class PaymentMappingState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
-            'secrethashes_to_task': None,  # TODO
+            'secrethashes_to_task': map_dict(
+                serialization.serialize_bytes,
+                lambda item: item,
+                self.secrethashes_to_task,
+            ),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentMappingState':
         assert data['type'] == cls.__name__
         restored = cls()
-        restored.secrethashes_to_task = {}  # TODO
+        restored.secrethashes_to_task = map_dict(
+            serialization.deserialize_bytes,
+            lambda item: item,
+            data['secrethashes_to_task'],
+        )
 
         return restored
 
