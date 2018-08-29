@@ -3,18 +3,19 @@ import json
 import os
 import sys
 from binascii import hexlify, unhexlify
-from typing import Dict
+from typing import Dict, Optional
 
 from eth_keyfile import decode_keyfile_json
 import structlog
 from eth_utils import to_checksum_address
 
+from raiden.utils.typing import AddressHex
 from raiden.utils import privtopub, privatekey_to_address
 
 log = structlog.get_logger(__name__)
 
 
-def find_datadir():
+def _find_datadir() -> str:
     home = os.path.expanduser('~')
     if home == '~':  # Could not expand user path
         return None
@@ -33,8 +34,8 @@ def find_datadir():
     return datadir
 
 
-def find_keystoredir():
-    datadir = find_datadir()
+def _find_keystoredir() -> str:
+    datadir = _find_datadir()
     if datadir is None:
         # can't find a data directory in the system
         return None
@@ -77,11 +78,11 @@ def check_keystore_json(jsondata: Dict) -> bool:
 
 
 class AccountManager:
-    def __init__(self, keystore_path=None):
+    def __init__(self, keystore_path: str = None):
         self.keystore_path = keystore_path
         self.accounts = {}
         if self.keystore_path is None:
-            self.keystore_path = find_keystoredir()
+            self.keystore_path = _find_keystoredir()
         if self.keystore_path is not None:
 
             try:
@@ -115,7 +116,7 @@ class AccountManager:
                                 msg = 'The account file is not valid JSON format'
                             log.warning(msg, path=fullpath, ex=ex)
 
-    def address_in_keystore(self, address):
+    def address_in_keystore(self, address: Optional[AddressHex]) -> bool:
         if address is None:
             return False
 
@@ -124,7 +125,7 @@ class AccountManager:
 
         return address.lower() in self.accounts
 
-    def get_privkey(self, address, password=None):
+    def get_privkey(self, address: AddressHex, password: str = None) -> str:
         """Find the keystore file for an account, unlock it and get the private key
 
         Args:
@@ -184,7 +185,7 @@ class Account:
             self.unlock(password)
 
     @classmethod
-    def load(cls, path, password=None):
+    def load(cls, path: str, password: str = None) -> 'Account':
         """Load an account from a keystore file.
 
         Args:
@@ -197,7 +198,7 @@ class Account:
             raise ValueError('Invalid keystore file')
         return Account(keystore, password, path=path)
 
-    def dump(self, include_address=True, include_id=True):
+    def dump(self, include_address=True, include_id=True) -> str:
         """Dump the keystore for later disk storage.
 
         The result inherits the entries `'crypto'` and `'version`' from `account.keystore`, and
@@ -291,23 +292,6 @@ class Account:
             self.keystore['id'] = value
         elif 'id' in self.keystore:
             self.keystore.pop('id')
-
-    def sign_tx(self, tx):
-        """Sign a Transaction with the private key of this account.
-
-        If the account is unlocked, this is equivalent to ``tx.sign(account.privkey)``.
-
-        Args:
-            tx: the :class:`ethereum.transactions.Transaction` to sign
-
-        Raises:
-            ValueError: if the account is locked
-        """
-        if self.privkey:
-            log.info('signing tx', tx=tx, account=self)
-            tx.sign(self.privkey)
-        else:
-            raise ValueError('Locked account cannot sign tx')
 
     def __repr__(self):
         if self.address is not None:
