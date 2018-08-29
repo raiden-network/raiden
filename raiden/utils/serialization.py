@@ -109,6 +109,10 @@ def json_decode(obj):
     return json.loads(obj, cls=RaidenJSONDecoder)
 
 
+def identity(val):
+    return val
+
+
 def map_dict(
     key_func: typing.Callable,
     value_func: typing.Callable,

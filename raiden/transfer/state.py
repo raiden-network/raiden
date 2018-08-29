@@ -301,16 +301,16 @@ class ChainState(State):
             'chain_id': self.chain_id,
             'identifiers_to_paymentnetworks': map_dict(
                 to_checksum_address,
-                PaymentNetworkState.to_dict,
+                serialization.identity,
                 self.identifiers_to_paymentnetworks,
             ),
             'nodeaddresses_to_networkstates': map_dict(
                 to_checksum_address,
-                lambda state: state,
+                serialization.identity,
                 self.nodeaddresses_to_networkstates,
             ),
             'our_address': to_checksum_address(self.our_address),
-            'payment_mapping': self.payment_mapping.to_dict(),
+            'payment_mapping': self.payment_mapping,
             'pending_transactions': self.pending_transactions,
             'queueids_to_queues': self.queueids_to_queues,
         }
@@ -327,15 +327,15 @@ class ChainState(State):
 
         restored.identifiers_to_paymentnetworks = map_dict(
             to_canonical_address,
-            PaymentNetworkState.from_dict,
+            serialization.identity,
             data['identifiers_to_paymentnetworks'],
         )
         restored.nodeaddresses_to_networkstates = map_dict(
             to_canonical_address,
-            lambda state: state,
+            serialization.identity,
             data['nodeaddresses_to_networkstates'],
         )
-        restored.payment_mapping = PaymentMappingState.from_dict(data['payment_mapping'])
+        restored.payment_mapping = data['payment_mapping']
         restored.pending_transactions = data['pending_transactions']
         restored.queueids_to_queues = data['queueids_to_queues']
 
@@ -388,8 +388,7 @@ class PaymentNetworkState(State):
             'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'tokennetworks': [
-                network.to_dict()
-                for network in self.tokenidentifiers_to_tokennetworks.values()
+                network for network in self.tokenidentifiers_to_tokennetworks.values()
             ],
             # 'tokenidentifiers_to_tokennetworks' can be reconstructed
             # 'tokenaddresses_to_tokennetworks' can be reconstructed
@@ -401,8 +400,7 @@ class PaymentNetworkState(State):
         restored = cls(
             address=to_canonical_address(data['address']),
             token_network_list=[
-                TokenNetworkState.from_dict(network)
-                for network in data['tokennetworks']
+                network for network in data['tokennetworks']
             ],
         )
 
@@ -459,11 +457,11 @@ class TokenNetworkState(State):
             'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
-            'network_graph': self.network_graph.to_dict(),
+            'network_graph': self.network_graph,
             # 'channelidentifiers_to_channels' can be recovered from partneraddresses
             'partneraddresses_to_channels': map_dict(
                 to_checksum_address,
-                lambda item: item,
+                serialization.identity,
                 self.partneraddresses_to_channels,
             ),
         }
@@ -475,10 +473,10 @@ class TokenNetworkState(State):
             address=to_canonical_address(data['address']),
             token_address=to_canonical_address(data['token_address']),
         )
-        restored.network_graph = TokenNetworkGraphState.from_dict(data['network_graph'])
+        restored.network_graph = data['network_graph']
         restored.partneraddresses_to_channels = map_dict(
             to_canonical_address,
-            lambda item: item,
+            serialization.identity,
             data['partneraddresses_to_channels'],
         )
         restored.channelidentifiers_to_channels = {}
@@ -591,7 +589,7 @@ class PaymentMappingState(State):
             'type': self.__class__.__name__,
             'secrethashes_to_task': map_dict(
                 serialization.serialize_bytes,
-                lambda item: item,
+                serialization.identity,
                 self.secrethashes_to_task,
             ),
         }
@@ -602,7 +600,7 @@ class PaymentMappingState(State):
         restored = cls()
         restored.secrethashes_to_task = map_dict(
             serialization.deserialize_bytes,
-            lambda item: item,
+            serialization.identity,
             data['secrethashes_to_task'],
         )
 
@@ -1094,7 +1092,7 @@ class UnlockPartialProofState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
-            'lock': self.lock.to_dict(),
+            'lock': self.lock,
             'secret': serialization.serialize_bytes(self.secret),
         }
 
@@ -1102,7 +1100,7 @@ class UnlockPartialProofState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
         assert data['type'] == cls.__name__
         restored = cls(
-            lock=HashTimeLockState.from_dict(data['lock']),
+            lock=data['lock'],
             secret=serialization.deserialize_bytes(data['secret']),
         )
 
@@ -1351,23 +1349,23 @@ class NettingChannelEndState(State):
             'contract_balance': self.contract_balance,
             'secrethashes_to_lockedlocks': map_dict(
                 serialization.serialize_bytes,
-                lambda lock: lock.to_dict(),
+                serialization.identity,
                 self.secrethashes_to_lockedlocks,
             ),
             'secrethashes_to_unlockedlocks': map_dict(
                 serialization.serialize_bytes,
-                lambda lock: lock.to_dict(),
+                serialization.identity,
                 self.secrethashes_to_unlockedlocks,
             ),
             'secrethashes_to_onchain_unlockedlocks': map_dict(
                 serialization.serialize_bytes,
-                lambda lock: lock.to_dict(),
+                serialization.identity,
                 self.secrethashes_to_onchain_unlockedlocks,
             ),
-            'merkletree': self.merkletree.to_dict(),
+            'merkletree': self.merkletree,
         }
         if self.balance_proof is not None:
-            result['balance_proof'] = self.balance_proof.to_dict()
+            result['balance_proof'] = self.balance_proof
 
         return result
 
@@ -1380,24 +1378,24 @@ class NettingChannelEndState(State):
         )
         restored.secrethashes_to_lockedlocks = map_dict(
             serialization.deserialize_bytes,
-            lambda lock: HashTimeLockState.from_dict(lock),
+            serialization.identity,
             data['secrethashes_to_lockedlocks'],
         )
         restored.secrethashes_to_unlockedlocks = map_dict(
             serialization.deserialize_bytes,
-            lambda lock: UnlockPartialProofState.from_dict(lock),
+            serialization.identity,
             data['secrethashes_to_unlockedlocks'],
         )
         restored.secrethashes_to_onchain_unlockedlocks = map_dict(
             serialization.deserialize_bytes,
-            lambda lock: UnlockPartialProofState.from_dict(lock),
+            serialization.identity,
             data['secrethashes_to_onchain_unlockedlocks'],
         )
         restored.merkletree = MerkleTreeState.from_dict(data['merkletree'])
 
         balance_proof = data.get('balance_proof')
         if data is not None:
-            restored.balance_proof = BalanceProofSignedState.from_dict(balance_proof)
+            restored.balance_proof = balance_proof
 
         return restored
 
@@ -1545,20 +1543,20 @@ class NettingChannelState(State):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'reveal_timeout': self.reveal_timeout,
             'settle_timeout': self.settle_timeout,
-            'our_state': self.our_state.to_dict(),
-            'partner_state': self.partner_state.to_dict(),
-            'open_transaction': self.open_transaction.to_dict(),
+            'our_state': self.our_state,
+            'partner_state': self.partner_state,
+            'open_transaction': self.open_transaction,
             'deposit_transaction_queue': self.deposit_transaction_queue,
         }
 
         if self.close_transaction is not None:
-            result['close_transaction'] = self.close_transaction.to_dict()
+            result['close_transaction'] = self.close_transaction
         if self.settle_transaction is not None:
-            result['settle_transaction'] = self.settle_transaction.to_dict()
+            result['settle_transaction'] = self.settle_transaction
         if self.update_transaction is not None:
-            result['update_transaction'] = self.update_transaction.to_dict()
+            result['update_transaction'] = self.update_transaction
         if self.our_unlock_transaction is not None:
-            result['our_unlock_transaction'] = self.our_unlock_transaction.to_dict()
+            result['our_unlock_transaction'] = self.our_unlock_transaction
 
         return result
 
@@ -1573,24 +1571,22 @@ class NettingChannelState(State):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             reveal_timeout=data['reveal_timeout'],
             settle_timeout=data['settle_timeout'],
-            our_state=NettingChannelEndState.from_dict(data['our_state']),
-            partner_state=NettingChannelEndState.from_dict(data['partner_state']),
-            open_transaction=TransactionExecutionStatus.from_dict(data['open_transaction']),
+            our_state=data['our_state'],
+            partner_state=data['partner_state'],
+            open_transaction=data['open_transaction'],
         )
         close_transaction = data.get('close_transaction')
         if close_transaction is not None:
-            restored.close_transaction = TransactionExecutionStatus.from_dict(close_transaction)
+            restored.close_transaction = close_transaction
         settle_transaction = data.get('settle_transaction')
         if settle_transaction is not None:
-            restored.settle_transaction = TransactionExecutionStatus.from_dict(settle_transaction)
+            restored.settle_transaction = settle_transaction
         update_transaction = data.get('update_transaction')
         if update_transaction is not None:
-            restored.update_transaction = TransactionExecutionStatus.from_dict(update_transaction)
+            restored.update_transaction = update_transaction
         our_unlock_transaction = data.get('our_unlock_transaction')
         if our_unlock_transaction is not None:
-            restored.our_unlock_transaction = TransactionExecutionStatus.from_dict(
-                our_unlock_transaction,
-            )
+            restored.our_unlock_transaction = our_unlock_transaction
 
         restored.deposit_transaction_queue = data['deposit_transaction_queue']
 
