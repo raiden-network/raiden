@@ -4,7 +4,7 @@ import pytest
 
 from raiden.exceptions import InvalidDBData
 from raiden.transfer.architecture import State, StateManager
-from raiden.storage.serialize import PickleSerializer
+from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage, RAIDEN_DB_VERSION
 from raiden.storage.wal import (
     restore_from_latest_snapshot,
@@ -37,7 +37,7 @@ def state_transtion_acc(state, state_change):
 
 def new_wal():
     state = None
-    serializer = PickleSerializer
+    serializer = JSONSerializer
 
     state_manager = StateManager(state_transition_noop, state)
     storage = SQLiteStorage(':memory:', serializer)
@@ -46,7 +46,7 @@ def new_wal():
 
 
 def test_connect_to_corrupt_db(tmpdir):
-    serializer = PickleSerializer
+    serializer = JSONSerializer
     dbpath = os.path.join(tmpdir, 'log.db')
     with open(dbpath, 'wb') as f:
         f.write(os.urandom(256))
