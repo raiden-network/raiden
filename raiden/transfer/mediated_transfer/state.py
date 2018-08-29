@@ -535,10 +535,13 @@ class TransferDescriptionWithSecretState(State):
 
     def __repr__(self):
         return (
-            '<TransferDescriptionWithSecretState token_network:{} amount:{} secrethash:{}>'
+            '<'
+            'TransferDescriptionWithSecretState token_network:{} amount:{} target:{} secrethash:{}'
+            '>'
         ).format(
             pex(self.token_network_identifier),
             self.amount,
+            pex(self.target),
             pex(self.secrethash),
         )
 
