@@ -34,9 +34,7 @@ def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
 @pytest.fixture(scope='session')
 def ethereum_tester(patch_genesis_gas_limit):
     """Returns an instance of an Ethereum tester"""
-    tester = EthereumTester(PyEVMBackend())
-    tester.set_fork_block('FORK_BYZANTIUM', 0)
-    return tester
+    return EthereumTester(PyEVMBackend())
 
 
 @pytest.fixture
