@@ -282,7 +282,7 @@ class ChainState(State):
     def __eq__(self, other):
         return (
             isinstance(other, ChainState) and
-            self.pseudo_random_generator == other.pseudo_random_generator and
+            # self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
@@ -507,17 +507,22 @@ class TokenNetworkGraphState(State):
         self.channel_identifier_to_participants = {}
 
     def __repr__(self):
-        return '<TokenNetworkGraphState>'
+        return '<TokenNetworkGraphState edges:{}>'.format(len(self.network.edges))
 
     def __eq__(self, other):
         return (
             isinstance(other, TokenNetworkGraphState) and
-            self.network == other.network and
+            self._to_comparable_graph() == other._to_comparable_graph() and
             self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def _to_comparable_graph(self):
+        return sorted([
+            sorted(edge) for edge in self.network.edges()
+        ])
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
