@@ -13,7 +13,6 @@ from eth_utils import (
     encode_hex,
     to_checksum_address,
     to_canonical_address,
-    to_normalized_address,
 )
 import gevent
 from gevent.lock import Semaphore
@@ -101,7 +100,7 @@ def check_address_has_code(
 
         raise AddressWithoutCode('{}Address {} does not contain code'.format(
             formated_contract_name,
-            to_normalized_address(address),
+            to_checksum_address(address),
         ))
 
 
@@ -530,7 +529,7 @@ class JSONRPCClient:
             {
                 'fromBlock': from_block,
                 'toBlock': to_block,
-                'address': to_normalized_address(contract_address),
+                'address': to_checksum_address(contract_address),
                 'topics': topics,
             },
         )
@@ -547,7 +546,7 @@ class JSONRPCClient:
             return self.web3.eth.getLogs({
                 'fromBlock': from_block,
                 'toBlock': to_block,
-                'address': to_normalized_address(contract_address),
+                'address': to_checksum_address(contract_address),
                 'topics': topics,
             })
         except BlockNotFound:
