@@ -364,7 +364,6 @@ def subdispatch_targettask(
         if iteration.new_state:
             sub_task = TargetTask(
                 token_network_identifier,
-                channel_identifier,
                 iteration.new_state,
             )
             chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task

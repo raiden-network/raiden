@@ -1,5 +1,4 @@
 import json
-import importlib
 from collections import defaultdict
 
 import networkx

@@ -1,6 +1,8 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from typing import List
 
+from eth_utils import to_canonical_address, to_checksum_address
+
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import RouteState, BalanceProofSignedState
 from raiden.transfer.mediated_transfer.state import (
@@ -8,6 +10,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
 )
 from raiden.utils import pex, sha3, typing
+from raiden.utils.serialization import serialize_bytes, deserialize_bytes
 
 
 # Note: The init states must contain all the required data for trying doing
@@ -159,9 +162,14 @@ class ActionCancelRoute(StateChange):
         timeouts.
     """
 
-    def __init__(self, registry_address, identifier, routes):
+    def __init__(
+            self,
+            registry_address: typing.Address,
+            channel_identifier: typing.ChannelID,
+            routes: typing.List[RouteState],
+    ):
         self.registry_address = registry_address
-        self.identifier = identifier
+        self.identifier = channel_identifier
         self.routes = routes
 
     def __repr__(self):
@@ -179,6 +187,21 @@ class ActionCancelRoute(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'registry_address': to_checksum_address(self.registry_address),
+            'identifier': self.identifier,
+            'routes': self.routes,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            to_canonical_address(data['registry_address']),
+            data['identifier'],
+            data['routes'],
+        )
 
 
 class ReceiveLockExpired(StateChange):
@@ -213,14 +236,6 @@ class ReceiveLockExpired(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(
-            data['registry_address'],
-            data['identifier'],
-            data['routes'],
-        )
 
 
 class ReceiveSecretRequest(StateChange):
@@ -262,16 +277,26 @@ class ReceiveSecretRequest(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'payment_identifier': to_checksum_address(self.payment_identifier),
+            'amount': self.amount,
+            'expiration': self.expiration,
+            'secrethash': serialize_bytes(self.secrethash),
+            'sender': to_checksum_address(self.sender),
+            'revealsecret': serialize_bytes(self.revealsecret),
+        }
+
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            data['payment_identifier'],
+            to_canonical_address(data['payment_identifier']),
             data['amount'],
             data['expiration'],
-            data['secrethash'],
-            data['sender'],
+            deserialize_bytes(data['secrethash']),
+            to_canonical_address(data['sender']),
         )
-        instance.revealsecret = data['revealsecret']
+        instance.revealsecret = deserialize_bytes(data['revealsecret'])
         return instance
 
 
@@ -306,13 +331,20 @@ class ReceiveSecretReveal(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'secret': serialize_bytes(self.secret),
+            'secrethash': serialize_bytes(self.secrethash),
+            'sender': to_checksum_address(self.sender),
+        }
+
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            data['secret'],
-            data['sender'],
+            deserialize_bytes(data['secret']),
+            to_canonical_address(data['sender']),
         )
-        instance.secrethash = data['secrethash']
+        instance.secrethash = deserialize_bytes(data['secrethash'])
         return instance
 
 
@@ -358,15 +390,23 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'secret': serialize_bytes(self.secret),
+            'sender': to_checksum_address(self.sender),
+            'routes': self.routes,
+            'transfer': self.transfer,
+        }
+
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            data['sender'],
+            to_canonical_address(data['sender']),
             data['routes'],
             data['transfer'],
-            data['secret'],
+            deserialize_bytes(data['secret']),
         )
-        instance.secrethash = data['secrethash']
+        instance.secrethash = deserialize_bytes(data['secrethash'])
         return instance
 
 
@@ -403,10 +443,18 @@ class ReceiveTransferRefund(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'sender': to_checksum_address(self.sender),
+            'routes': self.routes,
+            'transfer': self.transfer,
+        }
+
     @classmethod
     def from_dict(cls, data):
-        return cls(
-            data['sender'],
-            data['transfer'],
+        instance = cls(
+            to_canonical_address(data['sender']),
             data['routes'],
+            data['transfer'],
         )
+        return instance

@@ -28,6 +28,11 @@ class AccState(State):
     def __init__(self):
         self.state_changes = list()
 
+    def to_dict(self):
+        return {
+            'state_changes': self.state_changes,
+        }
+
 
 def state_transtion_acc(state, state_change):
     state = state or AccState()
@@ -135,7 +140,13 @@ def test_write_read_log():
 def test_write_read_events():
     wal = new_wal()
 
-    event = EventPaymentSentFailed(2, 3, 1, 'address', 'whatever')
+    event = EventPaymentSentFailed(
+        factories.make_payment_network_identifier(),
+        factories.make_address(),
+        1,
+        factories.make_address(),
+        'whatever',
+    )
     event_list = [event]
 
     with pytest.raises(sqlite3.IntegrityError):
