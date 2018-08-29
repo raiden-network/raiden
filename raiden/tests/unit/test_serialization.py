@@ -2,6 +2,7 @@ import pytest
 from networkx import Graph
 from eth_utils import to_canonical_address
 
+from raiden.storage.serialize import JSONSerializer
 from raiden.utils import serialization
 from raiden.transfer.merkle_tree import compute_layers
 
@@ -38,8 +39,8 @@ class MockObject(object):
 def test_object_custom_serialization():
     # Simple encode/decode
     original_obj = MockObject(attr1="Hello", attr2="World")
-    decoded_obj = serialization.json_decode(
-        serialization.json_encode(original_obj),
+    decoded_obj = JSONSerializer.deserialize(
+        JSONSerializer.serialize(original_obj),
     )
 
     assert original_obj == decoded_obj
@@ -47,8 +48,8 @@ def test_object_custom_serialization():
     # Encode/Decode with embedded objects
     embedded_obj = MockObject(amount=1, identifier='123')
     original_obj = MockObject(embedded=embedded_obj)
-    decoded_obj = serialization.json_decode(
-        serialization.json_encode(original_obj),
+    decoded_obj = JSONSerializer.deserialize(
+        JSONSerializer.serialize(original_obj),
     )
 
     assert original_obj == decoded_obj
@@ -88,8 +89,8 @@ def test_decode_with_ref_cache():
     embedded_A = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
     A = MockObject(attr1=10, attr2='123', embedded=embedded_A)
 
-    decoded_A = serialization.json_decode(
-        serialization.json_encode(A),
+    decoded_A = JSONSerializer.deserialize(
+        JSONSerializer.serialize(A),
     )
 
     assert A == decoded_A
@@ -98,8 +99,8 @@ def test_decode_with_ref_cache():
     embedded_B = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
     B = MockObject(attr1=10, attr2='123', embedded=embedded_B)
 
-    decoded_B = serialization.json_decode(
-        serialization.json_encode(B),
+    decoded_B = JSONSerializer.deserialize(
+        JSONSerializer.serialize(B),
     )
 
     assert B == decoded_B
@@ -117,7 +118,7 @@ def test_decode_with_unknown_type():
 }
 """
     with pytest.raises(TypeError) as m:
-        serialization.json_decode(test_str)
+        JSONSerializer.deserialize(test_str)
         assert str(m) == 'Module some.non.existent.package does not exist'
 
     test_str = """
@@ -127,7 +128,7 @@ def test_decode_with_unknown_type():
 }
 """
     with pytest.raises(TypeError) as m:
-        serialization.json_decode(test_str)
+        JSONSerializer.deserialize(test_str)
         assert str(m) == 'raiden.tests.unit.test_serialization.NonExistentClass'
 
 
