@@ -198,7 +198,7 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     assert transfer_1_secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
 
-    # Verify bob received the message and processed the LockExpired message
+    # Verify Bob received the message and processed the LockExpired message
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
     assert transfer_1_secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
@@ -220,7 +220,6 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert transfer_2_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
-    # Verify bob received the message and processed the LockExpired message
     bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
     assert transfer_2_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 

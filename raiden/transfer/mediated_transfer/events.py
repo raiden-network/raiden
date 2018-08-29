@@ -55,7 +55,7 @@ class SendLockExpired(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendLockedTransfer) and
+            isinstance(other, SendLockExpired) and
             self.message_identifier == other.message_identifier and
             self.balance_proof == other.balance_proof and
             self.recipient == other.recipient and

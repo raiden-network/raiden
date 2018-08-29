@@ -2,7 +2,7 @@
 from typing import List
 
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import RouteState, BalanceProofSignedState
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
@@ -157,7 +157,13 @@ class ActionCancelRoute(StateChange):
 class ReceiveLockExpired(StateChange):
     """ A LockExpired message received. """
 
-    def __init__(self, sender, balance_proof, secrethash, message_identifier):
+    def __init__(
+            self,
+            sender: typing.Address,
+            balance_proof: BalanceProofSignedState,
+            secrethash: typing.SecretHash,
+            message_identifier: typing.MessageID,
+    ):
         self.sender = sender
         self.balance_proof = balance_proof
         self.secrethash = secrethash

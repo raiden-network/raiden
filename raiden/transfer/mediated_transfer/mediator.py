@@ -227,7 +227,7 @@ def clear_if_finalized(iteration):
     # TODO: clear the expired transfer, this will need some sort of
     # synchronization among the nodes
     all_finalized = all(
-        pair.payee_state in STATE_TRANSFER_PAID and pair.payer_state in STATE_TRANSFER_PAID
+        pair.payee_state in STATE_TRANSFER_FINAL and pair.payer_state in STATE_TRANSFER_FINAL
         for pair in state.transfers_pair
     )
 
@@ -702,6 +702,37 @@ def events_for_unlock_if_closed(
     return events
 
 
+def events_for_expired_locks(
+        mediator_state: MediatorTransferState,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        block_number: typing.BlockNumber,
+        pseudo_random_generator: random.Random,
+):
+    events = list()
+
+    transfer_pair: MediationPairState
+    for transfer_pair in mediator_state.transfers_pair:
+        balance_proof = transfer_pair.payee_transfer.balance_proof
+        channel_identifier = balance_proof.channel_identifier
+        channel_state = channelidentifiers_to_channels.get(channel_identifier)
+
+        assert channel_state
+
+        secrethash = mediator_state.secrethash
+        locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
+        if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
+            # Lock has expired, cleanup...
+            transfer_pair.payee_state = 'payee_expired'
+            expired_lock_events = channel.events_for_expired_lock(
+                channel_state,
+                secrethash,
+                locked_lock,
+                pseudo_random_generator,
+            )
+            events.extend(expired_lock_events)
+    return events
+
+
 def secret_learned(
         state,
         channelidentifiers_to_channels,
@@ -897,25 +928,13 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
-    balance_proof = mediator_state.transfers_pair[0].payee_transfer.balance_proof
-    channel_identifier = balance_proof.channel_identifier
-    channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
-    assert channel_state
-
-    secrethash = mediator_state.secrethash
-    locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
-    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
-        # Lock has expired, cleanup...
-        expired_lock_event = channel.events_for_expired_lock(
-            channel_state,
-            secrethash,
-            locked_lock,
-            pseudo_random_generator,
-        )
-
-        iteration = TransitionResult(None, [expired_lock_event])
-        return iteration
+    expired_locks_events = events_for_expired_locks(
+        mediator_state,
+        channelidentifiers_to_channels,
+        block_number,
+        pseudo_random_generator,
+    )
 
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,
@@ -930,7 +949,7 @@ def handle_block(
 
     iteration = TransitionResult(
         mediator_state,
-        unlock_fail_events + secret_reveal_events,
+        unlock_fail_events + secret_reveal_events + expired_locks_events,
     )
 
     return iteration
@@ -1071,18 +1090,22 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channelidentifiers_to_channels: typing.ChannelMap,
 ):
-    balance_proof = mediator_state.transfers_pair[0].payer_transfer.balance_proof
-    channel_state = channelidentifiers_to_channels.get(balance_proof.channel_identifier)
+    events = list()
 
-    if not channel_state:
-        return TransitionResult(mediator_state, list())
+    transfer_pair: MediationPairState
+    for transfer_pair in mediator_state.transfers_pair:
+        balance_proof = transfer_pair.payer_transfer.balance_proof
+        channel_state = channelidentifiers_to_channels.get(balance_proof.channel_identifier)
 
-    result = channel.handle_receive_lock_expired(channel_state, state_change)
+        if not channel_state:
+            return TransitionResult(mediator_state, list())
 
-    return TransitionResult(
-        None,
-        result.events,
-    )
+        result = channel.handle_receive_lock_expired(channel_state, state_change)
+        if channel.get_lock(result.new_state.partner_state, mediator_state.secrethash):
+            transfer_pair.payer_state = 'payer_expired'
+            events.extend(result)
+
+    return TransitionResult(mediator_state, events)
 
 
 def state_transition(
