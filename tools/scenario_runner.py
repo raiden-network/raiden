@@ -20,7 +20,10 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.ui.console import ConsoleTools
-from raiden.utils import split_endpoint
+from raiden.utils import (
+    split_endpoint,
+    privatekey_to_address,
+)
 from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 gevent.monkey.patch_all()
@@ -117,7 +120,10 @@ def run(
         config['protocol']['throttle_fill_rate'],
     )
 
+    address = privatekey_to_address(privatekey_bin)
+
     transport = UDPTransport(
+        address=address,
         discovery=discovery,
         udpsocket=gevent.server._udp_socket((listen_host, listen_port)),
         throttle_policy=throttle_policy,
@@ -139,7 +145,7 @@ def run(
     app.start()
 
     app.discovery.register(
-        app.raiden.address,
+        address,
         listen_host,
         listen_port,
     )

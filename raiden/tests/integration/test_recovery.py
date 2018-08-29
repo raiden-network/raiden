@@ -57,6 +57,7 @@ def test_recovery_happy_case(
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(
+        app0.raiden.address,
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
@@ -173,6 +174,7 @@ def test_recovery_unhappy_case(
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(
+        app0.raiden.address,
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
@@ -254,6 +256,7 @@ def test_recovery_blockchain_events(
     socket = server._udp_socket(host_port)
 
     new_transport = UDPTransport(
+        app0.raiden.address,
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
