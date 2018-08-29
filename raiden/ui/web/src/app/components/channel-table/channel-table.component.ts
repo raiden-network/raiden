@@ -13,7 +13,7 @@ import { RaidenService } from '../../services/raiden.service';
 import { amountToDecimal } from '../../utils/amount.converter';
 import { StringUtils } from '../../utils/string.utils';
 import { ConfirmationDialogComponent, ConfirmationDialogPayload } from '../confirmation-dialog/confirmation-dialog.component';
-import { DepositDialogComponent, DepositDialogPayload } from '../deposit-dialog/deposit-dialog.component';
+import { DepositDialogComponent, DepositDialogPayload, DepositDialogResult } from '../deposit-dialog/deposit-dialog.component';
 import { OpenDialogComponent, OpenDialogPayload, OpenDialogResult } from '../open-dialog/open-dialog.component';
 import { PaymentDialogComponent, PaymentDialogPayload } from '../payment-dialog/payment-dialog.component';
 import { ChannelSorting } from './channel.sorting.enum';
@@ -183,7 +183,7 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
         });
 
         dialog.afterClosed().pipe(
-            flatMap((deposit?: number) => {
+            flatMap((deposit?: DepositDialogResult) => {
                 if (!deposit) {
                     return EMPTY;
                 }
@@ -191,8 +191,8 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
                 return this.raidenService.depositToChannel(
                     channel.token_address,
                     channel.partner_address,
-                    deposit,
-                    channel.userToken.decimals
+                    deposit.tokenAmount,
+                    deposit.tokenAmountDecimals
                 );
             })
         ).subscribe(() => this.refresh());

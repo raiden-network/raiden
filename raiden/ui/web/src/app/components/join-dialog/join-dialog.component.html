@@ -1,27 +1,15 @@
 <h1 mat-dialog-title>Join Token Network</h1>
-<div mat-dialog-content>
-    <mat-form-field class="full-width-form-field"
-                    [hideRequiredMarker]="true">
-        <input placeholder="Enter Funds to be allocated"
-               type="number"
-               [formControl]="funds"
-               matInput
-               [appAllowedDecimals]="decimals()"
-               min="0"
-               (input)="precise($event)"
-               [step]="step()"/>
-    </mat-form-field>
-    <mat-error *ngIf="funds.invalid && funds.hasError('invalidAmount') && (funds.dirty || funds.touched)">
-        The funds should be a positive number
-    </mat-error>
-    <mat-error *ngIf="funds.invalid && funds.hasError('tooManyDecimals') && (funds.dirty || funds.touched)">
-        This token network only supports up to {{ decimals() }} decimals
-    </mat-error>
+<div mat-dialog-content [formGroup]="form">
+    <app-token-input
+            [placeholder]="'Enter Funds to be allocated'"
+            [errorPlaceholder]="'funds'"
+            [parent]="form">
+    </app-token-input>
 </div>
 <div mat-dialog-actions>
     <button mat-button mat-dialog-close>Close</button>
     <button mat-button
             (click)="joinTokenNetwork()"
-            [disabled]="funds.invalid">Join
+            [disabled]="form.invalid">Join
     </button>
 </div>

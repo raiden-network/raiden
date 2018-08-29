@@ -36,6 +36,7 @@ import { DepositDialogComponent } from './components/deposit-dialog/deposit-dial
 import { ChannelEventsComponent } from './components/channel-events/channel-events.component';
 import { AllowedDecimalsDirective } from './directives/allowed-decimals.directive';
 import { DecimalPipe } from './pipes/decimal.pipe';
+import { TokenInputComponent } from './components/token-input/token-input.component';
 
 const appRoutes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -76,7 +77,8 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         DepositDialogComponent,
         ChannelEventsComponent,
         AllowedDecimalsDirective,
-        DecimalPipe
+        DecimalPipe,
+        TokenInputComponent
     ],
     imports: [
         RouterModule.forRoot(appRoutes),

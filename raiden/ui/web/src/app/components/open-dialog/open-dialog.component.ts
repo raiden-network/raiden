@@ -1,12 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { BigNumber } from 'bignumber.js';
 import { from, Observable } from 'rxjs';
 import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenService } from '../../services/raiden.service';
+import { TokenInputComponent } from '../token-input/token-input.component';
 
 export class OpenDialogPayload {
     readonly ownAddress: string;
@@ -34,12 +34,12 @@ export class OpenDialogComponent implements OnInit {
     public form: FormGroup;
     public token: FormControl;
     public partnerAddress: FormControl;
-    public balance: FormControl;
     public settleTimeout: FormControl;
+
+    @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
 
     public filteredOptions$: Observable<UserToken[]>;
     private tokens$: Observable<UserToken[]>;
-    private _decimals = 0;
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: OpenDialogPayload,
@@ -55,13 +55,13 @@ export class OpenDialogComponent implements OnInit {
         this.form = this.fb.group({
             partner_address: ['', (control) => control.value === data.ownAddress ? {ownAddress: true} : undefined],
             token: '',
-            balance: [0],
+            amount: 0,
+            decimals: true,
             settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
         this.token = this.form.get('token') as FormControl;
         this.partnerAddress = this.form.get('partner_address') as FormControl;
-        this.balance = this.form.get('balance') as FormControl;
         this.settleTimeout = this.form.get('settle_timeout') as FormControl;
 
         this.tokens$ = this.raidenService.getTokens(true).pipe(
@@ -84,25 +84,24 @@ export class OpenDialogComponent implements OnInit {
             tokenAddress: value.token,
             partnerAddress: value.partner_address,
             settleTimeout: value.settle_timeout,
-            balance: value.balance,
-            decimals: this._decimals
+            balance: this.tokenInput.tokenAmount.toNumber(),
+            decimals: this.tokenInput.tokenAmountDecimals
         };
 
         this.dialogRef.close(result);
     }
 
-    public step(): string {
-        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
-    }
-
-    public decimals(): number {
-        return this._decimals;
-    }
-
-    public precise(value) {
-        if (value.type === 'input' && !value.inputType) {
-            this.balance.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
+    // noinspection JSMethodCanBeStatic
+    identicon(address?: string): string {
+        if (!address) {
+            return '';
         }
+        return this.identiconCacheService.getIdenticon(address);
+    }
+
+    tokenSelected(value: UserToken) {
+        this.tokenInput.decimals = value.decimals;
+        this.token.setValue(value.address);
     }
 
     private _filter(value?: string): Observable<UserToken[]> {
@@ -122,18 +121,5 @@ export class OpenDialogComponent implements OnInit {
             }),
             toArray()
         );
-    }
-
-    // noinspection JSMethodCanBeStatic
-    identicon(address?: string): string {
-        if (!address) {
-            return '';
-        }
-        return this.identiconCacheService.getIdenticon(address);
-    }
-
-    tokenSelected(value: UserToken) {
-        this._decimals = value.decimals;
-        this.token.setValue(value.address);
     }
 }

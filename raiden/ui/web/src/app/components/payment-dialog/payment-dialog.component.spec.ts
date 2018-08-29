@@ -9,6 +9,7 @@ import { TokenPipe } from '../../pipes/token.pipe';
 import { RaidenConfig } from '../../services/raiden.config';
 import { SharedService } from '../../services/shared.service';
 import { MockConfig } from '../channel-table/channel-table.component.spec';
+import { TokenInputComponent } from '../token-input/token-input.component';
 import { PaymentDialogComponent, PaymentDialogPayload } from './payment-dialog.component';
 
 describe('PaymentDialogComponent', () => {
@@ -26,7 +27,8 @@ describe('PaymentDialogComponent', () => {
             declarations: [
                 PaymentDialogComponent,
                 TokenPipe,
-                AllowedDecimalsDirective
+                AllowedDecimalsDirective,
+                TokenInputComponent
             ],
             providers: [
                 {
@@ -55,7 +57,7 @@ describe('PaymentDialogComponent', () => {
     beforeEach(() => {
         fixture = TestBed.createComponent(PaymentDialogComponent);
         component = fixture.componentInstance;
-        fixture.detectChanges();
+        fixture.detectChanges(false);
     });
 
     it('should be created', () => {

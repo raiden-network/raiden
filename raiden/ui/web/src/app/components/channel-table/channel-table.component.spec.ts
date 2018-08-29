@@ -24,6 +24,7 @@ import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { EventListComponent } from '../event-list/event-list.component';
 import { OpenDialogComponent } from '../open-dialog/open-dialog.component';
+import { TokenInputComponent } from '../token-input/token-input.component';
 
 import { ChannelTableComponent } from './channel-table.component';
 import Spy = jasmine.Spy;
@@ -54,6 +55,7 @@ describe('ChannelTableComponent', () => {
                 ChannelTableComponent,
                 EventListComponent,
                 OpenDialogComponent,
+                TokenInputComponent,
                 TokenPipe,
                 EllipsisPipe,
                 KeysPipe,
