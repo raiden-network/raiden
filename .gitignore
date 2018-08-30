@@ -84,3 +84,6 @@ raiden/ui/web/node_modules/*
 .vscode
 .synapse
 raiden/smart_contracts/contracts.json
+
+# Our logs
+raiden-debug.log*
