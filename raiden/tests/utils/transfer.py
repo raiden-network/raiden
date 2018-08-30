@@ -2,7 +2,6 @@
 import random
 
 import gevent
-import time
 from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
@@ -277,18 +276,22 @@ def assert_synced_channel_state(
     assert_mirror(channel1, channel0)
 
 
-def wait_assert(*args, func, timeout=5, **kwargs):
-    """Like assert_*, but retry and raises the last AssertionError only after timeout"""
-    start_time = time.time()
+def wait_assert(func, *args, **kwargs):
+    """ Utility to re-run `func` if it raises an assert. Return once `func`
+    doesn't hit a failed assert anymore.
+
+    This will loop forever unless a gevent.Timeout is used.
+    """
     while True:
         try:
             func(*args, **kwargs)
-        except AssertionError:
-            if timeout and time.time() > start_time + timeout:
-                raise
-            gevent.sleep(0.5)
+        except AssertionError as e:
+            try:
+                gevent.sleep(0.5)
+            except gevent.Timeout:
+                raise e
         else:
-            return True
+            break
 
 
 def assert_mirror(original, mirror):
