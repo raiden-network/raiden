@@ -133,28 +133,28 @@ class InitiatorTask(State):
 class MediatorTask(State):
     __slots__ = (
         'token_network_identifier',
-        'manager_state',
+        'mediator_state',
     )
 
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
-            manager_state: 'MediatorTransferState',
+            mediator_state: 'MediatorTransferState',
     ):
         self.token_network_identifier = token_network_identifier
-        self.manager_state = manager_state
+        self.mediator_state = mediator_state
 
     def __repr__(self):
         return '<MediatorTask token_network_identifier:{} state:{}>'.format(
             self.token_network_identifier,
-            self.manager_state,
+            self.mediator_state,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, MediatorTask) and
             self.token_network_identifier == other.token_network_identifier and
-            self.manager_state == other.manager_state
+            self.mediator_state == other.mediator_state
         )
 
     def __ne__(self, other):
@@ -163,14 +163,14 @@ class MediatorTask(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'manager_state': self.manager_state,
+            'mediator_state': self.mediator_state,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            manager_state=data['manager_task'],
+            mediator_state=data['mediator_state'],
         )
 
         return restored
@@ -468,16 +468,22 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = data['network_graph']
-        restored.partneraddresses_to_channels = map_dict(
+        restored.partneraddresses_to_channels = defaultdict(dict)
+        restored.channelidentifiers_to_channels = {}
+
+        recovered_partneraddresses_to_channels = map_dict(
             to_canonical_address,
             serialization.identity,
             data['partneraddresses_to_channels'],
         )
-        restored.channelidentifiers_to_channels = {}
+
+        # for some reason the identifier becomes a string in the dict, recover it
         # recover id -> channel map
-        for channelmap in restored.partneraddresses_to_channels.values():
-            for id, channel in channelmap.items():
-                restored.channelidentifiers_to_channels[id] = channel
+        for partner, channelmap in recovered_partneraddresses_to_channels.items():
+            restored.partneraddresses_to_channels[partner] = {}
+            for channel in channelmap.values():
+                restored.channelidentifiers_to_channels[channel.identifier] = channel
+                restored.partneraddresses_to_channels[partner][channel.identifier] = channel
 
         return restored
 
@@ -778,7 +784,7 @@ class BalanceProofUnsignedState(State):
             locked_amount=data['locked_amount'],
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=to_canonical_address(data['channel_identifier']),
+            channel_identifier=data['channel_identifier'],
             chain_id=data['chain_id'],
         )
 
@@ -949,7 +955,7 @@ class BalanceProofSignedState(State):
             locked_amount=data['locked_amount'],
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=to_canonical_address(data['channel_identifier']),
+            channel_identifier=data['channel_identifier'],
             message_hash=serialization.deserialize_bytes(data['message_hash']),
             signature=serialization.deserialize_bytes(data['signature']),
             sender=to_canonical_address(data['sender']),
@@ -1345,7 +1351,7 @@ class NettingChannelEndState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
         restored = cls(
             address=to_canonical_address(data['address']),
-            balance=data['balance'],
+            balance=data['contract_balance'],
         )
         restored.secrethashes_to_lockedlocks = map_dict(
             serialization.deserialize_bytes,
@@ -1362,7 +1368,7 @@ class NettingChannelEndState(State):
             serialization.identity,
             data['secrethashes_to_onchain_unlockedlocks'],
         )
-        restored.merkletree = MerkleTreeState.from_dict(data['merkletree'])
+        restored.merkletree = data['merkletree']
 
         balance_proof = data.get('balance_proof')
         if data is not None:

@@ -538,7 +538,7 @@ class EventPaymentReceivedSuccess(Event):
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'amount': self.amount,
             'initiator': to_checksum_address(self.initiator),
         }
@@ -550,7 +550,7 @@ class EventPaymentReceivedSuccess(Event):
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             amount=data['amount'],
             initiator=to_canonical_address(data['initiator']),
         )
@@ -650,7 +650,7 @@ class SendDirectTransfer(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
@@ -694,6 +694,7 @@ class SendProcessed(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
         }
 
