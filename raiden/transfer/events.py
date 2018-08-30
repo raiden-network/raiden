@@ -694,7 +694,6 @@ class SendProcessed(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
             'message_identifier': self.message_identifier,
         }
 
