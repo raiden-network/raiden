@@ -11,7 +11,6 @@ from raiden.network.transport import MatrixTransport
 from raiden.app import App
 
 
-@pytest.mark.parametrize('in_memory_database', [False])
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])

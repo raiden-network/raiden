@@ -18,7 +18,6 @@ from raiden.transfer.state_change import (
 )
 
 
-@pytest.mark.parametrize('in_memory_database', [False])
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -131,7 +130,6 @@ def test_recovery_happy_case(
     )
 
 
-@pytest.mark.parametrize('in_memory_database', [False])
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -226,7 +224,6 @@ def test_recovery_unhappy_case(
     })
 
 
-@pytest.mark.parametrize('in_memory_database', [False])
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
