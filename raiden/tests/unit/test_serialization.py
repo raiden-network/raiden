@@ -5,6 +5,7 @@ from eth_utils import to_canonical_address
 from raiden.storage.serialize import JSONSerializer
 from raiden.utils import serialization
 from raiden.transfer.merkle_tree import compute_layers
+from raiden.transfer.state import EMPTY_MERKLE_TREE
 
 
 class MockObject(object):
@@ -170,3 +171,12 @@ def test_serialization_merkletree_layers():
     restored = serialization.deserialize_merkletree_layers(data)
 
     assert layers == restored
+
+
+def test_serialization_merkletree_layers_empty():
+    tree = EMPTY_MERKLE_TREE
+
+    data = serialization.serialize_merkletree_layers(tree.layers)
+    restored = serialization.deserialize_merkletree_layers(data)
+
+    assert tree.layers == restored

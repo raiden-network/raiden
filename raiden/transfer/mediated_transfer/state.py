@@ -386,8 +386,8 @@ class LockedTransferUnsignedState(State):
         restored = cls(
             payment_identifier=data['payment_identifier'],
             token=to_canonical_address(data['token']),
-            balance_proof=data['token'],
-            lock=data['token'],
+            balance_proof=data['balance_proof'],
+            lock=data['lock'],
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),
         )
