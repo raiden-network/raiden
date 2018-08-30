@@ -116,14 +116,12 @@ class InitiatorTask(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'manager_state': self.manager_state,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTask':
-        assert data['type'] == cls.__name__
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             manager_state=data['manager_task'],
@@ -164,14 +162,12 @@ class MediatorTask(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'manager_state': self.manager_state,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTask':
-        assert data['type'] == cls.__name__
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             manager_state=data['manager_task'],
@@ -212,14 +208,12 @@ class TargetTask(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'manager_state': self.manager_state,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
-        assert data['type'] == cls.__name__
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             manager_state=data['manager_task'],
@@ -282,7 +276,6 @@ class ChainState(State):
     def __eq__(self, other):
         return (
             isinstance(other, ChainState) and
-            # self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
@@ -296,7 +289,6 @@ class ChainState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'block_number': self.block_number,
             'chain_id': self.chain_id,
             'identifiers_to_paymentnetworks': map_dict(
@@ -317,7 +309,6 @@ class ChainState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ChainState':
-        assert data['type'] == cls.__name__
         restored = cls(
             pseudo_random_generator=random.Random(),
             block_number=data['block_number'],
@@ -385,7 +376,6 @@ class PaymentNetworkState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'tokennetworks': [
                 network for network in self.tokenidentifiers_to_tokennetworks.values()
@@ -396,7 +386,6 @@ class PaymentNetworkState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentNetworkState':
-        assert data['type'] == cls.__name__
         restored = cls(
             address=to_canonical_address(data['address']),
             token_network_list=[
@@ -454,7 +443,6 @@ class TokenNetworkState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph,
@@ -468,7 +456,6 @@ class TokenNetworkState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkState':
-        assert data['type'] == cls.__name__
         restored = cls(
             address=to_canonical_address(data['address']),
             token_address=to_canonical_address(data['token_address']),
@@ -524,7 +511,6 @@ class TokenNetworkGraphState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'network': serialization.serialize_networkx_graph(self.network),
             'channel_identifier_to_participants': map_dict(
                 str,
@@ -535,7 +521,6 @@ class TokenNetworkGraphState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkGraphState':
-        assert data['type'] == cls.__name__
         restored = cls()
         restored.network = serialization.deserialize_networkx_graph(data['network'])
         restored.channel_identifier_to_participants = map_dict(
@@ -586,7 +571,6 @@ class PaymentMappingState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'secrethashes_to_task': map_dict(
                 serialization.serialize_bytes,
                 serialization.identity,
@@ -596,7 +580,6 @@ class PaymentMappingState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentMappingState':
-        assert data['type'] == cls.__name__
         restored = cls()
         restored.secrethashes_to_task = map_dict(
             serialization.deserialize_bytes,
@@ -649,14 +632,12 @@ class RouteState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'node_address': to_checksum_address(self.node_address),
             'channel_identifier': self.channel_identifier,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
-        assert data['type'] == cls.__name__
         restored = cls(
             to_canonical_address(data['node_address']),
             data['channel_identifier'],
@@ -773,7 +754,6 @@ class BalanceProofUnsignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'nonce': self.nonce,
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
@@ -785,7 +765,6 @@ class BalanceProofUnsignedState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofUnsignedState':
-        assert data['type'] == cls.__name__
         restored = cls(
             nonce=data['nonce'],
             transferred_amount=data['transferred_amount'],
@@ -943,7 +922,6 @@ class BalanceProofSignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'nonce': self.nonce,
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
@@ -958,7 +936,6 @@ class BalanceProofSignedState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofSignedState':
-        assert data['type'] == cls.__name__
         restored = cls(
             nonce=data['nonce'],
             transferred_amount=data['transferred_amount'],
@@ -1036,7 +1013,6 @@ class HashTimeLockState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'amount': self.amount,
             'expiration': self.expiration,
             'secrethash': serialization.serialize_bytes(self.secrethash),
@@ -1046,7 +1022,6 @@ class HashTimeLockState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'HashTimeLockState':
-        assert data['type'] == cls.__name__
         restored = cls(
             amount=data['amount'],
             expiration=data['expiration'],
@@ -1091,14 +1066,12 @@ class UnlockPartialProofState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'lock': self.lock,
             'secret': serialization.serialize_bytes(self.secret),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
-        assert data['type'] == cls.__name__
         restored = cls(
             lock=data['lock'],
             secret=serialization.deserialize_bytes(data['secret']),
@@ -1147,7 +1120,6 @@ class UnlockProofState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'merkle_proof': map_list(serialization.serialize_bytes, self.merkle_proof),
             'lock_encoded': serialization.serialize_bytes(self.lock_encoded),
             'secret': serialization.serialize_bytes(self.secret),
@@ -1155,7 +1127,6 @@ class UnlockProofState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
-        assert data['type'] == cls.__name__
         restored = cls(
             merkle_proof=map_list(serialization.deserialize_bytes, data['merkle_proof']),
             lock_encoded=serialization.deserialize_bytes(data['lock_encoded']),
@@ -1226,9 +1197,7 @@ class TransactionExecutionStatus(State):
         return not self.__eq__(other)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
-        result = {
-            'type': self.__class__.__name__,
-        }
+        result = {}
         if self.started_block_number is not None:
             result['started_block_number'] = self.started_block_number
         if self.finished_block_number is not None:
@@ -1240,7 +1209,6 @@ class TransactionExecutionStatus(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionExecutionStatus':
-        assert data['type'] == cls.__name__
         restored = cls(
             started_block_number=data.get('started_block_number'),
             finished_block_number=data.get('finished_block_number'),
@@ -1274,13 +1242,11 @@ class MerkleTreeState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'layers': serialization.serialize_merkletree_layers(self.layers),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MerkleTreeState':
-        assert data['type'] == cls.__name__
         restored = cls(
             layers=serialization.deserialize_merkletree_layers(data['layers']),
         )
@@ -1344,7 +1310,6 @@ class NettingChannelEndState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'type': self.__class__.__name__,
             'address': to_checksum_address(self.address),
             'contract_balance': self.contract_balance,
             'secrethashes_to_lockedlocks': map_dict(
@@ -1371,7 +1336,6 @@ class NettingChannelEndState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
-        assert data['type'] == cls.__name__
         restored = cls(
             address=to_canonical_address(data['address']),
             balance=data['balance'],
@@ -1535,7 +1499,6 @@ class NettingChannelState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'type': self.__class__.__name__,
             'identifier': self.identifier,
             'chain_id': self.chain_id,
             'token_address': to_checksum_address(self.token_address),
@@ -1562,7 +1525,6 @@ class NettingChannelState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
-        assert data['type'] == cls.__name__
         restored = cls(
             identifier=data['identifier'],
             chain_id=data['chain_id'],
@@ -1648,7 +1610,6 @@ class TransactionChannelNewBalance(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'participant_address': to_checksum_address(self.participant_address),
             'contract_balance': self.contract_balance,
             'deposit_block_number': self.deposit_block_number,
@@ -1656,7 +1617,6 @@ class TransactionChannelNewBalance(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
-        assert data['type'] == cls.__name__
         restored = cls(
             to_canonical_address(data['participant_address']),
             data['contract_balance'],
@@ -1694,14 +1654,12 @@ class TransactionOrder(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'block_number': self.block_number,
             'transaction': self.transaction,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
-        assert data['type'] == cls.__name__
         restored = cls(
             data['block_number'],
             data['transaction'],
