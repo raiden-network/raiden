@@ -43,7 +43,9 @@ class Block(StateChange):
 
     @classmethod
     def from_dict(cls, data):
-        return cls(data['block_number'])
+        return cls(
+            block_number=data['block_number'],
+        )
 
 
 class ActionCancelPayment(StateChange):
@@ -71,7 +73,9 @@ class ActionCancelPayment(StateChange):
 
     @classmethod
     def from_dict(cls, data):
-        return cls(data['payment_identifier'])
+        return cls(
+            payment_identifier=data['payment_identifier'],
+        )
 
 
 class ActionChannelClose(StateChange):
@@ -109,8 +113,8 @@ class ActionChannelClose(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_identifier'],
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
         )
 
 
@@ -140,7 +144,9 @@ class ActionCancelTransfer(StateChange):
 
     @classmethod
     def from_dict(cls, data):
-        return cls(data['transfer_identifier'])
+        return cls(
+            transfer_identifier=data['transfer_identifier'],
+        )
 
 
 class ActionTransferDirect(StateChange):
@@ -192,10 +198,10 @@ class ActionTransferDirect(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['token_network_identifier']),
-            to_canonical_address(data['receiver_address']),
-            data['payment_identifier'],
-            data['amount'],
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            receiver_address=to_canonical_address(data['receiver_address']),
+            payment_identifier=data['payment_identifier'],
+            amount=data['amount'],
         )
 
 
@@ -241,9 +247,9 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_state'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_state=data['channel_state'],
         )
 
 
@@ -305,11 +311,11 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['transaction_hash'],
-            data['transaction_from'],
-            data['token_network_identifier'],
-            data['channel_identifier'],
-            data['closed_block_number'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_from=to_canonical_address(data['transaction_from']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
+            closed_block_number=data['closed_block_number'],
         )
 
 
@@ -341,7 +347,6 @@ class ActionInitChain(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitChain) and
-            self.pseudo_random_generator == other.pseudo_random_generator and
             self.block_number == other.block_number and
             self.chain_id == other.chain_id
         )
@@ -359,10 +364,10 @@ class ActionInitChain(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            random.Random(),
-            data['block_number'],
-            data['our_address'],
-            data['chain_id'],
+            pseudo_random_generator=random.Random(),
+            block_number=data['block_number'],
+            our_address=to_canonical_address(data['our_address']),
+            chain_id=data['chain_id'],
         )
 
 
@@ -407,8 +412,8 @@ class ActionNewTokenNetwork(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['payment_network_identifier'],
-            data['token_network'],
+            payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
+            token_network=data['token_network'],
         )
 
 
@@ -460,10 +465,10 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['transaction_hash'],
-            data['token_network_identifier'],
-            data['channel_identifier'],
-            data['deposit_transaction'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
+            deposit_transaction=data['deposit_transaction'],
         )
 
 
@@ -518,10 +523,10 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_identifier'],
-            data['settle_block_number'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
+            settle_block_number=data['settle_block_number'],
         )
 
 
@@ -581,8 +586,8 @@ class ActionChangeNodeNetworkState(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['node_address']),
-            data['network_state'],
+            node_address=to_canonical_address(data['node_address']),
+            network_state=data['network_state'],
         )
 
 
@@ -627,8 +632,8 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            data['payment_network'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            payment_network=data['payment_network'],
         )
 
 
@@ -676,9 +681,9 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['payment_network_identifier']),
-            data['token_network'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
+            token_network=data['token_network'],
         )
 
 
@@ -735,10 +740,10 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['secret_registry_address']),
-            deserialize_bytes(data['secrethash']),
-            deserialize_bytes(data['secret']),
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            secret_registry_address=to_canonical_address(data['secret_registry_address']),
+            secrethash=deserialize_bytes(data['secrethash']),
+            secret=deserialize_bytes(data['secret']),
         )
 
 
@@ -825,13 +830,13 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            to_canonical_address(data['participant']),
-            to_canonical_address(data['partner']),
-            deserialize_bytes(data['locksroot']),
-            data['unlocked_amount'],
-            data['returned_tokens'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            participant=to_canonical_address(data['participant']),
+            partner=to_canonical_address(data['partner']),
+            locksroot=deserialize_bytes(data['locksroot']),
+            unlocked_amount=data['unlocked_amount'],
+            returned_tokens=data['returned_tokens'],
         )
 
 
@@ -893,11 +898,11 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_identifier'],
-            to_canonical_address(data['participant1']),
-            to_canonical_address(data['participant2']),
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
+            participant1=to_canonical_address(data['participant1']),
+            participant2=to_canonical_address(data['participant2']),
         )
 
 
@@ -942,9 +947,9 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_identifier'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
         )
 
 
@@ -988,10 +993,10 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            deserialize_bytes(data['transaction_hash']),
-            to_canonical_address(data['token_network_identifier']),
-            data['channel_identifier'],
-            data['nonce'],
+            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            channel_identifier=data['channel_identifier'],
+            nonce=data['nonce'],
         )
 
 
@@ -1046,10 +1051,10 @@ class ReceiveTransferDirect(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['token_network_identifier'],
-            data['message_identifier'],
-            to_canonical_address(data['payment_identifier']),
-            data['balance_proof'],
+            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            message_identifier=data['message_identifier'],
+            payment_identifier=data['payment_identifier'],
+            balance_proof=data['balance_proof'],
         )
 
 
@@ -1099,9 +1104,9 @@ class ReceiveUnlock(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['message_identifier'],
-            deserialize_bytes(data['secret']),
-            data['balance_proof'],
+            message_identifier=data['message_identifier'],
+            secret=deserialize_bytes(data['secret']),
+            balance_proof=data['balance_proof'],
         )
 
 
@@ -1126,7 +1131,7 @@ class ReceiveDelivered(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['message_identifier'],
+            message_identifier=data['message_identifier'],
         )
 
 
@@ -1156,5 +1161,5 @@ class ReceiveProcessed(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['message_identifier']),
+            message_identifier=data['message_identifier'],
         )
