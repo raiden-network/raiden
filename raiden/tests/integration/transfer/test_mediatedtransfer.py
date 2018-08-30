@@ -1,3 +1,4 @@
+import gevent
 import pytest
 
 from raiden.messages import LockedTransfer, RevealSecret
@@ -38,20 +39,20 @@ def test_mediated_transfer(
         timeout=network_wait * number_of_nodes,
     )
 
-    wait_assert(
-        token_network_identifier,
-        app0, deposit - amount, [],
-        app1, deposit + amount, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
-    wait_assert(
-        token_network_identifier,
-        app1, deposit - amount, [],
-        app2, deposit + amount, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit - amount, [],
+            app1, deposit + amount, [],
+        )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - amount, [],
+            app2, deposit + amount, [],
+        )
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -88,20 +89,20 @@ def test_mediated_transfer_with_entire_deposit(
         timeout=network_wait * number_of_nodes,
     )
 
-    wait_assert(
-        token_network_identifier,
-        app0, deposit * 2, [],
-        app1, 0, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
-    wait_assert(
-        token_network_identifier,
-        app1, deposit * 2, [],
-        app2, 0, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit * 2, [],
+            app1, 0, [],
+        )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit * 2, [],
+            app2, 0, [],
+        )
 
 
 class _patch_transport:
@@ -154,17 +155,17 @@ def test_mediated_transfer_messages_out_of_order(
         timeout=network_wait * number_of_nodes,
     )
 
-    wait_assert(
-        token_network_identifier,
-        app0, deposit - amount, [],
-        app1, deposit + amount, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
-    wait_assert(
-        token_network_identifier,
-        app1, deposit - amount, [],
-        app2, deposit + amount, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit - amount, [],
+            app1, deposit + amount, [],
+        )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - amount, [],
+            app2, deposit + amount, [],
+        )

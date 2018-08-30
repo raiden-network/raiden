@@ -1,6 +1,7 @@
 import random
 
 import pytest
+import gevent
 
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
@@ -141,13 +142,13 @@ def test_receive_lockedtransfer_invalidnonce(
         app1,
     )
 
-    wait_assert(
-        token_network_identifier,
-        app0, deposit - amount, [],
-        app1, deposit + amount, [],
-        func=assert_synced_channel_state,
-        timeout=network_wait,
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit - amount, [],
+            app1, deposit + amount, [],
+        )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
