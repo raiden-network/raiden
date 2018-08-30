@@ -14,6 +14,7 @@ class RaidenJSONEncoder(json.JSONEncoder):
         if hasattr(obj, 'to_dict'):
             result = obj.to_dict()
             result['_type'] = f'{obj.__module__}.{obj.__class__.__name__}'
+            result['_version'] = 0
             return result
         return super().default(obj)
 
