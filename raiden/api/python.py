@@ -550,11 +550,14 @@ class RaidenAPI:
             )
 
         elif partner_address:
-            result = views.list_channelstate_for_tokennetwork(
+            result = views.list_all_channelstate(
                 views.state_from_raiden(self.raiden),
-                registry_address,
-                partner_address,
             )
+            result = [
+                channel_state
+                for channel_state in result
+                if channel_state.partner_state.address == partner_address
+            ]
 
         else:
             result = views.list_all_channelstate(
