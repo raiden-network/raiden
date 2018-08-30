@@ -652,7 +652,7 @@ class SendDirectTransfer(SendMessageEvent):
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': self.channel_identifier,
             'message_identifier': self.message_identifier,
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
             'token_address': to_checksum_address(self.token_address),
         }
@@ -665,7 +665,7 @@ class SendDirectTransfer(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],
             message_identifier=data['message_identifier'],
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             balance_proof=data['balance_proof'],
             token_address=to_canonical_address(data['token_address']),
         )
