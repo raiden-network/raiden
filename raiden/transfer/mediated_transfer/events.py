@@ -104,7 +104,6 @@ class SendLockedTransfer(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
             'message_identifier': self.message_identifier,
             'transfer': self.transfer,
         }
@@ -354,7 +353,6 @@ class SendSecretRequest(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
             'message_identifier': self.message_identifier,
             'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
             'amount': self.amount,

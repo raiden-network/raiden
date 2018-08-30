@@ -1643,9 +1643,8 @@ class TransactionOrder(State):
         )
 
     def __eq__(self, other):
-        if not isinstance(other, TransactionOrder):
-            return NotImplemented
         return (
+            isinstance(other, TransactionOrder) and
             self.block_number == other.block_number and
             self.transaction == other.transaction
         )

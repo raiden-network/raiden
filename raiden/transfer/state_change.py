@@ -1032,7 +1032,7 @@ class ReceiveTransferDirect(StateChange):
     def to_dict(self):
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'message_identifier': to_checksum_address(self.message_identifier),
+            'message_identifier': self.message_identifier,
             'payment_identifier': to_checksum_address(self.payment_identifier),
             'balance_proof': self.balance_proof,
         }
@@ -1041,7 +1041,7 @@ class ReceiveTransferDirect(StateChange):
     def from_dict(cls, data):
         return cls(
             to_canonical_address(data['token_network_identifier']),
-            to_canonical_address(data['message_identifier']),
+            data['message_identifier'],
             to_canonical_address(data['payment_identifier']),
             data['balance_proof'],
         )
@@ -1085,7 +1085,7 @@ class ReceiveUnlock(StateChange):
 
     def to_dict(self):
         return {
-            'message_identifier': to_checksum_address(self.message_identifier),
+            'message_identifier': self.message_identifier,
             'secret': serialize_bytes(self.secret),
             'balance_proof': self.balance_proof,
         }
@@ -1093,7 +1093,7 @@ class ReceiveUnlock(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['message_identifier']),
+            data['message_identifier'],
             deserialize_bytes(data['secret']),
             data['balance_proof'],
         )
@@ -1117,15 +1117,10 @@ class ReceiveDelivered(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
-        return {
-            'message_identifier': to_checksum_address(self.message_identifier),
-        }
-
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['message_identifier']),
+            data['message_identifier'],
         )
 
 
@@ -1149,7 +1144,7 @@ class ReceiveProcessed(StateChange):
 
     def to_dict(self):
         return {
-            'message_identifier': to_checksum_address(self.message_identifier),
+            'message_identifier': self.message_identifier,
         }
 
     @classmethod
