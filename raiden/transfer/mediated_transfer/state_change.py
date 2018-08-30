@@ -55,8 +55,8 @@ class ActionInitInitiator(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['transfer_description'],
-            data['routes'],
+            transfer_description=data['transfer_description'],
+            routes=data['routes'],
         )
 
 
@@ -106,9 +106,9 @@ class ActionInitMediator(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['routes'],
-            data['from_route'],
-            data['from_transfer'],
+            routes=data['routes'],
+            from_route=data['from_route'],
+            from_transfer=data['from_transfer'],
         )
 
 
@@ -152,7 +152,10 @@ class ActionInitTarget(StateChange):
 
     @classmethod
     def from_dict(cls, data):
-        return cls(data['route'], data['transfer'])
+        return cls(
+            route=data['route'],
+            transfer=data['transfer'],
+        )
 
 
 class ActionCancelRoute(StateChange):
@@ -198,9 +201,9 @@ class ActionCancelRoute(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            to_canonical_address(data['registry_address']),
-            data['identifier'],
-            data['routes'],
+            registry_address=to_canonical_address(data['registry_address']),
+            channel_identifier=data['identifier'],
+            routes=data['routes'],
         )
 
 
@@ -290,11 +293,11 @@ class ReceiveSecretRequest(StateChange):
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            data['payment_identifier'],
-            data['amount'],
-            data['expiration'],
-            deserialize_bytes(data['secrethash']),
-            to_canonical_address(data['sender']),
+            payment_identifier=data['payment_identifier'],
+            amount=data['amount'],
+            expiration=data['expiration'],
+            secrethash=deserialize_bytes(data['secrethash']),
+            sender=to_canonical_address(data['sender']),
         )
         instance.revealsecret = data['revealsecret']
         return instance
@@ -341,8 +344,8 @@ class ReceiveSecretReveal(StateChange):
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            deserialize_bytes(data['secret']),
-            to_canonical_address(data['sender']),
+            secret=deserialize_bytes(data['secret']),
+            sender=to_canonical_address(data['sender']),
         )
         instance.secrethash = deserialize_bytes(data['secrethash'])
         return instance
@@ -401,10 +404,10 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            to_canonical_address(data['sender']),
-            data['routes'],
-            data['transfer'],
-            deserialize_bytes(data['secret']),
+            sender=to_canonical_address(data['sender']),
+            routes=data['routes'],
+            transfer=data['transfer'],
+            secret=deserialize_bytes(data['secret']),
         )
         instance.secrethash = deserialize_bytes(data['secrethash'])
         return instance
@@ -453,8 +456,8 @@ class ReceiveTransferRefund(StateChange):
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            to_canonical_address(data['sender']),
-            data['routes'],
-            data['transfer'],
+            sender=to_canonical_address(data['sender']),
+            routes=data['routes'],
+            transfer=data['transfer'],
         )
         return instance
