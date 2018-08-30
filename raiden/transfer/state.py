@@ -1626,6 +1626,7 @@ class TransactionChannelNewBalance(State):
         return restored
 
 
+@total_ordering
 class TransactionOrder(State):
     def __init__(
             self,
@@ -1651,6 +1652,14 @@ class TransactionOrder(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if not isinstance(other, TransactionOrder):
+            return NotImplemented
+        return (
+            self.block_number < other.block_number and
+            self.transaction < other.transaction
+        )
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
