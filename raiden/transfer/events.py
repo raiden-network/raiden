@@ -254,7 +254,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         result = {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'merkle_tree_leaves': self.merkle_tree_leaves,  # TODO: map this list?
+            'merkle_tree_leaves': self.merkle_tree_leaves,
         }
 
         return result
@@ -264,7 +264,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            merkle_tree_leaves=data['merkle_tree_leaves'],  # TODO
+            merkle_tree_leaves=data['merkle_tree_leaves'],
         )
 
         return restored

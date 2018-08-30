@@ -252,8 +252,7 @@ class StateManager:
 
             if state_change != restored:
                 print('Serialisation failed for:', state_change.__class__.__name__)
-            else:
-                print('State change serialisation round-trip successful')
+
         except Exception:
             print('Serialisation failed for:', state_change.__class__.__name__)
 
@@ -281,8 +280,6 @@ class StateManager:
             if state != restored:
                 print('###########################################')
                 compare_state_trees(state, restored)
-            else:
-                print('State serialisation round-trip successful')
 
         assert isinstance(self.current_state, (State, type(None)))
         assert all(isinstance(e, Event) for e in events)
