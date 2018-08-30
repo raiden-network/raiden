@@ -122,9 +122,9 @@ class _patch_transport:
             self.done = True
 
 
+@pytest.mark.skip(reason='Currently fails on travis')
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.skip('Currently fails on travis')
 def test_mediated_transfer_messages_out_of_order(
         raiden_network,
         number_of_nodes,
