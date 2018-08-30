@@ -22,7 +22,7 @@ def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
-        channel_identifier=send_lockedtransfer_event.queue_identifier[1],
+        channel_identifier=send_lockedtransfer_event.queue_identifier.channel_identifier,
         message_identifier=send_lockedtransfer_event.message_identifier,
         payment_identifier=transfer.payment_identifier,
         token_address=transfer.token,

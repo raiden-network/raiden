@@ -13,6 +13,7 @@ from raiden.encoding import messages
 from raiden.transfer.architecture import State, SendMessageEvent
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils import lpex, pex, sha3, typing, serialization
 from raiden.utils.notifying_queue import QueueIdentifier
 from raiden.utils.serialization import (
@@ -122,12 +123,10 @@ class InitiatorTask(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTask':
-        restored = cls(
+        return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            manager_state=data['manager_task'],
+            manager_state=data['manager_state'],
         )
-
-        return restored
 
 
 class MediatorTask(State):
@@ -223,7 +222,7 @@ class TargetTask(State):
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            target_state=data['target_task'],
+            target_state=data['target_state'],
         )
 
         return restored
@@ -311,7 +310,9 @@ class ChainState(State):
             'our_address': to_checksum_address(self.our_address),
             'payment_mapping': self.payment_mapping,
             'pending_transactions': self.pending_transactions,
-            'queueids_to_queues': self.queueids_to_queues,
+            'queueids_to_queues': serialization.serialize_queueid_to_queue(
+                self.queueids_to_queues,
+            ),
         }
 
     @classmethod
@@ -335,7 +336,9 @@ class ChainState(State):
         )
         restored.payment_mapping = data['payment_mapping']
         restored.pending_transactions = data['pending_transactions']
-        restored.queueids_to_queues = data['queueids_to_queues']
+        restored.queueids_to_queues = serialization.deserialize_queueid_to_queue(
+            data['queueids_to_queues'],
+        )
 
         return restored
 
@@ -1629,9 +1632,9 @@ class TransactionChannelNewBalance(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
         restored = cls(
-            to_canonical_address(data['participant_address']),
-            data['contract_balance'],
-            data['deposit_block_number'],
+            participant_address=to_canonical_address(data['participant_address']),
+            contract_balance=data['contract_balance'],
+            deposit_block_number=data['deposit_block_number'],
         )
 
         return restored
@@ -1680,8 +1683,8 @@ class TransactionOrder(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
         restored = cls(
-            data['block_number'],
-            data['transaction'],
+            block_number=data['block_number'],
+            transaction=data['transaction'],
         )
 
         return restored

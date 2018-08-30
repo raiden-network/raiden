@@ -52,6 +52,12 @@ class ActionInitInitiator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'transfer_description': self.transfer,
+            'routes': self.routes,
+        }
+
     @classmethod
     def from_dict(cls, data):
         return cls(
@@ -103,6 +109,13 @@ class ActionInitMediator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'routes': self.routes,
+            'from_route': self.from_route,
+            'from_transfer': self.from_transfer,
+        }
+
     @classmethod
     def from_dict(cls, data):
         return cls(
@@ -149,6 +162,12 @@ class ActionInitTarget(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_dict(self):
+        return {
+            'route': self.route,
+            'transfer': self.transfer,
+        }
 
     @classmethod
     def from_dict(cls, data):

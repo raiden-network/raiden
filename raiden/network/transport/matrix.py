@@ -58,6 +58,7 @@ from raiden.transfer.state import (
     QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.message_handler import on_message
 from raiden.utils import pex
 from raiden.utils.notifying_queue import QueueIdentifier
