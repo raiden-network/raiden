@@ -481,6 +481,35 @@ def handle_token_network_action(
 
         events = iteration.events
 
+        # if state_change is ChannelClosed, clean message queues
+        if type(state_change) == ContractReceiveChannelClosed:
+            channel_state = views.get_channelstate_by_token_network_identifier(
+                chain_state=chain_state,
+                token_network_id=state_change.token_network_identifier,
+                channel_id=state_change.channel_identifier,
+            )
+
+            # clean both ordered and unordered queues for channel
+            queueids_to_clean = [
+                typing.QueueIdentifier(
+                    recipient=channel_state.partner_state.address,
+                    payment_network_identifier=channel_state.payment_network_identifier,
+                    token_network_identifier=channel_state.token_network_identifier,
+                    channel_identifier=channel_state.channel_identifier,
+                    ordered=True,
+                ),
+                typing.QueueIdentifier(
+                    recipient=channel_state.partner_state.address,
+                    payment_network_identifier=channel_state.payment_network_identifier,
+                    token_network_identifier=channel_state.token_network_identifier,
+                    channel_identifier=channel_state.channel_identifier,
+                    ordered=False,
+                ),
+            ]
+
+            for queueid in queueids_to_clean:
+                chain_state.queueids_to_queues.pop(queueid, None)
+
     return TransitionResult(chain_state, events)
 
 
