@@ -489,8 +489,8 @@ class LockedTransferSignedState(State):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             token=to_canonical_address(data['token']),
-            balance_proof=data['token'],
-            lock=data['token'],
+            balance_proof=data['balance_proof'],
+            lock=data['lock'],
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),
         )
@@ -688,7 +688,7 @@ class MediationPairState(State):
             'payee_address': to_checksum_address(self.payee_address),
             'payee_transfer': self.payee_transfer,
             'payee_state': self.payee_state,
-            'payer_transfer': self.payer_state,
+            'payer_transfer': self.payer_transfer,
             'payer_state': self.payer_state,
         }
 
