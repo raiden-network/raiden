@@ -273,19 +273,21 @@ export class RaidenService {
         );
     }
 
-    public getEvents(
+    public getBlockchainEvents(
         eventsParam: EventsParam,
         fromBlock?: number,
         toBlock?: number,
     ): Observable<Array<Event>> {
         let path: string;
         const channel = eventsParam.channel;
+        const basePath = '_debug/blockchain_events';
+
         if (channel) {
-            path = `blockchain_events/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
+            path = `${basePath}/payment_networks/${channel.token_address}/channels/${channel.partner_address}`;
         } else if (eventsParam.token) {
-            path = `blockchain_events/tokens/${eventsParam.token}`;
+            path = `${basePath}/tokens/${eventsParam.token}`;
         } else {
-            path = 'events/network';
+            path = `${basePath}/network`;
         }
         let params = new HttpParams();
         if (fromBlock) {

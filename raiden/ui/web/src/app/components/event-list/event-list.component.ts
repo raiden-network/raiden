@@ -64,7 +64,7 @@ export class EventListComponent implements OnInit {
                 if (fromBlock > latestBlock) {
                     return of([]);
                 }
-                const obs = this.raidenService.getEvents(
+                const obs = this.raidenService.getBlockchainEvents(
                     this.eventsParam,
                     fromBlock,
                     latestBlock);
