@@ -101,7 +101,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 
         received = {
             event.identifier: event
-            for _, event in events
+            for event in events
             if type(event) == EventPaymentReceivedSuccess
         }
 
@@ -203,7 +203,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
 
         received = {
             event.identifier: event
-            for _, event in events
+            for event in events
             if is_valid(event)
         }
 
