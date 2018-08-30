@@ -373,7 +373,7 @@ class LockedTransferUnsignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'token': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
             'lock': self.lock,
@@ -384,7 +384,7 @@ class LockedTransferUnsignedState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
         restored = cls(
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             token=to_canonical_address(data['token']),
             balance_proof=data['token'],
             lock=data['token'],
@@ -475,7 +475,7 @@ class LockedTransferSignedState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'message_identifier': self.message_identifier,
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'token': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
             'lock': self.lock,
@@ -487,7 +487,7 @@ class LockedTransferSignedState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
         restored = cls(
             message_identifier=data['message_identifier'],
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             token=to_canonical_address(data['token']),
             balance_proof=data['token'],
             lock=data['token'],
@@ -563,7 +563,7 @@ class TransferDescriptionWithSecretState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'amount': self.amount,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'initiator': to_checksum_address(self.initiator),
@@ -576,7 +576,7 @@ class TransferDescriptionWithSecretState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransferDescriptionWithSecretState':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             amount=data['amount'],
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             initiator=to_canonical_address(data['initiator']),

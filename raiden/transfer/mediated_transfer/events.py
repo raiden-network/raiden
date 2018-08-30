@@ -104,6 +104,7 @@ class SendLockedTransfer(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
             'transfer': self.transfer,
         }
@@ -186,7 +187,7 @@ class SendRevealSecret(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
             'secret': serialization.serialize_bytes(self.secret),
             # 'secrethash' is automatically filled by constructor
@@ -274,9 +275,9 @@ class SendBalanceProof(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'token_address': to_checksum_address(self.token),
             'secret': serialization.serialize_bytes(self.secret),
             'balance_proof': self.balance_proof,
@@ -290,7 +291,7 @@ class SendBalanceProof(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],
             message_identifier=data['message_identifier'],
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             token_address=to_canonical_address(data['token_address']),
             secret=serialization.deserialize_bytes(data['secret']),
             balance_proof=data['balance_proof'],
@@ -353,8 +354,9 @@ class SendSecretRequest(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'amount': self.amount,
             'expiration': self.expiration,
             'secrethash': serialization.serialize_bytes(self.secrethash),
@@ -368,7 +370,7 @@ class SendSecretRequest(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],
             message_identifier=data['message_identifier'],
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             amount=data['amount'],
             expiration=data['expiration'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
@@ -442,9 +444,9 @@ class SendRefundTransfer(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
-            'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'token_address': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
             'lock': self.lock,
@@ -460,7 +462,7 @@ class SendRefundTransfer(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],
             message_identifier=data['message_identifier'],
-            payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
+            payment_identifier=data['payment_identifier'],
             token_address=to_canonical_address(data['token_address']),
             balance_proof=data['balance_proof'],
             lock=data['lock'],
@@ -515,7 +517,12 @@ class EventUnlockSuccess(Event):
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
 
-    def __init__(self, identifier: typing.PaymentID, secrethash: typing.SecretHash, reason: str):
+    def __init__(
+            self,
+            identifier: typing.PaymentID,
+            secrethash: typing.SecretHash,
+            reason: str,
+    ):
         self.identifier = identifier
         self.secrethash = secrethash
         self.reason = reason
@@ -539,7 +546,7 @@ class EventUnlockFailed(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'reason': self.reason,
         }
@@ -549,7 +556,7 @@ class EventUnlockFailed(Event):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventUnlockFailed':
         restored = cls(
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
         )
@@ -582,7 +589,7 @@ class EventUnlockClaimSuccess(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'secrethash': serialization.serialize_bytes(self.secrethash),
         }
 
@@ -591,7 +598,7 @@ class EventUnlockClaimSuccess(Event):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventUnlockClaimSuccess':
         restored = cls(
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
 
@@ -625,7 +632,7 @@ class EventUnlockClaimFailed(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'reason': self.reason,
         }
@@ -635,7 +642,7 @@ class EventUnlockClaimFailed(Event):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventUnlockClaimFailed':
         restored = cls(
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
         )

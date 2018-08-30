@@ -179,28 +179,33 @@ class MediatorTask(State):
 class TargetTask(State):
     __slots__ = (
         'token_network_identifier',
-        'manager_state',
+        'channel_identifier',
+        'target_state',
     )
 
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
-            manager_state: 'TargetTransferState',
+            channel_identifier: typing.ChannelID,
+            target_state: 'TargetTransferState',
     ):
         self.token_network_identifier = token_network_identifier
-        self.manager_state = manager_state
+        self.target_state = target_state
+        self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return '<TargetTask token_network_identifier:{} state:{}>'.format(
+        return '<TargetTask token_network_identifier:{} channel_identifier:{} state:{}>'.format(
             self.token_network_identifier,
-            self.manager_state,
+            self.channel_identifier,
+            self.target_state,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, TargetTask) and
             self.token_network_identifier == other.token_network_identifier and
-            self.manager_state == other.manager_state
+            self.target_state == other.target_state and
+            self.channel_identifier == other.channel_identifier
         )
 
     def __ne__(self, other):
@@ -209,14 +214,16 @@ class TargetTask(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'manager_state': self.manager_state,
+            'channel_identifier': self.channel_identifier,
+            'target_state': self.target_state,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            manager_state=data['manager_task'],
+            channel_identifier=data['channel_identifier'],
+            target_state=data['target_task'],
         )
 
         return restored

@@ -53,7 +53,7 @@ AdditionalHash = NewType('AdditionalHash', T_AdditionalHash)
 T_NetworkTimeout = float
 NetworkTimeout = NewType('NetworkTimeout', T_NetworkTimeout)
 
-T_PaymentID = bytes
+T_PaymentID = int
 PaymentID = NewType('PaymentID', T_PaymentID)
 
 T_PaymentAmount = int

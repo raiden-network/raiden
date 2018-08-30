@@ -279,24 +279,24 @@ class ReceiveSecretRequest(StateChange):
 
     def to_dict(self):
         return {
-            'payment_identifier': to_checksum_address(self.payment_identifier),
+            'payment_identifier': self.payment_identifier,
             'amount': self.amount,
             'expiration': self.expiration,
             'secrethash': serialize_bytes(self.secrethash),
             'sender': to_checksum_address(self.sender),
-            'revealsecret': serialize_bytes(self.revealsecret),
+            'revealsecret': self.revealsecret,
         }
 
     @classmethod
     def from_dict(cls, data):
         instance = cls(
-            to_canonical_address(data['payment_identifier']),
+            data['payment_identifier'],
             data['amount'],
             data['expiration'],
             deserialize_bytes(data['secrethash']),
             to_canonical_address(data['sender']),
         )
-        instance.revealsecret = deserialize_bytes(data['revealsecret'])
+        instance.revealsecret = data['revealsecret']
         return instance
 
 
