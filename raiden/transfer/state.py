@@ -468,8 +468,6 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = data['network_graph']
-        restored.partneraddresses_to_channels = defaultdict(dict)
-        restored.channelidentifiers_to_channels = {}
 
         recovered_partneraddresses_to_channels = map_dict(
             to_canonical_address,
