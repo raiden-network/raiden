@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS settings (
 DB_CREATE_STATE_CHANGES = '''
 CREATE TABLE IF NOT EXISTS state_changes (
     identifier INTEGER PRIMARY KEY AUTOINCREMENT,
-    data BINARY
+    data JSON
 );
 '''
 
@@ -16,7 +16,7 @@ DB_CREATE_SNAPSHOT = '''
 CREATE TABLE IF NOT EXISTS state_snapshot (
     identifier INTEGER PRIMARY KEY,
     statechange_id INTEGER,
-    data BINARY,
+    data JSON,
     FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)
 );
 '''
@@ -25,7 +25,7 @@ DB_CREATE_STATE_EVENTS = '''
 CREATE TABLE IF NOT EXISTS state_events (
     identifier INTEGER PRIMARY KEY,
     source_statechange_id INTEGER NOT NULL,
-    data BINARY,
+    data JSON,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
 );
 '''
