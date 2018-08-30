@@ -69,18 +69,16 @@ class InitiatorPaymentState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'initiator': self.initiator.to_dict(),
-            'cancelled_channels': [],  # TODO
+            'cancelled_channels': self.cancelled_channels,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorPaymentState':
-        assert data['type'] == cls.__name__
         restored = cls(
             initiator=InitiatorTransferState.from_dict(data['initiator']),
         )
-        restored.cancelled_channels = []  # TODO
+        restored.cancelled_channels = data['cancelled_channels']
 
         return restored
 
@@ -137,27 +135,38 @@ class InitiatorTransferState(State):
         return not self.__eq__(other)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return {
-            'type': self.__class__.__name__,
+        result = {
             'transfer_description': self.transfer_description.to_dict(),
             'channel_identifier': self.channel_identifier,
-            'transfer': None,  # TODO
-            'secretrequest': None,  # TODO
-            'revealsecret': None,  # TODO
         }
+
+        if self.transfer is not None:
+            result['transfer'] = self.transfer
+        if self.secretrequest is not None:
+            result['secretrequest'] = self.secretrequest
+        if self.revealsecret is not None:
+            result['revealsecret'] = self.revealsecret
+
+        return result
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTransferState':
-        assert data['type'] == cls.__name__
         restored = cls(
             transfer_description=TransferDescriptionWithSecretState.from_dict(
                 data['transfer_description'],
             ),
             channel_identifier=data['channel_identifier'],
         )
-        restored.transfer = None  # TODO
-        restored.secretrequest = None  # TODO
-        restored.revealsecret = None  # TODO
+
+        transfer = data.get('transfer')
+        if transfer is not None:
+            restored.transfer = transfer
+        secretrequest = data.get('secretrequest')
+        if secretrequest is not None:
+            restored.secretrequest = secretrequest
+        revealsecret = data.get('revealsecret')
+        if revealsecret is not None:
+            restored.revealsecret = revealsecret
 
         return restored
 
@@ -201,9 +210,8 @@ class MediatorTransferState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'type': self.__class__.__name__,
             'secrethash': serialization.serialize_bytes(self.secrethash),
-            'transfers_pair': None,  # TODO
+            'transfers_pair': self.transfers_pair,
         }
 
         if self.secret is not None:
@@ -213,11 +221,10 @@ class MediatorTransferState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTransferState':
-        assert data['type'] == cls.__name__
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
-        restored.transfers_pair = []  # TODO
+        restored.transfers_pair = data['transfers_pair']
 
         secret = data.get('secret')
         if secret is not None:
@@ -270,7 +277,6 @@ class TargetTransferState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'type': self.__class__.__name__,
             'route': self.route,
             'transfer': self.transfer,
             'state': self.state,
@@ -283,7 +289,6 @@ class TargetTransferState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTransferState':
-        assert data['type'] == cls.__name__
         restored = cls(
             route=data['route'],
             transfer=data['transfer'],
@@ -368,7 +373,6 @@ class LockedTransferUnsignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
             'token': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
@@ -379,7 +383,6 @@ class LockedTransferUnsignedState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
-        assert data['type'] == cls.__name__
         restored = cls(
             payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
             token=to_canonical_address(data['token']),
@@ -471,7 +474,6 @@ class LockedTransferSignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
             'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
             'token': to_checksum_address(self.token),
@@ -483,7 +485,6 @@ class LockedTransferSignedState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
-        assert data['type'] == cls.__name__
         restored = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
@@ -561,7 +562,6 @@ class TransferDescriptionWithSecretState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'payment_identifier': serialization.serialize_bytes(self.payment_identifier),
             'amount': self.amount,
@@ -574,7 +574,6 @@ class TransferDescriptionWithSecretState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransferDescriptionWithSecretState':
-        assert data['type'] == cls.__name__
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             payment_identifier=serialization.deserialize_bytes(data['payment_identifier']),
@@ -686,7 +685,6 @@ class MediationPairState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'type': self.__class__.__name__,
             'payee_address': to_checksum_address(self.payee_address),
             'payee_transfer': self.payee_transfer,
             'payee_state': self.payee_state,
@@ -696,7 +694,6 @@ class MediationPairState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediationPairState':
-        assert data['type'] == cls.__name__
         restored = cls(
             payer_transfer=data['payer_transfer'],
             payee_address=to_canonical_address(data['payee_address']),
