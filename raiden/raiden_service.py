@@ -273,6 +273,9 @@ class RaidenService(Runnable):
                     f'smart contracts {known_registries}',
                 )
 
+        # Clear ref cache
+        serialize.RaidenJSONDecoder._ref_cache.clear()
+
         # Restore the current snapshot group
         self.snapshot_group = last_log_block_number // SNAPSHOT_BLOCK_COUNT
 
