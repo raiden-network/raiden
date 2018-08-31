@@ -42,8 +42,7 @@ export class RaidenConfig {
                     // make a simple test call to web3
                     this.web3.version.getNetwork((err, res) => {
                         if (err) {
-                            console.error('Invalid web3 endpoint', err);
-                            console.log('Switching to fallback: ' + this.config.web3_fallback);
+                            console.error(`Invalid web3 endpoint, switching to fallback ${this.config.web3_fallback}`, err);
                             this.config.web3 = this.config.web3_fallback;
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         } else {

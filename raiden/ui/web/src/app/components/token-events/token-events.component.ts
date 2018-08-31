@@ -22,7 +22,7 @@ export class TokenEventsComponent implements OnInit {
         this.eventsParam$ = this.route.paramMap.pipe(
             map((params: ParamMap) => ({
                 token: params.get('address')
-            }), tap((events: EventsParam) => console.log(events)))
+            }))
         );
     }
 

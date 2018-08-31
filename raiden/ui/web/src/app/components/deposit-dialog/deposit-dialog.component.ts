@@ -1,10 +1,15 @@
-import { Component, Inject, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { ChangeDetectorRef, Component, Inject, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { BigNumber } from 'bignumber.js';
+import { TokenInputComponent } from '../token-input/token-input.component';
 
 export interface DepositDialogPayload {
-    decimals: number;
+    readonly decimals: number;
+}
+
+export interface DepositDialogResult {
+    readonly tokenAmount: number;
+    readonly tokenAmountDecimals: number;
 }
 
 @Component({
@@ -14,36 +19,31 @@ export interface DepositDialogPayload {
 })
 export class DepositDialogComponent implements OnInit {
 
-    public depositControl: FormControl = new FormControl(0);
-    private readonly _decimals;
+    @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
+
+    form = this.fb.group({
+        amount: 0,
+        decimals: true,
+    });
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: DepositDialogPayload,
-        public dialogRef: MatDialogRef<DepositDialogComponent>
+        public dialogRef: MatDialogRef<DepositDialogComponent>,
+        private fb: FormBuilder,
+        private cdRef: ChangeDetectorRef
     ) {
-        this._decimals = data.decimals;
     }
 
     ngOnInit() {
+        this.tokenInput.decimals = this.data.decimals;
+        this.cdRef.detectChanges();
     }
 
     deposit() {
-        const deposit = this.depositControl.value as number;
-        this.dialogRef.close(deposit);
-    }
-
-    public step(): string {
-        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
-    }
-
-    public decimals(): number {
-        return this._decimals;
-    }
-
-    public precise(value) {
-        if (value.type === 'input' && !value.inputType) {
-            this.depositControl.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
-        }
+        const tokenInput = this.tokenInput;
+        const tokenAmount = tokenInput.tokenAmount.toNumber();
+        const tokenAmountDecimals = tokenInput.tokenAmountDecimals;
+        this.dialogRef.close({tokenAmount, tokenAmountDecimals});
     }
 
 }

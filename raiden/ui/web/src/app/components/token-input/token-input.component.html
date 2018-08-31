@@ -1,0 +1,51 @@
+<div fxLayout="row" [formGroup]="parent">
+    <mat-form-field fxLayout="column" fxFlex="1 1 auto" [hideRequiredMarker]="true">
+        <input matInput type="number"
+               [placeholder]="placeholder"
+               [formControlName]="'amount'"
+               [appAllowedDecimals]="tokenAmountDecimals"
+               [step]="step()"
+               (input)="precise($event)"
+               min="0"
+               required/>
+
+        <mat-hint align="start">
+            <span *ngIf="decimal_checkbox.checked; else alternative">
+                The smallest allowed value is {{step()}}
+            </span>
+            <ng-template #alternative>
+                1 represents then 1/{{decimals}} of the token
+            </ng-template>
+        </mat-hint>
+
+        <mat-error *ngIf="hasError('invalidAmount')">
+            The {{errorPlaceholder}} should be a positive number
+        </mat-error>
+
+        <mat-error *ngIf="hasError('tooManyDecimals')">
+            <span *ngIf="decimals > 0; else integer_only">
+                This token network only supports up to {{ decimals }} decimals
+            </span>
+
+            <ng-template #integer_only>
+                1 represents then 1/{{decimals}} of the token
+            </ng-template>
+        </mat-error>
+    </mat-form-field>
+
+    <mat-checkbox
+            #decimal_checkbox
+            fxLayout="column"
+            fxFlexAlign="center"
+            fxFlex="0 0 6.5em"
+            class="checkbox"
+            (change)="onCheckChange($event)"
+            [formControlName]="'decimals'"
+            matTooltip="Allows you to insert decimals, or integers representing the smallest denomination"
+            matTooltipPosition="above">
+        Decimals
+    </mat-checkbox>
+
+</div>
+
+

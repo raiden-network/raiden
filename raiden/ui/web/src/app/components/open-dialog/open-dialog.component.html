@@ -6,7 +6,7 @@
                  *ngIf="(partnerAddress.value && !partnerAddress.invalid); else placeholder"
                  src="{{identicon(partnerAddress.value)}}"/>
             <ng-template #placeholder>
-                <mat-icon >person</mat-icon>
+                <mat-icon>person</mat-icon>
             </ng-template>
         </div>
         <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
@@ -34,7 +34,6 @@
         </mat-form-field>
     </div>
 
-
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
 
         <input type="text" placeholder="Select Token" aria-label="Select Token"
@@ -56,22 +55,12 @@
         </mat-error>
 
     </mat-form-field>
-    <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
-        <input matInput type="number"
-               placeholder="Balance"
-               formControlName="balance"
-               required
-               [appAllowedDecimals]="decimals()"
-               min="0"
-               (input)="precise($event)"
-               [step]="step()"/>
-        <mat-error *ngIf="balance.invalid && balance.hasError('invalidAmount') && (balance.dirty || balance.touched)">
-            The channel balance has to be a number greater than zero
-        </mat-error>
-        <mat-error *ngIf="balance.invalid && balance.hasError('tooManyDecimals') && (balance.dirty || balance.touched)">
-            This token network only supports up to {{ decimals() }} decimals
-        </mat-error>
-    </mat-form-field>
+
+    <app-token-input
+            [placeholder]="'Balance'"
+            [errorPlaceholder]="'channel balance'"
+            [parent]="form">
+    </app-token-input>
 
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
         <input matInput type="number"

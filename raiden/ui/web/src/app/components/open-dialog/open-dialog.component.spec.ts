@@ -9,6 +9,7 @@ import { TokenPipe } from '../../pipes/token.pipe';
 import { RaidenConfig } from '../../services/raiden.config';
 import { SharedService } from '../../services/shared.service';
 import { MockConfig } from '../channel-table/channel-table.component.spec';
+import { TokenInputComponent } from '../token-input/token-input.component';
 
 import { OpenDialogComponent } from './open-dialog.component';
 
@@ -20,6 +21,7 @@ describe('OpenDialogComponent', () => {
         TestBed.configureTestingModule({
             declarations: [
                 OpenDialogComponent,
+                TokenInputComponent,
                 TokenPipe,
                 AllowedDecimalsDirective
             ],
@@ -50,7 +52,7 @@ describe('OpenDialogComponent', () => {
     beforeEach(() => {
         fixture = TestBed.createComponent(OpenDialogComponent);
         component = fixture.componentInstance;
-        fixture.detectChanges();
+        fixture.detectChanges(false);
     });
 
     it('should be created', () => {

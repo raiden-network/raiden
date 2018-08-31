@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature: `2251` Add webui support for switching token input between decimal and integer values.
 * :bug:`2293` Initiator had the payment and message identifiers swapped.
 * :bug:`2275` Adds scientific notation for really small fractions when displaying balances.
 * :bug:`2282` Fixes internal webui error that would not propagate channel updates.

@@ -6,6 +6,7 @@ import {
     MatBadgeModule,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
@@ -46,7 +47,8 @@ import {
         MatSortModule,
         MatSidenavModule,
         MatBadgeModule,
-        MatRadioModule
+        MatRadioModule,
+        MatCheckboxModule
     ],
     imports: [
         CommonModule

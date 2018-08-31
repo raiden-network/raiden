@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { BigNumber } from 'bignumber.js';
@@ -9,6 +9,7 @@ import { TokenPipe } from '../../pipes/token.pipe';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 
 import { RaidenService } from '../../services/raiden.service';
+import { TokenInputComponent } from '../token-input/token-input.component';
 
 export interface PaymentDialogPayload {
     tokenAddress: string;
@@ -28,13 +29,11 @@ export class PaymentDialogComponent implements OnInit {
 
     public token: FormControl;
     public targetAddress: FormControl;
-    public amount: FormControl;
 
     public filteredOptions$: Observable<UserToken[]>;
     public tokenPipe: TokenPipe;
+    @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
     private tokens$: Observable<UserToken[]>;
-
-    private _decimals = 0;
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: PaymentDialogPayload,
@@ -44,22 +43,23 @@ export class PaymentDialogComponent implements OnInit {
         private fb: FormBuilder
     ) {
         this.tokenPipe = new TokenPipe();
-        this._decimals = this.data.decimals;
     }
 
     ngOnInit() {
         const data = this.data;
+        this.tokenInput.decimals = data.decimals;
+
         const raidenAddress = this.raidenService.raidenAddress;
 
         this.form = this.fb.group({
             target_address: [data.targetAddress, (control) => control.value === raidenAddress ? {ownAddress: true} : undefined],
-            token: data.tokenAddress,
-            amount: [0]
+            amount: 0,
+            decimals: true,
+            token: data.tokenAddress
         });
 
         this.token = this.form.get('token') as FormControl;
         this.targetAddress = this.form.get('target_address') as FormControl;
-        this.amount = this.form.get('amount') as FormControl;
 
         this.tokens$ = this.raidenService.getTokens(true).pipe(
             flatMap((tokens: UserToken[]) => from(tokens)),
@@ -74,28 +74,14 @@ export class PaymentDialogComponent implements OnInit {
         );
     }
 
-    public step(): string {
-        return (1 / (10 ** this._decimals)).toFixed(this._decimals).toString();
-    }
-
-    public decimals(): number {
-        return this._decimals;
-    }
-
-    public precise(value) {
-        if (value.type === 'input' && !value.inputType) {
-            this.amount.setValue(new BigNumber(value.target.value).toFixed(this._decimals));
-        }
-    }
-
     public accept() {
         const value = this.form.value;
 
         const payload: PaymentDialogPayload = {
             tokenAddress: value['token'],
             targetAddress: value['target_address'],
-            decimals: this._decimals,
-            amount: value['amount']
+            decimals: this.tokenInput.tokenAmountDecimals,
+            amount: this.tokenInput.tokenAmount.toNumber()
         };
 
         this.dialogRef.close(payload);
@@ -103,17 +89,18 @@ export class PaymentDialogComponent implements OnInit {
 
     public reset() {
         this.form.reset();
-
-        const tokenAddress = this.data.tokenAddress;
         const targetAddress = this.data.targetAddress;
+        const tokenAddress = this.data.tokenAddress;
 
-        if (tokenAddress) {
-            this.token.setValue(tokenAddress);
-        }
+        this.form.setValue({
+            target_address: targetAddress ? targetAddress : '',
+            token: tokenAddress || '',
+            amount: 0,
+            decimals: true
+        });
 
-        this.targetAddress.setValue(targetAddress ? targetAddress : '');
-        this.amount.setValue(0);
-        this._decimals = this.data.decimals;
+        this.tokenInput.resetAmount();
+        this.tokenInput.decimals = this.data.decimals;
     }
 
     // noinspection JSMethodCanBeStatic
@@ -127,6 +114,11 @@ export class PaymentDialogComponent implements OnInit {
     // noinspection JSMethodCanBeStatic
     trackByFn(token: UserToken): string {
         return token.address;
+    }
+
+    tokenSelected(value: UserToken) {
+        this.tokenInput.decimals = value.decimals;
+        this.token.setValue(value.address);
     }
 
     private _filter(value?: string): Observable<UserToken[]> {
@@ -145,10 +137,5 @@ export class PaymentDialogComponent implements OnInit {
             }),
             toArray()
         );
-    }
-
-    tokenSelected(value: UserToken) {
-        this._decimals = value.decimals;
-        this.token.setValue(value.address);
     }
 }

@@ -1,26 +1,15 @@
 <h1 mat-dialog-title>Deposit to channel</h1>
-<div mat-dialog-content>
-    <mat-form-field class="full-width-form-field"
-                    [hideRequiredMarker]="true">
-        <input placeholder="Enter Funds to be allocated"
-               type="number"
-               [formControl]="depositControl"
-               matInput
-               value="0"
-               min="0"
-               (input)="precise($event)"
-               [appAllowedDecimals]="decimals()"
-               [step]="step()"/>
-
-        <mat-error *ngIf="depositControl.invalid && (depositControl.dirty || depositControl.touched)">
-            The deposit must me a positive number
-        </mat-error>
-    </mat-form-field>
+<div mat-dialog-content [formGroup]="form">
+    <app-token-input
+            placeholder="Enter Funds to be allocated"
+            [errorPlaceholder]="'deposit'"
+            [parent]="form">
+    </app-token-input>
 </div>
 <div mat-dialog-actions>
     <button mat-button mat-dialog-close>Cancel</button>
     <button mat-button
-            [disabled]="depositControl.invalid"
+            [disabled]="form.invalid"
             (click)="deposit()">Confirm
     </button>
 </div>

@@ -26,6 +26,8 @@ export class RaidenService {
     public raidenAddress: string;
     private userTokens: { [id: string]: UserToken | null } = {};
 
+    private defaultDecimals = 18;
+
     constructor(
         private http: HttpClient,
         private zone: NgZone,
@@ -348,7 +350,7 @@ export class RaidenService {
         if (userToken === undefined) {
             const decimals$: Observable<BigNumber> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.decimals(this.zoneEncap(cb))
-            )();
+            )().pipe(catchError(() => of(this.defaultDecimals)));
 
             const symbol$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))

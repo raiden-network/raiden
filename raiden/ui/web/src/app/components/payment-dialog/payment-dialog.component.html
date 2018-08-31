@@ -6,7 +6,7 @@
                  *ngIf="(targetAddress.value && !targetAddress.invalid); else placeholder"
                  src="{{identicon(targetAddress.value)}}"/>
             <ng-template #placeholder>
-                <mat-icon >person</mat-icon>
+                <mat-icon>person</mat-icon>
             </ng-template>
         </div>
 
@@ -59,24 +59,11 @@
         </mat-error>
 
     </mat-form-field>
-    <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
-        <input matInput type="number"
-               id="amount"
-               placeholder="Amount"
-               formControlName="amount"
-               required
-               [appAllowedDecimals]="decimals()"
-               min="0"
-               (input)="precise($event)"
-               [step]="step()"
-        />
-        <mat-error *ngIf="amount.invalid && amount.hasError('invalidAmount') && (amount.dirty || amount.touched)">
-            The transfer amount should be a positive number
-        </mat-error>
-        <mat-error *ngIf="amount.invalid && amount.hasError('tooManyDecimals') && (amount.dirty || amount.touched)">
-            This token network only supports up to {{ decimals() }} decimals
-        </mat-error>
-    </mat-form-field>
+    <app-token-input
+            [placeholder]="'Amount'"
+            [errorPlaceholder]="'payment amount'"
+            [parent]="form">
+    </app-token-input>
 
 </div>
 <div mat-dialog-actions>
