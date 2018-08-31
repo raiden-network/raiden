@@ -200,7 +200,7 @@ class RaidenService(Runnable):
     def start(self):
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
         if not self.stop_event.ready():
-            return  # already started
+            raise RuntimeError(f'{self!r} already started')
         self.stop_event.clear()
 
         if self.database_dir is not None:
@@ -325,12 +325,16 @@ class RaidenService(Runnable):
         """ Start the node asynchronously. The returned greenlet should be checked for errors """
         return gevent.spawn(self.start)
 
-    def run(self):
+    def _run(self):
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
         try:
             self.stop_event.wait()
-        finally:
-            self.stop()  # noop on double call, ensure cleanup and wait on subtasks
+        except gevent.GreenletExit:  # killed without exception
+            self.stop_event.set()
+            gevent.killall([self.alarm, self.transport])  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()
 
     def stop(self):
         """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """

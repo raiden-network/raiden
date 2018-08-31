@@ -93,7 +93,7 @@ class AlarmTask(Runnable):
         # probability of a new block increases.
         self.sleep_time = 0.5
 
-    def run(self):  # pylint: disable=method-hidden
+    def _run(self):  # pylint: disable=method-hidden
         try:
             self.loop_until_stop()
         except RaidenShuttingDown:

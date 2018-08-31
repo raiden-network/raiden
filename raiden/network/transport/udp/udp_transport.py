@@ -214,7 +214,7 @@ class UDPTransport(Runnable):
         self.server.start()
         super().start()
 
-    def run(self):
+    def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         try:
             self.stop_event.wait()
