@@ -42,7 +42,7 @@ class Block(StateChange):
         return not self.__eq__(other)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'Block':
         return cls(
             block_number=data['block_number'],
         )
@@ -72,7 +72,7 @@ class ActionCancelPayment(StateChange):
         return not self.__eq__(other)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionCancelPayment':
         return cls(
             payment_identifier=data['payment_identifier'],
         )
@@ -104,7 +104,7 @@ class ActionChannelClose(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> 'ActionChannelClose':
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
@@ -143,7 +143,7 @@ class ActionCancelTransfer(StateChange):
         return not self.__eq__(other)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionCancelTransfer':
         return cls(
             transfer_identifier=data['transfer_identifier'],
         )
@@ -187,7 +187,7 @@ class ActionTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'receiver_address': to_checksum_address(self.receiver_address),
@@ -196,7 +196,7 @@ class ActionTransferDirect(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionTransferDirect':
         return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             receiver_address=to_canonical_address(data['receiver_address']),
@@ -237,7 +237,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -245,7 +245,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveChannelNew':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -299,7 +299,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'transaction_from': to_checksum_address(self.transaction_from),
@@ -309,7 +309,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveChannelClosed':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             transaction_from=to_canonical_address(data['transaction_from']),
@@ -354,7 +354,7 @@ class ActionInitChain(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'block_number': self.block_number,
             'our_address': to_checksum_address(self.our_address),
@@ -362,7 +362,7 @@ class ActionInitChain(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionInitChain':
         return cls(
             pseudo_random_generator=random.Random(),
             block_number=data['block_number'],
@@ -403,14 +403,14 @@ class ActionNewTokenNetwork(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network': self.token_network,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionNewTokenNetwork':
         return cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network=data['token_network'],
@@ -454,7 +454,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -463,7 +463,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveChannelNewBalance':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -512,7 +512,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -521,7 +521,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveChannelSettled':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -543,7 +543,7 @@ class ActionLeaveAllNetworks(StateChange):
         return not self.__eq__(other)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionLeaveAllNetworks':
         return cls()
 
 
@@ -577,14 +577,14 @@ class ActionChangeNodeNetworkState(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'node_address': to_checksum_address(self.node_address),
             'network_state': self.network_state,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionChangeNodeNetworkState':
         return cls(
             node_address=to_canonical_address(data['node_address']),
             network_state=data['network_state'],
@@ -623,14 +623,14 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'payment_network': self.payment_network,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveNewPaymentNetwork':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             payment_network=data['payment_network'],
@@ -671,7 +671,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
@@ -679,7 +679,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveNewTokenNetwork':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
@@ -729,7 +729,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'secret_registry_address': to_checksum_address(self.secret_registry_address),
@@ -738,7 +738,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveSecretReveal':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             secret_registry_address=to_canonical_address(data['secret_registry_address']),
@@ -816,7 +816,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -828,7 +828,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveChannelBatchUnlock':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -886,7 +886,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -896,7 +896,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveRouteNew':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -937,7 +937,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -945,7 +945,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveRouteClosed':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -982,7 +982,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -991,7 +991,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ContractReceiveUpdateTransfer':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -1040,7 +1040,7 @@ class ReceiveTransferDirect(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'message_identifier': self.message_identifier,
@@ -1049,7 +1049,7 @@ class ReceiveTransferDirect(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveTransferDirect':
         return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             message_identifier=data['message_identifier'],
@@ -1094,7 +1094,7 @@ class ReceiveUnlock(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'message_identifier': self.message_identifier,
             'secret': serialize_bytes(self.secret),
@@ -1102,7 +1102,7 @@ class ReceiveUnlock(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveUnlock':
         return cls(
             message_identifier=data['message_identifier'],
             secret=deserialize_bytes(data['secret']),
@@ -1129,7 +1129,7 @@ class ReceiveDelivered(StateChange):
         return not self.__eq__(other)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveDelivered':
         return cls(
             message_identifier=data['message_identifier'],
         )
@@ -1153,13 +1153,8 @@ class ReceiveProcessed(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
-        return {
-            'message_identifier': self.message_identifier,
-        }
-
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveProcessed':
         return cls(
             message_identifier=data['message_identifier'],
         )

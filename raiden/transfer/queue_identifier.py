@@ -1,6 +1,6 @@
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.utils import typing
+from raiden.utils import pex, typing
 
 
 class QueueIdentifier:
@@ -14,7 +14,7 @@ class QueueIdentifier:
 
     def __repr__(self):
         return '<QueueIdentifier recipient:{} channel_identifier:{}>'.format(
-            self.recipient,
+            pex(self.recipient),
             self.channel_identifier,
         )
 

@@ -69,14 +69,14 @@ class InitiatorPaymentState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'initiator': self.initiator.to_dict(),
+            'initiator': self.initiator,
             'cancelled_channels': self.cancelled_channels,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorPaymentState':
         restored = cls(
-            initiator=InitiatorTransferState.from_dict(data['initiator']),
+            initiator=data['initiator'],
         )
         restored.cancelled_channels = data['cancelled_channels']
 
@@ -136,7 +136,7 @@ class InitiatorTransferState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'transfer_description': self.transfer_description.to_dict(),
+            'transfer_description': self.transfer_description,
             'channel_identifier': self.channel_identifier,
         }
 
@@ -152,9 +152,7 @@ class InitiatorTransferState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTransferState':
         restored = cls(
-            transfer_description=TransferDescriptionWithSecretState.from_dict(
-                data['transfer_description'],
-            ),
+            transfer_description=data['transfer_description'],
             channel_identifier=data['channel_identifier'],
         )
 
@@ -484,7 +482,7 @@ class LockedTransferSignedState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferSignedState':
         restored = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
@@ -569,7 +567,6 @@ class TransferDescriptionWithSecretState(State):
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
             'secret': serialization.serialize_bytes(self.secret),
-            # 'secrethash' not needed, get recreated by constructor
         }
 
     @classmethod

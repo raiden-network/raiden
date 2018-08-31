@@ -9,7 +9,7 @@ from typing import (
 )
 
 # The latest DB version
-RAIDEN_DB_VERSION = 1
+RAIDEN_DB_VERSION = 0
 
 
 class SQLiteStorage:

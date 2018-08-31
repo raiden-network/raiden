@@ -101,7 +101,7 @@ class InitiatorTask(State):
 
     def __repr__(self):
         return '<InitiatorTask token_network_identifier:{} state:{}>'.format(
-            self.token_network_identifier,
+            pex(self.token_network_identifier),
             self.manager_state,
         )
 
@@ -145,7 +145,7 @@ class MediatorTask(State):
 
     def __repr__(self):
         return '<MediatorTask token_network_identifier:{} state:{}>'.format(
-            self.token_network_identifier,
+            pex(self.token_network_identifier),
             self.mediator_state,
         )
 
@@ -194,7 +194,7 @@ class TargetTask(State):
 
     def __repr__(self):
         return '<TargetTask token_network_identifier:{} channel_identifier:{} state:{}>'.format(
-            self.token_network_identifier,
+            pex(self.token_network_identifier),
             self.channel_identifier,
             self.target_state,
         )
@@ -390,8 +390,6 @@ class PaymentNetworkState(State):
             'tokennetworks': [
                 network for network in self.tokenidentifiers_to_tokennetworks.values()
             ],
-            # 'tokenidentifiers_to_tokennetworks' can be reconstructed
-            # 'tokenaddresses_to_tokennetworks' can be reconstructed
         }
 
     @classmethod
@@ -456,7 +454,6 @@ class TokenNetworkState(State):
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph,
-            # 'channelidentifiers_to_channels' can be recovered from partneraddresses
             'partneraddresses_to_channels': map_dict(
                 to_checksum_address,
                 serialization.identity,
@@ -506,7 +503,7 @@ class TokenNetworkGraphState(State):
         self.channel_identifier_to_participants = {}
 
     def __repr__(self):
-        return '<TokenNetworkGraphState edges:{}>'.format(len(self.network.edges))
+        return '<TokenNetworkGraphState num_edges:{}>'.format(len(self.network.edges))
 
     def __eq__(self, other):
         return (
@@ -1030,8 +1027,6 @@ class HashTimeLockState(State):
             'amount': self.amount,
             'expiration': self.expiration,
             'secrethash': serialization.serialize_bytes(self.secrethash),
-            # 'encoded' not needed as it is created from the above data
-            # 'lockhash' not needed as it is created from the above data
         }
 
     @classmethod
@@ -1140,7 +1135,7 @@ class UnlockProofState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockProofState':
         restored = cls(
             merkle_proof=map_list(serialization.deserialize_bytes, data['merkle_proof']),
             lock_encoded=serialization.deserialize_bytes(data['lock_encoded']),

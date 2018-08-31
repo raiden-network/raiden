@@ -260,7 +260,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelUpdateTransfer':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
@@ -303,7 +303,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelUpdateTransfer':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendSecretReveal':
         restored = cls(
             expiration=data['expiration'],
             secret=serialization.deserialize_bytes(data['secret']),
@@ -583,7 +583,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'reason': self.reason,
         }
 
@@ -595,7 +595,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
             data: typing.Dict[str, typing.Any],
     )-> 'EventTransferReceivedInvalidDirectTransfer':
         restored = cls(
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             reason=data['reason'],
         )
 

@@ -52,16 +52,16 @@ class ActionInitInitiator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'transfer_description': self.transfer,
+            'transfer': self.transfer,
             'routes': self.routes,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionInitInitiator':
         return cls(
-            transfer_description=data['transfer_description'],
+            transfer_description=data['transfer'],
             routes=data['routes'],
         )
 
@@ -109,7 +109,7 @@ class ActionInitMediator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'routes': self.routes,
             'from_route': self.from_route,
@@ -117,7 +117,7 @@ class ActionInitMediator(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionInitMediator':
         return cls(
             routes=data['routes'],
             from_route=data['from_route'],
@@ -163,14 +163,14 @@ class ActionInitTarget(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'route': self.route,
             'transfer': self.transfer,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionInitTarget':
         return cls(
             route=data['route'],
             transfer=data['transfer'],
@@ -210,7 +210,7 @@ class ActionCancelRoute(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'registry_address': to_checksum_address(self.registry_address),
             'identifier': self.identifier,
@@ -218,7 +218,7 @@ class ActionCancelRoute(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ActionInitTarget':
         return cls(
             registry_address=to_canonical_address(data['registry_address']),
             channel_identifier=data['identifier'],
@@ -299,7 +299,7 @@ class ReceiveSecretRequest(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'payment_identifier': self.payment_identifier,
             'amount': self.amount,
@@ -310,7 +310,7 @@ class ReceiveSecretRequest(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveSecretRequest':
         instance = cls(
             payment_identifier=data['payment_identifier'],
             amount=data['amount'],
@@ -353,7 +353,7 @@ class ReceiveSecretReveal(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'secret': serialize_bytes(self.secret),
             'secrethash': serialize_bytes(self.secrethash),
@@ -361,7 +361,7 @@ class ReceiveSecretReveal(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveSecretReveal':
         instance = cls(
             secret=deserialize_bytes(data['secret']),
             sender=to_canonical_address(data['sender']),
@@ -412,7 +412,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'secret': serialize_bytes(self.secret),
             'sender': to_checksum_address(self.sender),
@@ -421,14 +421,13 @@ class ReceiveTransferRefundCancelRoute(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveTransferRefundCancelRoute':
         instance = cls(
             sender=to_canonical_address(data['sender']),
             routes=data['routes'],
             transfer=data['transfer'],
             secret=deserialize_bytes(data['secret']),
         )
-        instance.secrethash = deserialize_bytes(data['secrethash'])
         return instance
 
 
@@ -465,7 +464,7 @@ class ReceiveTransferRefund(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self):
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'sender': to_checksum_address(self.sender),
             'routes': self.routes,
@@ -473,7 +472,7 @@ class ReceiveTransferRefund(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> 'ReceiveTransferRefund':
         instance = cls(
             sender=to_canonical_address(data['sender']),
             routes=data['routes'],

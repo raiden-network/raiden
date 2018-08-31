@@ -49,6 +49,7 @@ from raiden.messages import (
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
+from raiden.storage.serialize import JSONSerializer
 from raiden.transfer import events as transfer_events, views
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
 from raiden.transfer.state import (
@@ -660,7 +661,7 @@ class MatrixTransport(Runnable):
         def send_delivered_for(message: SignedMessage):
             delivered_message = Delivered(message.message_identifier)
             self._raiden_service.sign(delivered_message)
-            self._send_raw(message.sender, json.dumps(delivered_message.to_dict()))
+            self._send_raw(message.sender, JSONSerializer.serialize(delivered_message))
 
         try:
             # TODO: Maybe replace with Matrix read receipts.

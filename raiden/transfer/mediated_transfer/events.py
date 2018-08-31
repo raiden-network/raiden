@@ -190,7 +190,6 @@ class SendRevealSecret(SendMessageEvent):
             'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
             'secret': serialization.serialize_bytes(self.secret),
-            # 'secrethash' is automatically filled by constructor
         }
 
         return result
@@ -498,7 +497,7 @@ class EventUnlockSuccess(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': serialization.serialize_bytes(self.identifier),
+            'identifier': self.identifier,
             'secrethash': serialization.serialize_bytes(self.secrethash),
         }
 
@@ -507,7 +506,7 @@ class EventUnlockSuccess(Event):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventUnlockSuccess':
         restored = cls(
-            identifier=serialization.deserialize_bytes(data['identifier']),
+            identifier=data['identifier'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
 
