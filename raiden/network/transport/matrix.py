@@ -190,7 +190,7 @@ class MatrixTransport(Runnable):
         initial_queues: QueueIdsToQueues,
     ):
         if not self._stop_event.ready():
-            return  # already started
+            raise RuntimeError(f'{self!r} already started')
         self._stop_event.clear()
         self._raiden_service = raiden_service
 
@@ -211,7 +211,7 @@ class MatrixTransport(Runnable):
 
         super().start()  # start greenlet
 
-    def run(self):
+    def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         try:
             # children crashes should throw an exception here
@@ -236,7 +236,7 @@ class MatrixTransport(Runnable):
         self._client.set_presence_state(UserPresence.OFFLINE.value)
 
         self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
-        # wait own greenlets, no need to get on them, exceptions should be raised in run()
+        # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets)
         self._client.logout()
         # parent may want to call get() after stop(), to ensure _run errors are re-raised

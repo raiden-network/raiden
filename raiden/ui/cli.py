@@ -1003,9 +1003,13 @@ class NodeRunner:
 
         # wait for interrupt
         event = AsyncResult()
-        gevent.signal(signal.SIGQUIT, event.set)
-        gevent.signal(signal.SIGTERM, event.set)
-        gevent.signal(signal.SIGINT, event.set)
+
+        def sig_set(sig, _frame):
+            event.set(sig)
+
+        gevent.signal(signal.SIGQUIT, sig_set)
+        gevent.signal(signal.SIGTERM, sig_set)
+        gevent.signal(signal.SIGINT, sig_set)
 
         # quit if any task exits, successfully or not
         for task in tasks:

@@ -398,7 +398,7 @@ class APIServer(Runnable):
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
 
-    def run(self, host='127.0.0.1', port=5001):
+    def _run(self, host='127.0.0.1', port=5001):
         try:
             # WSGI expects a stdlib logger, with structlog there's conflict of method names
             wsgi_log = logging.getLogger(__name__ + '.pywsgi')

@@ -3,28 +3,28 @@ from typing import Sequence
 
 
 class Runnable:
-    """Greenlet-like class, run() inside one, but can be stopped and restarted
+    """Greenlet-like class, __run() inside one, but can be stopped and restarted
 
     Allows subtasks to crash self, and bubble up the exception in the greenlet
     In the future, when proper restart is implemented, may be replaced by actual greenlet
     """
     greenlet: Greenlet = None
-    args: Sequence = tuple()  # args for run()
-    kwargs: dict = dict()  # kwargs for run()
+    args: Sequence = tuple()  # args for _run()
+    kwargs: dict = dict()  # kwargs for _run()
 
     def __init__(self, run=None, *args, **kwargs):
         if run is not None:
-            self.run = run
-        self.args = tuple(args)
+            self._run = run
+        self.args = args
         self.kwargs = kwargs
 
-        self.greenlet = Greenlet(self.run, *self.args, **self.kwargs)
+        self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
 
     def start(self):
         """ Synchronously start task
 
-        Reimplements in children an call super().start() at end to start run()
+        Reimplements in children an call super().start() at end to start _run()
         Start-time exceptions may be raised
         """
         if self.greenlet:
@@ -35,11 +35,11 @@ class Runnable:
             self.greenlet.kwargs == self.kwargs
         )
         if not pristine:
-            self.greenlet = Greenlet(self.run, *self.args, **self.kwargs)
+            self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
             self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
         self.greenlet.start()
 
-    def run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):
         """ Reimplements in children to busy wait here
 
         This busy wait should be finished gracefully after stop(),
@@ -47,9 +47,9 @@ class Runnable:
         raise NotImplementedError
 
     def stop(self):
-        """ Synchronous stop, gracefully tells run() to exit
+        """ Synchronous stop, gracefully tells _run() to exit
 
-        May wait subtasks to finish.
+        Should wait subtasks to finish.
         Stop-time exceptions may be raised, run exceptions should not (accessible via get())
         """
         raise NotImplementedError
@@ -57,7 +57,7 @@ class Runnable:
     def on_error(self, subtask: Greenlet):
         """ Default callback for substasks link_exception
 
-        Default callback re-raises the exception inside run() """
+        Default callback re-raises the exception inside _run() """
         if not self.greenlet:
             return
         self.greenlet.kill(subtask.exception)
