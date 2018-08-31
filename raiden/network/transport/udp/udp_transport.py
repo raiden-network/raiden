@@ -439,7 +439,7 @@ class UDPTransport:
         # pylint: disable=unidiomatic-typecheck
 
         if len(messagedata) > self.UDP_MAX_MESSAGE_SIZE:
-            log.error(
+            log.warning(
                 'INVALID MESSAGE: Packet larger than maximum size',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
@@ -450,7 +450,7 @@ class UDPTransport:
         try:
             message = decode(messagedata)
         except InvalidProtocolMessage as e:
-            log.error(
+            log.warning(
                 'INVALID PROTOCOL MESSAGE',
                 error=str(e),
                 node=pex(self.raiden.address),
@@ -467,7 +467,7 @@ class UDPTransport:
         elif message is not None:
             self.receive_message(message)
         else:
-            log.error(
+            log.warning(
                 'INVALID MESSAGE: Unknown cmdid',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
