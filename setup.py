@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import subprocess
+import re
 
 from setuptools import setup, find_packages
 from setuptools import Command
@@ -82,14 +83,18 @@ with open('README.rst') as readme_file:
 
 history = ''
 
-install_requires_replacements = {
-    'git+https://github.com/LefterisJP/pystun@develop#egg=pystun': 'pystun',
-}
 
-install_requires = list(set(
-    install_requires_replacements.get(requirement.strip(), requirement.strip())
-    for requirement in open('requirements.txt') if not requirement.lstrip().startswith('#')
-))
+def get_egg_or_req(req):
+    match = re.search('#egg=([^#@]+)', req, re.U | re.I)
+    return (match and match.group(1)) or req
+
+
+with open('requirements.txt') as req_file:
+    install_requires = list({
+        get_egg_or_req(requirement)
+        for requirement in req_file
+        if requirement.strip() and not requirement.lstrip().startswith('#')
+    })
 
 test_requirements = []
 
