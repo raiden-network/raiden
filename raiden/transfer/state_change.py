@@ -178,9 +178,9 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNew) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
-            self.channel_state == other.channel_state
+            self.channel_state == other.channel_state and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -223,11 +223,11 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelClosed) and
-            self.transaction_hash == other.transaction_hash and
             self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.closed_block_number == other.closed_block_number
+            self.closed_block_number == other.closed_block_number and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -332,10 +332,10 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelNewBalance) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.deposit_transaction == other.deposit_transaction
+            self.deposit_transaction == other.deposit_transaction and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -373,10 +373,10 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelSettled) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.settle_block_number == other.settle_block_number
+            self.settle_block_number == other.settle_block_number and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -452,8 +452,8 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveNewPaymentNetwork) and
-            self.transaction_hash == other.transaction_hash and
-            self.payment_network == other.payment_network
+            self.payment_network == other.payment_network and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -486,9 +486,9 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveNewTokenNetwork) and
-            self.transaction_hash == other.transaction_hash and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network == other.token_network
+            self.token_network == other.token_network and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -528,10 +528,10 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveSecretReveal) and
-            self.transaction_hash == other.transaction_hash and
             self.secret_registry_address == other.secret_registry_address and
             self.secrethash == other.secrethash and
-            self.secret == other.secret
+            self.secret == other.secret and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -595,13 +595,13 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
             self.participant == other.participant and
             self.partner == other.partner and
             self.locksroot == other.locksroot and
             self.unlocked_amount == other.unlocked_amount and
-            self.returned_tokens == other.returned_tokens
+            self.returned_tokens == other.returned_tokens and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -644,11 +644,11 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveRouteNew) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
             self.participant1 == other.participant1 and
-            self.participant2 == other.participant2
+            self.participant2 == other.participant2 and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -678,9 +678,9 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveRouteClosed) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
-            self.channel_identifier == other.channel_identifier
+            self.channel_identifier == other.channel_identifier and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -707,10 +707,10 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveUpdateTransfer) and
-            self.transaction_hash == other.transaction_hash and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.nonce == other.nonce
+            self.nonce == other.nonce and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):

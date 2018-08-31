@@ -107,6 +107,17 @@ class SendMessageEvent(Event):
         )
         self.message_identifier = message_identifier
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, SendMessageEvent) and
+            self.recipient == other.recipient and
+            self.queue_identifier == other.queue_identifier and
+            self.message_identifier == other.message_identifier
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractSendEvent(Event):
     pass
@@ -116,10 +127,28 @@ class ContractSendExpirableEvent(ContractSendEvent):
     def __init__(self, expiration: BlockExpiration):
         self.expiration = expiration
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendExpirableEvent) and
+            self.expiration == other.expiration
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ContractReceiveStateChange(StateChange):
     def __init__(self, transaction_hash: TransactionHash):
         self.transaction_hash = transaction_hash
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractReceiveStateChange) and
+            self.transaction_hash == other.transaction_hash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class StateManager:
