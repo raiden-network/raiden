@@ -474,8 +474,8 @@ class MatrixTransport:
         user = self._get_user(sender_id)
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            self.log.debug(
-                'invalid user displayName signature',
+            self.log.warning(
+                'At received message -- invalid user displayName signature',
                 peer_user=user.user_id,
                 room=room,
             )
@@ -497,7 +497,7 @@ class MatrixTransport:
 
         data = event['content']['body']
         if not isinstance(data, str):
-            self.log.debug(
+            self.log.warning(
                 'Received message body not a string',
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
@@ -575,8 +575,8 @@ class MatrixTransport:
             else:
                 self._receive_message(message)
         else:
-            self.log.error(
-                'Invalid message',
+            self.log.warning(
+                'Received Invalid message',
                 message=data,
             )
             return False
