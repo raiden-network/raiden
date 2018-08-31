@@ -162,15 +162,20 @@ class SendBalanceProof(SendMessageEvent):
         self.payment_identifier = payment_identifier
         self.token = token_address
         self.secret = secret
+        self.secrethash = sha3(secret)
         self.balance_proof = balance_proof
 
     def __repr__(self):
         return (
-            '<SendBalanceProof msgid:{} paymentid:{} token:{} recipient:{} balance_proof:{}>'
+            '<'
+            'SendBalanceProof msgid:{} paymentid:{} token:{} secrethash:{} recipient:{} '
+            'balance_proof:{}'
+            '>'
         ).format(
             self.message_identifier,
             self.payment_identifier,
             pex(self.token),
+            pex(self.secrethash),
             pex(self.recipient),
             self.balance_proof,
         )
