@@ -133,7 +133,8 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             isinstance(other, ContractSendChannelUpdateTransfer) and
             self.channel_identifier == other.channel_identifier and
             self.token_network_identifier == other.token_network_identifier and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -188,7 +189,8 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendSecretReveal) and
-            self.secret == other.secret
+            self.secret == other.secret and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -432,12 +434,10 @@ class SendDirectTransfer(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendDirectTransfer) and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
-            self.queue_identifier == other.queue_identifier and
             self.balance_proof == other.balance_proof and
             self.token == other.token and
-            self.recipient == other.recipient
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -456,8 +456,7 @@ class SendProcessed(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendProcessed) and
-            self.message_identifier == other.message_identifier and
-            self.recipient == other.recipient
+            super().__eq__(other)
         )
 
     def __ne__(self, other):

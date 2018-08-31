@@ -59,9 +59,8 @@ class SendLockedTransfer(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendLockedTransfer) and
-            self.message_identifier == other.message_identifier and
             self.transfer == other.transfer and
-            self.recipient == other.recipient
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -121,11 +120,9 @@ class SendRevealSecret(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendRevealSecret) and
-            self.recipient == other.recipient and
-            self.queue_identifier == other.queue_identifier and
-            self.message_identifier == other.message_identifier and
             self.secret == other.secret and
-            self.secrethash == other.secrethash
+            self.secrethash == other.secrethash and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -181,14 +178,12 @@ class SendBalanceProof(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendBalanceProof) and
-            self.recipient == other.recipient and
-            self.queue_identifier == other.queue_identifier and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.recipient == other.recipient and
             self.secret == other.secret and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -235,14 +230,12 @@ class SendSecretRequest(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendSecretRequest) and
-            self.recipient == other.recipient and
-            self.queue_identifier == other.queue_identifier and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
             self.expiration == other.expiration and
             self.secrethash == other.secrethash and
-            self.recipient == other.recipient
+            self.recipient == other.recipient and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -298,16 +291,14 @@ class SendRefundTransfer(SendMessageEvent):
     def __eq__(self, other):
         return (
             isinstance(other, SendRefundTransfer) and
-            self.recipient == other.recipient and
-            self.queue_identifier == other.queue_identifier and
-            self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
             self.token == other.token and
             self.balance_proof == other.balance_proof and
             self.lock == other.lock and
             self.initiator == other.initiator and
             self.target == other.target and
-            self.recipient == other.recipient
+            self.recipient == other.recipient and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
