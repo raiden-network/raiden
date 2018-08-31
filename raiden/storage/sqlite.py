@@ -3,10 +3,10 @@ import threading
 from typing import Any, Optional, Tuple
 
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
-from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES
+from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 
 # The latest DB version
-RAIDEN_DB_VERSION = 2
+RAIDEN_DB_VERSION = 3
 
 
 class SQLiteStorage:
@@ -100,7 +100,7 @@ class SQLiteStorage:
 
         return last_id
 
-    def write_events(self, state_change_id, events):
+    def write_events(self, state_change_id, events, log_time):
         """ Save events.
 
         Args:
@@ -108,15 +108,15 @@ class SQLiteStorage:
             events: List of Event objects.
         """
         events_data = [
-            (None, state_change_id, self.serializer.serialize(event))
+            (None, state_change_id, log_time, self.serializer.serialize(event))
             for event in events
         ]
 
         with self.write_lock, self.conn:
             self.conn.executemany(
                 'INSERT INTO state_events('
-                '   identifier, source_statechange_id, data'
-                ') VALUES(?, ?, ?)',
+                '   identifier, source_statechange_id, log_time, data'
+                ') VALUES(?, ?, ?, ?)',
                 events_data,
             )
 
@@ -176,6 +176,11 @@ class SQLiteStorage:
 
         return result
 
+    def _wrap_event(self, event, log_time):
+        if isinstance(event, EventWithLogTime):
+            return TimestampedEvent(event, log_time)
+        return event
+
     def get_events(self, limit: int = None, offset: int = None):
         if limit is not None and (not isinstance(limit, int) or limit < 0):
             raise InvalidNumberInput('limit must be a positive integer')
@@ -189,12 +194,15 @@ class SQLiteStorage:
         cursor = self.conn.cursor()
 
         cursor.execute(
-            'SELECT data FROM state_events ORDER BY identifier ASC LIMIT ? OFFSET ?',
+            '''
+            SELECT data, log_time FROM state_events
+                ORDER BY identifier ASC LIMIT ? OFFSET ?
+            ''',
             (limit, offset),
         )
 
         result = [
-            self.serializer.deserialize(entry[0])
+            self._wrap_event(self.serializer.deserialize(entry[0]), entry[1])
             for entry in cursor.fetchall()
         ]
         return result
