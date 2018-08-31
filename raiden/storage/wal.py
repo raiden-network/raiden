@@ -1,3 +1,4 @@
+from datetime import datetime
 import structlog
 
 from raiden.transfer.architecture import StateManager
@@ -49,11 +50,12 @@ class WriteAheadLog:
         Events produced by applying state change are also saved.
         """
         state_change_id = self.storage.write_state_change(state_change)
+        self.state_change_id = state_change_id
 
         events = self.state_manager.dispatch(state_change)
 
-        self.state_change_id = state_change_id
-        self.storage.write_events(state_change_id, events)
+        timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
+        self.storage.write_events(state_change_id, events, timestamp)
 
         return events
 

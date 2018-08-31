@@ -1,3 +1,11 @@
+from collections import namedtuple
+
+
+class TimestampedEvent(namedtuple('TimestampedEvent', 'wrapped_event log_time')):
+    def __getattr__(self, item):
+        return getattr(self.wrapped_event, item)
+
+
 DB_CREATE_SETTINGS = '''
 CREATE TABLE IF NOT EXISTS settings (
     name VARCHAR[24] NOT NULL PRIMARY KEY,
@@ -25,6 +33,7 @@ DB_CREATE_STATE_EVENTS = '''
 CREATE TABLE IF NOT EXISTS state_events (
     identifier INTEGER PRIMARY KEY,
     source_statechange_id INTEGER NOT NULL,
+    log_time TEXT,
     data JSON,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
 );
