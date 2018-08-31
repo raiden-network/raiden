@@ -134,9 +134,14 @@ def from_dict(data):
     try:
         klass = CLASSNAME_TO_CLASS[data['type']]
     except KeyError:
-        raise InvalidProtocolMessage(
-            'Invalid message type (data["type"] = {})'.format(data['type']),
-        ) from None
+        if 'type' in data:
+            raise InvalidProtocolMessage(
+                'Invalid message type (data["type"] = {})'.format(data['type']),
+            ) from None
+        else:
+            raise InvalidProtocolMessage(
+                'Invalid message data. Can not find the data type'
+            ) from None
     return klass.from_dict(data)
 
 

@@ -28,6 +28,7 @@ from raiden.constants import ID_TO_NETWORKNAME
 from raiden.encoding import signing
 from raiden.exceptions import (
     InvalidAddress,
+    InvalidProtocolMessage,
     UnknownAddress,
     UnknownTokenAddress,
     TransportError,
@@ -454,7 +455,7 @@ class MatrixTransport:
         _cachegetter('__messages_cache', lambda: TTLCache(32, 4)),
         key=lambda _, room, event: (room.room_id, event['type'], event['content'].get('body')),
     )
-    def _handle_message(self, room, event):
+    def _handle_message(self, room, event) -> bool:
         """ Handle text messages sent to listening rooms """
         if (
                 event['type'] != 'm.room.message' or
@@ -462,19 +463,23 @@ class MatrixTransport:
                 not self._running
         ):
             # Ignore non-messages and non-text messages
-            return
+            return False
 
         sender_id = event['sender']
 
         if sender_id == self._user_id:
             # Ignore our own messages
-            return
+            return False
 
         user = self._get_user(sender_id)
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            # invalid user displayName signature
-            return
+            self.log.debug(
+                'invalid user displayName signature',
+                peer_user=user.user_id,
+                room=room,
+            )
+            return False
         old_room = self._get_room_id_for_address(peer_address)
         if old_room != room.room_id:
             self.log.debug(
@@ -488,9 +493,18 @@ class MatrixTransport:
 
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
-            return
+            return False
 
         data = event['content']['body']
+        if not isinstance(data, str):
+            self.log.debug(
+                'Received message body not a string',
+                peer_user=user.user_id,
+                peer_address=to_checksum_address(peer_address),
+                room=room,
+            )
+            return False
+
         if data.startswith('0x'):
             try:
                 message = message_from_bytes(decode_hex(data))
@@ -502,7 +516,18 @@ class MatrixTransport:
                     peer_address=pex(peer_address),
                     exception=ex,
                 )
-                return
+                return False
+            except InvalidProtocolMessage as ex:
+                import pdb
+                pdb.set_trace()
+                self.log.warning(
+                    "Received message binary data is not a valid message",
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    exception=ex,
+                )
+                return False
+
         else:
             try:
                 message_dict = json.loads(data)
@@ -514,7 +539,15 @@ class MatrixTransport:
                     peer_address=pex(peer_address),
                     exception=ex,
                 )
-                return
+                return False
+            except InvalidProtocolMessage as ex:
+                self.log.warning(
+                    "Message data JSON are not a valid message",
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    exception=ex,
+                )
+                return False
 
         self.log.debug(
             'MESSAGE_DATA',
@@ -529,6 +562,7 @@ class MatrixTransport:
                 'Not required Ping received',
                 message=data,
             )
+            return False
         elif isinstance(message, SignedMessage):
             if message.sender != peer_address:
                 self.log.warning(
@@ -537,7 +571,7 @@ class MatrixTransport:
                     signer=message.sender,
                     peer_address=peer_address,
                 )
-                return
+                return False
             if isinstance(message, Delivered):
                 self._receive_delivered(message)
             else:
@@ -547,6 +581,9 @@ class MatrixTransport:
                 'Invalid message',
                 message=data,
             )
+            return False
+
+        return True
 
     def _receive_delivered(self, delivered: Delivered):
         # FIXME: check if UDPTransport also checks Delivered sender and message presence
@@ -996,7 +1033,6 @@ class MatrixTransport:
 
 
 def _event_to_message(event, node_address):
-    # FIXME: Replace with raiden-network/raiden#1424 once it's merged
     eventtypes_to_messagetype = {
         mediated_transfer_events.SendBalanceProof: messages.Secret,
         mediated_transfer_events.SendLockedTransfer: messages.LockedTransfer,
