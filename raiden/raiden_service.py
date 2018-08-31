@@ -221,7 +221,10 @@ class RaidenService:
         )
 
         if self.wal.state_manager.current_state is None:
-            log.debug('No recoverable state available, created inital state')
+            log.debug(
+                'No recoverable state available, created inital state',
+                node=pex(self.address),
+            )
             block_number = self.chain.block_number()
 
             state_change = ActionInitChain(
@@ -250,7 +253,11 @@ class RaidenService:
             # for that given block have been processed, filters can be safely
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
-            log.debug('Restored state from WAL', last_restored_block=last_log_block_number)
+            log.debug(
+                'Restored state from WAL',
+                last_restored_block=last_log_block_number,
+                node=pex(self.address),
+            )
 
         # Restore the current snapshot group
         self.snapshot_group = last_log_block_number // SNAPSHOT_BLOCK_COUNT
@@ -283,6 +290,7 @@ class RaidenService:
         log.debug(
             'Processing pending transactions',
             num_pending_transactions=len(pending_transactions),
+            node=pex(self.address),
         )
         with self.dispatch_events_lock:
             for transaction in pending_transactions:

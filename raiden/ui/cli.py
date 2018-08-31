@@ -925,7 +925,7 @@ class NodeRunner:
             else:
                 # Shouldn't happen
                 raise RuntimeError(f"Invalid transport type '{self._options['transport']}'")
-            app.stop(leave_channels=False)
+            app.stop()
         except ReplacementTransactionUnderpriced as e:
             print(
                 '{}. Please make sure that this Raiden node is the '

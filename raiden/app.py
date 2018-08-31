@@ -132,13 +132,10 @@ class App:  # pylint: disable=too-few-public-methods
         """ Start the raiden app. """
         self.raiden.start()
 
-    def stop(self, leave_channels: bool = False):
+    def stop(self):
         """ Stop the raiden app.
 
         Args:
             leave_channels: if True, also close and settle all channels before stopping
         """
-        if leave_channels:
-            self.raiden.close_and_settle()
-
         self.raiden.stop()

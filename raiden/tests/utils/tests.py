@@ -19,7 +19,7 @@ def cleanup_tasks():
 def shutdown_apps_and_cleanup_tasks(raiden_apps):
     for app in raiden_apps:
         try:
-            app.stop(leave_channels=False)
+            app.stop()
         except RaidenShuttingDown:
             pass
 
