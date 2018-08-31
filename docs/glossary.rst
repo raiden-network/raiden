@@ -61,7 +61,7 @@ Raiden Glossary
        The available balance :math:`B_a` of a channel participant is :math:`B_a = B_n - B_l`.
 
    balance proof
-       Balance proof is any kind of message used in order to cryptographically prove on the blockchain what the latest :term:`transferred amount` received from a counter party is.
+       Balance proof is any kind of message used in order to cryptographically prove on the blockchain what the latest :term:`transferred amount` and :term:`locked amount` received from a counter party is.
 
    hashlock
        A hashlock is the hashed secret that accompanies a locked message: ``sha3(secret)``.
