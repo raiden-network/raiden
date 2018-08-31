@@ -561,6 +561,9 @@ argument needs to be in the range of 0 to UINT64_MAX. Any block number outside t
 be rejected.
 For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which would define the limit of results to return and the offset from which to return results respectively.
 
+``raiden_events`` contain a timestamp field, ``log_time``, indicating when they were written to the write-ahead log.
+The format of ``log_time`` is ISO8601 with milliseconds.
+
 .. http:get:: /api/(version)/_debug/blockchain_events/network
 
    Query for token network creations.
@@ -804,6 +807,7 @@ Now for the internal Raiden events:
 
     [{
         'event': 'SendLockedTransfer',
+        'log_time': '2018-09-07T14:49:18.852',
         'message_identifier': 17084435898865420397,
         'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
         'transfer': '<LockedTransferUnsignedState id:43 '
@@ -817,6 +821,7 @@ Now for the internal Raiden events:
      },
      {
         'event': 'SendSecretReveal',
+        'log_time': '2018-09-07T14:49:20.351,
         'message_identifier': 9182020688704924936,
         'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
         'secret': '0xcefe6d325fc2b01f47d303417ddd14d788a31c0b078610b427a85b2141bc514d',
@@ -826,6 +831,7 @@ Now for the internal Raiden events:
         'amount': 200,
         'event': 'EventPaymentSentSuccess',
         'identifier': 43,
+        'log_time': '2018-09-07T14:49:23.664',
         'payment_network_identifier': '0x41ac2632d8c233784783e50ec6678cdc43f74c76',
         'target': '0x636F37d785257D919931ACFf318F70fB7Da4f903',
         'token_network_identifier': '0xedf18937be4064dfbe3e307bd193e812b723ac6f'
