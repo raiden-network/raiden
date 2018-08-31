@@ -8,8 +8,7 @@ class RaidenJSONEncoder(json.JSONEncoder):
     of recursive instance encoding. """
     def default(self, obj):
         """
-        If an object has `to_dict` method,
-        call that method.
+        If an object has `to_dict` method, call that method.
         """
         if hasattr(obj, 'to_dict'):
             result = obj.to_dict()

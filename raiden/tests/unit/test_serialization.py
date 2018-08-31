@@ -9,7 +9,7 @@ from raiden.transfer.state import EMPTY_MERKLE_TREE
 
 
 class MockObject(object):
-    """ Used to testing JSON encoding/decoding """
+    """ Used for testing JSON encoding/decoding """
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
