@@ -140,7 +140,7 @@ def from_dict(data):
             ) from None
         else:
             raise InvalidProtocolMessage(
-                'Invalid message data. Can not find the data type'
+                'Invalid message data. Can not find the data type',
             ) from None
     return klass.from_dict(data)
 

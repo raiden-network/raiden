@@ -518,8 +518,6 @@ class MatrixTransport:
                 )
                 return False
             except InvalidProtocolMessage as ex:
-                import pdb
-                pdb.set_trace()
                 self.log.warning(
                     "Received message binary data is not a valid message",
                     message_data=data,
