@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.7.0 <2018-08-31>`
 * :feature:`2296` Gracefully handle malformed messages
 * :feature:`2251` Add webui support for switching token input between decimal and integer values.
 * :bug:`2293` Initiator had the payment and message identifiers swapped.
