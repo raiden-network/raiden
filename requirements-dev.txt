@@ -5,9 +5,9 @@
 
 # Testing
 pytest==3.6.2
-pytest-timeout==1.2.1
-pytest-random==0.02
 pytest-cov==2.5.1
+pytest-random==0.02
+pytest-timeout==1.2.1
 grequests==0.3.0
 pexpect==4.6.0
 web3==4.6.0
