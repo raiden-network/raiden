@@ -180,9 +180,8 @@ class ReceiveLockExpired(StateChange):
             isinstance(other, ReceiveLockExpired) and
             self.sender == other.sender and
             self.balance_proof == other.balance_proof and
-            self.routes == other.routes and
-            self.secret == other.secret and
-            self.secrethash == other.secrethash
+            self.secrethash == other.secrethash and
+            self.message_identifier == other.message_identifier
         )
 
     def __ne__(self, other):
