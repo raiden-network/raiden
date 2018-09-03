@@ -13,7 +13,6 @@ import { amountFromDecimal, amountToDecimal } from '../utils/amount.converter';
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
-import { BigNumber } from 'bignumber.js';
 
 export type CallbackFunc = (error: Error, result: any) => void;
 
@@ -94,7 +93,8 @@ export class RaidenService {
                                 userToken,
                                 {connected: connections[token]}
                             ) : userToken
-                        ))
+                        )
+                    )
                 )
             ),
             switchMap((obsArray) => obsArray && obsArray.length ?
@@ -348,17 +348,20 @@ export class RaidenService {
         );
 
         if (userToken === undefined) {
-            const decimals$: Observable<BigNumber> = bindNodeCallback((cb: CallbackFunc) =>
+            const decimals$: Observable<number> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.decimals(this.zoneEncap(cb))
-            )().pipe(catchError(() => of(this.defaultDecimals)));
+            )().pipe(
+                map(value => value.toNumber()),
+                catchError(() => of(this.defaultDecimals))
+            );
 
             const symbol$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.symbol(this.zoneEncap(cb))
-            )();
+            )().pipe(catchError(() => of('')));
 
             const name$: Observable<string> = bindNodeCallback((cb: CallbackFunc) =>
                 tokenContractInstance.name(this.zoneEncap(cb))
-            )();
+            )().pipe(catchError(() => of('')));
 
             return zip(
                 symbol$,
@@ -372,7 +375,7 @@ export class RaidenService {
                         symbol,
                         name,
                         balance,
-                        decimals: decimals.toNumber()
+                        decimals: decimals
                     });
                 }),
                 tap((token) => tokenMap[tokenAddress] = token),
