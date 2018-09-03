@@ -375,6 +375,7 @@ class UDPTransport(Runnable):
             'new queue created for',
             node=pex(self.raiden.address),
             queue_identifier=queue_identifier,
+            items_qty=len(items),
         )
 
         return queue

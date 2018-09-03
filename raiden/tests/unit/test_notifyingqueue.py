@@ -34,3 +34,8 @@ def test_event_must_be_set():
     element = 1
     gevent.spawn_later(spawn_after_seconds, add_element_to_queue, queue, element)
     assert data_or_stop.wait()
+
+
+def test_not_empty():
+    queue = NotifyingQueue(items=[1, 2])
+    assert queue.is_set()
