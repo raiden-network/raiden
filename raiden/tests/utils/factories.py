@@ -319,7 +319,7 @@ def make_signed_balance_proof(
         locked_amount,
         locksroot,
     )
-    data_to_sign = balance_proof.pack_signing_data(
+    data_to_sign = balance_proof.pack_balance_proof(
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=extra_hash,

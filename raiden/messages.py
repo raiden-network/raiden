@@ -17,7 +17,7 @@ from raiden.constants import (
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
-from raiden.transfer.balance_proof import pack_signing_data
+from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.state import HashTimeLockState
 from raiden.utils import (
@@ -323,7 +323,7 @@ class EnvelopeMessage(SignedMessage):
             self.locked_amount,
             self.locksroot,
         )
-        balance_proof_packed = pack_signing_data(
+        balance_proof_packed = pack_balance_proof(
             nonce=self.nonce,
             balance_hash=balance_hash,
             additional_hash=self.message_hash,

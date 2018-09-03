@@ -1,17 +1,15 @@
-from raiden_libs.utils.signing import pack_data, eth_sign
+from raiden_libs.utils.signing import pack_data
 from raiden_contracts.constants import MessageTypeId
-
-from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import typing
 
 
-def pack_signing_data(
-        nonce,
-        balance_hash,
-        additional_hash,
-        channel_identifier,
-        token_network_identifier,
-        chain_id,
+def pack_balance_proof(
+        nonce: typing.Nonce,
+        balance_hash: typing.BalanceHash,
+        additional_hash: typing.AdditionalHash,
+        channel_identifier: typing.ChannelID,
+        token_network_identifier: typing.TokenNetworkID,
+        chain_id: typing.ChainID,
         msg_type: MessageTypeId=MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
     return pack_data([
@@ -33,18 +31,21 @@ def pack_signing_data(
     ])
 
 
-def signing_update_data(
-        balance_proof: BalanceProofSignedState,
-        privkey: bytes,
-) -> typing.Signature:
-    update_data = pack_signing_data(
-        balance_proof.nonce,
-        balance_proof.balance_hash,
-        balance_proof.message_hash,
-        balance_proof.channel_identifier,
-        balance_proof.token_network_identifier,
-        balance_proof.chain_id,
+def pack_balance_proof_update(
+        nonce: typing.Nonce,
+        balance_hash: typing.BalanceHash,
+        additional_hash: typing.AdditionalHash,
+        channel_identifier: typing.ChannelID,
+        token_network_identifier: typing.TokenNetworkID,
+        chain_id: typing.ChainID,
+        partner_signature: typing.Signature,
+) -> bytes:
+    return pack_balance_proof(
+        nonce=nonce,
+        balance_hash=balance_hash,
+        additional_hash=additional_hash,
+        channel_identifier=channel_identifier,
+        token_network_identifier=token_network_identifier,
+        chain_id=chain_id,
         msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
-    ) + balance_proof.signature
-
-    return eth_sign(privkey=privkey, data=update_data)
+    ) + partner_signature

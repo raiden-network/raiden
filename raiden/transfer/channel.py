@@ -10,7 +10,7 @@ from raiden_libs.utils.signing import eth_recover
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.balance_proof import pack_signing_data
+from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -194,7 +194,7 @@ def is_valid_signature(
         balance_proof.locked_amount,
         balance_proof.locksroot,
     )
-    data_that_was_signed = pack_signing_data(
+    data_that_was_signed = pack_balance_proof(
         nonce=balance_proof.nonce,
         balance_hash=balance_hash,
         additional_hash=balance_proof.message_hash,
