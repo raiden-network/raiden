@@ -339,7 +339,7 @@ class MatrixTransport(Runnable):
     def log(self):
         if not self._user_id:
             return log
-        return log.bind(current_user=self._user_id)
+        return log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
 
     @property
     def _network_name(self) -> str:
