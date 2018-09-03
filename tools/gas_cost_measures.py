@@ -5,10 +5,10 @@ from coincurve import PrivateKey
 from eth_tester import EthereumTester, PyEVMBackend
 from web3 import EthereumTesterProvider, Web3
 
-from raiden.transfer.balance_proof import pack_signing_data
+from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
-from raiden.encoding.signing import sign
 from raiden.constants import UNLOCK_TX_GAS_LIMIT
+from raiden_libs.utils.signing import eth_sign
 
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
 from raiden_contracts.tests.fixtures import contracts_manager  # noqa
@@ -166,15 +166,15 @@ def find_max_pending_transfers(gas_limit):
         )
 
         balance_hash = hash_balance_data(3000, 2000, pending_transfers_tree.merkle_root)
-        data_to_sign = pack_signing_data(
-            nonce,
-            balance_hash,
-            additional_hash,
-            channel_identifier,
-            token_network_identifier,
-            1,
+        data_to_sign = pack_balance_proof(
+            nonce=nonce,
+            balance_hash=balance_hash,
+            additional_hash=additional_hash,
+            channel_identifier=channel_identifier,
+            token_network_identifier=token_network_identifier,
+            chain_id=1,
         )
-        signature = sign(data_to_sign, tester.private_keys[1])
+        signature = eth_sign(privkey=tester.private_keys[1], data=data_to_sign)
 
         tester.call_transaction(
             'TokenNetwork',

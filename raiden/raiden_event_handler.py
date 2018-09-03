@@ -30,9 +30,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.balance_proof import signing_update_data
+from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.utils import pex
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden_libs.utils.signing import eth_sign
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 
@@ -215,10 +216,16 @@ def handle_contract_send_channelupdate(
             channel_id=channel_update_event.channel_identifier,
         )
 
-        our_signature = signing_update_data(
-            balance_proof,
-            raiden.privkey,
+        non_closing_data = pack_balance_proof_update(
+            nonce=balance_proof.nonce,
+            balance_hash=balance_proof.balance_hash,
+            additional_hash=balance_proof.message_hash,
+            channel_identifier=balance_proof.channel_identifier,
+            token_network_identifier=balance_proof.token_network_identifier,
+            chain_id=balance_proof.chain_id,
+            partner_signature=balance_proof.signature,
         )
+        our_signature = eth_sign(privkey=raiden.privkey, data=non_closing_data)
 
         try:
             channel.update_transfer(
