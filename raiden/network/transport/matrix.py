@@ -554,7 +554,7 @@ class MatrixTransport(Runnable):
                     "Can't parse message binary data",
                     message_data=data,
                     peer_address=pex(peer_address),
-                    exception=ex,
+                    _exc=ex,
                 )
                 return False
             except InvalidProtocolMessage as ex:
@@ -562,7 +562,7 @@ class MatrixTransport(Runnable):
                     "Received message binary data is not a valid message",
                     message_data=data,
                     peer_address=pex(peer_address),
-                    exception=ex,
+                    _exc=ex,
                 )
                 return False
 
@@ -575,7 +575,7 @@ class MatrixTransport(Runnable):
                     "Can't parse message data JSON",
                     message_data=data,
                     peer_address=pex(peer_address),
-                    exception=ex,
+                    _exc=ex,
                 )
                 return False
             except InvalidProtocolMessage as ex:
@@ -583,7 +583,7 @@ class MatrixTransport(Runnable):
                     "Message data JSON are not a valid message",
                     message_data=data,
                     peer_address=pex(peer_address),
-                    exception=ex,
+                    _exc=ex,
                 )
                 return False
 
