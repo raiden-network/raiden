@@ -486,16 +486,20 @@ def handle_token_network_action(
 
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
+    queueids_to_remove = []
     for queueid, queue in chain_state.queueids_to_queues.items():
         if queueid[1] == 'global':
-            remove = []
+            filtered_queue = [
+                message
+                for message in queue
+                if message.message_identifier != state_change.message_identifier
+            ]
 
-            for pos, message in enumerate(queue):
-                if message.message_identifier == state_change.message_identifier:
-                    remove.append(pos)
+            if not filtered_queue:
+                queueids_to_remove.append(queueid)
 
-            for removepos in reversed(remove):
-                queue.pop(removepos)
+    for queueid in queueids_to_remove:
+        del chain_state.queueids_to_queues[queueid]
 
     return TransitionResult(chain_state, [])
 
@@ -664,7 +668,8 @@ def handle_processed(
 ) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
     events = list()
-    for queue in chain_state.queueids_to_queues.values():
+    queueids_to_remove = []
+    for queueid, queue in chain_state.queueids_to_queues.items():
         remove = []
 
         # TODO: ensure Processed message came from the correct peer
@@ -687,6 +692,12 @@ def handle_processed(
 
         for removepos in reversed(remove):
             queue.pop(removepos)
+
+        if not queue:
+            queueids_to_remove.append(queueid)
+
+    for queueid in queueids_to_remove:
+        del chain_state.queueids_to_queues[queueid]
 
     return TransitionResult(chain_state, events)
 
