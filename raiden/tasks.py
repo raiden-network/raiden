@@ -178,9 +178,6 @@ class AlarmTask(Runnable):
 
         self.last_block_number = current_block
 
-    def stop_async(self):
-        self._stop_event.set(True)
-
     def stop(self):
-        self.stop_async()
-        return self.get()
+        self._stop_event.set(True)
+        return self.join()

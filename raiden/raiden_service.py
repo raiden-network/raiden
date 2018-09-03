@@ -166,7 +166,6 @@ class RaidenService(Runnable):
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
-        self.shutdown_timeout = config['shutdown_timeout']
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -321,10 +320,6 @@ class RaidenService(Runnable):
 
         super().start()
 
-    def start_async(self) -> gevent.Greenlet:
-        """ Start the node asynchronously. The returned greenlet should be checked for errors """
-        return gevent.spawn(self.start)
-
     def _run(self):
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
         try:
@@ -335,6 +330,7 @@ class RaidenService(Runnable):
             raise  # re-raise to keep killed status
         except Exception:
             self.stop()
+            raise
 
     def stop(self):
         """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
@@ -352,12 +348,11 @@ class RaidenService(Runnable):
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         try:
-            with gevent.Timeout(self.shutdown_timeout, 'Substasks didn\'t stopped on time'):
-                self.transport.stop()
-                self.alarm.stop()
-                self.transport.get()
-                self.alarm.get()
-                self.blockchain_events.uninstall_all_event_listeners()
+            self.transport.stop()
+            self.alarm.stop()
+            self.transport.get()
+            self.alarm.get()
+            self.blockchain_events.uninstall_all_event_listeners()
         except (gevent.Timeout, RaidenShuttingDown):
             pass
 

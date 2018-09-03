@@ -1049,11 +1049,12 @@ class NodeRunner:
                 finally:
                     task.get()  # re-raise
 
-            stop_tasks = [
-                gevent.spawn(stop_task, task)
-                for task in tasks
-            ]
-            gevent.joinall(stop_tasks, DEFAULT_SHUTDOWN_TIMEOUT, raise_error=True)
+            stop_tasks = [gevent.spawn(stop_task, task) for task in tasks]
+            gevent.joinall(
+                stop_tasks,
+                app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
+                raise_error=True,
+            )
 
         return app_
 

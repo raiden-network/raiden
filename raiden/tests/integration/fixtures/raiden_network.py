@@ -67,9 +67,8 @@ def raiden_chain(
         local_matrix_server,
     )
 
-    start_tasks = [app.raiden.start_async() for app in raiden_apps]
-    for task in gevent.iwait(start_tasks):
-        task.get()  # wait for start_async greenlets, re-raise if start failed
+    start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
+    gevent.joinall(start_tasks, raise_error=True)
 
     from_block = 0
     for app in raiden_apps:
@@ -95,7 +94,7 @@ def raiden_chain(
                 deposit,
                 settle_timeout,
             ))
-    gevent.wait(channel_greenlets)
+    gevent.joinall(channel_greenlets, raise_error=True)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
@@ -154,9 +153,8 @@ def raiden_network(
         local_matrix_server,
     )
 
-    start_tasks = [app.raiden.start_async() for app in raiden_apps]
-    for task in gevent.iwait(start_tasks):
-        task.get()  # wait for start_async greenlets, re-raise if start failed
+    start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
+    gevent.joinall(start_tasks, raise_error=True)
 
     app_channels = create_network_channels(
         raiden_apps,
@@ -174,7 +172,7 @@ def raiden_network(
                 deposit,
                 settle_timeout,
             ))
-    gevent.wait(greenlets)
+    gevent.joinall(greenlets, raise_error=True)
 
     exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
