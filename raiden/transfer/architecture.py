@@ -6,10 +6,10 @@ from raiden.utils.typing import (
     ChannelID,
     List,
     MessageID,
-    QueueIdentifier,
     T_ChannelID,
     TransactionHash,
 )
+from raiden.utils.notifying_queue import QueueIdentifier
 
 
 # Quick overview

@@ -5,9 +5,13 @@ from gevent.event import (
     _AbstractLinkable,
     Event,
 )
-from raiden.utils import typing
+import structlog
+
+from raiden.utils import pex, typing
+
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def event_first_of(*events: _AbstractLinkable) -> Event:
@@ -104,6 +108,13 @@ def retry(
         if event_quit.wait(timeout=timeout) is True:
             break
 
+        log.debug(
+            'retrying message',
+            node=pex(transport.address),
+            recipient=pex(recipient),
+            msgid=message_id,
+        )
+
         transport.maybe_sendraw_with_result(
             recipient,
             messagedata,
@@ -157,6 +168,11 @@ def retry_with_recovery(
         # Packets must not be sent to an unhealthy node, nor should the task
         # wait for it to become available if the message has been acknowledged.
         if event_unhealthy.is_set():
+            log.debug(
+                'waiting for recipient to become available',
+                node=pex(transport.address),
+                recipient=pex(recipient),
+            )
             wait_recovery(
                 stop_event,
                 event_healthy,

@@ -157,15 +157,16 @@ def healthcheck(
                 views.state_from_raiden(transport.raiden),
                 recipient,
             )
-            log.debug(
-                'node answered',
-                node=pex(transport.raiden.address),
-                to=pex(recipient),
-                current_state=current_state,
-                new_state=NODE_NETWORK_REACHABLE,
-            )
 
             if last_state != NODE_NETWORK_REACHABLE:
+                log.debug(
+                    'node answered',
+                    node=pex(transport.raiden.address),
+                    to=pex(recipient),
+                    current_state=current_state,
+                    new_state=NODE_NETWORK_REACHABLE,
+                )
+
                 last_state = NODE_NETWORK_REACHABLE
                 transport.set_node_network_state(
                     recipient,

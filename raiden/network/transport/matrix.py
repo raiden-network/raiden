@@ -60,6 +60,7 @@ from raiden.utils import (
     eth_sign_sha3,
     pex,
 )
+from raiden.utils.notifying_queue import QueueIdentifier
 from raiden.utils.typing import (
     Dict,
     Set,
@@ -71,7 +72,6 @@ from raiden.utils.typing import (
     Mapping,
     TypeVar,
     Union,
-    QueueIdentifier,
     Type,
     Iterable,
 )
