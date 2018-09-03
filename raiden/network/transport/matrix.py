@@ -23,9 +23,11 @@ from cachetools import cachedmethod, TTLCache
 from operator import attrgetter, itemgetter
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
+from raiden_libs.network.matrix import GMatrixClient, Room
+from raiden_libs.utils.signing import eth_sign, eth_recover
+
 from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
-from raiden.encoding import signing
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
@@ -56,10 +58,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.message_handler import on_message
-from raiden.utils import (
-    eth_sign_sha3,
-    pex,
-)
+from raiden.utils import pex
 from raiden.utils.notifying_queue import QueueIdentifier
 from raiden.utils.typing import (
     Dict,
@@ -76,7 +75,6 @@ from raiden.utils.typing import (
     Iterable,
 )
 from raiden.utils.runnable import Runnable
-from raiden_libs.network.matrix import GMatrixClient, Room
 
 
 log = structlog.get_logger(__name__)
@@ -89,7 +87,7 @@ _CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
 
 def _cachegetter(
         attr: str,
-        cachefactory: Callable[[], _CacheT] = WeakKeyDictionary,  # WeakKewDict best for properties
+        cachefactory: Callable[[], _CacheT] = WeakKeyDictionary,  # WeakKeyDict best for properties
 ) -> Callable[[_CIT], _CacheT]:
     """Returns a safer attrgetter which constructs the missing object with cachefactory
 
@@ -1002,20 +1000,18 @@ class MatrixTransport(Runnable):
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
-        return signing.sign(
-            data,
-            self._raiden_service.private_key,
-            hasher=eth_sign_sha3,
+        return eth_sign(
+            privkey=self._raiden_service.private_key,
+            data=data,
         )
 
     @staticmethod
     def _recover(data: bytes, signature: bytes) -> Address:
         """ Use eth_sign compatible hasher to recover address from signed data """
-        return signing.recover_address(
-            data,
+        return to_canonical_address(eth_recover(
+            data=data,
             signature=signature,
-            hasher=eth_sign_sha3,
-        )
+        ))
 
     @staticmethod
     @cachedmethod(_cachegetter('__address_cache', dict), key=attrgetter('user_id', 'displayname'))
@@ -1035,7 +1031,13 @@ class MatrixTransport(Runnable):
             )
             if not (address and recovered and recovered == address):
                 return None
-        except (DecodeError, TypeError, MatrixRequestError, json.decoder.JSONDecodeError):
+        except (
+            DecodeError,
+            TypeError,
+            ValueError,
+            MatrixRequestError,
+            json.decoder.JSONDecodeError,
+        ):
             return None
         return address
 

@@ -4,9 +4,11 @@ from binascii import hexlify
 from collections import namedtuple
 from typing import Union
 
+from eth_utils import to_canonical_address
+from raiden_libs.utils.signing import eth_recover
+
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
-from raiden.encoding.signing import recover_publickey
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.balance_proof import pack_signing_data
 from raiden.transfer.events import (
@@ -76,7 +78,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import publickey_to_address, typing
+from raiden.utils import typing
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 
 
@@ -204,17 +206,15 @@ def is_valid_signature(
     try:
         # ValueError is raised if the PublicKey instantiation failed, let it
         # propagate because it's a memory pressure problem
-        publickey = recover_publickey(
-            data_that_was_signed,
-            balance_proof.signature,
-        )
-    except Exception:  # pylint: disable=broad-except
-        # secp256k1 is using bare Exception classes
-        # raised if the recovery failed
+        signer_address = to_canonical_address(eth_recover(
+            data=data_that_was_signed,
+            signature=balance_proof.signature,
+        ))
+    except ValueError:
         msg = 'Signature invalid, could not be recovered.'
         return (False, msg)
 
-    is_correct_sender = sender_address == publickey_to_address(publickey)
+    is_correct_sender = sender_address == signer_address
     if is_correct_sender:
         return (True, None)
 

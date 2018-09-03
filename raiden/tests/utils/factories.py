@@ -5,11 +5,11 @@ import string
 
 from coincurve import PrivateKey
 
+from raiden_libs.utils.signing import eth_sign
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
-    signing,
 )
 from raiden.utils import (
     random_secret,
@@ -314,15 +314,6 @@ def make_signed_balance_proof(
         sender_address,
 ):
 
-    data_to_sign = balance_proof.signing_data(
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        channel_identifier=channel_identifier,
-        locksroot=locksroot,
-        extra_hash=extra_hash,
-    )
-
     balance_hash = hash_balance_data(
         transferred_amount,
         locked_amount,
@@ -337,7 +328,7 @@ def make_signed_balance_proof(
         chain_id=UNIT_CHAIN_ID,
     )
 
-    signature = signing.sign(data_to_sign, private_key)
+    signature = eth_sign(privkey=private_key, data=data_to_sign)
 
     signed_balance_proof = BalanceProofSignedState(
         nonce,
