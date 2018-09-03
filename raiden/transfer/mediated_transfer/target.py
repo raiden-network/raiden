@@ -289,7 +289,7 @@ def handle_lock_expired(
 ):
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(channel_state, state_change)
-    if channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
+    if not channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
         return TransitionResult(None, result.events)
 
     return TransitionResult(target_state, result.events)

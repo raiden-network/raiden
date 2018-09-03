@@ -14,6 +14,7 @@ from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
+    ReceiveLockExpired,
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -500,6 +501,82 @@ def test_state_transition():
         block_number + 2,
     )
     assert proof_iteration.new_state is None
+
+
+def test_target_receive_lock_expired():
+    lock_amount = 7
+    block_number = 1
+    initiator = factories.HOP6
+    pseudo_random_generator = random.Random()
+
+    our_balance = 100
+    our_address = factories.make_address()
+    partner_balance = 130
+
+    from_channel = factories.make_channel(
+        our_address=our_address,
+        our_balance=our_balance,
+        partner_address=UNIT_TRANSFER_SENDER,
+        partner_balance=partner_balance,
+    )
+    from_route = factories.route_from_channel(from_channel)
+    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+
+    from_transfer = factories.make_signed_transfer_for(
+        from_channel,
+        lock_amount,
+        initiator,
+        our_address,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    init = ActionInitTarget(
+        from_route,
+        from_transfer,
+    )
+
+    init_transition = target.state_transition(
+        None,
+        init,
+        from_channel,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert init_transition.new_state is not None
+    assert init_transition.new_state.route == from_route
+    assert init_transition.new_state.transfer == from_transfer
+
+    balance_proof = factories.make_signed_balance_proof(
+        2,
+        from_transfer.balance_proof.transferred_amount,
+        0,
+        from_transfer.balance_proof.token_network_identifier,
+        from_channel.identifier,
+        EMPTY_MERKLE_ROOT,
+        from_transfer.lock.secrethash,
+        sender_address=UNIT_TRANSFER_SENDER,
+        private_key=UNIT_TRANSFER_PKEY,
+    )
+
+    lock_expired_state_change = ReceiveLockExpired(
+        HOP1,
+        balance_proof,
+        from_transfer.lock.secrethash,
+        1,
+    )
+
+    iteration = target.state_transition(
+        init_transition.new_state,
+        lock_expired_state_change,
+        from_channel,
+        pseudo_random_generator,
+        10,
+    )
+
+    assert must_contain_entry(iteration.events, SendProcessed, {})
+
+    assert iteration.new_state is None
 
 
 @pytest.mark.xfail(reason='Not implemented #522')
