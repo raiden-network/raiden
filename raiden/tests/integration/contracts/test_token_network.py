@@ -8,9 +8,10 @@ from eth_utils import (
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MIN,
     TEST_SETTLE_TIMEOUT_MAX,
+    MessageTypeId,
 )
 from raiden_libs.messages import BalanceProof
-from raiden_libs.utils.signing import sign_data
+from raiden_libs.utils.signing import eth_sign
 
 from raiden.constants import EMPTY_HASH
 from raiden.exceptions import (
@@ -222,9 +223,10 @@ def test_token_network_proxy_basics(
         chain_id=chain_id,
         transferred_amount=transferred_amount,
     )
-    balance_proof.signature = encode_hex(
-        sign_data(encode_hex(private_keys[1]), balance_proof.serialize_bin()),
-    )
+    balance_proof.signature = encode_hex(eth_sign(
+        privkey=encode_hex(private_keys[1]),
+        data=balance_proof.serialize_bin(),
+    ))
     # close with invalid signature
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.close(
@@ -407,9 +409,10 @@ def test_token_network_proxy_update_transfer(
         chain_id=chain_id,
         transferred_amount=transferred_amount_c1,
     )
-    balance_proof_c1.signature = encode_hex(
-        sign_data(encode_hex(private_keys[1]), balance_proof_c1.serialize_bin()),
-    )
+    balance_proof_c1.signature = encode_hex(eth_sign(
+        privkey=encode_hex(private_keys[1]),
+        data=balance_proof_c1.serialize_bin(),
+    ))
     # balance proof signed by c2
     balance_proof_c2 = BalanceProof(
         channel_identifier=channel_identifier,
@@ -418,14 +421,17 @@ def test_token_network_proxy_update_transfer(
         chain_id=chain_id,
         transferred_amount=transferred_amount_c2,
     )
-    balance_proof_c2.signature = encode_hex(
-        sign_data(encode_hex(private_keys[2]), balance_proof_c2.serialize_bin()),
-    )
+    balance_proof_c2.signature = encode_hex(eth_sign(
+        privkey=encode_hex(private_keys[2]),
+        data=balance_proof_c2.serialize_bin(),
+    ))
 
-    non_closing_data = balance_proof_c1.serialize_bin() + decode_hex(balance_proof_c1.signature)
-    non_closing_signature = sign_data(
-        encode_hex(c2_client.privkey),
-        non_closing_data,
+    non_closing_data = balance_proof_c1.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
+    ) + decode_hex(balance_proof_c1.signature)
+    non_closing_signature = eth_sign(
+        privkey=encode_hex(c2_client.privkey),
+        data=non_closing_data,
     )
 
     with pytest.raises(RaidenUnrecoverableError) as exc:
@@ -453,10 +459,10 @@ def test_token_network_proxy_update_transfer(
 
     # using invalid non-closing signature
     # Usual mistake when calling update Transfer - balance proof signature is missing in the data
-    non_closing_data = balance_proof_c1.serialize_bin()
-    non_closing_signature = sign_data(
-        encode_hex(c2_client.privkey),
-        non_closing_data,
+    non_closing_data = balance_proof_c1.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
+    non_closing_signature = eth_sign(
+        privkey=encode_hex(c2_client.privkey),
+        data=non_closing_data,
     )
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.update_transfer(
@@ -469,10 +475,12 @@ def test_token_network_proxy_update_transfer(
             non_closing_signature,
         )
 
-    non_closing_data = balance_proof_c1.serialize_bin() + decode_hex(balance_proof_c1.signature)
-    non_closing_signature = sign_data(
-        encode_hex(c2_client.privkey),
-        non_closing_data,
+    non_closing_data = balance_proof_c1.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
+    ) + decode_hex(balance_proof_c1.signature)
+    non_closing_signature = eth_sign(
+        privkey=encode_hex(c2_client.privkey),
+        data=non_closing_data,
     )
     c2_token_network_proxy.update_transfer(
         channel_identifier,

@@ -9,11 +9,12 @@ import structlog
 from cachetools import LRUCache, cached
 from operator import attrgetter
 
+from raiden_libs.utils.signing import eth_sign, eth_recover
 from raiden.constants import (
     UINT256_MAX,
     UINT64_MAX,
 )
-from raiden.encoding import messages, signing
+from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_signing_data
@@ -244,7 +245,7 @@ class SignedMessage(Message):
     def sign(self, private_key):
         """ Sign message using `private_key`. """
         message_data = self._data_to_sign()
-        self.signature = signing.sign(message_data, private_key)
+        self.signature = eth_sign(privkey=private_key, data=message_data)
 
     @property
     @cached(_senders_cache, key=attrgetter('signature'))
@@ -254,7 +255,13 @@ class SignedMessage(Message):
         data_that_was_signed = self._data_to_sign()
         message_signature = self.signature
 
-        address = signing.recover_address(data_that_was_signed, message_signature)
+        try:
+            address = to_canonical_address(eth_recover(
+                data=data_that_was_signed,
+                signature=message_signature,
+            ))
+        except ValueError:
+            address = None
         if address is None:
             return None
         return address

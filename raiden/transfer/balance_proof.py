@@ -1,59 +1,8 @@
-from eth_utils import encode_hex
-
-from raiden_libs.utils import (
-    pack_data,
-    sign_data,
-    to_checksum_address,
-)
+from raiden_libs.utils.signing import pack_data, eth_sign
+from raiden_contracts.constants import MessageTypeId
 
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.encoding.messages import (
-    channel_identifier as channel_identifier_field,
-    locked_amount as locked_amount_field,
-    nonce as nonce_field,
-    transferred_amount as transferred_amount_field,
-)
 from raiden.utils import typing
-
-
-def signing_data(
-        nonce: int,
-        transferred_amount: int,
-        locked_amount: int,
-        channel_identifier: typing.ChannelID,
-        locksroot: bytes,
-        extra_hash: bytes,
-) -> bytes:
-
-    nonce_bytes = nonce_field.encoder.encode(nonce, nonce_field.size_bytes)
-    channel_identifier_bytes = channel_identifier_field.encoder.encode(
-        channel_identifier, channel_identifier_field.size_bytes,
-    )
-    pad_size = nonce_field.size_bytes - len(nonce_bytes)
-    nonce_bytes_padded = nonce_bytes.rjust(pad_size, b'\x00')
-
-    transferred_amount_bytes = transferred_amount_field.encoder.encode(
-        transferred_amount,
-        transferred_amount_field.size_bytes,
-    )
-    transferred_amount_bytes_padded = transferred_amount_bytes.rjust(pad_size, b'\x00')
-
-    locked_amount_bytes = locked_amount_field.encoder.encode(
-        locked_amount,
-        locked_amount_field.size_bytes,
-    )
-    locked_amount_bytes_padded = locked_amount_bytes.rjust(pad_size, b'\x00')
-
-    data_that_was_signed = (
-        nonce_bytes_padded +
-        transferred_amount_bytes_padded +
-        locked_amount_bytes_padded +
-        locksroot +
-        channel_identifier_bytes +
-        extra_hash
-    )
-
-    return data_that_was_signed
 
 
 def pack_signing_data(
@@ -63,21 +12,24 @@ def pack_signing_data(
         channel_identifier,
         token_network_identifier,
         chain_id,
+        msg_type: MessageTypeId=MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
     return pack_data([
-        'bytes32',
-        'uint256',
-        'bytes32',
-        'uint256',
         'address',
         'uint256',
+        'uint256',
+        'uint256',
+        'bytes32',
+        'uint256',
+        'bytes32',
     ], [
+        token_network_identifier,
+        chain_id,
+        msg_type,
+        channel_identifier,
         balance_hash,
         nonce,
         additional_hash,
-        channel_identifier,
-        to_checksum_address(token_network_identifier),
-        chain_id,
     ])
 
 
@@ -92,6 +44,7 @@ def signing_update_data(
         balance_proof.channel_identifier,
         balance_proof.token_network_identifier,
         balance_proof.chain_id,
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
     ) + balance_proof.signature
 
-    return sign_data(encode_hex(privkey), update_data)
+    return eth_sign(privkey=privkey, data=update_data)
