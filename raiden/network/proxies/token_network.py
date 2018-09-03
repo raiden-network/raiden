@@ -537,7 +537,11 @@ class TokenNetwork:
                     f'than the requested total deposit amount ({total_deposit})',
                 )
             if amount_to_deposit <= 0:
-                raise ValueError(f'deposit {amount_to_deposit} must be greater than 0.')
+                # Can happen if two calls to deposit happen and then we get here on the second call
+                raise DepositMismatch(
+                    f'total_deposit - current_deposit =  '
+                    f'{amount_to_deposit} must be greater than 0.'
+                )
 
             # A node may be setting up multiple channels for the same token
             # concurrently. Because each deposit changes the user balance this
@@ -553,9 +557,9 @@ class TokenNetwork:
             #
             current_balance = token.balance_of(self.node_address)
             if current_balance < amount_to_deposit:
-                raise ValueError(
-                    f'deposit {amount_to_deposit} can not be larger than the '
-                    f'available balance {current_balance}, '
+                raise DepositMismatch(
+                    f'total_deposit - current_deposit =  {amount_to_deposit} can not '
+                    f'be larger than the available balance {current_balance}, '
                     f'for token at address {pex(token_address)}',
                 )
 
