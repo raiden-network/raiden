@@ -12,6 +12,7 @@ templates:
     before_install:
       - mkdir -p $HOME/.bin
       - export PATH=$PATH:$HOME/.bin
+      - git rev-parse HEAD
       - .travis/before_install.sh
     install:
       - .travis/install.sh
@@ -59,7 +60,9 @@ jobs:
     - stage: lint
       sudo: false
       install: pip install -r requirements-lint.txt
-      script: make lint
+      script:
+        - git rev-parse HEAD
+        - make lint
 
     - stage: test
       <<: *job-template-test
@@ -188,6 +191,7 @@ jobs:
       env: TEST=""
       before_install:
         - sysctl -n machdep.cpu.brand_string
+        - git rev-parse HEAD
         - mkdir -p $HOME/.bin
         - export PATH=$HOME/.bin:$HOME/Library/Python/3.7/bin:/usr/local/bin/:$PATH
         - .travis/before_install.sh
