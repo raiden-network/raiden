@@ -10,12 +10,13 @@ from itertools import zip_longest
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, keccak, is_checksum_address, to_checksum_address
+from eth_utils import remove_0x_prefix, is_checksum_address, to_checksum_address
 
 import raiden
 from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
+from raiden_libs.utils.signing import sha3
 
 
 def safe_address_decode(address):
@@ -30,20 +31,6 @@ def safe_address_decode(address):
 
 def random_secret():
     return os.urandom(32)
-
-
-def sha3(data: bytes) -> bytes:
-    return keccak(data)
-
-
-def eth_sign_sha3(data: bytes) -> bytes:
-    """
-    eth_sign/recover compatible hasher
-    Prefixes data with "\x19Ethereum Signed Message:\n<len(data)>"
-    """
-    if not data.startswith(b'\x19Ethereum Signed Message:'):
-        data = b'\x19Ethereum Signed Message:\n%d%s' % (len(data), data)
-    return sha3(data)
 
 
 def ishash(data: bytes) -> bool:
