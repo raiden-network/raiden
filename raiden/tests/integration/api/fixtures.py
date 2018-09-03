@@ -42,4 +42,5 @@ def api_backend(raiden_network, rest_api_port_number):
 
     yield api_server, rest_api
 
-    api_server.stop()
+    if api_server:
+        api_server.stop()
