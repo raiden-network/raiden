@@ -9,6 +9,9 @@ class NotifyingQueue(Event):
         super().__init__()
         self._queue = Queue(maxsize, items)
 
+        if items:
+            self.set()
+
     def put(self, item):
         """ Add new item to the queue. """
         self._queue.put(item)
