@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
-from raiden.utils import random_secret
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.tests.utils import factories, events
 from raiden.tests.utils.factories import (
     make_transfer_description,
@@ -40,10 +40,12 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
+    SendLockExpired,
     SendLockedTransfer,
     SendRevealSecret,
 )
-from raiden.transfer.state_change import ActionCancelPayment
+from raiden.transfer.state_change import Block, ActionCancelPayment
+from raiden.utils import random_secret
 
 
 def make_initiator_manager_state(
@@ -681,3 +683,110 @@ def test_handle_secretreveal():
         'message_identifier': message_identifier,
         'payment_identifier': manager_state.initiator.transfer_description.payment_identifier,
     })
+
+
+def test_initiator_lock_expired():
+    amount = UNIT_TRANSFER_AMOUNT * 2
+    block_number = 1
+    refund_pkey, refund_address = factories.make_privkey_address()
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel2 = factories.make_channel(
+        our_balance=0,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    pseudo_random_generator = random.Random()
+
+    channelmap = {
+        channel1.identifier: channel1,
+        channel2.identifier: channel2,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+        factories.route_from_channel(channel2),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channelmap,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    transfer = current_state.initiator.transfer
+
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    # Trigger lock expiry
+    state_change = Block(
+        transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+    )
+
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        channelmap,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert events.must_contain_entry(iteration.events, SendLockExpired, {
+        'balance_proof': {
+            'nonce': 2,
+            'transferred_amount': 0,
+            'locked_amount': 0,
+        },
+        'secrethash': transfer.lock.secrethash,
+        'recipient': channel1.partner_state.address,
+    })
+
+    assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+
+    # Create 2 other transfers
+    transfer2_state = make_initiator_manager_state(
+        available_routes,
+        make_transfer_description('transfer2'),
+        channelmap,
+        pseudo_random_generator,
+        30,
+    )
+    transfer2_lock = transfer2_state.initiator.transfer.lock
+
+    transfer3_state = make_initiator_manager_state(
+        available_routes,
+        make_transfer_description('transfer3'),
+        channelmap,
+        pseudo_random_generator,
+        32,
+    )
+
+    transfer3_lock = transfer3_state.initiator.transfer.lock
+
+    assert len(channel1.our_state.secrethashes_to_lockedlocks) == 2
+
+    assert transfer2_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    expiration_block_number = transfer2_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+
+    iteration = initiator_manager.state_transition(
+        transfer2_state,
+        Block(expiration_block_number),
+        channelmap,
+        pseudo_random_generator,
+        expiration_block_number,
+    )
+
+    # Transfer 2 expired
+    assert transfer2_lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+
+    # Transfer 3 is still there
+    assert transfer3_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
