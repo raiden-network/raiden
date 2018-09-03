@@ -876,7 +876,7 @@ def mediate_transfer(
 
 
 def handle_init(
-        state_change: MediatorTransferState,
+        state_change: ActionInitMediator,
         channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
@@ -1101,9 +1101,9 @@ def handle_lock_expired(
             return TransitionResult(mediator_state, list())
 
         result = channel.handle_receive_lock_expired(channel_state, state_change)
-        if channel.get_lock(result.new_state.partner_state, mediator_state.secrethash):
+        if not channel.get_lock(result.new_state.partner_state, mediator_state.secrethash):
             transfer_pair.payer_state = 'payer_expired'
-            events.extend(result)
+            events.extend(result.events)
 
     return TransitionResult(mediator_state, events)
 

@@ -4,6 +4,7 @@ import random
 import pytest
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import publickey_to_address, random_secret
 from raiden.transfer import channel
 from raiden.transfer.events import ContractSendChannelClose
@@ -15,6 +16,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
+    ReceiveLockExpired,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
@@ -22,6 +24,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
+    SendLockExpired,
     SendLockedTransfer,
     SendRefundTransfer,
     SendRevealSecret,
@@ -30,10 +33,11 @@ from raiden.transfer.mediated_transfer.mediator import set_secret
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_ROOT,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block
-from raiden.transfer.events import ContractSendSecretReveal
+from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -58,6 +62,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    UNIT_TRANSFER_PKEY,
 )
 
 
@@ -1693,3 +1698,170 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
     assert failed_iteration.new_state is None and not failed_iteration.events
 
     assert all(isinstance(iteration.new_state, MediatorTransferState) for iteration in iterations)
+
+
+def test_mediator_lock_expired_with_new_block():
+    amount = 10
+    block_number = 5
+    target = HOP2
+    expiration = 30
+    pseudo_random_generator = random.Random()
+
+    payer_channel = factories.make_channel(
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+
+    payer_transfer = factories.make_signed_transfer_for(
+        payer_channel,
+        amount,
+        HOP1,
+        target,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    channelmap = {
+        channel1.identifier: channel1,
+        payer_channel.identifier: payer_channel,
+    }
+    possible_routes = [factories.route_from_channel(channel1)]
+
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    iteration = mediator.mediate_transfer(
+        mediator_state,
+        possible_routes,
+        payer_channel,
+        channelmap,
+        pseudo_random_generator,
+        payer_transfer,
+        block_number,
+    )
+    assert len(iteration.events) == 1
+
+    send_transfer = iteration.events[0]
+    assert isinstance(send_transfer, SendLockedTransfer)
+
+    transfer = send_transfer.transfer
+
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    iteration = mediator.state_transition(
+        mediator_state,
+        Block(block_expiration_number),
+        channelmap,
+        pseudo_random_generator,
+        block_expiration_number,
+    )
+
+    assert iteration.events
+    assert isinstance(iteration.events[1], SendLockExpired)
+
+    lock_expired = iteration.events[1]
+
+    assert transfer.lock.secrethash == lock_expired.secrethash
+    assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+
+
+def test_mediator_lock_expired_with_receive_lock_expired():
+    amount = 10
+    block_number = 5
+    target = HOP2
+    expiration = 30
+    pseudo_random_generator = random.Random()
+
+    payer_channel = factories.make_channel(
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+
+    payer_transfer = factories.make_signed_transfer_for(
+        payer_channel,
+        amount,
+        UNIT_TRANSFER_SENDER,
+        target,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        partner_address=target,
+    )
+    channelmap = {
+        channel1.identifier: channel1,
+        payer_channel.identifier: payer_channel,
+    }
+    possible_routes = [factories.route_from_channel(channel1)]
+
+    init_mediator = ActionInitMediator(
+        possible_routes,
+        factories.route_from_channel(payer_channel),
+        payer_transfer,
+    )
+
+    iteration = mediator.state_transition(
+        None,
+        init_mediator,
+        channelmap,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    transfer = payer_transfer
+
+    assert must_contain_entry(iteration.events, SendLockedTransfer, {
+        'recipient': target,
+        'transfer': {
+            'lock': {
+                'amount': 10,
+                'expiration': 30,
+                'secrethash': transfer.lock.secrethash,
+            },
+            'balance_proof': {
+                'nonce': 1,
+                'transferred_amount': 0,
+                'locked_amount': 10,
+                'locksroot': transfer.balance_proof.locksroot,
+            },
+        },
+    })
+
+    balance_proof = factories.make_signed_balance_proof(
+        2,
+        transfer.balance_proof.transferred_amount,
+        0,
+        transfer.balance_proof.token_network_identifier,
+        payer_channel.identifier,
+        EMPTY_MERKLE_ROOT,
+        transfer.lock.secrethash,
+        sender_address=UNIT_TRANSFER_SENDER,
+        private_key=UNIT_TRANSFER_PKEY,
+    )
+
+    lock_expired_state_change = ReceiveLockExpired(
+        HOP1,
+        balance_proof,
+        transfer.lock.secrethash,
+        1,
+    )
+
+    iteration = mediator.state_transition(
+        iteration.new_state,
+        lock_expired_state_change,
+        channelmap,
+        pseudo_random_generator,
+        10,
+    )
+
+    assert must_contain_entry(iteration.events, SendProcessed, {})
+
+    assert iteration.new_state
+    assert iteration.new_state.transfers_pair[0].payer_state == 'payer_expired'
+    assert iteration.new_state.transfers_pair[0].payee_state == 'payee_pending'
