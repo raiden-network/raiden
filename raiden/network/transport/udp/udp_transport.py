@@ -97,7 +97,7 @@ def single_queue_send(
 
     # Wait for the endpoint registration or to quit
     log.debug(
-        'queue: waiting node to become healthy',
+        'queue: waiting for node to become healthy',
         node=pex(transport.address),
         queue_identifier=queue_identifier,
         queue_size=len(queue),
@@ -589,7 +589,7 @@ class UDPTransport(Runnable):
             async_result.set()
         else:
             log.warn(
-                'UNKNOWN DELIVERED RECEIVED',
+                'UNKNOWN DELIVERED MESSAGE RECEIVED',
                 message_id=message_id,
             )
 
