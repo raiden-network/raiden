@@ -540,7 +540,7 @@ class TokenNetwork:
                 # Can happen if two calls to deposit happen and then we get here on the second call
                 raise DepositMismatch(
                     f'total_deposit - current_deposit =  '
-                    f'{amount_to_deposit} must be greater than 0.'
+                    f'{amount_to_deposit} must be greater than 0.',
                 )
 
             # A node may be setting up multiple channels for the same token
