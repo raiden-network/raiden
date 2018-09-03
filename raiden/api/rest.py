@@ -321,16 +321,6 @@ class APIServer(Runnable):
                 'Invalid api version: {}'.format(rest_api.version),
             )
 
-        # We cannot accept requests before the node has synchronized with the
-        # blockchain, which is done during the call to RaidenService.start.
-        # Otherwise there is no guarantee that the node is in a valid state and
-        # that the actions are valid, e.g. deposit in a channel that has closed
-        # while the node was offline.
-        if not rest_api.raiden_api.raiden:
-            raise RuntimeError(
-                'The RaidenService must be started before the API can be used',
-            )
-
         flask_app = Flask(__name__)
         if cors_domain_list:
             CORS(flask_app, origins=cors_domain_list)
@@ -371,6 +361,7 @@ class APIServer(Runnable):
 
         self.flask_app.errorhandler(HTTPStatus.NOT_FOUND)(endpoint_not_found)
         self.flask_app.errorhandler(Exception)(self.unhandled_exception)
+        self.flask_app.before_request(self._is_raiden_running)
 
         if web_ui:
             for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
@@ -380,6 +371,19 @@ class APIServer(Runnable):
                     view_func=self._serve_webui,
                     methods=('GET', ),
                 )
+
+        self._is_raiden_running()
+
+    def _is_raiden_running(self):
+        # We cannot accept requests before the node has synchronized with the
+        # blockchain, which is done during the call to RaidenService.start.
+        # Otherwise there is no guarantee that the node is in a valid state and
+        # that the actions are valid, e.g. deposit in a channel that has closed
+        # while the node was offline.
+        if not self.rest_api.raiden_api.raiden:
+            raise RuntimeError(
+                'The RaidenService must be started before the API can be used',
+            )
 
     def _serve_webui(self, file_name='index.html'):  # pylint: disable=redefined-builtin
         try:
