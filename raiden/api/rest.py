@@ -887,10 +887,17 @@ class RestAPI:
             token_address=to_checksum_address(token_address),
         )
         return_list = []
-        raiden_service_result = self.raiden_api.get_channel_list(
-            registry_address,
-            token_address,
-        )
+        try:
+            raiden_service_result = self.raiden_api.get_channel_list(
+                registry_address,
+                token_address,
+            )
+        except InvalidAddress as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT,
+            )
+
         for result in raiden_service_result:
             return_list.append({
                 'partner_address': result.partner_state.address,
@@ -1109,6 +1116,11 @@ class RestAPI:
                     to_checksum_address(token_address),
                     to_checksum_address(partner_address),
                 ),
+                status_code=HTTPStatus.CONFLICT,
+            )
+        except InvalidAddress as e:
+            return api_error(
+                errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
             )
 
