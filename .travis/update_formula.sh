@@ -32,7 +32,7 @@ commit_formula_file() {
 }
 
 upload_file() {
-    git push --tags
+    git push --follow-tags
 }
 
 clone_repo
