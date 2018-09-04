@@ -6,7 +6,7 @@ Raiden's API Documentation
 
 Introduction
 *************
-Raiden has a Restful API with URL endpoints corresponding to user-facing interaction allowed by a Raiden node. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to
+Raiden has a Restful API with URL endpoints corresponding to user-facing interaction allowed by a Raiden node. The endpoints accept and return JSON encoded objects. The api url path always contains the api version (the current API version is 1) in order to differentiate queries to
 different API versions. All queries start with: ``/api/<version>/``
 
 
