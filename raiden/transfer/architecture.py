@@ -3,6 +3,7 @@ from copy import deepcopy
 
 import structlog
 
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -13,7 +14,6 @@ from raiden.utils.typing import (
     TransactionHash,
 )
 from raiden.storage.serialize import JSONSerializer
-from raiden.utils.notifying_queue import QueueIdentifier
 
 
 # Quick overview

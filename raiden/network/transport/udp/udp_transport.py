@@ -29,8 +29,9 @@ from raiden.messages import (
 from raiden.settings import CACHE_TTL
 from raiden.utils import pex, typing
 from raiden.utils.runnable import Runnable
-from raiden.utils.notifying_queue import NotifyingQueue, QueueIdentifier
+from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.message_handler import on_message
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ReceiveDelivered
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.network.transport.udp import healthcheck

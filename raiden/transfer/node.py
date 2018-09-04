@@ -9,6 +9,7 @@ from raiden.transfer.mediated_transfer import (
     mediator,
     target,
 )
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     ContractSendEvent,
@@ -491,8 +492,9 @@ def handle_token_network_action(
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
     queueids_to_remove = []
+    queueid: QueueIdentifier
     for queueid, queue in chain_state.queueids_to_queues.items():
-        if queueid[1] == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
+        if queueid.channel_identifier == 'global':
             filtered_queue = [
                 message
                 for message in queue

@@ -52,6 +52,7 @@ from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
 from raiden.transfer import events as transfer_events, views
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
@@ -61,7 +62,6 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.message_handler import on_message
 from raiden.utils import pex
-from raiden.utils.notifying_queue import QueueIdentifier
 from raiden.utils.typing import (
     Dict,
     Set,
