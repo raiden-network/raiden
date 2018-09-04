@@ -128,7 +128,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
+@pytest.mark.parametrize('settle_timeout', [200])
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}

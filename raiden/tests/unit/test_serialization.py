@@ -119,7 +119,7 @@ def test_decode_with_ref_cache():
         JSONSerializer.serialize(B),
     )
 
-    for module, cache_entries in RaidenJSONDecoder.ref_cache._cache.items():
+    for _, cache_entries in RaidenJSONDecoder.ref_cache._cache.items():
         assert len(cache_entries) == 0
 
 
