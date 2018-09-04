@@ -1010,7 +1010,7 @@ class NodeRunner:
         # wait for interrupt
         event = AsyncResult()
 
-        def sig_set(sig, _frame):
+        def sig_set(sig=None, _frame=None):
             event.set(sig)
 
         gevent.signal(signal.SIGQUIT, sig_set)
