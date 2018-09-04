@@ -110,7 +110,7 @@ def retry(
 
         log.debug(
             'retrying message',
-            node=pex(transport.address),
+            node=pex(transport.raiden.address),
             recipient=pex(recipient),
             msgid=message_id,
         )
@@ -170,7 +170,7 @@ def retry_with_recovery(
         if event_unhealthy.is_set():
             log.debug(
                 'waiting for recipient to become available',
-                node=pex(transport.address),
+                node=pex(transport.raiden.address),
                 recipient=pex(recipient),
             )
             wait_recovery(

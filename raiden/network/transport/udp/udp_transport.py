@@ -98,7 +98,7 @@ def single_queue_send(
     # Wait for the endpoint registration or to quit
     log.debug(
         'queue: waiting for node to become healthy',
-        node=pex(transport.address),
+        node=pex(transport.raiden.address),
         queue_identifier=queue_identifier,
         queue_size=len(queue),
     )
@@ -110,7 +110,7 @@ def single_queue_send(
 
     log.debug(
         'queue: processing queue',
-        node=pex(transport.address),
+        node=pex(transport.raiden.address),
         queue_identifier=queue_identifier,
         queue_size=len(queue),
     )
@@ -121,7 +121,7 @@ def single_queue_send(
         if event_stop.is_set():
             log.debug(
                 'queue: stopping',
-                node=pex(transport.address),
+                node=pex(transport.raiden.address),
                 queue_identifier=queue_identifier,
                 queue_size=len(queue),
             )
@@ -133,7 +133,7 @@ def single_queue_send(
 
         log.debug(
             'queue: sending message',
-            node=pex(transport.address),
+            node=pex(transport.raiden.address),
             recipient=pex(recipient),
             msgid=message_id,
             queue_identifier=queue_identifier,
