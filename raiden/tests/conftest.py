@@ -98,7 +98,7 @@ def enable_greenlet_debugger(request):
             nonlocal enabled
             if not enabled and type not in (bdb.BdbQuit, KeyboardInterrupt):
                 enabled = True
-                pdb.post_mortem()
+                pdb.post_mortem()  # pylint: disable=no-member
                 enabled = False
 
         # Hooking the debugger on the hub error handler. Exceptions that are
@@ -174,6 +174,7 @@ if sys.platform == 'darwin':
 
         def getbasetemp(self):
             """ return base temporary directory. """
+            # pylint: disable=no-member
             try:
                 return self._basetemp
             except AttributeError:

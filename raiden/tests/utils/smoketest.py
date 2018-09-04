@@ -179,7 +179,7 @@ def run_smoketests(raiden_service: RaidenService, test_config: Dict, debug: bool
         error = traceback.format_exc()
         if debug:
             import pdb
-            pdb.post_mortem()
+            pdb.post_mortem()  # pylint: disable=no-member
         return error
 
 
