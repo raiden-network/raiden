@@ -12,9 +12,9 @@ from raiden.encoding.format import buffer_for
 from raiden.encoding import messages
 from raiden.transfer.architecture import State, SendMessageEvent
 from raiden.transfer.merkle_tree import merkleroot
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3, typing, serialization
-from raiden.utils.notifying_queue import QueueIdentifier
 from raiden.utils.serialization import (
     map_dict,
     map_list,
