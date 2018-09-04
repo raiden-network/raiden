@@ -26,7 +26,8 @@ class RaidenJSONDecoder(json.JSONDecoder):
 
     # Maintain a global cache instance
     # which lives across different decoder instances
-    _ref_cache = ReferenceCache()
+    ref_cache = ReferenceCache()
+    cache_object_references = True
 
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
@@ -44,17 +45,20 @@ class RaidenJSONDecoder(json.JSONDecoder):
             if hasattr(klass, 'from_dict'):
                 obj = klass.from_dict(data)
 
-            candidate = self._ref_cache.get(obj_type, obj)
-            if not candidate:
-                self._ref_cache.add(obj_type, obj)
-                return obj
-            return candidate
+            candidate = self.ref_cache.get(obj_type, obj)
+            if candidate:
+                return candidate
+
+            if self.cache_object_references:
+                self.ref_cache.add(obj_type, obj)
+
+            return obj
+
 
         return data
 
     def _import_type(self, type_name):
-        *module_name, klass_name = type_name.split('.')
-        module_name = '.'.join(module_name)
+        module_name, _, klass_name = type_name.rpartition('.')
 
         try:
             module = importlib.import_module(module_name, None)

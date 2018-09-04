@@ -2,7 +2,7 @@ import pytest
 from networkx import Graph
 from eth_utils import to_canonical_address
 
-from raiden.storage.serialize import JSONSerializer
+from raiden.storage.serialize import JSONSerializer, RaidenJSONDecoder
 from raiden.utils import serialization
 from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import EMPTY_MERKLE_TREE
@@ -109,6 +109,18 @@ def test_decode_with_ref_cache():
     # Make sure that the original decoded A
     # is returned
     assert id(decoded_A) == id(decoded_B)
+
+    # Make sure no object is cached
+    RaidenJSONDecoder.cache_object_references = False
+    RaidenJSONDecoder.ref_cache.clear()
+
+    # Decode some object
+    decoded_B = JSONSerializer.deserialize(
+        JSONSerializer.serialize(B),
+    )
+
+    for module, cache_entries in RaidenJSONDecoder.ref_cache._cache.items():
+        assert len(cache_entries) == 0
 
 
 def test_decode_with_unknown_type():
