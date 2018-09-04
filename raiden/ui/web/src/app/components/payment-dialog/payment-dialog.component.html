@@ -1,41 +1,12 @@
 <h1 mat-dialog-title>Pay</h1>
 <div mat-dialog-content [formGroup]="form">
-    <div fxLayout="row" fxLayoutGap="10px">
-        <div fxLayout="column" fxFlex="0 0 30px" fxLayoutAlign="center center">
-            <img class="identicon no-margin"
-                 *ngIf="(targetAddress.value && !targetAddress.invalid); else placeholder"
-                 src="{{identicon(targetAddress.value)}}"/>
-            <ng-template #placeholder>
-                <mat-icon>person</mat-icon>
-            </ng-template>
-        </div>
 
-        <mat-form-field fxLayout="column" fxFlex="1 1 auto" [hideRequiredMarker]="true">
-            <input matInput
-                   type="text" id="target_address" formControlName="target_address"
-                   placeholder="Receiver Address" required pattern="^0x[0-9a-fA-F]{40}$"
-                   minlength="42" maxlength="42" autofocus
-            />
-            <mat-error *ngIf="targetAddress.value.length == 0 && (targetAddress.dirty || targetAddress.touched)">
-                The receiver address cannot be empty
-            </mat-error>
-            <mat-error
-                    *ngIf="targetAddress.value.length > 0 && targetAddress.value.length < 42 && (targetAddress.dirty || targetAddress.touched)">
-                Invalid receiver address length
-            </mat-error>
-            <mat-error
-                    *ngIf="targetAddress.value.length == 42 && targetAddress.invalid && (targetAddress.dirty || targetAddress.touched)">
-            <span *ngIf="targetAddress.hasError('ownAddress')">
-                You cannot start a payment to your own address
-            </span>
-                <span *ngIf="!targetAddress.hasError('ownAddress')">
-                The target address is not in a valid format
-            </span>
-
-            </mat-error>
-
-        </mat-form-field>
-    </div>
+    <app-address-input
+            [displayIdenticon]="true"
+            formControlName="target_address"
+            placeholder="Receiver address"
+            errorPlaceholder="Receiver">
+    </app-address-input>
 
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
 
