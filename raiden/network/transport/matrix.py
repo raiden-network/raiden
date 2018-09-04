@@ -25,6 +25,7 @@ from weakref import WeakKeyDictionary, WeakValueDictionary
 
 from raiden_libs.network.matrix import GMatrixClient, Room
 from raiden_libs.utils.signing import eth_sign, eth_recover
+from raiden_libs.exceptions import InvalidSignature
 
 from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
@@ -1034,7 +1035,7 @@ class MatrixTransport(Runnable):
         except (
             DecodeError,
             TypeError,
-            ValueError,
+            InvalidSignature,
             MatrixRequestError,
             json.decoder.JSONDecodeError,
         ):
