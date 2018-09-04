@@ -75,7 +75,7 @@ def single_queue_send(
     Notes:
     - This task must be the only consumer of queue.
     - This task can be killed at any time, but the intended usage is to stop it
-      with the stop_event.
+      with the event_stop.
     - If there are many queues for the same recipient, it is the
       caller's responsibility to not start them together to avoid congestion.
     - This task assumes the endpoint is never cleared after it's first known.
@@ -92,7 +92,7 @@ def single_queue_send(
     # Reusing the event, clear must be carefully done
     data_or_stop = event_first_of(
         queue,
-        stop_event,
+        event_stop,
     )
 
     # Wait for the endpoint registration or to quit
@@ -105,7 +105,7 @@ def single_queue_send(
 
     event_first_of(
         event_healthy,
-        stop_event,
+        event_stop,
     ).wait()
 
     log.debug(
@@ -152,7 +152,7 @@ def single_queue_send(
                 messagedata,
                 message_id,
                 recipient,
-                stop_event,
+                event_stop,
                 event_healthy,
                 event_unhealthy,
                 backoff,
@@ -170,7 +170,7 @@ def single_queue_send(
             if not queue:
                 data_or_stop.clear()
 
-                if stop_event.is_set():
+                if event_stop.is_set():
                     return
 
 
@@ -192,8 +192,8 @@ class UDPTransport(Runnable):
         self.nat_keepalive_timeout = config['nat_keepalive_timeout']
         self.nat_invitation_timeout = config['nat_invitation_timeout']
 
-        self.stop_event = Event()
-        self.stop_event.set()
+        self.event_stop = Event()
+        self.event_stop.set()
 
         self.greenlets = list()
         self.addresses_events = dict()
@@ -219,10 +219,10 @@ class UDPTransport(Runnable):
             raiden: RaidenService,
             queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Event]],
     ):
-        if not self.stop_event.ready():
+        if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
 
-        self.stop_event.clear()
+        self.event_stop.clear()
         self.raiden = raiden
         self.queueids_to_queues = dict()
 
@@ -248,9 +248,9 @@ class UDPTransport(Runnable):
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         try:
-            self.stop_event.wait()
+            self.event_stop.wait()
         except gevent.GreenletExit:  # killed without exception
-            self.stop_event.set()
+            self.event_stop.set()
             gevent.killall(self.greenlets)  # kill children
             raise  # re-raise to keep killed status
         except Exception:
@@ -258,10 +258,10 @@ class UDPTransport(Runnable):
             raise
 
     def stop(self):
-        if self.stop_event.ready():
+        if self.event_stop.ready():
             return  # double call, happens on normal stop, ignore
 
-        self.stop_event.set()
+        self.event_stop.set()
 
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
@@ -318,7 +318,7 @@ class UDPTransport(Runnable):
                 healthcheck.healthcheck,
                 self,
                 recipient,
-                self.stop_event,
+                self.event_stop,
                 events.event_healthy,
                 events.event_unhealthy,
                 self.nat_keepalive_retries,
