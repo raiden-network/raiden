@@ -182,7 +182,7 @@ def test_token_network_proxy_basics(
 
     # channel is open.
     # deposit with no balance
-    with pytest.raises(ValueError):
+    with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
             channel_identifier,
             101,

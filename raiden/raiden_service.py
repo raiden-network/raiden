@@ -52,6 +52,7 @@ from raiden.utils import (
     create_default_identifier,
     typing,
 )
+from raiden.utils.runnable import Runnable
 from raiden.transfer.events import SendDirectTransfer
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -126,7 +127,7 @@ def target_init(transfer: LockedTransfer):
     return init_target_statechange
 
 
-class RaidenService:
+class RaidenService(Runnable):
     """ A Raiden node. """
 
     def __init__(
@@ -140,6 +141,7 @@ class RaidenService:
             config,
             discovery=None,
     ):
+        super().__init__()
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -164,10 +166,9 @@ class RaidenService:
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
-        self.shutdown_timeout = config['shutdown_timeout']
+
         self.stop_event = Event()
-        self.start_event = Event()
-        self.chain.client.inject_stop_event(self.stop_event)
+        self.stop_event.set()  # inits as stopped
 
         self.wal = None
         self.snapshot_group = 0
@@ -195,9 +196,10 @@ class RaidenService:
 
         self.event_poll_lock = gevent.lock.Semaphore()
 
-    def start_async(self) -> Event:
-        """ Start the node asynchronously. """
-        self.start_event.clear()
+    def start(self):
+        """ Start the node synchronously. Raises directly if anything went wrong on startup """
+        if not self.stop_event.ready():
+            raise RuntimeError(f'{self!r} already started')
         self.stop_event.clear()
 
         if self.database_dir is not None:
@@ -306,40 +308,37 @@ class RaidenService:
                     self.identifier_to_results[message.payment_identifier] = AsyncResult()
         self.transport.start(self, queueids_to_queues)
 
+        # exceptions on these subtasks should crash the app and bubble up
+        self.alarm.link_exception(self.on_error)
+        self.transport.link_exception(self.on_error)
+
         # Health check needs the transport layer
         self.start_neighbours_healthcheck()
 
         if self.config['transport_type'] == 'udp':
-            def set_start_on_registration(_):
-                self.start_event.set()
+            endpoint_registration_greenlet.get()  # re-raise if exception occurred
 
-            endpoint_registration_greenlet.link(set_start_on_registration)
-        else:
-            self.start_event.set()
+        super().start()
 
-        return self.start_event
-
-    def start(self) -> Event:
-        """ Start the node. """
-        self.start_async().wait()
-
-    def start_neighbours_healthcheck(self):
-        for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
-            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.start_health_check_for(neighbour)
+    def _run(self):
+        """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
+        try:
+            self.stop_event.wait()
+        except gevent.GreenletExit:  # killed without exception
+            self.stop_event.set()
+            gevent.killall([self.alarm, self.transport])  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()
+            raise
 
     def stop(self):
-        """ Stop the node. """
+        """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
+        if self.stop_event.ready():  # not started
+            return
+
         # Needs to come before any greenlets joining
         self.stop_event.set()
-        self.transport.stop_and_wait()
-        self.alarm.stop_async()
-
-        wait_for = [self.alarm]
-        wait_for.extend(getattr(self.transport, 'greenlets', []))
-        # We need a timeout to prevent an endless loop from trying to
-        # contact the disconnected client
-        gevent.wait(wait_for, timeout=self.shutdown_timeout)
 
         # Filters must be uninstalled after the alarm task has stopped. Since
         # the events are polled by an alarm task callback, if the filters are
@@ -349,9 +348,12 @@ class RaidenService:
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         try:
-            with gevent.Timeout(self.shutdown_timeout):
-                self.blockchain_events.uninstall_all_event_listeners()
-        except (gevent.timeout.Timeout, RaidenShuttingDown):
+            self.transport.stop()
+            self.alarm.stop()
+            self.transport.get()
+            self.alarm.get()
+            self.blockchain_events.uninstall_all_event_listeners()
+        except (gevent.Timeout, RaidenShuttingDown):
             pass
 
         self.blockchain_events.reset()
@@ -361,6 +363,11 @@ class RaidenService:
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def start_neighbours_healthcheck(self):
+        for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
+            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
+                self.start_health_check_for(neighbour)
 
     def get_block_number(self):
         return views.block_number(self.wal.state_manager.current_state)

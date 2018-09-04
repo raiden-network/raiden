@@ -59,7 +59,7 @@ def mock_matrix(
 
     transport = MatrixTransport(config)
     transport.raiden = MockRaidenService(ADDR)
-    transport._running = True
+    transport._stop_event.clear()
     transport._address_to_userids[HOP1] = USERID1
 
     monkeypatch.setattr(MatrixTransport, '_get_user', mock_get_user)

@@ -13,10 +13,11 @@ from raiden.transfer.architecture import State, SendMessageEvent
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3, typing
+from raiden.utils.notifying_queue import QueueIdentifier
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
-QueueIdsToQueues = typing.Dict[typing.QueueIdentifier, typing.List[SendMessageEvent]]
+QueueIdsToQueues = typing.Dict[QueueIdentifier, typing.List[SendMessageEvent]]
 
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'

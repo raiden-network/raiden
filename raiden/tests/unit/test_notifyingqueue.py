@@ -1,4 +1,12 @@
+import gevent
+from gevent.event import Event
+
 from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.network.transport.udp.udp_utils import event_first_of
+
+
+def add_element_to_queue(queue, element):
+    queue.put(element)
 
 
 def test_copy():
@@ -11,3 +19,18 @@ def test_copy():
 
     queue.put(2)
     assert queue.copy() == [1, 2], 'copy must preserve the items order'
+
+
+def test_event_must_be_set():
+    queue = NotifyingQueue()
+    event_stop = Event()
+
+    data_or_stop = event_first_of(
+        queue,
+        event_stop,
+    )
+
+    spawn_after_seconds = 1
+    element = 1
+    gevent.spawn_later(spawn_after_seconds, add_element_to_queue, queue, element)
+    assert data_or_stop.wait()

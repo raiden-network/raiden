@@ -5,9 +5,13 @@ from gevent.event import (
     _AbstractLinkable,
     Event,
 )
-from raiden.utils import typing
+import structlog
+
+from raiden.utils import pex, typing
+
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def event_first_of(*events: _AbstractLinkable) -> Event:
@@ -73,7 +77,7 @@ def retry(
         messagedata: bytes,
         message_id: typing.MessageID,
         recipient: typing.Address,
-        event_stop: Event,
+        stop_event: Event,
         timeout_backoff: typing.Generator[int, None, None],
 ) -> bool:
     """ Send messagedata until it's acknowledged.
@@ -96,13 +100,20 @@ def retry(
 
     event_quit = event_first_of(
         async_result,
-        event_stop,
+        stop_event,
     )
 
     for timeout in timeout_backoff:
 
         if event_quit.wait(timeout=timeout) is True:
             break
+
+        log.debug(
+            'retrying message',
+            node=pex(transport.address),
+            recipient=pex(recipient),
+            msgid=message_id,
+        )
 
         transport.maybe_sendraw_with_result(
             recipient,
@@ -113,13 +124,13 @@ def retry(
     return async_result.ready()
 
 
-def wait_recovery(event_stop: Event, event_healthy: Event):
+def wait_recovery(stop_event: Event, event_healthy: Event):
     event_first_of(
-        event_stop,
+        stop_event,
         event_healthy,
     ).wait()
 
-    if event_stop.is_set():
+    if stop_event.is_set():
         return
 
     # There may be multiple threads waiting, do not restart them all at
@@ -132,7 +143,7 @@ def retry_with_recovery(
         messagedata: bytes,
         message_id: typing.MessageID,
         recipient: typing.Address,
-        event_stop: Event,
+        stop_event: Event,
         event_healthy: Event,
         event_unhealthy: Event,
         backoff: typing.Generator[int, None, None],
@@ -147,27 +158,32 @@ def retry_with_recovery(
     # The underlying unhealthy will be cleared, care must be taken to properly
     # clear stop_or_unhealthy too.
     stop_or_unhealthy = event_first_of(
-        event_stop,
+        stop_event,
         event_unhealthy,
     )
 
     acknowledged = False
-    while not event_stop.is_set() and not acknowledged:
+    while not stop_event.is_set() and not acknowledged:
 
         # Packets must not be sent to an unhealthy node, nor should the task
         # wait for it to become available if the message has been acknowledged.
         if event_unhealthy.is_set():
+            log.debug(
+                'waiting for recipient to become available',
+                node=pex(transport.address),
+                recipient=pex(recipient),
+            )
             wait_recovery(
-                event_stop,
+                stop_event,
                 event_healthy,
             )
 
             # Assume wait_recovery returned because unhealthy was cleared and
-            # continue execution, this is safe to do because event_stop is
+            # continue execution, this is safe to do because stop_event is
             # checked below.
             stop_or_unhealthy.clear()
 
-            if event_stop.is_set():
+            if stop_event.is_set():
                 return acknowledged
 
         acknowledged = retry(

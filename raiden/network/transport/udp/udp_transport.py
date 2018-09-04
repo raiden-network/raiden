@@ -28,7 +28,8 @@ from raiden.messages import (
 )
 from raiden.settings import CACHE_TTL
 from raiden.utils import pex, typing
-from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.utils.runnable import Runnable
+from raiden.utils.notifying_queue import NotifyingQueue, QueueIdentifier
 from raiden.message_handler import on_message
 from raiden.transfer.state_change import ReceiveDelivered
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
@@ -41,6 +42,7 @@ from raiden.network.transport.udp.udp_utils import (
 from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log_healthcheck = structlog.get_logger(__name__ + '.healthcheck')  # pylint: disable=invalid-name
 
 QueueItem_T = typing.Tuple[bytes, int]
 Queue_T = typing.List[QueueItem_T]
@@ -60,6 +62,7 @@ def single_queue_send(
         transport: 'UDPTransport',
         recipient: typing.Address,
         queue: Queue_T,
+        queue_identifier: QueueIdentifier,
         event_stop: Event,
         event_healthy: Event,
         event_unhealthy: Event,
@@ -93,20 +96,49 @@ def single_queue_send(
     )
 
     # Wait for the endpoint registration or to quit
+    log.debug(
+        'queue: waiting for node to become healthy',
+        node=pex(transport.address),
+        queue_identifier=queue_identifier,
+        queue_size=len(queue),
+    )
+
     event_first_of(
         event_healthy,
         event_stop,
     ).wait()
 
+    log.debug(
+        'queue: processing queue',
+        node=pex(transport.address),
+        queue_identifier=queue_identifier,
+        queue_size=len(queue),
+    )
+
     while True:
         data_or_stop.wait()
 
         if event_stop.is_set():
+            log.debug(
+                'queue: stopping',
+                node=pex(transport.address),
+                queue_identifier=queue_identifier,
+                queue_size=len(queue),
+            )
             return
 
         # The queue is not empty at this point, so this won't raise Empty.
         # This task being the only consumer is a requirement.
         (messagedata, message_id) = queue.peek(block=False)
+
+        log.debug(
+            'queue: sending message',
+            node=pex(transport.address),
+            recipient=pex(recipient),
+            msgid=message_id,
+            queue_identifier=queue_identifier,
+            queue_size=len(queue),
+        )
 
         backoff = timeout_exponential_backoff(
             message_retries,
@@ -142,10 +174,11 @@ def single_queue_send(
                     return
 
 
-class UDPTransport:
+class UDPTransport(Runnable):
     UDP_MAX_MESSAGE_SIZE = 1200
 
     def __init__(self, discovery, udpsocket, throttle_policy, config):
+        super().__init__()
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
         self.raiden: RaidenService
@@ -160,6 +193,7 @@ class UDPTransport:
         self.nat_invitation_timeout = config['nat_invitation_timeout']
 
         self.event_stop = Event()
+        self.event_stop.set()
 
         self.greenlets = list()
         self.addresses_events = dict()
@@ -183,8 +217,12 @@ class UDPTransport:
     def start(
             self,
             raiden: RaidenService,
-            queueids_to_queues: typing.Dict[typing.QueueIdentifier, typing.List[Event]],
+            queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Event]],
     ):
+        if not self.event_stop.ready():
+            raise RuntimeError('UDPTransport started while running')
+
+        self.event_stop.clear()
         self.raiden = raiden
         self.queueids_to_queues = dict()
 
@@ -205,14 +243,31 @@ class UDPTransport:
             self.init_queue_for(queue_identifier, encoded_queue)
 
         self.server.start()
+        super().start()
 
-    def stop_and_wait(self):
+    def _run(self):
+        """ Runnable main method, perform wait on long-running subtasks """
+        try:
+            self.event_stop.wait()
+        except gevent.GreenletExit:  # killed without exception
+            self.event_stop.set()
+            gevent.killall(self.greenlets)  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()  # ensure cleanup and wait on subtasks
+            raise
+
+    def stop(self):
+        if self.event_stop.ready():
+            return  # double call, happens on normal stop, ignore
+
+        self.event_stop.set()
+
         # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
         self.server.stop_accepting()
 
         # Stop processing the outgoing queues
-        self.event_stop.set()
         gevent.wait(self.greenlets)
 
         # All outgoing tasks are stopped. Now it's safe to close the socket. At
@@ -272,11 +327,12 @@ class UDPTransport:
                 ping_nonce,
             )
             greenlet_healthcheck.name = f'Healthcheck for {pex(recipient)}'
+            greenlet_healthcheck.link_exception(self.on_error)
             self.greenlets.append(greenlet_healthcheck)
 
     def init_queue_for(
             self,
-            queue_identifier: typing.QueueIdentifier,
+            queue_identifier: QueueIdentifier,
             items: typing.List[QueueItem_T],
     ) -> Queue_T:
         """ Create the queue identified by the queue_identifier
@@ -296,6 +352,7 @@ class UDPTransport:
             self,
             recipient,
             queue,
+            queue_identifier,
             self.event_stop,
             events.event_healthy,
             events.event_unhealthy,
@@ -311,6 +368,7 @@ class UDPTransport:
                 f'Queue for {pex(recipient)} - {queue_identifier.channel_identifier}'
             )
 
+        greenlet_queue.link_exception(self.on_error)
         self.greenlets.append(greenlet_queue)
 
         log.debug(
@@ -323,7 +381,7 @@ class UDPTransport:
 
     def get_queue_for(
             self,
-            queue_identifier: typing.QueueIdentifier,
+            queue_identifier: QueueIdentifier,
     ) -> Queue_T:
         """ Return the queue identified by the given queue identifier.
 
@@ -339,7 +397,7 @@ class UDPTransport:
 
     def send_async(
             self,
-            queue_identifier: typing.QueueIdentifier,
+            queue_identifier: QueueIdentifier,
             message: 'Message',
     ):
         """ Send a new ordered message to recipient.
@@ -369,13 +427,17 @@ class UDPTransport:
 
             queue = self.get_queue_for(queue_identifier)
             queue.put((messagedata, message_id))
+            assert queue.is_set()
 
             log.debug(
                 'MESSAGE QUEUED',
                 node=pex(self.raiden.address),
                 queue_identifier=queue_identifier,
+                queue_size=len(queue),
                 message=message,
             )
+
+            assert not self.event_stop.is_set()
 
     def maybe_send(self, recipient: typing.Address, message: Message):
         """ Send message to recipient if the transport is running. """
@@ -525,6 +587,11 @@ class UDPTransport:
         if async_result is not None:
             del self.messageids_to_asyncresults[message_id]
             async_result.set()
+        else:
+            log.warn(
+                'UNKNOWN DELIVERED MESSAGE RECEIVED',
+                message_id=message_id,
+            )
 
     # Pings and Pongs are used to check the health status of another node. They
     # are /not/ part of the raiden protocol, only part of the UDP transport,
@@ -532,7 +599,7 @@ class UDPTransport:
     def receive_ping(self, ping: Ping):
         """ Handle a Ping message by answering with a Pong. """
 
-        log.debug(
+        log_healthcheck.debug(
             'PING RECEIVED',
             node=pex(self.raiden.address),
             message_id=ping.nonce,
@@ -555,7 +622,7 @@ class UDPTransport:
         async_result = self.messageids_to_asyncresults.get(message_id)
 
         if async_result is not None:
-            log.debug(
+            log_healthcheck.debug(
                 'PONG RECEIVED',
                 node=pex(self.raiden.address),
                 sender=pex(pong.sender),
@@ -563,6 +630,12 @@ class UDPTransport:
             )
 
             async_result.set(True)
+
+        else:
+            log_healthcheck.warn(
+                'UNKNOWN PONG RECEIVED',
+                message_id=message_id,
+            )
 
     def get_ping(self, nonce: int) -> Ping:
         """ Returns a signed Ping message.

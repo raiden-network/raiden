@@ -1,6 +1,8 @@
 from gevent.event import Event
 from gevent.queue import Queue
 
+from raiden.utils import typing, pex
+
 
 class NotifyingQueue(Event):
     def __init__(self, maxsize=None, items=()):
@@ -33,3 +35,15 @@ class NotifyingQueue(Event):
         while not copy.empty():
             result.append(copy.get_nowait())
         return result
+
+
+class QueueIdentifier(typing.NamedTuple):
+    recipient: typing.Address
+    channel_identifier: typing.ChannelID
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'QueueIdentifier recipient:{pex(self.recipient)} channelid:{self.channel_identifier}'
+            f'>'
+        )

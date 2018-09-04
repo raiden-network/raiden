@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import NewType, Tuple, Optional, Union, List, NamedTuple
+from typing import NewType, Tuple, Optional, Union, List
 
 
 T_Address = bytes
@@ -105,8 +105,3 @@ TransactionHash = NewType('TransactionHash', T_TransactionHash)
 SuccessOrError = Tuple[bool, Optional[str]]
 
 BlockSpecification = Union[str, T_BlockNumber]
-
-
-class QueueIdentifier(NamedTuple):
-    recipient: Address
-    channel_identifier: ChannelID
