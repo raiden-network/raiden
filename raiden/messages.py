@@ -10,6 +10,7 @@ from cachetools import LRUCache, cached
 from operator import attrgetter
 
 from raiden_libs.utils.signing import eth_sign, eth_recover
+from raiden_libs.exceptions import InvalidSignature
 from raiden.constants import (
     UINT256_MAX,
     UINT64_MAX,
@@ -260,10 +261,8 @@ class SignedMessage(Message):
                 data=data_that_was_signed,
                 signature=message_signature,
             ))
-        except ValueError:
+        except InvalidSignature:
             address = None
-        if address is None:
-            return None
         return address
 
     @classmethod

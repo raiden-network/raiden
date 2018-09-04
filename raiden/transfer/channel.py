@@ -6,6 +6,7 @@ from typing import Union
 
 from eth_utils import to_canonical_address
 from raiden_libs.utils.signing import eth_recover
+from raiden_libs.exceptions import InvalidSignature
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.transfer.architecture import StateChange, Event
@@ -210,7 +211,7 @@ def is_valid_signature(
             data=data_that_was_signed,
             signature=balance_proof.signature,
         ))
-    except ValueError:
+    except InvalidSignature:
         msg = 'Signature invalid, could not be recovered.'
         return (False, msg)
 
