@@ -274,9 +274,10 @@ class EventPaymentSentFailedSchema(BaseSchema):
     event = fields.Constant('EventPaymentSentFailed')
     reason = fields.Str()
     target = AddressField()
+    log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'reason', 'target')
+        fields = ('block_number', 'event', 'reason', 'target', 'log_time')
         strict = True
         decoding_class = dict
 
@@ -287,9 +288,10 @@ class EventPaymentSentSuccessSchema(BaseSchema):
     event = fields.Constant('EventPaymentSentSuccess')
     amount = fields.Integer()
     target = AddressField()
+    log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'target', 'identifier')
+        fields = ('block_number', 'event', 'amount', 'target', 'identifier', 'log_time')
         strict = True
         decoding_class = dict
 
@@ -300,8 +302,9 @@ class EventPaymentReceivedSuccessSchema(BaseSchema):
     event = fields.Constant('EventPaymentReceivedSuccess')
     amount = fields.Integer()
     initiator = AddressField()
+    log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'initiator', 'identifier')
+        fields = ('block_number', 'event', 'amount', 'initiator', 'identifier', 'log_time')
         strict = True
         decoding_class = dict
