@@ -24,8 +24,14 @@ class RaidenJSONDecoder(json.JSONDecoder):
     it's state.
     """
 
-    # Maintain a global cache instance
-    # which lives across different decoder instances
+    # Maintain a global cache instance which lives across different decoder instances
+    # The reason we need this ref cache is:
+    # State Objects are currently mutable. Different State Machines keep pointers of the
+    # same object such as channel states, balance proofs .. etc.
+    # Therefore, we rely on the fact that any "shared" object changes should be seen by
+    # other components pointing to the same object.
+    # This is why the ref_cache makes sure that, when deserializing, the object with
+    # exactly the same values should not be instantiated twice.
     ref_cache = ReferenceCache()
     cache_object_references = True
 
@@ -53,7 +59,6 @@ class RaidenJSONDecoder(json.JSONDecoder):
                 self.ref_cache.add(obj_type, obj)
 
             return obj
-
 
         return data
 
