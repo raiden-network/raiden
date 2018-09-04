@@ -8,6 +8,7 @@ import { MaterialComponentsModule } from '../../modules/material-components/mate
 import { TokenPipe } from '../../pipes/token.pipe';
 import { RaidenConfig } from '../../services/raiden.config';
 import { SharedService } from '../../services/shared.service';
+import { AddressInputComponent } from '../address-input/address-input.component';
 import { MockConfig } from '../channel-table/channel-table.component.spec';
 import { TokenInputComponent } from '../token-input/token-input.component';
 import { PaymentDialogComponent, PaymentDialogPayload } from './payment-dialog.component';
@@ -28,7 +29,8 @@ describe('PaymentDialogComponent', () => {
                 PaymentDialogComponent,
                 TokenPipe,
                 AllowedDecimalsDirective,
-                TokenInputComponent
+                TokenInputComponent,
+                AddressInputComponent
             ],
             providers: [
                 {

@@ -22,9 +22,7 @@ export type CallbackFunc = (error: Error, result: any) => void;
 export class RaidenService {
 
     public tokenContract: any;
-    public raidenAddress: string;
     private userTokens: { [id: string]: UserToken | null } = {};
-
     private defaultDecimals = 18;
 
     constructor(
@@ -34,6 +32,12 @@ export class RaidenService {
         private sharedService: SharedService,
     ) {
         this.tokenContract = this.raidenConfig.web3.eth.contract(tokenabi);
+    }
+
+    private _raidenAddress: string;
+
+    public get raidenAddress(): string {
+        return this._raidenAddress;
     }
 
     // noinspection JSMethodCanBeStatic
@@ -57,7 +61,7 @@ export class RaidenService {
 
     public getRaidenAddress(): Observable<string> {
         return this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`).pipe(
-            map((data) => this.raidenAddress = data.our_address),
+            map((data) => this._raidenAddress = data.our_address),
             catchError((error) => this.handleError(error)),
         );
     }

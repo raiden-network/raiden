@@ -22,6 +22,7 @@ import { ChannelPollingService } from '../../services/channel-polling.service';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
+import { AddressInputComponent } from '../address-input/address-input.component';
 import { EventListComponent } from '../event-list/event-list.component';
 import { OpenDialogComponent } from '../open-dialog/open-dialog.component';
 import { TokenInputComponent } from '../token-input/token-input.component';
@@ -30,7 +31,10 @@ import { ChannelTableComponent } from './channel-table.component';
 import Spy = jasmine.Spy;
 
 export class MockConfig extends RaidenConfig {
+
     public web3: any = {
+        isChecksum: false,
+        checksumAddress: '',
         eth: {
             latestBlock: 3694423,
             contract: () => {
@@ -38,6 +42,12 @@ export class MockConfig extends RaidenConfig {
             getBlockNumber: () => {
 
             }
+        },
+        isChecksumAddress(value) {
+            return this.isChecksum;
+        },
+        toChecksumAddress(value) {
+            return this.checksumAddress;
         }
     };
 }
@@ -56,6 +66,7 @@ describe('ChannelTableComponent', () => {
                 EventListComponent,
                 OpenDialogComponent,
                 TokenInputComponent,
+                AddressInputComponent,
                 TokenPipe,
                 EllipsisPipe,
                 KeysPipe,

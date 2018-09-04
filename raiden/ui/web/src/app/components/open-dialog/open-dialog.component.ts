@@ -6,6 +6,7 @@ import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/oper
 import { UserToken } from '../../models/usertoken';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenService } from '../../services/raiden.service';
+import { AddressInputComponent } from '../address-input/address-input.component';
 import { TokenInputComponent } from '../token-input/token-input.component';
 
 export class OpenDialogPayload {
@@ -31,12 +32,19 @@ export interface OpenDialogResult {
 })
 export class OpenDialogComponent implements OnInit {
 
-    public form: FormGroup;
+    public form: FormGroup = this.fb.group({
+        address: '',
+        token: '',
+        amount: 0,
+        decimals: true,
+        settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
+    });
+
     public token: FormControl;
-    public partnerAddress: FormControl;
     public settleTimeout: FormControl;
 
     @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
+    @ViewChild(AddressInputComponent) addressInput: AddressInputComponent;
 
     public filteredOptions$: Observable<UserToken[]>;
     private tokens$: Observable<UserToken[]>;
@@ -51,17 +59,8 @@ export class OpenDialogComponent implements OnInit {
     }
 
     ngOnInit() {
-        const data = this.data;
-        this.form = this.fb.group({
-            partner_address: ['', (control) => control.value === data.ownAddress ? {ownAddress: true} : undefined],
-            token: '',
-            amount: 0,
-            decimals: true,
-            settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
-        });
 
         this.token = this.form.get('token') as FormControl;
-        this.partnerAddress = this.form.get('partner_address') as FormControl;
         this.settleTimeout = this.form.get('settle_timeout') as FormControl;
 
         this.tokens$ = this.raidenService.getTokens(true).pipe(
@@ -82,21 +81,13 @@ export class OpenDialogComponent implements OnInit {
         const value = this.form.value;
         const result: OpenDialogResult = {
             tokenAddress: value.token,
-            partnerAddress: value.partner_address,
+            partnerAddress: value.address,
             settleTimeout: value.settle_timeout,
             balance: this.tokenInput.tokenAmount.toNumber(),
             decimals: this.tokenInput.tokenAmountDecimals
         };
 
         this.dialogRef.close(result);
-    }
-
-    // noinspection JSMethodCanBeStatic
-    identicon(address?: string): string {
-        if (!address) {
-            return '';
-        }
-        return this.identiconCacheService.getIdenticon(address);
     }
 
     tokenSelected(value: UserToken) {

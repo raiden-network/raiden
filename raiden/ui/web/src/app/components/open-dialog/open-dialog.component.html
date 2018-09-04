@@ -1,38 +1,11 @@
 <h1 mat-dialog-title>Open Channel</h1>
 <div mat-dialog-content [formGroup]="form">
-    <div fxLayout="row" fxLayoutGap="10px">
-        <div fxLayout="column" fxFlex="0 0 30px" fxLayoutAlign="center center">
-            <img class="identicon no-margin"
-                 *ngIf="(partnerAddress.value && !partnerAddress.invalid); else placeholder"
-                 src="{{identicon(partnerAddress.value)}}"/>
-            <ng-template #placeholder>
-                <mat-icon>person</mat-icon>
-            </ng-template>
-        </div>
-        <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
-            <input matInput
-                   type="text" formControlName="partner_address"
-                   placeholder="Partner Address" required pattern="^0x[0-9a-fA-F]{40}$"
-                   minlength="42" maxlength="42" autofocus
-            />
-            <mat-error *ngIf="partnerAddress.value.length == 0">
-                The partner address cannot be empty
-            </mat-error>
-            <mat-error *ngIf="partnerAddress.value.length > 0 && partnerAddress.value.length < 42">
-                Invalid partner address length
-            </mat-error>
-            <mat-error *ngIf="partnerAddress.value.length == 42 && partnerAddress.invalid">
-            <span *ngIf="partnerAddress.hasError('ownAddress')">
-                You cannot open a channel to your self
-            </span>
-                <span *ngIf="!partnerAddress.hasError('ownAddress')">
-                The partner address is not in a valid format
-            </span>
-
-            </mat-error>
-
-        </mat-form-field>
-    </div>
+    <app-address-input
+            formControlName="address"
+            placeholder="Target address"
+            errorPlaceholder="Target"
+            [displayIdenticon]="true">
+    </app-address-input>
 
     <mat-form-field class="full-width-form-field" [hideRequiredMarker]="true">
 

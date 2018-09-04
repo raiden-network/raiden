@@ -6,6 +6,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MaterialComponentsModule } from '../../modules/material-components/material-components.module';
 import { RaidenConfig } from '../../services/raiden.config';
 import { SharedService } from '../../services/shared.service';
+import { AddressInputComponent } from '../address-input/address-input.component';
 import { MockConfig } from '../channel-table/channel-table.component.spec';
 
 import { RegisterDialogComponent } from './register-dialog.component';
@@ -17,7 +18,8 @@ describe('RegisterDialogComponent', () => {
     beforeEach(async(() => {
         TestBed.configureTestingModule({
             declarations: [
-                RegisterDialogComponent
+                RegisterDialogComponent,
+                AddressInputComponent
             ],
             providers: [
                 {

@@ -37,6 +37,7 @@ import { ChannelEventsComponent } from './components/channel-events/channel-even
 import { AllowedDecimalsDirective } from './directives/allowed-decimals.directive';
 import { DecimalPipe } from './pipes/decimal.pipe';
 import { TokenInputComponent } from './components/token-input/token-input.component';
+import { AddressInputComponent } from './components/address-input/address-input.component';
 
 const appRoutes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -78,7 +79,8 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         ChannelEventsComponent,
         AllowedDecimalsDirective,
         DecimalPipe,
-        TokenInputComponent
+        TokenInputComponent,
+        AddressInputComponent
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
