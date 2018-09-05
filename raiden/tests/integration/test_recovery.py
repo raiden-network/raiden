@@ -18,6 +18,7 @@ from raiden.transfer.state_change import (
 )
 
 
+@pytest.mark.skip(reason='issue 2360')
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
