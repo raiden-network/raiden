@@ -989,10 +989,10 @@ class NodeRunner:
             try:
                 api_server.start(api_host, api_port)
             except APIServerPortInUseError:
-                print(
-                    'ERROR: API Address %s:%s is in use. '
-                    'Use --api-address <host:port> to specify port to listen on.' %
-                    (api_host, api_port),
+                click.secho(
+                    f'ERROR: API Address {api_host}:{api_port} is in use. '
+                    f'Use --api-address <host:port> to specify a different port.',
+                    fg='red',
                 )
                 sys.exit(1)
 
@@ -1069,12 +1069,19 @@ class NodeRunner:
                 finally:
                     task.get()  # re-raise
 
-            stop_tasks = [gevent.spawn(stop_task, task) for task in tasks]
-            gevent.joinall(
-                stop_tasks,
-                app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
-                raise_error=True,
-            )
+            try:
+                gevent.joinall(
+                    [gevent.spawn(stop_task, task) for task in tasks],
+                    app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
+                    raise_error=True,
+                )
+            except APIServerPortInUseError:
+                click.secho(
+                    f'ERROR: API Address {api_host}:{api_port} is in use. '
+                    f'Use --api-address <host:port> to specify a different port.',
+                    fg='red',
+                )
+                sys.exit(1)
 
         return app_
 
