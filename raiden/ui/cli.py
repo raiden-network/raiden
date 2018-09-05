@@ -703,9 +703,9 @@ def run_app(
 
     database_path = os.path.join(
         datadir,
+        f'node_{pex(address)}',
         f'netid_{net_id}',
-        pex(token_network_registry.address),
-        address_hex[:8],
+        f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
     config['database_path'] = database_path
