@@ -131,6 +131,12 @@ def get_our_capacity_for_token_network(
     return total_deposit
 
 
+def get_payment_network_identifiers(
+        chain_state: ChainState,
+) -> typing.List[typing.PaymentNetworkID]:
+    return list(chain_state.identifiers_to_paymentnetworks.keys())
+
+
 def get_token_network_registry_by_token_network_identifier(
         chain_state: ChainState,
         token_network_identifier: typing.Address,
