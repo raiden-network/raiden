@@ -113,7 +113,9 @@ def handle_inittarget(
         recipient = transfer.initiator
         secret_request = SendSecretRequest(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=message_identifier,
             payment_identifier=transfer.payment_identifier,
             amount=transfer.lock.amount,
@@ -177,7 +179,9 @@ def handle_secretreveal(
         # the transport and not by the state machine
         reveal = SendRevealSecret(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=message_identifier,
             secret=target_state.secret,
         )

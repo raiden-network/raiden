@@ -567,13 +567,14 @@ def test_events_for_revealsecret():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    _, transfers_pair = make_transfers_pair(
+    channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
         amount,
         block_number,
     )
 
     events = mediator.events_for_revealsecret(
+        channelmap,
         transfers_pair,
         our_address,
         pseudo_random_generator,
@@ -588,6 +589,7 @@ def test_events_for_revealsecret():
 
     last_pair.payee_state = 'payee_secret_revealed'
     events = mediator.events_for_revealsecret(
+        channelmap,
         transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
@@ -601,6 +603,7 @@ def test_events_for_revealsecret():
     assert last_pair.payer_state == 'payer_secret_revealed'
 
     events = mediator.events_for_revealsecret(
+        channelmap,
         transfers_pair,
         our_address,
         pseudo_random_generator,
@@ -612,6 +615,7 @@ def test_events_for_revealsecret():
 
     first_pair.payee_state = 'payee_secret_revealed'
     events = mediator.events_for_revealsecret(
+        channelmap,
         transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
@@ -629,13 +633,14 @@ def test_events_for_revealsecret_secret_unknown():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    _, transfers_pair = make_transfers_pair(
+    channelmap, transfers_pair = make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
         amount,
         block_number,
     )
 
     events = mediator.events_for_revealsecret(
+        channelmap,
         transfers_pair,
         ADDR,
         pseudo_random_generator,
@@ -658,7 +663,7 @@ def test_events_for_revealsecret_all_states():
 
     amount = 10
     for state in payee_secret_known:
-        _, transfers_pair = make_transfers_pair(
+        channelmap, transfers_pair = make_transfers_pair(
             [HOP2_KEY, HOP3_KEY],
             amount,
             block_number,
@@ -668,6 +673,7 @@ def test_events_for_revealsecret_all_states():
         pair.payee_state = state
 
         events = mediator.events_for_revealsecret(
+            channelmap,
             transfers_pair,
             UNIT_SECRET,
             pseudo_random_generator,

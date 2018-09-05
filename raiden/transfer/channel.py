@@ -1074,6 +1074,8 @@ def create_senddirecttransfer(
 
     direct_transfer = SendDirectTransfer(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
@@ -1153,6 +1155,8 @@ def create_sendlockedtransfer(
 
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         transfer=locked_transfer,
@@ -1205,6 +1209,8 @@ def create_unlock(
 
     unlock_lock = SendBalanceProof(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,

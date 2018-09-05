@@ -8,7 +8,6 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockSuccess,
     SendLockedTransfer,
     SendRevealSecret,
@@ -201,7 +200,9 @@ def handle_secretrequest(
         recipient = transfer_description.target
         revealsecret = SendRevealSecret(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=message_identifier,
             secret=transfer_description.secret,
         )

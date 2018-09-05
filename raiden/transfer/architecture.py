@@ -8,6 +8,8 @@ from raiden.utils.typing import (
     MessageID,
     T_ChannelID,
     TransactionHash,
+    PaymentNetworkID,
+    TokenNetworkID,
 )
 from raiden.utils.notifying_queue import QueueIdentifier
 
@@ -92,8 +94,11 @@ class SendMessageEvent(Event):
     def __init__(
             self,
             recipient: Address,
+            payment_network_identifier: PaymentNetworkID,
+            token_network_identifier: TokenNetworkID,
             channel_identifier: ChannelID,
             message_identifier: MessageID,
+            ordered: bool,
     ):
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)
@@ -103,7 +108,10 @@ class SendMessageEvent(Event):
         self.recipient = recipient
         self.queue_identifier = QueueIdentifier(
             recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
+            ordered=ordered,
         )
         self.message_identifier = message_identifier
 
