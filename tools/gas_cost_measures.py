@@ -11,10 +11,7 @@ from raiden.constants import UNLOCK_TX_GAS_LIMIT
 from raiden_libs.utils.signing import eth_sign
 
 from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
-from raiden_contracts.tests.fixtures import contracts_manager  # noqa
-from raiden_contracts.tests.utils import get_pending_transfers_tree
-# TODO Remove the unused import when possible.
-# We need it right now to avoid a circular import inside raiden-contracts.
+from raiden_contracts.utils.utils import get_pending_transfers_tree
 
 # increase block gas limit
 import eth_tester.backends.pyevm.main as pyevm_main
@@ -112,7 +109,7 @@ def find_max_pending_transfers(gas_limit):
         settle_timeout=150,
     )
 
-    channel_identifier = receipt['logs'][0]['topics'][1]
+    channel_identifier = int(hexlify(receipt['logs'][0]['topics'][1]), 16)
 
     tester.call_transaction(
         'HumanStandardToken',
@@ -133,6 +130,7 @@ def find_max_pending_transfers(gas_limit):
     tester.call_transaction(
         'TokenNetwork',
         'setTotalDeposit',
+        channel_identifier=channel_identifier,
         participant=tester.accounts[0],
         total_deposit=5000,
         partner=tester.accounts[1],
@@ -141,6 +139,7 @@ def find_max_pending_transfers(gas_limit):
     tester.call_transaction(
         'TokenNetwork',
         'setTotalDeposit',
+        channel_identifier=channel_identifier,
         participant=tester.accounts[1],
         total_deposit=2000,
         partner=tester.accounts[0],
@@ -179,6 +178,7 @@ def find_max_pending_transfers(gas_limit):
         tester.call_transaction(
             'TokenNetwork',
             'closeChannel',
+            channel_identifier=channel_identifier,
             partner=tester.accounts[1],
             balance_hash=balance_hash,
             nonce=nonce,
@@ -191,6 +191,7 @@ def find_max_pending_transfers(gas_limit):
         tester.call_transaction(
             'TokenNetwork',
             'settleChannel',
+            channel_identifier=channel_identifier,
             participant1=tester.accounts[0],
             participant1_transferred_amount=0,
             participant1_locked_amount=0,
@@ -204,6 +205,7 @@ def find_max_pending_transfers(gas_limit):
         receipt = tester.call_transaction(
             'TokenNetwork',
             'unlock',
+            channel_identifier=channel_identifier,
             participant=tester.accounts[0],
             partner=tester.accounts[1],
             merkle_tree_leaves=pending_transfers_tree.packed_transfers,
