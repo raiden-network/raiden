@@ -114,10 +114,15 @@
                 </div>
             </div>
             <div class="can-shrink" fxLayout="column" fxFlex="1 2 100%" fxLayoutAlign="center" fxLayoutGap="10px">
-                <div fxLayout="row" fxLayoutGap="4px">
+                <div fxLayout="row" fxLayoutGap="4px" fxLayoutAlign="start center">
                     <strong>Address:</strong>
                     <span class="truncate" [matTooltip]="token.address">
                         {{token.address}}
+                    </span>
+                    <span>
+                        <button mat-icon-button ngxClipboard [cbContent]="token.address">
+                            <mat-icon aria-label="Copy address to clipboard">content_copy</mat-icon>
+                        </button>
                     </span>
                 </div>
                 <div fxLayout="row" fxLayoutGap="4px">

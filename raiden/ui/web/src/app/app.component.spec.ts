@@ -2,6 +2,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
+import { ClipboardModule } from 'ngx-clipboard';
 
 import { AppComponent } from './app.component';
 import { MockConfig } from './components/channel-table/channel-table.component.spec';
@@ -31,6 +32,7 @@ describe('AppComponent', () => {
             imports: [
                 MaterialComponentsModule,
                 RouterTestingModule,
+                ClipboardModule,
                 HttpClientTestingModule,
                 NoopAnimationsModule
             ]
