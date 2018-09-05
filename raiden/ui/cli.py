@@ -72,6 +72,7 @@ from raiden.utils import (
     get_system_spec,
     is_supported_client,
     merge_dict,
+    pex,
     split_endpoint,
     typing,
 )
@@ -662,20 +663,6 @@ def run_app(
     if sync_check:
         check_synced(blockchain_service)
 
-    database_path = os.path.join(
-        datadir,
-        'netid_%s' % net_id,
-        address_hex[:8],
-        f'v{RAIDEN_DB_VERSION}_log.db',
-    )
-    config['database_path'] = database_path
-    print(
-        '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
-            database_path,
-        ),
-    )
-
     contract_addresses_given = (
         registry_contract_address is not None and
         secret_registry_contract_address is not None and
@@ -713,6 +700,22 @@ def run_app(
         handle_contract_no_code('secret registry', secret_registry_contract_address)
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
+
+    database_path = os.path.join(
+        datadir,
+        f'netid_{net_id}',
+        pex(token_network_registry.address),
+        address_hex[:8],
+        f'v{RAIDEN_DB_VERSION}_log.db',
+    )
+    config['database_path'] = database_path
+
+    print(
+        '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
+            constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
+            database_path,
+        ),
+    )
 
     discovery = None
     if transport == 'udp':
