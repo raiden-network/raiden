@@ -47,6 +47,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import (
     pex,
+    lpex,
     privatekey_to_address,
     random_secret,
     create_default_identifier,
@@ -260,6 +261,17 @@ class RaidenService(Runnable):
                 last_restored_block=last_log_block_number,
                 node=pex(self.address),
             )
+
+            known_networks = views.get_payment_network_identifiers(views.state_from_raiden(self))
+            if known_networks and self.default_registry.address not in known_networks:
+                configured_registry = pex(self.default_registry.address)
+                known_registries = lpex(known_networks)
+                raise RuntimeError(
+                    f'Token network address mismatch.\n'
+                    f'Raiden is configured to use the smart contract '
+                    f'{configured_registry}, which conflicts with the current known '
+                    f'smart contracts {known_registries}',
+                )
 
         # Restore the current snapshot group
         self.snapshot_group = last_log_block_number // SNAPSHOT_BLOCK_COUNT

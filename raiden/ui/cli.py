@@ -770,6 +770,9 @@ def run_app(
 
     try:
         raiden_app.start()
+    except RuntimeError as e:
+        click.secho(f'FATAL: {e}', fg='red')
+        sys.exit(1)
     except filelock.Timeout:
         name_or_id = constants.ID_TO_NETWORKNAME.get(network_id, network_id)
         print(
