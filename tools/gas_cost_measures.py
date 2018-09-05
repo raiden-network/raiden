@@ -21,7 +21,6 @@ pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
 class ContractTester:
     def __init__(self, generate_keys=0):
         self.tester = EthereumTester(PyEVMBackend())
-        self.tester.set_fork_block('FORK_BYZANTIUM', 0)
         self.web3 = Web3(EthereumTesterProvider(self.tester))
         if generate_keys > 0:
             generated_keys = [urandom(32) for _ in range(generate_keys)]
