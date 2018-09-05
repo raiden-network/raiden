@@ -21,7 +21,7 @@ class RaidenJSONEncoder(json.JSONEncoder):
 class RaidenJSONDecoder(json.JSONDecoder):
     """ A custom JSON decoder which facilitates
     specific object type invocation to restore
-    it's state.
+    its state.
     """
 
     # Maintain a global cache instance which lives across different decoder instances
