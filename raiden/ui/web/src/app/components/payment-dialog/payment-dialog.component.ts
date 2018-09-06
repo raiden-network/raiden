@@ -54,7 +54,6 @@ export class PaymentDialogComponent implements OnInit {
         this.form = this.fb.group({
             target_address: [data.targetAddress, (control) => control.value === raidenAddress ? {ownAddress: true} : undefined],
             amount: 0,
-            decimals: true,
             token: data.tokenAddress
         });
 
@@ -95,8 +94,7 @@ export class PaymentDialogComponent implements OnInit {
         this.form.setValue({
             target_address: targetAddress ? targetAddress : '',
             token: tokenAddress || '',
-            amount: 0,
-            decimals: true
+            amount: 0
         });
 
         this.tokenInput.resetAmount();

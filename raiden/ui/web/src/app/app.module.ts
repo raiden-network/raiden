@@ -6,7 +6,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 import { ClipboardModule } from 'ngx-clipboard';
 import { ToastrModule } from 'ngx-toastr';
-
 import { environment } from '../environments/environment';
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
@@ -30,11 +29,9 @@ import { TokenPipe } from './pipes/token.pipe';
 import { RaidenConfig } from './services/raiden.config';
 import { RaidenInterceptor } from './services/raiden.interceptor';
 import { RaidenService } from './services/raiden.service';
-
 import { SharedService } from './services/shared.service';
 import { DepositDialogComponent } from './components/deposit-dialog/deposit-dialog.component';
 import { ChannelEventsComponent } from './components/channel-events/channel-events.component';
-import { AllowedDecimalsDirective } from './directives/allowed-decimals.directive';
 import { DecimalPipe } from './pipes/decimal.pipe';
 import { TokenInputComponent } from './components/token-input/token-input.component';
 import { AddressInputComponent } from './components/address-input/address-input.component';
@@ -77,7 +74,6 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         ConfirmationDialogComponent,
         DepositDialogComponent,
         ChannelEventsComponent,
-        AllowedDecimalsDirective,
         DecimalPipe,
         TokenInputComponent,
         AddressInputComponent
