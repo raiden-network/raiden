@@ -716,7 +716,7 @@ def events_for_expired_locks(
         channel_identifier = balance_proof.channel_identifier
         channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
-        assert channel_state
+        assert channel_state, "Couldn't find channel for channel_id: {}".format(channel_identifier)
 
         secrethash = mediator_state.secrethash
         locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)

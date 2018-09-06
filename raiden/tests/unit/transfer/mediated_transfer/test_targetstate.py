@@ -575,7 +575,6 @@ def test_target_receive_lock_expired():
     )
 
     assert must_contain_entry(iteration.events, SendProcessed, {})
-
     assert iteration.new_state is None
 
 

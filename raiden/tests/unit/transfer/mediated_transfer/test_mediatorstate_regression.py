@@ -52,7 +52,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         our_balance=amount,
         token_address=UNIT_TOKEN_ADDRESS,
     )
-    channelmap = {
+    channel_map = {
         channel1.identifier: channel1,
         payer_channel.identifier: payer_channel,
     }
@@ -63,7 +63,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state,
         possible_routes,
         payer_channel,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -81,7 +81,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         block_iteration = mediator.handle_block(
             new_state,
             block_state_change,
-            channelmap,
+            channel_map,
             pseudo_random_generator,
             block_number,
         )
@@ -96,7 +96,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     paid_iteration = mediator.state_transition(
         new_state,
         receive_secret,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -110,7 +110,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     block_iteration = mediator.handle_block(
         paid_state,
         expired_block_state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         expired_block_number,
     )

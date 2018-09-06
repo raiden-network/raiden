@@ -58,8 +58,8 @@ class SendLockExpired(SendMessageEvent):
             isinstance(other, SendLockExpired) and
             self.message_identifier == other.message_identifier and
             self.balance_proof == other.balance_proof and
-            self.recipient == other.recipient and
-            self.secrethash == other.secrethash
+            self.secrethash == other.secrethash and
+            self.recipient == other.recipient
         )
 
     def __ne__(self, other):

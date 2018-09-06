@@ -83,7 +83,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import typing
+from raiden.utils import pex, typing
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 
 
@@ -406,7 +406,7 @@ def is_valid_lockedtransfer(
     )
 
 
-def is_valid_lockexpired(
+def is_valid_lock_expired(
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
@@ -418,7 +418,7 @@ def is_valid_lockexpired(
     if not lock:
         # If we don't find the lock,
         # it must have been removed earlier.
-        msg = 'Lock with secrethash {} does not exist'.format(state_change.secrethash)
+        msg = f'Lock with secrethash {pex(state_change.secrethash)} does not exist'
         return (False, msg, None)
 
     current_balance_proof = get_current_balanceproof(sender_state)
@@ -516,7 +516,7 @@ def is_valid_lockexpired(
             result = (False, msg, None)
 
         elif received_balance_proof.locked_amount != expected_locked_amount:
-            # locked amount should be be the same as BP given the current lock expiry
+            # locked amount should be the same found inside the balance proof
             msg = (
                 'Invalid LockExpired message. '
                 "Balance proof's locked_amount is invalid, expected: {} got: {}."
@@ -1512,7 +1512,7 @@ def events_for_expired_lock(
         secrethash: typing.SecretHash,
         locked_lock: LockedTransferUnsignedState,
         pseudo_random_generator: random.Random,
-) -> SendLockExpired:
+) -> typing.List[SendLockExpired]:
     nonce = get_next_nonce(channel_state.our_state)
     locked_amount = get_amount_locked(channel_state.our_state)
     our_balance_proof = channel_state.our_state.balance_proof
@@ -1551,7 +1551,7 @@ def delete_secrethash_endstate(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
         lock: LockedTransferUnsignedState,
-):
+) -> None:
     if is_lock_locked(end_state, secrethash):
         end_state.merkletree = compute_merkletree_without(
             end_state.merkletree,
@@ -1811,9 +1811,9 @@ def handle_refundtransfer(
 def handle_receive_lock_expired(
         channel_state: NettingChannelState,
         state_change: ReceiveLockExpired,
-):
+) -> TransitionResult:
     """Remove expired locks from channel states."""
-    is_valid, msg, merkletree = is_valid_lockexpired(
+    is_valid, _, merkletree = is_valid_lock_expired(
         state_change,
         channel_state,
         channel_state.partner_state,

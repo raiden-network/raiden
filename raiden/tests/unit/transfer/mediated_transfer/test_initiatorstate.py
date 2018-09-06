@@ -51,7 +51,7 @@ from raiden.utils import random_secret
 def make_initiator_manager_state(
         routes,
         transfer_description,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
 ):
@@ -65,7 +65,7 @@ def make_initiator_manager_state(
     iteration = initiator_manager.state_transition(
         inital_state,
         init_state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -92,7 +92,7 @@ def test_next_route():
     )
     pseudo_random_generator = random.Random()
 
-    channelmap = {
+    channel_map = {
         channel1.identifier: channel1,
         channel2.identifier: channel2,
         channel3.identifier: channel3,
@@ -108,7 +108,7 @@ def test_next_route():
     state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -125,7 +125,7 @@ def test_next_route():
     iteration = initiator_manager.state_transition(
         state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -140,7 +140,7 @@ def test_init_with_usable_routes():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
 
@@ -153,7 +153,7 @@ def test_init_with_usable_routes():
     transition = initiator_manager.state_transition(
         None,
         init_state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -188,11 +188,11 @@ def test_init_without_routes():
         routes,
     )
 
-    channelmap = dict()
+    channel_map = dict()
     iteration = initiator_manager.state_transition(
         None,
         init_state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -214,12 +214,12 @@ def test_state_wait_secretrequest_valid():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -240,7 +240,7 @@ def test_state_wait_secretrequest_valid():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -258,13 +258,13 @@ def test_state_wait_unlock_valid():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -284,7 +284,7 @@ def test_state_wait_unlock_valid():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -313,12 +313,12 @@ def test_state_wait_unlock_invalid():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -340,7 +340,7 @@ def test_state_wait_unlock_invalid():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -376,7 +376,7 @@ def test_refund_transfer_next_route():
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
 
-    channelmap = {
+    channel_map = {
         channel1.identifier: channel1,
         channel2.identifier: channel2,
         channel3.identifier: channel3,
@@ -392,14 +392,14 @@ def test_refund_transfer_next_route():
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
 
     original_transfer = current_state.initiator.transfer
     channel_identifier = current_state.initiator.channel_identifier
-    channel_state = channelmap[channel_identifier]
+    channel_state = channel_map[channel_identifier]
 
     refund_transfer = factories.make_signed_transfer(
         amount,
@@ -424,7 +424,7 @@ def test_refund_transfer_next_route():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -454,20 +454,20 @@ def test_refund_transfer_no_more_routes():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
 
     original_transfer = current_state.initiator.transfer
     channel_identifier = current_state.initiator.channel_identifier
-    channel_state = channelmap[channel_identifier]
+    channel_state = channel_map[channel_identifier]
 
     refund_transfer = factories.make_signed_transfer(
         amount,
@@ -491,7 +491,7 @@ def test_refund_transfer_no_more_routes():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -515,13 +515,13 @@ def test_refund_transfer_invalid_sender():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -547,7 +547,7 @@ def test_refund_transfer_invalid_sender():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -567,13 +567,13 @@ def test_cancel_transfer():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -585,7 +585,7 @@ def test_cancel_transfer():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -619,7 +619,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
 
@@ -630,7 +630,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
         transitions.append(initiator_manager.state_transition(
             None,
             init_state_change,
-            channelmap,
+            channel_map,
             pseudo_random_generator,
             block_number,
         ))
@@ -652,7 +652,7 @@ def test_handle_secretreveal():
         token_address=UNIT_TOKEN_ADDRESS,
         token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     )
-    channelmap = {channel1.identifier: channel1}
+    channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
     block_number = 10
@@ -660,7 +660,7 @@ def test_handle_secretreveal():
     manager_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -703,7 +703,7 @@ def test_initiator_lock_expired():
     )
     pseudo_random_generator = random.Random()
 
-    channelmap = {
+    channel_map = {
         channel1.identifier: channel1,
         channel2.identifier: channel2,
     }
@@ -717,7 +717,7 @@ def test_initiator_lock_expired():
     current_state = make_initiator_manager_state(
         available_routes,
         factories.UNIT_TRANSFER_DESCRIPTION,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -734,7 +734,7 @@ def test_initiator_lock_expired():
     iteration = initiator_manager.state_transition(
         current_state,
         state_change,
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -755,7 +755,7 @@ def test_initiator_lock_expired():
     transfer2_state = make_initiator_manager_state(
         available_routes,
         make_transfer_description('transfer2'),
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         30,
     )
@@ -764,7 +764,7 @@ def test_initiator_lock_expired():
     transfer3_state = make_initiator_manager_state(
         available_routes,
         make_transfer_description('transfer3'),
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         32,
     )
@@ -780,7 +780,7 @@ def test_initiator_lock_expired():
     iteration = initiator_manager.state_transition(
         transfer2_state,
         Block(expiration_block_number),
-        channelmap,
+        channel_map,
         pseudo_random_generator,
         expiration_block_number,
     )
