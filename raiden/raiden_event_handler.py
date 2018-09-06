@@ -52,11 +52,11 @@ def handle_send_lockexpired(
         raiden: RaidenService,
         send_lock_expired: SendLockExpired,
 ):
-    mediated_transfer_message = message_from_sendevent(send_lock_expired, raiden.address)
-    raiden.sign(mediated_transfer_message)
+    lock_expired_message = message_from_sendevent(send_lock_expired, raiden.address)
+    raiden.sign(lock_expired_message)
     raiden.transport.send_async(
         send_lock_expired.queue_identifier,
-        mediated_transfer_message,
+        lock_expired_message,
     )
 
 
