@@ -1,4 +1,4 @@
-from itertools import count
+from itertools import count, combinations
 from http import HTTPStatus
 
 import gevent
@@ -12,6 +12,7 @@ import grequests
 import pytest
 import structlog
 
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import (
     APIServer,
@@ -20,7 +21,8 @@ from raiden.api.rest import (
 from raiden.app import App
 from raiden.transfer import views
 from raiden.network.transport import UDPTransport
-from raiden.tests.integration.api.fixtures import wait_for_listening_port
+from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     wait_assert,
@@ -78,6 +80,7 @@ def restart_app(app):
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
         transport=new_transport,
+        raiden_event_handler=RaidenEventHandler(),
         discovery=app.raiden.discovery,
     )
 
@@ -86,24 +89,39 @@ def restart_app(app):
     return app
 
 
-def restart_network(raiden_network):
+def restart_network(raiden_network, retry_timeout):
     for app in raiden_network:
         app.stop()
 
-    new_network = [
-        restart_app(app)
+    wait_network = [
+        gevent.spawn(restart_app, app)
         for app in raiden_network
     ]
+
+    gevent.wait(wait_network)
+
+    new_network = [
+        greenlet.get()
+        for greenlet in wait_network
+    ]
+
+    # The tests assume the nodes are available to transfer
+    for app0, app1 in combinations(new_network, 2):
+        waiting.wait_for_healthy(
+            app0.raiden,
+            app1.raiden.address,
+            retry_timeout,
+        )
 
     return new_network
 
 
-def restart_network_and_apiservers(raiden_network, api_servers, port_generator):
+def restart_network_and_apiservers(raiden_network, api_servers, port_generator, retry_timeout):
     """Stop an app and start it back"""
     for rest_api in api_servers:
         rest_api.stop()
 
-    new_network = restart_network(raiden_network)
+    new_network = restart_network(raiden_network, retry_timeout)
     new_servers = start_apiserver_for_network(new_network, port_generator)
 
     return (new_network, new_servers)
@@ -282,7 +300,7 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize('deposit', [5])
 @pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
-def test_stress(raiden_network, deposit, token_addresses, port_generator):
+def test_stress(raiden_network, deposit, retry_timeout, token_addresses, port_generator):
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
@@ -314,6 +332,7 @@ def test_stress(raiden_network, deposit, token_addresses, port_generator):
             raiden_network,
             rest_apis,
             port_generator,
+            retry_timeout,
         )
 
         with gevent.Timeout(timeout):
@@ -335,6 +354,7 @@ def test_stress(raiden_network, deposit, token_addresses, port_generator):
             raiden_network,
             rest_apis,
             port_generator,
+            retry_timeout,
         )
 
         with gevent.Timeout(timeout):
@@ -356,6 +376,7 @@ def test_stress(raiden_network, deposit, token_addresses, port_generator):
             raiden_network,
             rest_apis,
             port_generator,
+            retry_timeout,
         )
 
-    restart_network(raiden_network)
+    restart_network(raiden_network, retry_timeout)
