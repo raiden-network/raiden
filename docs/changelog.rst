@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature: `2363` Add copy functionality for addresses shown on the webui.
 * :bug:`2362` Renamed wallet to tokens in the webui.
 * :bug:`2291` Adds EIP55 address validation to webui address inputs.
 * :bug:`2283` Fix API server Internal server error at token deposits.

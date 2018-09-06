@@ -9,6 +9,11 @@
     <span class="truncate account">
         {{raidenAddress}}
     </span>
+    <span>
+        <button mat-icon-button ngxClipboard [cbContent]="raidenAddress">
+            <mat-icon aria-label="Copy address to clipboard">content_copy</mat-icon>
+        </button>
+    </span>
     <span style="width: 36px; margin-right: 25px">
         <img class="round identicon" src="{{identicon(raidenAddress)}}"/>
     </span>

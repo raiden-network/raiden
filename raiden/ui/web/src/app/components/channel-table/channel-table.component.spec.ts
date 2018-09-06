@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
+import { ClipboardModule } from 'ngx-clipboard';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { EMPTY } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
@@ -93,6 +94,7 @@ describe('ChannelTableComponent', () => {
                 MaterialComponentsModule,
                 RouterTestingModule,
                 FormsModule,
+                ClipboardModule,
                 ToastrModule.forRoot(),
                 NoopAnimationsModule
             ]
