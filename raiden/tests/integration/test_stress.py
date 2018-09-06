@@ -104,7 +104,7 @@ def restart_network_and_apiservers(raiden_network, api_servers, port_generator):
         rest_api.stop()
 
     new_network = restart_network(raiden_network)
-    new_servers = start_apiserver_for_network(raiden_network, port_generator)
+    new_servers = start_apiserver_for_network(new_network, port_generator)
 
     return (new_network, new_servers)
 
