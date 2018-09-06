@@ -15,7 +15,7 @@ from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenShuttingDown
+from raiden.exceptions import InvalidAddress, RaidenRecoverableError
 from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
@@ -382,7 +382,7 @@ class RaidenService(Runnable):
             self.transport.get()
             self.alarm.get()
             self.blockchain_events.uninstall_all_event_listeners()
-        except (gevent.Timeout, RaidenShuttingDown):
+        except gevent.Timeout:
             pass
 
         self.blockchain_events.reset()

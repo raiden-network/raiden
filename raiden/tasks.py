@@ -8,7 +8,6 @@ from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
 
-from raiden.exceptions import RaidenShuttingDown
 from raiden.utils import gas_reserve, get_system_spec
 from raiden.utils.runnable import Runnable
 
@@ -96,8 +95,6 @@ class AlarmTask(Runnable):
     def _run(self):  # pylint: disable=method-hidden
         try:
             self.loop_until_stop()
-        except RaidenShuttingDown:
-            pass
         finally:
             self.callbacks = list()
 
