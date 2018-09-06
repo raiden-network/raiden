@@ -415,7 +415,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addresses):
+def test_automatic_secret_registration(raiden_chain, deposit, token_addresses, reveal_timeout):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -423,10 +423,6 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
         app0.raiden.default_registry.address,
         token_address,
     )
-
-    token_proxy = app0.raiden.chain.token(token_address)
-    initial_balance0 = token_proxy.balance_of(app0.raiden.address)
-    initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
     amount = 100
     identifier = 1
@@ -447,34 +443,14 @@ def test_close_channel_lack_of_balance_proof(raiden_chain, deposit, token_addres
     app0.raiden.sign(reveal_secret)
     message_handler.on_message(app1.raiden, reveal_secret)
 
-    RaidenAPI(app0.raiden).channel_close(
-        app0.raiden.default_registry.address,
-        token_address,
-        app1.raiden.address,
-    )
+    chain_state = views.state_from_app(app1)
 
-    channel_state = get_channelstate(app0, app1, token_network_identifier)
-    waiting.wait_for_settle(
-        app0.raiden,
-        app0.raiden.default_registry.address,
-        token_address,
-        [channel_state.identifier],
-        app0.raiden.alarm.sleep_time,
-    )
+    secrethash = sha3(secret)
+    target_task = chain_state.payment_mapping.secrethashes_to_task[secrethash]
+    lock_expiration = target_task.target_state.transfer.lock.expiration
+    wait_until_block(app1.raiden.chain, lock_expiration)
 
-    # wait for the node to call batch unlock
-    with gevent.Timeout(10):
-        wait_for_batch_unlock(
-            app0,
-            token_network_identifier,
-            channel_state.partner_state.address,
-            channel_state.our_state.address,
-        )
-
-    expected_balance0 = initial_balance0 + deposit - amount
-    expected_balance1 = initial_balance1 + deposit + amount
-    assert token_proxy.balance_of(app0.raiden.address) == expected_balance0
-    assert token_proxy.balance_of(app1.raiden.address) == expected_balance1
+    assert app1.raiden.default_secret_registry.check_registered(secrethash)
 
 
 @pytest.mark.xfail(reason='test incomplete')
