@@ -8,7 +8,11 @@ from eth_utils import to_checksum_address
 
 
 def spawn_raiden(args):
-    return pexpect.spawn(sys.executable, ['-m', 'raiden'] + args, logfile=sys.stdout)
+    return pexpect.spawn(
+        sys.executable, ['-m', 'raiden'] + args,
+        logfile=sys.stdout,
+        encoding='utf-8',
+    )
 
 
 def test_cli_version():
@@ -157,7 +161,6 @@ def test_cli_registry_address_without_deployed_contract(cli_args):
     child = spawn_raiden(cli_args)
     try:
         expect_cli_until_account_selection(child)
-        child.expect('You are connected')
         child.expect('contract does not contain code')
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
