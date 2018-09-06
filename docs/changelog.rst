@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug: `2730` Fixes a few issues with the token amount input.
 * :bug:`2439` Return properly filtered results from the API payments event endpoint
 * :bug:`2419` Fix Matrix transport crash due to inability to decode events
 * :bug:`2427` Fix a bug crashing the client when an unlock event for our address is seen on the chain
