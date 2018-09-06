@@ -427,7 +427,7 @@ class RaidenService(Runnable):
     def stop(self):
         """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
         if self.stop_event.ready():  # not started
-            return
+            raise RuntimeError(f'{self!r} already stopped')
 
         # Needs to come before any greenlets joining
         self.stop_event.set()

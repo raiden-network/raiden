@@ -16,7 +16,8 @@ def cleanup_tasks():
 
 def shutdown_apps_and_cleanup_tasks(raiden_apps):
     for app in raiden_apps:
-        app.stop()
+        if app:
+            app.stop()
 
     # Two tests in sequence could run a UDP server on the same port, a hanging
     # greenlet from the previous tests could send packet to the new server and
