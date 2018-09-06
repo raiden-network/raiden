@@ -10,8 +10,6 @@ monkey.patch_all()
 
 if True:
     import pytest
-
-    from raiden.exceptions import RaidenShuttingDown
     from raiden.log_config import configure_logging
     from raiden.tests.fixtures.variables import *  # noqa: F401,F403
     from raiden.utils.cli import LogLevelConfigType
@@ -161,7 +159,7 @@ def dont_exit_pytest():
     This allows the test suite to finish in case an exception is unhandled.
     """
     gevent.get_hub().SYSTEM_ERROR = BaseException
-    gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit, RaidenShuttingDown)
+    gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
 
 
 if sys.platform == 'darwin':

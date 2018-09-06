@@ -8,13 +8,7 @@ from eth_utils import is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.server import DatagramServer
 
-from raiden.exceptions import (
-    InvalidAddress,
-    InvalidProtocolMessage,
-    RaidenShuttingDown,
-    UnknownAddress,
-)
-
+from raiden.exceptions import InvalidAddress, InvalidProtocolMessage, UnknownAddress
 from raiden.message_handler import on_message
 from raiden.messages import Delivered, Message, Ping, Pong, decode
 from raiden.network.transport.udp import healthcheck
@@ -137,19 +131,16 @@ def single_queue_send(
             message_retry_max_timeout,
         )
 
-        try:
-            acknowledged = retry_with_recovery(
-                transport,
-                messagedata,
-                message_id,
-                recipient,
-                event_stop,
-                event_healthy,
-                event_unhealthy,
-                backoff,
-            )
-        except RaidenShuttingDown:  # For a clean shutdown process
-            return
+        acknowledged = retry_with_recovery(
+            transport,
+            messagedata,
+            message_id,
+            recipient,
+            event_stop,
+            event_healthy,
+            event_unhealthy,
+            backoff,
+        )
 
         if acknowledged:
             queue.get()
@@ -203,7 +194,7 @@ class UDPTransport(Runnable):
         self.get_host_port = cache_wrapper(discovery.get)
 
         self.throttle_policy = throttle_policy
-        self.server = DatagramServer(udpsocket, handle=self._receive)
+        self.server = DatagramServer(udpsocket, handle=self.receive)
 
     def start(
             self,
@@ -219,7 +210,7 @@ class UDPTransport(Runnable):
 
         # server.stop() clears the handle. Since this may be a restart the
         # handle must always be set
-        self.server.set_handle(self._receive)
+        self.server.set_handle(self.receive)
 
         for queue_identifier, queue in queueids_to_queues.items():
             encoded_queue = [
@@ -474,12 +465,6 @@ class UDPTransport(Runnable):
                 messagedata,
                 host_port,
             )
-
-    def _receive(self, data, host_port):  # pylint: disable=unused-argument
-        try:
-            self.receive(data)
-        except RaidenShuttingDown:  # For a clean shutdown
-            return
 
     def receive(self, messagedata: bytes) -> bool:
         """ Handle an UDP packet. """

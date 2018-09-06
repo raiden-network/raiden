@@ -4,7 +4,7 @@ from itertools import repeat
 import structlog
 from gevent.event import Event
 
-from raiden.exceptions import RaidenShuttingDown, UnknownAddress
+from raiden.exceptions import UnknownAddress
 from raiden.network.transport.udp import udp_utils
 from raiden.transfer import views
 from raiden.transfer.state import (
@@ -99,17 +99,14 @@ def healthcheck(
         message_id = ('ping', ping_nonce['nonce'], recipient)
 
         # Send Ping a few times before setting the node as unreachable
-        try:
-            acknowledged = udp_utils.retry(
-                transport,
-                messagedata,
-                message_id,
-                recipient,
-                stop_event,
-                [nat_keepalive_timeout] * nat_keepalive_retries,
-            )
-        except RaidenShuttingDown:  # For a clean shutdown process
-            return
+        acknowledged = udp_utils.retry(
+            transport,
+            messagedata,
+            message_id,
+            recipient,
+            stop_event,
+            [nat_keepalive_timeout] * nat_keepalive_retries,
+        )
 
         if stop_event.is_set():
             return
@@ -138,17 +135,14 @@ def healthcheck(
             # Retry until recovery, used for:
             # - Checking node status.
             # - Nat punching.
-            try:
-                acknowledged = udp_utils.retry(
-                    transport,
-                    messagedata,
-                    message_id,
-                    recipient,
-                    stop_event,
-                    repeat(nat_invitation_timeout),
-                )
-            except RaidenShuttingDown:  # For a clean shutdown process
-                return
+            acknowledged = udp_utils.retry(
+                transport,
+                messagedata,
+                message_id,
+                recipient,
+                stop_event,
+                repeat(nat_invitation_timeout),
+            )
 
         if acknowledged:
             current_state = views.get_node_network_status(
