@@ -57,6 +57,9 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
+from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
@@ -488,7 +491,7 @@ def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) ->
     # TODO: improve the complexity of this algorithm
     queueids_to_remove = []
     for queueid, queue in chain_state.queueids_to_queues.items():
-        if queueid[1] == 'global':
+        if queueid[1] == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
             filtered_queue = [
                 message
                 for message in queue
