@@ -98,7 +98,7 @@ class SendMessageEvent(Event):
             token_network_identifier: TokenNetworkID,
             channel_identifier: ChannelID,
             message_identifier: MessageID,
-            ordered: bool,
+            ordered: bool=False,
     ):
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)

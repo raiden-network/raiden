@@ -9,14 +9,6 @@ from raiden.utils import pex, sha3
 from raiden.utils import typing
 
 
-# According to the smart contracts as of 07/08:
-# https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
-# channel_identifier can never be 0. We make this a requirement in the client and use this fact
-# to signify that a channel_identifier of `0` passed to the messages adds them to the
-# global queue
-CHANNEL_IDENTIFIER_GLOBAL_QUEUE = 0
-
-
 def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
     queue_id = send_lockedtransfer_event.queue_identifier

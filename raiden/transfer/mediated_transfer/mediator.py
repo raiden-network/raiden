@@ -10,7 +10,6 @@ from raiden.transfer.events import (
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockFailed,
     EventUnlockSuccess,
     EventUnlockClaimFailed,
@@ -552,7 +551,7 @@ def events_for_revealsecret(
                 recipient=payer_transfer.balance_proof.sender,
                 payment_network_identifier=payer_channel.payment_network_identifier,
                 token_network_identifier=payer_channel.token_network_identifier,
-                channel_identifier=payer_channel.channel_identifier,
+                channel_identifier=payer_channel.identifier,
                 message_identifier=message_identifier,
                 secret=secret,
             )
@@ -1047,7 +1046,9 @@ def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifier
 
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
-                        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+                        payment_network_identifier=channel_state.payment_network_identifier,
+                        token_network_identifier=channel_state.token_network_identifier,
+                        channel_identifier=channel_state.identifier,
                         message_identifier=state_change.message_identifier,
                     )
                     events.append(send_processed)

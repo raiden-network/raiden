@@ -67,6 +67,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.utils import typing
+from raiden.utils.notifying_queue import QueueIdentifier
 
 
 def get_networks(
@@ -491,14 +492,14 @@ def handle_token_network_action(
 
             # clean both ordered and unordered queues for channel
             queueids_to_clean = [
-                typing.QueueIdentifier(
+                QueueIdentifier(
                     recipient=channel_state.partner_state.address,
                     payment_network_identifier=channel_state.payment_network_identifier,
                     token_network_identifier=channel_state.token_network_identifier,
                     channel_identifier=channel_state.channel_identifier,
                     ordered=True,
                 ),
-                typing.QueueIdentifier(
+                QueueIdentifier(
                     recipient=channel_state.partner_state.address,
                     payment_network_identifier=channel_state.payment_network_identifier,
                     token_network_identifier=channel_state.token_network_identifier,
