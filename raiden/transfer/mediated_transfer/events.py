@@ -66,6 +66,27 @@ class SendLockExpired(SendMessageEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'message_identifier': self.message_identifier,
+            'balance_proof': self.balance_proof,
+            'secrethash': serialization.serialize_bytes(self.secrethash),
+            'recipient': to_checksum_address(self.recipient),
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendLockExpired':
+        restored = cls(
+            recipient=to_canonical_address(data['recipient']),
+            message_identifier=data['message_identifier'],
+            balance_proof=data['balance_proof'],
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
+        )
+
+        return restored
+
 
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """

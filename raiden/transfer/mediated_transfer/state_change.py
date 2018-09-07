@@ -259,6 +259,23 @@ class ReceiveLockExpired(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'sender': to_checksum_address(self.sender),
+            'balance_proof': self.balance_proof,
+            'secrethash': serialize_bytes(self.secrethash),
+            'message_identifier': self.message_identifier,
+        }
+
+    @classmethod
+    def from_dict(cls, data) -> 'ReceiveLockExpired':
+        return cls(
+            sender=to_canonical_address(data['sender']),
+            balance_proof=data['balance_proof'],
+            secrethash=deserialize_bytes(data['secrethash']),
+            message_identifier=data['message_identifier'],
+        )
+
 
 class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
