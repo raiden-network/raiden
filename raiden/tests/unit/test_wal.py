@@ -6,6 +6,7 @@ import pytest
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
+from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_from_latest_snapshot
 from raiden.tests.utils import factories
 from raiden.transfer.architecture import State, StateManager, TransitionResult
@@ -131,6 +132,22 @@ def test_write_read_log():
     assert wal.storage.get_latest_state_snapshot() == (2, 'BBBB')
 
 
+def test_timestamped_event():
+    event = EventPaymentSentFailed(
+        factories.make_payment_network_identifier(),
+        factories.make_address(),
+        1,
+        factories.make_address(),
+        'whatever',
+    )
+    log_time = '2018-09-07T20:02:35.000'
+
+    timestamped = TimestampedEvent(event, log_time)
+    assert timestamped.log_time == log_time
+    assert timestamped.reason == timestamped.wrapped_event.reason == 'whatever'
+    assert timestamped.identifier == 1
+
+
 def test_write_read_events():
     wal = new_wal()
 
@@ -148,21 +165,26 @@ def test_write_read_events():
         wal.storage.write_events(
             unexisting_state_change_id,
             event_list,
+            '2018-08-31T17:38:00.000',
         )
 
     previous_events = wal.storage.get_events()
 
+    log_time = '2018-09-07T20:02:35.0000'
     state_change_id = wal.storage.write_state_change('statechangedata')
     wal.storage.write_events(
         state_change_id,
         event_list,
+        log_time,
     )
 
     new_events = wal.storage.get_events()
     assert len(previous_events) + 1 == len(new_events)
 
     latest_event = new_events[-1]
-    assert isinstance(latest_event, EventPaymentSentFailed)
+    assert isinstance(latest_event, TimestampedEvent)
+    assert isinstance(latest_event.wrapped_event, EventPaymentSentFailed)
+    assert latest_event.log_time == log_time
 
 
 def test_restore_without_snapshot():
