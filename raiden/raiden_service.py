@@ -13,7 +13,7 @@ from gevent.lock import Semaphore
 
 from raiden import constants, routing, waiting
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import SNAPSHOT_BLOCK_COUNT
+from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import InvalidAddress, RaidenShuttingDown
 from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
@@ -278,7 +278,8 @@ class RaidenService(Runnable):
         serialize.RaidenJSONDecoder.cache_object_references = False
 
         # Restore the current snapshot group
-        self.snapshot_group = last_log_block_number // SNAPSHOT_BLOCK_COUNT
+        state_change_qty = self.wal.storage.count_state_changes()
+        self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
         # Install the filters using the correct from_block value, otherwise
         # blockchain logs can be lost.
@@ -391,17 +392,6 @@ class RaidenService(Runnable):
     def handle_state_change(self, state_change):
         log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
 
-        # Take a snapshot every SNAPSHOT_BLOCK_COUNT
-        # TODO: Gather more data about storage requirements
-        # and update the value to specify how often we need
-        # capturing a snapshot should take place
-        block_number = self.get_block_number()
-        new_snapshot_group = block_number // SNAPSHOT_BLOCK_COUNT
-        if new_snapshot_group > self.snapshot_group:
-            log.debug(f'Storing snapshot at block: {block_number}')
-            self.wal.snapshot()
-            self.snapshot_group = new_snapshot_group
-
         event_list = self.wal.log_and_dispatch(state_change)
 
         if self.dispatch_events_lock.locked():
@@ -410,6 +400,16 @@ class RaidenService(Runnable):
         for event in event_list:
             log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
             on_raiden_event(self, event)
+
+        # Take a snapshot every SNAPSHOT_STATE_CHANGES_COUNT
+        # TODO: Gather more data about storage requirements
+        # and update the value to specify how often we need
+        # capturing a snapshot should take place
+        new_snapshot_group = self.wal.storage.count_state_changes() // SNAPSHOT_STATE_CHANGES_COUNT
+        if new_snapshot_group > self.snapshot_group:
+            log.debug(f'Storing snapshot: {new_snapshot_group}')
+            self.wal.snapshot()
+            self.snapshot_group = new_snapshot_group
 
         return event_list
 

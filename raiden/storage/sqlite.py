@@ -69,6 +69,16 @@ class SQLiteStorage:
 
         return int(query[0][0])
 
+    def count_state_changes(self) -> int:
+        cursor = self.conn.cursor()
+        query = cursor.execute('SELECT COUNT(1) FROM state_changes')
+        query = query.fetchall()
+
+        if len(query) == 0:
+            return 0
+
+        return int(query[0][0])
+
     def write_state_change(self, state_change):
         serialized_data = self.serializer.serialize(state_change)
 
