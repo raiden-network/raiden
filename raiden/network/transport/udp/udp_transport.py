@@ -466,7 +466,11 @@ class UDPTransport(Runnable):
                 host_port,
             )
 
-    def receive(self, messagedata: bytes) -> bool:
+    def receive(
+            self,
+            messagedata: bytes,
+            host_port: typing.Tuple[str, int],  # pylint: disable=unused-argument
+    ) -> bool:
         """ Handle an UDP packet. """
         # pylint: disable=unidiomatic-typecheck
 
