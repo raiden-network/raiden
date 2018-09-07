@@ -50,13 +50,15 @@ def event_filter(
         token_network_identifier: typing.TokenNetworkID = None,
         target_address: typing.Address = None,
 ):
+    event_target = getattr(event, 'target', None)
     return (
         isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and (
             token_network_identifier is None or
             token_network_identifier == event.token_network_identifier
         ) and (
             target_address is None or
-            getattr(event, 'target', None) == target_address
+            event_target is None or
+            event_target == target_address
         )
     )
 
