@@ -12,7 +12,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
@@ -127,7 +126,9 @@ def handle_inittarget(
         recipient = transfer.initiator
         secret_request = SendSecretRequest(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=message_identifier,
             payment_identifier=transfer.payment_identifier,
             amount=transfer.lock.amount,
@@ -191,7 +192,9 @@ def handle_secretreveal(
         # the transport and not by the state machine
         reveal = SendRevealSecret(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=message_identifier,
             secret=target_state.secret,
         )
@@ -237,7 +240,9 @@ def handle_unlock(
 
             send_processed = SendProcessed(
                 recipient=balance_proof_sender,
-                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
                 message_identifier=state_change.message_identifier,
             )
 

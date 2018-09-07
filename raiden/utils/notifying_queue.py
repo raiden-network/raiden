@@ -42,11 +42,18 @@ class NotifyingQueue(Event):
 
 class QueueIdentifier(typing.NamedTuple):
     recipient: typing.Address
-    channel_identifier: typing.ChannelID
+    payment_network_identifier: typing.PaymentNetworkID
+    # None means queue has messages not tied to any channel
+    token_network_identifier: typing.TokenNetworkID = None
+    channel_identifier: typing.ChannelID = None
+    ordered: bool = False  # default to previously 'global' queue
 
     def __repr__(self):
         return (
             f'<'
-            f'QueueIdentifier recipient:{pex(self.recipient)} channelid:{self.channel_identifier}'
+            f'QueueIdentifier recipient:{pex(self.recipient)} '
+            f'payment_network:{pex(self.payment_network_identifier)} '
+            f'token:{pex(self.token_network_identifier)} '
+            f'channelid:{self.channel_identifier}'
             f'>'
         )

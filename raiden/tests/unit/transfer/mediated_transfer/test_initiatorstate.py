@@ -36,7 +36,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
@@ -272,7 +271,9 @@ def test_state_wait_unlock_valid():
     # setup the state for the wait unlock
     current_state.initiator.revealsecret = SendRevealSecret(
         recipient=UNIT_TRANSFER_TARGET,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        payment_network_identifier=channel1.payment_network_identifier,
+        token_network_identifier=channel1.token_network_identifier,
+        channel_identifier=channel1.identifier,
         message_identifier=UNIT_TRANSFER_IDENTIFIER,
         secret=UNIT_SECRET,
     )
@@ -326,7 +327,9 @@ def test_state_wait_unlock_invalid():
     # setup the state for the wait unlock
     current_state.initiator.revealsecret = SendRevealSecret(
         recipient=target_address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        payment_network_identifier=channel1.payment_network_identifier,
+        token_network_identifier=channel1.token_network_identifier,
+        channel_identifier=channel1.identifier,
         message_identifier=identifier,
         secret=UNIT_SECRET,
     )

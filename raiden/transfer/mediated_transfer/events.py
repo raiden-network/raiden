@@ -9,19 +9,14 @@ from raiden.utils import pex, sha3
 from raiden.utils import typing
 
 
-# According to the smart contracts as of 07/08:
-# https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
-# channel_identifier can never be 0. We make this a requirement in the client and use this fact
-# to signify that a channel_identifier of `0` passed to the messages adds them to the
-# global queue
-CHANNEL_IDENTIFIER_GLOBAL_QUEUE = 0
-
-
 def refund_from_sendmediated(send_lockedtransfer_event):
     transfer = send_lockedtransfer_event.transfer
+    queue_id = send_lockedtransfer_event.queue_identifier
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
-        channel_identifier=send_lockedtransfer_event.queue_identifier[1],
+        payment_network_identifier=queue_id.payment_network_identifier,
+        token_network_identifier=queue_id.token_network_identifier,
+        channel_identifier=queue_id.channel_identifier,
         message_identifier=send_lockedtransfer_event.message_identifier,
         payment_identifier=transfer.payment_identifier,
         token_address=transfer.token,
@@ -72,6 +67,8 @@ class SendLockedTransfer(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             transfer: LockedTransferUnsignedState,
@@ -79,7 +76,14 @@ class SendLockedTransfer(SendMessageEvent):
         if not isinstance(transfer, LockedTransferUnsignedState):
             raise ValueError('transfer must be a LockedTransferUnsignedState instance')
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=True,
+        )
 
         self.transfer = transfer
 
@@ -133,13 +137,22 @@ class SendRevealSecret(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             secret: typing.Secret,
     ):
         secrethash = sha3(secret)
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=False,
+        )
 
         self.secret = secret
         self.secrethash = secrethash
@@ -184,6 +197,8 @@ class SendBalanceProof(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
@@ -191,7 +206,14 @@ class SendBalanceProof(SendMessageEvent):
             secret: typing.Secret,
             balance_proof: BalanceProofUnsignedState,
     ):
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=True,
+        )
 
         self.payment_identifier = payment_identifier
         self.token = token_address
@@ -237,6 +259,8 @@ class SendSecretRequest(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
@@ -244,8 +268,14 @@ class SendSecretRequest(SendMessageEvent):
             expiration: typing.BlockExpiration,
             secrethash: typing.SecretHash,
     ):
-
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=False,
+        )
 
         self.payment_identifier = payment_identifier
         self.amount = amount
@@ -291,6 +321,8 @@ class SendRefundTransfer(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
@@ -301,7 +333,14 @@ class SendRefundTransfer(SendMessageEvent):
             target: typing.TargetAddress,
     ):
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=True,
+        )
 
         self.payment_identifier = payment_identifier
         self.token = token_address

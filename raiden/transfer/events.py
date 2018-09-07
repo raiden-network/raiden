@@ -404,6 +404,8 @@ class SendDirectTransfer(SendMessageEvent):
     def __init__(
             self,
             recipient: typing.Address,
+            payment_network_identifier: typing.PaymentNetworkID,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             payment_identifier: typing.PaymentID,
@@ -411,7 +413,14 @@ class SendDirectTransfer(SendMessageEvent):
             token_address: typing.TokenAddress,
     ):
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(
+            recipient=recipient,
+            payment_network_identifier=payment_network_identifier,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            message_identifier=message_identifier,
+            ordered=True,
+        )
 
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof

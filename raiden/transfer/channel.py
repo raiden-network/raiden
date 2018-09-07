@@ -35,7 +35,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     refund_from_sendmediated,
     SendBalanceProof,
     SendLockedTransfer,
@@ -1231,6 +1230,8 @@ def create_senddirecttransfer(
 
     direct_transfer = SendDirectTransfer(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
@@ -1310,6 +1311,8 @@ def create_sendlockedtransfer(
 
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         transfer=locked_transfer,
@@ -1362,6 +1365,8 @@ def create_unlock(
 
     unlock_lock = SendBalanceProof(
         recipient=recipient,
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
@@ -1763,7 +1768,9 @@ def handle_receive_directtransfer(
 
         send_processed = SendProcessed(
             recipient=direct_transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=direct_transfer.message_identifier,
         )
         events = [payment_received_success, send_processed]
@@ -1798,7 +1805,9 @@ def handle_refundtransfer(
 
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=refund.transfer.message_identifier,
         )
         events = [send_processed]
@@ -1866,7 +1875,9 @@ def handle_receive_lockedtransfer(
 
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=mediated_transfer.message_identifier,
         )
         events = [send_processed]
@@ -1900,7 +1911,9 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
             message_identifier=unlock.message_identifier,
         )
         events = [send_processed]

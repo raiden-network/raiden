@@ -11,7 +11,6 @@ from gevent.server import DatagramServer
 import structlog
 from eth_utils import is_binary_address
 
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
@@ -361,12 +360,7 @@ class UDPTransport(Runnable):
             self.retry_interval * 10,
         )
 
-        if queue_identifier.channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
-            greenlet_queue.name = f'Queue for {pex(recipient)} - global'
-        else:
-            greenlet_queue.name = (
-                f'Queue for {pex(recipient)} - {queue_identifier.channel_identifier}'
-            )
+        greenlet_queue.name = f'Greenlet|Queue {pex(queue_identifier)}'
 
         greenlet_queue.link_exception(self.on_error)
         self.greenlets.append(greenlet_queue)

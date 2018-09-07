@@ -5,7 +5,6 @@ import re
 import sys
 import time
 import random
-from typing import Tuple, Union, List, Iterable
 from itertools import zip_longest
 
 import gevent
@@ -96,11 +95,11 @@ def quantity_encoder(i: int) -> str:
     return hex(i).rstrip('L')
 
 
-def pex(data: bytes) -> str:
-    return hexlify(data).decode()[:8]
+def pex(data: typing.Optional[bytes]) -> str:
+    return hexlify(data).decode()[:8] if data else ''
 
 
-def lpex(lst: Iterable[bytes]) -> List[str]:
+def lpex(lst: typing.Iterable[bytes]) -> typing.List[str]:
     return [pex(l) for l in lst]
 
 
@@ -108,7 +107,7 @@ def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
 
-def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
+def split_endpoint(endpoint: str) -> typing.Tuple[str, typing.Union[str, int]]:
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)
@@ -231,7 +230,7 @@ def is_frozen():
     return getattr(sys, 'frozen', False)
 
 
-def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
+def split_in_pairs(arg: typing.Iterable) -> typing.Iterable[typing.Tuple]:
     """ Split given iterable in pairs [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]"""
     # We are using zip_longest with one clever hack:
     # https://docs.python.org/3/library/itertools.html#itertools.zip_longest
