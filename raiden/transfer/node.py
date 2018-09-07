@@ -503,6 +503,8 @@ def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) ->
 
             if not filtered_queue:
                 queueids_to_remove.append(queueid)
+            else:
+                chain_state.queueids_to_queues[queueid] = filtered_queue
 
     for queueid in queueids_to_remove:
         del chain_state.queueids_to_queues[queueid]
