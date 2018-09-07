@@ -27,7 +27,7 @@ def wait_for_listening_port(
     raise RuntimeError('{port} is not bound'.format(port=port_number))
 
 
-def create_api_backend(raiden_app: App, port_number: int) -> APIServer:
+def create_api_server(raiden_app: App, port_number: int) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api)
