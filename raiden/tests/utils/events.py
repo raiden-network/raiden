@@ -1,4 +1,5 @@
-from web3.utils.datastructures import AttributeDict
+from web3.datastructures import AttributeDict
+
 
 NOVALUE = object()
 

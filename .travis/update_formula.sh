@@ -16,7 +16,7 @@ setup_git() {
 }
 
 update_formula() {
-    UPDATED_SHA256=$(openssl sha -sha256 dist/raiden-${TRAVIS_TAG}-macOS.zip)
+    UPDATED_SHA256=$(openssl sha -sha256 dist/archive/raiden-${TRAVIS_TAG}-macOS.zip)
     FORMULA_FILE="homebrew-raiden/raiden.rb"
 
     sed -i .bak "s/[0-9]\.[0-9]\.[0-9]/${TRAVIS_TAG/v/}/g" $FORMULA_FILE

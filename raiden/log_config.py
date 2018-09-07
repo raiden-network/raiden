@@ -269,7 +269,7 @@ def configure_logging(
     # if py-evm is not used this will throw, hence the try-catch block
     # for some reason it didn't work to put this into conftest.py
     try:
-        from eth.utils.logging import setup_trace_logging
+        from eth.tools.logging import setup_trace_logging
         setup_trace_logging()
-    except ModuleNotFoundError:
+    except ImportError:
         pass

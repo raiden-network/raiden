@@ -62,13 +62,21 @@ docs:
 
 REPO?=raiden-network/raiden
 RAIDENVERSION?=master
+ARCHIVE_TAG?=$(RAIDENVERSION)
+
+GITHUB_ACCESS_TOKEN_ARG=
+ifdef GITHUB_ACCESS_TOKEN
+GITHUB_ACCESS_TOKEN_ARG=--build-arg GITHUB_ACCESS_TOKEN_FRAGMENT=$(GITHUB_ACCESS_TOKEN)@
+endif
+
 
 bundle-docker:
-	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) --build-arg REPO=$(REPO) -f docker/build.Dockerfile docker
+    # Hide command echo to prevent leaking GITHUB_ACCESS_TOKEN in Travis logs
+	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) --build-arg REPO=$(REPO) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile docker
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
-	mkdir -p dist
-	docker cp builder:/raiden/raiden-$(RAIDENVERSION)-linux.tar.gz dist/raiden-$(RAIDENVERSION)-linux.tar.gz
+	mkdir -p dist/archive
+	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz
 	docker rm builder
 
 bundle:

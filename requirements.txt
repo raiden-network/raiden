@@ -16,14 +16,15 @@ netifaces==0.10.7
 networkx==2.1.0
 psutil==5.4.5
 git+https://github.com/raiden-network/raiden-libs@c0afdfdd200eedcc288ddad277549a342c4c8146#egg=raiden-libs
-git+https://github.com/raiden-network/raiden-contracts@d77e2a7f1f83afd302caabf1179374879bc7725c#egg=raiden-contracts
+git+https://github.com/raiden-network/raiden-contracts@ce3fad4271c6b9a074d226509bd7a1f62d873075#egg=raiden-contracts
 webargs==1.8.1
 eth-keyfile==0.5.1
 eth-utils==1.2.0
 structlog
 colorama
 py-solc
-web3==4.6.0
+# Use master until https://github.com/ethereum/web3.py/issues/1048 is fixed
+git+https://github.com/ethereum/web3.py@e39518638682d02314e3f4700dea48ae95abf819#egg=web3[tester]
 pysha3==1.0.2
 gevent==1.3.6
 pytoml==0.1.18

@@ -28,12 +28,17 @@ RUN cd /tmp && \
 # use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
 ARG REPO=raiden-network/raiden
 ARG RAIDENVERSION=master
+ARG GITHUB_ACCESS_TOKEN_FRAGMENT
 
 # This is a "hack" to automatically invalidate the cache in case there are new commits
-ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
+ADD https://${GITHUB_ACCESS_TOKEN_FRAGMENT}api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
 
 # clone raiden repo + install dependencies
-RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO}
+RUN git clone https://github.com/${REPO} && \
+    cd raiden && \
+    git fetch --tags && \
+    git reset --hard ${RAIDENVERSION}
+
 WORKDIR /raiden
 RUN git fetch --tags
 RUN pip install -r requirements.txt
@@ -54,7 +59,9 @@ RUN pip install pyinstaller
 # build pyinstaller package
 RUN pyinstaller --noconfirm --clean raiden.spec
 
+ARG ARCHIVE_TAG=${RAIDENVERSION}
+
 # pack result to have a unique name to get it out of the container later
 RUN cd dist && \
-    tar -cvzf raiden-${RAIDENVERSION}-linux.tar.gz raiden* && \
-    mv raiden-${RAIDENVERSION}-linux.tar.gz ..
+    tar -cvzf raiden-${ARCHIVE_TAG}-linux.tar.gz raiden* && \
+    mv raiden-${ARCHIVE_TAG}-linux.tar.gz ..

@@ -5,7 +5,7 @@ stages:
   - name: integration
     if: type = cron OR commit_message =~ /\[ci integration\]/ OR tag IS present
   - name: deploy
-    if: tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
+    if: type = cron OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
 templates:
   job-template-test: &job-template-test
@@ -42,6 +42,9 @@ env:
   - SYNAPSE_URL='https://github.com/matrix-org/synapse/tarball/master#egg=synapse'
   - SYNAPSE_SERVER_NAME='matrix.local.raiden'
   - COVERALLS_PARALLEL=true
+  # `GITHUB_ACCESS_TOKEN` - read only access token to increase GitHub API rate limits
+  # Format: `GITHUB_ACCESS_TOKEN=<username>:<token>`
+  - secure: "riRxis2NVGAjgl3jXOnMCXCpfWhOK7Q5B7CCRC0xPk+CyuHEOjIAvmueZwCrWt6i4jjlPeqpsLzDp7j56QG94hfGAs1sBq7aZQ6qVSqjCsj5IYPdAYRq8nivgHWjQuPoDWKsKOcEw44lUXUrWXvOf9T+AM+numz/feISdchqFr+OhVYv0g8mDQlFwAMcIwu4DpazECV/LlQxFR3iP7GDF6tU7NDx5uzCYzRU2vg4sSZWJJLHLs9gCpAqlEiKL3n5QhonQwJ7qbgOTlJaJNrI1qhOw29LjcVqIMxkM1VJ1hx61e55WzM/OquijMJCNrNVCQ8m3RP//bxoGoMrj9FFI+8qT9TSPjvSXWyZQxak30zZE7szF1Zfu/Cd9f56D/28leQ+KuJh8SvK53x04eNxn0y+amSElHlL1NgOJ86XNTdZM6xcYGEbt6Fy0Ia5CyGkUUw+gsLVAjSghC/iQsZgmXyjSsDCRBpYO79mR2r3S240Zb1DIhi9OX5W1IO6DOGlzjOdrRehmMZ2T4trM+Rz0q06g9D1Wxn69IP/wYACgydO0B55BjD6bEtspot/yh7aHH8MFEqeYLpskXwg4CjZ6HMfccfo/KM3kElVQpFQO3JCguhCX8zb3P4o49pInr6icDMBQfnDWkSDi1MCY8GnbTyB9dL1T9J7bTje7vaCvdk="
 cache:
   pip: true
   directories:
@@ -159,20 +162,26 @@ jobs:
       before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; .travis/before_install.sh
       install: .travis/install.sh
       script:
-        - RAIDENVERSION=$TRAVIS_TAG make bundle-docker
+        - source .travis/set_tag.sh
+        - REPO=${TRAVIS_REPO_SLUG} RAIDENVERSION=${TRAVIS_COMMIT} make bundle-docker
+        - tar -C dist -xvzf dist/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
         # Make sure the produced binary works
-        - dist/raiden-${TRAVIS_TAG}-linux smoketest
+        # Skip smoketest until raiden-network/raiden#2384 is fixed
+        #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
+
       deploy:
       - provider: releases
         api_key:
           secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-        file: dist/raiden-${TRAVIS_TAG}-linux.tar.gz
+        file: dist/archive/raiden-*-linux.tar.gz
+        file_glob: true
         skip_cleanup: true
         on:
           tags: true
           repo: raiden-network/raiden
           branch: master
-# Disabled until automated release account is reactivated
+
+## Disabled until automated release account is reactivated
 #      - provider: pypi
 #        user: raiden_pypi_automated
 #        password:
@@ -184,6 +193,23 @@ jobs:
 #          repo: raiden-network/raiden
 #          branch: master
 
+      - provider: s3
+        # Remove once https://github.com/travis-ci/dpl/issues/865 is fixed
+        edge:
+          branch: ha-s3-endpoint
+        skip_cleanup: true
+        access_key_id: MK22XIZDUYA3EWBHGAKD
+        secret_access_key:
+          secure: "VpTNi2O1kDyMfGCyZ4dRonmwp1cPl99ry/I34EdXg2qk8EL8d3Z7pVD0RwJjHGNTCZN0SYqj+MlbLQzBR0Ydxtpze5ayqN+v4aqvpdu33Vqm3gMJIgT6ciiGuBl6XwT3hhb6hWwSORXaGTYTn5G6fYPsd78A9/24YORf8kn9w5iBbjl1mBNTBw7e+SARTG2fHK0cM4qSNRMELfZvno7xcu2pjZK4vplOnSIxxE6Eh80PDE/AKyNUkRcHQ81Xt5QBekMwmalQUYRoZx75VYLSmrvCu1t407pfb80vxFaH+UG0mzuyUmZ/G8S6WY58jMBvv6EULr4Lj+ztT/CmnVPWlcLNP8hTJ+wBtdzgOVNFAJtL+PuudkMgE/JLuuF+IiRKjcIhBL29hGm46Kow3u6oJ4NvaTm0+8Vt+435TveHDg6bDwOl42ik66tZuklYmLadTd/SfxkUHdmIWsVGnfprwSmYrrkoPww0N90x3bbdfOtCI2mFeA4MThnkbOpmX9HOOOEYP0d3zTvu03h8P0N0nTsNiOyntMZ7943oJhlMEpGnhd/eHRAuYwO6s8mJZeQk7TCPvgbOnhGdtqR5SGLy3Q5+JV0sAieZeZvAbl+XIqDA0SPuJ4Jq/wCHaQ4B6fIcvW1PWl9gMleo5/Zh+yLXXuBKBPCTyOzaz97bNRQ/meM="
+        bucket: "raiden-nightlies"
+        acl: public_read
+        local_dir: dist/archive
+        cache_control: "max-age=31536000"
+        endpoint: https://ams3.digitaloceanspaces.com
+        on:
+          repo: raiden-network/raiden
+          branch: master
+
     - stage: deploy
       os: osx
       language: generic
@@ -191,29 +217,32 @@ jobs:
       env: TEST=""
       before_install:
         - sysctl -n machdep.cpu.brand_string
-        - git rev-parse HEAD
         - mkdir -p $HOME/.bin
-        - export PATH=$HOME/.bin:$HOME/Library/Python/3.7/bin:/usr/local/bin/:$PATH
+        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:/usr/local/bin/:$PATH
         - .travis/before_install.sh
       install:
+        - git pull --tags
         - .travis/install.sh
+        # pdbpp interferes with pyinstaller, uninstall it
+        - pip uninstall -y pdbpp
       before_script:
         - python setup.py build
         - RAIDEN_NPM_MISSING_FATAL=1 python setup.py compile_webui
       script:
-        # pdbpp interferes with pyinstaller, uninstall it
-        - pip uninstall -y pdbpp
+        - source .travis/set_tag.sh
+        - mkdir -p dist/archive
         - pyinstaller --noconfirm --clean raiden.spec
-        - cd dist && zip -9 -r raiden-${TRAVIS_TAG}-macOS.zip raiden*
-        # Make sure the produced binary works
-        - dist/raiden-${TRAVIS_TAG}-macOS smoketest
+        - zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden*
+        # Skip smoketest for now, because smoketest can't use anything from raiden.tests
+        #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
         # "Fix" Travis issues #6307 #6522 #9486
         - shell_session_update() { :; };
       deploy:
         - provider: releases
           api_key:
             secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-          file: dist/raiden-${TRAVIS_TAG}-macOS.zip
+          file: dist/archive/raiden-*-macOS.zip
+          file_glob: true
           skip_cleanup: true
           on:
             tags: true
@@ -224,5 +253,21 @@ jobs:
           skip_cleanup: true
           on:
             tags: true
+            repo: raiden-network/raiden
+            branch: master
+        - provider: s3
+          # Remove once https://github.com/travis-ci/dpl/issues/865 is fixed
+          edge:
+            branch: ha-s3-endpoint
+          skip_cleanup: true
+          access_key_id: MK22XIZDUYA3EWBHGAKD
+          secret_access_key:
+            secure: "VpTNi2O1kDyMfGCyZ4dRonmwp1cPl99ry/I34EdXg2qk8EL8d3Z7pVD0RwJjHGNTCZN0SYqj+MlbLQzBR0Ydxtpze5ayqN+v4aqvpdu33Vqm3gMJIgT6ciiGuBl6XwT3hhb6hWwSORXaGTYTn5G6fYPsd78A9/24YORf8kn9w5iBbjl1mBNTBw7e+SARTG2fHK0cM4qSNRMELfZvno7xcu2pjZK4vplOnSIxxE6Eh80PDE/AKyNUkRcHQ81Xt5QBekMwmalQUYRoZx75VYLSmrvCu1t407pfb80vxFaH+UG0mzuyUmZ/G8S6WY58jMBvv6EULr4Lj+ztT/CmnVPWlcLNP8hTJ+wBtdzgOVNFAJtL+PuudkMgE/JLuuF+IiRKjcIhBL29hGm46Kow3u6oJ4NvaTm0+8Vt+435TveHDg6bDwOl42ik66tZuklYmLadTd/SfxkUHdmIWsVGnfprwSmYrrkoPww0N90x3bbdfOtCI2mFeA4MThnkbOpmX9HOOOEYP0d3zTvu03h8P0N0nTsNiOyntMZ7943oJhlMEpGnhd/eHRAuYwO6s8mJZeQk7TCPvgbOnhGdtqR5SGLy3Q5+JV0sAieZeZvAbl+XIqDA0SPuJ4Jq/wCHaQ4B6fIcvW1PWl9gMleo5/Zh+yLXXuBKBPCTyOzaz97bNRQ/meM="
+          bucket: "raiden-nightlies"
+          acl: public_read
+          local_dir: dist/archive
+          cache_control: "max-age=31536000"
+          endpoint: https://ams3.digitaloceanspaces.com
+          on:
             repo: raiden-network/raiden
             branch: master
