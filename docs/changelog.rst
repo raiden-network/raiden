@@ -3,9 +3,10 @@ Changelog
 =========
 
 * :release:`0.8.0 <2018-09-07>`
-* :bug: `2373` Include events for received payments in the payment events API endpoint.
-* :feature: `862` Switch WAL serialization format to JSON in order to facilitate for WAL upgradability.
-* :feature: `2363` Add copy functionality for addresses shown on the webui.
+* :feature:`1894` We now start having nightly releases found here: https://raiden-nightlies.ams3.digitaloceanspaces.com/index.html
+* :bug:`2373` Include events for received payments in the payment events API endpoint.
+* :feature:`862` Switch WAL serialization format to JSON in order to facilitate for WAL upgradability.
+* :feature:`2363` Add copy functionality for addresses shown on the webui.
 * :bug:`2356` Create a new database per token network registry.
 * :bug:`2362` Renamed wallet to tokens in the webui.
 * :bug:`2291` Adds EIP55 address validation to webui address inputs.
