@@ -1,26 +1,7 @@
 # pylint: disable=too-many-arguments,redefined-outer-name
-import os
+
 import pytest
-import psutil
-import gevent
-
-from raiden.api.python import RaidenAPI
-from raiden.api.rest import RestAPI, APIServer
-
-
-def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
-    if pid is None:
-        pid = os.getpid()
-    for _ in range(tries):
-        gevent.sleep(sleep)
-        # macoOS requires root access for the connections api to work
-        # so get connections of the current process only
-        connections = psutil.Process(pid).connections()
-        for conn in connections:
-            if conn.status == 'LISTEN' and conn.laddr[1] == port_number:
-                return
-
-    raise RuntimeError('{port} is not bound'.format(port=port_number))
+from raiden.tests.integration.api.utils import create_api_backend
 
 
 # TODO: Figure out why this fixture can't work as session scoped
@@ -28,19 +9,10 @@ def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
 #       the server is no longer running even though the teardown has not
 #       been invoked.
 @pytest.fixture
-def api_backend(raiden_network, rest_api_port_number):
-    raiden_api = RaidenAPI(raiden_network[0].raiden)
-    rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api)
-    api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
-    api_server.start(port=rest_api_port_number)
+def test_api_server(raiden_network, rest_api_port_number):
+    api_server = create_api_backend(raiden_network[0], rest_api_port_number)
 
-    # Fixes flaky test, were requests are done prior to the server initializing
-    # the listening socket.
-    # https://github.com/raiden-network/raiden/issues/389#issuecomment-305551563
-    wait_for_listening_port(rest_api_port_number)
-
-    yield api_server, rest_api
+    yield api_server
 
     if api_server:
         api_server.stop()

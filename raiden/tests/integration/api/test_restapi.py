@@ -66,8 +66,7 @@ def assert_proper_response(response, status_code=HTTPStatus.OK):
     )
 
 
-def api_url_for(api_backend, endpoint, **kwargs):
-    api_server, _ = api_backend
+def api_url_for(api_server, endpoint, **kwargs):
     # url_for() expects binary address so we have to convert here
     for key, val in kwargs.items():
         if isinstance(val, str) and val.startswith('0x'):
@@ -117,7 +116,7 @@ def test_address_field():
     assert field._deserialize('0x414D72a6f6E28F4950117696081450d63D56C354', attr, data) == address
 
 
-def test_url_with_invalid_address(rest_api_port_number, api_backend):
+def test_url_with_invalid_address(rest_api_port_number):
     """ Addresses require the leading 0x in the urls. """
 
     url_without_prefix = (
@@ -136,7 +135,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_payload_with_address_without_prefix(api_backend):
+def test_payload_with_address_without_prefix(test_api_server):
     """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
     channel_data_obj = {
@@ -146,7 +145,7 @@ def test_payload_with_address_without_prefix(api_backend):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -162,25 +161,24 @@ def test_payload_with_address_without_prefix(api_backend):
 )
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_crash_on_unhandled_exception(api_backend):
+def test_crash_on_unhandled_exception(test_api_server):
     """ Crash when an unhandled exception happens on APIServer. """
-    api_server, _ = api_backend
 
     # as we should not have unhandled exceptions in our endpoints, create one to test
-    @api_server.flask_app.route('/error_endpoint', methods=['GET'])
+    @test_api_server.flask_app.route('/error_endpoint', methods=['GET'])
     def error_endpoint():
         raise CustomException('This is an unhandled error')
 
-    with api_server.flask_app.app_context():
+    with test_api_server.flask_app.app_context():
         url = url_for('error_endpoint')
     request = grequests.get(url)
     request.send()
-    api_server.get(timeout=10)
+    test_api_server.get(timeout=10)
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_payload_with_address_invalid_chars(api_backend):
+def test_payload_with_address_invalid_chars(test_api_server):
     """ Addresses cannot have invalid characters in it. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
     channel_data_obj = {
@@ -190,7 +188,7 @@ def test_payload_with_address_invalid_chars(api_backend):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -201,7 +199,7 @@ def test_payload_with_address_invalid_chars(api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_payload_with_address_invalid_length(api_backend):
+def test_payload_with_address_invalid_length(test_api_server):
     """ Encoded addresses must have the right length. """
     invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
     channel_data_obj = {
@@ -211,7 +209,7 @@ def test_payload_with_address_invalid_length(api_backend):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -222,7 +220,7 @@ def test_payload_with_address_invalid_length(api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_payload_with_address_not_eip55(api_backend):
+def test_payload_with_address_not_eip55(test_api_server):
     """ Provided addresses must be EIP55 encoded. """
     invalid_address = '0xf696209d2ca35e6c88e5b99b7cda3abf316bed69'
     channel_data_obj = {
@@ -232,7 +230,7 @@ def test_payload_with_address_not_eip55(api_backend):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -243,22 +241,21 @@ def test_payload_with_address_not_eip55(api_backend):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_api_query_our_address(api_backend):
+def test_api_query_our_address(test_api_server):
     request = grequests.get(
-        api_url_for(api_backend, 'addressresource'),
+        api_url_for(test_api_server, 'addressresource'),
     )
     response = request.send().response
     assert_proper_response(response)
 
-    api_server, _ = api_backend
-    our_address = api_server.rest_api.raiden_api.address
+    our_address = test_api_server.rest_api.raiden_api.address
     assert response.json() == {'our_address': to_checksum_address(our_address)}
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_get_channel_list(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -266,7 +263,7 @@ def test_api_get_channel_list(
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
     )
@@ -286,7 +283,7 @@ def test_api_get_channel_list(
 
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -297,7 +294,7 @@ def test_api_get_channel_list(
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
     )
@@ -313,7 +310,7 @@ def test_api_get_channel_list(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_channel_status_channel_nonexistant(
-        api_backend,
+        test_api_server,
         token_addresses,
 ):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
@@ -321,7 +318,7 @@ def test_api_channel_status_channel_nonexistant(
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -340,7 +337,7 @@ def test_api_channel_status_channel_nonexistant(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_and_deposit_channel(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -357,7 +354,7 @@ def test_api_open_and_deposit_channel(
 
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -389,7 +386,7 @@ def test_api_open_and_deposit_channel(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -410,7 +407,7 @@ def test_api_open_and_deposit_channel(
     # assert depositing negative amount fails
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=first_partner_address,
@@ -422,7 +419,7 @@ def test_api_open_and_deposit_channel(
     # let's deposit on the first channel
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=first_partner_address,
@@ -448,7 +445,7 @@ def test_api_open_and_deposit_channel(
     # let's try querying for the second channel
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=second_partner_address,
@@ -472,8 +469,7 @@ def test_api_open_and_deposit_channel(
     assert_dicts_are_equal(response, expected_response)
 
     # finally let's burn all eth and try to open another channel
-    api_server, _ = api_backend
-    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
     channel_data_obj = {
         'partner_address': '0xf3AF96F89b3d7CdcBE0C083690A28185Feb0b3CE',
         'token_address': to_checksum_address(token_address),
@@ -483,7 +479,7 @@ def test_api_open_and_deposit_channel(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -497,7 +493,7 @@ def test_api_open_and_deposit_channel(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_close_and_settle_channel(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -512,7 +508,7 @@ def test_api_open_close_and_settle_channel(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -537,7 +533,7 @@ def test_api_open_close_and_settle_channel(
     # let's close the channel
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -563,7 +559,7 @@ def test_api_open_close_and_settle_channel(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_close_insufficient_eth(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -578,7 +574,7 @@ def test_api_close_insufficient_eth(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -599,11 +595,10 @@ def test_api_close_insufficient_eth(
     assert_dicts_are_equal(response, expected_response)
 
     # let's burn all eth and try to close the channel
-    api_server, _ = api_backend
-    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -619,7 +614,7 @@ def test_api_close_insufficient_eth(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_open_channel_invalid_input(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -634,7 +629,7 @@ def test_api_open_channel_invalid_input(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -645,7 +640,7 @@ def test_api_open_channel_invalid_input(
     channel_data_obj['settle_timeout'] = TEST_SETTLE_TIMEOUT_MAX + 1
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -657,7 +652,7 @@ def test_api_open_channel_invalid_input(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_channel_state_change_errors(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -672,7 +667,7 @@ def test_api_channel_state_change_errors(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -683,7 +678,7 @@ def test_api_channel_state_change_errors(
     # let's try to set a random state
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -695,7 +690,7 @@ def test_api_channel_state_change_errors(
     # let's try to set both new state and balance
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -707,7 +702,7 @@ def test_api_channel_state_change_errors(
     # let's try to patch with no arguments
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -719,7 +714,7 @@ def test_api_channel_state_change_errors(
     # ok now let's close and settle for real
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -732,7 +727,7 @@ def test_api_channel_state_change_errors(
     # let's try to deposit to a settled channel
     request = grequests.patch(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
             partner_address=partner_address,
@@ -746,7 +741,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-def test_api_tokens(api_backend, blockchain_services, token_addresses):
+def test_api_tokens(test_api_server, blockchain_services, token_addresses):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address1 = token_addresses[0]
     token_address2 = token_addresses[1]
@@ -759,7 +754,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -776,7 +771,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -787,7 +782,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
     # and now let's get the token list
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'tokensresource',
         ),
     )
@@ -803,7 +798,7 @@ def test_api_tokens(api_backend, blockchain_services, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_query_partners_by_token(api_backend, blockchain_services, token_addresses):
+def test_query_partners_by_token(test_api_server, blockchain_services, token_addresses):
     first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
     token_address = token_addresses[0]
@@ -815,7 +810,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -827,7 +822,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     channel_data_obj['partner_address'] = second_partner_address
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -841,7 +836,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     channel_data_obj['token_address'] = to_checksum_address(token_address)
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -852,7 +847,7 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
     # and now let's query our partners per token for the first token
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'partnersresourcebytokenaddress',
             token_address=to_checksum_address(token_address),
         ),
@@ -879,15 +874,14 @@ def test_query_partners_by_token(api_backend, blockchain_services, token_address
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_api_payments(api_backend, raiden_network, token_addresses):
+def test_api_payments(test_api_server, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
 
-    api_server, _ = api_backend
-    our_address = api_server.rest_api.raiden_api.address
+    our_address = test_api_server.rest_api.raiden_api.address
 
     payment = {
         'initiator_address': to_checksum_address(our_address),
@@ -899,7 +893,7 @@ def test_api_payments(api_backend, raiden_network, token_addresses):
 
     request = grequests.post(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
@@ -915,7 +909,7 @@ def test_api_payments(api_backend, raiden_network, token_addresses):
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_register_token(api_backend, token_amount, token_addresses, raiden_network):
+def test_register_token(test_api_server, token_amount, token_addresses, raiden_network):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -941,7 +935,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     )
 
     register_request = grequests.put(api_url_for(
-        api_backend,
+        test_api_server,
         'registertokenresource',
         token_address=to_checksum_address(new_token_address),
     ))
@@ -953,7 +947,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
 
     # now try to reregister it and get the error
     conflict_request = grequests.put(api_url_for(
-        api_backend,
+        test_api_server,
         'registertokenresource',
         token_address=to_checksum_address(new_token_address),
     ))
@@ -963,7 +957,7 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
     # Burn all the eth and then make sure we get the appropriate API error
     burn_all_eth(app0.raiden)
     poor_request = grequests.put(api_url_for(
-        api_backend,
+        test_api_server,
         'registertokenresource',
         token_address=to_checksum_address(other_token_address),
     ))
@@ -974,10 +968,10 @@ def test_register_token(api_backend, token_amount, token_addresses, raiden_netwo
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-def test_get_connection_managers_info(api_backend, token_addresses):
+def test_get_connection_managers_info(test_api_server, token_addresses):
     # check that there are no registered tokens
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource'),
+        api_url_for(test_api_server, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -990,7 +984,7 @@ def test_get_connection_managers_info(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'connectionsresource',
             token_address=token_address1,
         ),
@@ -1001,7 +995,7 @@ def test_get_connection_managers_info(api_backend, token_addresses):
 
     # check that there now is one registered channel manager
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource'),
+        api_url_for(test_api_server, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -1017,7 +1011,7 @@ def test_get_connection_managers_info(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'connectionsresource',
             token_address=token_address2,
         ),
@@ -1028,7 +1022,7 @@ def test_get_connection_managers_info(api_backend, token_addresses):
 
     # check that there now are two registered channel managers
     request = grequests.get(
-        api_url_for(api_backend, 'connectionsinforesource'),
+        api_url_for(test_api_server, 'connectionsinforesource'),
     )
     response = request.send().response
     result = response.json()
@@ -1041,11 +1035,10 @@ def test_get_connection_managers_info(api_backend, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-def test_connect_insufficient_reserve(api_backend, token_addresses):
+def test_connect_insufficient_reserve(test_api_server, token_addresses):
 
     # Burn all eth and then try to connect to a token network
-    api_server, _ = api_backend
-    burn_all_eth(api_server.rest_api.raiden_api.raiden)
+    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
     funds = 100
     token_address1 = to_checksum_address(token_addresses[0])
     connect_data_obj = {
@@ -1053,7 +1046,7 @@ def test_connect_insufficient_reserve(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'connectionsresource',
             token_address=token_address1,
         ),
@@ -1067,7 +1060,7 @@ def test_connect_insufficient_reserve(api_backend, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_network_events(api_backend, token_addresses):
+def test_network_events(test_api_server, token_addresses):
     # let's create a new channel
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
@@ -1079,7 +1072,7 @@ def test_network_events(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -1090,7 +1083,7 @@ def test_network_events(api_backend, token_addresses):
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'blockchaineventsnetworkresource',
             from_block=0,
         ),
@@ -1102,7 +1095,7 @@ def test_network_events(api_backend, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_token_events(api_backend, token_addresses):
+def test_token_events(test_api_server, token_addresses):
     # let's create a new channel
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
@@ -1114,7 +1107,7 @@ def test_token_events(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -1125,7 +1118,7 @@ def test_token_events(api_backend, token_addresses):
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'blockchaineventstokenresource',
             token_address=token_address,
             from_block=0,
@@ -1138,7 +1131,7 @@ def test_token_events(api_backend, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_events(api_backend, token_addresses):
+def test_channel_events(test_api_server, token_addresses):
     # let's create a new channel
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
@@ -1150,7 +1143,7 @@ def test_channel_events(api_backend, token_addresses):
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -1161,7 +1154,7 @@ def test_channel_events(api_backend, token_addresses):
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'tokenchanneleventsresourceblockchain',
             partner_address=partner_address,
             token_address=token_address,
@@ -1175,10 +1168,10 @@ def test_channel_events(api_backend, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_token_events_errors_for_unregistered_token(api_backend):
+def test_token_events_errors_for_unregistered_token(test_api_server):
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'tokenchanneleventsresourceblockchain',
             token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             from_block=5,
@@ -1190,7 +1183,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
 
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelblockchaineventsresource',
             token_address='0x61C808D82A3Ac53231750daDc13c777b59310bD9',
             partner_address='0x61C808D82A3Ac53231750daDc13c777b59313bD9',
@@ -1206,7 +1199,7 @@ def test_token_events_errors_for_unregistered_token(api_backend):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('deposit', [50000])
 def test_api_deposit_limit(
-        api_backend,
+        test_api_server,
         token_addresses,
         reveal_timeout,
 ):
@@ -1225,7 +1218,7 @@ def test_api_deposit_limit(
 
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -1255,7 +1248,7 @@ def test_api_deposit_limit(
     }
     request = grequests.put(
         api_url_for(
-            api_backend,
+            test_api_server,
             'channelsresource',
         ),
         json=channel_data_obj,
@@ -1268,7 +1261,7 @@ def test_api_deposit_limit(
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
+def test_payment_events_endpoints(test_api_server, raiden_network, token_addresses):
     _, app1, app2 = raiden_network
     amount = 200
     identifier = 42
@@ -1277,12 +1270,10 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     target1_address = app1.raiden.address
     target2_address = app2.raiden.address
 
-    api_server, _ = api_backend
-
     # sending tokens to target 1
     request = grequests.post(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target1_address),
@@ -1295,7 +1286,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     amount -= 10
     request = grequests.post(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target2_address),
@@ -1307,7 +1298,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     # test endpoint without (partner and token)
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'paymentresource',
         ),
     )
@@ -1321,7 +1312,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     # test endpoint without partner
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_paymentresource',
             token_address=token_address,
         ),
@@ -1336,7 +1327,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
     # test endpoint for token and partner
     request = grequests.get(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_target_paymentresource',
             token_address=token_address,
             target_address=target1_address,
@@ -1350,7 +1341,7 @@ def test_payment_events_endpoints(api_backend, raiden_network, token_addresses):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
+def test_channel_events_raiden(test_api_server, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
@@ -1359,7 +1350,7 @@ def test_channel_events_raiden(api_backend, raiden_network, token_addresses):
 
     request = grequests.post(
         api_url_for(
-            api_backend,
+            test_api_server,
             'token_target_paymentresource',
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
