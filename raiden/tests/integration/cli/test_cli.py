@@ -53,7 +53,7 @@ def expect_cli_normal_startup(child):
     child.expect('The Raiden API RPC server is now running')
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 def test_cli_full_init(cli_args):
     child = spawn_raiden(cli_args)
     try:
@@ -64,7 +64,7 @@ def test_cli_full_init(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{'keystore_path': '.'}])
 def test_cli_wrong_keystore_path(cli_args):
     child = spawn_raiden(cli_args)
@@ -77,7 +77,7 @@ def test_cli_wrong_keystore_path(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('removed_args', [['password_file']])
 def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args):
     child = spawn_raiden(cli_args)
@@ -95,7 +95,7 @@ def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args)
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('removed_args', [['data_dir']])
 def test_cli_missing_data_dir(cli_args):
     child = spawn_raiden(cli_args)
@@ -107,7 +107,7 @@ def test_cli_missing_data_dir(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{'eth_rpc_endpoint': 'http://8.8.8.8:2020'}])
 def test_cli_wrong_rpc_endpoint(cli_args):
     child = spawn_raiden(cli_args)
@@ -120,7 +120,7 @@ def test_cli_wrong_rpc_endpoint(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{'network_id': '1'}])
 def test_cli_wrong_network_id_try_mainnet(cli_args):
     child = spawn_raiden(cli_args)
@@ -136,7 +136,7 @@ def test_cli_wrong_network_id_try_mainnet(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
     'registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
 }])
@@ -153,7 +153,7 @@ def test_cli_malformed_registry_address(cli_args):
         child.close()
 
 
-@pytest.mark.timeout(25)
+@pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
     'registry_contract_address': to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
 }])
