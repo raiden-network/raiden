@@ -494,7 +494,7 @@ def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) ->
     queueids_to_remove = []
     queueid: QueueIdentifier
     for queueid, queue in chain_state.queueids_to_queues.items():
-        if queueid.channel_identifier == 'global':
+        if queueid.channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
             filtered_queue = [
                 message
                 for message in queue
