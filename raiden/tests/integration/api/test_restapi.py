@@ -119,26 +119,9 @@ def test_address_field():
     assert field._deserialize('0x414D72a6f6E28F4950117696081450d63D56C354', attr, data) == address
 
 
-def test_url_with_invalid_address(test_api_server, rest_api_port_number):
-    """ Addresses require the leading 0x in the urls. """
-
-    url_without_prefix = (
-        'http://localhost:{port}/api/1/'
-        'channels/ea674fdde714fd979de3edf0f56aa9716b898ec8'
-    ).format(port=rest_api_port_number)
-
-    request = grequests.patch(
-        url_without_prefix,
-        json=dict(state='CHANNEL_STATE_SETTLED'),
-    )
-    response = request.send().response
-
-    assert_response_with_code(response, HTTPStatus.NOT_FOUND)
-
-
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_payload_with_address_without_prefix(test_api_server):
+def test_payload_with_invalid_addresses(test_api_server, rest_api_port_number):
     """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
     channel_data_obj = {
@@ -155,6 +138,19 @@ def test_payload_with_address_without_prefix(test_api_server):
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    url_without_prefix = (
+        'http://localhost:{port}/api/1/'
+        'channels/ea674fdde714fd979de3edf0f56aa9716b898ec8'
+    ).format(port=rest_api_port_number)
+
+    request = grequests.patch(
+        url_without_prefix,
+        json=dict(state='CHANNEL_STATE_SETTLED'),
+    )
+    response = request.send().response
+
+    assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
 @pytest.mark.xfail(
