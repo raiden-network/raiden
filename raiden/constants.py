@@ -87,7 +87,7 @@ NULL_HASH_BYTES = b'\x00' * 32
 
 TESTNET_GASPRICE_MULTIPLIER = 2.0
 
-SNAPSHOT_BLOCK_COUNT = 5000
+SNAPSHOT_STATE_CHANGES_COUNT = 500
 
 # calculated as of raiden-contracts@0dbe840c366841b414a11c78d8721046440b2a15
 # https://github.com/raiden-network/raiden-contracts/tree/0dbe840c366841b414a11c78d8721046440b2a15
