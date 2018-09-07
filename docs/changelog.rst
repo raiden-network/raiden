@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.8.0 <2018-09-07>`
 * :bug: `2373` Include events for received payments in the payment events API endpoint.
 * :feature: `862` Switch WAL serialization format to JSON in order to facilitate for WAL upgradability.
 * :feature: `2363` Add copy functionality for addresses shown on the webui.
