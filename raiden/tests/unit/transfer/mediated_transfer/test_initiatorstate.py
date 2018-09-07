@@ -682,7 +682,6 @@ def test_handle_secretreveal():
 def test_initiator_lock_expired():
     amount = UNIT_TRANSFER_AMOUNT * 2
     block_number = 1
-    refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -741,6 +740,11 @@ def test_initiator_lock_expired():
         },
         'secrethash': transfer.lock.secrethash,
         'recipient': channel1.partner_state.address,
+    })
+    assert events.must_contain_entry(iteration.events, EventPaymentSentFailed, {
+        'token_network_identifier': transfer.balance_proof.token_network_identifier,
+        'identifier': transfer.payment_identifier,
+        'target': transfer.target,
     })
 
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks

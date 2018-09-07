@@ -38,13 +38,23 @@ def handle_block(
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
     if locked_lock and channel.is_lock_expired(locked_lock, secrethash, state_change.block_number):
-        # Lock has expired, cleanup...
         expired_lock_events = channel.events_for_expired_lock(
             channel_state,
             secrethash,
             locked_lock,
             pseudo_random_generator,
         )
+
+        transfer_description = initiator_state.transfer_description
+        reason = 'lock expired'
+        transfer_failed = EventPaymentSentFailed(
+            payment_network_identifier=transfer_description.payment_network_identifier,
+            token_network_identifier=transfer_description.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            target=transfer_description.target,
+            reason=reason,
+        )
+        expired_lock_events.append(transfer_failed)
 
         iteration = TransitionResult(None, expired_lock_events)
         return iteration
