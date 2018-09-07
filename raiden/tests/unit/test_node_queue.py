@@ -31,17 +31,27 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
         recipient,
         events.CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     )
-    message = events.SendRevealSecret(
+
+    # Regression test:
+    # The code delivered_message handler worked only with a queue of one
+    # element
+    first_message = events.SendRevealSecret(
         recipient,
         channel_identifier,
         message_identifier,
         secret,
     )
+    second_message = events.SendRevealSecret(
+        recipient,
+        channel_identifier,
+        random.randint(0, 2 ** 16),
+        secret,
+    )
 
-    chain_state.queueids_to_queues[queue_identifier] = [message]
+    chain_state.queueids_to_queues[queue_identifier] = [first_message, second_message]
     delivered_message = state_change.ReceiveDelivered(message_identifier)
 
     iteration = node.handle_delivered(chain_state, delivered_message)
-
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
-    assert not new_queue
+
+    assert first_message not in new_queue
