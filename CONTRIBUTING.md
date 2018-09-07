@@ -53,6 +53,9 @@ Agreement). Our CLA bot will help you with that after you created a pull
 request. If you or your employer do not hold the whole copyright of the
 authorship submitted we can not accept your contribution.
 
+Please note that this project is released with a [Contributor Code of Conduct](../CODE_OF_CONDUCT.md).
+By participating in this project repository you agree to abide by its terms.
+
 ## Setup
 
 ### System dependencies
