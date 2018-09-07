@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature: `862` Switch WAL serialization format to JSON in order to facilitate for WAL upgradability.
 * :feature: `2363` Add copy functionality for addresses shown on the webui.
 * :bug:`2356` Create a new database per token network registry.
 * :bug:`2362` Renamed wallet to tokens in the webui.
