@@ -98,7 +98,7 @@ master_doc = 'index'
 project = 'Raiden Network'
 author = 'Raiden Project'
 
-version_string = '0.7.0'
+version_string = '0.8.0'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
