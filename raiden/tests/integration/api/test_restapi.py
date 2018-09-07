@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 import pytest
+import gevent
 import grequests
 from flask import url_for
 from eth_utils import (
@@ -24,8 +25,10 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
 )
 from raiden.tests.utils import assert_dicts_are_equal
+from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.waiting import wait_for_transfer_success
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -116,7 +119,7 @@ def test_address_field():
     assert field._deserialize('0x414D72a6f6E28F4950117696081450d63D56C354', attr, data) == address
 
 
-def test_url_with_invalid_address(rest_api_port_number):
+def test_url_with_invalid_address(test_api_server, rest_api_port_number):
     """ Addresses require the leading 0x in the urls. """
 
     url_without_prefix = (
@@ -1262,13 +1265,16 @@ def test_api_deposit_limit(
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_payment_events_endpoints(test_api_server, raiden_network, token_addresses):
-    _, app1, app2 = raiden_network
-    amount = 200
-    identifier = 42
+    app0, app1, app2 = raiden_network
+    amount1 = 200
+    identifier1 = 42
     token_address = token_addresses[0]
 
     target1_address = app1.raiden.address
     target2_address = app2.raiden.address
+
+    app1_server = create_api_server(app1, 8575)
+    app2_server = create_api_server(app2, 8576)
 
     # sending tokens to target 1
     request = grequests.post(
@@ -1278,12 +1284,13 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target1_address),
         ),
-        json={'amount': amount, 'identifier': identifier},
+        json={'amount': amount1, 'identifier': identifier1},
     )
     request.send()
 
     # sending some tokens to target 2
-    amount -= 10
+    identifier2 = 43
+    amount2 = 123
     request = grequests.post(
         api_url_for(
             test_api_server,
@@ -1291,11 +1298,25 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target2_address),
         ),
-        json={'amount': amount, 'identifier': identifier},
+        json={'amount': amount2, 'identifier': identifier2},
     )
     request.send()
+    exception = ValueError('Waiting for transfer received success in the WAL timed out')
+    with gevent.Timeout(seconds=60, exception=exception):
+        wait_for_transfer_success(
+            app1.raiden,
+            identifier1,
+            amount1,
+            app1.raiden.alarm.sleep_time,
+        )
+        wait_for_transfer_success(
+            app2.raiden,
+            identifier2,
+            amount2,
+            app2.raiden.alarm.sleep_time,
+        )
 
-    # test endpoint without (partner and token)
+    # test endpoint without (partner and token) for sender
     request = grequests.get(
         api_url_for(
             test_api_server,
@@ -1308,8 +1329,32 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     assert len(response) == 2
     assert response[0]['event'] == 'EventPaymentSentSuccess'
     assert response[1]['event'] == 'EventPaymentSentSuccess'
+    # test endpoint without (partner and token) for target1
+    request = grequests.get(
+        api_url_for(
+            app1_server,
+            'paymentresource',
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    # test endpoint without (partner and token) for target2
+    request = grequests.get(
+        api_url_for(
+            app2_server,
+            'paymentresource',
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
 
-    # test endpoint without partner
+    # test endpoint without partner for sender
     request = grequests.get(
         api_url_for(
             test_api_server,
@@ -1323,8 +1368,34 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     assert len(response) == 2
     assert response[0]['event'] == 'EventPaymentSentSuccess'
     assert response[1]['event'] == 'EventPaymentSentSuccess'
+    # test endpoint without partner for target1
+    request = grequests.get(
+        api_url_for(
+            app1_server,
+            'token_paymentresource',
+            token_address=token_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    # test endpoint without partner for target2
+    request = grequests.get(
+        api_url_for(
+            app2_server,
+            'token_paymentresource',
+            token_address=token_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
 
-    # test endpoint for token and partner
+    # test endpoint for token and partner for sender
     request = grequests.get(
         api_url_for(
             test_api_server,
@@ -1338,6 +1409,37 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = response.json()
     assert len(response) == 1
     assert response[0]['event'] == 'EventPaymentSentSuccess'
+    # test endpoint for token and partner for target1
+    request = grequests.get(
+        api_url_for(
+            app1_server,
+            'token_target_paymentresource',
+            token_address=token_address,
+            target_address=target1_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    # test endpoint for token and partner for target2
+    request = grequests.get(
+        api_url_for(
+            app2_server,
+            'token_target_paymentresource',
+            token_address=token_address,
+            target_address=target2_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+
+    app1_server.stop()
+    app2_server.stop()
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
