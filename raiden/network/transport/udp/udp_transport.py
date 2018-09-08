@@ -439,8 +439,6 @@ class UDPTransport(Runnable):
                 message=message,
             )
 
-            assert not self.event_stop.is_set()
-
     def maybe_send(self, recipient: typing.Address, message: Message):
         """ Send message to recipient if the transport is running. """
 
