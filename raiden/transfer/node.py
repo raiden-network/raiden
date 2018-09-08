@@ -189,10 +189,6 @@ def subdispatch_to_paymenttask(
         elif isinstance(sub_task, TargetTask):
             token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
-            token_network_state = views.get_token_network_by_identifier(
-                chain_state,
-                token_network_identifier,
-            )
 
             channel_state = views.get_channelstate_by_token_network_identifier(
                 chain_state,
