@@ -13,6 +13,10 @@ Running the web application
 ---------------------------
 There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :ref:`install instructions <installation>` for this.
 
+
+.. NOTE::
+      If an INFURA node is used as an ethereum rpc provider then the WebUI can't function.
+
 The only dependency needed to run the web application is `node.js <https://docs.npmjs.com/getting-started/installing-node>`_.
 
 Once Raiden and node.js has been installed, it is quite easy to install and start the web application. From the root of the Raiden directory do::
