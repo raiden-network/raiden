@@ -103,54 +103,65 @@ def handle_inittarget(
     transfer = state_change.transfer
     route = state_change.route
 
-    target_state = TargetTransferState(
-        route,
-        transfer,
-    )
-
     assert channel_state.identifier == transfer.balance_proof.channel_identifier
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
         channel_state,
         transfer,
     )
 
-    safe_to_wait, unsafe_msg = is_safe_to_wait(
-        transfer.lock.expiration,
-        channel_state.reveal_timeout,
-        block_number,
-    )
+    if is_valid:
+        # An valid balance proof does not mean the payment itself is still valid,
+        # e.g. the lock may be near expiration or have expired. This is fine, the
+        # message with an unusable lock must be handled to properly synchronize the
+        # local view of the partner's channel state, allowing the next balance
+        # proofs to be handled. This however, must only be done once, which is
+        # enforced by the nonce is increasing sequentially, which is verified by
+        # the handler handle_receive_lockedtransfer.
+        target_state = TargetTransferState(route, transfer)
 
-    # if there is not enough time to safely unlock the token on-chain
-    # silently let the transfer expire.
-    if is_valid and safe_to_wait:
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        recipient = transfer.initiator
-        secret_request = SendSecretRequest(
-            recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-            message_identifier=message_identifier,
-            payment_identifier=transfer.payment_identifier,
-            amount=transfer.lock.amount,
-            expiration=transfer.lock.expiration,
-            secrethash=transfer.lock.secrethash,
+        safe_to_wait, unsafe_msg = is_safe_to_wait(
+            transfer.lock.expiration,
+            channel_state.reveal_timeout,
+            block_number,
         )
 
-        channel_events.append(secret_request)
+        if safe_to_wait:
+            message_identifier = message_identifier_from_prng(pseudo_random_generator)
+            recipient = transfer.initiator
+            secret_request = SendSecretRequest(
+                recipient=recipient,
+                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+                message_identifier=message_identifier,
+                payment_identifier=transfer.payment_identifier,
+                amount=transfer.lock.amount,
+                expiration=transfer.lock.expiration,
+                secrethash=transfer.lock.secrethash,
+            )
+            channel_events.append(secret_request)
+        else:
+            # If there is not enough time to safely unlock the lock on-chain
+            # silently let the transfer expire. The target task must be created
+            # to handle the ReceiveLockExpired state change, which will clear
+            # the expired lock.
+            unlock_failed = EventUnlockClaimFailed(
+                identifier=transfer.payment_identifier,
+                secrethash=transfer.lock.secrethash,
+                reason=unsafe_msg,
+            )
+            channel_events.append(unlock_failed)
+
         iteration = TransitionResult(target_state, channel_events)
     else:
-        if not is_valid:
-            failure_reason = errormsg
-        elif not safe_to_wait:
-            failure_reason = unsafe_msg
-
+        # If the balance proof is not valid, do *not* create a task. Otherwise it's
+        # possible for an attacker to send multiple invalid transfers, and increase
+        # the memory usage of this Node.
         unlock_failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
-            reason=failure_reason,
+            reason=errormsg,
         )
-
         channel_events.append(unlock_failed)
-        iteration = TransitionResult(target_state, channel_events)
+        iteration = TransitionResult(None, channel_events)
 
     return iteration
 
@@ -307,12 +318,13 @@ def state_transition(
 
     iteration = TransitionResult(target_state, list())
     if type(state_change) == ActionInitTarget:
-        iteration = handle_inittarget(
-            state_change,
-            channel_state,
-            pseudo_random_generator,
-            block_number,
-        )
+        if target_state is None:
+            iteration = handle_inittarget(
+                state_change,
+                channel_state,
+                pseudo_random_generator,
+                block_number,
+            )
     elif type(state_change) == Block:
         assert state_change.block_number == block_number
 
