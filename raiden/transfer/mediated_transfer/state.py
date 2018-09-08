@@ -331,7 +331,7 @@ class LockedTransferUnsignedState(State):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
+        if balance_proof.locksroot == EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
         self.payment_identifier = payment_identifier
@@ -426,7 +426,7 @@ class LockedTransferSignedState(State):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if balance_proof.locksroot is EMPTY_MERKLE_ROOT:
+        if balance_proof.locksroot == EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
         self.message_identifier = message_identifier
