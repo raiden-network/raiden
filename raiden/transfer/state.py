@@ -278,6 +278,7 @@ class ChainState(State):
         return (
             isinstance(other, ChainState) and
             self.block_number == other.block_number and
+            self.pseudo_random_generator.getstate() == other.pseudo_random_generator.getstate() and
             self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
@@ -292,6 +293,7 @@ class ChainState(State):
         return {
             'block_number': self.block_number,
             'chain_id': self.chain_id,
+            'pseudo_random_generator': self.pseudo_random_generator.getstate(),
             'identifiers_to_paymentnetworks': map_dict(
                 to_checksum_address,
                 serialization.identity,
@@ -312,8 +314,16 @@ class ChainState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ChainState':
+        pseudo_random_generator = random.Random()
+
+        # JSON serializes a tuple as a list
+        state = list(data['pseudo_random_generator'])  # copy
+        state[1] = tuple(state[1])  # fix type
+        state = tuple(state)
+        pseudo_random_generator.setstate(state)
+
         restored = cls(
-            pseudo_random_generator=random.Random(),
+            pseudo_random_generator=pseudo_random_generator,
             block_number=data['block_number'],
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
