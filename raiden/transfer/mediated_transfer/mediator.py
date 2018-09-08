@@ -897,6 +897,9 @@ def handle_init(
         from_transfer,
     )
     if not is_valid:
+        # If the balance proof is not valid, do *not* create a task. Otherwise it's
+        # possible for an attacker to send multiple invalid transfers, and increase
+        # the memory usage of this Node.
         return TransitionResult(None, events)
 
     iteration = mediate_transfer(
