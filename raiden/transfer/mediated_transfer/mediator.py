@@ -827,7 +827,6 @@ def mediate_transfer(
     route.
     """
     transfer_pair = None
-    mediated_events = list()
 
     available_routes = filter_used_routes(
         state.transfers_pair,

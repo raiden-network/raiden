@@ -2,7 +2,6 @@ import json
 import re
 from collections import defaultdict
 from enum import Enum
-from json import JSONDecodeError
 from binascii import Error as DecodeError
 from random import Random
 from urllib.parse import urlparse
@@ -570,7 +569,7 @@ class MatrixTransport(Runnable):
             try:
                 message_dict = json.loads(data)
                 message = message_from_dict(message_dict)
-            except (UnicodeDecodeError, JSONDecodeError) as ex:
+            except (UnicodeDecodeError, json.JSONDecodeError) as ex:
                 self.log.warning(
                     "Can't parse message data JSON",
                     message_data=data,

@@ -9,10 +9,9 @@ from string import Template
 from typing import Callable, List, Union, Any, Dict
 
 import click
-import pytoml
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
-from pytoml import TomlError
+from pytoml import load, TomlError
 
 from raiden.utils import address_checksum_and_decode
 from raiden.constants import NETWORKNAME_TO_ID
@@ -328,7 +327,7 @@ def apply_config_file(
     config_file_values = dict()
     try:
         with config_file_path.open() as config_file:
-            config_file_values = pytoml.load(config_file)
+            config_file_values = load(config_file)
     except OSError as ex:
         # Silently ignore if 'file not found' and the config file path is the default
         config_file_param = paramname_to_param[config_file_option_name]

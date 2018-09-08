@@ -5,7 +5,6 @@ import json
 import os
 import signal
 import sys
-import tempfile
 import textwrap
 import traceback
 from binascii import hexlify
@@ -13,7 +12,7 @@ from copy import deepcopy
 from datetime import datetime
 from itertools import count
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import mktemp, NamedTemporaryFile
 from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
 from subprocess import DEVNULL
@@ -1146,7 +1145,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         setup_testchain_and_raiden,
     )
 
-    report_file = tempfile.mktemp(suffix='.log')
+    report_file = mktemp(suffix='.log')
     configure_logging({'': 'DEBUG'}, log_file=report_file)
 
     def append_report(subject, data):

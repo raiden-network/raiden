@@ -82,7 +82,7 @@ def compile_files_cwd(*args, **kwargs):
     if os.path.isfile(compile_wd):
         compile_wd = os.path.dirname(compile_wd)
     # remove prefix from the files
-    if compile_wd[-1] is not '/':
+    if compile_wd[-1] != '/':
         compile_wd += '/'
     file_list = [
         x.replace(compile_wd, '')
