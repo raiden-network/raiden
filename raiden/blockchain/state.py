@@ -26,8 +26,7 @@ def get_channel_state(
 
     identifier = payment_channel_proxy.channel_identifier
     settle_timeout = payment_channel_proxy.settle_timeout()
-
-    closed_block_number = None
+    is_closed = payment_channel_proxy.closed()
 
     # ignore bad open block numbers
     if opened_block_number <= 0:
@@ -39,10 +38,10 @@ def get_channel_state(
         TransactionExecutionStatus.SUCCESS,
     )
 
-    if closed_block_number:
+    if is_closed:
         close_transaction = TransactionExecutionStatus(
             None,
-            closed_block_number,
+            None,
             TransactionExecutionStatus.SUCCESS,
         )
     else:
