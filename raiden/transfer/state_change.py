@@ -345,7 +345,9 @@ class ActionInitChain(StateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ActionInitChain) and
+            self.pseudo_random_generator.getstate() == other.pseudo_random_generator.getstate() and
             self.block_number == other.block_number and
+            self.our_address == other.our_address and
             self.chain_id == other.chain_id
         )
 
@@ -357,12 +359,21 @@ class ActionInitChain(StateChange):
             'block_number': self.block_number,
             'our_address': to_checksum_address(self.our_address),
             'chain_id': self.chain_id,
+            'pseudo_random_generator': self.pseudo_random_generator.getstate(),
         }
 
     @classmethod
     def from_dict(cls, data) -> 'ActionInitChain':
+        pseudo_random_generator = random.Random()
+
+        # JSON serializes a tuple as a list
+        state = list(data['pseudo_random_generator'])  # copy
+        state[1] = tuple(state[1])  # fix type
+        state = tuple(state)
+        pseudo_random_generator.setstate(state)
+
         return cls(
-            pseudo_random_generator=random.Random(),
+            pseudo_random_generator=pseudo_random_generator,
             block_number=data['block_number'],
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],

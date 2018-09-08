@@ -1,8 +1,12 @@
+import random
+
 import pytest
 from eth_utils import to_canonical_address
 from networkx import Graph
 
 from raiden.storage.serialize import JSONSerializer, RaidenJSONDecoder
+from raiden.tests.utils import factories
+from raiden.transfer import state_change
 from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import EMPTY_MERKLE_TREE
 from raiden.utils import serialization
@@ -10,6 +14,7 @@ from raiden.utils import serialization
 
 class MockObject(object):
     """ Used for testing JSON encoding/decoding """
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -192,3 +197,39 @@ def test_serialization_merkletree_layers_empty():
     restored = serialization.deserialize_merkletree_layers(data)
 
     assert tree.layers == restored
+
+
+def test_actioninitchain_restore():
+    """ ActionInitChain *must* restore the previous pseudo random generator
+    state.
+
+    Message identifiers are used for confirmation messages, e.g. delivered and
+    processed messages, therefor it's important for each message identifier to
+    not collide with a previous identifier, for this reason the PRNG is used.
+
+    Additionally, during restarts the state changes are reapplied, and it's
+    really important for the re-execution of the state changes to be
+    deterministic, otherwise undefined behavior may happen. For this reason the
+    state of the PRNG must be restored.
+
+    If the above is not respected, the message ids generated during restart
+    will not match the previous IDs and the message queues won't be properly
+    cleared up.
+    """
+    pseudo_random_generator = random.Random()
+    block_number = 577
+    our_address = factories.make_address()
+    chain_id = 777
+
+    original_obj = state_change.ActionInitChain(
+        pseudo_random_generator,
+        block_number,
+        our_address,
+        chain_id,
+    )
+
+    decoded_obj = JSONSerializer.deserialize(
+        JSONSerializer.serialize(original_obj),
+    )
+
+    assert original_obj == decoded_obj
