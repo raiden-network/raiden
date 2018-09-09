@@ -44,7 +44,6 @@ from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
     HOP1_KEY,
-    UNIT_SETTLE_TIMEOUT,
     HOP2,
     HOP2_KEY,
     HOP3,
@@ -53,16 +52,18 @@ from raiden.tests.utils.factories import (
     HOP4_KEY,
     HOP5,
     HOP5_KEY,
-    UNIT_SECRETHASH,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
+    UNIT_SECRETHASH,
+    UNIT_SETTLE_TIMEOUT,
     UNIT_TOKEN_ADDRESS,
+    UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
+    UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
-    UNIT_TRANSFER_PKEY,
 )
 
 
@@ -106,6 +107,7 @@ def make_transfers_pair(privatekeys, amount, block_number):
             partner_balance=deposit_amount,
             partner_address=address,
             token_address=UNIT_TOKEN_ADDRESS,
+            token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
         )
         for address in addresses
     }
@@ -474,6 +476,7 @@ def test_events_for_refund():
         expiration,
         UNIT_SECRET,
         channel_identifier=refund_channel.identifier,
+        token_network_address=refund_channel.token_network_identifier,
     )
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(

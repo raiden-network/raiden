@@ -18,8 +18,6 @@ from raiden.raiden_service import (
 
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
-    UNIT_REGISTRY_IDENTIFIER,
-    UNIT_CHAIN_ID,
     make_address,
 )
 from raiden.transfer import channel, views
@@ -408,9 +406,8 @@ def make_receive_transfer_mediated(
         transferred_amount,
         lock,
         merkletree_leaves=None,
-        token_network_address=UNIT_REGISTRY_IDENTIFIER,
         locked_amount=None,
-        chain_id=UNIT_CHAIN_ID,
+        chain_id=None,
 ):
 
     if not isinstance(lock, HashTimeLockState):
@@ -436,12 +433,13 @@ def make_receive_transfer_mediated(
     payment_identifier = nonce
     transfer_target = make_address()
     transfer_initiator = make_address()
+    chain_id = chain_id or channel_state.chain_id
     mediated_transfer_msg = LockedTransfer(
         chain_id=chain_id,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=nonce,
-        token_network_address=token_network_address,
+        token_network_address=channel_state.token_network_identifier,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,

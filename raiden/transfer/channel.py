@@ -725,7 +725,7 @@ def is_valid_unlock(
 
     if not is_balance_proof_usable:
         msg = 'Invalid Unlock message. {}'.format(invalid_balance_proof_msg)
-        result = (False, msg)
+        result = (False, msg, None)
 
     elif received_balance_proof.locksroot != locksroot_without_lock:
         # Secret messages remove a known lock, the new locksroot must have only
