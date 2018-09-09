@@ -162,6 +162,7 @@ def test_channel_data_removed_after_unlock(
         our_address=our_address,
         partner_balance=our_balance,
         partner_address=address,
+        token_network_identifier=token_network_state.address,
     )
     payment_network_identifier = factories.make_payment_network_identifier()
 
@@ -195,7 +196,6 @@ def test_channel_data_removed_after_unlock(
         nonce=1,
         transferred_amount=0,
         lock=lock,
-        token_network_address=token_network_state.address,
     )
 
     from_route = factories.route_from_channel(channel_state)
@@ -283,6 +283,7 @@ def test_multiple_channel_states(
         our_address=our_address,
         partner_balance=our_balance,
         partner_address=address,
+        token_network_identifier=token_network_state.address,
     )
     payment_network_identifier = factories.make_payment_network_identifier()
 
@@ -316,7 +317,6 @@ def test_multiple_channel_states(
         nonce=1,
         transferred_amount=0,
         lock=lock,
-        token_network_address=token_network_state.address,
     )
 
     from_route = factories.route_from_channel(channel_state)

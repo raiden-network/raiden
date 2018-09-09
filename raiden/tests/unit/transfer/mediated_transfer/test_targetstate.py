@@ -214,6 +214,7 @@ def test_handle_inittarget():
         expiration,
         UNIT_SECRET,
         channel_identifier=from_channel.identifier,
+        token_network_address=from_channel.token_network_identifier,
     )
 
     state_change = ActionInitTarget(
