@@ -14,8 +14,9 @@ from raiden.exceptions import (
     RaidenShuttingDown,
     UnknownAddress,
 )
+
 from raiden.message_handler import on_message
-from raiden.messages import Delivered, Message, Ping, Pong, decode, message_from_sendevent
+from raiden.messages import Delivered, Message, Ping, Pong, decode
 from raiden.network.transport.udp import healthcheck
 from raiden.network.transport.udp.udp_utils import (
     event_first_of,
@@ -207,7 +208,7 @@ class UDPTransport(Runnable):
     def start(
             self,
             raiden: RaidenService,
-            queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Event]],
+            queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Message]],
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
@@ -221,15 +222,10 @@ class UDPTransport(Runnable):
         self.server.set_handle(self._receive)
 
         for queue_identifier, queue in queueids_to_queues.items():
-            encoded_queue = list()
-
-            for sendevent in queue:
-                message = message_from_sendevent(sendevent, raiden.address)
-                raiden.sign(message)
-                encoded = message.encode()
-
-                encoded_queue.append((encoded, sendevent.message_identifier))
-
+            encoded_queue = [
+                (message.encode(), message.message_identifier)
+                for message in queue
+            ]
             self.init_queue_for(queue_identifier, encoded_queue)
 
         self.server.start()

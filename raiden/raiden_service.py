@@ -16,7 +16,8 @@ from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenShuttingDown
-from raiden.messages import LockedTransfer, SignedMessage
+from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
+
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
@@ -314,12 +315,24 @@ class RaidenService(Runnable):
 
         self.alarm.start()
 
-        queueids_to_queues = views.get_all_messagequeues(chain_state)
-        # repopulate identifier_to_results for pending transfers
-        for queue_messages in queueids_to_queues.values():
-            for message in queue_messages:
-                if isinstance(message, SendDirectTransfer):
-                    self.identifier_to_results[message.payment_identifier] = AsyncResult()
+        events_queues = views.get_all_messagequeues(chain_state)
+        queueids_to_queues = dict()
+
+        for queue_identifier, event_queue in events_queues.items():
+
+            # repopulate identifier_to_results for pending transfers
+            for event in event_queue:
+                if type(event) == SendDirectTransfer:
+                    self.identifier_to_results[event.payment_identifier] = AsyncResult()
+
+            message_queue = []
+            for event in event_queue:
+                message = message_from_sendevent(event, self.address)
+                self.sign(message)
+                message_queue.append(message)
+
+            queueids_to_queues[queue_identifier] = message_queue
+
         self.transport.start(self, queueids_to_queues)
 
         # exceptions on these subtasks should crash the app and bubble up
