@@ -22,7 +22,6 @@ from eth_utils import (
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 
-from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
 from raiden.exceptions import (
     InvalidAddress,
@@ -46,8 +45,7 @@ from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
-from raiden.transfer import events as transfer_events, views
-from raiden.transfer.mediated_transfer import events as mediated_transfer_events
+from raiden.transfer import views
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -202,7 +200,7 @@ class MatrixTransport(Runnable):
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
-        self._send_queued_messages()  # uses property instead of initial_queues
+        self._send_queued_messages(initial_queues)
 
         self.log.info('TRANSPORT STARTED', config=self._config)
 
@@ -674,12 +672,9 @@ class MatrixTransport(Runnable):
             self.log.warning('Exception while processing message', exc_info=True)
             return
 
-    def _send_queued_messages(self):
-        for queue_identifier, events in self._queueids_to_queues.items():
-            node_address = self._raiden_service.address
-            for event in events:
-                message = _event_to_message(event, node_address)
-                self._raiden_service.sign(message)
+    def _send_queued_messages(self, queueids_to_queues):
+        for queue_identifier, messages in queueids_to_queues.items():
+            for message in messages:
                 self.start_health_check(queue_identifier.recipient)
                 self.send_async(queue_identifier, message)
 
@@ -1069,19 +1064,3 @@ class MatrixTransport(Runnable):
             self._set_room_id_for_address(address, None)
             return None
         return room_id
-
-
-def _event_to_message(event, node_address):
-    eventtypes_to_messagetype = {
-        mediated_transfer_events.SendBalanceProof: messages.Secret,
-        mediated_transfer_events.SendLockedTransfer: messages.LockedTransfer,
-        mediated_transfer_events.SendRefundTransfer: messages.RefundTransfer,
-        mediated_transfer_events.SendRevealSecret: messages.RevealSecret,
-        mediated_transfer_events.SendSecretRequest: messages.SecretRequest,
-        transfer_events.SendDirectTransfer: messages.DirectTransfer,
-        transfer_events.SendProcessed: messages.Processed,
-    }
-    message_class = eventtypes_to_messagetype.get(type(event))
-    if message_class is None:
-        raise TypeError(f'Event type {type(event)} is not supported.')
-    return message_class.from_event(event)
