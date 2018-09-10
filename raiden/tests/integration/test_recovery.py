@@ -18,12 +18,9 @@ from raiden.transfer.state_change import (
 )
 
 
-@pytest.mark.skip(reason='issue 2360')
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
 def test_recovery_happy_case(
         raiden_network,
         number_of_nodes,

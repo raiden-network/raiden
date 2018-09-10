@@ -60,12 +60,11 @@ def test_event_transfer_received_success(
         )
 
 
-@pytest.mark.skip(reason='issue 2360')
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [75])
-@pytest.mark.parametrize('settle_timeout', [250])
+@pytest.mark.parametrize('reveal_timeout', [15])
+@pytest.mark.parametrize('settle_timeout', [120])
 def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
@@ -125,12 +124,11 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     echo_node.stop()
 
 
-@pytest.mark.skip(reason='issue 2360')
 @pytest.mark.parametrize('number_of_nodes', [8])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [50])
-@pytest.mark.parametrize('settle_timeout', [250])
+@pytest.mark.parametrize('reveal_timeout', [15])
+@pytest.mark.parametrize('settle_timeout', [120])
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
