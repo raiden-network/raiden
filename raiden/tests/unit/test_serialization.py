@@ -204,7 +204,7 @@ def test_actioninitchain_restore():
     state.
 
     Message identifiers are used for confirmation messages, e.g. delivered and
-    processed messages, therefor it's important for each message identifier to
+    processed messages, therefore it's important for each message identifier to
     not collide with a previous identifier, for this reason the PRNG is used.
 
     Additionally, during restarts the state changes are reapplied, and it's
@@ -236,22 +236,6 @@ def test_actioninitchain_restore():
 
 
 def test_chainstate_restore():
-    """ ActionInitChain *must* restore the previous pseudo random generator
-    state.
-
-    Message identifiers are used for confirmation messages, e.g. delivered and
-    processed messages, therefor it's important for each message identifier to
-    not collide with a previous identifier, for this reason the PRNG is used.
-
-    Additionally, during restarts the state changes are reapplied, and it's
-    really important for the re-execution of the state changes to be
-    deterministic, otherwise undefined behavior may happen. For this reason the
-    state of the PRNG must be restored.
-
-    If the above is not respected, the message ids generated during restart
-    will not match the previous IDs and the message queues won't be properly
-    cleared up.
-    """
     pseudo_random_generator = random.Random()
     block_number = 577
     our_address = factories.make_address()

@@ -1,6 +1,4 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-import random
-
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import ContractReceiveStateChange, StateChange
@@ -11,6 +9,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionChannelNewBalance,
 )
+from raiden.transfer.utils import pseudo_random_generator_from_json
 from raiden.utils import pex, sha3, typing
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 
@@ -364,13 +363,7 @@ class ActionInitChain(StateChange):
 
     @classmethod
     def from_dict(cls, data) -> 'ActionInitChain':
-        pseudo_random_generator = random.Random()
-
-        # JSON serializes a tuple as a list
-        state = list(data['pseudo_random_generator'])  # copy
-        state[1] = tuple(state[1])  # fix type
-        state = tuple(state)
-        pseudo_random_generator.setstate(state)
+        pseudo_random_generator = pseudo_random_generator_from_json(data)
 
         return cls(
             pseudo_random_generator=pseudo_random_generator,
