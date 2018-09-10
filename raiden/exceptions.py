@@ -185,6 +185,10 @@ class InvalidBlockNumberInput(RaidenError):
     """Raised when the user provided a block number that is  < 0 or > UINT64_MAX"""
 
 
+class InvalidNumberInput(RaidenError):
+    """Raised when the user provided an invalid number"""
+
+
 class TransportError(RaidenError):
     """ Raised when a transport encounters an unexpected error """
 

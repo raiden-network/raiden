@@ -19,6 +19,7 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
 from raiden.api.objects import AddressList, PartnersPerTokenList
+
 from raiden.api.v1.encoding import (
     AddressListSchema,
     ChannelStateSchema,
@@ -60,6 +61,7 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
     InvalidBlockNumberInput,
+    InvalidNumberInput,
     InvalidSettleTimeout,
     SamePeerAddress,
     TokenNotRegistered,
@@ -798,7 +800,7 @@ class RestAPI:
                 limit=limit,
                 offset=offset,
             )
-        except (InvalidBlockNumberInput, InvalidAddress) as e:
+        except (InvalidNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         result = []
