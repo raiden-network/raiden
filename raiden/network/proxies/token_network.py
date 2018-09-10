@@ -382,20 +382,6 @@ class TokenNetwork:
         """ Returns the maximal settlement timeout for the token network. """
         return self.proxy.contract.functions.settlement_timeout_max().call()
 
-    def settle_block_number(
-            self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-    ) -> typing.Optional[typing.BlockNumber]:
-        """ Returns the channel settle_block_number if it is not yet settled and None Otherwise """
-        channel_data = self.detail_channel(
-            participant1=participant1,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-        )
-        return channel_data.settle_block_number
-
     def channel_is_opened(
             self,
             participant1: typing.Address,
