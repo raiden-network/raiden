@@ -1,14 +1,16 @@
 import pytest
 import gevent
+
+from raiden.app import App
 from raiden import waiting
-from raiden.transfer import views
+from raiden.network.transport import MatrixTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     direct_transfer,
     assert_synced_channel_state,
 )
-from raiden.network.transport import MatrixTransport
-from raiden.app import App
+from raiden.transfer import views
 
 
 @pytest.mark.parametrize('deposit', [10])
@@ -55,6 +57,8 @@ def test_send_queued_messages(
         app0.raiden.config['transport']['matrix'],
     )
 
+    raiden_event_handler = RaidenEventHandler()
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -62,6 +66,7 @@ def test_send_queued_messages(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
+        raiden_event_handler=raiden_event_handler,
         discovery=app0.raiden.discovery,
     )
 

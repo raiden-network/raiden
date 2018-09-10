@@ -96,6 +96,7 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
 from raiden.storage.sqlite import RAIDEN_DB_VERSION
+from raiden.raiden_event_handler import RaidenEventHandler
 
 
 log = structlog.get_logger(__name__)
@@ -754,6 +755,8 @@ def run_app(
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
+    raiden_event_handler = RaidenEventHandler()
+
     try:
         chain_config = constants.ID_TO_NETWORK_CONFIG.get(net_id, {})
         start_block = chain_config.get(constants.START_QUERY_BLOCK_KEY, 0)
@@ -764,6 +767,7 @@ def run_app(
             default_registry=token_network_registry,
             default_secret_registry=secret_registry,
             transport=transport,
+            raiden_event_handler=raiden_event_handler,
             discovery=discovery,
         )
     except RaidenError as e:

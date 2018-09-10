@@ -12,6 +12,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import merge_dict
@@ -341,6 +342,8 @@ def create_apps(
                 config['transport']['udp'],
             )
 
+        raiden_event_handler = RaidenEventHandler()
+
         app = App(
             config=config_copy,
             chain=blockchain,
@@ -348,6 +351,7 @@ def create_apps(
             default_registry=registry,
             default_secret_registry=secret_registry,
             transport=transport,
+            raiden_event_handler=raiden_event_handler,
             discovery=discovery,
         )
         apps.append(app)
