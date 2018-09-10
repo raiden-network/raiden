@@ -69,7 +69,8 @@ def test_token_bucket():
 
 def test_udp_receive_invalid_length(mock_udp):
     data = bytearray(random.getrandbits(8) for _ in range(mock_udp.UDP_MAX_MESSAGE_SIZE + 1))
-    assert not mock_udp.receive(data)
+    host_port = None
+    assert not mock_udp.receive(data, host_port)
 
 
 def test_udp_decode_invalid_message(mock_udp):
@@ -82,7 +83,8 @@ def test_udp_decode_invalid_message(mock_udp):
     )
     data = message.encode()
     wrong_command_id_data = b'\x99' + data[1:]
-    assert not mock_udp.receive(wrong_command_id_data)
+    host_port = None
+    assert not mock_udp.receive(wrong_command_id_data, host_port)
 
 
 def test_udp_decode_invalid_size_message(mock_udp):
@@ -95,4 +97,5 @@ def test_udp_decode_invalid_size_message(mock_udp):
     )
     data = message.encode()
     wrong_command_id_data = data[:-1]
-    assert not mock_udp.receive(wrong_command_id_data)
+    host_port = None
+    assert not mock_udp.receive(wrong_command_id_data, host_port)
