@@ -2,7 +2,8 @@ import sqlite3
 import threading
 from typing import Any, Optional, Tuple
 
-from raiden.exceptions import InvalidDBData
+from raiden.exceptions import InvalidDBData, InvalidNumberInput
+
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES
 
 # The latest DB version
@@ -180,11 +181,11 @@ class SQLiteStorage:
         limit = -1 if limit is None else limit
         offset = 0 if offset is None else offset
 
-        if not isinstance(limit, int):
-            raise ValueError('limit must be an integer')
+        if not isinstance(limit, int) or limit < 0:
+            raise InvalidNumberInput('limit must be a positive integer')
 
-        if not isinstance(offset, int):
-            raise ValueError('offset must be an integer')
+        if not isinstance(offset, int) or offset < 0:
+            raise InvalidNumberInput('offset must be a positive integer')
 
         cursor = self.conn.cursor()
 
