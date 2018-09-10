@@ -14,6 +14,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
+from raiden.raiden_event_handler import RaidenEventHandler
 
 
 @pytest.mark.parametrize('deposit', [10])

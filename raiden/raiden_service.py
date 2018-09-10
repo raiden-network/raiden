@@ -17,7 +17,6 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenShuttingDown
 from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
-
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal

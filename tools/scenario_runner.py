@@ -20,8 +20,8 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.ui.console import ConsoleTools
-from raiden.utils import split_endpoint
 from raiden.utils.gevent_utils import RaidenGreenletEvent
+from raiden.utils import split_endpoint
 
 gevent.monkey.patch_all()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
