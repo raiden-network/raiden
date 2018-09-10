@@ -1,10 +1,11 @@
-import gevent
 import os
+
+import gevent
 import psutil
 
-from raiden.app import App
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
+from raiden.app import App
 
 
 def wait_for_listening_port(
