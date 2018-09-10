@@ -1,28 +1,33 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
-
 from binascii import hexlify
 from typing import Union
 
 from eth_utils import to_canonical_address
-from raiden_libs.utils.signing import eth_recover
-from raiden_libs.exceptions import InvalidSignature
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
-from raiden.transfer.architecture import StateChange, Event
-from raiden.transfer.architecture import TransitionResult
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    EventTransferReceivedInvalidDirectTransfer,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
+    EventTransferReceivedInvalidDirectTransfer,
     SendDirectTransfer,
     SendProcessed,
+)
+from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+    refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -30,34 +35,20 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
-    ReceiveTransferRefundCancelRoute,
     ReceiveTransferRefund,
+    ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    refund_from_sendmediated,
-    SendBalanceProof,
-    SendLockedTransfer,
-    SendLockExpired,
-    SendRefundTransfer,
-)
-from raiden.transfer.merkle_tree import (
-    LEAVES,
-    merkleroot,
-    compute_layers,
-    compute_merkleproof_for,
-)
+from raiden.transfer.merkle_tree import LEAVES, compute_layers, compute_merkleproof_for, merkleroot
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
     CHANNEL_STATE_SETTLING,
-    CHANNEL_STATES_PRIOR_TO_CLOSED,
     CHANNEL_STATE_UNUSABLE,
+    CHANNEL_STATES_PRIOR_TO_CLOSED,
     EMPTY_MERKLE_ROOT,
     EMPTY_MERKLE_TREE,
-    message_identifier_from_prng,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
@@ -66,9 +57,10 @@ from raiden.transfer.state import (
     NettingChannelState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
+    TransactionOrder,
     UnlockPartialProofState,
     UnlockProofState,
-    TransactionOrder,
+    message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -84,8 +76,8 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex, typing
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
-
+from raiden_libs.exceptions import InvalidSignature
+from raiden_libs.utils.signing import eth_recover
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
@@ -263,7 +255,7 @@ def is_balance_proof_usable_onchain(
     the correct channel, and the values must not result in an under/overflow
     onchain.
 
-    Important: This predicated does not validate the all message fields. The
+    Important: This predicate does not validate all the message fields. The
     fields locksroot, transferred_amount, and locked_amount **MUST** be
     validated elsewhere based on the message type.
     """
