@@ -16,6 +16,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
+from raiden.raiden_event_handler import RaidenEventHandler
 
 
 @pytest.mark.parametrize('deposit', [10])
@@ -65,6 +66,8 @@ def test_recovery_happy_case(
         app0.raiden.config['transport']['udp'],
     )
 
+    raiden_event_handler = RaidenEventHandler()
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -72,6 +75,7 @@ def test_recovery_happy_case(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
+        raiden_event_handler=raiden_event_handler,
         discovery=app0.raiden.discovery,
     )
 
@@ -201,6 +205,8 @@ def test_recovery_unhappy_case(
         retry_timeout,
     )
 
+    raiden_event_handler = RaidenEventHandler()
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -208,6 +214,7 @@ def test_recovery_unhappy_case(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
+        raiden_event_handler=raiden_event_handler,
         discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
@@ -268,6 +275,8 @@ def test_recovery_blockchain_events(
     import gevent
     gevent.sleep(1)
 
+    raiden_event_handler = RaidenEventHandler()
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -275,6 +284,7 @@ def test_recovery_blockchain_events(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
+        raiden_event_handler=raiden_event_handler,
         discovery=app0.raiden.discovery,
     )
 

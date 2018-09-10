@@ -14,7 +14,11 @@ from gevent.lock import Semaphore
 from raiden import constants, routing, waiting
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
-from raiden.exceptions import InvalidAddress, RaidenShuttingDown
+from raiden.exceptions import (
+    InvalidAddress,
+    RaidenRecoverableError,
+    RaidenShuttingDown,
+)
 from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import (
@@ -23,7 +27,6 @@ from raiden.network.proxies import (
 )
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.blockchain.events import BlockchainEvents
-from raiden.raiden_event_handler import on_raiden_event
 from raiden.storage import wal, serialize, sqlite
 from raiden.tasks import AlarmTask
 from raiden.transfer import views, node
@@ -139,6 +142,7 @@ class RaidenService(Runnable):
             default_secret_registry: SecretRegistry,
             private_key_bin,
             transport,
+            raiden_event_handler: 'RaidenEventHandler',
             config,
             discovery=None,
     ):
@@ -167,6 +171,7 @@ class RaidenService(Runnable):
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
+        self.raiden_event_handler = raiden_event_handler
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -313,7 +318,7 @@ class RaidenService(Runnable):
         )
         with self.dispatch_events_lock:
             for transaction in pending_transactions:
-                on_raiden_event(self, transaction)
+                self.raiden_event_handler.on_raiden_event(self, transaction)
 
         self.alarm.start()
 
@@ -399,7 +404,14 @@ class RaidenService(Runnable):
 
         for event in event_list:
             log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
-            on_raiden_event(self, event)
+
+            try:
+                self.raiden_event_handler.on_raiden_event(
+                    raiden=self,
+                    event=event,
+                )
+            except RaidenRecoverableError as e:
+                log.error(str(e))
 
         # Take a snapshot every SNAPSHOT_STATE_CHANGES_COUNT
         # TODO: Gather more data about storage requirements
