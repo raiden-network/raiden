@@ -1,3 +1,5 @@
+import random
+
 from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
@@ -18,3 +20,14 @@ def hash_balance_data(
         ['uint256', 'uint256', 'bytes32'],
         [transferred_amount, locked_amount, locksroot],
     )
+
+
+def pseudo_random_generator_from_json(data):
+    # JSON serializes a tuple as a list
+    pseudo_random_generator = random.Random()
+    state = list(data['pseudo_random_generator'])  # copy
+    state[1] = tuple(state[1])  # fix type
+    state = tuple(state)
+    pseudo_random_generator.setstate(state)
+
+    return pseudo_random_generator

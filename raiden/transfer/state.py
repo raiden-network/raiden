@@ -16,6 +16,7 @@ from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, serialization, sha3, typing
 from raiden.utils.serialization import map_dict, map_list
+from raiden.transfer.utils import pseudo_random_generator_from_json
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
@@ -314,13 +315,7 @@ class ChainState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ChainState':
-        pseudo_random_generator = random.Random()
-
-        # JSON serializes a tuple as a list
-        state = list(data['pseudo_random_generator'])  # copy
-        state[1] = tuple(state[1])  # fix type
-        state = tuple(state)
-        pseudo_random_generator.setstate(state)
+        pseudo_random_generator = pseudo_random_generator_from_json(data)
 
         restored = cls(
             pseudo_random_generator=pseudo_random_generator,
