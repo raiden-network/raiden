@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import json
 import os
+import re
+import sys
 
 import click
-import re
-
-import sys
 from click.types import File
 
 IMPORT_RE = re.compile(r'^import +["\'](?P<contract>[^"\']+.sol)["\'];$')

@@ -1,12 +1,12 @@
 import pytest
-from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
 from raiden.constants import DISCOVERY_TX_GAS_LIMIT
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.utils import privatekey_to_address, host_port_to_endpoint
+from raiden.utils import host_port_to_endpoint, privatekey_to_address
+from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])

@@ -1,18 +1,16 @@
 #!/usr/bin/python3
-import structlog
+import logging
 import os
-import time
+import signal
 import subprocess
 import sys
-import logging
-
-import click
+import time
 from datetime import datetime, timedelta
 
-import signal
-
+import click
 import requests
-from web3 import Web3, IPCProvider
+import structlog
+from web3 import IPCProvider, Web3
 from web3.utils.compat.compat_stdlib import Timeout
 
 log = struct.get_logger(__name__)

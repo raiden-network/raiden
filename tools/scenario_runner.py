@@ -1,28 +1,27 @@
 #!/usr/bin/env python
-from binascii import hexlify
-import signal
 import json
-import time
 import random
+import signal
+import time
+from binascii import hexlify
 
 import click
 import gevent
 import structlog
 from eth_utils import decode_hex
-from web3 import Web3, HTTPProvider
+from web3 import HTTPProvider, Web3
 
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.protocol import NODE_NETWORK_REACHABLE
-from raiden.network.protocol import UDPTransport
+from raiden.network.protocol import NODE_NETWORK_REACHABLE, UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.ui.console import ConsoleTools
-from raiden.utils.gevent_utils import RaidenGreenletEvent
 from raiden.utils import split_endpoint
+from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 gevent.monkey.patch_all()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

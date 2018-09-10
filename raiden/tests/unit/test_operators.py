@@ -1,17 +1,12 @@
 from raiden.messages import Processed
 from raiden.tests.utils import factories
-from raiden.transfer.state_change import (
-    ActionCancelPayment,
-    ActionTransferDirect,
-    Block,
-)
 from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
     EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
 )
+from raiden.transfer.state_change import ActionCancelPayment, ActionTransferDirect, Block
 from raiden.utils import sha3
-
 
 ADDRESS = sha3(b'foo')[:20]
 ADDRESS2 = sha3(b'boo')[:20]

@@ -8,11 +8,21 @@ import pytest
 import structlog
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import (
-    DirectTransfer,
-    Secret,
-)
+from raiden.messages import DirectTransfer, Secret
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.tests.utils import factories
+from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.factories import (
+    HOP1,
+    UNIT_CHAIN_ID,
+    UNIT_REGISTRY_IDENTIFIER,
+    UNIT_SECRET,
+    UNIT_TRANSFER_INITIATOR,
+    UNIT_TRANSFER_SENDER,
+    UNIT_TRANSFER_TARGET,
+    make_secret,
+)
+from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -24,13 +34,12 @@ from raiden.transfer.merkle_tree import (
     LEAVES,
     MERKLEROOT,
     compute_layers,
-    merkleroot,
     merkle_leaves_from_packed_data,
+    merkleroot,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     EMPTY_MERKLE_ROOT,
-    balanceproof_from_envelope,
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelEndState,
@@ -38,6 +47,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
+    balanceproof_from_envelope,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -49,24 +59,7 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
-from raiden.tests.utils import factories
-from raiden.tests.utils.factories import (
-    UNIT_CHAIN_ID,
-    UNIT_REGISTRY_IDENTIFIER,
-    UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_SENDER,
-    UNIT_TRANSFER_TARGET,
-    UNIT_SECRET,
-    HOP1,
-    make_secret,
-)
-from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.transfer import make_receive_transfer_mediated
-from raiden.utils import (
-    random_secret,
-    sha3,
-    privatekey_to_address,
-)
+from raiden.utils import privatekey_to_address, random_secret, sha3
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

@@ -1,17 +1,13 @@
 import pytest
 
-from raiden.constants import UINT256_MAX, UINT64_MAX
-from raiden.messages import (
-    DirectTransfer,
-    LockedTransfer,
-    RefundTransfer,
-)
+from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.messages import DirectTransfer, LockedTransfer, RefundTransfer
+from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_mediated_transfer,
     make_refund_transfer,
 )
-from raiden.tests.utils.factories import make_privkey_address
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

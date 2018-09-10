@@ -1,22 +1,16 @@
-import sqlite3
 import os
+import sqlite3
+
 import pytest
 
 from raiden.exceptions import InvalidDBData
-from raiden.transfer.architecture import State, StateManager
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage, RAIDEN_DB_VERSION
-from raiden.storage.wal import (
-    restore_from_latest_snapshot,
-    WriteAheadLog,
-)
+from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
+from raiden.storage.wal import WriteAheadLog, restore_from_latest_snapshot
 from raiden.tests.utils import factories
-from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.architecture import State, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
-from raiden.transfer.state_change import (
-    Block,
-    ContractReceiveChannelBatchUnlock,
-)
+from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils import sha3
 
 

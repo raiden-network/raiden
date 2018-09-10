@@ -1,43 +1,32 @@
 from typing import Optional
 
 import structlog
-from web3.utils.filters import Filter
-from web3.exceptions import BadFunctionCallOutput
 from eth_utils import (
-    is_binary_address,
-    to_normalized_address,
-    to_canonical_address,
     encode_hex,
     event_abi_to_log_topic,
-    to_checksum_address,
+    is_binary_address,
     is_same_address,
+    to_canonical_address,
+    to_checksum_address,
+    to_normalized_address,
 )
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_TOKEN_NETWORK_CREATED,
-)
+from web3.exceptions import BadFunctionCallOutput
+from web3.utils.filters import Filter
 
-from raiden.utils import typing, compare_versions
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
     AddressWrongContract,
-    InvalidAddress,
     ContractVersionMismatch,
+    InvalidAddress,
     RaidenRecoverableError,
     TransactionThrew,
 )
-from raiden.utils import (
-    pex,
-    privatekey_to_address,
-)
-from raiden.settings import (
-    EXPECTED_CONTRACTS_VERSION,
-)
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
-)
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.settings import EXPECTED_CONTRACTS_VERSION
+from raiden.utils import compare_versions, pex, privatekey_to_address, typing
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

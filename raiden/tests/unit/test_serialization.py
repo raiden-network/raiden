@@ -1,11 +1,11 @@
 import pytest
-from networkx import Graph
 from eth_utils import to_canonical_address
+from networkx import Graph
 
 from raiden.storage.serialize import JSONSerializer, RaidenJSONDecoder
-from raiden.utils import serialization
 from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import EMPTY_MERKLE_TREE
+from raiden.utils import serialization
 
 
 class MockObject(object):

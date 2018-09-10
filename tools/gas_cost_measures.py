@@ -1,20 +1,19 @@
 from binascii import hexlify
 from os import urandom
 
+# increase block gas limit
+import eth_tester.backends.pyevm.main as pyevm_main
 from coincurve import PrivateKey
 from eth_tester import EthereumTester, PyEVMBackend
 from web3 import EthereumTesterProvider, Web3
 
+from raiden.constants import UNLOCK_TX_GAS_LIMIT
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
-from raiden.constants import UNLOCK_TX_GAS_LIMIT
+from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
+from raiden_contracts.utils.utils import get_pending_transfers_tree
 from raiden_libs.utils.signing import eth_sign
 
-from raiden_contracts.contract_manager import ContractManager, CONTRACTS_SOURCE_DIRS
-from raiden_contracts.utils.utils import get_pending_transfers_tree
-
-# increase block gas limit
-import eth_tester.backends.pyevm.main as pyevm_main
 pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
 
 

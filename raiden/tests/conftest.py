@@ -1,18 +1,20 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 import re
+import sys
 
 import gevent
 import py
-import sys
 from gevent import monkey
+
 monkey.patch_all()
 
-import pytest
+if True:
+    import pytest
 
-from raiden.utils.cli import LogLevelConfigType
-from raiden.exceptions import RaidenShuttingDown
-from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-from raiden.log_config import configure_logging
+    from raiden.exceptions import RaidenShuttingDown
+    from raiden.log_config import configure_logging
+    from raiden.tests.fixtures.variables import *  # noqa: F401,F403
+    from raiden.utils.cli import LogLevelConfigType
 
 
 def pytest_addoption(parser):

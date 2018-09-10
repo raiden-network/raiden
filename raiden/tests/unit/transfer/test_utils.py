@@ -1,9 +1,9 @@
 import pytest
 from eth_utils import decode_hex
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.utils import hash_balance_data
-from raiden.constants import EMPTY_HASH
 
 
 @pytest.mark.parametrize(

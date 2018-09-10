@@ -2,21 +2,15 @@ from contextlib import contextmanager
 
 from eth_utils import decode_hex
 from gevent.lock import RLock
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK,
-    ChannelEvent,
-)
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
 from raiden.constants import UINT256_MAX
-from raiden.utils import typing
-from raiden.utils.filters import (
-    get_filter_args_for_specific_event_from_channel,
-    decode_event,
-)
 from raiden.network.proxies import TokenNetwork
 from raiden.network.proxies.token_network import ChannelDetails
+from raiden.utils import typing
+from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 class PaymentChannel:

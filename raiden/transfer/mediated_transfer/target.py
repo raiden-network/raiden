@@ -1,33 +1,24 @@
 import random
+
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import (
-    EventPaymentReceivedSuccess,
-    SendProcessed,
-)
+from raiden.transfer.events import EventPaymentReceivedSuccess, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     SendRevealSecret,
     SendSecretRequest,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
     ReceiveLockExpired,
     ReceiveSecretReveal,
 )
-from raiden.transfer.state import (
-    NettingChannelState,
-    message_identifier_from_prng,
-)
-from raiden.transfer.state_change import (
-    Block,
-    ReceiveUnlock,
-    ContractReceiveSecretReveal,
-)
+from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.utils import typing
 
 

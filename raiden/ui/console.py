@@ -1,16 +1,16 @@
-from binascii import hexlify
 import io
 import logging
 import sys
 import time
+from binascii import hexlify
 
-from eth_utils import to_checksum_address
 import gevent
 import IPython
+from eth_utils import to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
-from raiden.api.python import RaidenAPI
 from raiden import waiting
+from raiden.api.python import RaidenAPI
 from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import get_contract_path, safe_address_decode, typing

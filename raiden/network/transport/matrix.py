@@ -1,49 +1,46 @@
 import json
 import re
+from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
-from binascii import Error as DecodeError
+from operator import attrgetter, itemgetter
 from random import Random
 from urllib.parse import urlparse
-from eth_utils import (
-    is_binary_address,
-    to_normalized_address,
-    to_canonical_address,
-    to_checksum_address,
-    encode_hex,
-    decode_hex,
-)
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 import gevent
 import structlog
+from cachetools import TTLCache, cachedmethod
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    is_binary_address,
+    to_canonical_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
-from cachetools import cachedmethod, TTLCache
-from operator import attrgetter, itemgetter
-from weakref import WeakKeyDictionary, WeakValueDictionary
-
-from raiden_libs.network.matrix import GMatrixClient, Room
-from raiden_libs.utils.signing import eth_sign, eth_recover
-from raiden_libs.exceptions import InvalidSignature
 
 from raiden import messages
 from raiden.constants import ID_TO_NETWORKNAME
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
+    TransportError,
     UnknownAddress,
     UnknownTokenAddress,
-    TransportError,
 )
+from raiden.message_handler import on_message
 from raiden.messages import (
-    decode as message_from_bytes,
-    from_dict as message_from_dict,
     Delivered,
+    Message,
     Ping,
     Pong,
-    SignedMessage,
-    Message,
     Processed,
+    SignedMessage,
+    decode as message_from_bytes,
+    from_dict as message_from_dict,
 )
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
@@ -54,29 +51,30 @@ from raiden.transfer.mediated_transfer import events as mediated_transfer_events
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
+    NODE_NETWORK_UNREACHABLE,
     QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
-from raiden.message_handler import on_message
 from raiden.utils import pex
+from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
-    Dict,
-    Set,
-    Tuple,
-    List,
-    Optional,
     Address,
     Callable,
+    Dict,
+    Iterable,
+    List,
     Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
     TypeVar,
     Union,
-    Type,
-    Iterable,
 )
-from raiden.utils.runnable import Runnable
-
+from raiden_libs.exceptions import InvalidSignature
+from raiden_libs.network.matrix import GMatrixClient, Room
+from raiden_libs.utils.signing import eth_recover, eth_sign
 
 log = structlog.get_logger(__name__)
 

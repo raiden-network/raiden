@@ -1,16 +1,15 @@
 import json
-import pytest
 import random
-from typing import Union, Optional
+from typing import Optional, Union
+
+import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import SecretRequest
 from raiden.network.transport.matrix import MatrixTransport
-from raiden.utils.typing import Address
-
-from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH, HOP1_KEY, HOP1
+from raiden.tests.utils.factories import ADDR, HOP1, HOP1_KEY, UNIT_SECRETHASH
 from raiden.tests.utils.transport import MockRaidenService
-
+from raiden.utils.typing import Address
 
 USERID1 = '@Alice:Wonderland'
 

@@ -3,10 +3,7 @@ import pytest
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.transfer import direct_transfer
 from raiden.transfer import views
-from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentReceivedSuccess,
-)
+from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
 
 
 @pytest.mark.parametrize('channels_per_node', [1])

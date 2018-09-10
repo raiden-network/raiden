@@ -1,4 +1,4 @@
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
@@ -8,7 +8,8 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
 )
 from raiden.transfer.state import BalanceProofSignedState, BalanceProofUnsignedState
-from raiden.utils import pex, typing, sha3, serialization
+from raiden.utils import pex, serialization, sha3, typing
+
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 

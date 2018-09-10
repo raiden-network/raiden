@@ -1,21 +1,19 @@
 from collections import namedtuple
 from itertools import repeat
 
-from gevent.event import Event
 import structlog
+from gevent.event import Event
 
-from raiden.exceptions import (
-    UnknownAddress,
-    RaidenShuttingDown,
-)
-from raiden.utils import pex, typing
+from raiden.exceptions import RaidenShuttingDown, UnknownAddress
+from raiden.network.transport.udp import udp_utils
 from raiden.transfer import views
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
 )
-from raiden.network.transport.udp import udp_utils
+from raiden.utils import pex, typing
+
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
 

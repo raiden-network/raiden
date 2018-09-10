@@ -1,13 +1,13 @@
-from collections import deque
-import random
 import copy
+import random
+from collections import deque
 
 import gevent
-from gevent.event import Event
-from gevent.queue import Queue
-from gevent.lock import BoundedSemaphore
-from gevent.timeout import Timeout
 import structlog
+from gevent.event import Event
+from gevent.lock import BoundedSemaphore
+from gevent.queue import Queue
+from gevent.timeout import Timeout
 
 from raiden.api.python import RaidenAPI
 from raiden.tasks import REMOVE_CALLBACK
@@ -15,7 +15,6 @@ from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import pex
-
 
 log = structlog.get_logger(__name__)
 

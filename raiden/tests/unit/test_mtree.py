@@ -1,16 +1,15 @@
 import pytest
 
 from raiden.exceptions import HashLengthNot32
-from raiden.utils import sha3
-from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.merkle_tree import (
     MERKLEROOT,
     compute_layers,
     compute_merkleproof_for,
-    validate_proof,
     merkleroot,
+    validate_proof,
 )
-from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
+from raiden.utils import sha3
 
 
 def sort_join(first, second):

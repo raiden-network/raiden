@@ -1,8 +1,9 @@
-import socket
 import os
+import socket
 import subprocess
-from mirakuru.http import HTTPExecutor as MiHTTPExecutor, HTTPConnection, HTTPException
+
 from mirakuru.base import ENV_UUID
+from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
 
 class HTTPExecutor(MiHTTPExecutor):

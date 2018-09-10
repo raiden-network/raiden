@@ -1,7 +1,7 @@
 import pytest
 
-from raiden.exceptions import InvalidBlockNumberInput
 from raiden.blockchain.events import get_contract_events
+from raiden.exceptions import InvalidBlockNumberInput
 from raiden.tests.utils.factories import ADDR
 
 

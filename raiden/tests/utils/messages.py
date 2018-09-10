@@ -1,22 +1,13 @@
 """ Utilities to track and assert transferred messages. """
-import string
 import random
+import string
 
-from raiden.constants import (
-    UINT64_MAX,
-    UINT256_MAX,
-)
-from raiden.utils import sha3
+from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.messages import DirectTransfer, Lock, LockedTransfer, RefundTransfer
+from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_CHANNEL_ID, make_privkey_address
 from raiden.tests.utils.tests import fixture_all_combinations
-from raiden.tests.utils.factories import make_privkey_address, UNIT_CHAIN_ID, UNIT_CHANNEL_ID
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
-from raiden.messages import (
-    DirectTransfer,
-    Lock,
-    LockedTransfer,
-    RefundTransfer,
-)
-
+from raiden.utils import sha3
 
 PRIVKEY, ADDRESS = make_privkey_address()
 INVALID_ADDRESSES = [

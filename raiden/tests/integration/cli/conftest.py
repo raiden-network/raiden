@@ -1,8 +1,6 @@
 import pytest
-from raiden.tests.utils.smoketest import (
-    load_smoketest_config,
-    setup_testchain_and_raiden,
-)
+
+from raiden.tests.utils.smoketest import load_smoketest_config, setup_testchain_and_raiden
 
 
 def append_arg_if_existing(argname, initial_args, new_args):

@@ -1,21 +1,8 @@
 from collections import namedtuple
-from typing import List, Dict
+from typing import Dict, List
 
 import structlog
-from eth_utils import (
-    encode_hex,
-    event_abi_to_log_topic,
-    to_canonical_address,
-)
-from raiden_contracts.constants import (
-    ChannelEvent,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_TOKEN_NETWORK,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_SECRET_REVEALED,
-    EVENT_TOKEN_NETWORK_CREATED,
-)
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from eth_utils import encode_hex, event_abi_to_log_topic, to_canonical_address
 
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
@@ -23,11 +10,20 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
 from raiden.utils import pex, typing
 from raiden.utils.filters import (
+    StatelessFilter,
     decode_event,
     get_filter_args_for_all_events_from_channel,
-    StatelessFilter,
 )
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
+from raiden_contracts.constants import (
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    EVENT_SECRET_REVEALED,
+    EVENT_TOKEN_NETWORK_CREATED,
+    ChannelEvent,
+)
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 def verify_block_number(number: typing.BlockSpecification, argname: str):

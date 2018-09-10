@@ -1,11 +1,8 @@
 import random
 
 import gevent
-from gevent.event import (
-    _AbstractLinkable,
-    Event,
-)
 import structlog
+from gevent.event import Event, _AbstractLinkable
 
 from raiden.utils import pex, typing
 

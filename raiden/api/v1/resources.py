@@ -1,18 +1,18 @@
-from webargs.flaskparser import use_kwargs
-from flask_restful import Resource
+import structlog
 from flask import Blueprint
+from flask_restful import Resource
+from webargs.flaskparser import use_kwargs
+
 from raiden.api.v1.encoding import (
+    BlockchainEventsRequestSchema,
     ChannelPatchSchema,
     ChannelPutSchema,
     ConnectionsConnectSchema,
     ConnectionsLeaveSchema,
-    BlockchainEventsRequestSchema,
-    RaidenEventsRequestSchema,
     PaymentSchema,
+    RaidenEventsRequestSchema,
 )
 from raiden.utils import typing
-
-import structlog
 
 log = structlog.get_logger(__name__)
 

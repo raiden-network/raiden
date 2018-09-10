@@ -1,8 +1,7 @@
 import pytest
 
-from raiden.transfer import views
-from raiden.transfer import state
 from raiden.messages import Ping
+from raiden.transfer import state, views
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

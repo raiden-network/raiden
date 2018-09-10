@@ -2,19 +2,15 @@ import random
 
 import pytest
 
-from raiden.messages import (
-    decode,
-    Processed,
-    Ping,
-)
-from raiden.constants import UINT256_MAX, UINT64_MAX
-from raiden.utils import sha3
+from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.messages import Ping, Processed, decode
+from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_mediated_transfer,
     make_refund_transfer,
 )
-from raiden.tests.utils.factories import make_privkey_address
+from raiden.utils import sha3
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

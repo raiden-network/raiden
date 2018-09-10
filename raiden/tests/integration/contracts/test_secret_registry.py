@@ -1,10 +1,11 @@
+import types
+
 import gevent
 import pytest
-import types
 from eth_utils import keccak
 
-from raiden.tests.utils import get_random_bytes
 from raiden.network.proxies import SecretRegistry
+from raiden.tests.utils import get_random_bytes
 
 
 def test_secret_registry(secret_registry_proxy):

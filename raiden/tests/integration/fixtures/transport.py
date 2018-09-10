@@ -1,11 +1,10 @@
-import pytest
-
-from enum import Enum
 from collections import namedtuple
+from enum import Enum
 from urllib.parse import urljoin
 
-from raiden.utils.http import HTTPExecutor
+import pytest
 
+from raiden.utils.http import HTTPExecutor
 
 TransportConfig = namedtuple('TransportConfig', 'protocol parameters')
 MatrixTransportConfig = namedtuple('MatrixTransportConfig', 'command server')

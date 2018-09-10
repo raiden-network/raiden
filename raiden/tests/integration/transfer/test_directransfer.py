@@ -1,12 +1,9 @@
 import gevent
 import pytest
+
+from raiden.tests.utils.transfer import assert_synced_channel_state, direct_transfer
 from raiden.transfer import views
 from raiden.waiting import wait_for_transfer_success
-
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    direct_transfer,
-)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

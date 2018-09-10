@@ -1,5 +1,4 @@
 from collections import defaultdict
-from gevent.event import AsyncResult
 from typing import List, NamedTuple, Optional
 
 import structlog
@@ -10,21 +9,14 @@ from eth_utils import (
     to_checksum_address,
     to_normalized_address,
 )
+from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
-from raiden_contracts.constants import (
-    ChannelState,
-    CONTRACT_TOKEN_NETWORK,
-    ChannelInfoIndex,
-    ParticipantInfoIndex,
-)
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from web3.utils.filters import Filter
 
 from raiden.exceptions import (
     ChannelOutdatedError,
     ContractVersionMismatch,
     DepositMismatch,
-    WithdrawMismatch,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidSettleTimeout,
@@ -32,21 +24,20 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     SamePeerAddress,
     TransactionThrew,
+    WithdrawMismatch,
 )
 from raiden.network.proxies import Token
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.settings import EXPECTED_CONTRACTS_VERSION
+from raiden.utils import compare_versions, pex, privatekey_to_address, typing
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK,
+    ChannelInfoIndex,
+    ChannelState,
+    ParticipantInfoIndex,
 )
-from raiden.settings import (
-    EXPECTED_CONTRACTS_VERSION,
-)
-from raiden.utils import (
-    compare_versions,
-    pex,
-    privatekey_to_address,
-    typing,
-)
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

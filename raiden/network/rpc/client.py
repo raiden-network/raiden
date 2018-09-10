@@ -3,51 +3,31 @@ import os
 import warnings
 from binascii import unhexlify
 from json.decoder import JSONDecodeError
+from operator import attrgetter
 
-from requests import ConnectTimeout
+import gevent
+import structlog
+from cachetools import TTLCache, cachedmethod
+from eth_utils import encode_hex, to_canonical_address, to_checksum_address
+from gevent.lock import Semaphore
 from pkg_resources import DistributionNotFound
+from requests import ConnectTimeout
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from web3.utils.filters import Filter
-from eth_utils import (
-    encode_hex,
-    to_checksum_address,
-    to_canonical_address,
-)
-import gevent
-from gevent.lock import Semaphore
-from cachetools import TTLCache, cachedmethod
-from operator import attrgetter
-import structlog
 
-from raiden.exceptions import (
-    AddressWithoutCode,
-    EthNodeCommunicationError,
-)
-from raiden.settings import RPC_CACHE_TTL
-from raiden.utils import (
-    is_supported_client,
-    pex,
-    privatekey_to_address,
-)
-from raiden.utils.typing import (
-    Address,
-    BlockSpecification,
-    Dict,
-    List,
-    Optional,
-)
-from raiden.utils.filters import StatelessFilter
+from raiden.constants import NULL_ADDRESS, TESTNET_GASPRICE_MULTIPLIER
+from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.settings import RPC_CACHE_TTL
+from raiden.utils import is_supported_client, pex, privatekey_to_address
+from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
-    solidity_unresolved_symbols,
     solidity_library_symbol,
     solidity_resolve_symbols,
+    solidity_unresolved_symbols,
 )
-from raiden.constants import (
-    NULL_ADDRESS,
-    TESTNET_GASPRICE_MULTIPLIER,
-)
+from raiden.utils.typing import Address, BlockSpecification, Dict, List, Optional
 
 try:
     from eth_tester.exceptions import BlockNotFound

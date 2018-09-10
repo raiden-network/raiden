@@ -2,11 +2,7 @@ import structlog
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer
-from raiden.encoding.format import (
-    make_field,
-    namedbuffer,
-    pad,
-)
+from raiden.encoding.format import make_field, namedbuffer, pad
 
 
 def cmdid(id_):

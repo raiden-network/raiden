@@ -1,21 +1,21 @@
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLING,
+    CHANNEL_STATE_CLOSING,
+    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_UNUSABLE,
-    NettingChannelState,
     NODE_NETWORK_UNKNOWN,
     ChainState,
-    PaymentNetworkState,
-    TokenNetworkState,
     InitiatorTask,
     MediatorTask,
-    TargetTask,
+    NettingChannelState,
+    PaymentNetworkState,
     QueueIdsToQueues,
+    TargetTask,
+    TokenNetworkState,
 )
 from raiden.utils import typing
 

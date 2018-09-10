@@ -1,5 +1,6 @@
 import importlib
 import json
+
 from raiden.utils.serialization import ReferenceCache
 
 

@@ -3,10 +3,7 @@ import random
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
-)
+from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockSuccess,
@@ -23,8 +20,8 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
-    RouteState,
     NettingChannelState,
+    RouteState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block

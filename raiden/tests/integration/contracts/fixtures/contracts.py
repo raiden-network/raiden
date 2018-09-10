@@ -1,24 +1,17 @@
 import pytest
-from raiden.network.proxies import (
-    SecretRegistry,
-    TokenNetworkRegistry,
-    Token,
-    TokenNetwork,
-)
-
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
 from eth_utils import to_canonical_address
 
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    CONTRACT_TOKEN_NETWORK,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_HUMAN_STANDARD_TOKEN,
-    TEST_SETTLE_TIMEOUT_MIN,
-    TEST_SETTLE_TIMEOUT_MAX,
-)
-
+from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
+)
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 @pytest.fixture

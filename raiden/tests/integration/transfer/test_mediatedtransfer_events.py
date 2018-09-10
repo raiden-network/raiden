@@ -1,16 +1,16 @@
 import pytest
 
-from raiden.utils import wait_until
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import mediated_transfer
-from raiden.tests.utils.events import must_contain_entry
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import (
-    EventUnlockSuccess,
     EventUnlockClaimSuccess,
+    EventUnlockSuccess,
     SendRevealSecret,
     SendSecretRequest,
 )
+from raiden.utils import wait_until
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])

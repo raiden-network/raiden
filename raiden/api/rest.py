@@ -1,90 +1,86 @@
-from http import HTTPStatus
 import errno
 import json
 import logging
 import socket
 import sys
+from http import HTTPStatus
 from typing import Dict
 
 import gevent
-from gevent.pywsgi import WSGIServer
-from flask import Flask, make_response, url_for, send_from_directory, request
+import structlog
+from eth_utils import encode_hex, to_checksum_address
+from flask import Flask, make_response, request, send_from_directory, url_for
 from flask.json import jsonify
-from flask_restful import Api, abort
 from flask_cors import CORS
+from flask_restful import Api, abort
+from gevent.pywsgi import WSGIServer
+from hexbytes import HexBytes
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
-from eth_utils import to_checksum_address, encode_hex
-from hexbytes import HexBytes
-import structlog
 
-from raiden.exceptions import (
-    AddressWithoutCode,
-    AlreadyRegisteredTokenAddress,
-    APIServerPortInUseError,
-    ChannelNotFound,
-    DuplicatedChannelError,
-    EthNodeCommunicationError,
-    InsufficientFunds,
-    InvalidAddress,
-    InvalidBlockNumberInput,
-    InvalidAmount,
-    InvalidSettleTimeout,
-    SamePeerAddress,
-    TransactionThrew,
-    UnknownTokenAddress,
-    DepositOverLimit,
-    DepositMismatch,
-    TokenNotRegistered,
-    InsufficientGasReserve,
-)
+from raiden.api.objects import AddressList, PartnersPerTokenList
 from raiden.api.v1.encoding import (
     AddressListSchema,
     ChannelStateSchema,
-    HexAddressConverter,
-    PartnersPerTokenListSchema,
-    PaymentSchema,
-    InvalidEndpoint,
-    EventPaymentSentSuccessSchema,
     EventPaymentReceivedSuccessSchema,
     EventPaymentSentFailedSchema,
+    EventPaymentSentSuccessSchema,
+    HexAddressConverter,
+    InvalidEndpoint,
+    PartnersPerTokenListSchema,
+    PaymentSchema,
 )
 from raiden.api.v1.resources import (
     AddressResource,
+    BlockchainEventsNetworkResource,
+    BlockchainEventsTokenResource,
     ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
-    create_blueprint,
-    BlockchainEventsNetworkResource,
     PartnersResourceByTokenAddress,
     PaymentResource,
     RaidenInternalEventsResource,
     RegisterTokenResource,
-    BlockchainEventsTokenResource,
     TokensResource,
+    create_blueprint,
+)
+from raiden.exceptions import (
+    AddressWithoutCode,
+    AlreadyRegisteredTokenAddress,
+    APIServerPortInUseError,
+    ChannelNotFound,
+    DepositMismatch,
+    DepositOverLimit,
+    DuplicatedChannelError,
+    EthNodeCommunicationError,
+    InsufficientFunds,
+    InsufficientGasReserve,
+    InvalidAddress,
+    InvalidAmount,
+    InvalidBlockNumberInput,
+    InvalidSettleTimeout,
+    SamePeerAddress,
+    TokenNotRegistered,
+    TransactionThrew,
+    UnknownTokenAddress,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
     EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
 )
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    NettingChannelState,
-)
-from raiden.utils import create_default_identifier
-from raiden.utils.runnable import Runnable
-from raiden.api.objects import PartnersPerTokenList, AddressList
+from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, NettingChannelState
 from raiden.utils import (
-    split_endpoint,
+    create_default_identifier,
     is_frozen,
-    typing,
     optional_address_to_string,
+    split_endpoint,
+    typing,
 )
+from raiden.utils.runnable import Runnable
 
 log = structlog.get_logger(__name__)
 

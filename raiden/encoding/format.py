@@ -1,4 +1,5 @@
-from collections import namedtuple, Counter
+from collections import Counter, namedtuple
+
 from raiden.exceptions import InvalidProtocolMessage
 
 __all__ = ('Field', 'namedbuffer', 'buffer_for')

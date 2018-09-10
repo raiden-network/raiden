@@ -1,12 +1,12 @@
 from raiden.transfer.architecture import Event
 from raiden.transfer.channel import get_status
 from raiden.transfer.events import ContractSendSecretReveal
-from raiden.utils import typing
 from raiden.transfer.state import (
-    CHANNEL_STATES_PRIOR_TO_CLOSED,
     CHANNEL_STATE_CLOSED,
+    CHANNEL_STATES_PRIOR_TO_CLOSED,
     NettingChannelState,
 )
+from raiden.utils import typing
 
 
 def events_for_onchain_secretreveal(

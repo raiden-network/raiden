@@ -1,15 +1,12 @@
-import pytest
 import gevent
+import pytest
 
-from raiden.app import App
 from raiden import waiting
+from raiden.app import App
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import (
-    direct_transfer,
-    assert_synced_channel_state,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, direct_transfer
 from raiden.transfer import views
 
 

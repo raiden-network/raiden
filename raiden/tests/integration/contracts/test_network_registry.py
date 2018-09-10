@@ -1,13 +1,10 @@
 import pytest
 from eth_utils import is_same_address, to_canonical_address
-from raiden_contracts.constants import (
-    TEST_SETTLE_TIMEOUT_MIN,
-    TEST_SETTLE_TIMEOUT_MAX,
-)
 
 from raiden.exceptions import RaidenRecoverableError, TransactionThrew
-from raiden.tests.utils.factories import make_address
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.tests.utils.factories import make_address
+from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
 def test_network_registry(token_network_registry_proxy: TokenNetworkRegistry, deploy_token):

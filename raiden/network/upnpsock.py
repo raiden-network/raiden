@@ -1,5 +1,6 @@
-import miniupnpc
 import ipaddress
+
+import miniupnpc
 import structlog
 
 MAX_PORT = 65535

@@ -1,15 +1,9 @@
 import random
 
 from raiden.tests.utils import factories
-from raiden.transfer import node
-from raiden.transfer import (
-    state,
-    state_change,
-)
+from raiden.transfer import node, state, state_change
+from raiden.transfer.mediated_transfer import events
 from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.mediated_transfer import (
-    events,
-)
 
 
 def test_delivered_message_must_clean_unordered_messages(chain_id):

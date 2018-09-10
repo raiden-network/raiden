@@ -2,7 +2,6 @@
 
 from ansible.module_utils.basic import AnsibleModule
 
-
 HAVE_DOCKER = True
 try:
     from docker import APIClient

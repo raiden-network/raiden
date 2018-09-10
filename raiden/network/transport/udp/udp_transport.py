@@ -3,44 +3,33 @@ from binascii import hexlify
 
 import cachetools
 import gevent
-from gevent.event import (
-    AsyncResult,
-    Event,
-)
-from gevent.server import DatagramServer
 import structlog
 from eth_utils import is_binary_address
+from gevent.event import AsyncResult, Event
+from gevent.server import DatagramServer
 
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
-    UnknownAddress,
     RaidenShuttingDown,
+    UnknownAddress,
 )
-from raiden.messages import (
-    message_from_sendevent,
-    decode,
-    Delivered,
-    Message,
-    Ping,
-    Pong,
-)
-from raiden.settings import CACHE_TTL
-from raiden.utils import pex, typing
-from raiden.utils.runnable import Runnable
-from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.message_handler import on_message
-from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.state_change import ReceiveDelivered
-from raiden.transfer.state_change import ActionChangeNodeNetworkState
+from raiden.messages import Delivered, Message, Ping, Pong, decode, message_from_sendevent
 from raiden.network.transport.udp import healthcheck
 from raiden.network.transport.udp.udp_utils import (
     event_first_of,
-    timeout_exponential_backoff,
     retry_with_recovery,
+    timeout_exponential_backoff,
 )
 from raiden.raiden_service import RaidenService
+from raiden.settings import CACHE_TTL
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
+from raiden.utils import pex, typing
+from raiden.utils.notifying_queue import NotifyingQueue
+from raiden.utils.runnable import Runnable
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 log_healthcheck = structlog.get_logger(__name__ + '.healthcheck')  # pylint: disable=invalid-name

@@ -1,27 +1,20 @@
-import pytest
 import gevent
+import pytest
 
-from raiden_contracts.constants import (
-    CONTRACT_HUMAN_STANDARD_TOKEN,
-    ChannelEvent,
-)
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.exceptions import (
-    AlreadyRegisteredTokenAddress,
-    InvalidAddress,
-    InsufficientFunds,
-)
+from raiden.exceptions import AlreadyRegisteredTokenAddress, InsufficientFunds, InvalidAddress
 from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.events import must_have_event
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     direct_transfer,
     get_channelstate,
 )
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (

@@ -1,6 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import Dict, NewType, List, Optional, Tuple, Union
-
+from typing import Dict, List, NewType, Optional, Tuple, Union
 
 T_Address = bytes
 Address = NewType('Address', T_Address)

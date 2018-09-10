@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import json
+import logging
 import os
 import sys
 from json import JSONEncoder
 
-import logging
-from raiden.log_config import configure_logging
 from logstash import LogstashFormatterVersion1, UDPLogstashHandler
 
+from raiden.log_config import configure_logging
 from raiden.utils import echo_node
 
 

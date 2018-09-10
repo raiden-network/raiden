@@ -4,21 +4,13 @@ import gevent
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import (
-    Lock,
-    LockedTransfer,
-    RevealSecret,
-    Secret,
-)
-from raiden.tests.integration.fixtures.raiden_network import (
-    CHAIN,
-    wait_for_channels,
-)
+from raiden.messages import Lock, LockedTransfer, RevealSecret, Secret
+from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.transfer.state import EMPTY_MERKLE_ROOT

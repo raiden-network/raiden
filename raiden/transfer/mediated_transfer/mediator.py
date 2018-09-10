@@ -1,20 +1,17 @@
 import itertools
 import random
-from typing import List, Dict
+from typing import Dict, List
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.events import (
-    ContractSendChannelBatchUnlock,
-    SendProcessed,
-)
+from raiden.transfer.events import ContractSendChannelBatchUnlock, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    EventUnlockFailed,
-    EventUnlockSuccess,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
+    EventUnlockFailed,
+    EventUnlockSuccess,
     SendRevealSecret,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -30,17 +27,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
     NettingChannelState,
     message_identifier_from_prng,
-    CHANNEL_STATE_OPENED,
 )
-from raiden.transfer.state_change import (
-    Block,
-    ContractReceiveSecretReveal,
-    ReceiveUnlock,
-)
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.utils import typing
-
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',

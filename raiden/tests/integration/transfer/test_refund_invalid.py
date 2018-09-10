@@ -3,22 +3,18 @@ import random
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import (
-    RevealSecret,
-    Secret,
-    SecretRequest,
-)
+from raiden.messages import RevealSecret, Secret, SecretRequest
 from raiden.tests.utils.factories import (
     HOP1,
     HOP1_KEY,
-    UNIT_SECRETHASH,
+    UNIT_CHAIN_ID,
     UNIT_SECRET,
+    UNIT_SECRETHASH,
     make_channel_identifier,
 )
-from raiden.transfer import views
 from raiden.tests.utils.messages import make_refund_transfer
 from raiden.tests.utils.transfer import sign_and_inject
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.transfer import views
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])

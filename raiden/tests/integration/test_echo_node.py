@@ -1,16 +1,13 @@
-import pytest
 import gevent
-
-from raiden.transfer.events import EventPaymentReceivedSuccess
-from raiden.utils.echo_node import EchoNode
-from raiden.api.python import RaidenAPI
-from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.events import (
-    must_contain_entry,
-)
-
-from raiden.utils import wait_until
+import pytest
 import structlog
+
+from raiden.api.python import RaidenAPI
+from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.network import CHAIN
+from raiden.transfer.events import EventPaymentReceivedSuccess
+from raiden.utils import wait_until
+from raiden.utils.echo_node import EchoNode
 
 log = structlog.get_logger(__name__)
 

@@ -4,14 +4,13 @@ from typing import List
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.state import RouteState, BalanceProofSignedState
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
+from raiden.transfer.state import BalanceProofSignedState, RouteState
 from raiden.utils import pex, sha3, typing
-from raiden.utils.serialization import serialize_bytes, deserialize_bytes
-
+from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 
 # Note: The init states must contain all the required data for trying doing
 # useful work, ie. there must /not/ be an event for requesting new data.

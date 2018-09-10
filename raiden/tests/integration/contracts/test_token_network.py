@@ -1,32 +1,27 @@
 import pytest
-from eth_utils import (
-    to_canonical_address,
-    encode_hex,
-    decode_hex,
-    to_checksum_address,
-)
-from raiden_contracts.constants import (
-    TEST_SETTLE_TIMEOUT_MIN,
-    TEST_SETTLE_TIMEOUT_MAX,
-    MessageTypeId,
-)
-from raiden_libs.messages import BalanceProof
-from raiden_libs.utils.signing import eth_sign
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
 from raiden.constants import EMPTY_HASH
 from raiden.exceptions import (
-    InvalidSettleTimeout,
-    SamePeerAddress,
-    DuplicatedChannelError,
-    TransactionThrew,
     DepositMismatch,
-    WithdrawMismatch,
+    DuplicatedChannelError,
+    InvalidSettleTimeout,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
+    SamePeerAddress,
+    TransactionThrew,
+    WithdrawMismatch,
 )
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils import wait_blocks
+from raiden_contracts.constants import (
+    TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
+    MessageTypeId,
+)
+from raiden_libs.messages import BalanceProof
+from raiden_libs.utils.signing import eth_sign
 
 
 def test_token_network_deposit_race(

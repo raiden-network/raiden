@@ -1,8 +1,7 @@
-import stun
 import structlog as structlog
+import stun
 
 from raiden.exceptions import STUNUnavailableException
-
 
 log = structlog.get_logger(__name__)
 

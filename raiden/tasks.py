@@ -1,15 +1,15 @@
-import requests
 import re
-from pkg_resources import parse_version
 
 import click
 import gevent
-from gevent.event import AsyncResult
+import requests
 import structlog
+from gevent.event import AsyncResult
+from pkg_resources import parse_version
 from web3 import Web3
 
 from raiden.exceptions import RaidenShuttingDown
-from raiden.utils import get_system_spec, gas_reserve
+from raiden.utils import gas_reserve, get_system_spec
 from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60

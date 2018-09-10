@@ -1,17 +1,17 @@
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.state import CHANNEL_STATE_UNUSABLE
 from raiden.transfer.events import EventPaymentSentFailed
+from raiden.transfer.state import CHANNEL_STATE_UNUSABLE
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionTransferDirect,
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelBatchUnlock,
-    ContractReceiveRouteNew,
     ContractReceiveRouteClosed,
+    ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
     ReceiveTransferDirect,
 )

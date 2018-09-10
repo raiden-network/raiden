@@ -1,28 +1,25 @@
 import random
 
-import pytest
 import gevent
+import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
-from raiden.messages import (
-    Lock,
-    LockedTransfer,
-)
-from raiden.tests.utils.geth import wait_until_block
+from raiden.messages import Lock, LockedTransfer
 from raiden.tests.utils.factories import (
-    make_address,
-    make_privkey_address,
     UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
+    make_address,
+    make_privkey_address,
 )
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
-    wait_assert,
     get_channelstate,
     mediated_transfer,
     sign_and_inject,
+    wait_assert,
 )
 from raiden.transfer import views
 

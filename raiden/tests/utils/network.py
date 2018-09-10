@@ -3,11 +3,11 @@ from binascii import hexlify
 from collections import namedtuple
 
 import gevent
-from gevent import server
 import structlog
+from gevent import server
 
-from raiden.app import App
 from raiden import waiting
+from raiden.app import App
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket

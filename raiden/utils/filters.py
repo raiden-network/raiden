@@ -1,19 +1,14 @@
-from eth_utils import (
-    decode_hex,
-    event_abi_to_log_topic,
-)
+from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
+from gevent.lock import Semaphore
+from pkg_resources import DistributionNotFound
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
-from eth_utils import to_checksum_address
-from web3.utils.filters import construct_event_filter_params, LogFilter
-from pkg_resources import DistributionNotFound
-from gevent.lock import Semaphore
+from web3.utils.filters import LogFilter, construct_event_filter_params
 
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-
-from raiden.utils.typing import Address, ChannelID, BlockSpecification, Dict
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 try:
     from eth_tester.exceptions import BlockNotFound

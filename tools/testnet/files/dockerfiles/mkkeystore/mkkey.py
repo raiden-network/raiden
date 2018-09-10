@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 import json
+import logging
 import os
+from datetime import datetime
 from json import JSONEncoder
 
 import click
-import logging
 from coincurve import PrivateKey
-from datetime import datetime
-
-
-from ethereum.tools.keys import make_keystore_json, sha3, encode_hex
 from ethereum.tools import keys
+from ethereum.tools.keys import encode_hex, make_keystore_json, sha3
 
 
 class BytesJSONEncoder(JSONEncoder):

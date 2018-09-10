@@ -1,39 +1,38 @@
 import structlog
 
-from raiden.exceptions import (
-    ChannelOutdatedError,
-)
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.exceptions import ChannelOutdatedError
 from raiden.messages import message_from_sendevent
 from raiden.transfer.architecture import Event
+from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.events import (
-    ContractSendSecretReveal,
+    ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
-    ContractSendChannelBatchUnlock,
-    EventTransferReceivedInvalidDirectTransfer,
+    ContractSendSecretReveal,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
+    EventTransferReceivedInvalidDirectTransfer,
     SendDirectTransfer,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
-    EventUnlockFailed,
-    EventUnlockSuccess,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
+    EventUnlockFailed,
+    EventUnlockSuccess,
     SendBalanceProof,
-    SendLockExpired,
     SendLockedTransfer,
+    SendLockExpired,
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.utils import pex
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden_libs.utils.signing import eth_sign
+
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 

@@ -1,16 +1,16 @@
 import pytest
 
 from raiden.messages import Ping
+from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
+    DIRECT_TRANSFER_INVALID_VALUES,
+    MEDIATED_TRANSFER_INVALID_VALUES,
+    REFUND_TRANSFER_INVALID_VALUES,
     make_direct_transfer,
     make_lock,
     make_mediated_transfer,
     make_refund_transfer,
-    MEDIATED_TRANSFER_INVALID_VALUES,
-    REFUND_TRANSFER_INVALID_VALUES,
-    DIRECT_TRANSFER_INVALID_VALUES,
 )
-from raiden.tests.utils.factories import make_privkey_address
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

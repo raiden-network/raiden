@@ -4,7 +4,6 @@ import sys
 
 import pkg_resources
 
-
 WEBUI_BASE_PATH = 'raiden/ui/web/dist'
 
 datas = []

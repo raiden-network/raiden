@@ -5,21 +5,17 @@ from collections import defaultdict
 from functools import total_ordering
 
 import networkx
-from eth_utils import to_checksum_address, to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.constants import UINT256_MAX, UINT64_MAX
-from raiden.encoding.format import buffer_for
+from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
-from raiden.transfer.architecture import State, SendMessageEvent
+from raiden.encoding.format import buffer_for
+from raiden.transfer.architecture import SendMessageEvent, State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import lpex, pex, sha3, typing, serialization
-from raiden.utils.serialization import (
-    map_dict,
-    map_list,
-)
-
+from raiden.utils import lpex, pex, serialization, sha3, typing
+from raiden.utils.serialization import map_dict, map_list
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']

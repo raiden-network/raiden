@@ -1,7 +1,7 @@
 from web3 import Web3
 
-from raiden.utils import typing
 from raiden.constants import EMPTY_HASH
+from raiden.utils import typing
 
 
 def hash_balance_data(
