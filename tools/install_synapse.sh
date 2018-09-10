@@ -35,7 +35,9 @@ if [[ ! -x ${SYNAPSE} ]]; then
     pushd "${BUILDDIR}"
 
     virtualenv -p "$(which python2)" venv
-    ./venv/bin/pip install "${SYNAPSE_URL}" pyinstaller coincurve pycryptodome 'pysaml2==4.6.0'
+    ./venv/bin/pip install --upgrade pip pyinstaller
+    ./venv/bin/pip install pysaml2==4.6.1 dis3 coincurve pycryptodome
+    ./venv/bin/pip install "${SYNAPSE_URL}"
     SITE="$( ./venv/bin/python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())' )"
     cp "${BASEDIR}/tools/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
     ./venv/bin/pyinstaller -F -n synapse \
@@ -48,7 +50,7 @@ if [[ ! -x ${SYNAPSE} ]]; then
         --add-data="${SITE}/Crypto/__init__.py:Crypto/" \
         --add-data="${SITE}/Crypto/Util:Crypto/Util" \
         --add-data="${SITE}/Crypto/Hash:Crypto/Hash" \
-        --add-data="${SITE}/pysaml2-4.6.0.dist-info:pysaml2-4.6.0.dist-info" \
+        --add-data="${SITE}/pysaml2-4.6.1.dist-info:pysaml2-4.6.1.dist-info" \
         "${SITE}/synapse/app/homeserver.py"
     rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
