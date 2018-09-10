@@ -110,12 +110,12 @@ def handle_inittarget(
     )
 
     if is_valid:
-        # An valid balance proof does not mean the payment itself is still valid,
-        # e.g. the lock may be near expiration or have expired. This is fine, the
+        # A valid balance proof does not mean the payment itself is still valid.
+        # e.g. the lock may be near expiration or have expired. This is fine. The
         # message with an unusable lock must be handled to properly synchronize the
         # local view of the partner's channel state, allowing the next balance
         # proofs to be handled. This however, must only be done once, which is
-        # enforced by the nonce is increasing sequentially, which is verified by
+        # enforced by the nonce increasing sequentially, which is verified by
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(route, transfer)
 
