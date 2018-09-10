@@ -1,103 +1,105 @@
 import gevent.monkey
+
 gevent.monkey.patch_all()
 
-import json
-import os
-import signal
-import sys
-import textwrap
-import traceback
-from binascii import hexlify
-from copy import deepcopy
-from datetime import datetime
-from itertools import count
-from pathlib import Path
-from tempfile import mktemp, NamedTemporaryFile
-from typing import Any, Dict
-from urllib.parse import urljoin, urlparse
-from subprocess import DEVNULL
+if True:
+    import json
+    import os
+    import signal
+    import sys
+    import textwrap
+    import traceback
+    from binascii import hexlify
+    from copy import deepcopy
+    from datetime import datetime
+    from itertools import count
+    from pathlib import Path
+    from subprocess import DEVNULL
+    from tempfile import NamedTemporaryFile, mktemp
+    from typing import Any, Dict
+    from urllib.parse import urljoin, urlparse
 
-import click
-import filelock
-import gevent
-from gevent.event import AsyncResult
-import requests
-import structlog
-from eth_utils import (
-    denoms,
-    to_canonical_address,
-    to_checksum_address,
-    to_int,
-    to_normalized_address,
-)
-from mirakuru import ProcessExitedWithError
-from requests.exceptions import (
-    ConnectionError as RequestsConnectionError,
-    ConnectTimeout,
-    RequestException,
-)
-from web3 import Web3, HTTPProvider
+    import click
+    import filelock
+    import gevent
+    import gevent.monkey
+    import requests
+    import structlog
+    from eth_utils import (
+        denoms,
+        to_canonical_address,
+        to_checksum_address,
+        to_int,
+        to_normalized_address,
+    )
+    from gevent.event import AsyncResult
+    from mirakuru import ProcessExitedWithError
+    from requests.exceptions import (
+        ConnectionError as RequestsConnectionError,
+        ConnectTimeout,
+        RequestException,
+    )
+    from web3 import HTTPProvider, Web3
 
-from raiden import constants
-from raiden.accounts import AccountManager
-from raiden.api.rest import APIServer, RestAPI
-from raiden.exceptions import (
-    AddressWithoutCode,
-    AddressWrongContract,
-    APIServerPortInUseError,
-    ContractVersionMismatch,
-    EthNodeCommunicationError,
-    RaidenError,
-    RaidenServicePortInUseError,
-    ReplacementTransactionUnderpriced,
-)
-from raiden.log_config import configure_logging
-from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
-from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.sockfactory import SocketFactory
-from raiden.network.throttle import TokenBucket
-from raiden.network.transport import MatrixTransport, UDPTransport
-from raiden.network.utils import get_free_port
-from raiden.settings import (
-    DEFAULT_NAT_KEEPALIVE_RETRIES,
-    DEFAULT_SHUTDOWN_TIMEOUT,
-    ETHERSCAN_API,
-    INITIAL_PORT,
-    ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
-)
-from raiden.tasks import check_version, check_gas_reserve
-from raiden.utils import (
-    get_system_spec,
-    is_supported_client,
-    merge_dict,
-    pex,
-    split_endpoint,
-    typing,
-)
-from raiden.utils.cli import (
-    ADDRESS_TYPE,
-    LOG_LEVEL_CONFIG_TYPE,
-    MatrixServerType,
-    NATChoiceType,
-    NetworkChoiceType,
-    PathRelativePath,
-    apply_config_file,
-    group,
-    option,
-    option_group,
-)
-from raiden.utils.echo_node import EchoNode
-from raiden.utils.http import HTTPExecutor
-from raiden.utils.runnable import Runnable
-from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-)
-from raiden.storage.sqlite import RAIDEN_DB_VERSION
-from raiden.raiden_event_handler import RaidenEventHandler
-
+    from raiden import constants
+    from raiden.accounts import AccountManager
+    from raiden.api.rest import APIServer, RestAPI
+    from raiden.exceptions import (
+        AddressWithoutCode,
+        AddressWrongContract,
+        APIServerPortInUseError,
+        ContractVersionMismatch,
+        EthNodeCommunicationError,
+        RaidenError,
+        RaidenServicePortInUseError,
+        ReplacementTransactionUnderpriced,
+    )
+    from raiden.log_config import configure_logging
+    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.discovery import ContractDiscovery
+    from raiden.network.rpc.client import JSONRPCClient
+    from raiden.network.sockfactory import SocketFactory
+    from raiden.network.throttle import TokenBucket
+    from raiden.network.transport import MatrixTransport, UDPTransport
+    from raiden.network.utils import get_free_port
+    from raiden.raiden_event_handler import RaidenEventHandler
+    from raiden.settings import (
+        DEFAULT_NAT_KEEPALIVE_RETRIES,
+        DEFAULT_SHUTDOWN_TIMEOUT,
+        ETHERSCAN_API,
+        INITIAL_PORT,
+        ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
+    )
+    from raiden.storage.sqlite import RAIDEN_DB_VERSION
+    from raiden.tasks import check_gas_reserve, check_version
+    from raiden.utils import (
+        get_system_spec,
+        is_supported_client,
+        merge_dict,
+        pex,
+        split_endpoint,
+        typing,
+    )
+    from raiden.utils.cli import (
+        ADDRESS_TYPE,
+        LOG_LEVEL_CONFIG_TYPE,
+        MatrixServerType,
+        NATChoiceType,
+        NetworkChoiceType,
+        PathRelativePath,
+        apply_config_file,
+        group,
+        option,
+        option_group,
+    )
+    from raiden.utils.echo_node import EchoNode
+    from raiden.utils.http import HTTPExecutor
+    from raiden.utils.runnable import Runnable
+    from raiden_contracts.constants import (
+        CONTRACT_ENDPOINT_REGISTRY,
+        CONTRACT_SECRET_REGISTRY,
+        CONTRACT_TOKEN_NETWORK_REGISTRY,
+    )
 
 log = structlog.get_logger(__name__)
 

@@ -1,15 +1,14 @@
 import random
 
-from raiden.utils import typing
 from raiden.transfer import channel
-from raiden.transfer.architecture import (
-    Event,
-    StateChange,
-    TransitionResult,
-)
+from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
-from raiden.transfer.mediated_transfer.events import EventUnlockFailed
 from raiden.transfer.mediated_transfer import initiator
+from raiden.transfer.mediated_transfer.events import EventUnlockFailed
+from raiden.transfer.mediated_transfer.state import (
+    InitiatorPaymentState,
+    TransferDescriptionWithSecretState,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
     ActionInitInitiator,
@@ -17,12 +16,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.mediated_transfer.state import (
-    InitiatorPaymentState,
-    TransferDescriptionWithSecretState,
-)
-from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.transfer.state import NettingChannelState
+from raiden.transfer.state_change import ActionCancelPayment, Block
+from raiden.utils import typing
 
 # TODO:
 # - Add synchronization for expired locks (issue #193).

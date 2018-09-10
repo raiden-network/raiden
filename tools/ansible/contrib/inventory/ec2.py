@@ -119,19 +119,18 @@ Security groups are comma-separated in 'ec2_security_group_ids' and
 
 ######################################################################
 
-import sys
-import os
 import argparse
+import os
 import re
+import sys
+from collections import defaultdict
 from time import time
-import boto
-from boto import ec2
-from boto import rds
-from boto import elasticache
-from boto import route53
-import six
 
+import boto
+import six
 from ansible.module_utils import ec2 as ec2_utils
+from boto import ec2, elasticache, rds, route53
+from six.moves import configparser
 
 HAS_BOTO3 = False
 try:
@@ -140,8 +139,6 @@ try:
 except ImportError:
     pass
 
-from six.moves import configparser
-from collections import defaultdict
 
 try:
     import json

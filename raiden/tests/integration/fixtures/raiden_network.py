@@ -2,16 +2,16 @@ import gevent
 import pytest
 import structlog
 
-from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
     create_apps,
     create_network_channels,
     create_sequential_channels,
     payment_channel_open_and_deposit,
-    wait_for_channels,
     wait_for_alarm_start,
+    wait_for_channels,
 )
+from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

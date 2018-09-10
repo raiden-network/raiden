@@ -1,12 +1,9 @@
 import sqlite3
 import threading
+from typing import Any, Optional, Tuple
+
 from raiden.exceptions import InvalidDBData
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES
-from typing import (
-    Any,
-    Optional,
-    Tuple,
-)
 
 # The latest DB version
 RAIDEN_DB_VERSION = 1

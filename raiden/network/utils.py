@@ -1,9 +1,8 @@
+from itertools import count
 from time import sleep
 from typing import Optional
 
 import psutil
-from itertools import count
-
 import requests
 from requests import RequestException
 

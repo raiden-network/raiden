@@ -14,7 +14,6 @@ from raiden.utils.typing import (
     TransactionHash,
 )
 
-
 # Quick overview
 # --------------
 #

@@ -1,18 +1,8 @@
-from raiden.transfer import (
-    channel,
-    token_network,
-    views,
-)
-from raiden.transfer.architecture import Event
-from raiden.transfer.mediated_transfer import (
-    initiator_manager,
-    mediator,
-    target,
-)
-from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     ContractSendEvent,
+    Event,
     SendMessageEvent,
     StateChange,
     TransitionResult,
@@ -26,13 +16,26 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     SendDirectTransfer,
 )
+from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitInitiator,
+    ActionInitMediator,
+    ActionInitTarget,
+    ReceiveLockExpired,
+    ReceiveSecretRequest,
+    ReceiveSecretReveal,
+    ReceiveTransferRefund,
+    ReceiveTransferRefundCancelRoute,
+)
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     ChainState,
-    PaymentNetworkState,
-    TokenNetworkState,
     InitiatorTask,
     MediatorTask,
+    PaymentNetworkState,
     TargetTask,
+    TokenNetworkState,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -49,27 +52,14 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
-    ContractReceiveRouteNew,
     ContractReceiveRouteClosed,
+    ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveTransferDirect,
     ReceiveUnlock,
-)
-from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-)
-from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator,
-    ActionInitMediator,
-    ActionInitTarget,
-    ReceiveLockExpired,
-    ReceiveSecretRequest,
-    ReceiveSecretReveal,
-    ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.utils import typing
 

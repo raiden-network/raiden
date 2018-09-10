@@ -1,5 +1,5 @@
-import pytest
 import gevent
+import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI

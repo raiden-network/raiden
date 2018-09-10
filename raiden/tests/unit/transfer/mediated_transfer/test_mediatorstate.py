@@ -5,39 +5,6 @@ import pytest
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
-from raiden.utils import publickey_to_address, random_secret
-from raiden.transfer import channel
-from raiden.transfer.events import ContractSendChannelClose
-from raiden.transfer.mediated_transfer import mediator
-from raiden.transfer.mediated_transfer.state import (
-    MediationPairState,
-    MediatorTransferState,
-    RouteState,
-)
-from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitMediator,
-    ReceiveLockExpired,
-    ReceiveSecretReveal,
-    ReceiveTransferRefund,
-)
-from raiden.transfer.mediated_transfer.events import (
-    EventUnlockFailed,
-    EventUnlockSuccess,
-    SendBalanceProof,
-    SendLockExpired,
-    SendLockedTransfer,
-    SendRefundTransfer,
-    SendRevealSecret,
-)
-from raiden.transfer.mediated_transfer.mediator import set_secret
-from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-    EMPTY_MERKLE_ROOT,
-    message_identifier_from_prng,
-)
-from raiden.transfer.state_change import Block
-from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -65,6 +32,42 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
 )
+from raiden.transfer import channel
+from raiden.transfer.events import (
+    ContractSendChannelClose,
+    ContractSendSecretReveal,
+    SendProcessed,
+)
+from raiden.transfer.mediated_transfer import mediator
+from raiden.transfer.mediated_transfer.events import (
+    EventUnlockFailed,
+    EventUnlockSuccess,
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+    SendRevealSecret,
+)
+from raiden.transfer.mediated_transfer.mediator import set_secret
+from raiden.transfer.mediated_transfer.state import (
+    MediationPairState,
+    MediatorTransferState,
+    RouteState,
+)
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitMediator,
+    ReceiveLockExpired,
+    ReceiveSecretReveal,
+    ReceiveTransferRefund,
+)
+from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+    EMPTY_MERKLE_ROOT,
+    message_identifier_from_prng,
+)
+from raiden.transfer.state_change import Block
+from raiden.utils import publickey_to_address, random_secret
 
 
 def make_transfer_pair(

@@ -1,20 +1,11 @@
-import structlog
-from gevent.event import AsyncResult
 from typing import List
 
+import structlog
+from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
+from gevent.event import AsyncResult
 from web3.exceptions import BadFunctionCallOutput
 from web3.utils.filters import Filter
-from eth_utils import (
-    is_binary_address,
-    to_normalized_address,
-    event_abi_to_log_topic,
-    encode_hex,
-)
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from raiden_contracts.constants import (
-    CONTRACT_SECRET_REGISTRY,
-    EVENT_SECRET_REVEALED,
-)
+
 from raiden.exceptions import (
     AddressWrongContract,
     ContractVersionMismatch,
@@ -22,19 +13,11 @@ from raiden.exceptions import (
     TransactionThrew,
 )
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
-)
-from raiden.settings import (
-    EXPECTED_CONTRACTS_VERSION,
-)
-from raiden.utils import (
-    pex,
-    typing,
-    sha3,
-    privatekey_to_address,
-    compare_versions,
-)
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.settings import EXPECTED_CONTRACTS_VERSION
+from raiden.utils import compare_versions, pex, privatekey_to_address, sha3, typing
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

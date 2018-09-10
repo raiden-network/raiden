@@ -1,20 +1,19 @@
 import pytest
-
-from raiden_contracts.constants import ChannelEvent
+from eth_utils import is_same_address, to_normalized_address
 
 from raiden.api.python import RaidenAPI
-from raiden.tests.utils.transfer import get_channelstate
-from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.geth import wait_until_block
+from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNKNOWN,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNKNOWN,
 )
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from eth_utils import is_same_address, to_normalized_address
+from raiden_contracts.constants import ChannelEvent
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

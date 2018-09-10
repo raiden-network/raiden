@@ -1,19 +1,9 @@
 import structlog
 
-from raiden.raiden_service import RaidenService
-from raiden.utils import random_secret
-from raiden.routing import get_best_routes
-from raiden.transfer import views
-from raiden.transfer.state import balanceproof_from_envelope
-from raiden.transfer.state_change import (
-    ReceiveProcessed,
-    ReceiveTransferDirect,
-    ReceiveUnlock,
-)
 from raiden.messages import (
     DirectTransfer,
-    LockExpired,
     LockedTransfer,
+    LockExpired,
     Message,
     Processed,
     RefundTransfer,
@@ -21,6 +11,9 @@ from raiden.messages import (
     Secret,
     SecretRequest,
 )
+from raiden.raiden_service import RaidenService
+from raiden.routing import get_best_routes
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
@@ -29,6 +22,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
+from raiden.transfer.state import balanceproof_from_envelope
+from raiden.transfer.state_change import ReceiveProcessed, ReceiveTransferDirect, ReceiveUnlock
+from raiden.utils import random_secret
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

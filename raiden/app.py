@@ -5,11 +5,7 @@ from eth_utils import to_checksum_address
 
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import (
-    TokenNetworkRegistry,
-    SecretRegistry,
-    Discovery,
-)
+from raiden.network.proxies import Discovery, SecretRegistry, TokenNetworkRegistry
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -25,9 +21,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
     INITIAL_PORT,
 )
-from raiden.utils import pex
-from raiden.utils import typing
-
+from raiden.utils import pex, typing
 
 log = structlog.get_logger(__name__)
 

@@ -5,21 +5,11 @@ import gevent
 from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import (
-    LockedTransfer,
-    Secret,
-)
 from raiden.message_handler import on_message
-from raiden.raiden_service import (
-    initiator_init,
-    mediator_init,
-    target_init,
-)
-
+from raiden.messages import LockedTransfer, Secret
+from raiden.raiden_service import initiator_init, mediator_init, target_init
 from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.factories import (
-    make_address,
-)
+from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
@@ -32,11 +22,10 @@ from raiden.transfer.state import (
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelState,
-
     balanceproof_from_envelope,
 )
 from raiden.transfer.state_change import ReceiveUnlock
-from raiden.utils import sha3, privatekey_to_address
+from raiden.utils import privatekey_to_address, sha3
 
 
 def sign_and_inject(message, key, address, app):

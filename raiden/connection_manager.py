@@ -1,23 +1,22 @@
 from binascii import unhexlify
-
-import gevent
-from gevent.event import AsyncResult
-from gevent.lock import Semaphore
 from random import shuffle
 
+import gevent
 import structlog
+from gevent.event import AsyncResult
+from gevent.lock import Semaphore
 
 from raiden import waiting
-from raiden.exceptions import DuplicatedChannelError
 from raiden.api.python import RaidenAPI
-from raiden.utils import pex, typing
 from raiden.exceptions import (
-    InvalidAmount,
-    TransactionThrew,
+    DuplicatedChannelError,
     InsufficientFunds,
+    InvalidAmount,
     RaidenRecoverableError,
+    TransactionThrew,
 )
 from raiden.transfer import views
+from raiden.utils import pex, typing
 from raiden.utils.typing import Address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

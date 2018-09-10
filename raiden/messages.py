@@ -1,58 +1,48 @@
-from eth_utils import (
-    big_endian_to_int,
-    to_normalized_address,
-    to_canonical_address,
-    encode_hex,
-    decode_hex,
-)
-import structlog
-from cachetools import LRUCache, cached
 from operator import attrgetter
 
-from raiden_libs.utils.signing import eth_sign, eth_recover
-from raiden_libs.exceptions import InvalidSignature
-from raiden.constants import (
-    UINT256_MAX,
-    UINT64_MAX,
+import structlog
+from cachetools import LRUCache, cached
+from eth_utils import (
+    big_endian_to_int,
+    decode_hex,
+    encode_hex,
+    to_canonical_address,
+    to_normalized_address,
 )
+
+from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.transfer.utils import hash_balance_data
-from raiden.transfer.state import HashTimeLockState
-from raiden.utils import (
-    ishash,
-    pex,
-    sha3,
-    typing,
-)
-from raiden.transfer.events import (
-    SendDirectTransfer,
-    SendProcessed,
-)
+from raiden.transfer.events import SendDirectTransfer, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
+    SendLockExpired,
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
-    SendLockExpired,
 )
+from raiden.transfer.state import HashTimeLockState
+from raiden.transfer.utils import hash_balance_data
+from raiden.utils import ishash, pex, sha3, typing
 from raiden.utils.typing import (
-    Optional,
     Address,
     BlockExpiration,
     ChainID,
-    MessageID,
-    SecretHash,
-    PaymentID,
-    Secret,
     ChannelID,
     Locksroot,
+    MessageID,
+    Optional,
+    PaymentID,
+    Secret,
+    SecretHash,
     TokenAmount,
     TokenNetworkAddress,
 )
+from raiden_libs.exceptions import InvalidSignature
+from raiden_libs.utils.signing import eth_recover, eth_sign
 
 __all__ = (
     'Delivered',

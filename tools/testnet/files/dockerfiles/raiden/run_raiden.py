@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 import os
-
-import click
 import sys
 
+import click
 
 ETH_RPC_ENDPOINT_ARG = '--eth-rpc-endpoint'
 

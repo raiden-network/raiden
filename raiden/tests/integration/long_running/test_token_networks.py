@@ -1,12 +1,11 @@
-import pytest
 import gevent
+import pytest
 
+from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.geth import wait_until_block
-from raiden.transfer import views, channel
+from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden import routing
-from raiden import waiting
 
 
 def wait_for_transaction(

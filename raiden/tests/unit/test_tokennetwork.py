@@ -3,19 +3,18 @@ import random
 
 from raiden.constants import UINT64_MAX
 from raiden.tests.utils import factories
-from raiden.transfer import node, channel, token_network
-from raiden.transfer.state import HashTimeLockState
-from raiden.transfer.state_change import (
-    ContractReceiveChannelNew,
-    ContractReceiveChannelClosed,
-    ContractReceiveChannelSettled,
-    ContractReceiveRouteNew,
-    ContractReceiveRouteClosed,
-    ContractReceiveChannelBatchUnlock,
-)
-from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
-from raiden.transfer.state import TokenNetworkState
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
+from raiden.transfer import channel, node, token_network
+from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
+from raiden.transfer.state import HashTimeLockState, TokenNetworkState
+from raiden.transfer.state_change import (
+    ContractReceiveChannelBatchUnlock,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelSettled,
+    ContractReceiveRouteClosed,
+    ContractReceiveRouteNew,
+)
 from raiden.utils import sha3
 
 

@@ -1,14 +1,15 @@
 import gevent
 import structlog
 
-from raiden.transfer.state import NODE_NETWORK_REACHABLE
-from raiden.transfer.state import (
-    CHANNEL_STATE_SETTLED,
-    CHANNEL_AFTER_CLOSE_STATES,
-)
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
+from raiden.transfer.state import (
+    CHANNEL_AFTER_CLOSE_STATES,
+    CHANNEL_STATE_SETTLED,
+    NODE_NETWORK_REACHABLE,
+)
 from raiden.utils import typing
+
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 

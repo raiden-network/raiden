@@ -1,39 +1,19 @@
-from marshmallow import (
-    fields,
-    post_dump,
-    post_load,
-    pre_load,
-    Schema,
-    SchemaOpts,
-)
+from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
+from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load
 from webargs import validate
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
-from eth_utils import (
-    is_checksum_address,
-    to_checksum_address,
-    to_canonical_address,
-)
 
-from raiden.api.objects import (
-    Address,
-    AddressList,
-    PartnersPerToken,
-    PartnersPerTokenList,
-)
+from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
 from raiden.settings import (
-    DEFAULT_SETTLE_TIMEOUT,
-    DEFAULT_REVEAL_TIMEOUT,
-    DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
+    DEFAULT_JOINABLE_FUNDS_TARGET,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
 )
 from raiden.transfer import channel
-from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
-)
-from raiden.utils import data_encoder, data_decoder
+from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
+from raiden.utils import data_decoder, data_encoder
 
 
 class InvalidEndpoint(NotFound):

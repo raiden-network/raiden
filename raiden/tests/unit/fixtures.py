@@ -1,16 +1,10 @@
-import pytest
 import random
 
-from raiden.transfer.state import (
-    ChainState,
-    PaymentNetworkState,
-    TokenNetworkState,
-)
+import pytest
 
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import (
-    UNIT_CHAIN_ID,
-)
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
 
 # pylint: disable=redefined-outer-name
 

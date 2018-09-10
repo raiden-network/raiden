@@ -5,12 +5,12 @@ import sys
 from binascii import hexlify, unhexlify
 from typing import Dict, Optional
 
-from eth_keyfile import decode_keyfile_json
 import structlog
+from eth_keyfile import decode_keyfile_json
 from eth_utils import to_checksum_address
 
+from raiden.utils import privatekey_to_address, privtopub
 from raiden.utils.typing import AddressHex
-from raiden.utils import privtopub, privatekey_to_address
 
 log = structlog.get_logger(__name__)
 

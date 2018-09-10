@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 import click
-from web3 import Web3, HTTPProvider
+from web3 import HTTPProvider, Web3
 
 from raiden.network.rpc.client import JSONRPCClient
-
 
 WEI_TO_ETH = 10 ** 18
 

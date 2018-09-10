@@ -2,18 +2,16 @@ import json
 from enum import Enum
 from typing import Dict, List
 
-from eth_utils import (
-    to_canonical_address,
-    decode_hex,
-    to_checksum_address,
-)
+from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from pkg_resources import DistributionNotFound
-from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
-from web3.utils.abi import get_abi_input_types
 from web3.contract import Contract
+from web3.utils.abi import get_abi_input_types
+from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
+
 from raiden.constants import EthClient
 from raiden.exceptions import InsufficientFunds, ReplacementTransactionUnderpriced
 from raiden.utils.filters import decode_event
+
 try:
     from eth_tester.exceptions import TransactionFailed
 except (ModuleNotFoundError, DistributionNotFound):

@@ -1,35 +1,23 @@
-from binascii import hexlify
-from collections import namedtuple
-import json
 import io
+import json
 import os
 import shutil
 import subprocess
 import sys
 import termios
 import time
-import gevent
+from binascii import hexlify
+from collections import namedtuple
 
-from eth_utils import (
-    encode_hex,
-    remove_0x_prefix,
-    to_checksum_address,
-    to_normalized_address,
-)
+import gevent
 import structlog
+from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
 from requests import ConnectionError
 from web3 import Web3
 
-from raiden.utils import (
-    privatekey_to_address,
-    privtopub,
-    typing,
-)
+from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.tests.fixtures.variables import (
-    DEFAULT_BALANCE_BIN,
-    DEFAULT_PASSPHRASE,
-)
+from raiden.utils import privatekey_to_address, privtopub, typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

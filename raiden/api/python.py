@@ -3,37 +3,31 @@ from contextlib import ExitStack
 import structlog
 from eth_utils import is_binary_address, to_checksum_address
 
-from raiden import waiting
 import raiden.blockchain.events as blockchain_events
-from raiden.transfer import (
-    architecture,
-    views,
-)
-from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
-    EventPaymentReceivedSuccess,
-)
-from raiden.transfer.state import NettingChannelState
-from raiden.transfer.state_change import ActionChannelClose
+from raiden import waiting
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
+    DepositOverLimit,
+    DuplicatedChannelError,
     InsufficientFunds,
+    InsufficientGasReserve,
     InvalidAddress,
     InvalidAmount,
     InvalidSettleTimeout,
-    UnknownTokenAddress,
-    DepositOverLimit,
-    DuplicatedChannelError,
     TokenNotRegistered,
-    InsufficientGasReserve,
+    UnknownTokenAddress,
 )
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils import (
-    pex,
-    typing,
+from raiden.transfer import architecture, views
+from raiden.transfer.events import (
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
 )
+from raiden.transfer.state import NettingChannelState
+from raiden.transfer.state_change import ActionChannelClose
+from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

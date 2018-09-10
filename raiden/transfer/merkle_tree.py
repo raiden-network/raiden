@@ -1,6 +1,5 @@
-from raiden.utils import split_in_pairs
 from raiden.exceptions import HashLengthNot32
-from raiden.utils import sha3
+from raiden.utils import sha3, split_in_pairs
 
 # the layers grow from the leaves to the root
 LEAVES = 0

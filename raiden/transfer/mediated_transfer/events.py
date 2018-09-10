@@ -1,14 +1,10 @@
 # pylint: disable=too-many-arguments,too-few-public-methods
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.transfer.architecture import (
-    Event,
-    SendMessageEvent,
-)
+from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
-from raiden.utils import pex, sha3, typing, serialization
-
+from raiden.utils import pex, serialization, sha3, typing
 
 # According to the smart contracts as of 07/08:
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213

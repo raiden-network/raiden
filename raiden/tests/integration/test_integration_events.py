@@ -1,11 +1,6 @@
 import gevent
 import pytest
-
 from eth_utils import to_checksum_address
-from raiden_contracts.constants import (
-    ChannelEvent,
-    EVENT_TOKEN_NETWORK_CREATED,
-)
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -19,15 +14,16 @@ from raiden.blockchain.events import (
     get_token_network_registry_events,
 )
 from raiden.tests.utils.events import must_have_event
+from raiden.tests.utils.geth import wait_until_block
+from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
     pending_mediated_transfer,
 )
-from raiden.tests.utils.geth import wait_until_block
-from raiden.tests.utils.network import CHAIN
-from raiden.transfer import views, channel
+from raiden.transfer import channel, views
 from raiden.utils import sha3
+from raiden_contracts.constants import EVENT_TOKEN_NETWORK_CREATED, ChannelEvent
 
 
 def wait_both_channel_open(

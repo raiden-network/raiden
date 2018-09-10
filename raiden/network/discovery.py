@@ -1,16 +1,11 @@
 import socket
-from eth_utils import is_binary_address
 
 import structlog
+from eth_utils import is_binary_address
 
-from raiden.exceptions import UnknownAddress
+from raiden.exceptions import InvalidAddress, UnknownAddress
 from raiden.network import proxies
-from raiden.utils import (
-    host_port_to_endpoint,
-    pex,
-    split_endpoint,
-)
-from raiden.exceptions import InvalidAddress
+from raiden.utils import host_port_to_endpoint, pex, split_endpoint
 
 log = structlog.get_logger(__name__)
 

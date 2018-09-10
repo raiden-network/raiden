@@ -5,20 +5,20 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer
-from raiden.transfer import channel, views
-from raiden.transfer.state import EMPTY_MERKLE_ROOT
-from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
     make_address,
     make_privkey_address,
 )
+from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
     sign_and_inject,
 )
+from raiden.transfer import channel, views
+from raiden.transfer.state import EMPTY_MERKLE_ROOT
 
 
 @pytest.mark.skip(reason='direct_transfer_async doesnt return AsyncResult anymore')

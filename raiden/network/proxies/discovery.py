@@ -1,11 +1,5 @@
-from eth_utils import (
-    to_checksum_address,
-    is_binary_address,
-    to_normalized_address,
-)
+from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from web3.exceptions import BadFunctionCallOutput
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
-from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
@@ -19,6 +13,8 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex
+from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 class Discovery:

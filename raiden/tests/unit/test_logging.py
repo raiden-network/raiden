@@ -1,10 +1,10 @@
 import logging
 import traceback
 
-import structlog
 import pytest
+import structlog
 
-from raiden.log_config import configure_logging, LogFilter
+from raiden.log_config import LogFilter, configure_logging
 
 
 def test_log_filter():

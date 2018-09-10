@@ -1,10 +1,11 @@
 import errno
-import netifaces
 import socket
+
+import netifaces
 import structlog
 
-from raiden.exceptions import STUNUnavailableException, RaidenServicePortInUseError
-from raiden.network import upnpsock, stunsock
+from raiden.exceptions import RaidenServicePortInUseError, STUNUnavailableException
+from raiden.network import stunsock, upnpsock
 
 log = structlog.get_logger(__name__)
 

@@ -3,11 +3,7 @@ import pytest
 
 from raiden.messages import LockedTransfer, RevealSecret
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    wait_assert,
-    mediated_transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
 from raiden.transfer import views
 
 

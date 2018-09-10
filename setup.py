@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-import os
-import subprocess
-import re
-
-from setuptools import setup, find_packages
-from setuptools import Command
-from setuptools.command.test import test as TestCommand
 import distutils.log
+import os
+import re
+import subprocess
 from distutils.spawn import find_executable
+
+from setuptools import Command, find_packages, setup
+from setuptools.command.test import test as TestCommand
 
 
 class PyTest(TestCommand):

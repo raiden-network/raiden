@@ -1,7 +1,7 @@
 import pytest
 
-from raiden.encoding.format import Field, namedbuffer
 from raiden.encoding.encoders import integer
+from raiden.encoding.format import Field, namedbuffer
 
 # pylint: disable=invalid-name
 byte = Field('byte', 1, 'B', None)

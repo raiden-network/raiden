@@ -4,14 +4,10 @@ import signal
 import tempfile
 
 from eth_utils import remove_0x_prefix
-from web3 import Web3, HTTPProvider
+from web3 import HTTPProvider, Web3
 
-from raiden.utils import sha3
-from raiden.tests.utils.geth import (
-    GethNodeDescription,
-    geth_run_private_blockchain,
-)
-from raiden.utils import privatekey_to_address
+from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
+from raiden.utils import privatekey_to_address, sha3
 
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10

@@ -2,18 +2,10 @@ import json
 from collections import defaultdict
 
 import networkx
-from eth_utils import (
-    to_checksum_address,
-    to_canonical_address,
-    to_bytes,
-    to_hex,
-)
+from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
+from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.utils import typing
-from raiden.transfer.merkle_tree import (
-    LEAVES,
-    compute_layers,
-)
 
 
 class ReferenceCache:

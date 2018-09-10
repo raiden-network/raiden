@@ -1,11 +1,11 @@
 import logging
 import logging.config
 import os
-import sys
 import re
-from traceback import TracebackException
+import sys
 from functools import wraps
-from typing import Dict, Callable, Pattern, Tuple, List
+from traceback import TracebackException
+from typing import Callable, Dict, List, Pattern, Tuple
 
 import structlog
 

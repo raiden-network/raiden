@@ -1,17 +1,11 @@
-from eth_utils import (
-    is_binary_address,
-    to_checksum_address,
-    to_normalized_address,
-)
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
 from raiden.exceptions import TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
-from raiden.network.rpc.transactions import (
-    check_transaction_threw,
-)
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 class Token:

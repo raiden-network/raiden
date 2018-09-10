@@ -1,18 +1,18 @@
+from heapq import heappop, heappush
 from typing import List
-from heapq import heappush, heappop
 
 import networkx
 import structlog
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
-    ChainState,
     CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
+    ChainState,
+    RouteState,
 )
 from raiden.utils import pex, typing
-from raiden.transfer.state import RouteState
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

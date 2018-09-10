@@ -1,32 +1,28 @@
 import gevent
 import structlog
 
-from raiden_contracts.constants import (
-    ChannelEvent,
-    EVENT_SECRET_REVEALED,
-    EVENT_TOKEN_NETWORK_CREATED,
-)
-
 from raiden.blockchain.events import decode_event_to_internal
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
-from raiden.utils import pex, data_decoder
-from raiden.transfer.state import (
-    TransactionChannelNewBalance,
-    TokenNetworkState,
-)
+from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
 from raiden.transfer.state_change import (
+    ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelBatchUnlock,
     ContractReceiveNewTokenNetwork,
-    ContractReceiveSecretReveal,
-    ContractReceiveRouteNew,
     ContractReceiveRouteClosed,
+    ContractReceiveRouteNew,
+    ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
+)
+from raiden.utils import data_decoder, pex
+from raiden_contracts.constants import (
+    EVENT_SECRET_REVEALED,
+    EVENT_TOKEN_NETWORK_CREATED,
+    ChannelEvent,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

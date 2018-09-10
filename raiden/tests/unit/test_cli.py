@@ -1,8 +1,5 @@
-from raiden.utils import (
-    is_minified_address,
-    is_supported_client,
-)
 from raiden.constants import EthClient
+from raiden.utils import is_minified_address, is_supported_client
 
 
 def test_check_json_rpc_geth():

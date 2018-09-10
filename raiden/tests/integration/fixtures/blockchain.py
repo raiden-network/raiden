@@ -1,24 +1,16 @@
 import pytest
 from eth_tester import EthereumTester, PyEVMBackend
-from web3 import Web3, HTTPProvider
+from web3 import HTTPProvider, Web3
 from web3.providers.eth_tester import EthereumTesterProvider
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.geth import (
-    geth_run_private_blockchain,
-    GethNodeDescription,
-)
+from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
+from raiden.tests.utils.tester import Miner, fund_accounts
 from raiden.tests.utils.tests import cleanup_tasks
-from raiden.tests.utils.tester import (
-    fund_accounts,
-    Miner,
-)
-from raiden.utils import (
-    privatekey_to_address,
-)
+from raiden.utils import privatekey_to_address
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 

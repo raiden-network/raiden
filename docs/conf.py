@@ -1,5 +1,11 @@
+import os
+import shlex
+import subprocess
+import sys
+
 from docutils.parsers.rst.directives.admonitions import BaseAdmonition
 from sphinx.util import compat
+
 compat.make_admonition = BaseAdmonition
 #
 # Raiden documentation build configuration file, created by
@@ -20,10 +26,6 @@ compat.make_admonition = BaseAdmonition
 #
 
 # - Add Raiden path to the path for sphinx to import
-import os
-import sys
-import subprocess
-import shlex
 sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
 
 

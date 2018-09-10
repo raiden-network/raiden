@@ -1,44 +1,42 @@
-from binascii import unhexlify, hexlify
-from http import HTTPStatus
-from string import Template
-import click
 import json
 import os
-import sys
-import requests
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import traceback
+from binascii import hexlify, unhexlify
+from http import HTTPStatus
+from string import Template
 from typing import Dict
-from web3 import Web3, HTTPProvider
+
+import click
+import requests
+from eth_utils import to_canonical_address, to_checksum_address
+from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
-
-from eth_utils import to_checksum_address, to_canonical_address
-
-from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    TEST_SETTLE_TIMEOUT_MIN,
-    TEST_SETTLE_TIMEOUT_MAX,
-)
-from raiden.tests.utils.geth import geth_wait_and_check
-from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
 from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
+from raiden.raiden_service import RaidenService
+from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
+from raiden.tests.utils.geth import geth_wait_and_check
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import get_project_root
-from raiden.raiden_service import RaidenService
-
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
+)
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'

@@ -5,41 +5,34 @@ import random
 import filelock
 import gevent
 import structlog
-
 from coincurve import PrivateKey
 from eth_utils import is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.lock import Semaphore
 
 from raiden import constants, routing, waiting
+from raiden.blockchain.events import BlockchainEvents
+from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
-from raiden.exceptions import (
-    InvalidAddress,
-    RaidenRecoverableError,
-    RaidenShuttingDown,
-)
+from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenShuttingDown
 from raiden.messages import LockedTransfer, SignedMessage
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import (
-    SecretRegistry,
-    TokenNetworkRegistry,
-)
-from raiden.blockchain_events_handler import on_blockchain_event
-from raiden.blockchain.events import BlockchainEvents
-from raiden.storage import wal, serialize, sqlite
+from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
+from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
-from raiden.transfer import views, node
-from raiden.transfer.state import RouteState, PaymentNetworkState
+from raiden.transfer import node, views
+from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.state import (
-    lockedtransfersigned_from_message,
     TransferDescriptionWithSecretState,
+    lockedtransfersigned_from_message,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
 )
+from raiden.transfer.state import PaymentNetworkState, RouteState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
@@ -49,15 +42,14 @@ from raiden.transfer.state_change import (
     ContractReceiveNewPaymentNetwork,
 )
 from raiden.utils import (
-    pex,
+    create_default_identifier,
     lpex,
+    pex,
     privatekey_to_address,
     random_secret,
-    create_default_identifier,
     typing,
 )
 from raiden.utils.runnable import Runnable
-from raiden.transfer.events import SendDirectTransfer
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

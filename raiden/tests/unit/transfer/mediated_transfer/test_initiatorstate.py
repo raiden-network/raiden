@@ -4,9 +4,9 @@ from copy import deepcopy
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
-from raiden.tests.utils import factories, events
+from raiden.tests.utils import events, factories
 from raiden.tests.utils.factories import (
-    make_transfer_description,
+    ADDR,
     UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRET,
     UNIT_TOKEN_ADDRESS,
@@ -15,18 +15,20 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
-    ADDR,
-)
-from raiden.transfer.events import (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
+    make_transfer_description,
 )
 from raiden.transfer import channel
-from raiden.transfer.state import (
-    RouteState,
-    message_identifier_from_prng,
+from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.mediated_transfer import initiator, initiator_manager
+from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventUnlockFailed,
+    EventUnlockSuccess,
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRevealSecret,
 )
-from raiden.transfer.mediated_transfer import initiator_manager, initiator
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
@@ -35,16 +37,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    EventUnlockFailed,
-    EventUnlockSuccess,
-    SendBalanceProof,
-    SendLockExpired,
-    SendLockedTransfer,
-    SendRevealSecret,
-)
-from raiden.transfer.state_change import Block, ActionCancelPayment
+from raiden.transfer.state import RouteState, message_identifier_from_prng
+from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.utils import random_secret
 
 

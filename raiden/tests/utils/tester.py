@@ -1,9 +1,9 @@
 import gevent
-from gevent.event import Event
 from eth_utils import encode_hex, to_checksum_address
-from raiden.utils import privatekey_to_address
+from gevent.event import Event
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE
+from raiden.utils import privatekey_to_address
 
 
 def fund_accounts(web3, private_keys, ethereum_tester):

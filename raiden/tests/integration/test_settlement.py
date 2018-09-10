@@ -3,14 +3,11 @@ import random
 import gevent
 import pytest
 
+from raiden import message_handler, waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
-from raiden import waiting, message_handler
 from raiden.messages import RevealSecret
-from raiden.settings import (
-    DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
-    DEFAULT_RETRY_TIMEOUT,
-)
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN

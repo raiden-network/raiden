@@ -1,14 +1,13 @@
 import pytest
 from eth_utils import to_checksum_address
+
+from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_tokens_and_fund_accounts
+from raiden.utils import privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
-
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.smartcontracts import deploy_tokens_and_fund_accounts
-from raiden.utils import privatekey_to_address, typing
 
 
 @pytest.fixture

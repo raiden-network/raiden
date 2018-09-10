@@ -1,20 +1,18 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
+
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.transfer.architecture import (
-    ContractReceiveStateChange,
-    StateChange,
-)
+from raiden.transfer.architecture import ContractReceiveStateChange, StateChange
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
     PaymentNetworkState,
-    TransactionChannelNewBalance,
     TokenNetworkState,
+    TransactionChannelNewBalance,
 )
-from raiden.utils import sha3, pex, typing
-from raiden.utils.serialization import serialize_bytes, deserialize_bytes
+from raiden.utils import pex, sha3, typing
+from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 
 
 class Block(StateChange):

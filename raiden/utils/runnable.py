@@ -1,5 +1,6 @@
-from gevent import Greenlet
 from typing import Sequence
+
+from gevent import Greenlet
 
 
 class Runnable:

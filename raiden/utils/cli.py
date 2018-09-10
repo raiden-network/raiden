@@ -2,21 +2,20 @@ import errno
 import os
 import re
 import sys
-from ipaddress import IPv4Address, AddressValueError
+from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Callable, List, Union, Any, Dict
+from typing import Any, Callable, Dict, List, Union
 
 import click
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
-from pytoml import load, TomlError
+from pytoml import TomlError, load
 
-from raiden.utils import address_checksum_and_decode
 from raiden.constants import NETWORKNAME_TO_ID
 from raiden.exceptions import InvalidAddress
-
+from raiden.utils import address_checksum_and_decode
 
 LOG_CONFIG_OPTION_NAME = 'log_config'
 

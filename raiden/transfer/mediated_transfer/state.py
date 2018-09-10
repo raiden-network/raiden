@@ -1,16 +1,16 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from eth_utils import encode_hex, to_checksum_address, to_canonical_address
+from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import State
-from raiden.utils import pex, sha3, typing, serialization
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
-    balanceproof_from_envelope,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
     RouteState,
+    balanceproof_from_envelope,
 )
+from raiden.utils import pex, serialization, sha3, typing
 
 
 def lockedtransfersigned_from_message(message):

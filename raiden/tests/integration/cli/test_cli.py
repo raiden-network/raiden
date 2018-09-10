@@ -1,10 +1,12 @@
 import json
-import pytest
-import pexpect
 import sys
+
+import pexpect
+import pytest
 from click.testing import CliRunner
-from raiden.ui.cli import run
 from eth_utils import to_checksum_address
+
+from raiden.ui.cli import run
 
 
 def spawn_raiden(args):

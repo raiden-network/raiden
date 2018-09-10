@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import os
 import json
+import os
 from datetime import datetime
+
 import click
 
 

@@ -5,35 +5,28 @@ import string
 
 from coincurve import PrivateKey
 
-from raiden_libs.utils.signing import eth_sign
 from raiden.constants import UINT64_MAX, UINT256_MAX
-from raiden.messages import (
-    Lock,
-    LockedTransfer,
-)
-from raiden.utils import (
-    random_secret,
-    sha3,
-    publickey_to_address,
-    privatekey_to_address,
-)
+from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel
+from raiden.transfer.mediated_transfer.state import (
+    HashTimeLockState,
+    LockedTransferUnsignedState,
+    TransferDescriptionWithSecretState,
+    lockedtransfersigned_from_message,
+)
+from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
+    EMPTY_MERKLE_ROOT,
     BalanceProofSignedState,
+    BalanceProofUnsignedState,
     NettingChannelEndState,
     NettingChannelState,
     RouteState,
     TransactionExecutionStatus,
 )
-from raiden.transfer.state import BalanceProofUnsignedState, EMPTY_MERKLE_ROOT
-from raiden.transfer.mediated_transfer.state import (
-    lockedtransfersigned_from_message,
-    HashTimeLockState,
-    TransferDescriptionWithSecretState,
-    LockedTransferUnsignedState,
-)
-from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3
+from raiden_libs.utils.signing import eth_sign
 
 # prefixing with UNIT_ to differ from the default globals
 UNIT_SETTLE_TIMEOUT = 50

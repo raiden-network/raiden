@@ -1,18 +1,15 @@
 import gevent
 import pytest
 
-from raiden.transfer import views
-from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.events import raiden_events_must_contain_entry
+from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     direct_transfer,
     mediated_transfer,
 )
-from raiden.transfer.mediated_transfer.events import (
-    SendLockedTransfer,
-    SendRefundTransfer,
-)
+from raiden.transfer import views
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
 from raiden.transfer.state import lockstate_from_lock
 
 

@@ -5,18 +5,15 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.network.transport import UDPTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    mediated_transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.raiden_event_handler import RaidenEventHandler
 
 
 @pytest.mark.parametrize('deposit', [10])

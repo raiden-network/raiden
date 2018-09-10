@@ -5,8 +5,8 @@ from eth_utils import decode_hex, to_checksum_address
 from pkg_resources import DistributionNotFound
 
 from raiden.exceptions import ReplacementTransactionUnderpriced
-from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.solc import compile_files_cwd
 
 try:

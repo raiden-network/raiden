@@ -1,21 +1,21 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
-from raiden.transfer.mediated_transfer import mediator
-from raiden.transfer.mediated_transfer.state import MediatorTransferState
-from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.state_change import Block
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
     HOP2,
-    UNIT_SECRETHASH,
     UNIT_SECRET,
+    UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
     UNIT_TRANSFER_SENDER,
 )
+from raiden.transfer.mediated_transfer import mediator
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.state import MediatorTransferState
+from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.transfer.state_change import Block
 
 
 def test_payer_enter_danger_zone_with_transfer_payed():

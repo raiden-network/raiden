@@ -40,7 +40,6 @@ clean-test:
 lint:
 	flake8 raiden/ tools/
 	pylint --disable=all --enable=no-value-for-parameter,too-many-format-args,no-member raiden
-	isort -v
 	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff .
 	python setup.py check --restructuredtext --strict
 

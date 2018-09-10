@@ -1,6 +1,6 @@
 import gevent
-from web3 import Web3, HTTPProvider
-from eth_utils import to_checksum_address, encode_hex
+from eth_utils import encode_hex, to_checksum_address
+from web3 import HTTPProvider, Web3
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import get_contract_path, sha3

@@ -1,10 +1,10 @@
 from eth_utils import to_canonical_address
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import typing
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
 
 def deploy_tokens_and_fund_accounts(

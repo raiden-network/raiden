@@ -4,6 +4,16 @@ import random
 import pytest
 
 from raiden.constants import UINT64_MAX
+from raiden.tests.utils import factories
+from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.factories import (
+    HOP1,
+    UNIT_SECRET,
+    UNIT_SECRETHASH,
+    UNIT_TRANSFER_PKEY,
+    UNIT_TRANSFER_SENDER,
+    UNIT_TRANSFER_TARGET,
+)
 from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelClose,
@@ -11,32 +21,19 @@ from raiden.transfer.events import (
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer import target
+from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
+    SendRevealSecret,
+    SendSecretRequest,
+)
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
     ReceiveLockExpired,
     ReceiveSecretReveal,
 )
-from raiden.transfer.mediated_transfer.events import (
-    EventUnlockClaimFailed,
-    SendRevealSecret,
-    SendSecretRequest,
-)
-from raiden.transfer.state_change import (
-    Block,
-    ReceiveUnlock,
-)
-from raiden.tests.utils import factories
-from raiden.tests.utils.events import must_contain_entry
-from raiden.tests.utils.factories import (
-    HOP1,
-    UNIT_SECRETHASH,
-    UNIT_SECRET,
-    UNIT_TRANSFER_PKEY,
-    UNIT_TRANSFER_SENDER,
-    UNIT_TRANSFER_TARGET,
-)
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
+from raiden.transfer.state_change import Block, ReceiveUnlock
 
 
 def make_target_state(our_address, amount, block_number, initiator, expiration=None):
