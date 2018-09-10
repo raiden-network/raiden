@@ -39,8 +39,8 @@ clean-test:
 
 lint:
 	flake8 raiden/ tools/
-	pylint --disable=all --enable=no-value-for-parameter,too-many-format-args,no-member raiden
 	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff .
+	pylint --rcfile .pylint.rc raiden
 	python setup.py check --restructuredtext --strict
 
 test:
