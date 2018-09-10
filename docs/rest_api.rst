@@ -784,7 +784,7 @@ For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which
 
 Now for the internal Raiden events:
 
-.. http:get:: /api/(version)/_debug/raiden_events/tokens/(token_address)
+.. http:get:: /api/(version)/_debug/raiden_events/
 
    Query for Raiden internal node events.
 
@@ -792,7 +792,7 @@ Now for the internal Raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/raiden_events/tokens/0xb2eef045d5c05cfc9b351a59cc5c4597de6487e2 HTTP/1.1
+      GET /api/1/_debug/raiden_events/ HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -835,74 +835,4 @@ Now for the internal Raiden events:
   :statuscode 400: If the provided query string is malformed
   :statuscode 404: If the token at the given token_address does not exist
   :statuscode 409: If the given block number or token_address arguments are invalid
-  :statuscode 500: Internal Raiden node error
-
-.. http:get:: /api/(version)/_debug/raiden_events/networks/(token_address)/channels/(partner_address)
-
-   Query for Raiden internal node events.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      GET /api/1/_debug/raiden_events/networks/0x7150c717eb60978713f4ddaa288cf3101581cd81/channels/ HTTP/1.1
-      Host: localhost:5001
-
-  **Example Response**:
-
-  .. sourcecode:: http
-
-     HTTP/1.1 200 OK
-     Content-Type: application/json
-
-    [{
-        'event': 'SendLockedTransfer',
-        'message_identifier': 16700893459475179678,
-        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
-        'transfer': '<LockedTransferUnsignedState id:42 '
-                  'token:0x7150c717eb60978713f4ddaa288cf3101581cd81 '
-                  'balance_proof:<BalanceProofUnsignedState nonce:1 '
-                  'transferred_amount:0 locked_amount:200 locksroot:b407910b '
-                  'token_network:b12596e5 channel_identifier:1 chain_id: 337> '
-                  'lock:<HashTimeLockState amount:200 expiration:56 '
-                  'secrethash:8ee5cb32> '
-                  'target:0x1d2cb001f807882c4a862731cbb77390e641a8fd>'
-     },
-     {
-        'event': 'SendSecretReveal',
-        'message_identifier': 17638248769110067506,
-        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
-        'secret': '0x211c0b2cef1541eda28e0b1f86391f19eb3519fccd2e643096d9066a8a992d10',
-        'secrethash': '0x8ee5cb32c24203b9d62dd55359c3494f4a1694039fb0ce7c2c46bdf619b54c76'
-     },
-     {
-        'amount': 200,
-        'event': 'EventPaymentSentSuccess',
-        'identifier': 42,
-        'payment_network_identifier': '0xf6febb9ca9efab37e495612dff0e30964cbb2c15',
-        'target': '0x1d2cB001f807882C4a862731CBB77390e641A8fD',
-        'token_network_identifier': '0xb12596e59a7fa29c0f7c349261cd91148a496dc8'
-     },
-     {
-        'event': 'EventUnlockSuccess',
-        'identifier': 42,
-        'secrethash': '0x8ee5cb32c24203b9d62dd55359c3494f4a1694039fb0ce7c2c46bdf619b54c76'
-     },
-     {
-        'balance_proof': '<BalanceProofUnsignedState nonce:2 transferred_amount:200 '
-                       'locked_amount:0 locksroot:00000000 token_network:b12596e5 '
-                       'channel_identifier:1 chain_id: 337>',
-        'event': 'SendBalanceProof',
-        'message_identifier': 42,
-        'payment_identifier': 5518212473974981549,
-        'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
-        'secret': '0x211c0b2cef1541eda28e0b1f86391f19eb3519fccd2e643096d9066a8a992d10',
-        'token': '0x7150c717eb60978713f4ddaa288cf3101581cd81'
-     }]
-
-
-  :statuscode 200: For successful query
-  :statuscode 400: If the provided query string is malformed
-  :statuscode 404: If the token at the given token_address does not exist
-  :statuscode 409: If the given token_address argument is invalid
   :statuscode 500: Internal Raiden node error
