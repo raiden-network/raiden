@@ -1,34 +1,25 @@
 from http import HTTPStatus
 
-import pytest
 import gevent
 import grequests
+import pytest
+from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
 from flask import url_for
-from eth_utils import (
-    to_checksum_address,
-    to_canonical_address,
-    is_checksum_address,
-)
+
+from raiden.api.v1.encoding import AddressField, HexAddressConverter
+from raiden.tests.integration.api.utils import create_api_server
+from raiden.tests.utils import assert_dicts_are_equal
+from raiden.tests.utils.client import burn_all_eth
+from raiden.tests.utils.events import must_have_event
+from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
+from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
     MAX_TOKENS_DEPLOY,
-    TEST_SETTLE_TIMEOUT_MIN,
     TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
 )
-
-from raiden.api.v1.encoding import (
-    AddressField,
-    HexAddressConverter,
-)
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-)
-from raiden.tests.utils import assert_dicts_are_equal
-from raiden.tests.integration.api.utils import create_api_server
-from raiden.tests.utils.client import burn_all_eth
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.waiting import wait_for_transfer_success
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -1322,9 +1313,8 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
+    assert must_have_event(response, {'event': 'EventPaymentSentSuccess'})
     assert len(response) == 2
-    assert response[0]['event'] == 'EventPaymentSentSuccess'
-    assert response[1]['event'] == 'EventPaymentSentSuccess'
     # test endpoint without (partner and token) for target1
     request = grequests.get(
         api_url_for(
@@ -1335,8 +1325,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
     # test endpoint without (partner and token) for target2
     request = grequests.get(
         api_url_for(
@@ -1347,8 +1336,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
 
     # test endpoint without partner for sender
     request = grequests.get(
@@ -1362,8 +1350,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
     assert len(response) == 2
-    assert response[0]['event'] == 'EventPaymentSentSuccess'
-    assert response[1]['event'] == 'EventPaymentSentSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentSentSuccess'})
     # test endpoint without partner for target1
     request = grequests.get(
         api_url_for(
@@ -1375,8 +1362,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
     # test endpoint without partner for target2
     request = grequests.get(
         api_url_for(
@@ -1388,8 +1374,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
 
     # test endpoint for token and partner for sender
     request = grequests.get(
@@ -1403,8 +1388,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentSentSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentSentSuccess'})
     # test endpoint for token and partner for target1
     request = grequests.get(
         api_url_for(
@@ -1417,8 +1401,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
     # test endpoint for token and partner for target2
     request = grequests.get(
         api_url_for(
@@ -1431,8 +1414,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert len(response) == 1
-    assert response[0]['event'] == 'EventPaymentReceivedSuccess'
+    assert must_have_event(response, {'event': 'EventPaymentReceivedSuccess'})
 
     app1_server.stop()
     app2_server.stop()
