@@ -1,14 +1,16 @@
 import logging
+import random
 from http import HTTPStatus
 from itertools import combinations, count
 
 import gevent
 import grequests
 import pytest
+import requests
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
-from gevent import server
+from gevent import pool, server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -18,11 +20,22 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
+from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
 from raiden.utils.cli import LogLevelConfigType
 
+STATELESS_EVENT_HANDLER = RaidenEventHandler()
+
 log = structlog.get_logger(__name__)
+
+
+class RandomCrashEventHandler(RaidenEventHandler):
+    def on_raiden_event(self, raiden, event):
+        if random.random() < 0.2:
+            raiden.stop()
+        else:
+            super().on_raiden_event(raiden, event)
 
 
 def _url_for(apiserver, endpoint, **kwargs):
@@ -106,7 +119,27 @@ def start_apiserver_for_network(raiden_network, port_generator):
     ]
 
 
-def restart_app(app):
+def _monitor(app, api_server):
+    assert app.raiden
+    assert api_server
+
+    while True:
+        # wait for a failure to happen and then stop the rest api
+        app.raiden.stop_event.wait()
+        api_server.stop()
+
+        # wait for both services to stop
+        app.raiden.get()
+        api_server.get()
+
+        assert not app.raiden
+        assert not api_server
+
+        app.start()
+        api_server.start()
+
+
+def new_app(app, raiden_event_handler=STATELESS_EVENT_HANDLER):
     host_port = (
         app.raiden.config['transport']['udp']['host'],
         app.raiden.config['transport']['udp']['port'],
@@ -136,6 +169,12 @@ def restart_app(app):
     return app
 
 
+def restart_app(app):
+    app.stop()
+    app.raiden.get()
+    app.start()
+
+
 def restart_network(raiden_network, retry_timeout):
     for app in raiden_network:
         app.stop()
@@ -147,57 +186,81 @@ def restart_network(raiden_network, retry_timeout):
 
     gevent.wait(wait_network)
 
-    new_network = [
-        greenlet.get()
-        for greenlet in wait_network
-    ]
-
     # The tests assume the nodes are available to transfer
-    for app0, app1 in combinations(new_network, 2):
+    for app0, app1 in combinations(raiden_network, 2):
         waiting.wait_for_healthy(
             app0.raiden,
             app1.raiden.address,
             retry_timeout,
         )
 
-    return new_network
 
-
-def restart_network_and_apiservers(raiden_network, api_servers, port_generator, retry_timeout):
+def restart_network_and_apiservers(raiden_network, api_servers, retry_timeout):
     """Stop an app and start it back"""
     for rest_api in api_servers:
         rest_api.stop()
+        rest_api.get()
 
-    new_network = restart_network(raiden_network, retry_timeout)
-    new_servers = start_apiserver_for_network(new_network, port_generator)
+    restart_network(raiden_network, retry_timeout)
 
-    return (new_network, new_servers)
+    for rest_api in api_servers:
+        rest_api.start()
 
 
 def address_from_apiserver(apiserver):
     return apiserver.rest_api.raiden_api.address
 
 
-def transfer_and_assert(server_from, server_to, token_address, identifier, amount):
-    url = _url_for(
-        server_from,
-        'token_target_paymentresource',
-        token_address=to_checksum_address(token_address),
-        target_address=to_checksum_address(address_from_apiserver(server_to)),
-    )
+def transfer_and_assert(post_url, identifier, amount):
     json = {'amount': amount, 'identifier': identifier}
 
-    log.debug('PAYMENT REQUEST', url=url, json=json)
+    log.debug('Payment request', url=post_url, json=json)
 
-    request = grequests.post(url, json=json)
+    request = grequests.post(post_url, json=json)
     response = request.send().response
 
-    assert (
-        getattr(request, 'exception', None) is None and
-        response is not None and
-        response.status_code == HTTPStatus.OK and
-        response.headers['Content-Type'] == 'application/json'
-    )
+    exception = getattr(request, 'exception', None)
+    if exception:
+        raise exception
+
+    assert response is not None
+    assert response.headers['Content-Type'] == 'application/json', response.headers['Content-Type']
+    assert response.status_code == HTTPStatus.OK, response.json()
+
+
+def _wait_for_server(post_url, identifier, amount, port_number):
+    self_ = gevent.getcurrent()
+    self_.name = f'payment id={identifier} amount={amount} URL={post_url}'
+
+    while True:
+        try:
+            transfer_and_assert(
+                post_url,
+                identifier,
+                amount,
+            )
+            return
+        except (requests.RequestException, requests.ConnectionError):
+            wait_for_listening_port(port_number)
+
+
+def parallel_bounded_requests(
+        post_url,
+        identifier_generator,
+        number_of_concurrent_requests,
+        number_of_requests,
+        port_number,
+):
+    throttled_pool = pool.Pool(size=number_of_concurrent_requests)
+
+    for _ in range(number_of_requests):
+        throttled_pool.spawn(
+            _wait_for_server,
+            post_url=post_url,
+            identifier=next(identifier_generator),
+            amount=1,
+            port_number=port_number,
+        )
 
 
 def sequential_transfers(
@@ -205,14 +268,19 @@ def sequential_transfers(
         server_to,
         number_of_transfers,
         token_address,
-        identifier_generator,
+        payment_identifier,
 ):
+    post_url = _url_for(
+        server_from,
+        'token_target_paymentresource',
+        token_address=to_checksum_address(token_address),
+        target_address=to_checksum_address(address_from_apiserver(server_to)),
+    )
+
     for _ in range(number_of_transfers):
         transfer_and_assert(
-            server_from=server_from,
-            server_to=server_to,
-            token_address=token_address,
-            identifier=next(identifier_generator),
+            post_url=post_url,
+            identifier=payment_identifier,
             amount=1,
         )
 
@@ -230,7 +298,7 @@ def stress_send_serial_transfers(rest_apis, token_address, identifier_generator,
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
 
     # deplete the channels in the backwards direction
@@ -240,7 +308,7 @@ def stress_send_serial_transfers(rest_apis, token_address, identifier_generator,
             server_to=server_to,
             number_of_transfers=deposit * 2,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
 
     # reset the balances balances by sending the "extra" deposit forward
@@ -250,7 +318,7 @@ def stress_send_serial_transfers(rest_apis, token_address, identifier_generator,
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
 
 
@@ -267,7 +335,7 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
         for server_from, server_to in pairs
     ])
@@ -280,7 +348,7 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
             server_to=server_to,
             number_of_transfers=deposit * 2,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
         for server_to, server_from in pairs
     ])
@@ -293,7 +361,7 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
         for server_from, server_to in pairs
     ])
@@ -315,7 +383,7 @@ def stress_send_and_receive_parallel_transfers(
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
         for server_from, server_to in pairs
     ]
@@ -327,7 +395,7 @@ def stress_send_and_receive_parallel_transfers(
             server_to=server_to,
             number_of_transfers=deposit,
             token_address=token_address,
-            identifier_generator=identifier_generator,
+            payment_identifier=next(identifier_generator),
         )
         for server_to, server_from in pairs
     ]
@@ -353,7 +421,7 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize('deposit', [5])
 @pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
-def test_stress(
+def test_stress_happy_case(
         request,
         raiden_network,
         deposit,
@@ -395,10 +463,9 @@ def test_stress(
             deposit,
         )
 
-        raiden_network, rest_apis = restart_network_and_apiservers(
+        restart_network_and_apiservers(
             raiden_network,
             rest_apis,
-            port_generator,
             retry_timeout,
         )
 
@@ -415,10 +482,9 @@ def test_stress(
             deposit,
         )
 
-        raiden_network, rest_apis = restart_network_and_apiservers(
+        restart_network_and_apiservers(
             raiden_network,
             rest_apis,
-            port_generator,
             retry_timeout,
         )
 
@@ -435,11 +501,66 @@ def test_stress(
             deposit,
         )
 
-        raiden_network, rest_apis = restart_network_and_apiservers(
+        restart_network_and_apiservers(
             raiden_network,
             rest_apis,
-            port_generator,
             retry_timeout,
         )
 
     restart_network(raiden_network, retry_timeout)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('deposit', [50])
+@pytest.mark.parametrize('reveal_timeout', [15])
+@pytest.mark.parametrize('settle_timeout', [120])
+def test_stress_unhappy_case(
+        raiden_chain,
+        deposit,
+        token_addresses,
+        port_generator,
+):
+    random_crash_handler = RandomCrashEventHandler()
+    initiator, mediator, target = raiden_chain
+
+    initiator.raiden.raiden_event_handler = random_crash_handler
+    mediator.raiden.raiden_event_handler = random_crash_handler
+    target.raiden.raiden_event_handler = random_crash_handler
+
+    token_address = token_addresses[0]
+    identifier_generator = count()
+
+    initiator_api_port = next(port_generator)
+
+    initiator_api = start_apiserver(initiator, initiator_api_port)
+    mediator_api = start_apiserver(mediator, next(port_generator))
+    target_api = start_apiserver(target, next(port_generator))
+
+    initiator_monitor = gevent.spawn(_monitor, initiator, initiator_api)
+    mediator_monitor = gevent.spawn(_monitor, mediator, mediator_api)
+    target_monitor = gevent.spawn(_monitor, target, target_api)
+
+    post_url = _url_for(
+        initiator_api,
+        'token_target_paymentresource',
+        token_address=to_checksum_address(token_address),
+        target_address=to_checksum_address(target.raiden.address),
+    )
+
+    runner = gevent.spawn(
+        parallel_bounded_requests,
+        post_url=post_url,
+        identifier_generator=identifier_generator,
+        number_of_concurrent_requests=10,
+        number_of_requests=deposit,
+        port_number=initiator_api_port,
+    )
+
+    gevent.wait([
+        initiator_monitor,
+        mediator_monitor,
+        target_monitor,
+        runner,
+    ])
