@@ -997,7 +997,7 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change) -> b
 
             if channel_state:
                 is_our_batch_unlock = (
-                    state_change.transaction_from == our_address and
+                    state_change.participant == our_address and
                     state_change.token_network_identifier == transaction.token_network_identifier
                 )
                 if is_our_batch_unlock:
