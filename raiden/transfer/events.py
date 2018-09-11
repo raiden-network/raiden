@@ -205,7 +205,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         ).format(
             pex(self.token_network_identifier),
             self.channel_identifier,
-            pex(self.participant)
+            pex(self.participant),
         )
 
     def __eq__(self, other):

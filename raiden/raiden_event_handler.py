@@ -325,18 +325,24 @@ class RaidenEventHandler:
         )
 
         storage = raiden.wal.storage
-        our_state_change = storage.get_state_change_by_data_field(
+        our_state_changes = storage.get_state_changes_by_data_field(
             'balance_hash',
-            participants_details.our_details.balance_hash
+            participants_details.our_details.balance_hash,
         )
 
-        partner_state_change = storage.get_state_change_by_data_field(
+        partner_state_changes = storage.get_state_changes_by_data_field(
             'balance_hash',
-            participants_details.partner_details.balance_hash
+            participants_details.partner_details.balance_hash,
         )
 
-        our_balance_proof = our_state_change.balance_proof
-        partner_balance_proof = partner_state_change.balance_proof
+        our_balance_proof = None
+        partner_balance_proof = None
+
+        if our_state_changes:
+            our_balance_proof = our_state_changes[0].balance_proof
+
+        if partner_state_changes:
+            partner_balance_proof = partner_state_changes[0].balance_proof
 
         our_balance_hash = participants_details.our_details.balance_hash
         if our_balance_proof and our_balance_hash != EMPTY_HASH:
