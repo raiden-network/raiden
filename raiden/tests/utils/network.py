@@ -15,10 +15,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import (
-    merge_dict,
-    privatekey_to_address,
-)
+from raiden.utils import merge_dict, privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

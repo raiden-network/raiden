@@ -1,32 +1,23 @@
-from itertools import count, combinations
 from http import HTTPStatus
+from itertools import combinations, count
 
 import gevent
-from gevent import server
-from eth_utils import (
-    to_checksum_address,
-    to_canonical_address,
-)
-from flask import url_for
 import grequests
 import pytest
 import structlog
+from eth_utils import to_canonical_address, to_checksum_address
+from flask import url_for
+from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import (
-    APIServer,
-    RestAPI,
-)
+from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
-from raiden.transfer import views
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    wait_assert,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
+from raiden.transfer import views
 
 log = structlog.get_logger(__name__)
 
