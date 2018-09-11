@@ -136,14 +136,15 @@ class SQLiteStorage:
 
         return result
 
-    def get_state_change_by_data_field(self, field, value):
+    def get_state_changes_by_data_field(self, field, value):
+        """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
         cursor.execute(
             "SELECT data FROM state_changes WHERE "
             f"json_extract(data, '$.{field}')'==? "
             "ORDER BY identifier DESC LIMIT 1",
-            value
+            value,
         )
 
         try:
