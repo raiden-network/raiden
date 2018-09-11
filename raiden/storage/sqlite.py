@@ -136,6 +136,28 @@ class SQLiteStorage:
 
         return result
 
+    def get_state_change_by_data_field(self, field, value):
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            "SELECT data FROM state_changes WHERE "
+            f"json_extract(data, '$.{field}')'==? "
+            "ORDER BY identifier DESC LIMIT 1",
+            value
+        )
+
+        try:
+            result = [
+                self.serializer.deserialize(entry[0])
+                for entry in cursor.fetchall()
+            ]
+        except AttributeError:
+            raise InvalidDBData(
+                'Your local database is corrupt. Bailing ...',
+            )
+
+        return result
+
     def get_statechanges_by_identifier(self, from_identifier, to_identifier):
         if not (from_identifier == 'latest' or isinstance(from_identifier, int)):
             raise ValueError("from_identifier must be an integer or 'latest'")
