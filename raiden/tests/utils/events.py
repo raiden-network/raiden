@@ -70,3 +70,12 @@ def must_have_event(event_list, dict_data):
         if isinstance(item, dict) and check_dict_nested_attrs(item, dict_data):
             return item
     return None
+
+
+def must_have_events(event_list, *args) -> bool:
+    for dict_data in args:
+        item = must_have_event(event_list, dict_data)
+        if not item:
+            return False
+
+    return True
