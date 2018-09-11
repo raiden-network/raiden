@@ -973,7 +973,7 @@ class MatrixTransport(Runnable):
             for server_name
             in config['available_servers']
         ]
-        gevent.joinall(get_rtt_jobs)
+        gevent.joinall(get_rtt_jobs, raise_error=True)
         sorted_servers = sorted(
             (job.value for job in get_rtt_jobs if job.value[1] is not None),
             key=itemgetter(1),

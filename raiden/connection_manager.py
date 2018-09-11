@@ -342,7 +342,7 @@ class ConnectionManager:
             gevent.spawn(self._join_partner, partner)
             for partner in join_partners
         ]
-        gevent.joinall(greenlets)
+        gevent.joinall(greenlets, raise_error=True)
         return True
 
     @property
