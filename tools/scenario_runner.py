@@ -20,10 +20,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.ui.console import ConsoleTools
-from raiden.utils import (
-    split_endpoint,
-    privatekey_to_address,
-)
+from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.gevent_utils import RaidenGreenletEvent
 
 gevent.monkey.patch_all()

@@ -7,11 +7,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import SecretRequest
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport.udp import UDPTransport
-from raiden.tests.utils.factories import (
-    ADDR,
-    UNIT_SECRETHASH,
-    make_address,
-)
+from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.transport import MockDiscovery, MockRaidenService
 
 
