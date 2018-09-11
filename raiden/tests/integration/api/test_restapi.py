@@ -1468,7 +1468,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
         }, {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier3,
-        }
+        },
     )
 
     # test endpoint for token and partner for app0
@@ -1525,7 +1525,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
         {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier1,
-        }
+        },
     )
     request = grequests.get(
         api_url_for(
