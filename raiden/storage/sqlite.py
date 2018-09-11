@@ -178,14 +178,14 @@ class SQLiteStorage:
         return result
 
     def get_events(self, limit: int = None, offset: int = None):
-        limit = -1 if limit is None else limit
-        offset = 0 if offset is None else offset
-
-        if not isinstance(limit, int) or limit < 0:
+        if limit is not None and (not isinstance(limit, int) or limit < 0):
             raise InvalidNumberInput('limit must be a positive integer')
 
-        if not isinstance(offset, int) or offset < 0:
+        if offset is not None and (not isinstance(offset, int) or offset < 0):
             raise InvalidNumberInput('offset must be a positive integer')
+
+        limit = -1 if limit is None else limit
+        offset = 0 if offset is None else offset
 
         cursor = self.conn.cursor()
 
