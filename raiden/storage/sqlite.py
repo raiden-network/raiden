@@ -3,11 +3,10 @@ import threading
 from typing import Any, Optional, Tuple
 
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
-
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES
 
 # The latest DB version
-RAIDEN_DB_VERSION = 1
+RAIDEN_DB_VERSION = 2
 
 
 class SQLiteStorage:
