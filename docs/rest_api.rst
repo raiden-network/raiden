@@ -553,7 +553,7 @@ In Raiden we distinguish between two types of events: ``blockchain_events`` and 
 The payment events are a very small subset of ``raiden_events``.
 
 .. NOTE::
-      All raiden event endpoints are for debugging only and might get removed in the future. They are placed under the ``_debug`` document in the REST URI.
+      All blockchain and raiden event endpoints except for the payment ones are for debugging only and might get removed in the future. They are placed under the ``_debug`` document in the REST URI.
 
 Blockchain events can be filtered down by providing the query string arguments ``from_block``
 and/or ``to_block`` to only query events from a limited range of blocks. The block number
@@ -759,17 +759,20 @@ For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which
          {
              event: "EventPaymentReceivedSuccess",
              amount: 5,
-             initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+             initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7",
+             identifier: 1
          },
          {
              event: "EventPaymentSentSuccess",
              amount: 35,
-             target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+             target: "0x82641569b2062B545431cF6D7F0A418582865ba7",
+             identifier: 2
          },
          {
              event: "EventPaymentSentSuccess",
              amount: 20,
              target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
+             identifier: 3
          }
      ]
 
