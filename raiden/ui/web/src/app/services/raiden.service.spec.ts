@@ -2,6 +2,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
 import { BigNumber } from 'bignumber.js';
+import { of } from 'rxjs';
 import { MockConfig } from '../components/channel-table/channel-table.component.spec';
 import { Channel } from '../models/channel';
 import { UserToken } from '../models/usertoken';
@@ -67,6 +68,7 @@ describe('RaidenService', () => {
         service = TestBed.get(RaidenService);
 
         spyOn(sharedService, 'error');
+        spyOn(service, 'raidenAddress$').and.returnValue(of('0x504300C525CbE91Adb3FE0944Fe1f56f5162C75C'));
     });
 
     afterEach(inject([HttpTestingController], (backend: HttpTestingController) => {
@@ -136,7 +138,7 @@ describe('RaidenService', () => {
 
     });
 
-    it('should have user token included in the channels', () => {
+    it('should have user token included in the channels', fakeAsync(() => {
 
         const token: UserToken = {
             address: '0x0f114A1E9Db192502E7856309cc899952b3db1ED',
@@ -186,9 +188,22 @@ describe('RaidenService', () => {
             status: 200,
             statusText: 'All good'
         });
-    });
 
-    it('should show an error message for JSON RPC errors while fetching channels', () => {
+        tick();
+
+        mockHttp.expectOne({
+            url: `${endpoint}/address`,
+            method: 'GET'
+        }).flush({
+            own_address: '0x504300C525CbE91Adb3FE0944Fe1f56f5162C75C'
+        }, {
+            status: 200,
+            statusText: 'All Good'
+        });
+        flush();
+    }));
+
+    it('should show an error message for JSON RPC errors while fetching channels', fakeAsync(() => {
 
         const rpcError = Error('Invalid JSON RPC response');
 
@@ -213,17 +228,25 @@ describe('RaidenService', () => {
             expect(error).toBeTruthy();
         });
 
-        const getChannelsRequest = mockHttp.expectOne({
+        mockHttp.expectOne({
             url: `${endpoint}/channels`,
             method: 'GET'
-        });
-
-        getChannelsRequest.flush([
+        }).flush([
             channel1,
             channel2
         ], {
             status: 200,
             statusText: 'All good'
+        });
+
+        mockHttp.expectOne({
+            url: `${endpoint}/address`,
+            method: 'GET'
+        }).flush({
+            own_address: '0x504300C525CbE91Adb3FE0944Fe1f56f5162C75C'
+        }, {
+            status: 200,
+            statusText: 'All Good'
         });
 
         expect(sharedService.error).toHaveBeenCalledTimes(1);
@@ -233,7 +256,9 @@ describe('RaidenService', () => {
 
         expect(payload.title).toBe('Raiden Error', 'It should be a Raiden Error');
         expect(payload.description).toContain('Could not access the JSON-RPC endpoint');
-    });
+
+        flush();
+    }));
 
 
     it('should show an error message for JSON RPC errors when fetching a token', fakeAsync(() => {
@@ -262,6 +287,17 @@ describe('RaidenService', () => {
         });
 
         tick();
+
+        mockHttp.expectOne({
+            url: `${endpoint}/address`,
+            method: 'GET'
+        }).flush({
+            own_address: '0x504300C525CbE91Adb3FE0944Fe1f56f5162C75C'
+        }, {
+            status: 200,
+            statusText: 'All Good'
+        });
+
         flush();
     }));
 });

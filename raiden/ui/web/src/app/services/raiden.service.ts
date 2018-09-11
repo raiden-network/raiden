@@ -1,10 +1,11 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
 import { bindNodeCallback, combineLatest, from, Observable, of, throwError, zip } from 'rxjs';
-import { catchError, first, flatMap, map, share, switchMap, tap, toArray } from 'rxjs/operators';
+import { catchError, first, flatMap, map, share, shareReplay, switchMap, tap, toArray } from 'rxjs/operators';
 import { Channel } from '../models/channel';
 import { Connections } from '../models/connection';
 import { Event, EventsParam } from '../models/event';
+import { PaymentEvent } from '../models/payment-event';
 import { SwapToken } from '../models/swaptoken';
 
 import { UserToken } from '../models/usertoken';
@@ -22,6 +23,7 @@ export type CallbackFunc = (error: Error, result: any) => void;
 export class RaidenService {
 
     public tokenContract: any;
+    readonly raidenAddress$: Observable<string>;
     private userTokens: { [id: string]: UserToken | null } = {};
     private defaultDecimals = 18;
 
@@ -32,6 +34,11 @@ export class RaidenService {
         private sharedService: SharedService,
     ) {
         this.tokenContract = this.raidenConfig.web3.eth.contract(tokenabi);
+        this.raidenAddress$ = this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`).pipe(
+            map((data) => this._raidenAddress = data.our_address),
+            catchError((error) => this.handleError(error)),
+            shareReplay(1)
+        );
     }
 
     private _raidenAddress: string;
@@ -41,7 +48,6 @@ export class RaidenService {
     }
 
     // noinspection JSMethodCanBeStatic
-
     get identifier(): number {
         return Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
     }
@@ -57,13 +63,6 @@ export class RaidenService {
 
     public toChecksumAddress(address: string): string {
         return this.raidenConfig.web3.toChecksumAddress(address);
-    }
-
-    public getRaidenAddress(): Observable<string> {
-        return this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`).pipe(
-            map((data) => this._raidenAddress = data.our_address),
-            catchError((error) => this.handleError(error)),
-        );
     }
 
     public getChannels(): Observable<Array<Channel>> {
@@ -167,6 +166,20 @@ export class RaidenService {
             }),
             catchError((error) => this.handleError(error)),
         );
+    }
+
+    public getPaymentHistory(tokenAddress: string, targetAddress?: string): Observable<PaymentEvent[]> {
+        return this.http.get<PaymentEvent[]>(`${this.raidenConfig.api}/payments/${tokenAddress}`)
+            .pipe(
+                map(events => {
+                    if (targetAddress) {
+                        return events.filter(event => event.initiator === targetAddress || event.target === targetAddress);
+                    } else {
+                        return events;
+                    }
+                }),
+                catchError((error) => this.handleError(error))
+            );
     }
 
     public depositToChannel(
@@ -341,14 +354,19 @@ export class RaidenService {
         tokenAddress: string,
         refresh: boolean = true,
     ): Observable<UserToken | null> {
+
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
         const tokenMap = this.userTokens;
         const userToken: UserToken | null | undefined = tokenMap[tokenAddress];
 
-        const balance$: Observable<number> = bindNodeCallback((addr: string, cb: CallbackFunc) =>
-            tokenContractInstance.balanceOf(addr, this.zoneEncap(cb)),
-        )(this.raidenAddress).pipe(
-            map((balance) => balance.toNumber())
+        const balance$: Observable<number> = this.raidenAddress$.pipe(
+            flatMap(value => {
+                return bindNodeCallback((addr: string, cb: CallbackFunc) =>
+                    tokenContractInstance.balanceOf(addr, this.zoneEncap(cb))
+                )(value).pipe(
+                    map((balance) => balance.toNumber())
+                );
+            })
         );
 
         if (userToken === undefined) {

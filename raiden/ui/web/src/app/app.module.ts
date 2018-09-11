@@ -37,6 +37,7 @@ import { TokenInputComponent } from './components/token-input/token-input.compon
 import { AddressInputComponent } from './components/address-input/address-input.component';
 import { TokenNetworkSelectorComponent } from './components/token-network-selector/token-network-selector.component';
 import { RegisteredNetworkValidatorDirective } from './directives/registered-network-validator.directive';
+import { PaymentHistoryComponent } from './components/payment-history/payment-history.component';
 
 const appRoutes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -46,7 +47,8 @@ const appRoutes: Routes = [
     {path: 'channels', component: ChannelTableComponent},
     {path: 'events/network', component: NetworkEventsComponent},
     {path: 'events/tokens/:address', component: TokenEventsComponent},
-    {path: 'events/channels/:channel_identifier', component: ChannelEventsComponent}
+    {path: 'events/channels/:channel_identifier', component: ChannelEventsComponent},
+    {path: 'payments', component: PaymentHistoryComponent}
 ];
 
 export function ConfigLoader(raidenConfig: RaidenConfig) {
@@ -80,7 +82,8 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         TokenInputComponent,
         AddressInputComponent,
         TokenNetworkSelectorComponent,
-        RegisteredNetworkValidatorDirective
+        RegisteredNetworkValidatorDirective,
+        PaymentHistoryComponent
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
