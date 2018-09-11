@@ -914,11 +914,14 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.info('settle failed', **log_details)
-                self._check_channel_state_for_settle(
-                    self.node_address,
-                    partner,
-                    channel_identifier,
-                )
+                try:
+                    self._check_channel_state_for_settle(
+                        self.node_address,
+                        partner,
+                        channel_identifier,
+                    )
+                except RaidenRecoverableError:
+                    pass
                 raise TransactionThrew('Settle', receipt_or_none)
 
             log.info('settle successful', **log_details)
