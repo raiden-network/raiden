@@ -23,8 +23,8 @@ eth-utils==1.2.0
 structlog
 colorama
 py-solc
-# Use master until https://github.com/ethereum/web3.py/issues/1048 is fixed
-git+https://github.com/ethereum/web3.py@e39518638682d02314e3f4700dea48ae95abf819#egg=web3[tester]
+web3[tester]==4.7.1
+py-geth==2.0.1
 pysha3==1.0.2
 gevent==1.3.6
 pytoml==0.1.18
