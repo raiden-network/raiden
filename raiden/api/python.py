@@ -41,20 +41,35 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 def event_filter(
         event: architecture.Event,
+        our_address: typing.Address,
         token_network_identifier: typing.TokenNetworkID = None,
         target_address: typing.Address = None,
 ):
-    event_target = getattr(event, 'target', None)
-    return (
-        isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and (
+    is_matching_event = (
+        isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and
+        (
             token_network_identifier is None or
             token_network_identifier == event.token_network_identifier
-        ) and (
-            target_address is None or
-            event_target is None or
-            event_target == target_address
         )
     )
+    if not is_matching_event:
+        return False
+
+    sent_and_target_matches = (
+        isinstance(event, (EventPaymentSentFailed, EventPaymentSentSuccess)) and
+        (
+            target_address is None or
+            event.target == target_address
+        )
+    )
+    received_and_target_matches = (
+        isinstance(event, (EventPaymentReceivedSuccess)) and
+        (
+            target_address is None or
+            target_address == our_address
+        )
+    )
+    return sent_and_target_matches or received_and_target_matches
 
 
 class RaidenAPI:
@@ -682,7 +697,7 @@ class RaidenAPI:
                 limit=limit,
                 offset=offset,
             )
-            if event_filter(event, token_network_identifier, target_address)
+            if event_filter(event, self.address, token_network_identifier, target_address)
         ]
 
         return events
