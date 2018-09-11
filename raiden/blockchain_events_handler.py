@@ -109,7 +109,8 @@ def handle_channel_new(raiden, event):
     # A new channel is available, run the connection manager in case more
     # connections are needed
     connection_manager = raiden.connection_manager_for_token_network(token_network_identifier)
-    gevent.spawn(connection_manager.retry_connect)
+    retry_connect = gevent.spawn(connection_manager.retry_connect)
+    raiden.add_pending_greenlet(retry_connect)
 
 
 def handle_channel_new_balance(raiden, event):
@@ -154,11 +155,13 @@ def handle_channel_new_balance(raiden, event):
                 token_network_identifier,
             )
 
-            gevent.spawn(
+            join_channel = gevent.spawn(
                 connection_manager.join_channel,
                 participant_address,
                 total_deposit,
             )
+
+            raiden.add_pending_greenlet(join_channel)
 
 
 def handle_channel_closed(raiden, event):
