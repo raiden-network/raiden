@@ -10,4 +10,4 @@ flake8-commas==2.0.0
 flake8-tuple==0.2.13
 isort==4.2.15
 readme-renderer==21.0
-pylint==1.9.2
+pylint==2.1.1

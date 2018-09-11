@@ -39,8 +39,8 @@ clean-test:
 
 lint:
 	flake8 raiden/ tools/
-	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff .
-	pylint --rcfile .pylint.rc raiden
+	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff raiden/ -sg */node_modules/*
+	pylint --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict
 
 test:
