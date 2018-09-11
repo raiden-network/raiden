@@ -27,7 +27,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
-    SendRevealSecret,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -240,7 +240,7 @@ def test_state_wait_secretrequest_valid():
     )
 
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendRevealSecret)
+    assert isinstance(iteration.events[0], SendSecretReveal)
 
 
 def test_state_wait_unlock_valid():
@@ -264,7 +264,7 @@ def test_state_wait_unlock_valid():
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret(
+    current_state.initiator.revealsecret = SendSecretReveal(
         recipient=UNIT_TRANSFER_TARGET,
         channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
         message_identifier=UNIT_TRANSFER_IDENTIFIER,
@@ -318,7 +318,7 @@ def test_state_wait_unlock_invalid():
     )
 
     # setup the state for the wait unlock
-    current_state.initiator.revealsecret = SendRevealSecret(
+    current_state.initiator.revealsecret = SendSecretReveal(
         recipient=target_address,
         channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
         message_identifier=identifier,

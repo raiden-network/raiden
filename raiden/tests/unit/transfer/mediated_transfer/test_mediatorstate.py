@@ -46,7 +46,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
-    SendRevealSecret,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediator import set_secret
 from raiden.transfer.mediated_transfer.state import (
@@ -1027,7 +1027,7 @@ def test_secret_learned():
     assert transfer_pair.payee_state == 'payee_balance_proof'
     assert transfer_pair.payer_state == 'payer_secret_revealed'
 
-    reveal_events = [e for e in iteration.events if isinstance(e, SendRevealSecret)]
+    reveal_events = [e for e in iteration.events if isinstance(e, SendSecretReveal)]
     assert len(reveal_events) == 1
 
     balance_events = [e for e in iteration.events if isinstance(e, SendBalanceProof)]

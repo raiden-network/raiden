@@ -140,8 +140,8 @@ class SendLockedTransfer(SendMessageEvent):
         return restored
 
 
-class SendRevealSecret(SendMessageEvent):
-    """ Sends a RevealSecret to another node.
+class SendSecretReveal(SendMessageEvent):
+    """ Sends a SecretReveal to another node.
 
     This event is used once the secret is known locally and an action must be
     performed on the recipient:
@@ -184,7 +184,7 @@ class SendRevealSecret(SendMessageEvent):
         self.secrethash = secrethash
 
     def __repr__(self):
-        return '<SendRevealSecret msgid:{} secrethash:{} recipient:{}>'.format(
+        return '<SendSecretReveal msgid:{} secrethash:{} recipient:{}>'.format(
             self.message_identifier,
             pex(self.secrethash),
             pex(self.recipient),
@@ -192,7 +192,7 @@ class SendRevealSecret(SendMessageEvent):
 
     def __eq__(self, other):
         return (
-            isinstance(other, SendRevealSecret) and
+            isinstance(other, SendSecretReveal) and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
             super().__eq__(other)
@@ -212,7 +212,7 @@ class SendRevealSecret(SendMessageEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendRevealSecret':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendSecretReveal':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],

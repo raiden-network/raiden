@@ -544,7 +544,7 @@ Payments
 Querying Events
 ===============
 
-Events are kept by the node. A normal user should only care about the events exposed for payments. Those events show if a payment failed or if it was successful. But at the moment we expose all of the events in the REST api mainly for debugging purposes. 
+Events are kept by the node. A normal user should only care about the events exposed for payments. Those events show if a payment failed or if it was successful. But at the moment we expose all of the events in the REST api mainly for debugging purposes.
 
 In Raiden we distinguish between two types of events: ``blockchain_events`` and ``raiden_events``.
 ``blockchain_events`` are events that are being emitted by the smart contracts.
@@ -816,7 +816,7 @@ Now for the internal Raiden events:
                       'target:0x636f37d785257d919931acff318f70fb7da4f903>'
      },
      {
-        'event': 'SendRevealSecret',
+        'event': 'SendSecretReveal',
         'message_identifier': 9182020688704924936,
         'recipient': '0x636f37d785257d919931acff318f70fb7da4f903',
         'secret': '0xcefe6d325fc2b01f47d303417ddd14d788a31c0b078610b427a85b2141bc514d',
@@ -869,7 +869,7 @@ Now for the internal Raiden events:
                   'target:0x1d2cb001f807882c4a862731cbb77390e641a8fd>'
      },
      {
-        'event': 'SendRevealSecret',
+        'event': 'SendSecretReveal',
         'message_identifier': 17638248769110067506,
         'recipient': '0x1d2cb001f807882c4a862731cbb77390e641a8fd',
         'secret': '0x211c0b2cef1541eda28e0b1f86391f19eb3519fccd2e643096d9066a8a992d10',

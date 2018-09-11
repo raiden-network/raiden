@@ -7,8 +7,8 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
-    SendRevealSecret,
     SendSecretRequest,
+    SendSecretReveal,
 )
 from raiden.utils import wait_until
 
@@ -38,7 +38,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     def test_initiator_events():
         initiator_events = app0.raiden.wal.storage.get_events()
         return (
-            must_contain_entry(initiator_events, SendRevealSecret, {}) and
+            must_contain_entry(initiator_events, SendSecretReveal, {}) and
             must_contain_entry(initiator_events, EventUnlockSuccess, {})
         )
 
@@ -57,7 +57,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         target_events = app2.raiden.wal.storage.get_events()
         return (
             must_contain_entry(target_events, SendSecretRequest, {}) and
-            must_contain_entry(target_events, SendRevealSecret, {}) and
+            must_contain_entry(target_events, SendSecretReveal, {}) and
             must_contain_entry(target_events, EventUnlockClaimSuccess, {})
         )
 

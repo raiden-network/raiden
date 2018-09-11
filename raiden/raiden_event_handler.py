@@ -27,8 +27,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
-    SendRevealSecret,
     SendSecretRequest,
+    SendSecretReveal,
 )
 from raiden.utils import pex
 from raiden_libs.utils.signing import eth_sign
@@ -56,7 +56,7 @@ class RaidenEventHandler:
             self.handle_send_lockedtransfer(raiden, event)
         elif type(event) == SendDirectTransfer:
             self.handle_send_directtransfer(raiden, event)
-        elif type(event) == SendRevealSecret:
+        elif type(event) == SendSecretReveal:
             self.handle_send_revealsecret(raiden, event)
         elif type(event) == SendBalanceProof:
             self.handle_send_balanceproof(raiden, event)
@@ -126,7 +126,7 @@ class RaidenEventHandler:
     def handle_send_revealsecret(
             self,
             raiden: RaidenService,
-            reveal_secret_event: SendRevealSecret,
+            reveal_secret_event: SendSecretReveal,
     ):
         reveal_secret_message = message_from_sendevent(reveal_secret_event, raiden.address)
         raiden.sign(reveal_secret_message)

@@ -8,7 +8,7 @@ from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockSuccess,
     SendLockedTransfer,
-    SendRevealSecret,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import (
     InitiatorTransferState,
@@ -219,7 +219,7 @@ def handle_secretrequest(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         transfer_description = initiator_state.transfer_description
         recipient = transfer_description.target
-        revealsecret = SendRevealSecret(
+        revealsecret = SendSecretReveal(
             recipient=recipient,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
