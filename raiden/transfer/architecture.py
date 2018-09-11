@@ -100,6 +100,10 @@ class Event:
 
 
 class SendMessageEvent(Event):
+    """ Marker used for events which represent off-chain protocol messages tied
+    to a channel.
+    """
+
     def __init__(
             self,
             recipient: Address,
@@ -131,10 +135,15 @@ class SendMessageEvent(Event):
 
 
 class ContractSendEvent(Event):
+    """ Marker used for events which represent on-chain transactions. """
     pass
 
 
 class ContractSendExpirableEvent(ContractSendEvent):
+    """ Marker used for events which represent on-chain transactions which are
+    time dependent.
+    """
+
     def __init__(self, expiration: BlockExpiration):
         self.expiration = expiration
 
@@ -149,6 +158,8 @@ class ContractSendExpirableEvent(ContractSendEvent):
 
 
 class ContractReceiveStateChange(StateChange):
+    """ Marker used for state changes which represent on-chain logs. """
+
     def __init__(self, transaction_hash: TransactionHash):
         self.transaction_hash = transaction_hash
 
