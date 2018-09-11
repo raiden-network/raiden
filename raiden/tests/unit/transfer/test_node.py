@@ -26,4 +26,5 @@ def test_is_transaction_effect_satisfied(chain_state):
         unlocked_amount=0,
         returned_tokens=0,
     )
-    assert is_transaction_effect_satisfied(chain_state, transaction, state_change)
+    # try calling with the address being neither us nor our partner
+    assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)

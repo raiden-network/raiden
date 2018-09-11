@@ -871,7 +871,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def is_transaction_effect_satisfied(chain_state, transaction, state_change):
+def is_transaction_effect_satisfied(chain_state, transaction, state_change) -> bool:
     """ True if the side-effect of `transaction` is satisfied by
     `state_change`.
 
@@ -983,6 +983,8 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change):
             partner_address = state_change.partner
         elif state_change.partner == our_address:
             partner_address = state_change.participant
+        else:
+            return False
 
         # Use the second address as the partner address, but check that a
         # channel exists for our_address and partner_address
