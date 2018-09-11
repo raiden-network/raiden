@@ -61,3 +61,23 @@ def token_network_state(payment_network_state, token_network_id, token_id):
     payment_network_state.tokenaddresses_to_tokennetworks[token_id] = token_network
 
     return token_network
+
+
+@pytest.fixture
+def netting_channel_state(chain_state, token_network_state, payment_network_state):
+    partner = factories.make_address()
+    channel_id = factories.make_channel_identifier()
+    channel_state = factories.make_channel(
+        our_balance=10,
+        partner_balance=10,
+        our_address=chain_state.our_address,
+        partner_address=partner,
+        token_address=token_network_state.token_address,
+        payment_network_identifier=payment_network_state.address,
+        token_network_identifier=token_network_state.address,
+        channel_identifier=channel_id,
+    )
+
+    token_network_state.partneraddresses_to_channels[partner][channel_id] = channel_state
+
+    return channel_state
