@@ -388,6 +388,9 @@ class RaidenService(Runnable):
         if self.db_lock is not None:
             self.db_lock.release()
 
+    def add_pending_greenlet(self, greenlet: gevent.Greenlet):
+        greenlet.link_exception(self.on_error)
+
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
