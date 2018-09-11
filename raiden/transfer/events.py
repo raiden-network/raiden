@@ -80,16 +80,7 @@ class ContractSendChannelSettle(ContractSendEvent):
             self,
             channel_identifier: typing.ChannelID,
             token_network_identifier: typing.TokenNetworkAddress,
-            our_balance_proof: typing.Union[
-                BalanceProofSignedState,
-                BalanceProofUnsignedState,
-                None,
-            ],
-            partner_balance_proof: typing.Union[
-                BalanceProofSignedState,
-                BalanceProofUnsignedState,
-                None,
-            ],
+
     ):
         if not isinstance(channel_identifier, typing.T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
@@ -97,20 +88,8 @@ class ContractSendChannelSettle(ContractSendEvent):
         if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
             raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
 
-        if our_balance_proof and not isinstance(our_balance_proof, BalanceProofUnsignedState):
-            raise ValueError('our_balance_proof must be a BalanceProofSignedState instance')
-
-        is_valid_partner_bp = (
-            partner_balance_proof and
-            not isinstance(partner_balance_proof, BalanceProofSignedState)
-        )
-        if is_valid_partner_bp:
-            raise ValueError('partner_balance_proof must be a BalanceProofSignedState instance')
-
         self.channel_identifier = channel_identifier
         self.token_network_identifier = token_network_identifier
-        self.our_balance_proof = our_balance_proof
-        self.partner_balance_proof = partner_balance_proof
 
     def __repr__(self):
         return '<ContractSendChannelSettle channel:{} token_network:{}>'.format(
@@ -122,9 +101,7 @@ class ContractSendChannelSettle(ContractSendEvent):
         return (
             isinstance(other, ContractSendChannelSettle) and
             self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier and
-            self.our_balance_proof == other.our_balance_proof and
-            self.partner_balance_proof == other.partner_balance_proof
+            self.token_network_identifier == other.token_network_identifier
         )
 
     def __ne__(self, other):
@@ -136,22 +113,13 @@ class ContractSendChannelSettle(ContractSendEvent):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
         }
 
-        if self.our_balance_proof is not None:
-            result['our_balance_proof'] = self.our_balance_proof
-        if self.partner_balance_proof is not None:
-            result['partner_balance_proof'] = self.partner_balance_proof
-
         return result
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelSettle':
-        our_balance_proof = data.get('our_balance_proof')
-        partner_balance_proof = data.get('partner_balance_proof')
         restored = cls(
             channel_identifier=data['channel_identifier'],
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            our_balance_proof=our_balance_proof,
-            partner_balance_proof=partner_balance_proof,
         )
 
         return restored
@@ -223,21 +191,21 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            merkle_tree_leaves: typing.MerkleTreeLeaves,
+            participant: typing.Address,
     ):
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.merkle_tree_leaves = merkle_tree_leaves
+        self.participant = participant
 
     def __repr__(self):
         return (
             '<ContractSendChannelBatchUnlock '
-            'token_network_id:{} channel:{} merkle_tree_leaves:{}'
+            'token_network_id:{} channel:{} participant:{}'
             '>'
         ).format(
             pex(self.token_network_identifier),
             self.channel_identifier,
-            self.merkle_tree_leaves,
+            pex(self.participant)
         )
 
     def __eq__(self, other):
@@ -245,7 +213,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             isinstance(other, ContractSendChannelBatchUnlock) and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.merkle_tree_leaves == other.merkle_tree_leaves
+            self.participant == other.participant
         )
 
     def __ne__(self, other):
@@ -255,7 +223,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         result = {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'merkle_tree_leaves': self.merkle_tree_leaves,
+            'participant': self.participant,
         }
 
         return result
@@ -265,7 +233,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            merkle_tree_leaves=data['merkle_tree_leaves'],
+            participant=data['participant'],
         )
 
         return restored

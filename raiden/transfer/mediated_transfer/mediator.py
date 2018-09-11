@@ -676,18 +676,10 @@ def events_for_unlock_if_closed(
         # The unlock is done by the channel
         if not payer_channel_open:
             pair.payer_state = 'payer_waiting_unlock'
-
-            partner_state = payer_channel.partner_state
-            lock = channel.get_lock(partner_state, secrethash)
-            unlock_proof = channel.compute_proof_for_lock(
-                partner_state,
-                secret,
-                lock,
-            )
             unlock = ContractSendChannelBatchUnlock(
                 payer_channel.token_network_identifier,
                 payer_channel.identifier,
-                [unlock_proof],
+                payer_channel.partner_state.address,
             )
             events.append(unlock)
 

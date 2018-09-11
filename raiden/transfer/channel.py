@@ -1804,8 +1804,6 @@ def handle_block(
             event = ContractSendChannelSettle(
                 channel_state.identifier,
                 channel_state.token_network_identifier,
-                channel_state.our_state.balance_proof,
-                channel_state.partner_state.balance_proof,
             )
             events.append(event)
 
@@ -1894,7 +1892,7 @@ def handle_channel_settled(
             onchain_unlock = ContractSendChannelBatchUnlock(
                 channel_state.token_network_identifier,
                 channel_state.identifier,
-                merkle_tree_leaves,
+                channel_state.partner_state.address,
             )
             events.append(onchain_unlock)
 
