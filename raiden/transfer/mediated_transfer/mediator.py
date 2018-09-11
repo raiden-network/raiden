@@ -12,7 +12,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendRevealSecret,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -533,7 +533,7 @@ def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
-            revealsecret = SendRevealSecret(
+            revealsecret = SendSecretReveal(
                 recipient=payer_transfer.balance_proof.sender,
                 channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
                 message_identifier=message_identifier,

@@ -625,7 +625,7 @@ class MediationPairState(State):
 
     valid_payer_states = (
         'payer_pending',
-        'payer_secret_revealed',  # SendRevealSecret was sent
+        'payer_secret_revealed',  # SendSecretReveal was sent
         'payer_waiting_close',    # ContractSendChannelClose was sent
         'payer_waiting_unlock',   # ContractSendChannelBatchUnlock was sent
         'payer_balance_proof',    # ReceiveUnlock was received

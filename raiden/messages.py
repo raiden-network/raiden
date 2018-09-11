@@ -21,8 +21,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
-    SendRevealSecret,
     SendSecretRequest,
+    SendSecretReveal,
 )
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
@@ -143,7 +143,7 @@ def message_from_sendevent(send_event, our_address):
         message = LockedTransfer.from_event(send_event)
     elif type(send_event) == SendDirectTransfer:
         message = DirectTransfer.from_event(send_event)
-    elif type(send_event) == SendRevealSecret:
+    elif type(send_event) == SendSecretReveal:
         message = RevealSecret.from_event(send_event)
     elif type(send_event) == SendBalanceProof:
         message = Secret.from_event(send_event)

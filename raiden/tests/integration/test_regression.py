@@ -12,7 +12,7 @@ from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import views
-from raiden.transfer.mediated_transfer.events import SendRevealSecret
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
 
@@ -110,7 +110,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
 
     event = must_contain_entry(
         app1.raiden.wal.storage.get_events(),
-        SendRevealSecret,
+        SendSecretReveal,
         {},
     )
     assert event

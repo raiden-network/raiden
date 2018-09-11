@@ -29,13 +29,13 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
-    first_message = events.SendRevealSecret(
+    first_message = events.SendSecretReveal(
         recipient,
         channel_identifier,
         message_identifier,
         secret,
     )
-    second_message = events.SendRevealSecret(
+    second_message = events.SendSecretReveal(
         recipient,
         channel_identifier,
         random.randint(0, 2 ** 16),

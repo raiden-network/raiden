@@ -23,8 +23,8 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
-    SendRevealSecret,
     SendSecretRequest,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -305,7 +305,7 @@ def test_handle_secretreveal():
     assert len(iteration.events) == 1
 
     reveal = iteration.events[0]
-    assert isinstance(reveal, SendRevealSecret)
+    assert isinstance(reveal, SendSecretReveal)
 
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.secret == secret

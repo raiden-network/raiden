@@ -7,8 +7,8 @@ from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
-    SendRevealSecret,
     SendSecretRequest,
+    SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediator import is_safe_to_wait
 from raiden.transfer.mediated_transfer.state import TargetTransferState
@@ -191,7 +191,7 @@ def handle_secretreveal(
 
         # Send the secret reveal message only once, delivery is guaranteed by
         # the transport and not by the state machine
-        reveal = SendRevealSecret(
+        reveal = SendSecretReveal(
             recipient=recipient,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
