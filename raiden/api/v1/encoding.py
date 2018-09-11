@@ -289,7 +289,7 @@ class EventPaymentSentSuccessSchema(BaseSchema):
     target = AddressField()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'target')
+        fields = ('block_number', 'event', 'amount', 'target', 'identifier')
         strict = True
         decoding_class = dict
 
@@ -302,6 +302,6 @@ class EventPaymentReceivedSuccessSchema(BaseSchema):
     initiator = AddressField()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'initiator')
+        fields = ('block_number', 'event', 'amount', 'initiator', 'identifier')
         strict = True
         decoding_class = dict
