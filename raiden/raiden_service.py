@@ -213,7 +213,6 @@ class RaidenService(Runnable):
                 self.config['transport']['udp']['external_port'],
             )
 
-        # The database may be :memory:
         storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
         self.wal = wal.restore_from_latest_snapshot(
             node.state_transition,

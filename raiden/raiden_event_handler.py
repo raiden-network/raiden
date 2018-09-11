@@ -3,6 +3,7 @@ import structlog
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError
 from raiden.messages import message_from_sendevent
+from raiden.network.proxies import TokenNetwork
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.events import (
@@ -310,15 +311,34 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
+        channel: TokenNetwork
         channel = raiden.chain.payment_channel(
             token_network_address=channel_settle_event.token_network_identifier,
             channel_id=channel_settle_event.channel_identifier,
         )
-        our_balance_proof = channel_settle_event.our_balance_proof
-        partner_balance_proof = channel_settle_event.partner_balance_proof
-        channel_details = channel.detail()
 
-        our_balance_hash = channel_details.participants_data.our_details.balance_hash
+        # Fetch on-chain balance hashes for both participants
+        participants_details = channel.detail_participants(
+            participant1=channel_settle_event.our_balance_proof.sender,
+            participant2=channel_settle_event.partner_balance_proof.sender,
+            channel_identifier=channel_settle_event.our_balance_proof.channel_identifier,
+        )
+
+        storage = raiden.wal.storage
+        our_state_change = storage.get_state_change_by_data_field(
+            'balance_hash',
+            participants_details.our_details.balance_hash
+        )
+
+        partner_state_change = storage.get_state_change_by_data_field(
+            'balance_hash',
+            participants_details.partner_details.balance_hash
+        )
+
+        our_balance_proof = our_state_change.balance_proof
+        partner_balance_proof = partner_state_change.balance_proof
+
+        our_balance_hash = participants_details.our_details.balance_hash
         if our_balance_proof and our_balance_hash != EMPTY_HASH:
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
@@ -328,7 +348,7 @@ class RaidenEventHandler:
             our_locked_amount = 0
             our_locksroot = EMPTY_HASH
 
-        partner_balance_hash = channel_details.participants_data.partner_details.balance_hash
+        partner_balance_hash = participants_details.partner_details.balance_hash
         if partner_balance_proof and partner_balance_hash != EMPTY_HASH:
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
