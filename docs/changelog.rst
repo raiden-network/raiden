@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :bug:`2419` Fix Matrix transport crash due to inability to decode events
+* :bug:`2427` Fix a bug crashing the client when an unlock event for our address is seen on the chain
 
 * :release:`0.8.0 <2018-09-07>`
 * :feature:`1894` We now start having nightly releases found here: https://raiden-nightlies.ams3.digitaloceanspaces.com/index.html
