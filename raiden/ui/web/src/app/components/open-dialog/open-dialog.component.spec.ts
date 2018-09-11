@@ -10,6 +10,7 @@ import { SharedService } from '../../services/shared.service';
 import { AddressInputComponent } from '../address-input/address-input.component';
 import { MockConfig } from '../channel-table/channel-table.component.spec';
 import { TokenInputComponent } from '../token-input/token-input.component';
+import { TokenNetworkSelectorComponent } from '../token-network-selector/token-network-selector.component';
 
 import { OpenDialogComponent } from './open-dialog.component';
 
@@ -23,7 +24,8 @@ describe('OpenDialogComponent', () => {
                 OpenDialogComponent,
                 TokenInputComponent,
                 AddressInputComponent,
-                TokenPipe
+                TokenPipe,
+                TokenNetworkSelectorComponent
             ],
             providers: [
                 {

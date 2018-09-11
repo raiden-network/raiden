@@ -1,11 +1,7 @@
 import { Component, Inject, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { BigNumber } from 'bignumber.js';
-import { from, Observable } from 'rxjs';
-import { filter, flatMap, share, startWith, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
-import { TokenPipe } from '../../pipes/token.pipe';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -27,13 +23,7 @@ export class PaymentDialogComponent implements OnInit {
 
     public form: FormGroup;
 
-    public token: FormControl;
-    public targetAddress: FormControl;
-
-    public filteredOptions$: Observable<UserToken[]>;
-    public tokenPipe: TokenPipe;
     @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
-    private tokens$: Observable<UserToken[]>;
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: PaymentDialogPayload,
@@ -42,7 +32,7 @@ export class PaymentDialogComponent implements OnInit {
         private identiconCacheService: IdenticonCacheService,
         private fb: FormBuilder
     ) {
-        this.tokenPipe = new TokenPipe();
+
     }
 
     ngOnInit() {
@@ -56,21 +46,6 @@ export class PaymentDialogComponent implements OnInit {
             amount: 0,
             token: data.tokenAddress
         });
-
-        this.token = this.form.get('token') as FormControl;
-        this.targetAddress = this.form.get('target_address') as FormControl;
-
-        this.tokens$ = this.raidenService.getTokens(true).pipe(
-            flatMap((tokens: UserToken[]) => from(tokens)),
-            filter((token: UserToken) => !!token.connected),
-            toArray(),
-            share()
-        );
-
-        this.filteredOptions$ = this.form.controls['token'].valueChanges.pipe(
-            startWith(''),
-            flatMap(value => this._filter(value))
-        );
     }
 
     public accept() {
@@ -109,31 +84,7 @@ export class PaymentDialogComponent implements OnInit {
         return this.identiconCacheService.getIdenticon(address);
     }
 
-    // noinspection JSMethodCanBeStatic
-    trackByFn(token: UserToken): string {
-        return token.address;
-    }
-
-    tokenSelected(value: UserToken) {
-        this.tokenInput.decimals = value.decimals;
-        this.token.setValue(value.address);
-    }
-
-    private _filter(value?: string): Observable<UserToken[]> {
-        if (!value || typeof value !== 'string') {
-            return this.tokens$;
-        }
-
-        const keyword = value.toLowerCase();
-        return this.tokens$.pipe(
-            flatMap((tokens: UserToken[]) => from(tokens)),
-            filter((token: UserToken) => {
-                const name = token.name.toLocaleLowerCase();
-                const symbol = token.symbol.toLocaleLowerCase();
-                const address = token.address.toLocaleLowerCase();
-                return name.startsWith(keyword) || symbol.startsWith(keyword) || address.startsWith(keyword);
-            }),
-            toArray()
-        );
+    tokenNetworkSelected(token: UserToken) {
+        this.tokenInput.decimals = token.decimals;
     }
 }
