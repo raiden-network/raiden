@@ -24,7 +24,7 @@ def test_is_transaction_effect_satisfied(
         unlocked_amount=0,
         returned_tokens=0,
     )
-    # try calling with the address being neither us nor our partner
+    # unlock for a channel in which this node is not a participant must return False
     assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
 
     # now call normally with us being the partner and not the participant

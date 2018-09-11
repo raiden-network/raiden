@@ -979,12 +979,11 @@ def is_transaction_effect_satisfied(chain_state, transaction, state_change) -> b
 
         # Don't assume that because we sent the transaction, we are a
         # participant
+        partner_address = None
         if state_change.participant == our_address:
             partner_address = state_change.partner
         elif state_change.partner == our_address:
             partner_address = state_change.participant
-        else:
-            return False
 
         # Use the second address as the partner address, but check that a
         # channel exists for our_address and partner_address
