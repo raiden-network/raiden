@@ -19,7 +19,6 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
 from raiden.api.objects import AddressList, PartnersPerTokenList
-
 from raiden.api.v1.encoding import (
     AddressListSchema,
     ChannelStateSchema,
@@ -400,24 +399,11 @@ class APIServer(Runnable):
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
 
-    def _run(self, host='127.0.0.1', port=5001):
+    def _run(self):
         try:
-            # WSGI expects a stdlib logger, with structlog there's conflict of method names
-            wsgi_log = logging.getLogger(__name__ + '.pywsgi')
-            self.wsgiserver = WSGIServer(
-                (host, port),
-                self.flask_app,
-                log=wsgi_log,
-                error_log=wsgi_log,
-            )
-            # rest unhandled exception will be re-raised here:
             self.wsgiserver.serve_forever()
-        except socket.error as e:
-            if e.errno == errno.EADDRINUSE:
-                raise APIServerPortInUseError()
+        except gevent.GreenletExit:  # pylint: disable=try-except-raise
             raise
-        except gevent.GreenletExit:  # killed without exception
-            raise  # re-raise to keep killed status
         except Exception:
             self.stop()  # ensure cleanup and wait on subtasks
             raise
@@ -427,7 +413,24 @@ class APIServer(Runnable):
         return self.get()  # block here
 
     def start(self, host='127.0.0.1', port=5001):
-        self.kwargs = {'host': host, 'port': port}
+        # WSGI expects a stdlib logger, with structlog there's conflict of
+        # method names rest unhandled exception will be re-raised here:
+        wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+        wsgiserver = WSGIServer(
+            (host, port),
+            self.flask_app,
+            log=wsgi_log,
+            error_log=wsgi_log,
+        )
+
+        try:
+            wsgiserver.init_socket()
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                raise APIServerPortInUseError()
+            raise
+
+        self.wsgiserver = wsgiserver
         super().start()
 
     def stop(self):
