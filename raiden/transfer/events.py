@@ -217,7 +217,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.partner == other.partner and
+            self.partner == other.partner
         )
 
     def __ne__(self, other):
