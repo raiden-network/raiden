@@ -6,6 +6,11 @@ from raiden.transfer.architecture import StateManager
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def wal_from_snapshot(transition_function, storage, state) -> 'WriteAheadLog':
+    state_manager = StateManager(transition_function, state)
+    return WriteAheadLog(state_manager, storage)
+
+
 def restore_from_latest_snapshot(transition_function, storage):
     snapshot = storage.get_latest_state_snapshot()
 
@@ -24,12 +29,11 @@ def restore_from_latest_snapshot(transition_function, storage):
             to_identifier='latest',
         )
 
-    state_manager = StateManager(transition_function, state)
-    wal = WriteAheadLog(state_manager, storage)
+    wal = wal_from_snapshot(transition_function, storage, state)
 
     log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
     for state_change in unapplied_state_changes:
-        state_manager.dispatch(state_change)
+        wal.state_manager.dispatch(state_change)
 
     return wal
 
