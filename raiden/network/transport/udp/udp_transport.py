@@ -14,7 +14,6 @@ from raiden.exceptions import (
     RaidenShuttingDown,
     UnknownAddress,
 )
-
 from raiden.message_handler import on_message
 from raiden.messages import Delivered, Message, Ping, Pong, decode
 from raiden.network.transport.udp import healthcheck
@@ -208,7 +207,7 @@ class UDPTransport(Runnable):
     def start(
             self,
             raiden: RaidenService,
-            queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Message]],
+            queueids_to_queues: typing.QueueIdsToMessages,
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
