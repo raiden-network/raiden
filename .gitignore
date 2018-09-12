@@ -77,7 +77,7 @@ truffle/.bash_history
 # ignore node_modules
 raiden/raidenwebui/node_modules/
 
-raiden/ui/web/node_modules/*
+raiden/ui/web/node_modules/
 
 # editors
 .idea
