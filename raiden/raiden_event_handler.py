@@ -4,8 +4,10 @@ from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies import TokenNetwork
+from raiden.storage.restore import channel_state_until_balance_hash
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
+from raiden.transfer.channel import get_batch_unlock
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -296,13 +298,39 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        channel = raiden.chain.payment_channel(
+        channel: TokenNetwork = raiden.chain.payment_channel(
             channel_unlock_event.token_network_identifier,
             channel_unlock_event.channel_identifier,
         )
 
+        participants_details = channel.details_participants(
+            raiden.address,
+            channel_unlock_event.partner,
+            channel_unlock_event.channel_identifier,
+        )
+
+        restored_channel_state = channel_state_until_balance_hash(
+            raiden=raiden,
+            token_address=channel_unlock_event.token_address,
+            channel_identifier=channel_unlock_event.channel_identifier,
+            target_balance_hash=participants_details.partner_details.balance_hash,
+        )
+
+        if not restored_channel_state:
+            log.error('Could not find channel state with partner balance hash {}'.format(
+                pex(participants_details.partner_details.balance_hash),
+            ))
+            return
+
+        partner_state = restored_channel_state.partner_state
+        merkle_tree_leaves = get_batch_unlock(partner_state)
+
         try:
-            channel.unlock(channel_unlock_event.merkle_tree_leaves)
+            channel.unlock(
+                restored_channel_state.identifier,
+                channel_unlock_event.partner,
+                merkle_tree_leaves,
+            )
         except ChannelOutdatedError as e:
             log.error(str(e))
 
@@ -311,8 +339,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
-        channel: TokenNetwork
-        channel = raiden.chain.payment_channel(
+        channel: TokenNetwork = raiden.chain.payment_channel(
             token_network_address=channel_settle_event.token_network_identifier,
             channel_id=channel_settle_event.channel_identifier,
         )

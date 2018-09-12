@@ -9,7 +9,7 @@ def channel_state_until_balance_hash(
         raiden: 'RaidenService',
         token_address: typing.TokenAddress,
         channel_identifier: typing.ChannelID,
-        target_balance_hash: bytes
+        target_balance_hash: bytes,
 ) -> typing.Optional[NettingChannelState]:
     """ Go through WAL state changes until a certain hash balance is found. """
 
@@ -28,7 +28,7 @@ def channel_state_until_balance_hash(
             chain_state=chain_state,
             payment_network_id=raiden.default_registry,
             token_address=token_address,
-            channel_id=channel_identifier
+            channel_id=channel_identifier,
         )
         if not channel_state:
             continue
@@ -37,7 +37,7 @@ def channel_state_until_balance_hash(
         balance_hash = hash_balance_data(
             transferred_amount=partner_latest_balance_proof.transferred_amount,
             locked_amount=partner_latest_balance_proof.locked_amount,
-            locksroot=partner_latest_balance_proof.locksroot
+            locksroot=partner_latest_balance_proof.locksroot,
         )
         if target_balance_hash == balance_hash:
             return channel_state
