@@ -1890,6 +1890,7 @@ def handle_channel_settled(
 
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
+                channel_state.token_address,
                 channel_state.token_network_identifier,
                 channel_state.identifier,
                 channel_state.partner_state.address,

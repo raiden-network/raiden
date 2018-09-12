@@ -189,31 +189,35 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def __init__(
             self,
+            token_address: typing.TokenAddress,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            participant: typing.Address,
+            partner: typing.Address,
     ):
+        self.token_address = token_address
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.participant = participant
+        self.partner = partner
 
     def __repr__(self):
         return (
             '<ContractSendChannelBatchUnlock '
-            'token_network_id:{} channel:{} participant:{}'
+            'token_address: {} token_network_id:{} channel:{} partner:{}'
             '>'
         ).format(
+            pex(self.token_address),
             pex(self.token_network_identifier),
             self.channel_identifier,
-            pex(self.participant),
+            pex(self.partner),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendChannelBatchUnlock) and
+            self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.participant == other.participant
+            self.partner == other.partner and
         )
 
     def __ne__(self, other):
@@ -221,9 +225,10 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
+            'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'participant': self.participant,
+            'partner': self.partner,
         }
 
         return result
@@ -231,9 +236,10 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
+            token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            participant=data['participant'],
+            partner=data['partner'],
         )
 
         return restored
