@@ -262,7 +262,7 @@ class ReceiveLockExpired(StateChange):
         return {
             'sender': to_checksum_address(self.sender),
             'balance_proof': self.balance_proof,
-            'balance_hash': self.balance_proof.balance_hash,
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
             'secrethash': serialize_bytes(self.secrethash),
             'message_identifier': self.message_identifier,
         }
@@ -272,6 +272,7 @@ class ReceiveLockExpired(StateChange):
         return cls(
             sender=to_canonical_address(data['sender']),
             balance_proof=data['balance_proof'],
+            balance_hash=deserialize_bytes(data['balance_hash']),
             secrethash=deserialize_bytes(data['secrethash']),
             message_identifier=data['message_identifier'],
         )
