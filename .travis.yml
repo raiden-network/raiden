@@ -18,12 +18,12 @@ templates:
       - .travis/install.sh
     script:
       - .travis/run.sh
+    sudo: true
 
   job-template-integration: &job-template-integration
     <<: *job-template-test
-    sudo: true
 
-dist: trusty
+dist: xenial
 sudo: false
 language: python
 python:
