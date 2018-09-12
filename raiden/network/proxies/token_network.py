@@ -1112,5 +1112,5 @@ class TokenNetwork:
 
             raise RaidenRecoverableError(
                 "Settling this channel failed although the channel's current state "
-                "is closed. Maybe it was already settled by the other participant?"
+                "is closed. Maybe it was already settled by the other participant?",
             )
