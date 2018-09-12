@@ -1,6 +1,9 @@
 from typing import Sequence
 
+import structlog
 from gevent import Greenlet
+
+log = structlog.get_logger(__name__)
 
 
 class Runnable:
@@ -59,6 +62,13 @@ class Runnable:
         """ Default callback for substasks link_exception
 
         Default callback re-raises the exception inside _run() """
+        log.error(
+            'Runnable subtask died!',
+            this=self,
+            running=bool(self),
+            subtask=subtask,
+            exc=subtask.exception,
+        )
         if not self.greenlet:
             return
         self.greenlet.kill(subtask.exception)
