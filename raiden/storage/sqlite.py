@@ -142,9 +142,9 @@ class SQLiteStorage:
 
         cursor.execute(
             "SELECT data FROM state_changes WHERE "
-            f"json_extract(data, '$.{field}')'==? "
+            f"json_extract(data, '$.{field}')=? "
             "ORDER BY identifier DESC LIMIT 1",
-            value,
+            (value,),
         )
 
         try:
