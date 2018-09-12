@@ -36,7 +36,6 @@ export class OpenDialogComponent implements OnInit {
         address: '',
         token: '',
         amount: 0,
-        decimals: true,
         settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
     });
 

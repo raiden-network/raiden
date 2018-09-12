@@ -19,8 +19,7 @@ export class JoinDialogComponent implements OnInit {
     @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
 
     form = this.fb.group({
-        amount: 0,
-        decimals: true
+        amount: 0
     });
 
     constructor(

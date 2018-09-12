@@ -9,7 +9,6 @@ import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { EMPTY } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
 import { delay, startWith } from 'rxjs/operators';
-import { AllowedDecimalsDirective } from '../../directives/allowed-decimals.directive';
 import { CdkDetailRowDirective } from '../../directives/cdk-detail-row.directive';
 import { Channel } from '../../models/channel';
 import { UserToken } from '../../models/usertoken';
@@ -73,8 +72,7 @@ describe('ChannelTableComponent', () => {
                 KeysPipe,
                 SubsetPipe,
                 DecimalPipe,
-                CdkDetailRowDirective,
-                AllowedDecimalsDirective
+                CdkDetailRowDirective
             ],
             providers: [
                 SharedService,
