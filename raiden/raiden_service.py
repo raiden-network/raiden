@@ -17,7 +17,6 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenShuttingDown
 from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
-
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
@@ -311,7 +310,10 @@ class RaidenService(Runnable):
         )
         with self.dispatch_events_lock:
             for transaction in pending_transactions:
-                self.raiden_event_handler.on_raiden_event(self, transaction)
+                try:
+                    self.raiden_event_handler.on_raiden_event(self, transaction)
+                except RaidenRecoverableError as e:
+                    log.error(str(e))
 
         self.alarm.start()
 
