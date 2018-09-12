@@ -190,6 +190,10 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
 
         self._login_or_register()
+        if self._client._handle_thread:
+            # wait on _handle_thread for initial sync
+            # this is needed so the rooms are populated before we _inventory_rooms
+            self._client._handle_thread.get()
         self._join_discovery_room()
         self._inventory_rooms()
 
@@ -439,6 +443,7 @@ class MatrixTransport(Runnable):
             self._maybe_invite_user(user)
 
     def _inventory_rooms(self):
+        self.log.debug('INVENTORY ROOMS', rooms=self._client.rooms)
         for room in self._client.rooms.values():
             if any(self._discovery_room_alias in alias for alias in room.aliases):
                 continue
