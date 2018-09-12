@@ -1,3 +1,13 @@
+---
+name: Bug Report
+about: Non critical bug reports about the Raiden Network
+---
+
+<!--## Intro
+
+Use this template to report non-critical bugs. For critical bugs, anything that may involve loss or locking of funds, please submit the report to bounty@raiden.network.
+-->
+
 ## Problem Definition
 
 Provide a description of what is the current problem and why you are raising this issue.
