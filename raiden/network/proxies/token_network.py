@@ -156,6 +156,11 @@ class TokenNetwork:
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:
+                log.info(
+                    'new_netting_channel called',
+                    peer1=pex(self.node_address),
+                    peer2=pex(partner),
+                )
                 transaction_hash = self._new_netting_channel(partner, settle_timeout)
             except Exception as e:
                 new_open_channel_transaction.set_exception(e)
@@ -178,9 +183,8 @@ class TokenNetwork:
             raise RaidenUnrecoverableError('creating new channel failed')
 
         channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
-
         log.info(
-            'new_netting_channel called',
+            'new_netting_channel created succesfully with',
             peer1=pex(self.node_address),
             peer2=pex(partner),
             channel_identifier=channel_identifier,
