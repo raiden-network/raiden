@@ -413,8 +413,8 @@ class APIServer(Runnable):
         return self.get()  # block here
 
     def start(self, host='127.0.0.1', port=5001):
-        # WSGI expects a stdlib logger, with structlog there's conflict of
-        # method names rest unhandled exception will be re-raised here:
+        # WSGI expects an stdlib logger. With structlog there's conflict of
+        # method names. Rest unhandled exception will be re-raised here:
         wsgi_log = logging.getLogger(__name__ + '.pywsgi')
         wsgiserver = WSGIServer(
             (host, port),
