@@ -228,7 +228,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'partner': self.partner,
+            'partner': to_checksum_address(self.partner),
         }
 
         return result
@@ -239,7 +239,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            partner=data['partner'],
+            partner=to_canonical_address(data['partner']),
         )
 
         return restored

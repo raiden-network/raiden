@@ -11,9 +11,10 @@ def test_is_transaction_effect_satisfied(
         netting_channel_state,
 ):
     transaction = ContractSendChannelBatchUnlock(
+        token_address=token_network_state.token_address,
         token_network_identifier=token_network_id,
         channel_identifier=netting_channel_state.identifier,
-        merkle_tree_leaves=EMPTY_MERKLE_ROOT,
+        partner=HOP2,
     )
     state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=UNIT_SECRETHASH,
