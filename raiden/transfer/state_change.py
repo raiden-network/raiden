@@ -1081,7 +1081,6 @@ class ReceiveTransferDirect(StateChange):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             balance_proof=data['balance_proof'],
-            balance_hash=deserialize_bytes(data['balance_hash']),
         )
 
 
@@ -1135,7 +1134,6 @@ class ReceiveUnlock(StateChange):
             message_identifier=data['message_identifier'],
             secret=deserialize_bytes(data['secret']),
             balance_proof=data['balance_proof'],
-            balance_hash=deserialize_bytes(data['balance_hash']),
         )
 
 

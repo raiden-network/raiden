@@ -3,7 +3,7 @@ import structlog
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError
 from raiden.messages import message_from_sendevent
-from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_balance_hash
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
@@ -34,6 +34,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.utils import pex
+from raiden.utils.serialization import serialize_bytes
 from raiden_libs.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -298,17 +299,21 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        channel: TokenNetwork = raiden.chain.payment_channel(
+        payment_channel: PaymentChannel = raiden.chain.payment_channel(
             channel_unlock_event.token_network_identifier,
             channel_unlock_event.channel_identifier,
         )
+        token_network: TokenNetwork = payment_channel.token_network
 
-        participants_details = channel.details_participants(
+        # Fetch on-chain balance hashes for both participants
+        participants_details = token_network.details_participants(
             raiden.address,
             channel_unlock_event.partner,
             channel_unlock_event.channel_identifier,
         )
 
+        # Replay state changes until a channel state is reached where
+        # this channel state has the participants balance hash.
         restored_channel_state = channel_state_until_balance_hash(
             raiden=raiden,
             token_address=channel_unlock_event.token_address,
@@ -322,11 +327,12 @@ class RaidenEventHandler:
             ))
             return
 
+        # Compute merkle tree leaves from partner state
         partner_state = restored_channel_state.partner_state
         merkle_tree_leaves = get_batch_unlock(partner_state)
 
         try:
-            channel.unlock(
+            payment_channel.unlock(
                 restored_channel_state.identifier,
                 channel_unlock_event.partner,
                 merkle_tree_leaves,
@@ -339,27 +345,30 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
-        channel: TokenNetwork = raiden.chain.payment_channel(
+        payment_channel: PaymentChannel = raiden.chain.payment_channel(
             token_network_address=channel_settle_event.token_network_identifier,
             channel_id=channel_settle_event.channel_identifier,
         )
 
+        token_network_proxy: TokenNetwork = payment_channel.token_network
         # Fetch on-chain balance hashes for both participants
-        participants_details = channel.detail_participants(
-            participant1=channel_settle_event.our_balance_proof.sender,
-            participant2=channel_settle_event.partner_balance_proof.sender,
-            channel_identifier=channel_settle_event.our_balance_proof.channel_identifier,
+        participants_details = token_network_proxy.detail_participants(
+            participant1=payment_channel.participant1,
+            participant2=payment_channel.participant2,
+            channel_identifier=channel_settle_event.channel_identifier,
         )
 
+        # Query state changes which have the on-chain
+        # balance hash and use the balance proofs from those states.
         storage = raiden.wal.storage
         our_state_changes = storage.get_state_changes_by_data_field(
             'balance_hash',
-            participants_details.our_details.balance_hash,
+            serialize_bytes(participants_details.our_details.balance_hash),
         )
 
         partner_state_changes = storage.get_state_changes_by_data_field(
             'balance_hash',
-            participants_details.partner_details.balance_hash,
+            serialize_bytes(participants_details.partner_details.balance_hash),
         )
 
         our_balance_proof = None
@@ -411,7 +420,7 @@ class RaidenEventHandler:
             second_locked_amount = our_locked_amount
             second_locksroot = our_locksroot
 
-        channel.settle(
+        payment_channel.settle(
             first_transferred_amount,
             first_locked_amount,
             first_locksroot,

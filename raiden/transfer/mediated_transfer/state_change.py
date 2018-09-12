@@ -272,7 +272,6 @@ class ReceiveLockExpired(StateChange):
         return cls(
             sender=to_canonical_address(data['sender']),
             balance_proof=data['balance_proof'],
-            balance_hash=deserialize_bytes(data['balance_hash']),
             secrethash=deserialize_bytes(data['secrethash']),
             message_identifier=data['message_identifier'],
         )
