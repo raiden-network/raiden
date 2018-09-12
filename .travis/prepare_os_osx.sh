@@ -8,7 +8,7 @@ PYTHON_36_FORMULA=https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a76
 # Pin to python3.6 for the time being
 brew install ${PYTHON_36_FORMULA} || brew upgrade ${PYTHON_36_FORMULA}
 
-for tool in automake gmp leveldb libffi libtool node openssl pkg-config; do
+for tool in automake gmp leveldb libffi libtool node openssl pkg-config sqlite3; do
     brew install ${tool} || brew upgrade ${tool} || true
 done
 
