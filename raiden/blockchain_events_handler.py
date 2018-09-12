@@ -2,7 +2,7 @@ import gevent
 import structlog
 from eth_utils import to_canonical_address
 
-from raiden.blockchain.events import decode_event_to_internal
+from raiden.blockchain.events import Event, decode_event_to_internal
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
@@ -29,7 +29,7 @@ from raiden_contracts.constants import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def handle_tokennetwork_new(raiden, event):
+def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
     """ Handles a `TokenNetworkCreated` event. """
     data = event.event_data
     token_network_address = data['token_network_address']
@@ -58,7 +58,7 @@ def handle_tokennetwork_new(raiden, event):
     raiden.handle_state_change(new_token_network)
 
 
-def handle_channel_new(raiden, event):
+def handle_channel_new(raiden: 'RaidenService', event: Event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     transaction_hash = event.event_data['transactionHash']
@@ -114,7 +114,7 @@ def handle_channel_new(raiden, event):
     raiden.add_pending_greenlet(retry_connect)
 
 
-def handle_channel_new_balance(raiden, event):
+def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
     data = event.event_data
     channel_identifier = data['channel_identifier']
     token_network_identifier = event.originating_contract
@@ -165,7 +165,7 @@ def handle_channel_new_balance(raiden, event):
             raiden.add_pending_greenlet(join_channel)
 
 
-def handle_channel_closed(raiden, event):
+def handle_channel_closed(raiden: 'RaidenService', event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
@@ -199,7 +199,7 @@ def handle_channel_closed(raiden, event):
         raiden.handle_state_change(channel_closed)
 
 
-def handle_channel_update_transfer(raiden, event):
+def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     channel_identifier = data['channel_identifier']
@@ -222,7 +222,7 @@ def handle_channel_update_transfer(raiden, event):
         raiden.handle_state_change(channel_transfer_updated)
 
 
-def handle_channel_settled(raiden, event):
+def handle_channel_settled(raiden: 'RaidenService', event: Event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     channel_identifier = event.event_data['channel_identifier']
@@ -246,7 +246,7 @@ def handle_channel_settled(raiden, event):
         raiden.handle_state_change(channel_settled)
 
 
-def handle_channel_batch_unlock(raiden, event):
+def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
 
@@ -266,7 +266,7 @@ def handle_channel_batch_unlock(raiden, event):
     raiden.handle_state_change(unlock_state_change)
 
 
-def handle_secret_revealed(raiden, event):
+def handle_secret_revealed(raiden: 'RaidenService', event: Event):
     secret_registry_address = event.originating_contract
     data = event.event_data
 
@@ -283,7 +283,7 @@ def handle_secret_revealed(raiden, event):
     raiden.handle_state_change(registeredsecret_state_change)
 
 
-def on_blockchain_event(raiden, event):
+def on_blockchain_event(raiden: 'RaidenService', event: Event):
     data = event.event_data
     log.debug(
         'BLOCKCHAIN EVENT',

@@ -648,10 +648,10 @@ def events_for_onchain_secretreveal(
 
 
 def events_for_unlock_if_closed(
-        channelidentifiers_to_channels,
-        transfers_pair,
-        secret,
-        secrethash,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        transfers_pair: typing.List[MediationPairState],
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
 ):
     """ Unlock on chain if the payer channel is closed and the secret is known.
     If a channel is closed because of another task a balance proof will not be
@@ -677,6 +677,7 @@ def events_for_unlock_if_closed(
         if not payer_channel_open:
             pair.payer_state = 'payer_waiting_unlock'
             unlock = ContractSendChannelBatchUnlock(
+                payer_channel.token_address,
                 payer_channel.token_network_identifier,
                 payer_channel.identifier,
                 payer_channel.partner_state.address,
