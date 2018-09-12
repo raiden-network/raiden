@@ -231,9 +231,8 @@ class ConnectionManager:
         If the connection manager has no funds, this is a noop.
         """
         with self.lock:
-            while self._funds_remaining > 0 and not self._leaving_state:
-                if not self._open_channels():
-                    break
+            if self._funds_remaining > 0 and not self._leaving_state:
+                self._open_channels()
 
     def _find_new_partners(self):
         """ Search the token network for potential channel partners. """
