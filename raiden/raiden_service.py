@@ -555,10 +555,10 @@ class RaidenService(Runnable):
 
     def mediated_transfer_async(
             self,
-            token_network_identifier,
-            amount,
-            target,
-            identifier,
+            token_network_identifier: typing.TokenNetworkID,
+            amount: typing.TokenAmount,
+            target: typing.Address,
+            identifier: typing.PaymentID,
     ):
         """ Transfer `amount` between this node and `target`.
 
@@ -621,10 +621,10 @@ class RaidenService(Runnable):
 
     def start_mediated_transfer(
             self,
-            token_network_identifier,
-            amount,
-            target,
-            identifier,
+            token_network_identifier: typing.TokenNetworkID,
+            amount: typing.TokenAmount,
+            target: typing.Address,
+            identifier: typing.PaymentID,
     ):
 
         self.start_health_check_for(target)
