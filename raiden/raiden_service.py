@@ -441,7 +441,7 @@ class RaidenService(Runnable):
         # UDP's healthcheck requires the transport to be fully started, but
         # this function may be called while the service is being started.
         #
-        # The healthcheck's that are not started in this fuction during startup
+        # The healthchecks that are not started in this fuction during startup
         # are handled by self.start_neighbours_healthcheck()
         if self.transport:
             self.transport.start_health_check(node_address)
