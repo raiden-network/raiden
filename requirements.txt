@@ -1,6 +1,4 @@
-# temporary until pystun creates a new release
-git+https://github.com/LefterisJP/pystun@develop#egg=pystun
-
+pystun-patched-for-raiden==0.1.0
 cachetools==2.1.0
 coincurve==8.0.2
 filelock==3.0.4
