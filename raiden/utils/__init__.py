@@ -188,13 +188,18 @@ def get_system_spec():
             platform.machine(),
         )
 
-    system_spec = dict(
-        raiden=pkg_resources.require(raiden.__name__)[0].version,
-        python_implementation=platform.python_implementation(),
-        python_version=platform.python_version(),
-        system=system_info,
-        distribution='bundled' if getattr(sys, 'frozen', False) else 'source',
-    )
+    try:
+        version = pkg_resources.require(raiden.__name__)[0].version
+    except (pkg_resources.ContextualVersionConflict, pkg_resources.DistributionNotFound):
+        version = None
+
+    system_spec = {
+        'raiden': version,
+        'python_implementation': platform.python_implementation(),
+        'python_version': platform.python_version(),
+        'system': system_info,
+        'distribution': 'bundled' if getattr(sys, 'frozen', False) else 'source',
+    }
     return system_spec
 
 
