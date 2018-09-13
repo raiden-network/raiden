@@ -38,10 +38,10 @@ def handle_block(
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
     lock_expired = channel.is_lock_expired(
-        channel_state.our_state,
-        locked_lock,
-        secrethash,
-        state_change.block_number,
+        end_state=channel_state.our_state,
+        locked_lock=locked_lock,
+        secrethash=secrethash,
+        block_number=state_change.block_number,
     )
     if locked_lock and lock_expired:
         # Lock has expired, cleanup...
@@ -308,7 +308,7 @@ def handle_onchain_secretreveal(
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-):
+) -> TransitionResult:
     """ Validates and handles a ContractReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
 

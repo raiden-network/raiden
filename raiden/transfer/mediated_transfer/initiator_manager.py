@@ -273,10 +273,10 @@ def handle_onchain_secretreveal(
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
     sub_iteration = initiator.handle_onchain_secretreveal(
-        payment_state.initiator,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
+        initiator_state=payment_state.initiator,
+        state_change=state_change,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
     return iteration

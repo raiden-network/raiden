@@ -10,7 +10,7 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 RAIDEN_DB_VERSION = 4
 
 
-def assert_sqlite_version():
+def assert_sqlite_version() -> bool:
     if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
         return False
     return True
@@ -143,7 +143,7 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, field, value):
+    def get_latest_event_by_data_field(self, field: str, value: str):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -166,7 +166,7 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_state_change_by_data_field(self, field, value):
+    def get_latest_state_change_by_data_field(self, field: str, value: str):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 

@@ -11,7 +11,9 @@ from raiden.utils.serialization import serialize_bytes
 def get_latest_known_balance_proof(
         storage: SQLiteStorage,
         balance_hash: typing.BalanceHash,
-):
+) -> typing.Optional['BalanceProofSignedState']:
+    """ Tries to find the balance proof with the provided balance hash
+    in either latest state change or latest event. """
     state_change = storage.get_latest_state_change_by_data_field(
         'balance_hash',
         serialize_bytes(balance_hash),
