@@ -182,7 +182,6 @@ class MatrixTransport(Runnable):
     def start(
         self,
         raiden_service: RaidenService,
-        initial_queues: QueueIdsToQueues,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
@@ -204,7 +203,6 @@ class MatrixTransport(Runnable):
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
-        self._send_queued_messages(initial_queues)
 
         self.log.info('TRANSPORT STARTED', config=self._config)
 
@@ -676,12 +674,6 @@ class MatrixTransport(Runnable):
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)
             return
-
-    def _send_queued_messages(self, queueids_to_queues):
-        for queue_identifier, messages in queueids_to_queues.items():
-            for message in messages:
-                self.start_health_check(queue_identifier.recipient)
-                self.send_async(queue_identifier, message)
 
     def _send_with_retry(
         self,
