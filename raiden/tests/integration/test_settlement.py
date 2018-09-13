@@ -8,6 +8,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
+from raiden.storage.restore import channel_state_until_balance_hash
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -234,6 +235,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         token_address,
     )
 
+    # Take a snapshot early on
+    alice_app.raiden.wal.snapshot()
+
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(alice_app),
         token_network_identifier,
@@ -247,6 +251,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
+
+    # Take snapshot before transfer
+    alice_app.raiden.wal.snapshot()
 
     alice_to_bob_amount = 10
     identifier = 1
@@ -271,6 +278,22 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app, deposit, [lock],
         bob_app, deposit, [],
     )
+
+    # Take a snapshot early on
+    alice_app.raiden.wal.snapshot()
+
+    our_balance_proof = alice_bob_channel_state.our_state.balance_proof
+
+    # Test WAL restore to return the latest channel state
+    restored_channel_state = channel_state_until_balance_hash(
+        alice_app.raiden,
+        token_address,
+        alice_bob_channel_state.identifier,
+        alice_bob_channel_state.our_state.balance_proof.balance_hash,
+    )
+
+    our_restored_balance_proof = restored_channel_state.our_state.balance_proof
+    assert our_balance_proof == our_restored_balance_proof
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle

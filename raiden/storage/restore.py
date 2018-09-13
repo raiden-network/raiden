@@ -40,19 +40,30 @@ def channel_state_until_balance_hash(
         log.state_manager.dispatch(state_change)
         channel_state = views.get_channelstate_by_id(
             chain_state=chain_state,
-            payment_network_id=raiden.default_registry,
+            payment_network_id=raiden.default_registry.address,
             token_address=token_address,
             channel_id=channel_identifier,
         )
         if not channel_state:
             continue
 
+        our_latest_balance_proof = channel_state.our_state.balance_proof
         partner_latest_balance_proof = channel_state.partner_state.balance_proof
-        balance_hash = hash_balance_data(
-            transferred_amount=partner_latest_balance_proof.transferred_amount,
-            locked_amount=partner_latest_balance_proof.locked_amount,
-            locksroot=partner_latest_balance_proof.locksroot,
-        )
+
+        balance_hash = None
+        if partner_latest_balance_proof:
+            balance_hash = hash_balance_data(
+                transferred_amount=partner_latest_balance_proof.transferred_amount,
+                locked_amount=partner_latest_balance_proof.locked_amount,
+                locksroot=partner_latest_balance_proof.locksroot,
+            )
+        elif our_latest_balance_proof:
+            balance_hash = hash_balance_data(
+                transferred_amount=our_latest_balance_proof.transferred_amount,
+                locked_amount=our_latest_balance_proof.locked_amount,
+                locksroot=our_latest_balance_proof.locksroot,
+            )
+
         if target_balance_hash == balance_hash:
             return channel_state
 
