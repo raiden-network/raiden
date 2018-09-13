@@ -54,13 +54,16 @@ class ContractSendChannelClose(ContractSendEvent):
         return not self.__eq__(other)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return {
+        result = {
             'channel_identifier': self.channel_identifier,
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
-            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
+
         }
+        if self.balance_proof:
+            result['balance_hash'] = serialization.serialize_bytes(self.balance_proof.balance_hash)
+        return result
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
@@ -169,8 +172,9 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             'channel_identifier': self.channel_identifier,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
-            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
         }
+        if self.balance_proof:
+            result['balance_hash'] = serialization.serialize_bytes(self.balance_proof.balance_hash)
 
         return result
 
@@ -631,9 +635,10 @@ class SendDirectTransfer(SendMessageEvent):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
             'token_address': to_checksum_address(self.token),
         }
+        if self.balance_proof:
+            result['balance_hash'] = serialization.serialize_bytes(self.balance_proof.balance_hash)
 
         return result
 
