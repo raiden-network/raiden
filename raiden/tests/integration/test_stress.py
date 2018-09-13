@@ -156,7 +156,7 @@ def sequential_transfers(server_from, server_to, total, token_address, identifie
 
 
 def stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit):
-    """Send `deposit` transfers of value `1` one at the time, without changing
+    """Send `deposit` transfers of value `1` one at a time, without changing
     the initial capacity.
     """
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
