@@ -1,6 +1,6 @@
 from enum import Enum
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -79,10 +79,8 @@ NETWORKNAME_TO_ID = {
 }
 
 MIN_REQUIRED_SOLC = 'v0.4.23'
-NULL_ADDRESS = '0x' + '0' * 40
-NULL_ADDRESS_BYTES = b'\x00' * 20
-
-NULL_HASH_BYTES = b'\x00' * 32
+NULL_ADDRESS_BYTES = bytes(20)
+NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 
 TESTNET_GASPRICE_MULTIPLIER = 2.0
 
