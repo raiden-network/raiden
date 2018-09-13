@@ -144,8 +144,14 @@ def transfer_and_assert(server_from, server_to, token_address, identifier, amoun
     )
 
 
-def sequential_transfers(server_from, server_to, total, token_address, identifier_generator):
-    for _ in range(total):
+def sequential_transfers(
+        server_from,
+        server_to,
+        number_of_transfers,
+        token_address,
+        identifier_generator,
+):
+    for _ in range(number_of_transfers):
         transfer_and_assert(
             server_from=server_from,
             server_to=server_to,
@@ -164,31 +170,31 @@ def stress_send_serial_transfers(rest_apis, token_address, identifier_generator,
     # deplete the channels in one direction
     for server_from, server_to in pairs:
         sequential_transfers(
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
 
     # deplete the channels in the backwards direction
     for server_to, server_from in pairs:
         sequential_transfers(
-            server_from,
-            server_to,
-            deposit * 2,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit * 2,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
 
     # reset the balances balances by sending the "extra" deposit forward
     for server_from, server_to in pairs:
         sequential_transfers(
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
 
 
@@ -201,11 +207,11 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     gevent.wait([
         gevent.spawn(
             sequential_transfers,
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
         for server_from, server_to in pairs
     ])
@@ -214,11 +220,11 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     gevent.wait([
         gevent.spawn(
             sequential_transfers,
-            server_from,
-            server_to,
-            deposit * 2,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit * 2,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
         for server_to, server_from in pairs
     ])
@@ -227,11 +233,11 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     gevent.wait([
         gevent.spawn(
             sequential_transfers,
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
         for server_from, server_to in pairs
     ])
@@ -249,11 +255,11 @@ def stress_send_and_receive_parallel_transfers(
     foward_transfers = [
         gevent.spawn(
             sequential_transfers,
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
         for server_from, server_to in pairs
     ]
@@ -261,11 +267,11 @@ def stress_send_and_receive_parallel_transfers(
     backwards_transfers = [
         gevent.spawn(
             sequential_transfers,
-            server_from,
-            server_to,
-            deposit,
-            token_address,
-            identifier_generator,
+            server_from=server_from,
+            server_to=server_to,
+            number_of_transfers=deposit,
+            token_address=token_address,
+            identifier_generator=identifier_generator,
         )
         for server_to, server_from in pairs
     ]
