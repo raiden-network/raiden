@@ -136,7 +136,30 @@ class SQLiteStorage:
 
         return result
 
-    def get_state_changes_by_data_field(self, field, value):
+    def get_latest_event_by_data_field(self, field, value):
+        """ Return all state changes filtered by a named field and value."""
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            "SELECT data FROM state_events WHERE "
+            f"json_extract(data, '$.{field}')=? "
+            "ORDER BY identifier DESC LIMIT 1",
+            (value,),
+        )
+
+        result = None
+        try:
+            row = cursor.fetchone()
+            if row:
+                result = self.serializer.deserialize(row[0])
+        except AttributeError:
+            raise InvalidDBData(
+                'Your local database is corrupt. Bailing ...',
+            )
+
+        return result
+
+    def get_latest_state_change_by_data_field(self, field, value):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -147,11 +170,11 @@ class SQLiteStorage:
             (value,),
         )
 
+        result = None
         try:
-            result = [
-                self.serializer.deserialize(entry[0])
-                for entry in cursor.fetchall()
-            ]
+            row = cursor.fetchone()
+            if row:
+                result = self.serializer.deserialize(row[0])
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',

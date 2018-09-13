@@ -59,6 +59,7 @@ class ContractSendChannelClose(ContractSendEvent):
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -168,6 +169,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             'channel_identifier': self.channel_identifier,
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
         }
 
         return result
@@ -629,6 +631,7 @@ class SendDirectTransfer(SendMessageEvent):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
             'token_address': to_checksum_address(self.token),
         }
 
