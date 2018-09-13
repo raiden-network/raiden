@@ -239,7 +239,7 @@ class RaidenService(Runnable):
                 [],  # empty list of token network states as it's the node's startup
             )
             state_change = ContractReceiveNewPaymentNetwork(
-                constants.NULL_HASH_BYTES,
+                constants.EMPTY_HASH,
                 payment_network,
             )
             self.handle_state_change(state_change)
