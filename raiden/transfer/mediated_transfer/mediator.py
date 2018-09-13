@@ -706,7 +706,7 @@ def events_for_expired_locks(
         secrethash = mediator_state.secrethash
         locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
         lock_expired = channel.is_lock_expired(
-            channel.our_state,
+            channel_state.our_state,
             locked_lock,
             secrethash,
             block_number,

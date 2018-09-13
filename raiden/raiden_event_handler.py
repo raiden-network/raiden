@@ -33,8 +33,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
+from raiden.transfer.utils import get_latest_known_balance_proof
 from raiden.utils import pex
-from raiden.utils.serialization import serialize_bytes
 from raiden_libs.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -306,7 +306,7 @@ class RaidenEventHandler:
         token_network: TokenNetwork = payment_channel.token_network
 
         # Fetch on-chain balance hashes for both participants
-        participants_details = token_network.details_participants(
+        participants_details = token_network.detail_participants(
             raiden.address,
             channel_unlock_event.partner,
             channel_unlock_event.channel_identifier,
@@ -332,11 +332,7 @@ class RaidenEventHandler:
         merkle_tree_leaves = get_batch_unlock(partner_state)
 
         try:
-            payment_channel.unlock(
-                restored_channel_state.identifier,
-                channel_unlock_event.partner,
-                merkle_tree_leaves,
-            )
+            payment_channel.unlock(merkle_tree_leaves)
         except ChannelOutdatedError as e:
             log.error(str(e))
 
@@ -360,15 +356,14 @@ class RaidenEventHandler:
 
         # Query state changes which have the on-chain
         # balance hash and use the balance proofs from those states.
-        storage = raiden.wal.storage
-        our_state_changes = storage.get_state_changes_by_data_field(
-            'balance_hash',
-            serialize_bytes(participants_details.our_details.balance_hash),
+        our_balance_proof = get_latest_known_balance_proof(
+            raiden.wal.storage,
+            participants_details.our_details.balance_hash,
         )
 
-        partner_state_changes = storage.get_state_changes_by_data_field(
-            'balance_hash',
-            serialize_bytes(participants_details.partner_details.balance_hash),
+        partner_balance_proof = get_latest_known_balance_proof(
+            raiden.wal.storage,
+            participants_details.partner_details.balance_hash,
         )
 
         our_balance_proof = None
