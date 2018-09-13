@@ -38,7 +38,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import RouteState, message_identifier_from_prng
-from raiden.transfer.state_change import ActionCancelPayment, Block
+from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils import random_secret
 
 
@@ -791,3 +791,55 @@ def test_initiator_lock_expired():
 
     # Transfer 3 is still there
     assert transfer3_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+
+def test_initiator_handle_contract_receive_secret_reveal():
+    amount = UNIT_TRANSFER_AMOUNT * 2
+    block_number = 1
+    refund_pkey, refund_address = factories.make_privkey_address()
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    pseudo_random_generator = random.Random()
+
+    channel_map = {
+        channel1.identifier: channel1,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    transfer = current_state.initiator.transfer
+
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    state_change = ContractReceiveSecretReveal(
+        factories.make_transaction_hash(),
+        factories.make_address(),
+        transfer.lock.secrethash,
+        UNIT_SECRET,
+    )
+
+    initiator_manager.handle_onchain_secretreveal(
+        current_state,
+        state_change,
+        channel_map,
+        pseudo_random_generator,
+    )
+
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_onchain_unlockedlocks
