@@ -17,7 +17,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import NettingChannelState
-from raiden.transfer.state_change import ActionCancelPayment, Block
+from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils import typing
 
 # TODO:
@@ -264,6 +264,24 @@ def handle_secretreveal(
     return iteration
 
 
+def handle_onchain_secretreveal(
+        payment_state: InitiatorPaymentState,
+        state_change: ReceiveSecretReveal,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    channel_identifier = payment_state.initiator.channel_identifier
+    channel_state = channelidentifiers_to_channels[channel_identifier]
+    sub_iteration = initiator.handle_onchain_secretreveal(
+        payment_state.initiator,
+        state_change,
+        channel_state,
+        pseudo_random_generator,
+    )
+    iteration = iteration_from_sub(payment_state, sub_iteration)
+    return iteration
+
+
 def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
@@ -322,6 +340,13 @@ def state_transition(
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secretreveal(
+            payment_state,
+            state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ContractReceiveSecretReveal:
+        iteration = handle_onchain_secretreveal(
             payment_state,
             state_change,
             channelidentifiers_to_channels,

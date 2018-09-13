@@ -24,7 +24,7 @@ from raiden.transfer.state import (
     RouteState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils import typing
 
 
@@ -37,7 +37,13 @@ def handle_block(
     secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
-    if locked_lock and channel.is_lock_expired(locked_lock, secrethash, state_change.block_number):
+    lock_expired = channel.is_lock_expired(
+        channel_state.our_state,
+        locked_lock,
+        secrethash,
+        state_change.block_number,
+    )
+    if locked_lock and lock_expired:
         # Lock has expired, cleanup...
         expired_lock_events = channel.events_for_expired_lock(
             channel_state,
@@ -293,5 +299,29 @@ def handle_secretreveal(
         iteration = TransitionResult(None, [payment_sent_success, unlock_success, unlock_lock])
     else:
         iteration = TransitionResult(initiator_state, list())
+
+    return iteration
+
+
+def handle_onchain_secretreveal(
+        initiator_state: InitiatorTransferState,
+        state_change: ContractReceiveSecretReveal,
+        channel_state: NettingChannelState,
+        pseudo_random_generator: random.Random,
+):
+    """ Validates and handles a ContractReceiveSecretReveal state change. """
+    valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
+
+    iteration = TransitionResult(initiator_state, list())
+    if valid_secret:
+        # Register LockedTransfer in secrethashes_to_onchain_unlockedlocks
+        # without removing the LockedTransfer from secrethashes_to_lockedlocks
+        channel.register_onchain_secret(
+            channel_state=channel_state,
+            secret=state_change.secret,
+            secrethash=state_change.secrethash,
+            delete_lock=False,
+        )
+        iteration.new_state = initiator_state
 
     return iteration
