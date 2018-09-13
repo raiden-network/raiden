@@ -53,6 +53,7 @@ if True:
         RaidenError,
         RaidenServicePortInUseError,
         ReplacementTransactionUnderpriced,
+        TransactionAlreadyPending,
     )
     from raiden.log_config import configure_logging
     from raiden.network.blockchain_service import BlockChainService
@@ -945,7 +946,7 @@ class NodeRunner:
                 # Shouldn't happen
                 raise RuntimeError(f"Invalid transport type '{self._options['transport']}'")
             app.stop()
-        except ReplacementTransactionUnderpriced as e:
+        except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
             print(
                 '{}. Please make sure that this Raiden node is the '
                 'only user of the selected account'.format(str(e)),

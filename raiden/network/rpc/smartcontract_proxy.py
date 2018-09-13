@@ -9,7 +9,11 @@ from web3.utils.abi import get_abi_input_types
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 
 from raiden.constants import EthClient
-from raiden.exceptions import InsufficientFunds, ReplacementTransactionUnderpriced
+from raiden.exceptions import (
+    InsufficientFunds,
+    ReplacementTransactionUnderpriced,
+    TransactionAlreadyPending,
+)
 from raiden.utils.filters import decode_event
 
 try:
@@ -24,7 +28,8 @@ class ClientErrorInspectResult(Enum):
     PROPAGATE_ERROR = 1
     INSUFFICIENT_FUNDS = 2
     TRANSACTION_UNDERPRICED = 3
-    ALWAYS_FAIL = 4
+    TRANSACTION_PENDING = 4
+    ALWAYS_FAIL = 5
 
 
 def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspectResult:
@@ -43,6 +48,8 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspe
                 return ClientErrorInspectResult.ALWAYS_FAIL
             elif error['message'] == 'replacement transaction underpriced':
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+            elif error['message'].startswith('known transaction:'):
+                return ClientErrorInspectResult.TRANSACTION_PENDING
 
     elif eth_node == EthClient.PARITY:
         if error['code'] == -32010 and 'insufficient funds' in error['message']:
@@ -86,6 +93,11 @@ class ContractProxy:
                     'caused by the reuse of the previous transaction '
                     'nonce as well as paying an amount of gas less than or '
                     'equal to the previous transaction\'s gas amount',
+                )
+            elif action == ClientErrorInspectResult.TRANSACTION_PENDING:
+                raise TransactionAlreadyPending(
+                    'The transaction has already been submitted. Please '
+                    'wait until is has been mined or increase the gas price.',
                 )
 
             raise e

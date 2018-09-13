@@ -190,6 +190,10 @@ class ReplacementTransactionUnderpriced(RaidenError):
     """Raised when a replacement transaction is rejected by the blockchain"""
 
 
+class TransactionAlreadyPending(RaidenError):
+    """Raised when a transaction is already pending"""
+
+
 class ChannelOutdatedError(RaidenError):
     """ Raised when an action is invoked on a channel whose
     identifier has been replaced with a new channel identifier
