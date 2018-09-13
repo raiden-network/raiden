@@ -607,7 +607,7 @@ class RaidenAPI:
             token_address: typing.TokenAddress,
             amount: typing.TokenAmount,
             target: typing.Address,
-            identifier: int = None,
+            identifier: typing.PaymentID = None,
             transfer_timeout: int = None,
     ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
@@ -628,7 +628,7 @@ class RaidenAPI:
             token_address: typing.TokenAddress,
             amount: typing.TokenAmount,
             target: typing.Address,
-            identifier: int = None,
+            identifier: typing.PaymentID = None,
     ):
 
         if not isinstance(amount, int):
