@@ -316,26 +316,21 @@ class RaidenService(Runnable):
                     log.error(str(e))
 
         self.alarm.start()
+        self.transport.start(self)
 
         events_queues = views.get_all_messagequeues(chain_state)
-        queueids_to_queues = dict()
 
         for queue_identifier, event_queue in events_queues.items():
+            self.transport.start_health_check(queue_identifier.recipient)
 
             # repopulate identifier_to_results for pending transfers
             for event in event_queue:
                 if type(event) == SendDirectTransfer:
                     self.identifier_to_results[event.payment_identifier] = AsyncResult()
 
-            message_queue = []
-            for event in event_queue:
                 message = message_from_sendevent(event, self.address)
                 self.sign(message)
-                message_queue.append(message)
-
-            queueids_to_queues[queue_identifier] = message_queue
-
-        self.transport.start(self, queueids_to_queues)
+                self.transport.send_async(queue_identifier, message)
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)

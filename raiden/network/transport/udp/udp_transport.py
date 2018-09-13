@@ -199,7 +199,6 @@ class UDPTransport(Runnable):
     def start(
             self,
             raiden: RaidenService,
-            queueids_to_queues: typing.Dict[QueueIdentifier, typing.List[Message]],
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
@@ -211,13 +210,6 @@ class UDPTransport(Runnable):
         # server.stop() clears the handle. Since this may be a restart the
         # handle must always be set
         self.server.set_handle(self.receive)
-
-        for queue_identifier, queue in queueids_to_queues.items():
-            encoded_queue = [
-                (message.encode(), message.message_identifier)
-                for message in queue
-            ]
-            self.init_queue_for(queue_identifier, encoded_queue)
 
         self.server.start()
         super().start()

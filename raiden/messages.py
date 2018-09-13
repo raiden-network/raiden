@@ -14,6 +14,7 @@ from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage
+from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.events import SendDirectTransfer, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
@@ -115,7 +116,7 @@ def assert_transfer_values(payment_identifier, token, recipient):
         raise ValueError('recipient is an invalid address')
 
 
-def decode(data):
+def decode(data: bytes):
     try:
         klass = CMDID_TO_CLASS[data[0]]
     except KeyError:
@@ -123,7 +124,7 @@ def decode(data):
     return klass.decode(data)
 
 
-def from_dict(data):
+def from_dict(data: dict):
     try:
         klass = CLASSNAME_TO_CLASS[data['type']]
     except KeyError:
@@ -138,7 +139,7 @@ def from_dict(data):
     return klass.from_dict(data)
 
 
-def message_from_sendevent(send_event, our_address):
+def message_from_sendevent(send_event: SendMessageEvent, our_address: Address) -> 'Message':
     if type(send_event) == SendLockedTransfer:
         message = LockedTransfer.from_event(send_event)
     elif type(send_event) == SendDirectTransfer:
