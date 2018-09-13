@@ -1453,11 +1453,11 @@ def register_secret_endstate(
         secrethash: typing.SecretHash,
 ) -> None:
     if is_lock_locked(end_state, secrethash):
-        pendinglock = end_state.secrethashes_to_lockedlocks[secrethash]
+        pending_lock = end_state.secrethashes_to_lockedlocks[secrethash]
         del end_state.secrethashes_to_lockedlocks[secrethash]
 
         end_state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
-            pendinglock,
+            pending_lock,
             secret,
         )
 
@@ -1471,20 +1471,20 @@ def register_onchain_secret_endstate(
     # the lock might be in end_state.secrethashes_to_lockedlocks or
     # end_state.secrethashes_to_unlockedlocks
     # It should be removed from both and moved into secrethashes_to_onchain_unlockedlocks
-    pendinglock = None
+    pending_lock = None
 
     if is_lock_locked(end_state, secrethash):
-        pendinglock = end_state.secrethashes_to_lockedlocks[secrethash]
+        pending_lock = end_state.secrethashes_to_lockedlocks[secrethash]
 
     if secrethash in end_state.secrethashes_to_unlockedlocks:
-        pendinglock = end_state.secrethashes_to_unlockedlocks[secrethash].lock
+        pending_lock = end_state.secrethashes_to_unlockedlocks[secrethash].lock
 
-    if pendinglock:
+    if pending_lock:
         if delete_lock:
             _del_lock(end_state, secrethash)
 
         end_state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
-            pendinglock,
+            pending_lock,
             secret,
         )
 

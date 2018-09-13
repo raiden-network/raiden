@@ -1147,9 +1147,9 @@ def test_channel_never_expires_lock_with_secret_onchain():
     lock_secrethash = sha3(lock_secret)
 
     lock = HashTimeLockState(
-        lock_amount,
-        lock_expiration,
-        lock_secrethash,
+        amount=lock_amount,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
     )
 
     payment_identifier = 1
@@ -1158,14 +1158,14 @@ def test_channel_never_expires_lock_with_secret_onchain():
     transfer_initiator = factories.make_address()
 
     channel.send_lockedtransfer(
-        channel_state,
-        transfer_initiator,
-        transfer_target,
-        lock_amount,
-        message_identifier,
-        payment_identifier,
-        lock_expiration,
-        lock_secrethash,
+        channel_state=channel_state,
+        initiator=transfer_initiator,
+        target=transfer_target,
+        amount=lock_amount,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
     )
 
     assert lock.secrethash in channel_state.our_state.secrethashes_to_lockedlocks
@@ -1196,24 +1196,24 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
     lock_secret = b'test_channel_must_accept_expired_locks'
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
-        lock_amount,
-        lock_expiration,
-        lock_secrethash,
+        amount=lock_amount,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
     )
 
     nonce = 1
     transferred_amount = 0
     receive_lockedtransfer = make_receive_transfer_mediated(
-        channel_state,
-        privkey2,
-        nonce,
-        transferred_amount,
-        lock,
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        lock=lock,
     )
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(
-        channel_state,
-        receive_lockedtransfer,
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
     )
     assert is_valid, msg
 

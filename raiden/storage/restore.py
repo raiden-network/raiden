@@ -1,10 +1,20 @@
+from contextlib import contextmanager
 from copy import deepcopy
 
-from raiden.storage import wal
 from raiden.transfer import node, views
+from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import typing
+
+
+@contextmanager
+def temporary_state_manager(state_transition, state):
+    state_manager = StateManager(state_transition, state)
+    try:
+        yield state_manager
+    finally:
+        state_manager = None
 
 
 def channel_state_until_balance_hash(
@@ -13,7 +23,7 @@ def channel_state_until_balance_hash(
         channel_identifier: typing.ChannelID,
         target_balance_hash: bytes,
 ) -> typing.Optional[NettingChannelState]:
-    """ Go through WAL state changes until a certain hash balance is found. """
+    """ Go through WAL state changes until a certain balance hash is found. """
 
     # Restore state from the latest snapshot
     snapshot = raiden.wal.storage.get_latest_state_snapshot()
@@ -35,36 +45,36 @@ def channel_state_until_balance_hash(
     )
 
     # Create a copy WAL
-    log = wal.wal_from_snapshot(node.state_transition, raiden.wal.storage, chain_state)
-    for state_change in unapplied_state_changes:
-        log.state_manager.dispatch(state_change)
-        channel_state = views.get_channelstate_by_id(
-            chain_state=chain_state,
-            payment_network_id=raiden.default_registry.address,
-            token_address=token_address,
-            channel_id=channel_identifier,
-        )
-        if not channel_state:
-            continue
-
-        our_latest_balance_proof = channel_state.our_state.balance_proof
-        partner_latest_balance_proof = channel_state.partner_state.balance_proof
-
-        balance_hash = None
-        if partner_latest_balance_proof:
-            balance_hash = hash_balance_data(
-                transferred_amount=partner_latest_balance_proof.transferred_amount,
-                locked_amount=partner_latest_balance_proof.locked_amount,
-                locksroot=partner_latest_balance_proof.locksroot,
+    with temporary_state_manager(node.state_transition, chain_state) as state_manager:
+        for state_change in unapplied_state_changes:
+            state_manager.dispatch(state_change)
+            channel_state = views.get_channelstate_by_id(
+                chain_state=chain_state,
+                payment_network_id=raiden.default_registry.address,
+                token_address=token_address,
+                channel_id=channel_identifier,
             )
-        elif our_latest_balance_proof:
-            balance_hash = hash_balance_data(
-                transferred_amount=our_latest_balance_proof.transferred_amount,
-                locked_amount=our_latest_balance_proof.locked_amount,
-                locksroot=our_latest_balance_proof.locksroot,
-            )
+            if not channel_state:
+                continue
 
-        if target_balance_hash == balance_hash:
-            return channel_state
+            our_latest_balance_proof = channel_state.our_state.balance_proof
+            partner_latest_balance_proof = channel_state.partner_state.balance_proof
 
-    return None
+            balance_hash = None
+            if partner_latest_balance_proof:
+                balance_hash = hash_balance_data(
+                    transferred_amount=partner_latest_balance_proof.transferred_amount,
+                    locked_amount=partner_latest_balance_proof.locked_amount,
+                    locksroot=partner_latest_balance_proof.locksroot,
+                )
+            elif our_latest_balance_proof:
+                balance_hash = hash_balance_data(
+                    transferred_amount=our_latest_balance_proof.transferred_amount,
+                    locked_amount=our_latest_balance_proof.locked_amount,
+                    locksroot=our_latest_balance_proof.locksroot,
+                )
+
+            if target_balance_hash == balance_hash:
+                return channel_state
+
+        return None

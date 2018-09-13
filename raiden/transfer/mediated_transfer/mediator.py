@@ -652,7 +652,7 @@ def events_for_unlock_if_closed(
         transfers_pair: typing.List[MediationPairState],
         secret: typing.Secret,
         secrethash: typing.SecretHash,
-):
+) -> typing.List[ContractSendChannelBatchUnlock]:
     """ Unlock on chain if the payer channel is closed and the secret is known.
     If a channel is closed because of another task a balance proof will not be
     received, so there is no reason to wait for the unsafe region before
@@ -706,10 +706,10 @@ def events_for_expired_locks(
         secrethash = mediator_state.secrethash
         locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
         lock_expired = channel.is_lock_expired(
-            channel_state.our_state,
-            locked_lock,
-            secrethash,
-            block_number,
+            end_state=channel_state.our_state,
+            locked_lock=locked_lock,
+            secrethash=secrethash,
+            block_number=block_number,
         )
         if locked_lock and lock_expired:
             # Lock has expired, cleanup...

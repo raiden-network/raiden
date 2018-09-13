@@ -794,6 +794,9 @@ def test_initiator_lock_expired():
 
 
 def test_initiator_handle_contract_receive_secret_reveal():
+    """ Make sure the initiator handles ContractReceiveSecretReveal
+    and checks the existence of the transfer's secrethash in
+    secrethashes_to_lockedlocks and secrethashes_to_onchain_unlockedlocks. """
     amount = UNIT_TRANSFER_AMOUNT * 2
     block_number = 1
     refund_pkey, refund_address = factories.make_privkey_address()
@@ -816,11 +819,11 @@ def test_initiator_handle_contract_receive_secret_reveal():
 
     block_number = 10
     current_state = make_initiator_manager_state(
-        available_routes,
-        factories.UNIT_TRANSFER_DESCRIPTION,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
+        routes=available_routes,
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     transfer = current_state.initiator.transfer
@@ -828,17 +831,17 @@ def test_initiator_handle_contract_receive_secret_reveal():
     assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
     state_change = ContractReceiveSecretReveal(
-        factories.make_transaction_hash(),
-        factories.make_address(),
-        transfer.lock.secrethash,
-        UNIT_SECRET,
+        transaction_hash=factories.make_transaction_hash(),
+        secret_registry_address=factories.make_address(),
+        secrethash=transfer.lock.secrethash,
+        secret=UNIT_SECRET,
     )
 
     initiator_manager.handle_onchain_secretreveal(
-        current_state,
-        state_change,
-        channel_map,
-        pseudo_random_generator,
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
