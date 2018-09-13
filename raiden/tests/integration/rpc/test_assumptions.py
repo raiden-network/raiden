@@ -24,6 +24,23 @@ except (ModuleNotFoundError, DistributionNotFound):
 # pylint: disable=unused-argument,protected-access
 
 
+def make_fixed_gas_price_strategy(gas_price):
+    def fixed_gas_price_strategy(_web3, _transaction_params):
+        return gas_price
+
+    return fixed_gas_price_strategy
+
+
+def make_decreasing_gas_price_strategy(gas_price):
+    # this is a really hacky way to create decreasing numbers
+    def increasing_gas_price_strategy(web3, _transaction_params):
+        old_counter = getattr(web3, 'counter', gas_price)
+        web3.counter = old_counter - 1
+        return old_counter
+
+    return increasing_gas_price_strategy
+
+
 def deploy_rpc_test_contract(deploy_client):
     here = os.path.dirname(os.path.relpath(__file__))
     contract_path = os.path.join(here, 'RpcTest.sol')
@@ -118,7 +135,8 @@ def test_estimate_gas_fail(deploy_client):
 def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
     gas_price = 2000000000
-    deploy_client.given_gas_price = gas_price
+    gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
+    deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.contract_address
@@ -127,7 +145,6 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     second_client = JSONRPCClient(
         web3=deploy_client.web3,
         privkey=deploy_client.privkey,
-        gasprice=gas_price,
     )
 
     second_proxy = second_client.new_contract_proxy(
@@ -145,7 +162,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
 def test_duplicated_transaction_different_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
     gas_price = 2000000000
-    deploy_client.given_gas_price = gas_price
+    deploy_client.web3.eth.setGasPriceStrategy(make_decreasing_gas_price_strategy(gas_price))
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.contract_address
@@ -154,7 +171,6 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
     second_client = JSONRPCClient(
         web3=deploy_client.web3,
         privkey=deploy_client.privkey,
-        gasprice=gas_price + 1,
     )
 
     second_proxy = second_client.new_contract_proxy(
