@@ -1,5 +1,6 @@
 # pylint: disable=too-many-arguments,redefined-outer-name
 import pytest
+
 from raiden.tests.integration.api.utils import create_api_server
 
 

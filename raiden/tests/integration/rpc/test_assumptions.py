@@ -4,7 +4,7 @@ import pytest
 from eth_utils import decode_hex, to_checksum_address
 from pkg_resources import DistributionNotFound
 
-from raiden.exceptions import ReplacementTransactionUnderpriced
+from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.solc import compile_files_cwd
@@ -115,16 +115,19 @@ def test_estimate_gas_fail(deploy_client):
     assert not contract_proxy.estimate_gas('fail')
 
 
-def test_duplicated_transaction_raises(deploy_client):
+def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
+    gas_price = 2000000000
+    deploy_client.given_gas_price = gas_price
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     second_client = JSONRPCClient(
-        deploy_client.web3,
-        deploy_client.privkey,
+        web3=deploy_client.web3,
+        privkey=deploy_client.privkey,
+        gasprice=gas_price,
     )
 
     second_proxy = second_client.new_contract_proxy(
@@ -134,7 +137,34 @@ def test_duplicated_transaction_raises(deploy_client):
 
     gas = contract_proxy.estimate_gas('ret') * 2
 
-    with pytest.raises((ReplacementTransactionUnderpriced, ValidationError)):
+    with pytest.raises(TransactionAlreadyPending):
+        second_proxy.transact('ret', startgas=gas)
+        contract_proxy.transact('ret', startgas=gas)
+
+
+def test_duplicated_transaction_different_gas_price_raises(deploy_client):
+    """ If the same transaction is sent twice a JSON RPC error is raised. """
+    gas_price = 2000000000
+    deploy_client.given_gas_price = gas_price
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.contract_address
+    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+
+    second_client = JSONRPCClient(
+        web3=deploy_client.web3,
+        privkey=deploy_client.privkey,
+        gasprice=gas_price + 1,
+    )
+
+    second_proxy = second_client.new_contract_proxy(
+        contract_proxy.contract.abi,
+        contract_proxy.contract_address,
+    )
+
+    gas = contract_proxy.estimate_gas('ret') * 2
+
+    with pytest.raises(ReplacementTransactionUnderpriced):
         second_proxy.transact('ret', startgas=gas)
         contract_proxy.transact('ret', startgas=gas)
 
