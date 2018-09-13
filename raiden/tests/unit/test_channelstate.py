@@ -30,6 +30,7 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventTransferReceivedInvalidDirectTransfer,
 )
+from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import (
     LEAVES,
     MERKLEROOT,
@@ -1130,6 +1131,123 @@ def test_interwoven_transfers():
                 channel_state.our_state,
                 partner_model_current,
             )
+
+
+def test_channel_never_expires_lock_with_secret_onchain():
+    """ Send a mediated transfer and register secret on chain.
+    The lock must be moved into secrethashes_to_onchain_unlockedlocks
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, _ = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    lock_amount = 30
+    lock_expiration = 10
+    lock_secret = sha3(b'test_end_state')
+    lock_secrethash = sha3(lock_secret)
+
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    payment_identifier = 1
+    message_identifier = random.randint(0, UINT64_MAX)
+    transfer_target = factories.make_address()
+    transfer_initiator = factories.make_address()
+
+    channel.send_lockedtransfer(
+        channel_state,
+        transfer_initiator,
+        transfer_target,
+        lock_amount,
+        message_identifier,
+        payment_identifier,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    assert lock.secrethash in channel_state.our_state.secrethashes_to_lockedlocks
+
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock.secrethash,
+        delete_lock=True,
+    )
+
+    assert lock.secrethash not in channel_state.our_state.secrethashes_to_lockedlocks
+    assert lock.secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
+
+
+def test_channel_must_never_expire_locks_with_onchain_secret():
+    """ A transfer is received and the secret is registered on chain.
+    This means that any lock expired messages should not be accepted.
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    block_number = 100
+
+    lock_amount = 10
+    lock_expiration = block_number - 10
+    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        lock_amount,
+        lock_expiration,
+        lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state,
+        privkey2,
+        nonce,
+        transferred_amount,
+        lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state,
+        receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+        delete_lock=False,
+    )
+
+    lock_expired = ReceiveLockExpired(
+        channel_state.partner_state.address,
+        receive_lockedtransfer.balance_proof,
+        lock_secrethash,
+        1,
+    )
+
+    is_valid, _, _ = channel.is_valid_lock_expired(
+        lock_expired,
+        channel_state,
+        channel_state.partner_state,
+        channel_state.our_state,
+    )
+
+    assert not is_valid
+
+    channel.handle_receive_lock_expired(
+        channel_state,
+        lock_expired,
+    )
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
 
 def test_channel_must_accept_expired_locks():
