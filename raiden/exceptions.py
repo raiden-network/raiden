@@ -190,7 +190,7 @@ class ReplacementTransactionUnderpriced(RaidenError):
     """Raised when a replacement transaction is rejected by the blockchain"""
 
 
-class TransactionAlreadyPending(RaidenError):
+class TransactionAlreadyPending(RaidenUnrecoverableError):
     """Raised when a transaction is already pending"""
 
 
