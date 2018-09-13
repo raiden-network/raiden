@@ -705,7 +705,13 @@ def events_for_expired_locks(
 
         secrethash = mediator_state.secrethash
         locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
-        if locked_lock and channel.is_lock_expired(locked_lock, secrethash, block_number):
+        lock_expired = channel.is_lock_expired(
+            channel.our_state,
+            locked_lock,
+            secrethash,
+            block_number,
+        )
+        if locked_lock and lock_expired:
             # Lock has expired, cleanup...
             transfer_pair.payee_state = 'payee_expired'
             expired_lock_events = channel.events_for_expired_lock(
