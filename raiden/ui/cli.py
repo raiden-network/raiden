@@ -1069,19 +1069,11 @@ class NodeRunner:
                 finally:
                     task.get()  # re-raise
 
-            try:
-                gevent.joinall(
-                    [gevent.spawn(stop_task, task) for task in tasks],
-                    app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
-                    raise_error=True,
-                )
-            except APIServerPortInUseError:
-                click.secho(
-                    f'ERROR: API Address {api_host}:{api_port} is in use. '
-                    f'Use --api-address <host:port> to specify a different port.',
-                    fg='red',
-                )
-                sys.exit(1)
+            gevent.joinall(
+                [gevent.spawn(stop_task, task) for task in tasks],
+                app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
+                raise_error=True,
+            )
 
         return app_
 
