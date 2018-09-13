@@ -3,6 +3,7 @@ Changelog
 =========
 
 
+* :bug:`2453` Connection manager will no longer be stuck if there are no available channel partners
 * :bug:`2437` Fix a bug where neighbors couldn't communicate through matrix after restart
 * :bug:`2370` Fixes a few issues with the token amount input.
 * :bug:`2439` Return properly filtered results from the API payments event endpoint
