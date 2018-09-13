@@ -122,10 +122,19 @@ def is_lock_locked(
 
 
 def is_lock_expired(
+        end_state: NettingChannelEndState,
         locked_lock: typing.Optional[LockedTransferSignedState],
         secrethash: typing.SecretHash,
         block_number: typing.BlockNumber,
 ):
+    """ Determine whether a lock is expired based on certain conditions. """
+
+    # If secret is registered on-chain, the lock never expires.
+    secret_registered_on_chain = secrethash in end_state.secrethashes_to_onchain_unlockedlocks
+    if secret_registered_on_chain:
+        return False
+
+    # If the current block exceeds lock's expiration + confirmation time then the lock has expired.
     if locked_lock:
         lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
         if block_number < lock_expiration_threshold:
@@ -453,6 +462,9 @@ def is_valid_lock_expired(
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
     lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash)
+    lock_registered_on_chain = (
+        secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
+    )
 
     if not lock:
         msg = (
@@ -480,6 +492,10 @@ def is_valid_lock_expired(
 
     elif merkletree is None:
         msg = 'Invalid LockExpired message. Same lockhash handled twice.'
+        result = (False, msg, None)
+
+    elif lock_registered_on_chain:
+        msg = 'Invalid LockExpired message. Secret registered on-chain.'
         result = (False, msg, None)
 
     else:
@@ -1450,6 +1466,7 @@ def register_onchain_secret_endstate(
         end_state: NettingChannelEndState,
         secret: typing.Secret,
         secrethash: typing.SecretHash,
+        delete_lock: bool = True,
 ) -> None:
     # the lock might be in end_state.secrethashes_to_lockedlocks or
     # end_state.secrethashes_to_unlockedlocks
@@ -1463,7 +1480,8 @@ def register_onchain_secret_endstate(
         pendinglock = end_state.secrethashes_to_unlockedlocks[secrethash].lock
 
     if pendinglock:
-        _del_lock(end_state, secrethash)
+        if delete_lock:
+            _del_lock(end_state, secrethash)
 
         end_state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
             pendinglock,
@@ -1492,6 +1510,7 @@ def register_onchain_secret(
         channel_state: NettingChannelState,
         secret: typing.Secret,
         secrethash: typing.SecretHash,
+        delete_lock: bool = True,
 ) -> None:
     """This will register the onchain secret and set the lock to the unlocked stated.
 
@@ -1501,8 +1520,8 @@ def register_onchain_secret(
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
-    register_onchain_secret_endstate(our_state, secret, secrethash)
-    register_onchain_secret_endstate(partner_state, secret, secrethash)
+    register_onchain_secret_endstate(our_state, secret, secrethash, delete_lock)
+    register_onchain_secret_endstate(partner_state, secret, secrethash, delete_lock)
 
 
 def handle_send_directtransfer(
