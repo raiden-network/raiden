@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import distutils.log
 import os
-import re
 import subprocess
 from distutils.spawn import find_executable
 
@@ -83,14 +82,9 @@ with open('README.rst') as readme_file:
 history = ''
 
 
-def get_egg_or_req(req):
-    match = re.search('#egg=([^#@]+)', req, re.U | re.I)
-    return (match and match.group(1)) or req
-
-
-with open('requirements.txt') as req_file:
+with open('constraints.txt') as req_file:
     install_requires = list({
-        get_egg_or_req(requirement)
+        requirement
         for requirement in req_file
         if requirement.strip() and not requirement.lstrip().startswith('#')
     })
