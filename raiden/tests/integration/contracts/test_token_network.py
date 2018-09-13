@@ -289,7 +289,7 @@ def test_token_network_proxy_basics(
     wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
 
     # try to settle using incorrect data
-    with pytest.raises(RaidenRecoverableError):
+    with pytest.raises(RaidenUnrecoverableError):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=1,
@@ -504,7 +504,7 @@ def test_token_network_proxy_update_transfer(
     wait_blocks(c1_client.web3, 10)
 
     # settling with an invalid amount
-    with pytest.raises(RaidenRecoverableError):
+    with pytest.raises(RaidenUnrecoverableError):
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,
