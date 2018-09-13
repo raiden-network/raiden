@@ -316,8 +316,10 @@ class RaidenEventHandler:
         )
         our_balance_proof = channel_settle_event.our_balance_proof
         partner_balance_proof = channel_settle_event.partner_balance_proof
+        channel_details = channel.detail()
 
-        if our_balance_proof:
+        our_balance_hash = channel_details.participants_data.our_details.balance_hash
+        if our_balance_proof and our_balance_hash != EMPTY_HASH:
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
@@ -326,7 +328,8 @@ class RaidenEventHandler:
             our_locked_amount = 0
             our_locksroot = EMPTY_HASH
 
-        if partner_balance_proof:
+        partner_balance_hash = channel_details.participants_data.partner_details.balance_hash
+        if partner_balance_proof and partner_balance_hash != EMPTY_HASH:
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot
