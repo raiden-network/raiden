@@ -2,7 +2,7 @@
 Changelog
 =========
 
-
+* "bug:`2367` Token network selection dropdown will not filter out not connected networks.
 * :bug:`2453` Connection manager will no longer be stuck if there are no available channel partners
 * :bug:`2437` Fix a bug where neighbors couldn't communicate through matrix after restart
 * :bug:`2370` Fixes a few issues with the token amount input.

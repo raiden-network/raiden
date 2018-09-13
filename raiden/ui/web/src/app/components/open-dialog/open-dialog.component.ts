@@ -2,7 +2,7 @@ import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { from, Observable } from 'rxjs';
-import { filter, flatMap, share, startWith, takeWhile, toArray } from 'rxjs/operators';
+import { filter, flatMap, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenService } from '../../services/raiden.service';
@@ -30,7 +30,7 @@ export interface OpenDialogResult {
     templateUrl: './open-dialog.component.html',
     styleUrls: ['./open-dialog.component.css']
 })
-export class OpenDialogComponent implements OnInit {
+export class OpenDialogComponent  {
 
     public form: FormGroup = this.fb.group({
         address: '',
@@ -39,14 +39,8 @@ export class OpenDialogComponent implements OnInit {
         settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
     });
 
-    public token: FormControl;
-    public settleTimeout: FormControl;
-
     @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
     @ViewChild(AddressInputComponent) addressInput: AddressInputComponent;
-
-    public filteredOptions$: Observable<UserToken[]>;
-    private tokens$: Observable<UserToken[]>;
 
     constructor(
         @Inject(MAT_DIALOG_DATA) public data: OpenDialogPayload,
@@ -55,25 +49,6 @@ export class OpenDialogComponent implements OnInit {
         private identiconCacheService: IdenticonCacheService,
         private fb: FormBuilder,
     ) {
-    }
-
-    ngOnInit() {
-
-        this.token = this.form.get('token') as FormControl;
-        this.settleTimeout = this.form.get('settle_timeout') as FormControl;
-
-        this.tokens$ = this.raidenService.getTokens(true).pipe(
-            flatMap((tokens: UserToken[]) => from(tokens)),
-            filter((token: UserToken) => !!token.connected),
-            toArray(),
-            share()
-        );
-
-        this.filteredOptions$ = this.form.controls['token'].valueChanges.pipe(
-            startWith(''),
-            takeWhile(value => typeof value === 'string'),
-            flatMap(value => this._filter(value))
-        );
     }
 
     accept() {
@@ -89,27 +64,7 @@ export class OpenDialogComponent implements OnInit {
         this.dialogRef.close(result);
     }
 
-    tokenSelected(value: UserToken) {
+    tokenNetworkSelected(value: UserToken) {
         this.tokenInput.decimals = value.decimals;
-        this.token.setValue(value.address);
-    }
-
-    private _filter(value?: string): Observable<UserToken[]> {
-        if (!value || typeof value !== 'string') {
-            return this.tokens$;
-        }
-
-        const keyword = value.toLowerCase();
-
-        return this.tokens$.pipe(
-            flatMap((tokens: UserToken[]) => from(tokens)),
-            filter((token: UserToken) => {
-                const name = token.name.toLowerCase();
-                const symbol = token.symbol.toLowerCase();
-                const address = token.address.toLowerCase();
-                return name.startsWith(keyword) || symbol.startsWith(keyword) || address.startsWith(keyword);
-            }),
-            toArray()
-        );
     }
 }
