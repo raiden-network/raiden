@@ -8,7 +8,7 @@ from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
 
-from raiden.utils import gas_reserve, get_system_spec
+from raiden.utils import gas_reserve
 from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
@@ -21,9 +21,9 @@ REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def check_version():
+def check_version(current_version: str):
     """ Check periodically for a new release """
-    app_version = parse_version(get_system_spec()['raiden'])
+    app_version = parse_version(current_version)
     while True:
         try:
             content = requests.get(LATEST).json()

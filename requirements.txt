@@ -23,6 +23,7 @@ eth-utils==1.2.0
 structlog
 colorama
 py-solc
+pytest
 web3[tester]==4.7.1
 py-geth==2.0.1
 pysha3==1.0.2
