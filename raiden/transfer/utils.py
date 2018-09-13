@@ -3,7 +3,30 @@ import random
 from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.utils import typing
+from raiden.utils.serialization import serialize_bytes
+
+
+def get_latest_known_balance_proof(
+        storage: SQLiteStorage,
+        balance_hash: typing.BalanceHash,
+):
+    state_change = storage.get_latest_state_change_by_data_field(
+        'balance_hash',
+        serialize_bytes(balance_hash),
+    )
+    if state_change:
+        return state_change.balance_proof
+
+    event = storage.get_latest_event_by_data_field(
+        'balance_hash',
+        serialize_bytes(balance_hash),
+    )
+    if event:
+        return event.balance_proof
+
+    return None
 
 
 def hash_balance_data(

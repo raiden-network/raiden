@@ -297,6 +297,7 @@ class SendBalanceProof(SendMessageEvent):
             'payment_identifier': self.payment_identifier,
             'token_address': to_checksum_address(self.token),
             'secret': serialization.serialize_bytes(self.secret),
+            'balance_proof': self.balance_proof,
             'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
         }
 
