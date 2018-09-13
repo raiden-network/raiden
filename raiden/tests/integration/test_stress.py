@@ -291,7 +291,14 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize('deposit', [5])
 @pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
-def test_stress(raiden_network, deposit, retry_timeout, token_addresses, port_generator):
+def test_stress(
+        raiden_network,
+        deposit,
+        retry_timeout,
+        token_addresses,
+        port_generator,
+        skip_if_not_udp,
+):
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
