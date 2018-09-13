@@ -49,7 +49,7 @@ checkout of raiden.
 #. Install the dependecies::
 
     $ cd raiden
-    $ pip install -r requirements-dev.txt
+    $ pip install -c contraints.txt -r requirements-dev.txt
 
 #. Make raiden available inside the virtualenv::
 
