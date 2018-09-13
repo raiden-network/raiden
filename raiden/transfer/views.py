@@ -13,7 +13,7 @@ from raiden.transfer.state import (
     MediatorTask,
     NettingChannelState,
     PaymentNetworkState,
-    QueueIdsToQueues,
+    QueueIdsToEvents,
     TargetTask,
     TokenNetworkState,
 )
@@ -75,7 +75,7 @@ def get_pending_transactions(chain_state: ChainState) -> typing.List[ContractSen
 
 def get_all_messagequeues(
         chain_state: ChainState,
-) -> QueueIdsToQueues:
+) -> QueueIdsToEvents:
     return chain_state.queueids_to_queues
 
 

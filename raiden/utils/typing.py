@@ -106,3 +106,5 @@ SuccessOrError = Tuple[bool, Optional[str]]
 BlockSpecification = Union[str, T_BlockNumber]
 
 ChannelMap = Dict[ChannelID, 'NettingChannelState']
+
+QueueIdsToMessages = Dict['QueueIdentifier', List['Message']]

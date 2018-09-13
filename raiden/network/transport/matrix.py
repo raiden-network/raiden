@@ -51,7 +51,6 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_UNREACHABLE,
-    QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.utils import pex
@@ -64,6 +63,7 @@ from raiden.utils.typing import (
     List,
     Mapping,
     Optional,
+    QueueIdsToMessages,
     Set,
     Tuple,
     Type,
@@ -182,7 +182,7 @@ class MatrixTransport(Runnable):
     def start(
         self,
         raiden_service: RaidenService,
-        initial_queues: QueueIdsToQueues,
+        initial_queues: QueueIdsToMessages,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
@@ -325,7 +325,7 @@ class MatrixTransport(Runnable):
             self._send_with_retry(queue_identifier, message)
 
     @property
-    def _queueids_to_queues(self) -> QueueIdsToQueues:
+    def _queueids_to_queues(self) -> QueueIdsToMessages:
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
 
