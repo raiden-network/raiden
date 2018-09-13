@@ -104,7 +104,7 @@ def geth_to_cmd(
     if node.get('mine', False):
         cmd.append('--mine')
 
-    log.debug('geth command: {}'.format(cmd))
+    log.debug('geth command', command=cmd)
 
     return cmd
 
