@@ -66,6 +66,7 @@ class SendLockExpired(SendMessageEvent):
         result = {
             'message_identifier': self.message_identifier,
             'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'recipient': to_checksum_address(self.recipient),
         }
@@ -296,7 +297,7 @@ class SendBalanceProof(SendMessageEvent):
             'payment_identifier': self.payment_identifier,
             'token_address': to_checksum_address(self.token),
             'secret': serialization.serialize_bytes(self.secret),
-            'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
         }
 
         return result
@@ -465,6 +466,7 @@ class SendRefundTransfer(SendMessageEvent):
             'payment_identifier': self.payment_identifier,
             'token_address': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
+            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
             'lock': self.lock,
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
