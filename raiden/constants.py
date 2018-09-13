@@ -8,6 +8,8 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
 
+SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
+
 UINT64_MAX = 2 ** 64 - 1
 UINT64_MIN = 0
 

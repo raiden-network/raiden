@@ -2,11 +2,18 @@ import sqlite3
 import threading
 from typing import Any, Optional, Tuple
 
+from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 
 # The latest DB version
 RAIDEN_DB_VERSION = 4
+
+
+def assert_sqlite_version():
+    if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
+        return False
+    return True
 
 
 class SQLiteStorage:

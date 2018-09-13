@@ -71,7 +71,7 @@ if True:
         INITIAL_PORT,
         ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
     )
-    from raiden.storage.sqlite import RAIDEN_DB_VERSION
+    from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
     from raiden.tasks import check_gas_reserve, check_version
     from raiden.utils import (
         get_system_spec,
@@ -591,6 +591,12 @@ def run_app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
+
+    if not assert_sqlite_version():
+        log.error('SQLite3 should be at least version {}'.format(
+            '.'.join(constants.SQLITE_MIN_REQUIRED_VERSION),
+        ))
+        sys.exit(1)
 
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
