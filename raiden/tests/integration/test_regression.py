@@ -124,7 +124,8 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
 
     if transport_config.protocol is TransportProtocol.UDP:
         reveal_data = reveal_secret.encode()
-        app1.raiden.transport.receive(reveal_data)
+        host_port = None
+        app1.raiden.transport.receive(reveal_data, host_port)
     elif transport_config.protocol is TransportProtocol.MATRIX:
         app1.raiden.transport._receive_message(reveal_secret)  # pylint: disable=protected-access
     else:
@@ -193,7 +194,8 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
 
     if transport_config.protocol is TransportProtocol.UDP:
         message_data = mediated_transfer.encode()
-        app1.raiden.transport.receive(message_data)
+        host_port = None
+        app1.raiden.transport.receive(message_data, host_port)
     elif transport_config.protocol is TransportProtocol.MATRIX:
         app1.raiden.transport._receive_message(mediated_transfer)
     else:
@@ -225,23 +227,32 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
             secret.encode(),
             reveal_secret.encode(),
         ]
+        host_port = None
         receive_method = app1.raiden.transport.receive
+        wait = [
+            gevent.spawn_later(
+                .1,
+                receive_method,
+                data,
+                host_port,
+            )
+            for data in messages
+        ]
     elif transport_config.protocol is TransportProtocol.MATRIX:
         messages = [
             secret,
             reveal_secret,
         ]
         receive_method = app1.raiden.transport._receive_message
+        wait = [
+            gevent.spawn_later(
+                .1,
+                receive_method,
+                data,
+            )
+            for data in messages
+        ]
     else:
         raise TypeError('Unknown TransportProtocol')
-
-    wait = [
-        gevent.spawn_later(
-            .1,
-            receive_method,
-            data,
-        )
-        for data in messages
-    ]
 
     gevent.joinall(wait)
