@@ -743,7 +743,6 @@ def run_app(
         )
 
         transport = UDPTransport(
-            address,
             discovery,
             mapped_socket.socket,
             throttle_policy,
