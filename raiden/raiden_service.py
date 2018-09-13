@@ -296,6 +296,10 @@ class RaidenService(Runnable):
         #  to avoid rejecting messages for unknown channels.
         self.alarm.register_callback(self._callback_new_block)
 
+        # alarm.first_run may process some new channel, which would start_health_check_for
+        # a partner, that's why transport needs to be already started at this point
+        self.transport.start(self)
+
         self.alarm.first_run()
 
         chain_state = views.state_from_raiden(self)
@@ -316,12 +320,12 @@ class RaidenService(Runnable):
                     log.error(str(e))
 
         self.alarm.start()
-        self.transport.start(self)
 
+        # after transport and alarm is started, send queued messages
         events_queues = views.get_all_messagequeues(chain_state)
 
         for queue_identifier, event_queue in events_queues.items():
-            self.transport.start_health_check(queue_identifier.recipient)
+            self.start_health_check_for(queue_identifier.recipient)
 
             # repopulate identifier_to_results for pending transfers
             for event in event_queue:

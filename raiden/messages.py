@@ -116,7 +116,7 @@ def assert_transfer_values(payment_identifier, token, recipient):
         raise ValueError('recipient is an invalid address')
 
 
-def decode(data: bytes):
+def decode(data: bytes) -> 'Message':
     try:
         klass = CMDID_TO_CLASS[data[0]]
     except KeyError:
@@ -124,7 +124,7 @@ def decode(data: bytes):
     return klass.decode(data)
 
 
-def from_dict(data: dict):
+def from_dict(data: dict) -> 'Message':
     try:
         klass = CLASSNAME_TO_CLASS[data['type']]
     except KeyError:
