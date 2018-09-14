@@ -558,9 +558,9 @@ def smoketest(ctx, debug):
 
                 raiden_api = RaidenAPI(app.raiden)
                 rest_api = RestAPI(raiden_api)
-                api_server = APIServer(rest_api)
                 (api_host, api_port) = split_endpoint(args['api_address'])
-                api_server.start(api_host, api_port)
+                api_server = APIServer(rest_api, config={'host': api_host, 'port': api_port})
+                api_server.start()
 
                 raiden_api.channel_open(
                     registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
