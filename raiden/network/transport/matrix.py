@@ -116,6 +116,9 @@ class UserPresence(Enum):
     UNKNOWN = 'unknown'
 
 
+_JOIN_RETRIES = 5
+
+
 class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
@@ -352,7 +355,7 @@ class MatrixTransport(Runnable):
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
         # try login and register on first 5 possible accounts
-        for i in range(5):
+        for i in range(_JOIN_RETRIES):
             base_username = to_normalized_address(self._raiden_service.address)
             username = base_username
             if i:
@@ -429,7 +432,7 @@ class MatrixTransport(Runnable):
                 break
         else:
             self.log.debug('Could not join any discovery room, trying to create one')
-            for _ in range(5):
+            for _ in range(_JOIN_RETRIES):
                 try:
                     discovery_room = self._client.create_room(
                         self._discovery_room_alias,
@@ -821,7 +824,7 @@ class MatrixTransport(Runnable):
         room_name_full = f'#{room_name}:{self._server_name}'
         invitees_uids = [user.user_id for user in invitees]
 
-        for _ in range(5):
+        for _ in range(_JOIN_RETRIES):
             # try joining room
             try:
                 room = self._client.join_room(room_name_full)
