@@ -308,10 +308,7 @@ def create_apps(
                     'transport_type': 'matrix',
                     'transport': {
                         'matrix': {
-                            'discovery_room': {
-                                'alias_fragment': 'discovery',
-                                'server': 'matrix.local.raiden',
-                            },
+                            'discovery_room': 'discovery',
                             'retries_before_backoff': retries_before_backoff,
                             'retry_interval': retry_interval,
                             'server': local_matrix_url,

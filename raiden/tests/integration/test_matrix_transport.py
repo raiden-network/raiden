@@ -50,10 +50,7 @@ def mock_matrix(
             'https://transport02.raiden.network',
             'https://transport03.raiden.network',
         ],
-        discovery_room={
-            'alias_fragment': 'discovery',
-            'server': 'transport01.raiden.network',
-        },
+        discovery_room='discovery',
     )
 
     transport = MatrixTransport(config)
