@@ -6,9 +6,9 @@ Changelog
 * :bug:`2507` Fix a security issue where an attacker could eavesdrop Matrix communications between two nodes in private rooms
 * :bug:`2501` Adds a matrix.private_rooms config to communicate only through private rooms in Matrix
 * :bug:`2449` Fix a race condition when handling channel close events.
+* :bug:`2414` If partner uses our old balance proof on-chain, the raiden client will now recover it from the WAL and properly use it on-chain.
 
 * :release:`0.9.0 <2018-09-14>`
-
 * :feature:`2287` Internal events now have timestamps.
 * :feature:`2307` Matrix discovery rooms now are decentralized, aliased and shared by all servers in the federation
 * :bug:`2461` For received payments events filter based on the initiator.
