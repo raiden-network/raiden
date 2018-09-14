@@ -310,14 +310,22 @@ class APIServer(Runnable):
         rest_api = RestAPI(raiden_api)
 
         # create the server and link the api-endpoints with flask / flask-restful middleware
-        api_server = APIServer(rest_api)
+        api_server = APIServer(rest_api, {'host: '127.0.0.1', 'port': 5001})
 
         # run the server greenlet
-        api_server.start('127.0.0.1', 5001)
+        api_server.start()
     """
-    kwargs = {'host': '127.0.0.1', 'port': 5001}
 
-    def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
+    _api_prefix = '/api/1'
+
+    def __init__(
+            self,
+            rest_api,
+            config,
+            cors_domain_list=None,
+            web_ui=False,
+            eth_rpc_endpoint=None,
+    ):
         super().__init__()
         if rest_api.version != 1:
             raise ValueError(
@@ -350,6 +358,7 @@ class APIServer(Runnable):
             URLS_V1,
         )
 
+        self.config = config
         self.rest_api = rest_api
         self.flask_app = flask_app
         self.blueprint = blueprint
@@ -434,16 +443,18 @@ class APIServer(Runnable):
             self.stop()  # ensure cleanup and wait on subtasks
             raise
 
-    def serve_forever(self, host='127.0.0.1', port=5001):
-        self.start(host, port)
-        return self.get()  # block here
+    def start(self):
+        log.debug(
+            'Starting rest api',
+            host=self.config['host'],
+            port=self.config['port'],
+        )
 
-    def start(self, host='127.0.0.1', port=5001):
         # WSGI expects an stdlib logger. With structlog there's conflict of
         # method names. Rest unhandled exception will be re-raised here:
         wsgi_log = logging.getLogger(__name__ + '.pywsgi')
         wsgiserver = WSGIServer(
-            (host, port),
+            (self.config['host'], self.config['port']),
             self.flask_app,
             log=wsgi_log,
             error_log=wsgi_log,
@@ -463,6 +474,12 @@ class APIServer(Runnable):
         super().start()
 
     def stop(self):
+        log.debug(
+            'Stopping rest api',
+            host=self.config['host'],
+            port=self.config['port'],
+        )
+
         if self.wsgiserver is not None:
             self.wsgiserver.stop()
             self.wsgiserver = None
