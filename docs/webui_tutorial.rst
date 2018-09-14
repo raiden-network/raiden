@@ -27,11 +27,11 @@ This could be run automatically as part of installing Raiden, but to keep the ru
 
 With the web application installed, we can :ref:`fire up Raiden <running_raiden>`. Make sure, you add the CORS domain to the start parameters of your ethereum client::
 
-    geth <...other parameters...> --rpccorsdomain "http://localhost:5001"
+    geth <...other parameters...> --rpccorsdomain http://127.0.0.1:5001
 
 Raiden can be started without the web application by providing the ``--no-web-ui`` flag.
 
-Now all that is left to do is to navigate to `localhost:5001 <localhost:5001>`_ and interaction with Raiden through a web application can begin.
+Now all that is left to do is to navigate to `127.0.0.1:5001 <127.0.0.1:5001>`_ and interaction with Raiden through a web application can begin.
 
 
 The landing page
