@@ -5,6 +5,7 @@ from typing import Any, Optional, Tuple
 from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
+from raiden.utils import typing
 
 # The latest DB version
 RAIDEN_DB_VERSION = 4
@@ -143,15 +144,22 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, field: str, value: str):
+    def get_latest_event_by_data_field(self, filters: typing.Dict[str, str]):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
+        where_clauses = []
+        args = []
+        for field, value in filters.items():
+            where_clauses.append('json_extract(data, ?)=?')
+            args.append(f'$.{field}')
+            args.append(value)
+
         cursor.execute(
             "SELECT data FROM state_events WHERE "
-            f"json_extract(data, '$.{field}')=? "
+            f"{' AND '.join(where_clauses)}"
             "ORDER BY identifier DESC LIMIT 1",
-            (value,),
+            args,
         )
 
         result = None
@@ -166,15 +174,22 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_state_change_by_data_field(self, field: str, value: str):
+    def get_latest_state_change_by_data_field(self, filters: typing.Dict[str, str]):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
+        where_clauses = []
+        args = []
+        for field, value in filters.items():
+            where_clauses.append('json_extract(data, ?)=?')
+            args.append(f'$.{field}')
+            args.append(value)
+
         cursor.execute(
-            "SELECT data FROM state_changes WHERE "
-            f"json_extract(data, '$.{field}')=? "
+            "SELECT data FROM state_events WHERE "
+            f"{' AND '.join(where_clauses)}"
             "ORDER BY identifier DESC LIMIT 1",
-            (value,),
+            args,
         )
 
         result = None
