@@ -176,12 +176,7 @@ class SQLiteStorage:
 
         return result
 
-    def _wrap_event(self, event, log_time):
-        if isinstance(event, EventWithLogTime):
-            return TimestampedEvent(event, log_time)
-        return event
-
-    def get_events(self, limit: int = None, offset: int = None):
+    def _query_events(self, limit: int = None, offset: int = None):
         if limit is not None and (not isinstance(limit, int) or limit < 0):
             raise InvalidNumberInput('limit must be a positive integer')
 
@@ -201,11 +196,19 @@ class SQLiteStorage:
             (limit, offset),
         )
 
+        return cursor.fetchall()
+
+    def get_events_with_timestamps(self, limit: int = None, offset: int = None):
+        entries = self._query_events(limit, offset)
         result = [
-            self._wrap_event(self.serializer.deserialize(entry[0]), entry[1])
-            for entry in cursor.fetchall()
+            TimestampedEvent(self.serializer.deserialize(entry[0]), entry[1])
+            for entry in entries
         ]
         return result
+
+    def get_events(self, limit: int = None, offset: int = None):
+        entries = self._query_events(limit, offset)
+        return [self.serializer.deserialize(entry[0]) for entry in entries]
 
     def __del__(self):
         self.conn.close()
