@@ -33,7 +33,8 @@ ADD . /raiden
 
 WORKDIR /raiden
 RUN git fetch --tags
-RUN pip install -r requirements.txt
+RUN pip install -U pip setuptools
+RUN pip install -r requirements.txt -c constraints.txt
 
 # build contracts and web_ui
 RUN python setup.py build
