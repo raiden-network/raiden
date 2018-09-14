@@ -73,7 +73,7 @@ endif
 
 bundle-docker:
     # Hide command echo to prevent leaking GITHUB_ACCESS_TOKEN in Travis logs
-	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) --build-arg REPO=$(REPO) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile docker
+	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg RAIDENVERSION=$(RAIDENVERSION) --build-arg REPO=$(REPO) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
 	mkdir -p dist/archive
