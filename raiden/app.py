@@ -53,10 +53,7 @@ class App:  # pylint: disable=too-few-public-methods
                     'https://transport02.raiden.network',
                     'https://transport03.raiden.network',
                 ],
-                'discovery_room': {
-                    'alias_fragment': 'discovery',
-                    'server': 'transport01.raiden.network',
-                },
+                'discovery_room': 'discovery',
                 'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 'retry_interval': DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
                 'server': 'auto',

@@ -1302,7 +1302,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                 args['extra_config'] = {
                     'transport': {
                         'matrix': {
-                            'discovery_room': {'server': 'matrix.local.raiden'},
                             'server_name': 'matrix.local.raiden',
                         },
                     },

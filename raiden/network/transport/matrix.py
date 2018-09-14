@@ -398,41 +398,57 @@ class MatrixTransport(Runnable):
         self._get_user(self._user_id).set_display_name(name)
 
     def _join_discovery_room(self):
-        discovery_cfg = self._config['discovery_room']
-        self._discovery_room_alias = self._make_room_alias(discovery_cfg['alias_fragment'])
-        discovery_room_alias_full = (
-            f'#{self._discovery_room_alias}:{discovery_cfg["server"]}'
-        )
+        self._discovery_room_alias = self._make_room_alias(self._config['discovery_room'])
 
-        last_ex = None
-        for _ in range(5):
-            # try join room
+        servers = self._config.get('available_servers') or list()
+        servers = [urlparse(s).hostname for s in servers]
+        if self._server_name not in servers:
+            servers.append(self._server_name)
+        servers.sort(key=lambda s: '' if s == self._server_name else s)  # our server goes first
+
+        our_server_discovery_room_alias_full = f'#{self._discovery_room_alias}:{self._server_name}'
+
+        # try joining a discovery room on any of the available servers, starting with ours
+        for server in servers:
+            discovery_room_alias_full = f'#{self._discovery_room_alias}:{server}'
             try:
                 discovery_room = self._client.join_room(discovery_room_alias_full)
-                break
             except MatrixRequestError as ex:
                 if ex.code not in (404, 403):
                     raise
-                last_ex = ex
-
-            # if can't, room doesn't exist, try creating
-            if discovery_cfg['server'] != self._server_name:
-                raise RuntimeError(
-                    f"Discovery room {discovery_room_alias_full} not found and can't be "
-                    f"created on a federated homeserver {self._server_name!r}.",
-                ) from last_ex
-            try:
-                discovery_room = self._client.create_room(
-                    self._discovery_room_alias,
-                    is_public=True,
+                self.log.debug(
+                    'Could not join discovery room',
+                    room_alias_full=discovery_room_alias_full,
+                    _exception=ex,
                 )
+            else:
+                if our_server_discovery_room_alias_full not in discovery_room.aliases:
+                    # we managed to join a discovery room, but it's not aliased in our server
+                    discovery_room.add_room_alias(our_server_discovery_room_alias_full)
+                    discovery_room.aliases.append(our_server_discovery_room_alias_full)
                 break
-            except MatrixRequestError as ex:
-                if ex.code not in (400, 409):
-                    raise
-                last_ex = ex
         else:
-            raise last_ex
+            self.log.debug('Could not join any discovery room, trying to create one')
+            for _ in range(5):
+                try:
+                    discovery_room = self._client.create_room(
+                        self._discovery_room_alias,
+                        is_public=True,
+                    )
+                except MatrixRequestError as ex:
+                    if ex.code not in (400, 409):
+                        raise
+                    try:
+                        discovery_room = self._client.join_room(
+                            our_server_discovery_room_alias_full,
+                        )
+                    except MatrixRequestError as ex:
+                        if ex.code not in (404, 403):
+                            raise
+                    else:
+                        break
+                else:
+                    break
 
         self._discovery_room = discovery_room
         # Populate initial members
