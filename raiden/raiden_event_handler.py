@@ -1,7 +1,7 @@
 import structlog
 
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
-from raiden.exceptions import ChannelOutdatedError
+from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_balance_hash
@@ -33,7 +33,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.utils import get_latest_known_balance_proof
+from raiden.transfer.utils import (
+    get_latest_known_balance_proof_from_events,
+    get_latest_known_balance_proof_from_state_changes,
+)
 from raiden.utils import pex
 from raiden_libs.utils.signing import eth_sign
 
@@ -322,10 +325,13 @@ class RaidenEventHandler:
         )
 
         if not restored_channel_state:
-            log.error('Could not find channel state with partner balance hash {}'.format(
+            msg = 'Channel state with partner balance hash {} could not be found'.format(
                 pex(participants_details.partner_details.balance_hash),
-            ))
-            return
+            )
+            log.error(msg)
+            # raise RaidenUnrecoverableError(
+            #     f'Unlock cannot continue because {msg}',
+            # )
 
         # Compute merkle tree leaves from partner state
         partner_state = restored_channel_state.partner_state
@@ -356,14 +362,24 @@ class RaidenEventHandler:
 
         # Query state changes which have the on-chain
         # balance hash and use the balance proofs from those states.
-        our_balance_proof = get_latest_known_balance_proof(
-            raiden.wal.storage,
-            participants_details.our_details.balance_hash,
+
+        # Fetch our latest balance proof from events our node has emitted
+        our_balance_proof = get_latest_known_balance_proof_from_events(
+            storage=raiden.wal.storage,
+            chain_id=raiden.chain.network_id,
+            token_network_id=channel_settle_event.token_network_identifier,
+            channel_identifier=channel_settle_event.channel_identifier,
+            balance_hash=participants_details.our_details.balance_hash,
         )
 
-        partner_balance_proof = get_latest_known_balance_proof(
-            raiden.wal.storage,
-            participants_details.partner_details.balance_hash,
+        # Fetch partner's latest balance proof from received state changes
+        partner_balance_proof = get_latest_known_balance_proof_from_state_changes(
+            storage=raiden.wal.storage,
+            chain_id=raiden.chain.network_id,
+            token_network_id=channel_settle_event.token_network_identifier,
+            channel_identifier=channel_settle_event.channel_identifier,
+            recipient=participants_details.our_details.address,
+            balance_hash=participants_details.partner_details.balance_hash,
         )
 
         our_balance_proof = None
@@ -395,31 +411,11 @@ class RaidenEventHandler:
             partner_locked_amount = 0
             partner_locksroot = EMPTY_HASH
 
-        our_max_transferred = our_transferred_amount + our_locked_amount
-        partner_max_transferred = partner_transferred_amount + partner_locked_amount
-
-        # The smart contract requires the max transferred of the /first/ balance
-        # proof to be /smaller/.
-        if our_max_transferred < partner_max_transferred:
-            first_transferred_amount = our_transferred_amount
-            first_locked_amount = our_locked_amount
-            first_locksroot = our_locksroot
-            second_transferred_amount = partner_transferred_amount
-            second_locked_amount = partner_locked_amount
-            second_locksroot = partner_locksroot
-        else:
-            first_transferred_amount = partner_transferred_amount
-            first_locked_amount = partner_locked_amount
-            first_locksroot = partner_locksroot
-            second_transferred_amount = our_transferred_amount
-            second_locked_amount = our_locked_amount
-            second_locksroot = our_locksroot
-
         payment_channel.settle(
-            first_transferred_amount,
-            first_locked_amount,
-            first_locksroot,
-            second_transferred_amount,
-            second_locked_amount,
-            second_locksroot,
+            our_transferred_amount,
+            our_locked_amount,
+            our_locksroot,
+            partner_transferred_amount,
+            partner_locked_amount,
+            partner_locksroot,
         )

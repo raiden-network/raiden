@@ -102,6 +102,10 @@ class SendLockedTransfer(SendMessageEvent):
 
         self.transfer = transfer
 
+    @property
+    def balance_proof(self):
+        return self.transfer.balance_proof
+
     def __repr__(self):
         return '<SendLockedTransfer msgid:{} transfer:{} recipient:{}>'.format(
             self.message_identifier,
@@ -125,6 +129,10 @@ class SendLockedTransfer(SendMessageEvent):
             'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
             'transfer': self.transfer,
+            'balance_proof': self.transfer.balance_proof,
+            'balance_hash': serialization.serialize_bytes(
+                self.transfer.balance_proof.balance_hash,
+            ),
         }
 
         return result
