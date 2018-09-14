@@ -1,5 +1,6 @@
 import random
 
+from eth_utils import to_checksum_address
 from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
@@ -8,23 +9,43 @@ from raiden.utils import typing
 from raiden.utils.serialization import serialize_bytes
 
 
-def get_latest_known_balance_proof(
+def get_latest_known_balance_proof_from_state_changes(
         storage: SQLiteStorage,
+        chain_id: typing.ChainID,
+        token_network_id: typing.TokenNetworkID,
+        channel_identifier: typing.ChannelID,
+        balance_hash: typing.BalanceHash,
+        recipient: typing.Address,
+) -> typing.Optional['BalanceProofSignedState']:
+    """ Tries to find the balance proof with the provided balance hash
+    in stored state changes. """
+    state_change = storage.get_latest_state_change_by_data_field({
+        'balance_proof.chain_id': chain_id,
+        'balance_proof.token_network_id': to_checksum_address(token_network_id),
+        'balance_proof.channel_identifier': channel_identifier,
+        'balance_proof.sender': to_checksum_address(recipient),
+        'balance_hash': serialize_bytes(balance_hash),
+    })
+    if state_change:
+        return state_change.balance_proof
+    return None
+
+
+def get_latest_known_balance_proof_from_events(
+        storage: SQLiteStorage,
+        chain_id: typing.ChainID,
+        token_network_id: typing.TokenNetworkID,
+        channel_identifier: typing.ChannelID,
         balance_hash: typing.BalanceHash,
 ) -> typing.Optional['BalanceProofSignedState']:
     """ Tries to find the balance proof with the provided balance hash
-    in either latest state change or latest event. """
-    state_change = storage.get_latest_state_change_by_data_field(
-        'balance_hash',
-        serialize_bytes(balance_hash),
-    )
-    if state_change:
-        return state_change.balance_proof
-
-    event = storage.get_latest_event_by_data_field(
-        'balance_hash',
-        serialize_bytes(balance_hash),
-    )
+    in stored events. """
+    event = storage.get_latest_event_by_data_field({
+        'balance_proof.chain_id': chain_id,
+        'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
+        'balance_proof.channel_identifier': channel_identifier,
+        'balance_hash': serialize_bytes(balance_hash),
+    })
     if event:
         return event.balance_proof
 
