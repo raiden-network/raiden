@@ -619,7 +619,10 @@ def run_app(
         raise RuntimeError('Missing socket')
 
     address_hex = to_normalized_address(address) if address else None
+
+    print('\n')  # Add a bit of space before the prompt is shown
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+
     address = to_canonical_address(address_hex)
 
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -845,6 +848,8 @@ def run_app(
 
 
 def prompt_account(address_hex, keystore_path, password_file):
+    import inquirer
+
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
         print(
@@ -854,35 +859,33 @@ def prompt_account(address_hex, keystore_path, password_file):
         )
         sys.exit(1)
 
-    if not accmgr.address_in_keystore(address_hex):
-        # check if an address has been passed
-        if address_hex is not None:
-            print("Account '{}' could not be found on the system. Aborting ...".format(
-                address_hex))
-            sys.exit(1)
-
-        addresses = list(accmgr.accounts.keys())
+    if not address_hex:
         formatted_addresses = [
-            '[{:3d}] - {}'.format(idx, to_checksum_address(addr))
-            for idx, addr in enumerate(addresses)
+            to_checksum_address(addr)
+            for addr in accmgr.accounts
         ]
 
-        should_prompt = True
+        print('Use the arrow keys to select the address to be used by Raiden\n')
+        addresses = inquirer.List(
+            'address',
+            message='Address to be used by raiden',
+            choices=sorted(formatted_addresses),
+            carousel=True,
+        )
 
-        print('The following accounts were found in your machine:')
-        print('')
-        print('\n'.join(formatted_addresses))
-        print('')
+        answers = inquirer.prompt([addresses])
 
-        while should_prompt:
-            idx = click.prompt('Select one of them by index to continue', type=int)
+        if not answers:  # user cancelled
+            sys.exit(1)
 
-            if 0 <= idx < len(addresses):
-                should_prompt = False
-            else:
-                print('\nError: Provided index "{}" is out of bounds\n'.format(idx))
+        address_hex = answers['address']
 
-        address_hex = addresses[idx]
+    nonexisting_address = (
+        address_hex and not accmgr.address_in_keystore(address_hex)
+    )
+    if nonexisting_address:
+        print(f"Account '{address_hex}' could not be found on the system. Aborting ...")
+        sys.exit(1)
 
     password = None
     if password_file:

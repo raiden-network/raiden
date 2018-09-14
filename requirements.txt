@@ -8,6 +8,7 @@ Flask
 Flask-Cors
 Flask-Restful
 gevent
+inquirer
 ipython<5.0.0
 marshmallow
 marshmallow_polyfield
