@@ -3,6 +3,9 @@
 set -e
 set -x
 
+# Disable host key checking to avoid hanging at the prompt
+export GIT_SSH_COMMAND='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+
 clone_repo() {
     git clone git@github.com:raiden-network/homebrew-raiden
     cd homebrew-raiden
