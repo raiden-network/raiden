@@ -3,9 +3,10 @@ Changelog
 =========
 
 
+* :release:`0.9.0 <2018-09-14>`
+
 * :feature:`2287` Internal events now have timestamps.
 * :feature:`2307` Matrix discovery rooms now are decentralized, aliased and shared by all servers in the federation
-* :bug:`2461` Always return payment received events irrespective of the target parameter.
 * :bug:`2461` For received payments events filter based on the initiator.
 * :feature:`2252` Adds payment history page to the webui.
 * :bug:`2367` Token network selection dropdown will not filter out not connected networks.
