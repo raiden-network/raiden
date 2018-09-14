@@ -55,5 +55,5 @@ ARG ARCHIVE_TAG=${RAIDENVERSION}
 
 # pack result to have a unique name to get it out of the container later
 RUN cd dist && \
-    tar -cvzf raiden-${ARCHIVE_TAG}-linux.tar.gz raiden* && \
+    tar -cvzf ./raiden-${ARCHIVE_TAG}-linux.tar.gz raiden* && \
     mv raiden-${ARCHIVE_TAG}-linux.tar.gz ..

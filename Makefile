@@ -77,7 +77,7 @@ bundle-docker:
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
 	mkdir -p dist/archive
-	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz
+	docker cp builder:"/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz" "dist/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz"
 	docker rm builder
 
 bundle:
