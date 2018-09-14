@@ -160,6 +160,17 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     TracebackException.format = tracebackexception_format
 
 
+def configure_logging_defaults(logger_level_config: Dict[str, str] = None):
+    if logger_level_config:
+        logger_level_config = dict(logger_level_config)
+    else:
+        logger_level_config = dict()
+
+    logger_level_config.setdefault('filelock', 'ERROR')
+    logger_level_config.setdefault('', DEFAULT_LOG_LEVEL)
+    return logger_level_config
+
+
 def configure_logging(
         logger_level_config: Dict[str, str] = None,
         colorize: bool = True,
