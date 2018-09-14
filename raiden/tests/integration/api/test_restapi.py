@@ -1512,17 +1512,13 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert must_have_event(
+    assert must_have_events(
         response,
         {
             'event': 'EventPaymentSentSuccess',
             'identifier': identifier3,
             'target': to_checksum_address(target2_address),
-        },
-    )
-    assert not must_have_event(
-        response,
-        {
+        }, {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier1,
         },
