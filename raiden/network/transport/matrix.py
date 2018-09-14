@@ -207,7 +207,7 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        self.log.info('TRANSPORT STARTED', config=self._config)
+        self.log.debug('TRANSPORT STARTED', config=self._config)
 
         super().start()  # start greenlet
 
@@ -313,7 +313,7 @@ class MatrixTransport(Runnable):
                 'Do not use send_async for {} messages'.format(message.__class__.__name__),
             )
 
-        self.log.info(
+        self.log.debug(
             'SEND ASYNC',
             receiver_address=pex(receiver_address),
             message=message,
@@ -364,7 +364,7 @@ class MatrixTransport(Runnable):
             try:
                 self._client.sync_token = None
                 self._client.login(username, password)
-                self.log.info(
+                self.log.debug(
                     'LOGIN',
                     homeserver=self._server_name,
                     server_url=self._server_url,
@@ -382,7 +382,7 @@ class MatrixTransport(Runnable):
                 )
                 try:
                     self._client.register_with_password(username, password)
-                    self.log.info(
+                    self.log.debug(
                         'REGISTER',
                         homeserver=self._server_name,
                         server_url=self._server_url,
@@ -667,7 +667,7 @@ class MatrixTransport(Runnable):
         )
 
     def _receive_message(self, message: SignedMessage):
-        self.log.info(
+        self.log.debug(
             'MESSAGE RECEIVED',
             node=pex(self._raiden_service.address),
             message=message,
@@ -812,7 +812,7 @@ class MatrixTransport(Runnable):
         if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
 
-        self.log.info(
+        self.log.debug(
             'CHANNEL ROOM',
             peer_address=to_normalized_address(address),
             room=room,
@@ -830,15 +830,15 @@ class MatrixTransport(Runnable):
                 room = self._client.join_room(room_name_full)
             except MatrixRequestError as error:
                 if error.code == 404:
-                    self.log.info(
+                    self.log.debug(
                         f'Room {room_name_full} not found, trying to create it.',
                         error=error,
                     )
                 else:
-                    self.log.info(f'Error joining room {room_name}: '
-                                  f'{error.content} {error.code}')
+                    self.log.debug(f'Error joining room {room_name}: '
+                                   f'{error.content} {error.code}')
             else:
-                self.log.info('Room joined successfully', room=room)
+                self.log.debug('Room joined successfully', room=room)
                 break
 
             # if can't, try creating it
@@ -853,10 +853,10 @@ class MatrixTransport(Runnable):
                     message = 'seems to have been created by peer meanwhile.'
                 else:
                     message = f'{error.code} {error.content}'
-                self.log.info(f'Error creating room {room_name}: {message}. '
-                              f'Retrying to join...')
+                self.log.debug(f'Error creating room {room_name}: {message}. '
+                               f'Retrying to join...')
             else:
-                self.log.info('Room created successfully', room=room, invitees=invitees)
+                self.log.debug('Room created successfully', room=room, invitees=invitees)
                 break
         else:
             # if can't join nor create, create an unnamed one
