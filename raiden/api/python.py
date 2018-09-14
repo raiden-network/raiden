@@ -41,7 +41,6 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 def event_filter_for_payments(
         event: architecture.Event,
-        our_address: typing.Address,
         token_network_identifier: typing.TokenNetworkID = None,
         target_address: typing.Address = None,
 ) -> bool:
@@ -50,8 +49,7 @@ def event_filter_for_payments(
     - If no other args are given, all payment related events match
     - If a token network identifier is given then only payment events for that match
     - If a target is also given then if the event is a payment sent event and the
-      target matches it's returned. If it's a payment received it's returned only
-      if target equals our address.
+      target matches it's returned. If it's a payment received it's always returned.
     """
     is_matching_event = (
         isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and
@@ -70,14 +68,7 @@ def event_filter_for_payments(
             event.target == target_address
         )
     )
-    received_and_target_matches = (
-        isinstance(event, (EventPaymentReceivedSuccess)) and
-        (
-            target_address is None or
-            target_address == our_address
-        )
-    )
-    return sent_and_target_matches or received_and_target_matches
+    return sent_and_target_matches or isinstance(event, (EventPaymentReceivedSuccess))
 
 
 class RaidenAPI:
@@ -705,10 +696,9 @@ class RaidenAPI:
                 limit=limit,
                 offset=offset,
             ) if event_filter_for_payments(
-                event.wrapped_event,
-                self.address,
-                token_network_identifier,
-                target_address,
+                event=event.wrapped_event,
+                token_network_identifier=token_network_identifier,
+                target_address=target_address,
             )
         ]
 
