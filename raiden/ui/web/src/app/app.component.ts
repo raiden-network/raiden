@@ -25,7 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit() {
-        this.raidenService.getRaidenAddress().subscribe((address) => this.raidenAddress = address);
+        this.raidenService.raidenAddress$.subscribe((address) => this.raidenAddress = address);
         this.sub = this.sharedService.pendingRequests.subscribe((pendingRequests) => {
             setTimeout(() => {
                 this.pendingRequests = pendingRequests;
