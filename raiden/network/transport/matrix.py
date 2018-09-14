@@ -835,8 +835,12 @@ class MatrixTransport(Runnable):
                         error=error,
                     )
                 else:
-                    self.log.debug(f'Error joining room {room_name}: '
-                                   f'{error.content} {error.code}')
+                    self.log.debug(
+                        f'Error joining room',
+                        room_name=room_name,
+                        error=error.content,
+                        error_code=error.code,
+                    )
             else:
                 self.log.debug('Room joined successfully', room=room)
                 break
@@ -850,11 +854,19 @@ class MatrixTransport(Runnable):
                 )
             except MatrixRequestError as error:
                 if error.code == 409:
-                    message = 'seems to have been created by peer meanwhile.'
+                    msg = (
+                        'Error creating room, '
+                        'seems to have been created by peer meanwhile, retrying.'
+                    )
                 else:
-                    message = f'{error.code} {error.content}'
-                self.log.debug(f'Error creating room {room_name}: {message}. '
-                               f'Retrying to join...')
+                    msg = 'Error creating room, retrying.'
+
+                self.log.debug(
+                    msg,
+                    room_name=room_name,
+                    error=error.content,
+                    error_code=error.code,
+                )
             else:
                 self.log.debug('Room created successfully', room=room, invitees=invitees)
                 break
