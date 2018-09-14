@@ -1257,6 +1257,7 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     identifier1 = 42
     token_address = token_addresses[0]
 
+    app0_address = app0.raiden.address
     target1_address = app1.raiden.address
     target2_address = app2.raiden.address
 
@@ -1512,13 +1513,17 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert must_have_events(
+    assert must_have_event(
         response,
         {
             'event': 'EventPaymentSentSuccess',
             'identifier': identifier3,
             'target': to_checksum_address(target2_address),
-        }, {
+        },
+    )
+    assert not must_have_event(
+        response,
+        {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier1,
         },
@@ -1534,20 +1539,14 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     response = response.json()
-    assert must_have_event(
-        response,
-        {
-            'event': 'EventPaymentReceivedSuccess',
-            'identifier': identifier1,
-        },
-    )
+    assert len(response) == 0
     # test endpoint for token and partner for target2
     request = grequests.get(
         api_url_for(
             app2_server,
             'token_target_paymentresource',
             token_address=token_address,
-            target_address=target2_address,
+            target_address=app0_address,
         ),
     )
     response = request.send().response
@@ -1558,9 +1557,45 @@ def test_payment_events_endpoints(test_api_server, raiden_network, token_address
         {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier2,
-        }, {
+        },
+    )
+    assert not must_have_event(
+        response,
+        {
+            'event': 'EventPaymentReceivedSuccess',
+            'identifier': identifier1,
+        },
+    )
+    assert not must_have_event(
+        response,
+        {
             'event': 'EventPaymentReceivedSuccess',
             'identifier': identifier3,
+        },
+    )
+    request = grequests.get(
+        api_url_for(
+            app2_server,
+            'token_target_paymentresource',
+            token_address=token_address,
+            target_address=target1_address,
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    response = response.json()
+    assert must_have_events(
+        response,
+        {
+            'event': 'EventPaymentReceivedSuccess',
+            'identifier': identifier3,
+        },
+    )
+    assert not must_have_event(
+        response,
+        {
+            'event': 'EventPaymentReceivedSuccess',
+            'identifier': identifier2,
         },
     )
     assert not must_have_event(
