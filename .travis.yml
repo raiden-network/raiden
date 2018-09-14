@@ -208,7 +208,6 @@ jobs:
         endpoint: https://ams3.digitaloceanspaces.com
         on:
           repo: raiden-network/raiden
-          branch: master
 
     - stage: deploy
       os: osx
@@ -270,4 +269,3 @@ jobs:
           endpoint: https://ams3.digitaloceanspaces.com
           on:
             repo: raiden-network/raiden
-            branch: master
