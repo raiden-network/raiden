@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* "bug:`2367` Token network selection dropdown will not filter out not connected networks.
+* :bug:`2367` Token network selection dropdown will not filter out not connected networks.
 * :bug:`2453` Connection manager will no longer be stuck if there are no available channel partners
 * :bug:`2437` Fix a bug where neighbors couldn't communicate through matrix after restart
 * :bug:`2370` Fixes a few issues with the token amount input.
@@ -10,7 +10,7 @@ Changelog
 * :bug:`2419` Fix Matrix transport crash due to inability to decode events
 * :bug:`2427` Fix a bug crashing the client when an unlock event for our address is seen on the chain
 * :bug:`2431` Do not crash on recoverable errors during settlement
-* :feature:`` Pinned depedencies versions, builds are now reproducible and build artifacts won't break because of downstream dependencies.
+* :feature:`2460` Pinned depedencies versions, builds are now reproducible and build artifacts won't break because of downstream dependencies.
 
 * :release:`0.8.0 <2018-09-07>`
 * :feature:`1894` We now start having nightly releases found here: https://raiden-nightlies.ams3.digitaloceanspaces.com/index.html
