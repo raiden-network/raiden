@@ -1303,6 +1303,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                     'transport': {
                         'matrix': {
                             'server_name': 'matrix.local.raiden',
+                            'available_servers': [],
                         },
                     },
                 }
@@ -1316,6 +1317,14 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             success = False
     elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
         args['mapped_socket'] = None
+        args['extra_config'] = {
+            'transport': {
+                'matrix': {
+                    'server_name': 'matrix.local.raiden',
+                    'available_servers': [],
+                },
+            },
+        }
         success = _run_smoketest()
     else:
         # Shouldn't happen

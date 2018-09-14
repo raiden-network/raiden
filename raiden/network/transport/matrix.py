@@ -401,7 +401,7 @@ class MatrixTransport(Runnable):
         self._discovery_room_alias = self._make_room_alias(self._config['discovery_room'])
 
         servers = self._config.get('available_servers') or list()
-        servers = [urlparse(s).hostname for s in servers]
+        servers = [urlparse(s).hostname for s in servers if urlparse(s).hostname]
         if self._server_name not in servers:
             servers.append(self._server_name)
         servers.sort(key=lambda s: '' if s == self._server_name else s)  # our server goes first
