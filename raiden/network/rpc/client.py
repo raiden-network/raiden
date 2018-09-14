@@ -197,7 +197,6 @@ class JSONRPCClient:
         self.web3 = web3
 
         self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
-        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
         self._nonce_offset = nonce_offset
