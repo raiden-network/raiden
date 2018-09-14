@@ -3,9 +3,9 @@ stages:
   - name: lint
   - name: test
   - name: integration
-    if: type = cron OR commit_message =~ /\[ci integration\]/ OR tag IS present
+    if: (type = cron OR commit_message =~ /\[ci integration\]/ OR tag IS present) AND NOT commit_message =~ /\[ci nightly\]/
   - name: deploy
-    if: type = cron OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
+    if: type = cron OR commit_message =~ /\[ci nightly\]/ OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
 templates:
   job-template-test: &job-template-test
