@@ -87,9 +87,12 @@ def _trimmed_logging(logger_level_config):
 def start_apiserver(raiden_app, rest_api_port_number):
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api)
+    api_server = APIServer(rest_api, config={'host': 'localhost', 'port': rest_api_port_number})
+
+    # required for url_for
     api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
-    api_server.start(port=rest_api_port_number)
+
+    api_server.start()
 
     wait_for_listening_port(rest_api_port_number)
 

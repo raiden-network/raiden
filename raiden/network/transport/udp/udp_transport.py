@@ -160,7 +160,7 @@ class UDPTransport(Runnable):
     def __init__(self, address, discovery, udpsocket, throttle_policy, config):
         super().__init__()
         # these values are initialized by the start method
-        self.queueids_to_queues = dict()
+        self.queueids_to_queues: typing.Dict = dict()
         self.raiden: RaidenService
         self.message_handler: MessageHandler
 
@@ -219,6 +219,8 @@ class UDPTransport(Runnable):
         self.log.debug('UDP started')
         super().start()
 
+        log.debug('UDP transport started')
+
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         try:
@@ -262,7 +264,7 @@ class UDPTransport(Runnable):
         for async_result in self.messageids_to_asyncresults.values():
             async_result.set(False)
 
-        self.log.debug('UDP stopped')
+        log.debug('UDP stopped', node=pex(self.raiden.address))
         del self.log_healthcheck
         del self.log
 

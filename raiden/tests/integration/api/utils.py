@@ -31,9 +31,9 @@ def wait_for_listening_port(
 def create_api_server(raiden_app: App, port_number: int) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api)
+    api_server = APIServer(rest_api, config={'host': 'localhost', 'port': port_number})
     api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(port_number)
-    api_server.start(port=port_number)
+    api_server.start()
 
     # Fixes flaky test, were requests are done prior to the server initializing
     # the listening socket.
