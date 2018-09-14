@@ -168,7 +168,7 @@ def test_write_read_events():
             '2018-08-31T17:38:00.000',
         )
 
-    previous_events = wal.storage.get_events()
+    previous_events = wal.storage.get_events_with_timestamps()
 
     log_time = '2018-09-07T20:02:35.0000'
     state_change_id = wal.storage.write_state_change('statechangedata')
@@ -178,7 +178,7 @@ def test_write_read_events():
         log_time,
     )
 
-    new_events = wal.storage.get_events()
+    new_events = wal.storage.get_events_with_timestamps()
     assert len(previous_events) + 1 == len(new_events)
 
     latest_event = new_events[-1]

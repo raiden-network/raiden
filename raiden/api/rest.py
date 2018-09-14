@@ -784,7 +784,7 @@ class RestAPI:
         except (InvalidBlockNumberInput, InvalidAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
-    def get_raiden_events_payment_history(
+    def get_raiden_events_payment_history_with_timestamps(
             self,
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
@@ -797,7 +797,7 @@ class RestAPI:
             target_address=optional_address_to_string(target_address),
         )
         try:
-            raiden_service_result = self.raiden_api.get_raiden_events_payment_history(
+            service_result = self.raiden_api.get_raiden_events_payment_history_with_timestamps(
                 token_address=token_address,
                 target_address=target_address,
                 limit=limit,
@@ -807,23 +807,26 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         result = []
-        for event in raiden_service_result:
-            if isinstance(event, EventPaymentSentSuccess):
+        for event in service_result:
+            if isinstance(event.wrapped_event, EventPaymentSentSuccess):
                 serialized_event = self.sent_success_payment_schema.dump(event)
-            elif isinstance(event, EventPaymentSentFailed):
+            elif isinstance(event.wrapped_event, EventPaymentSentFailed):
                 serialized_event = self.failed_payment_schema.dump(event)
-            elif isinstance(event, EventPaymentReceivedSuccess):
+            elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.dump(event)
             else:
-                log.warning('Unexpected event', unexpected_event=event)
+                log.warning('Unexpected event', unexpected_event=event.wrapped_event)
 
             result.append(serialized_event.data)
         return api_response(result=result)
 
-    def get_raiden_internal_events(self, limit, offset):
+    def get_raiden_internal_events_with_timestamps(self, limit, offset):
         return [
             str(e)
-            for e in self.raiden_api.raiden.wal.storage.get_events(limit=limit, offset=offset)
+            for e in self.raiden_api.raiden.wal.storage.get_events_with_timestamps(
+                limit=limit,
+                offset=offset,
+            )
         ]
 
     def get_blockchain_events_channel(

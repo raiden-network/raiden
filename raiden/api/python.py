@@ -673,7 +673,7 @@ class RaidenAPI:
         )
         return async_result
 
-    def get_raiden_events_payment_history(
+    def get_raiden_events_payment_history_with_timestamps(
             self,
             token_address: typing.TokenAddress = None,
             target_address: typing.Address = None,
@@ -701,11 +701,11 @@ class RaidenAPI:
 
         events = [
             event
-            for event in self.raiden.wal.storage.get_events(
+            for event in self.raiden.wal.storage.get_events_with_timestamps(
                 limit=limit,
                 offset=offset,
             ) if event_filter_for_payments(
-                event,
+                event.wrapped_event,
                 self.address,
                 token_network_identifier,
                 target_address,
@@ -714,8 +714,24 @@ class RaidenAPI:
 
         return events
 
-    def get_raiden_internal_events(self, limit: int = None, offset: int = None):
-        return self.raiden.wal.storage.get_events(limit=limit, offset=offset)
+    def get_raiden_events_payment_history(
+            self,
+            token_address: typing.TokenAddress = None,
+            target_address: typing.Address = None,
+            limit: int = None,
+            offset: int = None,
+    ):
+        timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
+            token_address,
+            target_address,
+            limit,
+            offset,
+        )
+
+        return [event.wrapped_event for event in timestamped_events]
+
+    def get_raiden_internal_events_with_timestamps(self, limit: int = None, offset: int = None):
+        return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
 

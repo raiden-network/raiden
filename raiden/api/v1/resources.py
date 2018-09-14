@@ -149,7 +149,7 @@ class RaidenInternalEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, token_address, partner_address=None, limit=None, offset=None):
-        return self.rest_api.get_raiden_internal_events(
+        return self.rest_api.get_raiden_internal_events_with_timestamps(
             token_address=token_address,
             partner_address=partner_address,
             limit=limit,
@@ -218,7 +218,7 @@ class PaymentResource(BaseResource):
             limit: int = None,
             offset: int = None,
     ):
-        return self.rest_api.get_raiden_events_payment_history(
+        return self.rest_api.get_raiden_events_payment_history_with_timestamps(
             token_address=token_address,
             target_address=target_address,
             limit=limit,
