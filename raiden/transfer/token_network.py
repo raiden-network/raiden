@@ -116,16 +116,21 @@ def handle_closed(
         block_number,
 ):
     network_graph_state = token_network_state.network_graph
-    participant1, participant2 = network_graph_state.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ]
-    token_network_state.network_graph.network.remove_edge(
-        participant1,
-        participant2,
-    )
-    del token_network_state.network_graph.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ]
+
+    # it might happen that both partners close at the same time, so the channel might
+    # already be deleted
+    if state_change.channel_identifier in network_graph_state.channel_identifier_to_participants:
+        participant1, participant2 = network_graph_state.channel_identifier_to_participants[
+            state_change.channel_identifier
+        ]
+        token_network_state.network_graph.network.remove_edge(
+            participant1,
+            participant2,
+        )
+        del token_network_state.network_graph.channel_identifier_to_participants[
+            state_change.channel_identifier
+        ]
+
     return subdispatch_to_channel_by_id(
         token_network_state,
         state_change,
@@ -227,16 +232,20 @@ def handle_closeroute(token_network_state, state_change):
     events = list()
 
     network_graph_state = token_network_state.network_graph
-    participant1, participant2 = network_graph_state.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ]
-    token_network_state.network_graph.network.remove_edge(
-        participant1,
-        participant2,
-    )
-    del token_network_state.network_graph.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ]
+
+    # it might happen that both partners close at the same time, so the channel might
+    # already be deleted
+    if state_change.channel_identifier in network_graph_state.channel_identifier_to_participants:
+        participant1, participant2 = network_graph_state.channel_identifier_to_participants[
+            state_change.channel_identifier
+        ]
+        token_network_state.network_graph.network.remove_edge(
+            participant1,
+            participant2,
+        )
+        del token_network_state.network_graph.channel_identifier_to_participants[
+            state_change.channel_identifier
+        ]
 
     return TransitionResult(token_network_state, events)
 
