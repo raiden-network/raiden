@@ -9,6 +9,8 @@ from gevent.lock import Semaphore
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
+    DepositMismatch,
+    DepositOverLimit,
     DuplicatedChannelError,
     InsufficientFunds,
     InvalidAmount,
@@ -284,8 +286,8 @@ class ConnectionManager:
             log.exception('connection manager: deposit failed')
         except RaidenRecoverableError:
             log.exception('connection manager: channel not in opened state')
-        except InsufficientFunds as e:
-            log.error(f'connection manager: {str(e)}')
+        except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
+            log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`
