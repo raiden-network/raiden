@@ -101,6 +101,7 @@ if True:
         CONTRACT_ENDPOINT_REGISTRY,
         CONTRACT_SECRET_REGISTRY,
         CONTRACT_TOKEN_NETWORK_REGISTRY,
+        NetworkType,
     )
 
 log = structlog.get_logger(__name__)
@@ -394,6 +395,15 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--network-type',
+            help=(
+                'Specify the network type (main or test).\n'
+            ),
+            type=click.Choice(['main', 'test']),
+            default='test',
+            show_default=True,
+        ),
+        option(
             '--accept-disclaimer',
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
@@ -585,6 +595,7 @@ def run_app(
         transport,
         matrix_server,
         network_id,
+        network_type,
         extra_config=None,
         **kwargs,
 ):
@@ -675,6 +686,10 @@ def run_app(
 
     config['chain_id'] = network_id
 
+    if network_type == 'main':
+        config['chain_id'] = NetworkType.MAIN
+    else:
+        config['chain_id'] = NetworkType.TEST
     if sync_check:
         check_synced(blockchain_service)
 
