@@ -1,5 +1,6 @@
 import gevent
 import structlog
+from eth_utils import to_canonical_address
 
 from raiden.blockchain.events import decode_event_to_internal
 from raiden.blockchain.state import get_channel_state
@@ -283,10 +284,15 @@ def handle_secret_revealed(raiden, event):
 
 
 def on_blockchain_event(raiden, event):
-    log.debug('BLOCKCHAIN EVENT', node=pex(raiden.address), chain_event=event)
+    data = event.event_data
+    log.debug(
+        'BLOCKCHAIN EVENT',
+        node=pex(raiden.address),
+        contract=pex(to_canonical_address(data['address'])),
+        chain_event=event,
+    )
 
     event = decode_event_to_internal(event)
-    data = event.event_data
 
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         handle_tokennetwork_new(raiden, event)
