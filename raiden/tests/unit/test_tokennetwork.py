@@ -476,18 +476,15 @@ def test_routing_updates(
         block_number=closed_block_number,
     )
 
-    graph_state = channel_closed_iteration1.new_state.network_graph
-    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
-    assert new_channel_identifier in graph_state.channel_identifier_to_participants
-    assert len(graph_state.channel_identifier_to_participants) == 1
-    assert graph_state.network[address2][address3] is not None
-    assert len(graph_state.network.edges()) == 1
-
-    # close the channel the node is not a participant of, check edge is removed from graph
-    channel_close_state_change2 = ContractReceiveRouteClosed(
+    # Check that a second ContractReceiveChannelClosed events is handled properly
+    # This might have been sent from the other participant of the channel
+    # See issue #2449
+    channel_close_state_change2 = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
+        transaction_from=channel_state.our_state.address,
         token_network_identifier=token_network_state.address,
-        channel_identifier=new_channel_identifier,
+        channel_identifier=channel_state.identifier,
+        closed_block_number=closed_block_number,
     )
 
     channel_closed_iteration2 = token_network.state_transition(
@@ -495,10 +492,49 @@ def test_routing_updates(
         token_network_state=channel_closed_iteration1.new_state,
         state_change=channel_close_state_change2,
         pseudo_random_generator=pseudo_random_generator,
-        block_number=closed_block_number + 10,
+        block_number=closed_block_number,
     )
 
     graph_state = channel_closed_iteration2.new_state.network_graph
+    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
+    assert new_channel_identifier in graph_state.channel_identifier_to_participants
+    assert len(graph_state.channel_identifier_to_participants) == 1
+    assert graph_state.network[address2][address3] is not None
+    assert len(graph_state.network.edges()) == 1
+
+    # close the channel the node is not a participant of, check edge is removed from graph
+    channel_close_state_change3 = ContractReceiveRouteClosed(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_identifier=new_channel_identifier,
+    )
+
+    channel_closed_iteration3 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=channel_closed_iteration2.new_state,
+        state_change=channel_close_state_change3,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=closed_block_number + 10,
+    )
+
+    # Check that a second ContractReceiveRouteClosed events is handled properly.
+    # This might have been sent from the second participant of the channel
+    # See issue #2449
+    channel_close_state_change4 = ContractReceiveRouteClosed(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_identifier=new_channel_identifier,
+    )
+
+    channel_closed_iteration4 = token_network.state_transition(
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=channel_closed_iteration3.new_state,
+        state_change=channel_close_state_change4,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=closed_block_number + 10,
+    )
+
+    graph_state = channel_closed_iteration4.new_state.network_graph
     assert channel_state.identifier not in graph_state.channel_identifier_to_participants
     assert new_channel_identifier not in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 0
