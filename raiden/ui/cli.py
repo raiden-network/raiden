@@ -690,6 +690,25 @@ def run_app(
         config['chain_id'] = NetworkType.MAIN
     else:
         config['chain_id'] = NetworkType.TEST
+
+    if net_id in constants.ID_TO_NETWORK_CONFIG:
+        contract_addresses_known = True
+        contract_addresses = constants.ID_TO_NETWORK_CONFIG['net_id']['contract_addresses']
+        not_allowed = (
+            constants.ID_TO_NETWORK_CONFIG['network_type'] == NetworkType.MAIN and
+            config['chain_id'] == NetworkType.TEST
+        )
+        if not_allowed:
+            print(
+                'The choset network {} is identified as a mainnet but a test network type '
+                'was given. This is not allowed.'.format(
+                    constants.ID_TO_NETWORKNAME[network_id],
+                ),
+            )
+    else:
+        contract_addresses_known = False
+        contract_addresses = dict()
+
     if sync_check:
         check_synced(blockchain_service)
 
@@ -698,7 +717,6 @@ def run_app(
         secret_registry_contract_address is not None and
         discovery_contract_address is not None
     )
-    contract_addresses_known = net_id in constants.ID_TO_NETWORK_CONFIG
 
     if not contract_addresses_given and not contract_addresses_known:
         print((
@@ -706,8 +724,6 @@ def run_app(
               'them in the command line or the configuration file.'
               ).format(net_id))
         sys.exit(1)
-
-    contract_addresses = constants.ID_TO_NETWORK_CONFIG.get(net_id, dict())
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
