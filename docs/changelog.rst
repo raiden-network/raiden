@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2449` Fix a race condition when handling channel close events.
 
 * :release:`0.9.0 <2018-09-14>`
 
