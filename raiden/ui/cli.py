@@ -700,7 +700,7 @@ def run_app(
         )
         if not_allowed:
             print(
-                'The choset network {} is identified as a mainnet but a test network type '
+                'The chosen network {} is identified as a mainnet but a test network type '
                 'was given. This is not allowed.'.format(
                     constants.ID_TO_NETWORKNAME[network_id],
                 ),
@@ -720,8 +720,8 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         print((
-              "There are known contract addresses for network id '{}'. Please provide "
-              'them in the command line or the configuration file.'
+              "There are no known contract addresses for network id '{}'. Please provide "
+              'them in the command line or in the configuration file.'
               ).format(net_id))
         sys.exit(1)
 
