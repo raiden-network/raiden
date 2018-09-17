@@ -731,7 +731,7 @@ class RestAPI:
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         log.debug(
             'Getting token list',
-            registry_address=registry_address,
+            registry_address=to_checksum_address(registry_address),
         )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
         assert isinstance(raiden_service_result, list)
@@ -770,7 +770,9 @@ class RestAPI:
     ):
         log.debug(
             'Getting token network blockchain events',
-            token_address=token_address,
+            token_address=to_checksum_address(token_address),
+            from_block=from_block,
+            to_block=to_block,
         )
         try:
             raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
@@ -795,6 +797,8 @@ class RestAPI:
             'Getting payment history',
             token_address=optional_address_to_string(token_address),
             target_address=optional_address_to_string(target_address),
+            limit=limit,
+            offset=offset,
         )
         try:
             service_result = self.raiden_api.get_raiden_events_payment_history_with_timestamps(
@@ -838,8 +842,10 @@ class RestAPI:
     ):
         log.debug(
             'Getting channel blockchain events',
-            token_address=token_address,
-            partner_address=partner_address,
+            token_address=to_checksum_address(token_address),
+            partner_address=optional_address_to_string(partner_address),
+            from_block=from_block,
+            to_block=to_block,
         )
         try:
             raiden_service_result = self.raiden_api.get_blockchain_events_channel(
