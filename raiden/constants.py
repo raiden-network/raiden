@@ -25,6 +25,11 @@ class EthClient(Enum):
     TESTER = 3
 
 
+class NetworkType(Enum):
+    MAIN = 1
+    TEST = 2
+
+
 # Deployed to Ropsten revival on 2018-09-03 from
 # raiden-contracts@fc1c79329a165c738fc55c3505cf801cc79872e4
 ROPSTEN_REGISTRY_ADDRESS = '0xf2a175A52Bd3c815eD7500c765bA19652AB89B30'
