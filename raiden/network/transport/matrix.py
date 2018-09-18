@@ -546,29 +546,30 @@ class MatrixTransport(Runnable):
             return False
 
         # rooms we created and invited user, or were invited specifically by them
-        rooms = self._get_room_ids_for_address(peer_address)
+        room_ids = self._get_room_ids_for_address(peer_address)
 
-        if room.room_id not in rooms:
+        if room.room_id not in room_ids:
             # this should not happen, but is not fatal, as we may not know user yet
             self.log.warning(
-                'received peer message in a room we didnt create nor were invited by them',
+                'received peer message in a room we didn\'t create nor were invited by them',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 room=room,
             )
             return
 
-        if not rooms or room.room_id != rooms[0]:
+        if not room_ids or room.room_id != room_ids[0]:
             self.log.debug(
                 'received message triggered new comms room for peer',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
-                known_user_rooms=rooms,
+                known_user_rooms=room_ids,
                 room=room,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
-        # healthcheck is done only later, as we could starthealthcheck this user later
+        # don't proceed if user isn't healthchecked (yet)
+        # check is done after rooms updates in case we need to communicate with the user later
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
             return False
@@ -796,7 +797,7 @@ class MatrixTransport(Runnable):
 
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
-        if room_ids:  # if we know any room for this user, uses the first one
+        if room_ids:  # if we know any room for this user, use the first one
             return self._client.rooms[room_ids[0]]
 
         # The addresses are being sorted to ensure the same channel is used for both directions
@@ -1114,6 +1115,8 @@ class MatrixTransport(Runnable):
 
         assert not room_id or room_id in self._client.rooms, 'Invalid room_id'
         address_hex: AddressHex = to_checksum_address(address)
+        # filter_private=False to preserve public rooms on the list, even if we require privacy
+        room_ids = self._get_room_ids_for_address(address, filter_private=False)
 
         # no need to deepcopy, we don't modify lists in-place
         _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = self._client.account_data.get(
@@ -1121,16 +1124,18 @@ class MatrixTransport(Runnable):
             {},
         ).copy()
 
+        changed = False
         if not room_id:  # falsy room_id => clear list
+            changed = address_hex in _address_to_room_ids
             _address_to_room_ids.pop(address_hex, None)
         else:
-            # filter_private=False to preserve public rooms on the list, even if we require privacy
-            room_ids = self._get_room_ids_for_address(address, filter_private=False)
             # push to front
-            _address_to_room_ids[address_hex] = [room_id] + [r for r in room_ids if r != room_id]
+            room_ids = [room_id] + [r for r in room_ids if r != room_id]
+            if room_ids != _address_to_room_ids.get(address_hex):
+                _address_to_room_ids[address_hex] = room_ids
+                changed = True
 
-        # if changed:
-        if self._client.account_data.get('network.raiden.rooms', {}) != _address_to_room_ids:
+        if changed:
             self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
 
     def _get_room_ids_for_address(
