@@ -49,7 +49,7 @@ class BlockChainService:
     def block_number(self) -> int:
         return self.client.block_number()
 
-    def get_block(self, block_identifier) -> int:
+    def get_block(self, block_identifier):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
 
     def is_synced(self) -> bool:
