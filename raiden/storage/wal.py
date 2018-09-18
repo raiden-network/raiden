@@ -1,4 +1,5 @@
 from datetime import datetime
+
 import structlog
 
 from raiden.transfer.architecture import StateManager
@@ -6,25 +7,23 @@ from raiden.transfer.architecture import StateManager
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def restore_from_latest_snapshot(transition_function, storage):
-    snapshot = storage.get_latest_state_snapshot()
+def restore_to_state_change(transition_function, storage, state_change_identifier):
+    snapshot = storage.get_snapshot_closest_to_state_change(state_change_identifier)
 
+    from_state_change_id = 0
+    chain_state = None
     if snapshot:
         log.debug('Restoring from snapshot')
-        last_applied_state_change_id, state = snapshot
-        unapplied_state_changes = storage.get_statechanges_by_identifier(
-            from_identifier=last_applied_state_change_id,
-            to_identifier='latest',
-        )
+        from_state_change_id, chain_state = snapshot
     else:
         log.debug('No snapshot found, replaying all state changes')
-        state = None
-        unapplied_state_changes = storage.get_statechanges_by_identifier(
-            from_identifier=0,
-            to_identifier='latest',
-        )
 
-    state_manager = StateManager(transition_function, state)
+    unapplied_state_changes = storage.get_statechanges_by_identifier(
+        from_identifier=from_state_change_id,
+        to_identifier=state_change_identifier,
+    )
+
+    state_manager = StateManager(transition_function, chain_state)
     wal = WriteAheadLog(state_manager, storage)
 
     log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))

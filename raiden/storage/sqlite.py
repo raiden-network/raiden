@@ -11,6 +11,17 @@ from raiden.utils import typing
 RAIDEN_DB_VERSION = 4
 
 
+class EventRecord(typing.NamedTuple):
+    event_identifier: typing.ChannelID
+    state_change_identifier: typing.BlockNumber
+    data: typing.Any
+
+
+class StateChangeRecord(typing.NamedTuple):
+    state_change_identifier: typing.ChannelID
+    data: typing.Any
+
+
 def assert_sqlite_version() -> bool:
     if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
         return False
@@ -144,7 +155,43 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, filters: typing.Dict[str, str]):
+    def get_snapshot_closest_to_state_change(
+            self,
+            state_change_id: int,
+    ) -> Optional[Tuple[int, Any]]:
+        """ Get snapshots earlier than state_change with provided ID. """
+
+        if not (state_change_id == 'latest' or isinstance(state_change_id, int)):
+            raise ValueError("from_identifier must be an integer or 'latest'")
+
+        cursor = self.conn.cursor()
+        if state_change_id == 'latest':
+            cursor.execute(
+                'SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1',
+            )
+            state_change_id = cursor.fetchone()
+
+        cursor = self.conn.execute(
+            'SELECT statechange_id, data FROM state_snapshot '
+            'WHERE statechange_id <= ?'
+            'ORDER BY identifier DESC LIMIT 1',
+            (state_change_id, ),
+        )
+        serialized = cursor.fetchall()
+
+        result = 0, None
+        if serialized:
+            assert len(serialized) == 1
+            last_applied_state_change_id = serialized[0][0]
+            snapshot_state = self.serializer.deserialize(serialized[0][1])
+            return (last_applied_state_change_id, snapshot_state)
+
+        return result
+
+    def get_latest_event_by_data_field(
+            self,
+            filters: typing.Dict[str, str],
+    ) -> EventRecord:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -156,17 +203,28 @@ class SQLiteStorage:
             args.append(value)
 
         cursor.execute(
-            "SELECT data FROM state_events WHERE "
+            "SELECT identifier, source_statechange_id, data FROM state_events WHERE "
             f"{' AND '.join(where_clauses)}"
             "ORDER BY identifier DESC LIMIT 1",
             args,
         )
 
-        result = None
+        result = EventRecord(
+            event_identifier=0,
+            state_change_identifier=0,
+            data=None,
+        )
         try:
             row = cursor.fetchone()
             if row:
-                result = self.serializer.deserialize(row[0])
+                event_id = row[0]
+                state_change_id = row[1]
+                event = self.serializer.deserialize(row[2])
+                result = EventRecord(
+                    event_identifier=event_id,
+                    state_change_identifier=state_change_id,
+                    data=event,
+                )
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
@@ -174,7 +232,10 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_state_change_by_data_field(self, filters: typing.Dict[str, str]):
+    def get_latest_state_change_by_data_field(
+            self,
+            filters: typing.Dict[str, str],
+    ) -> StateChangeRecord:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -186,17 +247,22 @@ class SQLiteStorage:
             args.append(value)
 
         cursor.execute(
-            "SELECT data FROM state_events WHERE "
+            "SELECT identifier, data FROM state_changes WHERE "
             f"{' AND '.join(where_clauses)}"
             "ORDER BY identifier DESC LIMIT 1",
             args,
         )
 
-        result = None
+        result = StateChangeRecord(state_change_identifier=0, data=None)
         try:
             row = cursor.fetchone()
             if row:
-                result = self.serializer.deserialize(row[0])
+                state_change_id = row[0]
+                state_change = self.serializer.deserialize(row[1])
+                result = StateChangeRecord(
+                    state_change_identifier=state_change_id,
+                    data=state_change,
+                )
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
