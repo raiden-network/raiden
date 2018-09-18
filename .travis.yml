@@ -18,8 +18,6 @@ templates:
       - .travis/install.sh
     script:
       - .travis/run.sh
-    after_script:
-      - coveralls
 
   job-template-integration: &job-template-integration
     <<: *job-template-test
