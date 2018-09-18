@@ -348,6 +348,10 @@ class MatrixTransport(Runnable):
             str(self._raiden_service.chain.network_id),
         )
 
+    @property
+    def _private_rooms(self) -> bool:
+        return bool(self._config.get('private_rooms'))
+
     def _login_or_register(self):
         # password is signed server address
         password = encode_hex(self._sign(self._server_name.encode()))
@@ -537,17 +541,31 @@ class MatrixTransport(Runnable):
                 room=room,
             )
             return False
-        old_room = self._get_room_id_for_address(peer_address)
-        if old_room != room.room_id:
-            self.log.debug(
-                'received message triggered new room for peer',
+
+        # rooms we created and invited user, or were invited specifically by them
+        rooms = self._get_room_ids_for_address(peer_address)
+
+        if room.room_id not in rooms:
+            # this should not happen, but is not fatal, as we may not know user yet
+            self.log.warning(
+                'received peer message in a room we didnt create nor were invited by them',
                 peer_user=user.user_id,
-                peer_address=to_checksum_address(peer_address),
-                old_room=old_room,
+                peer_address=pex(peer_address),
+                room=room,
+            )
+            return
+
+        if not rooms or room.room_id != rooms[0]:
+            self.log.debug(
+                'received message triggered new comms room for peer',
+                peer_user=user.user_id,
+                peer_address=pex(peer_address),
+                known_user_rooms=rooms,
                 room=room,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
+        # healthcheck is done only later, as we could starthealthcheck this user later
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
             return False
@@ -772,9 +790,11 @@ class MatrixTransport(Runnable):
         address_hex = to_normalized_address(address)
         assert address and address in self._address_to_userids,\
             f'address not health checked: me: {self._user_id}, peer: {address_hex}'
-        room_id = self._get_room_id_for_address(address)
-        if room_id:
-            return self._client.rooms[room_id]
+
+        # filter_private is done in _get_room_ids_for_address
+        room_ids = self._get_room_ids_for_address(address)
+        if room_ids:  # if we know any room for this user, uses the first one
+            return self._client.rooms[room_ids[0]]
 
         # The addresses are being sorted to ensure the same channel is used for both directions
         # of communication.
@@ -975,11 +995,11 @@ class MatrixTransport(Runnable):
         if not address:
             return
 
-        room_id = self._get_room_id_for_address(address)
-        if not room_id:
+        room_ids = self._get_room_ids_for_address(address)
+        if not room_ids:
             return
 
-        room = self._client.rooms[room_id]
+        room = self._client.rooms[room_ids[0]]
         if not room._members:
             room.get_joined_members()
         if user.user_id not in room._members:
@@ -1074,21 +1094,61 @@ class MatrixTransport(Runnable):
         return user
 
     def _set_room_id_for_address(self, address: Address, room_id: Optional[str]):
-        """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms """
-        address_hex = to_checksum_address(address)
-        _address_to_room_id = self._client.account_data.get('network.raiden.rooms', {})
-        if room_id != _address_to_room_id.get(address_hex):
-            if room_id:
-                _address_to_room_id[address_hex] = room_id
-            else:
-                _address_to_room_id.pop(address_hex, None)
-            self._client.set_account_data('network.raiden.rooms', _address_to_room_id)
+        """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms
 
-    def _get_room_id_for_address(self, address: Address) -> Optional[str]:
-        """ Uses GMatrixClient.get_account_data to get updated mapping of addresses->rooms """
+        If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
+
+        assert not room_id or room_id in self._client.rooms, 'Invalid room_id'
         address_hex = to_checksum_address(address)
-        room_id = self._client.account_data.get('network.raiden.rooms', {}).get(address_hex)
-        if room_id and room_id not in self._client.rooms:
-            self._set_room_id_for_address(address, None)
-            return None
-        return room_id
+
+        # no need to deepcopy, we don't modify lists in-place
+        # type: Dict[address_hex, List[room_id]]
+        _address_to_room_ids = self._client.account_data.get('network.raiden.rooms', {}).copy()
+
+        if not room_id:  # falsy room_id => clear list
+            _address_to_room_ids.pop(address_hex, None)
+        else:
+            # filter_private=False to preserve public rooms on the list, even if we require privacy
+            room_ids = self._get_room_ids_for_address(address, filter_private=False)
+            # push to front
+            _address_to_room_ids[address_hex] = [room_id] + [r for r in room_ids if r != room_id]
+
+        # if changed:
+        if self._client.account_data.get('network.raiden.rooms', {}) != _address_to_room_ids:
+            self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+
+    def _get_room_ids_for_address(self, address: Address, filter_private: bool=None) -> List[str]:
+        """ Uses GMatrixClient.get_account_data to get updated mapping of address->rooms
+
+        It'll filter only existing rooms.
+        If filter_private=True, also filter out public rooms.
+        If filter_private=None, filter according to self._private_rooms
+        """
+        address_hex = to_checksum_address(address)
+        room_ids = self._client.account_data.get(
+            'network.raiden.rooms',
+            {},
+        ).get(address_hex)
+        if not room_ids:  # None or empty
+            room_ids = list()
+        if not isinstance(room_ids, list):  # old version, single room
+            room_ids = [room_ids]
+
+        if filter_private is None:
+            filter_private = self._private_rooms
+        if not filter_private:
+            # existing rooms
+            room_ids = [
+                room_id
+                for room_id in room_ids
+                if room_id in self._client.rooms
+            ]
+        else:
+            # existing and private rooms
+            room_ids = [
+                room_id
+                for room_id in room_ids
+                if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
+            ]
+
+        return room_ids
