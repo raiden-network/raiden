@@ -89,7 +89,7 @@ class InitiatorTask(State):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
-            manager_state: 'InitiatorTransferState',
+            manager_state,
     ):
         self.token_network_identifier = token_network_identifier
         self.manager_state = manager_state
@@ -133,7 +133,7 @@ class MediatorTask(State):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
-            mediator_state: 'MediatorTransferState',
+            mediator_state,
     ):
         self.token_network_identifier = token_network_identifier
         self.mediator_state = mediator_state
@@ -181,7 +181,7 @@ class TargetTask(State):
             self,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            target_state: 'TargetTransferState',
+            target_state,
     ):
         self.token_network_identifier = token_network_identifier
         self.target_state = target_state

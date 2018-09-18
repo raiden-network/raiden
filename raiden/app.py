@@ -72,7 +72,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             transport,
-            raiden_event_handler: 'RaidenEventHandler',
+            raiden_event_handler,
             discovery: Discovery = None,
     ):
         raiden = RaidenService(
