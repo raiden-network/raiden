@@ -10,7 +10,7 @@ def pack_balance_proof(
         channel_identifier: typing.ChannelID,
         token_network_identifier: typing.TokenNetworkID,
         chain_id: typing.ChainID,
-        msg_type: MessageTypeId=MessageTypeId.BALANCE_PROOF,
+        msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
     return pack_data([
         'address',
