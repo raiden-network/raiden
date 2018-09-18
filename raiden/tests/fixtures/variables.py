@@ -304,3 +304,8 @@ def database_paths(tmpdir, private_keys):
         database_paths.append(os.path.join(app_dir, 'log.db'))
 
     return database_paths
+
+
+@pytest.fixture
+def private_rooms():
+    return True

@@ -263,6 +263,7 @@ def create_apps(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         local_matrix_url=None,
+        private_rooms=None,
 ):
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -313,7 +314,7 @@ def create_apps(
                             'retry_interval': retry_interval,
                             'server': local_matrix_url,
                             'server_name': 'matrix.local.raiden',
-                            'private_rooms': True,
+                            'private_rooms': private_rooms,
                         },
                     },
                 },
