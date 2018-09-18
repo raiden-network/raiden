@@ -55,6 +55,8 @@ class ParticipantDetails(NamedTuple):
     is_closer: bool
     balance_hash: typing.BalanceHash
     nonce: typing.Nonce
+    locksroot: typing.Locksroot
+    locked_amount: typing.TokenAmount
 
 
 class ParticipantsDetails(NamedTuple):
@@ -274,6 +276,8 @@ class TokenNetwork:
             is_closer=data[ParticipantInfoIndex.IS_CLOSER],
             balance_hash=data[ParticipantInfoIndex.BALANCE_HASH],
             nonce=data[ParticipantInfoIndex.NONCE],
+            locksroot=data[ParticipantInfoIndex.LOCKSROOT],
+            locked_amount=data[ParticipantInfoIndex.LOCKED_AMOUNT],
         )
 
     def detail_channel(
