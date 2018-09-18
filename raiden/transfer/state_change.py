@@ -20,28 +20,51 @@ class Block(StateChange):
         block_number: The current block_number.
     """
 
-    def __init__(self, block_number: typing.BlockNumber):
+    def __init__(
+            self,
+            block_number: typing.BlockNumber,
+            gas_limit: typing.BlockGasLimit,
+            block_hash: typing.BlockHash,
+    ):
         if not isinstance(block_number, typing.T_BlockNumber):
             raise ValueError('block_number must be of type block_number')
 
         self.block_number = block_number
+        self.gas_limit = gas_limit
+        self.block_hash = block_hash
 
     def __repr__(self):
-        return '<Block {}>'.format(self.block_number)
+        return (
+            f'<Block '
+            f'number={self.block_number} gas_limit={self.gas_limit} '
+            f'block_hash={pex(self.block_hash)}'
+            f'>'
+        )
 
     def __eq__(self, other):
         return (
             isinstance(other, Block) and
-            self.block_number == other.block_number
+            self.block_number == other.block_number and
+            self.gas_limit == other.gas_limit and
+            self.block_hash == other.block_hash
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self) -> 'ActionChannelClose':
+        return {
+            'block_number': self.block_number,
+            'gas_limit': self.gas_limit,
+            'block_hash': serialize_bytes(self.block_hash),
+        }
+
     @classmethod
     def from_dict(cls, data) -> 'Block':
         return cls(
             block_number=data['block_number'],
+            gas_limit=data['gas_limit'],
+            block_hash=deserialize_bytes(data['block_hash']),
         )
 
 

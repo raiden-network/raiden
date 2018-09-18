@@ -16,6 +16,15 @@ Balance = NewType('Balance', T_Balance)
 T_BalanceHash = bytes
 BalanceHash = NewType('BalanceHash', T_BalanceHash)
 
+T_BlockGasLimit = int
+BlockGasLimit = NewType('BlockGasLimit', T_BlockGasLimit)
+
+T_BlockGasPrice = int
+BlockGasPrice = NewType('BlockGasPrice', T_BlockGasPrice)
+
+T_BlockHash = bytes
+BlockHash = NewType('BlockHash', T_BlockHash)
+
 T_BlockNumber = int
 BlockNumber = NewType('BlockNumber', T_BlockNumber)
 

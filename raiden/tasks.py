@@ -130,7 +130,8 @@ class AlarmTask(Runnable):
         sleep_time = self.sleep_time
         while self._stop_event.wait(sleep_time) is not True:
             last_block_number = self.last_block_number
-            current_block = self.chain.block_number()
+            latest_block = self.chain.get_block(block_identifier='latest')
+            latest_block_number = latest_block['number']
 
             if chain_id != self.chain.network_id:
                 raise RuntimeError(
@@ -138,42 +139,52 @@ class AlarmTask(Runnable):
                     'is not supported.',
                 )
 
-            if current_block != last_block_number:
-                log.debug('new block', number=current_block)
+            if latest_block_number != last_block_number:
+                log.debug(
+                    'new block',
+                    number=latest_block_number,
+                    gas_limit=latest_block['gasLimit'],
+                    block_hash=latest_block['hash'],
+                )
 
-                if current_block > last_block_number + 1:
-                    missed_blocks = current_block - last_block_number - 1
+                if latest_block_number > last_block_number + 1:
+                    missed_blocks = latest_block_number - last_block_number - 1
                     log.info(
                         'missed blocks',
                         missed_blocks=missed_blocks,
-                        current_block=current_block,
+                        latest_block=latest_block,
                     )
 
-                self._run_callbacks(current_block)
+                self._run_callbacks(latest_block)
 
     def first_run(self):
         # callbacks must be executed during the first run to update the node state
         assert self.callbacks, 'callbacks not set'
 
         chain_id = self.chain.network_id
-        current_block = self.chain.block_number()
+        latest_block = self.chain.get_block(block_identifier='latest')
 
-        log.debug('starting at block number', current_block=current_block)
+        log.debug(
+            'starting at block number',
+            number=latest_block['number'],
+            gas_limit=latest_block['gasLimit'],
+            block_hash=latest_block['hash'],
+        )
 
-        self._run_callbacks(current_block)
+        self._run_callbacks(latest_block)
         self.chain_id = chain_id
 
-    def _run_callbacks(self, current_block):
+    def _run_callbacks(self, latest_block):
         remove = list()
         for callback in self.callbacks:
-            result = callback(current_block)
+            result = callback(latest_block)
             if result is REMOVE_CALLBACK:
                 remove.append(callback)
 
         for callback in remove:
             self.callbacks.remove(callback)
 
-        self.last_block_number = current_block
+        self.last_block_number = latest_block['number']
 
     def stop(self):
         self._stop_event.set(True)

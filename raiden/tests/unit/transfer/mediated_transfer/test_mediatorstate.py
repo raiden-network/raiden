@@ -1458,9 +1458,15 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # Wait until it's not safe to wait for the off-chain unlock for B-C (and expire C-A2)
     new_iteration = iteration
     for new_block_number in range(block_number, attack_block_number + 1):
+        block = Block(
+            block_number=new_block_number,
+            gas_limit=1,
+            block_hash=factories.make_transaction_hash(),
+        )
+
         new_iteration = mediator.state_transition(
             new_iteration.new_state,
-            Block(new_block_number),
+            block,
             channel_map,
             pseudo_random_generator,
             new_block_number,
@@ -1491,9 +1497,14 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
 
     # don't go on-chain since the balance proof was not received
     for new_block_number in range(block_number, from_transfer.lock.expiration + 1):
+        block = Block(
+            block_number=new_block_number,
+            gas_limit=1,
+            block_hash=factories.make_transaction_hash(),
+        )
         new_iteration = mediator.state_transition(
             new_iteration.new_state,
-            Block(new_block_number),
+            block,
             channel_map,
             pseudo_random_generator,
             new_block_number,
@@ -1756,9 +1767,14 @@ def test_mediator_lock_expired_with_new_block():
     transfer = send_transfer.transfer
 
     block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    block = Block(
+        block_number=block_expiration_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = mediator.state_transition(
         mediator_state,
-        Block(block_expiration_number),
+        block,
         channel_map,
         pseudo_random_generator,
         block_expiration_number,
