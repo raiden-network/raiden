@@ -7,7 +7,7 @@ from raiden.exceptions import InvalidDBData
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.utils import TimestampedEvent
-from raiden.storage.wal import WriteAheadLog, restore_from_latest_snapshot
+from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils import factories
 from raiden.transfer.architecture import State, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
@@ -215,9 +215,10 @@ def test_restore_without_snapshot():
     )
     wal.log_and_dispatch(block3)
 
-    newwal = restore_from_latest_snapshot(
-        state_transtion_acc,
-        wal.storage,
+    newwal = restore_to_state_change(
+        transition_function=state_transtion_acc,
+        storage=wal.storage,
+        state_change_identifier='latest',
     )
 
     aggregate = newwal.state_manager.current_state
