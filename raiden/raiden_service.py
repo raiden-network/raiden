@@ -214,9 +214,10 @@ class RaidenService(Runnable):
             )
 
         storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
-        self.wal = wal.restore_from_latest_snapshot(
-            node.state_transition,
-            storage,
+        self.wal = wal.restore_to_state_change(
+            transition_function=node.state_transition,
+            storage=storage,
+            state_change_identifier='latest',
         )
 
         if self.wal.state_manager.current_state is None:

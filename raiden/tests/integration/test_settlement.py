@@ -8,7 +8,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
-from raiden.storage.restore import channel_state_until_balance_hash
+from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -263,6 +263,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_to_bob_amount,
         identifier,
     )
+
     secrethash = sha3(secret)
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
@@ -285,11 +286,12 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     our_balance_proof = alice_bob_channel_state.our_state.balance_proof
 
     # Test WAL restore to return the latest channel state
-    restored_channel_state = channel_state_until_balance_hash(
+    restored_channel_state = channel_state_until_state_change(
         alice_app.raiden,
         token_address,
+        token_network_identifier,
         alice_bob_channel_state.identifier,
-        alice_bob_channel_state.our_state.balance_proof.balance_hash,
+        'latest',
     )
 
     our_restored_balance_proof = restored_channel_state.our_state.balance_proof

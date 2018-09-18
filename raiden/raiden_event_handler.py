@@ -1,10 +1,11 @@
 import structlog
+from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
-from raiden.storage.restore import channel_state_until_balance_hash
+from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock
@@ -38,6 +39,7 @@ from raiden.transfer.utils import (
     get_latest_known_balance_proof_from_state_changes,
 )
 from raiden.utils import pex
+from raiden.utils.serialization import serialize_bytes
 from raiden_libs.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -311,31 +313,64 @@ class RaidenEventHandler:
         # Fetch on-chain balance hashes for both participants
         participants_details = token_network.detail_participants(
             raiden.address,
-            channel_unlock_event.partner,
+            channel_unlock_event.participant,
             channel_unlock_event.channel_identifier,
         )
 
+        our_details = participants_details.our_details
+        our_locksroot = our_details.locksroot
+
+        partner_details = participants_details.partner_details
+        partner_locksroot = partner_details.locksroot
+        record = None
+
+        if (partner_details.address == channel_unlock_event.participant and
+                partner_locksroot != EMPTY_HASH):
+            # Partner account
+            record = raiden.wal.storage.get_latest_state_change_by_data_field({
+                'balance_proof.chain_id': raiden.chain.network_id,
+                'balance_proof.token_network_identifier': to_checksum_address(
+                    channel_unlock_event.token_network_identifier,
+                ),
+                'balance_proof.channel_identifier': channel_unlock_event.channel_identifier,
+                'balance_proof.sender': to_checksum_address(
+                    participants_details.partner_details.address,
+                ),
+                'balance_proof.locksroot': serialize_bytes(partner_locksroot),
+            })
+        elif (our_details.address == channel_unlock_event.participant and
+                our_locksroot != EMPTY_HASH):
+            # Our account
+            record = raiden.wal.storage.get_latest_event_by_data_field({
+                'balance_proof.chain_id': raiden.chain.network_id,
+                'balance_proof.token_network_identifier': to_checksum_address(
+                    channel_unlock_event.token_network_identifier,
+                ),
+                'balance_proof.locksroot': serialize_bytes(our_locksroot),
+                'channel_identifier': channel_unlock_event.channel_identifier,
+            })
+        else:
+            raise RaidenUnrecoverableError(
+                "Failed to find state/event that match current channel locksroots",
+            )
+
         # Replay state changes until a channel state is reached where
         # this channel state has the participants balance hash.
-        restored_channel_state = channel_state_until_balance_hash(
+        restored_channel_state = channel_state_until_state_change(
             raiden=raiden,
             token_address=channel_unlock_event.token_address,
+            token_network_identifier=channel_unlock_event.token_network_identifier,
             channel_identifier=channel_unlock_event.channel_identifier,
-            target_balance_hash=participants_details.partner_details.balance_hash,
+            state_change_identifier=record.state_change_identifier,
         )
 
-        if not restored_channel_state:
-            msg = 'Channel state with partner balance hash {} could not be found'.format(
-                pex(participants_details.partner_details.balance_hash),
-            )
-            log.error(msg)
-            # raise RaidenUnrecoverableError(
-            #     f'Unlock cannot continue because {msg}',
-            # )
-
         # Compute merkle tree leaves from partner state
+        our_state = restored_channel_state.our_state
         partner_state = restored_channel_state.partner_state
-        merkle_tree_leaves = get_batch_unlock(partner_state)
+        if partner_state.address == channel_unlock_event.participant:  # Partner account
+            merkle_tree_leaves = get_batch_unlock(partner_state)
+        elif our_state.address == channel_unlock_event.participant:  # Our account
+            merkle_tree_leaves = get_batch_unlock(our_state)
 
         try:
             payment_channel.unlock(merkle_tree_leaves)
@@ -381,15 +416,6 @@ class RaidenEventHandler:
             recipient=participants_details.our_details.address,
             balance_hash=participants_details.partner_details.balance_hash,
         )
-
-        our_balance_proof = None
-        partner_balance_proof = None
-
-        if our_state_changes:
-            our_balance_proof = our_state_changes[0].balance_proof
-
-        if partner_state_changes:
-            partner_balance_proof = partner_state_changes[0].balance_proof
 
         our_balance_hash = participants_details.our_details.balance_hash
         if our_balance_proof and our_balance_hash != EMPTY_HASH:
