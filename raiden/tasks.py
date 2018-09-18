@@ -15,7 +15,7 @@ CHECK_VERSION_INTERVAL = 3 * 60 * 60
 CHECK_GAS_RESERVE_INTERVAL = 60 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
-SECURITY_EXPRESSION = '\[CRITICAL UPDATE.*?\]'
+SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
