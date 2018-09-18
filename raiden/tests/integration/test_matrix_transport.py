@@ -1,6 +1,5 @@
 import json
 import random
-from typing import Optional, Union
 
 import pytest
 
@@ -9,7 +8,7 @@ from raiden.messages import SecretRequest
 from raiden.network.transport.matrix import MatrixTransport
 from raiden.tests.utils.factories import ADDR, HOP1, HOP1_KEY, UNIT_SECRETHASH
 from raiden.tests.utils.transport import MockRaidenService
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, List, Optional, Union
 
 USERID1 = '@Alice:Wonderland'
 
@@ -19,6 +18,7 @@ def mock_matrix(
         monkeypatch,
         retry_interval,
         retries_before_backoff,
+        local_matrix_server,
 ):
 
     from matrix_client.user import User
@@ -27,8 +27,12 @@ def mock_matrix(
     def mock_get_user(klass, user: Union[User, str]) -> User:
         return User(None, USERID1)
 
-    def mock_get_room_id_for_address(klass, address: Address) -> Optional[str]:
-        return '42'
+    def mock_get_room_ids_for_address(
+            klass,
+            address: Address,
+            filter_private: bool=None,
+    ) -> List[str]:
+        return ['!roomID:server']
 
     def mock_set_room_id_for_address(self, address: Address, room_id: Optional[str]):
         pass
@@ -44,13 +48,11 @@ def mock_matrix(
     config = dict(
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
-        server='auto',
-        available_servers=[
-            'https://transport01.raiden.network',
-            'https://transport02.raiden.network',
-            'https://transport03.raiden.network',
-        ],
+        server=local_matrix_server,
+        server_name='matrix.local.raiden',
+        available_servers=[],
         discovery_room='discovery',
+        private_rooms=True,
     )
 
     transport = MatrixTransport(config)
@@ -59,7 +61,11 @@ def mock_matrix(
     transport._address_to_userids[HOP1] = USERID1
 
     monkeypatch.setattr(MatrixTransport, '_get_user', mock_get_user)
-    monkeypatch.setattr(MatrixTransport, '_get_room_id_for_address', mock_get_room_id_for_address)
+    monkeypatch.setattr(
+        MatrixTransport,
+        '_get_room_ids_for_address',
+        mock_get_room_ids_for_address,
+    )
     monkeypatch.setattr(MatrixTransport, '_set_room_id_for_address', mock_set_room_id_for_address)
     monkeypatch.setattr(MatrixTransport, '_receive_message', mock_receive_message)
 
@@ -109,46 +115,54 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(mock_matrix, skip_userid_validation):
+def test_normal_processing_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     assert m._handle_message(room, event)
 
 
-def test_normal_processing_json(mock_matrix, skip_userid_validation):
+def test_normal_processing_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     room, event = make_message(convert_to_hex=False)
     assert m._handle_message(room, event)
 
 
-def test_processing_invalid_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
-def test_sending_nonstring_body(mock_matrix, skip_userid_validation):
+def test_sending_nonstring_body(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     room, event = make_message(overwrite_data=b'somebinarydata')
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_json(
+        mock_matrix,
+        skip_userid_validation,
+        skip_if_not_matrix,
+):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_cmdid_json(
+        mock_matrix,
+        skip_userid_validation,
+        skip_if_not_matrix,
+):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -156,7 +170,7 @@ def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -164,7 +178,11 @@ def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_cmdid_hex(
+        mock_matrix,
+        skip_userid_validation,
+        skip_if_not_matrix,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
