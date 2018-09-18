@@ -190,9 +190,7 @@ jobs:
 #          branch: master
 
       - provider: s3
-        # Remove once https://github.com/travis-ci/dpl/issues/865 is fixed
-        edge:
-          branch: ha-s3-endpoint
+        edge: true
         skip_cleanup: true
         access_key_id: MK22XIZDUYA3EWBHGAKD
         secret_access_key:
@@ -251,9 +249,7 @@ jobs:
             repo: raiden-network/raiden
             branch: master
         - provider: s3
-          # Remove once https://github.com/travis-ci/dpl/issues/865 is fixed
-          edge:
-            branch: ha-s3-endpoint
+          edge: true
           skip_cleanup: true
           access_key_id: MK22XIZDUYA3EWBHGAKD
           secret_access_key:
