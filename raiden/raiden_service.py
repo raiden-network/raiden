@@ -441,7 +441,7 @@ class RaidenService(Runnable):
     def start_health_check_for(self, node_address):
         self.transport.start_health_check(node_address)
 
-    def _callback_new_block(self, current_block_number):
+    def _callback_new_block(self, latest_block):
         """Called once a new block is detected by the alarm task.
 
         Note:
@@ -465,8 +465,9 @@ class RaidenService(Runnable):
         # API and the AlarmTask. The following lock is necessary, to ensure the
         # expected side-effects are properly applied (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
+        latest_block_number = latest_block['number']
         with self.event_poll_lock:
-            for event in self.blockchain_events.poll_blockchain_events(current_block_number):
+            for event in self.blockchain_events.poll_blockchain_events(latest_block_number):
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the ChainState's block_number.
                 on_blockchain_event(self, event)
@@ -481,7 +482,11 @@ class RaidenService(Runnable):
             # twice, this will happen if the node crashed and some events have
             # been processed but the Block state change has not been
             # dispatched.
-            state_change = Block(current_block_number)
+            state_change = Block(
+                block_number=latest_block_number,
+                gas_limit=latest_block['gasLimit'],
+                block_hash=bytes(latest_block['hash']),
+            )
             self.handle_state_change(state_change)
 
     def sign(self, message):

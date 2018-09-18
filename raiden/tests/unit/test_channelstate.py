@@ -421,7 +421,11 @@ def test_deposit_must_wait_for_confirmation():
     unconfirmed_state = iteration.new_state
 
     for block_number in range(block_number, confirmed_deposit_block_number):
-        unconfirmed_block = Block(block_number)
+        unconfirmed_block = Block(
+            block_number=block_number,
+            gas_limit=1,
+            block_hash=factories.make_transaction_hash(),
+        )
         iteration = channel.state_transition(
             deepcopy(unconfirmed_state),
             unconfirmed_block,
@@ -441,7 +445,11 @@ def test_deposit_must_wait_for_confirmation():
             partner_model1,
         )
 
-    confirmed_block = Block(confirmed_deposit_block_number)
+    confirmed_block = Block(
+        block_number=confirmed_deposit_block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = channel.state_transition(
         deepcopy(unconfirmed_state),
         confirmed_block,

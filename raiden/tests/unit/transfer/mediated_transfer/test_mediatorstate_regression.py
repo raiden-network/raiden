@@ -76,7 +76,11 @@ def test_payer_enter_danger_zone_with_transfer_payed():
 
     new_state = initial_iteration.new_state
     for block_number in range(block_number, lock_expiration - channel1.reveal_timeout):
-        block_state_change = Block(block_number)
+        block_state_change = Block(
+            block_number=block_number,
+            gas_limit=1,
+            block_hash=factories.make_transaction_hash(),
+        )
 
         block_iteration = mediator.handle_block(
             new_state,
@@ -106,7 +110,11 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     # move to the block in which the payee lock expires. This must not raise an
     # assertion
     expired_block_number = lock_expiration + 1
-    expired_block_state_change = Block(expired_block_number)
+    expired_block_state_change = Block(
+        block_number=expired_block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     block_iteration = mediator.handle_block(
         paid_state,
         expired_block_state_change,

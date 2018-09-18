@@ -67,7 +67,11 @@ def test_write_read_log():
     wal = new_wal()
 
     block_number = 1337
-    block = Block(block_number)
+    block = Block(
+        block_number=block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     unlocked_amount = 10
     returned_amount = 5
     participant = factories.make_address()
@@ -190,9 +194,26 @@ def test_write_read_events():
 def test_restore_without_snapshot():
     wal = new_wal()
 
-    wal.log_and_dispatch(Block(5))
-    wal.log_and_dispatch(Block(7))
-    wal.log_and_dispatch(Block(8))
+    block1 = Block(
+        block_number=5,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block1)
+
+    block2 = Block(
+        block_number=7,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block2)
+
+    block3 = Block(
+        block_number=8,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block3)
 
     newwal = restore_from_latest_snapshot(
         state_transtion_acc,
@@ -200,4 +221,4 @@ def test_restore_without_snapshot():
     )
 
     aggregate = newwal.state_manager.current_state
-    assert aggregate.state_changes == [Block(5), Block(7), Block(8)]
+    assert aggregate.state_changes == [block1, block2, block3]

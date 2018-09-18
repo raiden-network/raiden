@@ -327,7 +327,11 @@ def test_handle_block():
         initiator,
     )
 
-    new_block = Block(block_number + 1)
+    new_block = Block(
+        block_number=block_number + 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = target.state_transition(
         state,
         new_block,
@@ -354,7 +358,11 @@ def test_handle_block_equal_block_number():
         initiator,
     )
 
-    new_block = Block(block_number)
+    new_block = Block(
+        block_number=block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = target.state_transition(
         state,
         new_block,
@@ -381,7 +389,11 @@ def test_handle_block_lower_block_number():
         initiator,
     )
 
-    new_block = Block(block_number - 1)
+    new_block = Block(
+        block_number=block_number - 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = target.state_transition(
         state,
         new_block,
@@ -438,7 +450,11 @@ def test_state_transition():
     assert init_transition.new_state.route == from_route
     assert init_transition.new_state.transfer == from_transfer
 
-    first_new_block = Block(block_number + 1)
+    first_new_block = Block(
+        block_number=block_number + 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     first_block_iteration = target.state_transition(
         init_transition.new_state,
         first_new_block,
@@ -457,7 +473,11 @@ def test_state_transition():
     )
     assert reveal_iteration.events
 
-    second_new_block = Block(block_number + 2)
+    second_new_block = Block(
+        block_number=block_number + 2,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = target.state_transition(
         init_transition.new_state,
         second_new_block,

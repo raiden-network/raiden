@@ -19,9 +19,21 @@ HASH2 = sha3(b'joo')
 
 def test_transfer_statechange_operators():
     # pylint: disable=unneeded-not
-    a = Block(2)
-    b = Block(2)
-    c = Block(3)
+    a = Block(
+        block_number=2,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    b = Block(
+        block_number=2,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    c = Block(
+        block_number=3,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
 
     assert a == b
     assert not a != b

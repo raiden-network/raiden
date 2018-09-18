@@ -722,7 +722,9 @@ def test_initiator_lock_expired():
 
     # Trigger lock expiry
     state_change = Block(
-        transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
     )
 
     iteration = initiator_manager.state_transition(
@@ -771,9 +773,14 @@ def test_initiator_lock_expired():
 
     expiration_block_number = transfer2_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 
+    block = Block(
+        block_number=expiration_block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
     iteration = initiator_manager.state_transition(
         transfer2_state,
-        Block(expiration_block_number),
+        block,
         channel_map,
         pseudo_random_generator,
         expiration_block_number,
