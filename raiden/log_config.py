@@ -160,17 +160,6 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     TracebackException.format = tracebackexception_format
 
 
-def configure_logging_defaults(logger_level_config: Dict[str, str] = None):
-    if logger_level_config:
-        logger_level_config = dict(logger_level_config)
-    else:
-        logger_level_config = dict()
-
-    logger_level_config.setdefault('filelock', 'ERROR')
-    logger_level_config.setdefault('', DEFAULT_LOG_LEVEL)
-    return logger_level_config
-
-
 def configure_logging(
         logger_level_config: Dict[str, str] = None,
         colorize: bool = True,
@@ -179,8 +168,11 @@ def configure_logging(
         disable_debug_logfile: bool = False,
 ):
     structlog.reset_defaults()
-    if logger_level_config is None:
-        logger_level_config = {'': DEFAULT_LOG_LEVEL}
+
+    logger_level_config = logger_level_config or dict()
+    logger_level_config.setdefault('filelock', 'ERROR')
+    logger_level_config.setdefault('', DEFAULT_LOG_LEVEL)
+
     processors = [
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,

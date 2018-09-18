@@ -55,7 +55,7 @@ if True:
         ReplacementTransactionUnderpriced,
         TransactionAlreadyPending,
     )
-    from raiden.log_config import configure_logging, configure_logging_defaults
+    from raiden.log_config import configure_logging
     from raiden.network.blockchain_service import BlockChainService
     from raiden.network.discovery import ContractDiscovery
     from raiden.network.rpc.client import JSONRPCClient
@@ -916,9 +916,8 @@ class NodeRunner:
         if not self._options['accept_disclaimer']:
             click.confirm('\nHave you read and acknowledge the above disclaimer?', abort=True)
 
-        log_config = configure_logging_defaults(self._options['log_config'])
         configure_logging(
-            log_config,
+            self._options['log_config'],
             log_json=self._options['log_json'],
             log_file=self._options['log_file'],
             disable_debug_logfile=self._options['disable_debug_logfile'],
