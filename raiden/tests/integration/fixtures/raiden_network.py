@@ -37,6 +37,7 @@ def raiden_chain(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         local_matrix_server,
+        private_rooms,
 ):
 
     if len(token_addresses) != 1:
@@ -65,6 +66,7 @@ def raiden_chain(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         local_matrix_server,
+        private_rooms,
     )
 
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
@@ -131,6 +133,7 @@ def raiden_network(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         local_matrix_server,
+        private_rooms,
 ):
 
     raiden_apps = create_apps(
@@ -151,6 +154,7 @@ def raiden_network(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         local_matrix_server,
+        private_rooms,
     )
 
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]

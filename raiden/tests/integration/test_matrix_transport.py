@@ -19,6 +19,7 @@ def mock_matrix(
         retry_interval,
         retries_before_backoff,
         local_matrix_server,
+        private_rooms,
 ):
 
     from matrix_client.user import User
@@ -52,7 +53,7 @@ def mock_matrix(
         server_name='matrix.local.raiden',
         available_servers=[],
         discovery_room='discovery',
-        private_rooms=True,
+        private_rooms=private_rooms,
     )
 
     transport = MatrixTransport(config)

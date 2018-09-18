@@ -16,8 +16,26 @@ class TransportProtocol(Enum):
 
 
 @pytest.fixture
-def transport_config():
-    return TransportConfig(protocol=TransportProtocol.UDP, parameters=None)
+def transport(request):
+    """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
+    return request.config.getoption('transport')
+
+
+@pytest.fixture
+def transport_config(request, transport):
+    if transport == 'udp':
+        return TransportConfig(protocol=TransportProtocol.UDP, parameters=None)
+    elif transport == 'matrix':
+        command = request.config.getoption('local_matrix')
+        return TransportConfig(
+            protocol=TransportProtocol.MATRIX,
+            parameters=MatrixTransportConfig(
+                command=command,
+                server=request.config.getoption('matrix_server'),
+            ),
+        )
+    else:
+        return None
     # can be changed with command line options, see tests/conftest.py
 
 
@@ -35,6 +53,13 @@ def skip_if_not_matrix(request):
     if request.config.option.transport in ('matrix', 'all'):
         return
     pytest.skip('This test works only with Matrix transport')
+
+
+@pytest.fixture
+def public_and_private_rooms():
+    """If present in a test, conftest.pytest_generate_tests will parametrize private_rooms fixture
+    """
+    return True
 
 
 @pytest.fixture
