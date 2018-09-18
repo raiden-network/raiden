@@ -823,7 +823,10 @@ class MatrixTransport(Runnable):
 
         self._address_to_userids[address].update({user.user_id for user in peers})
 
-        room = self._get_unlisted_room(room_name, invitees=peers)
+        if self._private_rooms:
+            room = self._get_private_room(invitees=peers)
+        else:
+            room = self._get_public_room(room_name, invitees=peers)
         self._set_room_id_for_address(address, room.room_id)
 
         for user in peers:
@@ -839,8 +842,16 @@ class MatrixTransport(Runnable):
         )
         return room
 
-    def _get_unlisted_room(self, room_name, invitees: List[User]):
-        """Obtain a room that cannot be found by search_room_directory."""
+    def _get_private_room(self, invitees: List[User]):
+        """ Create an anonymous, private room and invite peers """
+        return self._client.create_room(
+            None,
+            invitees=[user.user_id for user in invitees],
+            is_public=False,
+        )
+
+    def _get_public_room(self, room_name, invitees: List[User]):
+        """ Obtain a public, canonically named (if possible) room and invite peers """
         room_name_full = f'#{room_name}:{self._server_name}'
         invitees_uids = [user.user_id for user in invitees]
 
@@ -870,7 +881,7 @@ class MatrixTransport(Runnable):
                 room = self._client.create_room(
                     room_name,
                     invitees=invitees_uids,
-                    is_public=True,  # FIXME: debug only
+                    is_public=True,
                 )
             except MatrixRequestError as error:
                 if error.code == 409:
@@ -895,7 +906,7 @@ class MatrixTransport(Runnable):
             room = self._client.create_room(
                 None,
                 invitees=invitees_uids,
-                is_public=True,  # FIXME: debug only
+                is_public=True,
             )
             log.warning(
                 'Could not create nor join a named room. Successfuly created an unnamed one',
