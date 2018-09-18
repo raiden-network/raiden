@@ -134,7 +134,7 @@ class RaidenService(Runnable):
             default_secret_registry: SecretRegistry,
             private_key_bin,
             transport,
-            raiden_event_handler: 'RaidenEventHandler',
+            raiden_event_handler,
             config,
             discovery=None,
     ):
