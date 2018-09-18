@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import Dict, List, NewType, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, NewType, Optional, Tuple, Union
 
 T_Address = bytes
 Address = NewType('Address', T_Address)
@@ -115,3 +115,25 @@ SuccessOrError = Tuple[bool, Optional[str]]
 BlockSpecification = Union[str, T_BlockNumber]
 
 ChannelMap = Dict[ChannelID, 'NettingChannelState']
+
+
+class ChannelUniqueID(NamedTuple):
+    chain_id: ChainID
+    payment_network_id: PaymentNetworkID
+    token_address: TokenAddress
+    channel_id: ChannelID
+
+    def matches(self, channel_id: ChannelID) -> bool:
+        return self.channel_id == channel_id
+
+    def to_dict(self) -> Dict[str, Any]:
+        return dict(self._asdict())  # pylint: disable=no-member
+
+    @classmethod
+    def from_dict(cls, data) -> 'ChannelUniqueID':
+        return cls(
+            chain_id=data['chain_id'],
+            payment_network_id=data['payment_network_id'],
+            token_address=data['token_address'],
+            channel_id=data['channel_id'],
+        )
