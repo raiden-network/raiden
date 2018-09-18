@@ -6,7 +6,7 @@ from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 
 # The latest DB version
-RAIDEN_DB_VERSION = 3
+RAIDEN_DB_VERSION = 4
 
 
 class SQLiteStorage:

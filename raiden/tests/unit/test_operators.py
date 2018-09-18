@@ -19,15 +19,16 @@ HASH2 = sha3(b'joo')
 
 def test_transfer_statechange_operators():
     # pylint: disable=unneeded-not
+    block_hash = factories.make_transaction_hash()
     a = Block(
         block_number=2,
         gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_hash=block_hash,
     )
     b = Block(
         block_number=2,
         gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_hash=block_hash,
     )
     c = Block(
         block_number=3,
