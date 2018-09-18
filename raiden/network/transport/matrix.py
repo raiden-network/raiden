@@ -58,11 +58,13 @@ from raiden.utils import pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
+    AddressHex,
     Callable,
     Dict,
     Iterable,
     List,
     Mapping,
+    NewType,
     Optional,
     Set,
     Tuple,
@@ -80,6 +82,7 @@ _CT = TypeVar('CT')  # class type
 _CIT = Union[_CT, Type[_CT]]  # class or instance type
 _RT = TypeVar('RT')  # return type
 _CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
+_RoomID = NewType('RoomID', str)
 
 
 def _cachegetter(
@@ -478,7 +481,7 @@ class MatrixTransport(Runnable):
                 aliases=room.aliases,
             )
 
-    def _handle_invite(self, room_id: str, state: dict):
+    def _handle_invite(self, room_id: _RoomID, state: dict):
         """ Join all invited rooms """
         if self._stop_event.ready():
             return
@@ -1104,17 +1107,19 @@ class MatrixTransport(Runnable):
             user = self._client.get_user(user)
         return user
 
-    def _set_room_id_for_address(self, address: Address, room_id: Optional[str]):
+    def _set_room_id_for_address(self, address: Address, room_id: Optional[_RoomID]):
         """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms
 
         If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
 
         assert not room_id or room_id in self._client.rooms, 'Invalid room_id'
-        address_hex = to_checksum_address(address)
+        address_hex: AddressHex = to_checksum_address(address)
 
         # no need to deepcopy, we don't modify lists in-place
-        # type: Dict[address_hex, List[room_id]]
-        _address_to_room_ids = self._client.account_data.get('network.raiden.rooms', {}).copy()
+        _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = self._client.account_data.get(
+            'network.raiden.rooms',
+            {},
+        ).copy()
 
         if not room_id:  # falsy room_id => clear list
             _address_to_room_ids.pop(address_hex, None)
@@ -1128,14 +1133,18 @@ class MatrixTransport(Runnable):
         if self._client.account_data.get('network.raiden.rooms', {}) != _address_to_room_ids:
             self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
 
-    def _get_room_ids_for_address(self, address: Address, filter_private: bool=None) -> List[str]:
+    def _get_room_ids_for_address(
+            self,
+            address: Address,
+            filter_private: bool=None,
+    ) -> List[_RoomID]:
         """ Uses GMatrixClient.get_account_data to get updated mapping of address->rooms
 
         It'll filter only existing rooms.
         If filter_private=True, also filter out public rooms.
         If filter_private=None, filter according to self._private_rooms
         """
-        address_hex = to_checksum_address(address)
+        address_hex: AddressHex = to_checksum_address(address)
         room_ids = self._client.account_data.get(
             'network.raiden.rooms',
             {},
