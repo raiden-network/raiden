@@ -198,23 +198,23 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_address: typing.TokenAddress,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            partner: typing.Address,
+            participant: typing.Address,
     ):
         self.token_address = token_address
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.partner = partner
+        self.participant = participant
 
     def __repr__(self):
         return (
             '<ContractSendChannelBatchUnlock '
-            'token_address: {} token_network_id:{} channel:{} partner:{}'
+            'token_address: {} token_network_id:{} channel:{} participant:{}'
             '>'
         ).format(
             pex(self.token_address),
             pex(self.token_network_identifier),
             self.channel_identifier,
-            pex(self.partner),
+            pex(self.participant),
         )
 
     def __eq__(self, other):
@@ -223,7 +223,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.partner == other.partner
+            self.participant == other.participant
         )
 
     def __ne__(self, other):
@@ -234,7 +234,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'partner': to_checksum_address(self.partner),
+            'participant': to_checksum_address(self.participant),
         }
 
         return result
@@ -245,7 +245,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            partner=to_canonical_address(data['partner']),
+            participant=to_canonical_address(data['participant']),
         )
 
         return restored

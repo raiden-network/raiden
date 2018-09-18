@@ -108,11 +108,17 @@ class ActionInitMediator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def balance_proof(self):
+        return self.from_transfer.balance_proof
+
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'routes': self.routes,
             'from_route': self.from_route,
             'from_transfer': self.from_transfer,
+            'balance_proof': self.balance_proof,
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -162,10 +168,16 @@ class ActionInitTarget(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def balance_proof(self):
+        return self.transfer.balance_proof
+
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'route': self.route,
             'transfer': self.transfer,
+            'balance_proof': self.balance_proof,
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
