@@ -495,7 +495,7 @@ def is_valid_lock_expired(
         result = (False, msg, None)
 
     elif lock_registered_on_chain:
-        msg = 'Invalid LockExpired message. Secret registered on-chain.'
+        msg = 'Invalid LockExpired mesage. Lock was unlocked on-chain.'
         result = (False, msg, None)
 
     else:

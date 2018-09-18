@@ -169,7 +169,10 @@ class SQLiteStorage:
             cursor.execute(
                 'SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1',
             )
-            state_change_id = cursor.fetchone()
+            if cursor.rowcount > 0:
+                state_change_id = cursor.fetchone()[0]
+            else:
+                state_change_id = 0
 
         cursor = self.conn.execute(
             'SELECT statechange_id, data FROM state_snapshot '
