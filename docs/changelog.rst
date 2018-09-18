@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`2507` Fix a security issue where an attacker could eavesdrop Matrix communications between two nodes in private rooms
+* :bug:`2501` Adds a matrix.private_rooms config to communicate only through private rooms in Matrix
 * :bug:`2449` Fix a race condition when handling channel close events.
 
 * :release:`0.9.0 <2018-09-14>`
