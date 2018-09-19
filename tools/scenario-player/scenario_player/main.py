@@ -12,8 +12,9 @@ from eth_utils import to_checksum_address
 
 from raiden.accounts import Account
 from raiden.log_config import configure_logging
+from scenario_player import tasks
 from scenario_player.runner import ScenarioRunner
-from scenario_player.tasks import TaskState
+from scenario_player.tasks.base import TaskState, collect_tasks
 from scenario_player.utils import DummyStream, LogBuffer, send_notification_mail
 
 log = structlog.get_logger(__name__)
@@ -103,9 +104,14 @@ def main(scenario_file, keystore_file, password, rpc_url, auth, mailgun_api_key)
         if isinstance(handler, logging.StreamHandler):
             handler.stream = log_buffer
             break
+
     with open(keystore_file, 'r') as keystore:
         account = Account(json.load(keystore), password, keystore_file)
         log.info("Using account", account=to_checksum_address(account.address))
+
+    # Collect tasks
+    collect_tasks(tasks)
+
     runner = ScenarioRunner(account, rpc_url, auth, scenario_file)
     terminal = Terminal()
     # Disable line wrapping
