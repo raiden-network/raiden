@@ -94,7 +94,7 @@ To open a channel with another Raiden node four things are needed: the address o
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
-       "settle_timeout": 600
+       "settle_timeout": 500
    }
 
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
@@ -113,7 +113,7 @@ Successfully opening a channel returns the following information:
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
        "state": "opened",
-       "settle_timeout": 600,
+       "settle_timeout": 500,
        "reveal_timeout": 10
    }
 
@@ -284,8 +284,8 @@ When successful this gives a response with a channel object where the state is s
         "token_address": "0x0f114A1E9Db192502E7856309cc899952b3db1ED",
         "balance": 350,
         "state": "closed",
-        "settle_timeout": 600,
-        "reveal_timeout"
+        "settle_timeout": 500,
+        "reveal_timeout": 10
     }
 
 Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"opened"``.
