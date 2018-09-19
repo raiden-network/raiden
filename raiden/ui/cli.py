@@ -688,6 +688,8 @@ def run_app(
 
     if network_type == 'main':
         config['chain_id'] = NetworkType.MAIN
+        # Forcing private rooms to true for the mainnet
+        config['transport']['matrix']['private_rooms'] = True
     else:
         config['chain_id'] = NetworkType.TEST
 
