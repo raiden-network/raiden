@@ -135,6 +135,7 @@ Deploying
    :statuscode 409:
     - The token was already registered before, or
     - The registering transaction failed.
+   :statuscode 501: Registering a token only works on testnet temporarily. On mainnet this error is returned.
    :resjson address token_network_address: The deployed token networks address.
 
 Querying Information About Channels and Tokens
