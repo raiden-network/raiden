@@ -12,6 +12,8 @@ interface RDNConfig {
     poll_interval?: number;
     block_start?: number;
     http_timeout?: number;
+    settle_timeout?: number;
+    reveal_timeout?: number;
 }
 
 const default_config: RDNConfig = {
@@ -21,6 +23,8 @@ const default_config: RDNConfig = {
     poll_interval: 5000,
     block_start: 1603031,
     http_timeout: 600000,
+    settle_timeout: 500,
+    reveal_timeout: 10,
 };
 
 @Injectable()

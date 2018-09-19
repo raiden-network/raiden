@@ -384,15 +384,29 @@ class APIServer(Runnable):
 
     def _serve_webui(self, file_name='index.html'):  # pylint: disable=redefined-builtin
         try:
-            assert file_name
+            if not file_name:
+                raise NotFound
+
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
-            if web3 and 'config.' in file_name and file_name.endswith('.json'):
+            if 'config.' in file_name and file_name.endswith('.json'):
+                config = {
+                    'raiden': self._api_prefix,
+                    'web3': web3,
+                    'settle_timeout': self.rest_api.raiden_api.raiden.config['settle_timeout'],
+                    'reveal_timeout': self.rest_api.raiden_api.raiden.config['reveal_timeout'],
+                }
+
+                # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
+                # which is the hostname by which the client/browser sees/access the raiden node
                 host = request.headers.get('Host')
-                if any(h in web3 for h in ('localhost', '127.0.0.1')) and host:
-                    _, _port = split_endpoint(web3)
-                    _host, _ = split_endpoint(host)
-                    web3 = 'http://{}:{}'.format(_host, _port)
-                response = jsonify({'raiden': self._api_prefix, 'web3': web3})
+                if web3 and host:
+                    web3_host, web3_port = split_endpoint(web3)
+                    if web3_host in ('localhost', '127.0.0.1'):
+                        host, _ = split_endpoint(host)
+                        web3 = f'http://{host}:{web3_port}'
+                        config['web3'] = web3
+
+                response = jsonify(config)
             else:
                 response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file_name)
         except (NotFound, AssertionError):
