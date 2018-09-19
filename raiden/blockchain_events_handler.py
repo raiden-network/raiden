@@ -127,11 +127,13 @@ def handle_channel_new_balance(raiden, event: Event):
     transaction_hash = data['transactionHash']
     assert transaction_hash, 'A mined transaction must have the hash field'
 
-    previous_channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+        chain_state,
         token_network_identifier,
         channel_identifier,
     )
+    previous_channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
     # Channels will only be registered if this node is a participant
     is_participant = previous_channel_state is not None
@@ -176,11 +178,13 @@ def handle_channel_closed(raiden, event: Event):
     transaction_hash = data['transactionHash']
     assert transaction_hash, 'A mined transaction must have the hash field'
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+        chain_state,
         token_network_identifier,
         channel_identifier,
     )
+    channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
     if channel_state:
         # The from address is included in the ChannelClosed event as the
@@ -211,11 +215,13 @@ def handle_channel_update_transfer(raiden, event: Event):
     transaction_hash = data['transactionHash']
     assert transaction_hash, 'A mined transaction must have the hash field'
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+        chain_state,
         token_network_identifier,
         channel_identifier,
     )
+    channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
     if channel_state:
         channel_transfer_updated = ContractReceiveUpdateTransfer(
@@ -236,11 +242,13 @@ def handle_channel_settled(raiden, event: Event):
     transaction_hash = data['transactionHash']
     assert transaction_hash, 'A mined transaction must have the hash field'
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+        chain_state,
         token_network_identifier,
         channel_identifier,
     )
+    channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
     if channel_state:
         channel_settled = ContractReceiveChannelSettled(

@@ -8,7 +8,9 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
 )
+
 from raiden.utils import typing
+from raiden.utils.typing import ChannelUniqueID
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -159,12 +161,15 @@ def wait_for_close(
 
     while channel_ids:
         last_id = channel_ids[-1]
-        channel_state = views.get_channelstate_by_id(
-            views.state_from_raiden(raiden),
-            payment_network_id,
-            token_address,
-            last_id,
+
+        chain_state = views.state_from_raiden(raiden)
+        channel_unique_id = ChannelUniqueID(
+            chain_id=chain_state.chain_id,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+            channel_id=last_id,
         )
+        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
         channel_is_settled = (
             channel_state is None or
@@ -216,12 +221,15 @@ def wait_for_settle(
 
     while channel_ids:
         last_id = channel_ids[-1]
-        channel_state = views.get_channelstate_by_id(
-            views.state_from_raiden(raiden),
-            payment_network_id,
-            token_address,
-            last_id,
+
+        chain_state = views.state_from_raiden(raiden)
+        channel_unique_id = ChannelUniqueID(
+            chain_id=chain_state.chain_id,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+            channel_id=last_id,
         )
+        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
         channel_is_settled = (
             channel_state is None or

@@ -179,11 +179,12 @@ def subdispatch_to_paymenttask(
             token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
 
-            channel_state = views.get_channelstate_by_token_network_identifier(
+            channel_unique_id = views.get_channel_unique_id_by_token_network_id(
                 chain_state,
                 token_network_identifier,
                 channel_identifier,
             )
+            channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
             if channel_state:
                 sub_iteration = target.state_transition(
@@ -329,11 +330,12 @@ def subdispatch_targettask(
     events = list()
     channel_state = None
     if is_valid_subtask:
-        channel_state = views.get_channelstate_by_token_network_identifier(
+        channel_unique_id = views.get_channel_unique_id_by_token_network_id(
             chain_state,
             token_network_identifier,
             channel_identifier,
         )
+        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
     if channel_state:
         pseudo_random_generator = chain_state.pseudo_random_generator
