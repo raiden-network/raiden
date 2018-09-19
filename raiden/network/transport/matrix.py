@@ -1136,7 +1136,8 @@ class MatrixTransport(Runnable):
                 changed = True
 
         if changed:
-            self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+            # dict will be set at the end of _clean_unused_rooms
+            self._clean_unused_rooms(_address_to_room_ids)
 
     def _get_room_ids_for_address(
             self,
@@ -1177,3 +1178,64 @@ class MatrixTransport(Runnable):
             ]
 
         return room_ids
+
+    def _clean_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = None):
+        """ Checks for rooms we've joined and which partner isn't health-checked and leave"""
+        # cache in a set all healthchecked addresses
+        healthchecked_hex_addresses: Set[AddressHex] = {
+            to_checksum_address(address)
+            for address in self._address_to_userids
+        }
+
+        changed = False
+        if _address_to_room_ids is None:
+            _address_to_room_ids = self._client.account_data.get(
+                'network.raiden.rooms',
+                {},
+            ).copy()
+        else:
+            # if received _address_to_room_ids, assume it was already modified
+            changed = True
+
+        keep_rooms: Set[_RoomID] = set()
+
+        for address_hex, room_ids in _address_to_room_ids.items():
+            if not room_ids:  # None or empty
+                room_ids = list()
+            if not isinstance(room_ids, list):  # old version, single room
+                room_ids = [room_ids]
+
+            if address_hex not in healthchecked_hex_addresses:
+                _address_to_room_ids.pop(address_hex)
+                changed = True
+            else:
+                counters = [0, 0]  # public, private
+
+                # limit to at most 2 public and 2 private rooms, preserving order
+                def _filter(room_id: _RoomID) -> bool:
+                    if room_id not in self._client.rooms:
+                        return False
+                    elif counters[self._client.rooms[room_id].invite_only] < 2:
+                        counters[self._client.rooms[room_id].invite_only] += 1
+                        return True
+                    else:
+                        return False
+
+                new_room_ids: List[_RoomID] = [room_id for room_id in room_ids if _filter(room_id)]
+
+                keep_rooms |= set(new_room_ids)
+                if room_ids != new_room_ids:
+                    _address_to_room_ids[address_hex] = new_room_ids
+                    changed = True
+
+        if changed:
+            self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+
+        # iterate over copy because it can be changed on-the-flight by _client
+        # but to_stay rooms should always be valid, so no need for lock
+        for room_id, room in list(self._client.rooms.items()):
+            if self._discovery_room and room_id == self._discovery_room.room_id:
+                # don't leave discovery room
+                continue
+            if room_id not in keep_rooms:
+                self._spawn(room.leave)
