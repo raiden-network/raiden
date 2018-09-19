@@ -138,7 +138,7 @@ def dependencies_order_of_build(target_contract, dependencies_map):
 
 def monkey_patch_web3(web3, client, gas_price_strategy):
     try:
-        # install caching middlewares
+        # install caching middleware
         web3.middleware_stack.add(middleware.time_based_cache_middleware)
 
         # set gas price strategy
@@ -197,6 +197,7 @@ class JSONRPCClient:
         self.web3 = web3
 
         self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
+        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
         self._nonce_offset = nonce_offset
@@ -223,10 +224,9 @@ class JSONRPCClient:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
-    def gas_price(self, transaction: Dict = None) -> int:
-        if transaction is None:
-            transaction = dict()
-        return int(self.web3.eth.generateGasPrice(transaction_params=transaction))
+    @cachedmethod(attrgetter('_gasprice_cache'))
+    def gas_price(self) -> int:
+        return int(self.web3.eth.generateGasPrice())
 
     def check_startgas(self, startgas):
         if not startgas:
@@ -407,18 +407,19 @@ class JSONRPCClient:
         with self._nonce_lock:
             nonce = self._available_nonce
             startgas = self.check_startgas(startgas)
+            gas_price = self.gas_price()
 
             transaction = {
                 'data': data,
                 'gas': startgas,
                 'nonce': nonce,
                 'value': value,
+                'gasPrice': gas_price,
             }
-            transaction['gasPrice'] = self.gas_price(transaction)
             node_gas_price = self.web3.eth.gasPrice
             log.debug(
                 'Calculated gas price for transaction',
-                calculated_gas_price=transaction['gasPrice'],
+                calculated_gas_price=gas_price,
                 node_gas_price=node_gas_price,
             )
 
