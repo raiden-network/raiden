@@ -482,7 +482,7 @@ class MatrixTransport(Runnable):
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict):
-        """ Join all invited rooms """
+        """ Join rooms invited by healthchecked partners """
         if self._stop_event.ready():
             return
         invite_event = [
@@ -497,8 +497,15 @@ class MatrixTransport(Runnable):
         user = self._get_user(invite_event['sender'])
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            self.log.warning(
+            self.log.debug(
                 'Got invited to a room by invalid signed user - ignoring',
+                room_id=room_id,
+                user=user,
+            )
+            return
+        if peer_address not in self._address_to_userids:
+            self.log.debug(
+                'Got invited by a non-healthchecked user - ignoring',
                 room_id=room_id,
                 user=user,
             )
@@ -538,9 +545,20 @@ class MatrixTransport(Runnable):
         user = self._get_user(sender_id)
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
-            self.log.warning(
-                'At received message -- invalid user displayName signature',
+            self.log.debug(
+                'message from invalid user displayName signature',
                 peer_user=user.user_id,
+                room=room,
+            )
+            return False
+
+        # don't proceed if user isn't healthchecked (yet)
+        if peer_address not in self._address_to_userids:
+            # user not start_health_check'ed
+            self.log.debug(
+                'message from non-healthchecked peer - ignoring',
+                sender=user,
+                sender_address=pex(peer_address),
                 room=room,
             )
             return False
@@ -550,13 +568,15 @@ class MatrixTransport(Runnable):
 
         if room.room_id not in room_ids:
             # this should not happen, but is not fatal, as we may not know user yet
-            self.log.warning(
-                'received peer message in a room we didn\'t create nor were invited by them',
+            self.log.debug(
+                'received peer message in an unknown or without enough privacy room',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 room=room,
+                private_room=room.invite_only,
+                require_private_room=self._private_rooms,
             )
-            return
+            return False
 
         if not room_ids or room.room_id != room_ids[0]:
             self.log.debug(
@@ -567,12 +587,6 @@ class MatrixTransport(Runnable):
                 room=room,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
-
-        # don't proceed if user isn't healthchecked (yet)
-        # check is done after rooms updates in case we need to communicate with the user later
-        if peer_address not in self._address_to_userids:
-            # user not start_health_check'ed
-            return False
 
         data = event['content']['body']
         if not isinstance(data, str):
@@ -587,7 +601,8 @@ class MatrixTransport(Runnable):
         if data.startswith('0x'):
             try:
                 message = message_from_bytes(decode_hex(data))
-                assert message
+                if not message:
+                    raise InvalidProtocolMessage
             except (DecodeError, AssertionError) as ex:
                 self.log.warning(
                     "Can't parse message binary data",
