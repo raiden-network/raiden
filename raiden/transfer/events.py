@@ -314,7 +314,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
 
 
 class EventPaymentSentSuccess(Event):
-    """ Event emitted by the initiator when a transfer is considered sucessful.
+    """ Event emitted by the initiator when a transfer is considered successful.
 
     A transfer is considered successful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
