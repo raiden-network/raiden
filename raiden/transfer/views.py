@@ -18,6 +18,8 @@ from raiden.transfer.state import (
     TokenNetworkState,
 )
 from raiden.utils import typing
+from raiden.utils.typing import ChannelUniqueID
+
 
 # TODO: Either enforce immutability or make a copy of the values returned by
 # the view functions
@@ -344,6 +346,58 @@ def get_channelstate_by_id(
         channel_state = token_network.channelidentifiers_to_channels.get(channel_id)
 
     return channel_state
+
+
+def get_channelstate_by_unique_id(
+        chain_state: ChainState,
+        channel_unique_id: ChannelUniqueID,
+) -> typing.Optional[NettingChannelState]:
+
+    channel_state = None
+
+    if channel_unique_id.chain_id == chain_state.chain_id:
+        token_network = get_token_network_by_token_address(
+            chain_state,
+            channel_unique_id.payment_network_id,
+            channel_unique_id.token_address,
+        )
+        if token_network:
+            channel_state = token_network.channelidentifiers_to_channels.get(
+                channel_unique_id.channel_id,
+            )
+
+    return channel_state
+
+
+def get_payment_network_id_by_token_network_id(
+        chain_state: ChainState,
+        token_network_id: typing.Address,
+) -> typing.Optional[typing.PaymentNetworkID]:
+
+    for payment_network_id, payment_network in chain_state.identifiers_to_paymentnetworks.items():
+        if token_network_id in payment_network.tokenidentifiers_to_tokennetworks:
+            return payment_network_id
+
+    return None
+
+
+def get_channel_unique_id_by_token_network_id(
+        chain_state: ChainState,
+        token_network_id: typing.Address,
+        channel_id: typing.ChannelID,
+) -> ChannelUniqueID:
+
+    payment_network_id = get_payment_network_id_by_token_network_id(chain_state, token_network_id)
+    payment_network = chain_state.identifiers_to_paymentnetworks[payment_network_id]
+    token_network = payment_network.tokenidentifiers_to_tokennetworks[token_network_id]
+    token_address = token_network.token_address
+
+    return ChannelUniqueID(
+        chain_id=chain_state.chain_id,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+        channel_id=channel_id,
+    )
 
 
 def get_channelstate_filter(
