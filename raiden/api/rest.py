@@ -530,7 +530,6 @@ class RestAPI:
             partner_address: typing.Address,
             token_address: typing.TokenAddress,
             settle_timeout: typing.BlockTimeout = None,
-            reveal_timeout: typing.BlockTimeout = None,
             total_deposit: typing.TokenAmount = None,
     ):
         log.debug(
@@ -539,7 +538,6 @@ class RestAPI:
             partner_address=to_checksum_address(partner_address),
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
-            reveal_timeout=reveal_timeout,
         )
         try:
             self.raiden_api.channel_open(
@@ -547,7 +545,6 @@ class RestAPI:
                 token_address,
                 partner_address,
                 settle_timeout,
-                reveal_timeout,
             )
         except EthNodeCommunicationError:
             return api_response(

@@ -158,7 +158,6 @@ def run(
             app.raiden,
             app.discovery,
             app.config['settle_timeout'],
-            app.config['reveal_timeout'],
         )
 
         transfers_by_peer = {}

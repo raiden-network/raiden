@@ -1234,11 +1234,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         api_server.start(api_host, api_port)
 
         raiden_api.channel_open(
-            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-            to_canonical_address(token.contract.address),
-            to_canonical_address(TEST_PARTNER_ADDRESS),
-            None,
-            None,
+            registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+            token_address=to_canonical_address(token.contract.address),
+            partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
         )
         raiden_api.set_total_channel_deposit(
             contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],

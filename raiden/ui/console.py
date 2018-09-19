@@ -138,7 +138,6 @@ class Console(gevent.Greenlet):
             self.app.raiden,
             self.app.discovery,
             self.app.config['settle_timeout'],
-            self.app.config['reveal_timeout'],
         )
 
         self.console_locals = {
@@ -162,13 +161,12 @@ class Console(gevent.Greenlet):
 
 
 class ConsoleTools:
-    def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
+    def __init__(self, raiden_service, discovery, settle_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
         self._api = RaidenAPI(raiden_service)
         self._discovery = discovery
         self.settle_timeout = settle_timeout
-        self.reveal_timeout = reveal_timeout
 
     def create_token(
             self,
@@ -255,7 +253,6 @@ class ConsoleTools:
             peer_address_hex,
             total_deposit,
             settle_timeout=None,
-            reveal_timeout=None,
     ):
         """ Convenience method to open a channel.
 
@@ -265,7 +262,6 @@ class ConsoleTools:
             peer_address_hex (str): hex encoded address of the channel peer.
             total_deposit (int): amount of total funding for the channel.
             settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
-            reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
 
         Return:
             netting_channel: the (newly opened) netting channel object.
@@ -285,7 +281,6 @@ class ConsoleTools:
             token_address,
             peer_address,
             settle_timeout=settle_timeout,
-            reveal_timeout=reveal_timeout,
         )
 
         return self._api.set_total_channel_deposit(
