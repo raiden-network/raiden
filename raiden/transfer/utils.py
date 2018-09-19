@@ -15,15 +15,15 @@ def get_latest_known_balance_proof_from_state_changes(
         token_network_id: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
         balance_hash: typing.BalanceHash,
-        recipient: typing.Address,
+        sender: typing.Address,
 ) -> typing.Optional['BalanceProofSignedState']:
     """ Tries to find the balance proof with the provided balance hash
     in stored state changes. """
     state_change_record = storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_id': to_checksum_address(token_network_id),
+        'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
         'balance_proof.channel_identifier': channel_identifier,
-        'balance_proof.sender': to_checksum_address(recipient),
+        'balance_proof.sender': to_checksum_address(sender),
         'balance_hash': serialize_bytes(balance_hash),
     })
     if state_change_record.data:

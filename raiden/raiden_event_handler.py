@@ -413,7 +413,7 @@ class RaidenEventHandler:
             chain_id=raiden.chain.network_id,
             token_network_id=channel_settle_event.token_network_identifier,
             channel_identifier=channel_settle_event.channel_identifier,
-            recipient=participants_details.our_details.address,
+            sender=participants_details.partner_details.address,
             balance_hash=participants_details.partner_details.balance_hash,
         )
 
