@@ -248,7 +248,7 @@ class RaidenAPI:
 
         if settle_timeout < self.raiden.config['reveal_timeout'] * 2:
             raise InvalidSettleTimeout(
-                'settle_timeout can not be smaller than double reveal_timeout',
+                'settle_timeout can not be smaller than double the reveal_timeout',
             )
 
         if not is_binary_address(registry_address):
