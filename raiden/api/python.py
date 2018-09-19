@@ -238,21 +238,17 @@ class RaidenAPI:
             token_address: typing.TokenAddress,
             partner_address: typing.Address,
             settle_timeout: typing.BlockTimeout = None,
-            reveal_timeout: typing.BlockTimeout = None,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> typing.ChannelID:
         """ Open a channel with the peer at `partner_address`
         with the given `token_address`.
         """
-        if reveal_timeout is None:
-            reveal_timeout = self.raiden.config['reveal_timeout']
-
         if settle_timeout is None:
             settle_timeout = self.raiden.config['settle_timeout']
 
-        if settle_timeout <= reveal_timeout:
+        if settle_timeout < self.raiden.config['reveal_timeout'] * 2:
             raise InvalidSettleTimeout(
-                'reveal_timeout can not be larger-or-equal to settle_timeout',
+                'settle_timeout can not be smaller than double reveal_timeout',
             )
 
         if not is_binary_address(registry_address):

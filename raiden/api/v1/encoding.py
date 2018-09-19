@@ -5,12 +5,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
-from raiden.settings import (
-    DEFAULT_INITIAL_CHANNEL_TARGET,
-    DEFAULT_JOINABLE_FUNDS_TARGET,
-    DEFAULT_REVEAL_TIMEOUT,
-    DEFAULT_SETTLE_TIMEOUT,
-)
+from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
 from raiden.utils import data_decoder, data_encoder
@@ -210,8 +205,7 @@ class ChannelStateSchema(BaseSchema):
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
-    settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
-    reveal_timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
+    settle_timeout = fields.Integer(missing=None)
     total_deposit = fields.Integer(default=None, missing=None)
 
     class Meta:
