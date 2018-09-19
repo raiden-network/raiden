@@ -226,6 +226,10 @@ class JSONRPCClient:
 
     @cachedmethod(attrgetter('_gasprice_cache'))
     def gas_price(self) -> int:
+        # generateGasPrice takes the transaction to be send as an optional argument
+        # but both strategies that we are using (time-based and rpc-based) don't make
+        # use of this argument. It is therefore safe to not provide it at the moment.
+        # This needs to be reevaluated if we use different gas price strategies
         return int(self.web3.eth.generateGasPrice())
 
     def check_startgas(self, startgas):
