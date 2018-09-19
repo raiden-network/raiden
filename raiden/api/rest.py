@@ -82,6 +82,7 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.runnable import Runnable
+from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)
 
@@ -493,6 +494,11 @@ class RestAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
     ):
+        if self.raiden_api.raiden.config['network_type'] == NetworkType.MAIN:
+            return api_error(
+                errors='Registering a new token is currently disabled in the Ethereum mainnet',
+                status_code=HTTPStatus.NOT_IMPLEMENTED,
+            )
         log.debug(
             'Registering token',
             registry_address=to_checksum_address(registry_address),

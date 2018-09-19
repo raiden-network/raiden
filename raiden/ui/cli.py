@@ -687,18 +687,18 @@ def run_app(
     config['chain_id'] = network_id
 
     if network_type == 'main':
-        config['chain_id'] = NetworkType.MAIN
+        config['network_type'] = NetworkType.MAIN
         # Forcing private rooms to true for the mainnet
         config['transport']['matrix']['private_rooms'] = True
     else:
-        config['chain_id'] = NetworkType.TEST
+        config['network_type'] = NetworkType.TEST
 
     if net_id in constants.ID_TO_NETWORK_CONFIG:
         contract_addresses_known = True
         contract_addresses = constants.ID_TO_NETWORK_CONFIG['net_id']['contract_addresses']
         not_allowed = (
             constants.ID_TO_NETWORK_CONFIG['network_type'] == NetworkType.MAIN and
-            config['chain_id'] == NetworkType.TEST
+            config['network_type'] == NetworkType.TEST
         )
         if not_allowed:
             print(
