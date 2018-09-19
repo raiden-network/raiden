@@ -8,6 +8,7 @@ from gevent.lock import Semaphore
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.constants import NetworkType
 from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
@@ -15,6 +16,7 @@ from raiden.exceptions import (
     InsufficientFunds,
     InvalidAmount,
     RaidenRecoverableError,
+    RaidenUnrecoverableError,
     TransactionThrew,
 )
 from raiden.transfer import views
@@ -217,6 +219,11 @@ class ConnectionManager:
                 )
             except RaidenRecoverableError:
                 log.exception('connection manager join: channel not in opened state')
+            except RaidenUnrecoverableError as e:
+                if self.raiden.config['network_type'] == NetworkType.MAIN:
+                    log.error(str(e))
+                else:
+                    raise
             else:
                 log.debug(
                     'joined a channel!',
@@ -286,6 +293,11 @@ class ConnectionManager:
             log.exception('connection manager: deposit failed')
         except RaidenRecoverableError:
             log.exception('connection manager: channel not in opened state')
+        except RaidenUnrecoverableError as e:
+            if self.raiden.config['network_type'] == NetworkType.MAIN:
+                log.error(str(e))
+            else:
+                raise
         except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
             log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
 

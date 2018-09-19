@@ -14,8 +14,8 @@ from raiden import constants, routing, waiting
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError
+from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT, NetworkType
+from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
@@ -318,6 +318,11 @@ class RaidenService(Runnable):
                     self.raiden_event_handler.on_raiden_event(self, transaction)
                 except RaidenRecoverableError as e:
                     log.error(str(e))
+                except RaidenUnrecoverableError as e:
+                    if self.config['network_type'] == NetworkType.MAIN:
+                        log.error(str(e))
+                    else:
+                        raise
 
         self.alarm.start()
 
@@ -421,6 +426,11 @@ class RaidenService(Runnable):
                 )
             except RaidenRecoverableError as e:
                 log.error(str(e))
+            except RaidenUnrecoverableError as e:
+                if self.config['network_type'] == NetworkType.MAIN:
+                    log.error(str(e))
+                else:
+                    raise
 
         # Take a snapshot every SNAPSHOT_STATE_CHANGES_COUNT
         # TODO: Gather more data about storage requirements
