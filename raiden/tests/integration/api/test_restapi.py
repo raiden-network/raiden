@@ -7,6 +7,7 @@ from eth_utils import is_checksum_address, to_canonical_address, to_checksum_add
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
+from raiden.constants import NetworkType
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_all_eth
@@ -894,6 +895,35 @@ def test_api_payments(test_api_server, raiden_network, token_addresses):
     assert_proper_response(response)
     response = response.json()
     assert response == payment
+
+
+@pytest.mark.parametrize('number_of_tokens', [0])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('network_type', [NetworkType.MAIN])
+def test_register_token_mainnet(test_api_server, token_amount, token_addresses, raiden_network):
+    app0 = raiden_network[0]
+    new_token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app0.raiden.chain.client,
+        num_confirmations=None,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
+    )
+    register_request = grequests.put(api_url_for(
+        test_api_server,
+        'registertokenresource',
+        token_address=to_checksum_address(new_token_address),
+    ))
+    response = register_request.send().response
+    assert(
+        response is not None and
+        response.status_code == HTTPStatus.NOT_IMPLEMENTED
+    )
 
 
 @pytest.mark.parametrize('number_of_tokens', [0])

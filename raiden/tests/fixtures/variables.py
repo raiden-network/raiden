@@ -5,6 +5,7 @@ import random
 import pytest
 from eth_utils import denoms, remove_0x_prefix, to_normalized_address
 
+from raiden.constants import NetworkType
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_RETRY_TIMEOUT,
@@ -309,3 +310,9 @@ def database_paths(tmpdir, private_keys):
 @pytest.fixture
 def private_rooms():
     return True
+
+
+@pytest.fixture
+def network_type():
+    """Specifies the network type"""
+    return NetworkType.TEST
