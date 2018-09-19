@@ -27,7 +27,7 @@ Changelog
 * :bug:`2431` Do not crash on recoverable errors during settlement
 * :feature:`1473` Add gas price strategies that adapt the gas price to the network conditions.
 * :feature:`2460` Pinned depedencies versions, builds are now reproducible and build artifacts won't break because of downstream dependencies.
-* :feature:`2484` Nicier visual address selection for the CLI.
+* :feature:`2484` Nicer visual address selection for the CLI.
 
 * :release:`0.8.0 <2018-09-07>`
 * :feature:`1894` We now start having nightly releases found here: https://raiden-nightlies.ams3.digitaloceanspaces.com/index.html
