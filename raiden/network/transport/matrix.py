@@ -485,16 +485,32 @@ class MatrixTransport(Runnable):
         """ Join rooms invited by healthchecked partners """
         if self._stop_event.ready():
             return
+
         invite_event = [
             event
             for event in state['events']
             if event['type'] == 'm.room.member' and
-            event['content'].get('membership') == 'invite'
+            event['content'].get('membership') == 'invite' and
+            event['state_key'] == self._user_id
         ]
         if not invite_event:
-            return
+            return  # there should always be a invite membership for us
         invite_event = invite_event[0]
-        user = self._get_user(invite_event['sender'])
+        sender = invite_event['sender']
+
+        sender_join_event = [
+            event
+            for event in state['events']
+            if event['type'] == 'm.room.member' and
+            event['content'].get('membership') == 'join' and
+            event['state_key'] == sender
+        ]
+        if not sender_join_event:
+            return  # there should always be a join membership event for the sender
+        sender_join_event = sender_join_event[0]
+
+        user = self._get_user(sender)
+        user.displayname = sender_join_event['content'].get('displayname') or user.displayname
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
@@ -503,6 +519,7 @@ class MatrixTransport(Runnable):
                 user=user,
             )
             return
+
         if peer_address not in self._address_to_userids:
             self.log.debug(
                 'Got invited by a non-healthchecked user - ignoring',
@@ -510,11 +527,31 @@ class MatrixTransport(Runnable):
                 user=user,
             )
             return
-        # one must join to be able to fetch room alias
+
+        join_rules_event = [
+            event
+            for event in state['events']
+            if event['type'] == 'm.room.join_rules'
+        ]
+
+        # room privacy as seen from the event
+        private_room: bool = False
+        if join_rules_event:
+            join_rules_event = join_rules_event[0]
+            private_room: bool = join_rules_event['content'].get('join_rule') == 'invite'
+
+        # we join and set despite room privacy and requirement,
+        # _get_room_ids_for_address will take care of returning only matching rooms and
+        # _clean_unused_rooms will leave in the future, if and when needed
         room = self._client.join_room(room_id)
         if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
+
+        # at this point, room state is not populated yet, so we populate 'invite_only' from event
+        room.invite_only = private_room
+
         self._set_room_id_for_address(peer_address, room_id)
+
         self.log.debug(
             'Invited and joined a room',
             room_id=room_id,
@@ -848,9 +885,6 @@ class MatrixTransport(Runnable):
             room = self._get_public_room(room_name, invitees=peers)
         self._set_room_id_for_address(address, room.room_id)
 
-        for user in peers:
-            self._maybe_invite_user(user)
-
         if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
 
@@ -1020,7 +1054,7 @@ class MatrixTransport(Runnable):
         state_change = ActionChangeNodeNetworkState(address, reachability)
         self._raiden_service.handle_state_change(state_change)
 
-    def _maybe_invite_user(self, user):
+    def _maybe_invite_user(self, user: User):
         address = self._validate_userid_signature(user)
         if not address:
             return
@@ -1033,7 +1067,7 @@ class MatrixTransport(Runnable):
         if not room._members:
             room.get_joined_members()
         if user.user_id not in room._members:
-            self.log.debug('INVITE', user=user, room=room)
+            self.log.debug('Inviting', user=user, room=room)
             room.invite_user(user.user_id)
 
     def _select_server(self, config):
@@ -1229,12 +1263,14 @@ class MatrixTransport(Runnable):
                 # limit to at most 2 public and 2 private rooms, preserving order
                 def _filter(room_id: _RoomID) -> bool:
                     if room_id not in self._client.rooms:
-                        return False
+                        return False  # room is gone, clean
+                    elif self._client.rooms[room_id].invite_only is None:
+                        return True  # not known, postpone cleaning
                     elif counters[self._client.rooms[room_id].invite_only] < 2:
                         counters[self._client.rooms[room_id].invite_only] += 1
-                        return True
+                        return True  # not enough rooms of this type yet
                     else:
-                        return False
+                        return False  # enough rooms, leave and clean
 
                 new_room_ids: List[_RoomID] = [room_id for room_id in room_ids if _filter(room_id)]
 
