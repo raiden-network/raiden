@@ -81,7 +81,7 @@ class ScenarioRunner(object):
         self.token_address = None
 
     def run_scenario(self):
-        from scenario_player.tasks import _get_task_class_for_type
+        from scenario_player.tasks.base import get_task_class_for_type
 
         log.info("Fetching node addresses")
         unreachable_nodes = [node for node, addr in self.node_to_address.items() if not addr]
@@ -124,7 +124,7 @@ class ScenarioRunner(object):
                 "Exactly one root task is required below the 'scenario' key.",
             ) from None
 
-        task_class = _get_task_class_for_type(root_task_type)
+        task_class = get_task_class_for_type(root_task_type)
         self.root_task = task_class(runner=self, config=root_task_config)
         self.root_task()
 
