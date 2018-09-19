@@ -14,7 +14,11 @@
 
     <div class="mat-elevation-z8">
 
-        <mat-table [dataSource]="dataSource" matSort [trackBy]="trackByFn">
+        <mat-table [dataSource]="dataSource"
+                   matSort
+                   [trackBy]="trackByFn"
+                   matSortActive="block_number"
+                   matSortDirection="desc">
             <ng-container matColumnDef="block_number">
                 <mat-header-cell *matHeaderCellDef mat-sort-header fxFlex="15"> Block Number</mat-header-cell>
                 <mat-cell *matCellDef="let row" fxFlex="15"> {{row.block_number}}</mat-cell>
