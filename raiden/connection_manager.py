@@ -15,6 +15,7 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     InsufficientFunds,
     InvalidAmount,
+    InvalidDBData,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     TransactionThrew,
@@ -221,6 +222,8 @@ class ConnectionManager:
                 log.exception('connection manager join: channel not in opened state')
             except RaidenUnrecoverableError as e:
                 if self.raiden.config['network_type'] == NetworkType.MAIN:
+                    if isinstance(e, InvalidDBData):
+                        raise
                     log.error(str(e))
                 else:
                     raise
@@ -295,6 +298,8 @@ class ConnectionManager:
             log.exception('connection manager: channel not in opened state')
         except RaidenUnrecoverableError as e:
             if self.raiden.config['network_type'] == NetworkType.MAIN:
+                if isinstance(e, InvalidDBData):
+                    raise
                 log.error(str(e))
             else:
                 raise
