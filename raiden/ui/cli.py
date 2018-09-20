@@ -41,7 +41,14 @@ if True:
     )
     from web3 import HTTPProvider, Web3
 
-    from raiden import constants
+    from raiden.constants import (
+        DISCOVERY_TX_GAS_LIMIT,
+        ID_TO_NETWORKNAME,
+        ID_TO_NETWORK_CONFIG,
+        NetworkType,
+        START_QUERY_BLOCK_KEY,
+        SQLITE_MIN_REQUIRED_VERSION,
+    )
     from raiden.accounts import AccountManager
     from raiden.api.rest import APIServer, RestAPI
     from raiden.exceptions import (
@@ -101,7 +108,6 @@ if True:
         CONTRACT_ENDPOINT_REGISTRY,
         CONTRACT_SECRET_REGISTRY,
         CONTRACT_TOKEN_NETWORK_REGISTRY,
-        NetworkType,
     )
 
 log = structlog.get_logger(__name__)
@@ -121,7 +127,7 @@ ETHEREUM_NODE_COMMUNICATION_ERROR = (
 def check_synced(blockchain_service: BlockChainService) -> None:
     net_id = blockchain_service.network_id
     try:
-        network = constants.ID_TO_NETWORKNAME[net_id]
+        network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         print(
             'Could not determine the network the ethereum node is connected.\n'
@@ -155,7 +161,7 @@ def check_discovery_registration_gas(
         blockchain_service: BlockChainService,
         account_address: typing.Address,
 ) -> None:
-    discovery_tx_cost = blockchain_service.client.gas_price() * constants.DISCOVERY_TX_GAS_LIMIT
+    discovery_tx_cost = blockchain_service.client.gas_price() * DISCOVERY_TX_GAS_LIMIT
     account_balance = blockchain_service.client.balance(account_address)
 
     # pylint: disable=no-member
@@ -605,7 +611,7 @@ def run_app(
 
     if not assert_sqlite_version():
         log.error('SQLite3 should be at least version {}'.format(
-            '.'.join(constants.SQLITE_MIN_REQUIRED_VERSION),
+            '.'.join(SQLITE_MIN_REQUIRED_VERSION),
         ))
         sys.exit(1)
 
@@ -672,11 +678,11 @@ def run_app(
 
     net_id = blockchain_service.network_id
     if net_id != network_id:
-        if network_id in constants.ID_TO_NETWORKNAME and net_id in constants.ID_TO_NETWORKNAME:
+        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
             print((
                 "The chosen ethereum network '{}' differs from the ethereum client '{}'. "
                 'Please update your settings.'
-            ).format(constants.ID_TO_NETWORKNAME[network_id], constants.ID_TO_NETWORKNAME[net_id]))
+            ).format(ID_TO_NETWORKNAME[network_id], ID_TO_NETWORKNAME[net_id]))
         else:
             print((
                 "The chosen ethereum network id '{}' differs from the ethereum client '{}'. "
@@ -693,18 +699,18 @@ def run_app(
     else:
         config['network_type'] = NetworkType.TEST
 
-    if net_id in constants.ID_TO_NETWORK_CONFIG:
+    if net_id in ID_TO_NETWORK_CONFIG:
         contract_addresses_known = True
-        contract_addresses = constants.ID_TO_NETWORK_CONFIG['net_id']['contract_addresses']
+        contract_addresses = ID_TO_NETWORK_CONFIG['net_id']['contract_addresses']
         not_allowed = (
-            constants.ID_TO_NETWORK_CONFIG['network_type'] == NetworkType.MAIN and
+            ID_TO_NETWORK_CONFIG['network_type'] == NetworkType.MAIN and
             config['network_type'] == NetworkType.TEST
         )
         if not_allowed:
             print(
                 'The chosen network {} is identified as a mainnet but a test network type '
                 'was given. This is not allowed.'.format(
-                    constants.ID_TO_NETWORKNAME[network_id],
+                    ID_TO_NETWORKNAME[network_id],
                 ),
             )
     else:
@@ -760,7 +766,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            constants.ID_TO_NETWORKNAME.get(net_id) or net_id,
+            ID_TO_NETWORKNAME.get(net_id) or net_id,
             database_path,
         ),
     )
@@ -806,8 +812,8 @@ def run_app(
     raiden_event_handler = RaidenEventHandler()
 
     try:
-        chain_config = constants.ID_TO_NETWORK_CONFIG.get(net_id, {})
-        start_block = chain_config.get(constants.START_QUERY_BLOCK_KEY, 0)
+        chain_config = ID_TO_NETWORK_CONFIG.get(net_id, {})
+        start_block = chain_config.get(START_QUERY_BLOCK_KEY, 0)
         raiden_app = App(
             config=config,
             chain=blockchain_service,
@@ -828,7 +834,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = constants.ID_TO_NETWORKNAME.get(network_id, network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
         print(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
