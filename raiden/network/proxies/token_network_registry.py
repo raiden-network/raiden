@@ -20,10 +20,10 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     TransactionThrew,
 )
-from raiden.network.rpc.client import StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
-from raiden.utils import compare_versions, pex, privatekey_to_address, typing
+from raiden.utils import compare_versions, pex, typing
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
@@ -33,8 +33,10 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 class TokenNetworkRegistry:
     def __init__(
             self,
-            jsonrpc_client,
-            registry_address,
+            jsonrpc_client: JSONRPCClient,
+            registry_address: typing.Address,
+            node_address: typing.Address,
+            chain_id: typing.ChainID,
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
@@ -59,7 +61,8 @@ class TokenNetworkRegistry:
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.node_address = privatekey_to_address(self.client.privkey)
+        self.node_address = node_address
+        self.chain_id = chain_id
 
     def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:
         """ Return the token network address for the given token or None if

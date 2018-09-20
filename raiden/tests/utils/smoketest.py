@@ -259,7 +259,12 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     contract_addresses = deploy_smoketest_contracts(client, RAIDENTEST_CHAINID)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
-    registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
+    registry = TokenNetworkRegistry(
+        client,
+        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+        node_address=to_canonical_address(ethereum_config['address']),
+        chain_id=627,
+    )
     registry.add_token(to_canonical_address(token.contract.address))
 
     print_step('Setting up Raiden')

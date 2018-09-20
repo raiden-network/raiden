@@ -61,8 +61,10 @@ def token_network_registry_contract(chain_id, deploy_contract, secret_registry_c
 @pytest.fixture
 def token_network_registry_proxy(deploy_client, token_network_registry_contract):
     return TokenNetworkRegistry(
-        deploy_client,
-        to_canonical_address(token_network_registry_contract.contract.address),
+        jsonrpc_client=deploy_client,
+        registry_address=to_canonical_address(token_network_registry_contract.contract.address),
+        node_address=deploy_client.sender,
+        chain_id=deploy_client.chain_id(),
     )
 
 

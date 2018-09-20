@@ -134,8 +134,10 @@ class BlockChainService:
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    self.client,
-                    address,
+                    jsonrpc_client=self.client,
+                    registry_address=address,
+                    node_address=self.node_address,
+                    chain_id=self.chain_id,
                 )
 
         return self.address_to_token_network_registry[address]
