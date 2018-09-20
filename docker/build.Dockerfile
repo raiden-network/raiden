@@ -24,11 +24,6 @@ RUN cd /tmp && \
     chmod -R a+rwX /tmp/node_modules && \
     rm node*.tar.*
 
-
-# use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
-ARG REPO=raiden-network/raiden
-ARG RAIDENVERSION=master
-
 ADD . /raiden
 
 WORKDIR /raiden
@@ -52,7 +47,7 @@ RUN pip install pyinstaller
 # build pyinstaller package
 RUN pyinstaller --noconfirm --clean raiden.spec
 
-ARG ARCHIVE_TAG=${RAIDENVERSION}
+ARG ARCHIVE_TAG
 
 # pack result to have a unique name to get it out of the container later
 RUN cd dist && \
