@@ -227,7 +227,13 @@ export class ChannelTableComponent implements OnInit, OnDestroy {
 
     public onOpenChannel() {
 
-        const payload = new OpenDialogPayload(this.raidenService.raidenAddress);
+        const rdnConfig = this.raidenConfig.config;
+
+        const payload: OpenDialogPayload = {
+            ownAddress: this.raidenService.raidenAddress,
+            revealTimeout: rdnConfig.reveal_timeout,
+            defaultSettleTimeout: rdnConfig.settle_timeout
+        };
 
         const dialog = this.dialog.open(OpenDialogComponent, {
             width: '500px',

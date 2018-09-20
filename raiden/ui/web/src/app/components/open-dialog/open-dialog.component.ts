@@ -1,20 +1,16 @@
-import { Component, Inject, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { Component, Inject, ViewChild } from '@angular/core';
+import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { from, Observable } from 'rxjs';
-import { filter, flatMap, toArray } from 'rxjs/operators';
 import { UserToken } from '../../models/usertoken';
 import { IdenticonCacheService } from '../../services/identicon-cache.service';
 import { RaidenService } from '../../services/raiden.service';
 import { AddressInputComponent } from '../address-input/address-input.component';
 import { TokenInputComponent } from '../token-input/token-input.component';
 
-export class OpenDialogPayload {
+export interface OpenDialogPayload {
     readonly ownAddress: string;
-
-    constructor(ownAddress: string) {
-        this.ownAddress = ownAddress;
-    }
+    readonly defaultSettleTimeout: number;
+    readonly revealTimeout: number;
 }
 
 export interface OpenDialogResult {
@@ -30,13 +26,20 @@ export interface OpenDialogResult {
     templateUrl: './open-dialog.component.html',
     styleUrls: ['./open-dialog.component.css']
 })
-export class OpenDialogComponent  {
+export class OpenDialogComponent {
 
     public form: FormGroup = this.fb.group({
         address: '',
         token: '',
         amount: 0,
-        settle_timeout: [500, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
+        settle_timeout: [this.data.defaultSettleTimeout, [(control: AbstractControl) => {
+            const value = parseInt(control.value, 10);
+            if (isNaN(value) || value <= 0) {
+                return {invalidAmount: true};
+            } else {
+                return undefined;
+            }
+        }, Validators.min(this.data.revealTimeout * 2)]]
     });
 
     @ViewChild(TokenInputComponent) tokenInput: TokenInputComponent;
