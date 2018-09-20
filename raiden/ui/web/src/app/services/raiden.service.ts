@@ -10,6 +10,7 @@ import { SwapToken } from '../models/swaptoken';
 
 import { UserToken } from '../models/usertoken';
 import { amountFromDecimal, amountToDecimal } from '../utils/amount.converter';
+import { NetworkType } from './network-type.enum';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
@@ -39,6 +40,10 @@ export class RaidenService {
             catchError((error) => this.handleError(error)),
             shareReplay(1)
         );
+    }
+
+    public get main(): boolean {
+        return this.raidenConfig.config.network_type === NetworkType.MAIN;
     }
 
     private _raidenAddress: string;
