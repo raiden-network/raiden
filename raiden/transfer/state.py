@@ -14,6 +14,7 @@ from raiden.transfer.architecture import SendMessageEvent, State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
+from raiden.transfer.views import get_channel_unique_id_by_token_network_id
 from raiden.utils import lpex, pex, serialization, sha3, typing
 from raiden.utils.serialization import map_dict, map_list
 from raiden.utils.typing import ChannelUniqueID
@@ -222,6 +223,13 @@ class TargetTask(State):
         )
 
         return restored
+
+    def get_channel_unique_id(self, chain_state):
+        return get_channel_unique_id_by_token_network_id(
+            chain_state,
+            self.token_network_identifier,
+            self.channel_identifier
+        )
 
 
 class ChainState(State):
