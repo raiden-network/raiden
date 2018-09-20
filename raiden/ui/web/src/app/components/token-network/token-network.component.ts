@@ -5,6 +5,7 @@ import { BehaviorSubject, EMPTY, Subscription } from 'rxjs';
 import { flatMap, switchMap, tap } from 'rxjs/operators';
 import { SortingData } from '../../models/sorting.data';
 import { UserToken } from '../../models/usertoken';
+import { NetworkType } from '../../services/network-type.enum';
 import { RaidenConfig } from '../../services/raiden.config';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -84,6 +85,10 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         private raidenService: RaidenService,
         private raidenConfig: RaidenConfig
     ) {
+    }
+
+    public get main(): boolean {
+        return this.raidenService.main;
     }
 
     showRegisterDialog() {

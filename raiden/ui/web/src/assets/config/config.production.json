@@ -2,5 +2,6 @@
   "raiden": "/api/1",
   "reveal_timeout": 10,
   "settle_timeout": 500,
-  "web3": "http://localhost:8545"
+  "web3": "http://localhost:8545",
+  "network_type": "test"
 }

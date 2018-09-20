@@ -13,7 +13,11 @@
             </mat-card-title>
             <div fxLayout="row"
                  fxLayoutAlign="end" fxFlex="50">
-                <button mat-icon-button color="accent" (click)="showRegisterDialog()"
+                <button *ngIf="!main"
+                        id="token-registration"
+                        mat-icon-button
+                        color="accent"
+                        (click)="showRegisterDialog()"
                         matTooltip="Register a new token">
                     <mat-icon aria-label="Register a new token">add_circle</mat-icon>
                 </button>

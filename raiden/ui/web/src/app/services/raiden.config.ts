@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { NetworkType } from './network-type.enum';
 
 import { SharedService } from './shared.service';
 
@@ -14,6 +15,7 @@ interface RDNConfig {
     http_timeout?: number;
     settle_timeout?: number;
     reveal_timeout?: number;
+    network_type?: NetworkType;
 }
 
 const default_config: RDNConfig = {
@@ -25,6 +27,7 @@ const default_config: RDNConfig = {
     http_timeout: 600000,
     settle_timeout: 500,
     reveal_timeout: 10,
+    network_type: NetworkType.TEST
 };
 
 @Injectable()
@@ -33,8 +36,10 @@ export class RaidenConfig {
     public api: string;
     public web3: any;
 
-    constructor(private http: HttpClient,
-                private sharedService: SharedService) { }
+    constructor(
+        private http: HttpClient,
+        private sharedService: SharedService
+    ) { }
 
     load(url: string) {
         return new Promise((resolve) => {
