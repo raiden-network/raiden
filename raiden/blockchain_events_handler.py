@@ -2,7 +2,7 @@ import gevent
 import structlog
 from eth_utils import to_canonical_address
 
-from raiden.blockchain.events import Event, decode_event_to_internal
+from raiden.blockchain.events import Event, add_channel_unique_identifier, decode_event_to_internal
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
@@ -305,6 +305,7 @@ def on_blockchain_event(raiden: 'RaidenService', event: Event):
     )
 
     event = decode_event_to_internal(event)
+    event = add_channel_unique_identifier(raiden, event)
 
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
         handle_tokennetwork_new(raiden, event)

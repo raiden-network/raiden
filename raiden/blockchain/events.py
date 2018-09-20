@@ -7,6 +7,7 @@ from raiden.constants import UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
+from raiden.transfer import views
 from raiden.utils import pex, typing
 from raiden.utils.filters import (
     StatelessFilter,
@@ -200,6 +201,21 @@ def decode_event_to_internal(event):
     elif data['event'] == EVENT_SECRET_REVEALED:
         data['secrethash'] = data['args']['secrethash']
         data['secret'] = data['args']['secret']
+
+    return event
+
+
+def add_channel_unique_identifier(raiden, event):
+    data = event.event_data
+
+    if 'channel_identifier' in data:
+        chain_state = views.state_from_raiden(raiden)
+        channel_unique_id = chain_state.get_channel_unique_id_by_token_network_id(
+            event.originating_contract,
+            data['channel_identifier'],
+        )
+
+        data['channel_unique_identifier'] = channel_unique_id
 
     return event
 
