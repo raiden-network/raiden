@@ -15,7 +15,12 @@ from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT, NetworkType
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import (
+    InvalidAddress,
+    InvalidDBData,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
 from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
@@ -320,6 +325,8 @@ class RaidenService(Runnable):
                     log.error(str(e))
                 except RaidenUnrecoverableError as e:
                     if self.config['network_type'] == NetworkType.MAIN:
+                        if isinstance(e, InvalidDBData):
+                            raise
                         log.error(str(e))
                     else:
                         raise
@@ -428,6 +435,8 @@ class RaidenService(Runnable):
                 log.error(str(e))
             except RaidenUnrecoverableError as e:
                 if self.config['network_type'] == NetworkType.MAIN:
+                    if isinstance(e, InvalidDBData):
+                        raise
                     log.error(str(e))
                 else:
                     raise
