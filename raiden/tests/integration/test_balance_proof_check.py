@@ -25,13 +25,12 @@ def test_invalid_close(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    registry_address = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         chain_state=chain_state,
         payment_network_id=payment_network_id,
         token_address=token_address,
     )
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_unique_identifier = get_channelstate(app0, app1, token_network_identifier).unique_id
 
     # make a transfer from app0 to app1 so that app1 is supposed to have a non empty balance hash
     direct_transfer(
@@ -48,25 +47,21 @@ def test_invalid_close(
     # app1 closes the channel with an empty hash instead of the expected hash
     # of the transferred amount from app0
     token_network_contract.close(
-        channel_identifier=channel_identifier,
+        channel_identifier=channel_unique_identifier.channel_id,
         partner=app0.raiden.address,
         balance_hash=EMPTY_HASH,
         nonce=0,
         additional_hash=EMPTY_HASH,
         signature=EMPTY_SIGNATURE,
     )
-    waiting.wait_for_close(
+    waiting.wait_for_close2(
         raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
+        channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
+        channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
@@ -75,7 +70,7 @@ def test_invalid_close(
     )
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
+        'channel_identifier': channel_unique_identifier.channel_id,
     })
 
 
@@ -100,7 +95,7 @@ def test_invalid_update_transfer(
         payment_network_id=payment_network_id,
         token_address=token_address,
     )
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_unique_identifier = get_channelstate(app0, app1, token_network_identifier).unique_id
 
     # make a transfer
     direct_transfer(
@@ -118,22 +113,18 @@ def test_invalid_update_transfer(
         token_address=token_address,
         partner_address=app1.raiden.address,
     )
-    waiting.wait_for_close(
+    waiting.wait_for_close2(
         raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
+        channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
 
     # app1 won't update the channel
 
     # app0 waits for settle
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
+        channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
@@ -142,5 +133,5 @@ def test_invalid_update_transfer(
     )
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
+        'channel_identifier': channel_unique_identifier.channel_id,
     })

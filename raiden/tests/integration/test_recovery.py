@@ -194,11 +194,9 @@ def test_recovery_unhappy_case(
         app0.raiden.address,
     )
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         app1.raiden,
-        app1.raiden.default_registry.address,
-        token_address,
-        [channel01.identifier],
+        [channel01.unique_id],
         retry_timeout,
     )
 

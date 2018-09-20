@@ -62,9 +62,9 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         token_network_identifier,
     )
 
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_unique_identifier = get_channelstate(app0, app1, token_network_identifier).unique_id
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_unique_identifier.channel_id in token_network.partneraddresses_to_channels[
         app1.raiden.address
     ]
 
@@ -76,11 +76,9 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         app0.raiden.address,
     )
 
-    waiting.wait_for_close(
+    waiting.wait_for_close2(
         app0.raiden,
-        registry_address,
-        token_address,
-        [channel_identifier],
+        [channel_unique_identifier],
         app0.raiden.alarm.sleep_time,
     )
 
@@ -93,11 +91,9 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
     assert channel_state.close_transaction.finished_block_number
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         app0.raiden,
-        registry_address,
-        token_address,
-        [channel_identifier],
+        [channel_unique_identifier],
         app0.raiden.alarm.sleep_time,
     )
 
@@ -106,7 +102,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         token_network_identifier,
     )
 
-    assert channel_identifier not in token_network.partneraddresses_to_channels[
+    assert channel_unique_identifier.channel_id not in token_network.partneraddresses_to_channels[
         app1.raiden.address
     ]
 
@@ -117,14 +113,14 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
     assert must_contain_entry(state_changes, ContractReceiveChannelClosed, {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
+        'channel_identifier': channel_unique_identifier.channel_id,
         'transaction_from': app1.raiden.address,
         'block_number': channel_state.close_transaction.finished_block_number,
     })
 
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
+        'channel_identifier': channel_unique_identifier.channel_id,
     })
 
 
@@ -315,11 +311,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
     assert lock.secrethash == sha3(secret)
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         alice_app.raiden,
-        registry_address,
-        token_address,
-        [alice_bob_channel_state.identifier],
+        [alice_bob_channel_state.unique_id],
         alice_app.raiden.alarm.sleep_time,
     )
 
@@ -407,11 +401,9 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         app0.raiden.address,
     )
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         app1.raiden,
-        app1.raiden.default_registry.address,
-        token_address,
-        [channelstate_0_1.identifier],
+        [channelstate_0_1.unique_id],
         app1.raiden.alarm.sleep_time,
     )
 
@@ -625,11 +617,9 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     #     alice_second_transfer,
     # )
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         app0.raiden,
-        registry_address,
-        token_address,
-        [channel0.identifier],
+        [channel0.unique_id],
         app0.raiden.alarm.sleep_time,
     )
 

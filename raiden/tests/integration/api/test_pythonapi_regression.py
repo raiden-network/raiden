@@ -47,11 +47,9 @@ def test_close_regression(raiden_network, deposit, token_addresses):
 
     api2.channel_close(registry_address, token_address, api1.address)
 
-    waiting.wait_for_settle(
+    waiting.wait_for_settle2(
         app0.raiden,
-        app0.raiden.default_registry.address,
-        token_address,
-        [channel12.identifier],
+        [channel12.unique_id],
         app0.raiden.alarm.sleep_time,
     )
     node1_expected_balance = node1_balance_before + deposit - amount
