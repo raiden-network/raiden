@@ -16,6 +16,7 @@ from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
 from raiden.utils import lpex, pex, serialization, sha3, typing
 from raiden.utils.serialization import map_dict, map_list
+from raiden.utils.typing import ChannelUniqueID
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
@@ -1561,6 +1562,15 @@ class NettingChannelState(State):
         restored.deposit_transaction_queue = data['deposit_transaction_queue']
 
         return restored
+
+    @property
+    def unique_id(self):
+        return ChannelUniqueID(
+            chain_id=self.chain_id,
+            payment_network_id=self.payment_network_identifier,
+            token_address=self.token_address,
+            channel_id=self.identifier,
+        )
 
 
 @total_ordering
