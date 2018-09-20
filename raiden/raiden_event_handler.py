@@ -6,6 +6,7 @@ from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
+from raiden.transfer import views
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock
@@ -239,6 +240,13 @@ class RaidenEventHandler:
             channel_close_event: ContractSendChannelClose,
     ):
         balance_proof = channel_close_event.balance_proof
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_token_network_identifier(
+            chain_state=chain_state,
+            token_network_id=channel_close_event.token_network_identifier,
+            channel_id=channel_close_event.channel_identifier,
+        )
+        channel_unique_id = channel_state.unique_id
 
         if balance_proof:
             nonce = balance_proof.nonce
@@ -253,8 +261,7 @@ class RaidenEventHandler:
             message_hash = EMPTY_HASH
 
         channel_proxy = raiden.chain.payment_channel(
-            token_network_address=channel_close_event.token_network_identifier,
-            channel_id=channel_close_event.channel_identifier,
+            channel_unique_id=channel_unique_id,
         )
 
         channel_proxy.close(
@@ -270,11 +277,17 @@ class RaidenEventHandler:
             channel_update_event: ContractSendChannelUpdateTransfer,
     ):
         balance_proof = channel_update_event.balance_proof
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_token_network_identifier(
+            chain_state=chain_state,
+            token_network_id=channel_update_event.token_network_identifier,
+            channel_id=channel_update_event.channel_identifier,
+        )
+        channel_unique_id = channel_state.unique_id
 
         if balance_proof:
             channel = raiden.chain.payment_channel(
-                token_network_address=channel_update_event.token_network_identifier,
-                channel_id=channel_update_event.channel_identifier,
+                channel_unique_id=channel_unique_id,
             )
 
             non_closing_data = pack_balance_proof_update(
@@ -304,17 +317,23 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_token_network_identifier(
+            chain_state=chain_state,
+            token_network_id=channel_unlock_event.token_network_identifier,
+            channel_id=channel_unlock_event.channel_identifier,
+        )
+        channel_unique_id = channel_state.unique_id
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            channel_unlock_event.token_network_identifier,
-            channel_unlock_event.channel_identifier,
+            channel_unique_id=channel_unique_id,
         )
         token_network: TokenNetwork = payment_channel.token_network
 
         # Fetch on-chain balance hashes for both participants
         participants_details = token_network.detail_participants(
-            raiden.address,
-            channel_unlock_event.participant,
-            channel_unlock_event.channel_identifier,
+            participant1=raiden.address,
+            participant2=channel_unlock_event.participant,
+            channel_unique_id=channel_unique_id,
         )
 
         our_details = participants_details.our_details
@@ -381,9 +400,15 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
-        payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=channel_settle_event.token_network_identifier,
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_token_network_identifier(
+            chain_state=chain_state,
+            token_network_id=channel_settle_event.token_network_identifier,
             channel_id=channel_settle_event.channel_identifier,
+        )
+        channel_unique_id = channel_state.unique_id
+        payment_channel: PaymentChannel = raiden.chain.payment_channel(
+            channel_unique_id=channel_unique_id,
         )
 
         token_network_proxy: TokenNetwork = payment_channel.token_network
@@ -391,7 +416,7 @@ class RaidenEventHandler:
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,
             participant2=payment_channel.participant2,
-            channel_identifier=channel_settle_event.channel_identifier,
+            channel_unique_id=channel_unique_id,
         )
 
         # Query state changes which have the on-chain

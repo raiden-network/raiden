@@ -11,9 +11,10 @@ from raiden.exceptions import (
     SamePeerAddress,
     TransactionThrew,
 )
-from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies import TokenNetwork, TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils import wait_blocks
+from raiden.utils.typing import ChannelUniqueID
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -27,6 +28,7 @@ def test_token_network_deposit_race(
         token_network_proxy,
         private_keys,
         token_proxy,
+        chain_id,
         web3,
 ):
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -36,25 +38,31 @@ def test_token_network_deposit_race(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c1_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=c1_client,
+        registry_address=token_network_proxy.registry.address,
+        chain_id=chain_id,
+    )
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        registry=c1_token_network_registry_proxy,
     )
     token_proxy.transfer(c1_client.sender, 10)
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_unique_id = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
         TEST_SETTLE_TIMEOUT_MIN,
     )
-    assert channel_identifier is not None
+    assert channel_unique_id is not None
 
     c1_token_network_proxy.set_total_deposit(
-        channel_identifier,
-        2,
-        c2_client.sender,
+        channel_unique_id=channel_unique_id,
+        total_deposit=2,
+        partner=c2_client.sender,
     )
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
-            channel_identifier,
+            channel_unique_id,
             1,
             c2_client.sender,
         )
@@ -75,13 +83,25 @@ def test_token_network_proxy_basics(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c1_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=c1_client,
+        registry_address=token_network_proxy.registry.address,
+        chain_id=chain_id,
+    )
+    c2_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=c2_client,
+        registry_address=token_network_proxy.registry.address,
+        chain_id=chain_id,
+    )
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        registry=c1_token_network_registry_proxy,
     )
     c2_token_network_proxy = TokenNetwork(
-        c2_client,
-        token_network_address,
+        jsonrpc_client=c2_client,
+        manager_address=token_network_address,
+        registry=c2_token_network_registry_proxy,
     )
 
     initial_token_balance = 100
@@ -94,35 +114,46 @@ def test_token_network_proxy_basics(
 
     # instantiating a new channel - test basic assumptions
     assert c1_token_network_proxy.channel_exists_and_not_settled(
-        c1_client.sender,
-        c2_client.sender,
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
     ) is False
-    assert c1_token_network_proxy.channel_is_opened(c1_client.sender, c2_client.sender) is False
-    assert c1_token_network_proxy.channel_is_closed(c1_client.sender, c2_client.sender) is False
+    assert c1_token_network_proxy.channel_is_opened(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+    ) is False
+    assert c1_token_network_proxy.channel_is_closed(
+        participant1=c1_client.sender,
+        participant2=c2_client.sender,
+    ) is False
     # test timeout limits
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
-            c2_client.sender,
-            TEST_SETTLE_TIMEOUT_MIN - 1,
+            partner=c2_client.sender,
+            settle_timeout=TEST_SETTLE_TIMEOUT_MIN - 1,
         )
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
-            c2_client.sender,
-            TEST_SETTLE_TIMEOUT_MAX + 1,
+            partner=c2_client.sender,
+            settle_timeout=TEST_SETTLE_TIMEOUT_MAX + 1,
         )
     # channel to self
     with pytest.raises(SamePeerAddress):
         c1_token_network_proxy.new_netting_channel(
-            c1_client.sender,
-            TEST_SETTLE_TIMEOUT_MIN,
+            partner=c1_client.sender,
+            settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         )
 
     # Channel is not open yet
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c1_token_network_proxy.set_total_deposit(
-            1,
-            1,
-            c2_client.sender,
+            channel_unique_id=ChannelUniqueID(
+                chain_id=chain_id,
+                payment_network_id=token_network_proxy.registry.address,
+                token_address=token_proxy.address,
+                channel_id=1,
+            ),
+            total_deposit=1,
+            partner=c2_client.sender,
         )
 
         assert 'does not exist' in str(exc)
@@ -130,12 +161,17 @@ def test_token_network_proxy_basics(
     # Channel is not open yet
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c1_token_network_proxy.close(
-            1,
-            c2_client.sender,
-            EMPTY_HASH,
-            0,
-            EMPTY_HASH,
-            EMPTY_HASH,
+            channel_unique_id=ChannelUniqueID(
+                chain_id=chain_id,
+                payment_network_id=token_network_proxy.registry.address,
+                token_address=token_proxy.address,
+                channel_id=1,
+            ),
+            partner=c2_client.sender,
+            balance_hash=EMPTY_HASH,
+            nonce=0,
+            additional_hash=EMPTY_HASH,
+            signature=EMPTY_HASH,
         )
 
         assert 'does not exist' in str(exc)
@@ -153,49 +189,49 @@ def test_token_network_proxy_basics(
     #     assert 'does not exist' in str(exc)
 
     # actually create a channel
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
-        c2_client.sender,
-        TEST_SETTLE_TIMEOUT_MIN,
+    channel_unique_id = c1_token_network_proxy.new_netting_channel(
+        partner=c2_client.sender,
+        settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
     )
-    assert channel_identifier is not None
+    assert channel_unique_id is not None
     # multiple channels with the same peer are not allowed
     with pytest.raises(DuplicatedChannelError):
         c1_token_network_proxy.new_netting_channel(
-            c2_client.sender,
-            TEST_SETTLE_TIMEOUT_MIN,
+            partner=c2_client.sender,
+            settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         )
     assert c1_token_network_proxy.channel_exists_and_not_settled(
         participant1=c1_client.sender,
         participant2=c2_client.sender,
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
     ) is True
     assert c1_token_network_proxy.channel_is_opened(
         participant1=c1_client.sender,
         participant2=c2_client.sender,
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
     ) is True
 
     # channel is open.
     # deposit with no balance
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
-            channel_identifier,
-            101,
-            c2_client.sender,
+            channel_unique_id=channel_unique_id,
+            total_deposit=101,
+            partner=c2_client.sender,
         )
 
     # no negative deposit
     with pytest.raises(DepositMismatch):
         c1_token_network_proxy.set_total_deposit(
-            channel_identifier,
-            -1,
-            c2_client.sender,
+            channel_unique_id=channel_unique_id,
+            total_deposit=-1,
+            partner=c2_client.sender,
         )
     # actual deposit
     c1_token_network_proxy.set_total_deposit(
-        channel_identifier,
-        10,
-        c2_client.sender,
+        channel_unique_id=channel_unique_id,
+        total_deposit=10,
+        partner=c2_client.sender,
     )
 
     # no negative deposit
@@ -211,7 +247,7 @@ def test_token_network_proxy_basics(
     # balance proof by c2
     transferred_amount = 3
     balance_proof = BalanceProof(
-        channel_identifier=channel_identifier,
+        channel_identifier=channel_unique_id.channel_id,
         token_network_address=to_checksum_address(token_network_address),
         nonce=1,
         chain_id=chain_id,
@@ -224,7 +260,7 @@ def test_token_network_proxy_basics(
     # close with invalid signature
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.close(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             partner=c1_client.sender,
             balance_hash=decode_hex(balance_proof.balance_hash),
             nonce=balance_proof.nonce,
@@ -234,7 +270,7 @@ def test_token_network_proxy_basics(
 
     # correct close
     c2_token_network_proxy.close(
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
         partner=c1_client.sender,
         balance_hash=decode_hex(balance_proof.balance_hash),
         nonce=balance_proof.nonce,
@@ -244,18 +280,18 @@ def test_token_network_proxy_basics(
     assert c1_token_network_proxy.channel_is_closed(
         participant1=c1_client.sender,
         participant2=c2_client.sender,
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
     ) is True
     assert c1_token_network_proxy.channel_exists_and_not_settled(
         participant1=c1_client.sender,
         participant2=c2_client.sender,
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
     ) is True
 
     # closing already closed channel
     with pytest.raises(RaidenRecoverableError):
         c2_token_network_proxy.close(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             partner=c1_client.sender,
             balance_hash=decode_hex(balance_proof.balance_hash),
             nonce=balance_proof.nonce,
@@ -265,7 +301,7 @@ def test_token_network_proxy_basics(
 
     with pytest.raises(RaidenRecoverableError) as exc:
         c2_token_network_proxy.set_total_deposit(
-            channel_identifier,
+            channel_unique_id,
             20,
             c1_client.sender,
         )
@@ -274,7 +310,7 @@ def test_token_network_proxy_basics(
 
     with pytest.raises(RaidenRecoverableError) as exc:
         c2_token_network_proxy.close(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             partner=c1_client.sender,
             balance_hash=decode_hex(balance_proof.balance_hash),
             nonce=balance_proof.nonce,
@@ -290,7 +326,7 @@ def test_token_network_proxy_basics(
     # try to settle using incorrect data
     with pytest.raises(RaidenUnrecoverableError):
         c2_token_network_proxy.settle(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             transferred_amount=1,
             locked_amount=0,
             locksroot=EMPTY_HASH,
@@ -301,7 +337,7 @@ def test_token_network_proxy_basics(
         )
 
     c2_token_network_proxy.settle(
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
         transferred_amount=0,
         locked_amount=0,
         locksroot=EMPTY_HASH,
@@ -313,14 +349,14 @@ def test_token_network_proxy_basics(
     assert c1_token_network_proxy.channel_exists_and_not_settled(
         participant1=c1_client.sender,
         participant2=c2_client.sender,
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
     ) is False
     assert token_proxy.balance_of(c1_client.sender) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.sender) == (initial_balance_c2 + transferred_amount)
 
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c1_token_network_proxy.set_total_deposit(
-            channel_identifier,
+            channel_unique_id,
             10,
             c2_client.sender,
         )
@@ -362,16 +398,28 @@ def test_token_network_proxy_update_transfer(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c1_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=c1_client,
+        registry_address=token_network_proxy.registry.address,
+        chain_id=chain_id,
+    )
+    c2_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=c2_client,
+        registry_address=token_network_proxy.registry.address,
+        chain_id=chain_id,
+    )
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        registry=c1_token_network_registry_proxy,
     )
     c2_token_network_proxy = TokenNetwork(
-        c2_client,
-        token_network_address,
+        jsonrpc_client=c2_client,
+        manager_address=token_network_address,
+        registry=c2_token_network_registry_proxy,
     )
     # create a channel
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_unique_id = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
         10,
     )
@@ -384,12 +432,12 @@ def test_token_network_proxy_update_transfer(
     initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
     assert initial_balance_c2 == initial_balance
     c1_token_network_proxy.set_total_deposit(
-        channel_identifier,
-        10,
-        c2_client.sender,
+        channel_unique_id=channel_unique_id,
+        total_deposit=10,
+        partner=c2_client.sender,
     )
     c2_token_network_proxy.set_total_deposit(
-        channel_identifier,
+        channel_unique_id,
         10,
         c1_client.sender,
     )
@@ -397,7 +445,7 @@ def test_token_network_proxy_update_transfer(
     transferred_amount_c1 = 1
     transferred_amount_c2 = 3
     balance_proof_c1 = BalanceProof(
-        channel_identifier=channel_identifier,
+        channel_identifier=channel_unique_id.channel_id,
         token_network_address=to_checksum_address(token_network_address),
         nonce=1,
         chain_id=chain_id,
@@ -409,7 +457,7 @@ def test_token_network_proxy_update_transfer(
     ))
     # balance proof signed by c2
     balance_proof_c2 = BalanceProof(
-        channel_identifier=channel_identifier,
+        channel_identifier=channel_unique_id.channel_id,
         token_network_address=to_checksum_address(token_network_address),
         nonce=2,
         chain_id=chain_id,
@@ -430,7 +478,7 @@ def test_token_network_proxy_update_transfer(
 
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c2_token_network_proxy.update_transfer(
-            channel_identifier,
+            channel_unique_id,
             c1_client.sender,
             decode_hex(balance_proof_c1.balance_hash),
             balance_proof_c1.nonce,
@@ -443,7 +491,7 @@ def test_token_network_proxy_update_transfer(
 
     # close by c1
     c1_token_network_proxy.close(
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
         partner=c2_client.sender,
         balance_hash=decode_hex(balance_proof_c2.balance_hash),
         nonce=balance_proof_c2.nonce,
@@ -460,7 +508,7 @@ def test_token_network_proxy_update_transfer(
     )
     with pytest.raises(TransactionThrew):
         c2_token_network_proxy.update_transfer(
-            channel_identifier,
+            channel_unique_id,
             c1_client.sender,
             decode_hex(balance_proof_c1.balance_hash),
             balance_proof_c1.nonce,
@@ -477,7 +525,7 @@ def test_token_network_proxy_update_transfer(
         data=non_closing_data,
     )
     c2_token_network_proxy.update_transfer(
-        channel_identifier,
+        channel_unique_id,
         c1_client.sender,
         decode_hex(balance_proof_c1.balance_hash),
         balance_proof_c1.nonce,
@@ -488,7 +536,7 @@ def test_token_network_proxy_update_transfer(
 
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c1_token_network_proxy.settle(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             transferred_amount=transferred_amount_c1,
             locked_amount=0,
             locksroot=EMPTY_HASH,
@@ -505,7 +553,7 @@ def test_token_network_proxy_update_transfer(
     # settling with an invalid amount
     with pytest.raises(RaidenUnrecoverableError):
         c1_token_network_proxy.settle(
-            channel_identifier=channel_identifier,
+            channel_unique_id=channel_unique_id,
             transferred_amount=2,
             locked_amount=0,
             locksroot=EMPTY_HASH,
@@ -517,7 +565,7 @@ def test_token_network_proxy_update_transfer(
 
     # proper settle
     c1_token_network_proxy.settle(
-        channel_identifier=channel_identifier,
+        channel_unique_id=channel_unique_id,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
         locksroot=EMPTY_HASH,
@@ -534,9 +582,9 @@ def test_token_network_proxy_update_transfer(
     # Already settled
     with pytest.raises(RaidenUnrecoverableError) as exc:
         c2_token_network_proxy.set_total_deposit(
-            channel_identifier,
-            20,
-            c1_client.sender,
+            channel_unique_id=channel_unique_id,
+            total_deposit=20,
+            partner=c1_client.sender,
         )
 
         assert 'getChannelIdentifier returned 0' in str(exc)

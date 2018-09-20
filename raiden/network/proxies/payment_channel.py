@@ -17,15 +17,15 @@ class PaymentChannel:
     def __init__(
             self,
             token_network: TokenNetwork,
-            channel_identifier: typing.ChannelID,
+            channel_unique_id: typing.ChannelUniqueID,
     ):
 
-        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
-            raise ValueError('channel_identifier {} is not a uint256'.format(channel_identifier))
+        if channel_unique_id.channel_id < 0 or channel_unique_id.channel_id > UINT256_MAX:
+            raise ValueError('channel_identifier of {} is not a uint256'.format(channel_unique_id))
 
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
-            channel_identifier=channel_identifier,
+            channel_identifier=channel_unique_id.channel_id,
             event_name=ChannelEvent.OPENED,
         )
 
@@ -43,7 +43,7 @@ class PaymentChannel:
         if token_network.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        self.channel_identifier = channel_identifier
+        self.channel_unique_id = channel_unique_id
         self.channel_operations_lock = RLock()
         self.participant1 = participant1
         self.participant2 = participant2
@@ -54,16 +54,20 @@ class PaymentChannel:
         with self.token_network.channel_operations_lock[self.participant2]:
             yield
 
-    def token_address(self) -> typing.Address:
+    @property
+    def channel_identifier(self) -> typing.ChannelID:
+        return self.channel_unique_id.channel_id
+
+    def token_address(self) -> typing.TokenAddress:
         """ Returns the address of the token for the channel. """
-        return self.token_network.token_address()
+        return self.channel_unique_id.token_address
 
     def detail(self) -> ChannelDetails:
         """ Returns the channel details. """
         return self.token_network.detail(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def settle_timeout(self) -> int:
@@ -108,7 +112,7 @@ class PaymentChannel:
         return self.token_network.channel_is_opened(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def closed(self) -> bool:
@@ -116,7 +120,7 @@ class PaymentChannel:
         return self.token_network.channel_is_closed(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def settled(self) -> bool:
@@ -124,7 +128,7 @@ class PaymentChannel:
         return self.token_network.channel_is_settled(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def closing_address(self) -> typing.Address:
@@ -132,7 +136,7 @@ class PaymentChannel:
         return self.token_network.closing_address(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def can_transfer(self) -> bool:
@@ -140,12 +144,12 @@ class PaymentChannel:
         return self.token_network.can_transfer(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
         )
 
     def set_total_deposit(self, total_deposit: typing.TokenAmount):
         self.token_network.set_total_deposit(
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
             total_deposit=total_deposit,
             partner=self.participant2,
         )
@@ -159,7 +163,7 @@ class PaymentChannel:
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
             partner=self.participant2,
             balance_hash=balance_hash,
             nonce=nonce,
@@ -177,7 +181,7 @@ class PaymentChannel:
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
             partner=self.participant2,
             balance_hash=balance_hash,
             nonce=nonce,
@@ -188,7 +192,7 @@ class PaymentChannel:
 
     def unlock(self, merkle_tree_leaves: bytes):
         self.token_network.unlock(
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
             partner=self.participant2,
             merkle_tree_leaves=merkle_tree_leaves,
         )
@@ -204,7 +208,7 @@ class PaymentChannel:
     ):
         """ Settles the channel. """
         self.token_network.settle(
-            channel_identifier=self.channel_identifier,
+            channel_unique_id=self.channel_unique_id,
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,

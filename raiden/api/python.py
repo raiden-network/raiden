@@ -281,7 +281,8 @@ class RaidenAPI:
             )
 
         token_network = self.raiden.chain.token_network(
-            registry.get_token_network(token_address),
+            registry_address=registry_address,
+            address=registry.get_token_network(token_address),
         )
 
         has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
@@ -372,13 +373,14 @@ class RaidenAPI:
             raise InvalidAddress('No channel with partner_address for the given token')
 
         token = self.raiden.chain.token(token_address)
-        netcontract_address = channel_state.identifier
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(token_address)
-        token_network_proxy = self.raiden.chain.token_network(token_network_address)
+        token_network_proxy = self.raiden.chain.token_network(
+            registry_address=registry_address,
+            address=token_network_address,
+        )
         channel_proxy = self.raiden.chain.payment_channel(
-            token_network_proxy.address,
-            netcontract_address,
+            channel_unique_id=channel_state.unique_id,
         )
 
         balance = token.balance_of(self.raiden.address)
@@ -491,8 +493,7 @@ class RaidenAPI:
             # don't release the locks when their context goes out of scope
             for channel_state in channels_to_close:
                 channel = self.raiden.chain.payment_channel(
-                    token_network_identifier,
-                    channel_state.identifier,
+                    channel_unique_id=channel_state.unique_id,
                 )
                 stack.enter_context(channel.lock_or_raise())
 

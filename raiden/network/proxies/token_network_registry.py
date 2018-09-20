@@ -35,7 +35,6 @@ class TokenNetworkRegistry:
             self,
             jsonrpc_client: JSONRPCClient,
             registry_address: typing.Address,
-            node_address: typing.Address,
             chain_id: typing.ChainID,
     ):
         if not is_binary_address(registry_address):
@@ -61,7 +60,7 @@ class TokenNetworkRegistry:
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.node_address = node_address
+        self.node_address = jsonrpc_client.sender
         self.chain_id = chain_id
 
     def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:

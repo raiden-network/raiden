@@ -260,9 +260,8 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
     registry = TokenNetworkRegistry(
-        client,
-        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-        node_address=to_canonical_address(ethereum_config['address']),
+        jsonrpc_client=client,
+        registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         chain_id=627,
     )
     registry.add_token(to_canonical_address(token.contract.address))

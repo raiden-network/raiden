@@ -13,7 +13,7 @@ from raiden.network.proxies import (
 )
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
-from raiden.utils.typing import Address, ChannelID, T_ChannelID
+from raiden.utils.typing import Address, ChannelUniqueID
 
 
 class BlockChainService:
@@ -136,22 +136,25 @@ class BlockChainService:
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
                     jsonrpc_client=self.client,
                     registry_address=address,
-                    node_address=self.node_address,
                     chain_id=self.chain_id,
                 )
 
         return self.address_to_token_network_registry[address]
 
-    def token_network(self, address: Address) -> TokenNetwork:
+    def token_network(self, registry_address: Address, address: Address) -> TokenNetwork:
         if not is_binary_address(address):
             raise ValueError('address must be a valid address')
 
+        registry = self.token_network_registry(registry_address)
         with self._token_network_creation_lock:
             if address not in self.address_to_token_network:
-                self.address_to_token_network[address] = TokenNetwork(
-                    self.client,
-                    address,
+                token_network = TokenNetwork(
+                    jsonrpc_client=self.client,
+                    manager_address=address,
+                    registry=registry,
                 )
+                assert registry.get_token_network(token_network.token_address()) == address
+                self.address_to_token_network[address] = token_network
 
         return self.address_to_token_network[address]
 
@@ -170,27 +173,30 @@ class BlockChainService:
 
     def payment_channel(
             self,
-            token_network_address: Address,
-            channel_id: ChannelID,
+            channel_unique_id: ChannelUniqueID,
     ) -> PaymentChannel:
-
-        if not is_binary_address(token_network_address):
-            raise ValueError('address must be a valid address')
-        if not isinstance(channel_id, T_ChannelID):
-            raise ValueError('channel identifier must be of type T_ChannelID')
+        if not isinstance(channel_unique_id, ChannelUniqueID):
+            raise ValueError('channel_unique_id must be of type ChannelUniqueID')
 
         with self._payment_channel_creation_lock:
-            dict_key = (token_network_address, channel_id)
-
-            if dict_key not in self.identifier_to_payment_channel:
-                token_network = self.token_network(token_network_address)
-
-                self.identifier_to_payment_channel[dict_key] = PaymentChannel(
-                    token_network=token_network,
-                    channel_identifier=channel_id,
+            if channel_unique_id not in self.identifier_to_payment_channel:
+                registry = self.token_network_registry(
+                    address=channel_unique_id.payment_network_id,
+                )
+                token_network_address = registry.get_token_network(channel_unique_id.token_address)
+                if not token_network_address:
+                    raise ValueError('token not registered for given network')
+                token_network = self.token_network(
+                    registry_address=registry.address,
+                    address=token_network_address,
                 )
 
-        return self.identifier_to_payment_channel[dict_key]
+                self.identifier_to_payment_channel[channel_unique_id] = PaymentChannel(
+                    token_network=token_network,
+                    channel_unique_id=channel_unique_id,
+                )
+
+        return self.identifier_to_payment_channel[channel_unique_id]
 
     @property
     @ttl_cache(ttl=30)

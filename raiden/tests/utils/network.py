@@ -28,21 +28,19 @@ BlockchainServices = namedtuple(
 )
 
 
-def check_channel(
+def _check_channel(
         app1,
         app2,
         token_network_identifier,
-        channel_identifier,
+        channel_unique_id,
         settle_timeout,
         deposit_amount,
 ):
     netcontract1 = app1.raiden.chain.payment_channel(
-        token_network_identifier,
-        channel_identifier,
+        channel_unique_id=channel_unique_id,
     )
     netcontract2 = app2.raiden.chain.payment_channel(
-        token_network_identifier,
-        channel_identifier,
+        channel_unique_id=channel_unique_id,
     )
 
     # Check a valid settle timeout was used, the netting contract has an
@@ -88,20 +86,22 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
     assert token_address
 
     token_network_address = app0.raiden.default_registry.get_token_network(token_address)
-    token_network_proxy = app0.raiden.chain.token_network(token_network_address)
+    token_network_proxy = app0.raiden.chain.token_network(
+        registry_address=app0.raiden.default_registry.address,
+        address=token_network_address,
+    )
 
-    channel_identifier = token_network_proxy.new_netting_channel(
+    channel_unique_id = token_network_proxy.new_netting_channel(
         app1.raiden.address,
         settle_timeout,
     )
-    assert channel_identifier
+    assert channel_unique_id
 
     for app in [app0, app1]:
         # Use each app's own chain because of the private key / local signing
         token = app.raiden.chain.token(token_address)
         payment_channel_proxy = app.raiden.chain.payment_channel(
-            token_network_proxy.address,
-            channel_identifier,
+            channel_unique_id=channel_unique_id,
         )
 
         # This check can succeed and the deposit still fail, if channels are
@@ -118,11 +118,11 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         new_balance = token.balance_of(app.raiden.address)
         assert new_balance <= previous_balance - deposit
 
-    check_channel(
+    _check_channel(
         app0,
         app1,
         token_network_proxy.address,
-        channel_identifier,
+        channel_unique_id,
         settle_timeout,
         deposit,
     )

@@ -42,12 +42,16 @@ def test_invalid_close(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    token_network_contract = TokenNetwork(app1.raiden.chain.client, token_network_identifier)
+    token_network_contract = TokenNetwork(
+        jsonrpc_client=app1.raiden.chain.client,
+        manager_address=token_network_identifier,
+        registry=app1.raiden.default_registry,
+    )
 
     # app1 closes the channel with an empty hash instead of the expected hash
     # of the transferred amount from app0
     token_network_contract.close(
-        channel_identifier=channel_unique_identifier.channel_id,
+        channel_unique_id=channel_unique_identifier,
         partner=app0.raiden.address,
         balance_hash=EMPTY_HASH,
         nonce=0,

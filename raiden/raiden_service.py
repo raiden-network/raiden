@@ -563,7 +563,10 @@ class RaidenService(Runnable):
             )
 
             for token_network in token_networks:
-                token_network_proxy = self.chain.token_network(token_network)
+                token_network_proxy = self.chain.token_network(
+                    registry_address=token_network_registry_proxy.address,
+                    address=token_network,
+                )
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy,
                     from_block,

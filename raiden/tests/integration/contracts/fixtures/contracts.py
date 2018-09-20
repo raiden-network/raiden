@@ -59,12 +59,11 @@ def token_network_registry_contract(chain_id, deploy_contract, secret_registry_c
 
 
 @pytest.fixture
-def token_network_registry_proxy(deploy_client, token_network_registry_contract):
+def token_network_registry_proxy(deploy_client, token_network_registry_contract, chain_id):
     return TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
         registry_address=to_canonical_address(token_network_registry_contract.contract.address),
-        node_address=deploy_client.sender,
-        chain_id=deploy_client.chain_id(),
+        chain_id=chain_id,
     )
 
 
@@ -90,10 +89,11 @@ def token_network_contract(
 
 
 @pytest.fixture
-def token_network_proxy(deploy_client, token_network_contract):
+def token_network_proxy(deploy_client, token_network_contract, token_network_registry_proxy):
     return TokenNetwork(
-        deploy_client,
-        to_canonical_address(token_network_contract.contract.address),
+        jsonrpc_client=deploy_client,
+        manager_address=to_canonical_address(token_network_contract.contract.address),
+        registry=token_network_registry_proxy,
     )
 
 

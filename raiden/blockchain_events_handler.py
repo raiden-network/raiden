@@ -34,7 +34,10 @@ def handle_tokennetwork_new(raiden, event: Event):
     data = event.event_data
     token_network_address = data['token_network_address']
 
-    token_network_proxy = raiden.chain.token_network(token_network_address)
+    token_network_proxy = raiden.chain.token_network(
+        registry_address=event.originating_contract,
+        address=token_network_address,
+    )
     raiden.blockchain_events.add_token_network_listener(
         token_network_proxy,
         from_block=data['blockNumber'],
@@ -72,8 +75,7 @@ def handle_channel_new(raiden, event: Event):
     # Raiden node is participant
     if is_participant:
         channel_proxy = raiden.chain.payment_channel(
-            token_network_identifier,
-            channel_unique_id.channel_id,
+            channel_unique_id=channel_unique_id,
         )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(

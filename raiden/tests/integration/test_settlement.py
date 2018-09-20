@@ -408,8 +408,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     )
 
     netting_channel = app1.raiden.chain.payment_channel(
-        token_network_identifier,
-        channelstate_0_1.identifier,
+        channel_unique_id=channelstate_0_1.unique_id,
     )
 
     # The direct transfer locksroot must not contain the unlocked lock, the
