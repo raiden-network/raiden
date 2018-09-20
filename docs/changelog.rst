@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2515` Adds validation for settle timeout against reveal timeout when opening a channel from the webui.
 * :bug:`2517` Increase the time a notification stays visible on the webui.
 * :bug:`2512` Add descending order by block_number as default for blockchain events on webui.
 * :bug:`2507` Fix a security issue where an attacker could eavesdrop Matrix communications between two nodes in private rooms
