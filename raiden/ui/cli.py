@@ -701,9 +701,9 @@ def run_app(
 
     if net_id in ID_TO_NETWORK_CONFIG:
         contract_addresses_known = True
-        contract_addresses = ID_TO_NETWORK_CONFIG['net_id']['contract_addresses']
+        contract_addresses = ID_TO_NETWORK_CONFIG[net_id]['contract_addresses']
         not_allowed = (
-            ID_TO_NETWORK_CONFIG['network_type'] == NetworkType.MAIN and
+            ID_TO_NETWORK_CONFIG[net_id] == NetworkType.MAIN and
             config['network_type'] == NetworkType.TEST
         )
         if not_allowed:
