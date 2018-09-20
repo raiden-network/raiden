@@ -76,7 +76,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         app0.raiden.address,
     )
 
-    waiting.wait_for_close2(
+    waiting.wait_for_close(
         app0.raiden,
         [channel_unique_identifier],
         app0.raiden.alarm.sleep_time,
@@ -91,7 +91,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
     assert channel_state.close_transaction.finished_block_number
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         app0.raiden,
         [channel_unique_identifier],
         app0.raiden.alarm.sleep_time,
@@ -311,7 +311,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
     assert lock.secrethash == sha3(secret)
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         alice_app.raiden,
         [alice_bob_channel_state.unique_id],
         alice_app.raiden.alarm.sleep_time,
@@ -401,7 +401,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         app0.raiden.address,
     )
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         app1.raiden,
         [channelstate_0_1.unique_id],
         app1.raiden.alarm.sleep_time,
@@ -617,7 +617,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     #     alice_second_transfer,
     # )
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         app0.raiden,
         [channel0.unique_id],
         app0.raiden.alarm.sleep_time,

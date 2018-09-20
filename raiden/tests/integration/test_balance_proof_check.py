@@ -54,12 +54,12 @@ def test_invalid_close(
         additional_hash=EMPTY_HASH,
         signature=EMPTY_SIGNATURE,
     )
-    waiting.wait_for_close2(
+    waiting.wait_for_close(
         raiden=app0.raiden,
         channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         raiden=app0.raiden,
         channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
@@ -113,7 +113,7 @@ def test_invalid_update_transfer(
         token_address=token_address,
         partner_address=app1.raiden.address,
     )
-    waiting.wait_for_close2(
+    waiting.wait_for_close(
         raiden=app0.raiden,
         channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
@@ -122,7 +122,7 @@ def test_invalid_update_transfer(
     # app1 won't update the channel
 
     # app0 waits for settle
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         raiden=app0.raiden,
         channel_unique_ids=[channel_unique_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,

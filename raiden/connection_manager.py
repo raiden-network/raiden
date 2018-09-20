@@ -185,7 +185,7 @@ class ConnectionManager:
                 for channel_state in channels_to_close
             ]
 
-            waiting.wait_for_settle2(
+            waiting.wait_for_settle(
                 self.raiden,
                 channel_unique_ids,
                 self.raiden.alarm.sleep_time,

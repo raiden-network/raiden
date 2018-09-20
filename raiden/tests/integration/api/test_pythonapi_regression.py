@@ -47,7 +47,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
 
     api2.channel_close(registry_address, token_address, api1.address)
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         app0.raiden,
         [channel12.unique_id],
         app0.raiden.alarm.sleep_time,

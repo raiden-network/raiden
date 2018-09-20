@@ -505,7 +505,7 @@ class RaidenAPI:
                 self.raiden.handle_state_change(channel_close)
 
         channel_unique_ids = [channel_state.unique_id for channel_state in channels_to_close]
-        waiting.wait_for_close2(self.raiden, channel_unique_ids, retry_timeout)
+        waiting.wait_for_close(self.raiden, channel_unique_ids, retry_timeout)
 
     def get_channel_list(
             self,

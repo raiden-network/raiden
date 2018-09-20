@@ -147,23 +147,6 @@ def wait_for_payment_balance(
 
 def wait_for_close(
         raiden: RaidenService,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.Address,
-        channel_ids: typing.List[typing.ChannelID],
-        retry_timeout: float,
-) -> None:
-
-    chain_state = views.state_from_raiden(raiden)
-    channel_unique_ids = [
-        ChannelUniqueID(chain_state.chain_id, payment_network_id, token_address, channel_id)
-        for channel_id in channel_ids
-    ]
-
-    wait_for_close2(raiden, channel_unique_ids, retry_timeout)
-
-
-def wait_for_close2(
-        raiden: RaidenService,
         channel_unique_ids: typing.List[typing.ChannelUniqueID],
         retry_timeout: float,
 ) -> None:
@@ -213,23 +196,6 @@ def wait_for_payment_network(
 
 def wait_for_settle(
         raiden: RaidenService,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-        channel_ids: typing.List[typing.ChannelID],
-        retry_timeout: float,
-) -> None:
-
-    chain_state = views.state_from_raiden(raiden)
-    channel_unique_ids = [
-        ChannelUniqueID(chain_state.chain_id, payment_network_id, token_address, channel_id)
-        for channel_id in channel_ids
-    ]
-
-    wait_for_settle2(raiden, channel_unique_ids, retry_timeout)
-
-
-def wait_for_settle2(
-        raiden: RaidenService,
         channel_unique_ids: typing.List[ChannelUniqueID],
         retry_timeout: float,
 ) -> None:
@@ -272,17 +238,20 @@ def wait_for_settle_all_channels(
     chain_state = views.state_from_raiden(raiden)
 
     id_paymentnetworkstate = chain_state.identifiers_to_paymentnetworks.items()
-    for payment_network_id, payment_network_state in id_paymentnetworkstate:
+    for _, payment_network_state in id_paymentnetworkstate:
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
         for token_network_id, token_network_state in id_tokennetworkstate:
             channel_ids = token_network_state.channelidentifiers_to_channels.keys()
 
+            channel_unique_ids = [
+                chain_state.get_channel_unique_id_by_token_network_id(token_network_id, channel_id)
+                for channel_id in channel_ids
+            ]
+
             wait_for_settle(
                 raiden,
-                payment_network_id,
-                token_network_id,
-                channel_ids,
+                channel_unique_ids,
                 retry_timeout,
             )
 

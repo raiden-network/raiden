@@ -194,7 +194,7 @@ def test_recovery_unhappy_case(
         app0.raiden.address,
     )
 
-    waiting.wait_for_settle2(
+    waiting.wait_for_settle(
         app1.raiden,
         [channel01.unique_id],
         retry_timeout,
