@@ -209,6 +209,9 @@ class JSONRPCClient:
     def __repr__(self):
         return f'<JSONRPCClient node:{pex(self.sender)} nonce:{self._available_nonce}>'
 
+    def chain_id(self) -> int:
+        return int(self.web3.version.network)
+
     def block_number(self):
         """ Return the most recent block. """
         return self.web3.eth.blockNumber

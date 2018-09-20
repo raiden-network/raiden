@@ -192,5 +192,5 @@ class BlockChainService:
 
     @property
     @ttl_cache(ttl=30)
-    def network_id(self) -> int:
-        return int(self.client.web3.version.network)
+    def chain_id(self) -> int:
+        return self.client.chain_id()

@@ -134,7 +134,7 @@ class AlarmTask(Runnable):
             latest_block = self.chain.get_block(block_identifier='latest')
             latest_block_number = latest_block['number']
 
-            if chain_id != self.chain.network_id:
+            if chain_id != self.chain.chain_id:
                 raise RuntimeError(
                     'Changing the underlying blockchain while the Raiden node is running '
                     'is not supported.',
@@ -162,7 +162,7 @@ class AlarmTask(Runnable):
         # callbacks must be executed during the first run to update the node state
         assert self.callbacks, 'callbacks not set'
 
-        chain_id = self.chain.network_id
+        chain_id = self.chain.chain_id
         latest_block = self.chain.get_block(block_identifier='latest')
 
         log.debug(

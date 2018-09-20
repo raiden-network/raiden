@@ -125,9 +125,9 @@ ETHEREUM_NODE_COMMUNICATION_ERROR = (
 
 
 def check_synced(blockchain_service: BlockChainService) -> None:
-    net_id = blockchain_service.network_id
+    chain_id = blockchain_service.chain_id
     try:
-        network = ID_TO_NETWORKNAME[net_id]
+        network = ID_TO_NETWORKNAME[chain_id]
     except (EthNodeCommunicationError, RequestException):
         click.secho(
             'Could not determine the network the ethereum node is connected.\n'
@@ -140,7 +140,7 @@ def check_synced(blockchain_service: BlockChainService) -> None:
     except KeyError:
         click.secho(
             f'Your ethereum client is connected to a non-recognized private \n'
-            f'network with network-ID {net_id}. Since we can not check if the client \n'
+            f'network with network-ID {chain_id}. Since we can not check if the client \n'
             f'is synced please restart raiden with the --no-sync-check argument.'
             f'\n',
             fg='red',
@@ -148,7 +148,7 @@ def check_synced(blockchain_service: BlockChainService) -> None:
         sys.exit(1)
 
     url = ETHERSCAN_API.format(
-        network=network if net_id != 1 else 'api',
+        network=network if chain_id != 1 else 'api',
         action='eth_blockNumber',
     )
     wait_for_sync(
@@ -684,25 +684,25 @@ def run_app(
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
-    net_id = blockchain_service.network_id
-    if net_id != network_id:
-        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
+    chain_id = blockchain_service.chain_id
+    if chain_id != network_id:
+        if network_id in ID_TO_NETWORKNAME and chain_id in ID_TO_NETWORKNAME:
             click.secho(
                 f"The chosen ethereum network '{ID_TO_NETWORKNAME[network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[net_id]}'. "
+                f"differs from the ethereum client '{ID_TO_NETWORKNAME[chain_id]}'. "
                 "Please update your settings.",
                 fg='red',
             )
         else:
             click.secho(
                 f"The chosen ethereum network id '{network_id}' differs from the "
-                f"ethereum client '{net_id}'. "
+                f"ethereum client '{chain_id}'. "
                 "Please update your settings.",
                 fg='red',
             )
         sys.exit(1)
 
-    config['chain_id'] = network_id
+    config['chain_id'] = chain_id
 
     if network_type == 'main':
         config['network_type'] = NetworkType.MAIN
@@ -715,8 +715,8 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contract_addresses = dict()
-    if net_id in ID_TO_NETWORK_CONFIG:
-        network_config = ID_TO_NETWORK_CONFIG[net_id]
+    if chain_id in ID_TO_NETWORK_CONFIG:
+        network_config = ID_TO_NETWORK_CONFIG[chain_id]
         not_allowed = (
             NetworkType.TEST not in network_config and
             network_type == NetworkType.TEST
@@ -747,7 +747,7 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{net_id}'. "
+            f"There are no known contract addresses for network id '{chain_id}'. "
             "Please provide them in the command line or in the configuration file.",
             fg='red',
         )
@@ -778,7 +778,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{net_id}',
+        f'netid_{chain_id}',
         f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -786,7 +786,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(net_id) or net_id,
+            ID_TO_NETWORKNAME.get(chain_id) or chain_id,
             database_path,
         ),
     )
@@ -853,7 +853,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(chain_id, chain_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',

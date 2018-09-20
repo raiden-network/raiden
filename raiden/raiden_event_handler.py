@@ -327,7 +327,7 @@ class RaidenEventHandler:
                 partner_locksroot != EMPTY_HASH):
             # Partner account
             record = raiden.wal.storage.get_latest_state_change_by_data_field({
-                'balance_proof.chain_id': raiden.chain.network_id,
+                'balance_proof.chain_id': raiden.chain.chain_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
                     channel_unlock_event.token_network_identifier,
                 ),
@@ -341,7 +341,7 @@ class RaidenEventHandler:
                 our_locksroot != EMPTY_HASH):
             # Our account
             record = raiden.wal.storage.get_latest_event_by_data_field({
-                'balance_proof.chain_id': raiden.chain.network_id,
+                'balance_proof.chain_id': raiden.chain.chain_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
                     channel_unlock_event.token_network_identifier,
                 ),
@@ -396,14 +396,13 @@ class RaidenEventHandler:
 
         # Query state changes which have the on-chain
         # balance hash and use the balance proofs from those states.
-
         our_balance_hash = participants_details.our_details.balance_hash
         our_balance_proof = None
         if our_balance_hash != EMPTY_HASH:
             # Fetch our latest balance proof from events our node has emitted
             our_balance_proof = get_latest_known_balance_proof_from_events(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
+                chain_id=raiden.chain.chain_id,
                 token_network_id=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
                 balance_hash=our_balance_hash,
@@ -424,7 +423,7 @@ class RaidenEventHandler:
             # Fetch partner's latest balance proof from received state changes
             partner_balance_proof = get_latest_known_balance_proof_from_state_changes(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
+                chain_id=raiden.chain.chain_id,
                 token_network_id=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
                 sender=participants_details.partner_details.address,

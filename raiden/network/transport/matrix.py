@@ -314,8 +314,8 @@ class MatrixTransport(Runnable):
     @property
     def _network_name(self) -> str:
         return ID_TO_NETWORKNAME.get(
-            self._raiden_service.chain.network_id,
-            str(self._raiden_service.chain.network_id),
+            self._raiden_service.chain.chain_id,
+            str(self._raiden_service.chain.chain_id),
         )
 
     @property

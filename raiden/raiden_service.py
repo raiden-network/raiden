@@ -259,7 +259,7 @@ class RaidenService(Runnable):
                 random.Random(),
                 block_number,
                 self.chain.node_address,
-                self.chain.network_id,
+                self.chain.chain_id,
             )
             self.wal.log_and_dispatch(state_change)
             payment_network = PaymentNetworkState(
