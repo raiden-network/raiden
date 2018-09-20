@@ -152,24 +152,33 @@ def wait_for_close(
         channel_ids: typing.List[typing.ChannelID],
         retry_timeout: float,
 ) -> None:
+
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_ids = [
+        ChannelUniqueID(chain_state.chain_id, payment_network_id, token_address, channel_id)
+        for channel_id in channel_ids
+    ]
+
+    wait_for_close2(raiden, channel_unique_ids, retry_timeout)
+
+
+def wait_for_close2(
+        raiden: RaidenService,
+        channel_unique_ids: typing.List[typing.ChannelUniqueID],
+        retry_timeout: float,
+) -> None:
     """Wait until all channels are closed.
 
     Note:
         This does not time out, use gevent.Timeout.
     """
-    channel_ids = list(channel_ids)
+    channel_unique_ids = list(channel_unique_ids)
 
-    while channel_ids:
-        last_id = channel_ids[-1]
-
-        chain_state = views.state_from_raiden(raiden)
-        channel_unique_id = ChannelUniqueID(
-            chain_id=chain_state.chain_id,
-            payment_network_id=payment_network_id,
-            token_address=token_address,
-            channel_id=last_id,
+    while channel_unique_ids:
+        channel_state = views.get_channelstate_by_unique_id(
+            views.state_from_raiden(raiden),
+            channel_unique_ids[-1],
         )
-        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
         channel_is_settled = (
             channel_state is None or
@@ -177,7 +186,7 @@ def wait_for_close(
         )
 
         if channel_is_settled:
-            channel_ids.pop()
+            channel_unique_ids.pop()
         else:
             gevent.sleep(retry_timeout)
 
@@ -209,27 +218,36 @@ def wait_for_settle(
         channel_ids: typing.List[typing.ChannelID],
         retry_timeout: float,
 ) -> None:
+
+    chain_state = views.state_from_raiden(raiden)
+    channel_unique_ids = [
+        ChannelUniqueID(chain_state.chain_id, payment_network_id, token_address, channel_id)
+        for channel_id in channel_ids
+    ]
+
+    wait_for_settle2(raiden, channel_unique_ids, retry_timeout)
+
+
+def wait_for_settle2(
+        raiden: RaidenService,
+        channel_unique_ids: typing.List[ChannelUniqueID],
+        retry_timeout: float,
+) -> None:
     """Wait until all channels are settled.
 
     Note:
         This does not time out, use gevent.Timeout.
     """
-    if not isinstance(channel_ids, list):
+    if not isinstance(channel_unique_ids, list):
         raise ValueError('channel_ids must be a list')
 
-    channel_ids = list(channel_ids)
+    channel_unique_ids = list(channel_unique_ids)
 
-    while channel_ids:
-        last_id = channel_ids[-1]
-
-        chain_state = views.state_from_raiden(raiden)
-        channel_unique_id = ChannelUniqueID(
-            chain_id=chain_state.chain_id,
-            payment_network_id=payment_network_id,
-            token_address=token_address,
-            channel_id=last_id,
+    while channel_unique_ids:
+        channel_state = views.get_channelstate_by_unique_id(
+            views.state_from_raiden(raiden),
+            channel_unique_ids[-1],
         )
-        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
 
         channel_is_settled = (
             channel_state is None or
@@ -237,7 +255,7 @@ def wait_for_settle(
         )
 
         if channel_is_settled:
-            channel_ids.pop()
+            channel_unique_ids.pop()
         else:
             gevent.sleep(retry_timeout)
 

@@ -180,16 +180,14 @@ class ConnectionManager:
                 partner_addresses,
             )
 
-            channel_ids = [
-                channel_state.identifier
+            channel_unique_ids = [
+                channel_state.unique_id
                 for channel_state in channels_to_close
             ]
 
-            waiting.wait_for_settle(
+            waiting.wait_for_settle2(
                 self.raiden,
-                registry_address,
-                self.token_address,
-                channel_ids,
+                channel_unique_ids,
                 self.raiden.alarm.sleep_time,
             )
 

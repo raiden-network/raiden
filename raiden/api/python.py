@@ -504,15 +504,8 @@ class RaidenAPI:
 
                 self.raiden.handle_state_change(channel_close)
 
-        channel_ids = [channel_state.identifier for channel_state in channels_to_close]
-
-        waiting.wait_for_close(
-            self.raiden,
-            registry_address,
-            token_address,
-            channel_ids,
-            retry_timeout,
-        )
+        channel_unique_ids = [channel_state.unique_id for channel_state in channels_to_close]
+        waiting.wait_for_close2(self.raiden, channel_unique_ids, retry_timeout)
 
     def get_channel_list(
             self,
