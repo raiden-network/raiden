@@ -398,17 +398,19 @@ class RaidenEventHandler:
         # Query state changes which have the on-chain
         # balance hash and use the balance proofs from those states.
 
-        # Fetch our latest balance proof from events our node has emitted
-        our_balance_proof = get_latest_known_balance_proof_from_events(
-            storage=raiden.wal.storage,
-            chain_id=raiden.chain.network_id,
-            token_network_id=channel_settle_event.token_network_identifier,
-            channel_identifier=channel_settle_event.channel_identifier,
-            balance_hash=participants_details.our_details.balance_hash,
-        )
-
         our_balance_hash = participants_details.our_details.balance_hash
-        if our_balance_proof and our_balance_hash != EMPTY_HASH:
+        our_balance_proof = None
+        if our_balance_hash != EMPTY_HASH:
+            # Fetch our latest balance proof from events our node has emitted
+            our_balance_proof = get_latest_known_balance_proof_from_events(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_id=channel_settle_event.token_network_identifier,
+                channel_identifier=channel_settle_event.channel_identifier,
+                balance_hash=participants_details.our_details.balance_hash,
+            )
+
+        if our_balance_proof:
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
