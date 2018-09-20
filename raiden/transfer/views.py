@@ -369,37 +369,6 @@ def get_channelstate_by_unique_id(
     return channel_state
 
 
-def get_payment_network_id_by_token_network_id(
-        chain_state: ChainState,
-        token_network_id: typing.Address,
-) -> typing.Optional[typing.PaymentNetworkID]:
-
-    for payment_network_id, payment_network in chain_state.identifiers_to_paymentnetworks.items():
-        if token_network_id in payment_network.tokenidentifiers_to_tokennetworks:
-            return payment_network_id
-
-    return None
-
-
-def get_channel_unique_id_by_token_network_id(
-        chain_state: ChainState,
-        token_network_id: typing.Address,
-        channel_id: typing.ChannelID,
-) -> ChannelUniqueID:
-
-    payment_network_id = get_payment_network_id_by_token_network_id(chain_state, token_network_id)
-    payment_network = chain_state.identifiers_to_paymentnetworks[payment_network_id]
-    token_network = payment_network.tokenidentifiers_to_tokennetworks[token_network_id]
-    token_address = token_network.token_address
-
-    return ChannelUniqueID(
-        chain_id=chain_state.chain_id,
-        payment_network_id=payment_network_id,
-        token_address=token_address,
-        channel_id=channel_id,
-    )
-
-
 def get_channelstate_filter(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,

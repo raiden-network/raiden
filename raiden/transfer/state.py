@@ -14,7 +14,6 @@ from raiden.transfer.architecture import SendMessageEvent, State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
-from raiden.transfer.views import get_channel_unique_id_by_token_network_id
 from raiden.utils import lpex, pex, serialization, sha3, typing
 from raiden.utils.serialization import map_dict, map_list
 from raiden.utils.typing import ChannelUniqueID
@@ -225,10 +224,9 @@ class TargetTask(State):
         return restored
 
     def get_channel_unique_id(self, chain_state):
-        return get_channel_unique_id_by_token_network_id(
-            chain_state,
+        return chain_state.get_channel_unique_id_by_token_network_id(
             self.token_network_identifier,
-            self.channel_identifier
+            self.channel_identifier,
         )
 
 
@@ -349,6 +347,35 @@ class ChainState(State):
         )
 
         return restored
+
+    def get_payment_network_id_by_token_network_id(
+            self,
+            token_network_id: typing.Address,
+    ) -> typing.Optional[typing.PaymentNetworkID]:
+
+        for payment_network_id, payment_network in self.identifiers_to_paymentnetworks.items():
+            if token_network_id in payment_network.tokenidentifiers_to_tokennetworks:
+                return payment_network_id
+
+        return None
+
+    def get_channel_unique_id_by_token_network_id(
+            self,
+            token_network_id: typing.Address,
+            channel_id: typing.ChannelID,
+    ) -> ChannelUniqueID:
+
+        payment_network_id = self.get_payment_network_id_by_token_network_id(token_network_id)
+        payment_network = self.identifiers_to_paymentnetworks[payment_network_id]
+        token_network = payment_network.tokenidentifiers_to_tokennetworks[token_network_id]
+        token_address = token_network.token_address
+
+        return ChannelUniqueID(
+            chain_id=self.chain_id,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+            channel_id=channel_id,
+        )
 
 
 class PaymentNetworkState(State):
