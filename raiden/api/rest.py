@@ -396,6 +396,7 @@ class APIServer(Runnable):
                     'web3': web3,
                     'settle_timeout': self.rest_api.raiden_api.raiden.config['settle_timeout'],
                     'reveal_timeout': self.rest_api.raiden_api.raiden.config['reveal_timeout'],
+                    'network_type': self.rest_api.raiden_api.raiden.config['network_type'],
                 }
 
                 # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
