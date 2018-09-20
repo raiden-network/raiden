@@ -93,7 +93,11 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         HttpClientModule,
         BrowserAnimationsModule,
         MaterialComponentsModule,
-        ToastrModule.forRoot(),
+        ToastrModule.forRoot({
+            timeOut: 5000,
+            extendedTimeOut: 10000,
+            preventDuplicates: true
+        }),
         ClipboardModule,
     ],
     providers: [
