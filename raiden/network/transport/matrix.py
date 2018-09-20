@@ -486,28 +486,28 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
 
-        invite_event = [
+        invite_events = [
             event
             for event in state['events']
             if event['type'] == 'm.room.member' and
             event['content'].get('membership') == 'invite' and
             event['state_key'] == self._user_id
         ]
-        if not invite_event:
-            return  # there should always be a invite membership for us
-        invite_event = invite_event[0]
+        if not invite_events:
+            return  # there should always be one and only one invite membership event for us
+        invite_event = invite_events[0]
         sender = invite_event['sender']
 
-        sender_join_event = [
+        sender_join_events = [
             event
             for event in state['events']
             if event['type'] == 'm.room.member' and
             event['content'].get('membership') == 'join' and
             event['state_key'] == sender
         ]
-        if not sender_join_event:
-            return  # there should always be a join membership event for the sender
-        sender_join_event = sender_join_event[0]
+        if not sender_join_events:
+            return  # there should always be one and only one join membership event for the sender
+        sender_join_event = sender_join_events[0]
 
         user = self._get_user(sender)
         user.displayname = sender_join_event['content'].get('displayname') or user.displayname
@@ -528,7 +528,7 @@ class MatrixTransport(Runnable):
             )
             return
 
-        join_rules_event = [
+        join_rules_events = [
             event
             for event in state['events']
             if event['type'] == 'm.room.join_rules'
@@ -536,13 +536,13 @@ class MatrixTransport(Runnable):
 
         # room privacy as seen from the event
         private_room: bool = False
-        if join_rules_event:
-            join_rules_event = join_rules_event[0]
+        if join_rules_events:
+            join_rules_event = join_rules_events[0]
             private_room: bool = join_rules_event['content'].get('join_rule') == 'invite'
 
-        # we join and set despite room privacy and requirement,
+        # we join room and _set_room_id_for_address despite room privacy and requirements,
         # _get_room_ids_for_address will take care of returning only matching rooms and
-        # _clean_unused_rooms will leave in the future, if and when needed
+        # _leave_unused_rooms will clear it in the future, if and when needed
         room = self._client.join_room(room_id)
         if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
@@ -605,13 +605,16 @@ class MatrixTransport(Runnable):
 
         if room.room_id not in room_ids:
             # this should not happen, but is not fatal, as we may not know user yet
+            if bool(room.invite_only) < self._private_rooms:
+                reason = 'required private room, but received message in a public'
+            else:
+                reason = 'unknown room for user'
             self.log.debug(
-                'received peer message in an unknown or without enough privacy room',
+                'received peer message in an invalid room - ignoring',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 room=room,
-                private_room=room.invite_only,
-                require_private_room=self._private_rooms,
+                reason=reason,
             )
             return False
 
@@ -1186,7 +1189,7 @@ class MatrixTransport(Runnable):
 
         if changed:
             # dict will be set at the end of _clean_unused_rooms
-            self._clean_unused_rooms(_address_to_room_ids)
+            self._leave_unused_rooms(_address_to_room_ids)
 
     def _get_room_ids_for_address(
             self,
@@ -1228,7 +1231,7 @@ class MatrixTransport(Runnable):
 
         return room_ids
 
-    def _clean_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = None):
+    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = None):
         """ Checks for rooms we've joined and which partner isn't health-checked and leave"""
         # cache in a set all healthchecked addresses
         healthchecked_hex_addresses: Set[AddressHex] = {
@@ -1257,34 +1260,34 @@ class MatrixTransport(Runnable):
             if address_hex not in healthchecked_hex_addresses:
                 _address_to_room_ids.pop(address_hex)
                 changed = True
-            else:
-                counters = [0, 0]  # public, private
+                continue
 
-                # limit to at most 2 public and 2 private rooms, preserving order
-                def _filter(room_id: _RoomID) -> bool:
-                    if room_id not in self._client.rooms:
-                        return False  # room is gone, clean
-                    elif self._client.rooms[room_id].invite_only is None:
-                        return True  # not known, postpone cleaning
-                    elif counters[self._client.rooms[room_id].invite_only] < 2:
-                        counters[self._client.rooms[room_id].invite_only] += 1
-                        return True  # not enough rooms of this type yet
-                    else:
-                        return False  # enough rooms, leave and clean
+            counters = [0, 0]  # public, private
+            new_room_ids: List[_RoomID] = list()
 
-                new_room_ids: List[_RoomID] = [room_id for room_id in room_ids if _filter(room_id)]
+            # limit to at most 2 public and 2 private rooms, preserving order
+            for room_id in room_ids:
+                if room_id not in self._client.rooms:
+                    continue
+                elif self._client.rooms[room_id].invite_only is None:
+                    new_room_ids.append(room_id)  # not known, postpone cleaning
+                elif counters[self._client.rooms[room_id].invite_only] < 2:
+                    counters[self._client.rooms[room_id].invite_only] += 1
+                    new_room_ids.append(room_id)  # not enough rooms of this type yet
+                else:
+                    continue  # enough rooms, leave and clean
 
-                keep_rooms |= set(new_room_ids)
-                if room_ids != new_room_ids:
-                    _address_to_room_ids[address_hex] = new_room_ids
-                    changed = True
+            keep_rooms |= set(new_room_ids)
+            if room_ids != new_room_ids:
+                _address_to_room_ids[address_hex] = new_room_ids
+                changed = True
+
+        rooms: List[Tuple[_RoomID, Room]] = list(self._client.rooms.items())
 
         if changed:
             self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
 
-        # iterate over copy because it can be changed on-the-flight by _client
-        # but to_stay rooms should always be valid, so no need for lock
-        for room_id, room in list(self._client.rooms.items()):
+        for room_id, room in rooms:
             if self._discovery_room and room_id == self._discovery_room.room_id:
                 # don't leave discovery room
                 continue
