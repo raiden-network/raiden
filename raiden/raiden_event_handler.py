@@ -407,16 +407,6 @@ class RaidenEventHandler:
             balance_hash=participants_details.our_details.balance_hash,
         )
 
-        # Fetch partner's latest balance proof from received state changes
-        partner_balance_proof = get_latest_known_balance_proof_from_state_changes(
-            storage=raiden.wal.storage,
-            chain_id=raiden.chain.network_id,
-            token_network_id=channel_settle_event.token_network_identifier,
-            channel_identifier=channel_settle_event.channel_identifier,
-            sender=participants_details.partner_details.address,
-            balance_hash=participants_details.partner_details.balance_hash,
-        )
-
         our_balance_hash = participants_details.our_details.balance_hash
         if our_balance_proof and our_balance_hash != EMPTY_HASH:
             our_transferred_amount = our_balance_proof.transferred_amount
@@ -428,7 +418,19 @@ class RaidenEventHandler:
             our_locksroot = EMPTY_HASH
 
         partner_balance_hash = participants_details.partner_details.balance_hash
-        if partner_balance_proof and partner_balance_hash != EMPTY_HASH:
+        partner_balance_proof = None
+        if partner_balance_hash != EMPTY_HASH:
+            # Fetch partner's latest balance proof from received state changes
+            partner_balance_proof = get_latest_known_balance_proof_from_state_changes(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_id=channel_settle_event.token_network_identifier,
+                channel_identifier=channel_settle_event.channel_identifier,
+                sender=participants_details.partner_details.address,
+                balance_hash=participants_details.partner_details.balance_hash,
+            )
+
+        if partner_balance_proof:
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot
