@@ -391,12 +391,13 @@ class APIServer(Runnable):
 
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
             if 'config.' in file_name and file_name.endswith('.json'):
+                network_type = self.rest_api.raiden_api.raiden.config['network_type'].name.lower()
                 config = {
                     'raiden': self._api_prefix,
                     'web3': web3,
                     'settle_timeout': self.rest_api.raiden_api.raiden.config['settle_timeout'],
                     'reveal_timeout': self.rest_api.raiden_api.raiden.config['reveal_timeout'],
-                    'network_type': self.rest_api.raiden_api.raiden.config['network_type'],
+                    'network_type': network_type,
                 }
 
                 # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
