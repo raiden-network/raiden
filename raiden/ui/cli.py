@@ -138,11 +138,11 @@ def check_synced(blockchain_service: BlockChainService) -> None:
         )
         sys.exit(1)
     except KeyError:
-        print(
-            'Your ethereum client is connected to a non-recognized private \n'
-            'network with network-ID {}. Since we can not check if the client \n'
-            'is synced please restart raiden with the --no-sync-check argument.'
-            '\n'.format(net_id),
+        click.secho(
+            f'Your ethereum client is connected to a non-recognized private \n'
+            f'network with network-ID {net_id}. Since we can not check if the client \n'
+            f'is synced please restart raiden with the --no-sync-check argument.'
+            f'\n',
             fg='red',
         )
         sys.exit(1)
