@@ -17,7 +17,7 @@ from raiden_contracts.constants import ChannelEvent
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('number_of_tokens', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
 def test_token_addresses(raiden_network, token_addresses):
     app = raiden_network[0]
     api = RaidenAPI(app.raiden)
