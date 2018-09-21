@@ -5,6 +5,7 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
+from raiden.constants import NetworkType
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -382,14 +383,18 @@ class RaidenAPI:
 
         balance = token.balance_of(self.raiden.address)
 
-        deposit_limit = token_network_proxy.proxy.contract.functions.deposit_limit().call()
-        if total_deposit > deposit_limit:
-            raise DepositOverLimit(
-                'The deposit of {} is bigger than the current limit of {}'.format(
-                    total_deposit,
-                    deposit_limit,
-                ),
+        if self.raiden.config['network_type'] == NetworkType.MAIN:
+            deposit_limit = (
+                token_network_proxy.proxy.contract.functions.
+                channel_participant_deposit_limit().call()
             )
+            if total_deposit > deposit_limit:
+                raise DepositOverLimit(
+                    'The deposit of {} is bigger than the current limit of {}'.format(
+                        total_deposit,
+                        deposit_limit,
+                    ),
+                )
 
         if total_deposit <= channel_state.our_state.contract_balance:
             # no action required
