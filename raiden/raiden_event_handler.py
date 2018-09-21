@@ -45,7 +45,6 @@ from raiden_libs.utils.signing import eth_sign
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
     EventTransferReceivedInvalidDirectTransfer,
     EventPaymentReceivedSuccess,
@@ -56,6 +55,9 @@ UNEVENTFUL_EVENTS = (
 
 
 class RaidenEventHandler:
+    def __init__(self):
+        self.log = structlog.get_logger(__name__)
+
     def on_raiden_event(self, raiden: RaidenService, event: Event):
         # pylint: disable=too-many-branches
 
@@ -94,7 +96,7 @@ class RaidenEventHandler:
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
-            log.error('Unknown event {}'.format(type(event)))
+            self.log.error('Unknown event {}'.format(type(event)))
 
     def handle_send_lockexpired(
             self,
@@ -220,7 +222,7 @@ class RaidenEventHandler:
             unlock_failed_event: EventUnlockFailed,
     ):
         # pylint: disable=unused-argument
-        log.error(
+        self.log.error(
             'UnlockFailed!',
             secrethash=pex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
@@ -297,7 +299,7 @@ class RaidenEventHandler:
                     our_signature,
                 )
             except ChannelOutdatedError as e:
-                log.error(str(e))
+                self.log.error(str(e))
 
     def handle_contract_send_channelunlock(
             self,
@@ -375,7 +377,7 @@ class RaidenEventHandler:
         try:
             payment_channel.unlock(merkle_tree_leaves)
         except ChannelOutdatedError as e:
-            log.error(str(e))
+            self.log.error(str(e))
 
     def handle_contract_send_channelsettle(
             self,

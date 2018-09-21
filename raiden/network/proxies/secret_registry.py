@@ -19,8 +19,6 @@ from raiden.utils import compare_versions, pex, privatekey_to_address, sha3, typ
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 class SecretRegistry:
     def __init__(
@@ -52,6 +50,7 @@ class SecretRegistry:
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
         self.open_secret_transactions = dict()
+        self.log = structlog.get_logger(__name__)
 
     def register_secret(self, secret: typing.Secret):
         self.register_secret_batch([secret])
@@ -67,7 +66,7 @@ class SecretRegistry:
                     secret_batch.append(secret)
                     self.open_secret_transactions[secret] = secret_registry_transaction
             else:
-                log.info(
+                self.log.info(
                     f'secret {encode_hex(secrethash)} already registered.',
                     node=pex(self.node_address),
                     contract=pex(self.address),
@@ -77,7 +76,7 @@ class SecretRegistry:
         if not secret_batch:
             return
 
-        log.info(
+        self.log.info(
             'registerSecretBatch called',
             node=pex(self.node_address),
             contract=pex(self.address),
@@ -104,7 +103,7 @@ class SecretRegistry:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            log.critical(
+            self.log.critical(
                 'registerSecretBatch failed',
                 node=pex(self.node_address),
                 contract=pex(self.address),
@@ -112,7 +111,7 @@ class SecretRegistry:
             )
             raise TransactionThrew('registerSecretBatch', receipt_or_none)
 
-        log.info(
+        self.log.info(
             'registerSecretBatch successful',
             node=pex(self.node_address),
             contract=pex(self.address),

@@ -12,8 +12,6 @@ from eth_utils import to_checksum_address
 from raiden.utils import privatekey_to_address, privtopub
 from raiden.utils.typing import AddressHex
 
-log = structlog.get_logger(__name__)
-
 
 def _find_datadir() -> str:
     home = os.path.expanduser('~')
@@ -79,6 +77,7 @@ def check_keystore_json(jsondata: Dict) -> bool:
 
 class AccountManager:
     def __init__(self, keystore_path: str = None):
+        log = structlog.get_logger(__name__)
         self.keystore_path = keystore_path
         self.accounts = {}
         if self.keystore_path is None:

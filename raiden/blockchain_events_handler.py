@@ -26,8 +26,6 @@ from raiden_contracts.constants import (
     ChannelEvent,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def handle_tokennetwork_new(raiden, event: Event):
     """ Handles a `TokenNetworkCreated` event. """
@@ -285,6 +283,7 @@ def handle_secret_revealed(raiden, event: Event):
 
 def on_blockchain_event(raiden: 'RaidenService', event: Event):
     data = event.event_data
+    log = structlog.get_logger(__name__)
     log.debug(
         'BLOCKCHAIN EVENT',
         node=pex(raiden.address),

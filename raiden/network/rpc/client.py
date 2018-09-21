@@ -38,9 +38,6 @@ except (ModuleNotFoundError, DistributionNotFound):
         pass
 
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
 def make_connection_test_middleware(client):
     def connection_test_middleware(make_request, web3):
         """ Creates middleware that checks if the provider is connected. """
@@ -202,7 +199,8 @@ class JSONRPCClient:
         self._nonce_lock = Semaphore()
         self._nonce_offset = nonce_offset
 
-        log.debug(
+        self.log = structlog.get_logger(__name__)
+        self.log.debug(
             'JSONRPCClient created',
             sender=pex(self.sender),
             available_nonce=_available_nonce,
@@ -326,7 +324,7 @@ class JSONRPCClient:
 
             deployment_order.pop()  # remove `contract_name` from the list
 
-            log.debug('Deploying dependencies: {}'.format(str(deployment_order)))
+            self.log.debug('Deploying dependencies: {}'.format(str(deployment_order)))
 
             for deploy_contract in deployment_order:
                 dependency_contract = all_contracts[deploy_contract]
@@ -421,7 +419,7 @@ class JSONRPCClient:
                 'gasPrice': gas_price,
             }
             node_gas_price = self.web3.eth.gasPrice
-            log.debug(
+            self.log.debug(
                 'Calculated gas price for transaction',
                 calculated_gas_price=gas_price,
                 node_gas_price=node_gas_price,
@@ -439,12 +437,12 @@ class JSONRPCClient:
                 'gasLimit': transaction['gas'],
                 'gasPrice': transaction['gasPrice'],
             }
-            log.debug('send_raw_transaction called', **log_details)
+            self.log.debug('send_raw_transaction called', **log_details)
 
             tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
             self._available_nonce += 1
 
-            log.debug('send_raw_transaction returned', tx_hash=tx_hash, **log_details)
+            self.log.debug('send_raw_transaction returned', tx_hash=tx_hash, **log_details)
             return tx_hash
 
     def poll(self, transaction_hash: bytes, confirmations: int = None):

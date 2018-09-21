@@ -1,7 +1,6 @@
 from collections import namedtuple
 from typing import Dict, List
 
-import structlog
 from eth_utils import encode_hex, event_abi_to_log_topic, to_canonical_address
 
 from raiden.constants import UINT64_MAX
@@ -45,7 +44,6 @@ Proxies = namedtuple(
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def get_contract_events(

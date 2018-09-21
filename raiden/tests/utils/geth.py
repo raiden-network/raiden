@@ -19,9 +19,6 @@ from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHR
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.utils import privatekey_to_address, privtopub, typing
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
 GethNodeDescription = namedtuple(
     'GethNodeDescription',
     [
@@ -104,7 +101,7 @@ def geth_to_cmd(
     if node.get('mine', False):
         cmd.append('--mine')
 
-    log.debug('geth command', command=cmd)
+    structlog.get_logger(__name__).debug('geth command', command=cmd)
 
     return cmd
 

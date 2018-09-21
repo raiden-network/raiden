@@ -84,8 +84,6 @@ from raiden.utils import (
 )
 from raiden.utils.runnable import Runnable
 
-log = structlog.get_logger(__name__)
-
 ERROR_STATUS_CODES = [
     HTTPStatus.CONFLICT,
     HTTPStatus.REQUEST_TIMEOUT,
@@ -372,6 +370,7 @@ class APIServer(Runnable):
                 )
 
         self._is_raiden_running()
+        self.log = structlog.get_logger(__name__)
 
     def _is_raiden_running(self):
         # We cannot accept requests before the node has synchronized with the
@@ -458,7 +457,7 @@ class APIServer(Runnable):
 
     def unhandled_exception(self, exception: Exception):
         """ Flask.errorhandler when an exception wasn't correctly handled """
-        log.critical(
+        self.log.critical(
             'Unhandled exception when processing endpoint request',
             exc_type=exception.__class__,
             exception=str(exception),
@@ -486,6 +485,7 @@ class RestAPI:
         self.sent_success_payment_schema = EventPaymentSentSuccessSchema()
         self.received_success_payment_schema = EventPaymentReceivedSuccessSchema()
         self.failed_payment_schema = EventPaymentSentFailedSchema()
+        self.log = structlog.get_logger(__name__)
 
     def get_our_address(self):
         return api_response(
@@ -502,7 +502,7 @@ class RestAPI:
                 errors='Registering a new token is currently disabled in the Ethereum mainnet',
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
-        log.debug(
+        self.log.debug(
             'Registering token',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -541,7 +541,7 @@ class RestAPI:
             settle_timeout: typing.BlockTimeout = None,
             total_deposit: typing.TokenAmount = None,
     ):
-        log.debug(
+        self.log.debug(
             'Opening channel',
             registry_address=to_checksum_address(registry_address),
             partner_address=to_checksum_address(partner_address),
@@ -574,7 +574,7 @@ class RestAPI:
 
         if total_deposit:
             # make initial deposit
-            log.debug(
+            self.log.debug(
                 'Depositing to new channel',
                 registry_address=to_checksum_address(registry_address),
                 token_address=to_checksum_address(token_address),
@@ -626,7 +626,7 @@ class RestAPI:
             initial_channel_target: int = None,
             joinable_funds_target: float = None,
     ):
-        log.debug(
+        self.log.debug(
             'Connecting to token network',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -668,7 +668,7 @@ class RestAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
     ):
-        log.debug(
+        self.log.debug(
             'Leaving token network',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -686,7 +686,7 @@ class RestAPI:
     def get_connection_managers_info(self, registry_address: typing.PaymentNetworkID):
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
-        log.debug(
+        self.log.debug(
             'Getting connection managers info',
             registry_address=to_checksum_address(registry_address),
         )
@@ -730,7 +730,7 @@ class RestAPI:
             token_address: typing.TokenAddress = None,
             partner_address: typing.Address = None,
     ):
-        log.debug(
+        self.log.debug(
             'Getting channel list',
             registry_address=to_checksum_address(registry_address),
             token_address=optional_address_to_string(token_address),
@@ -749,7 +749,7 @@ class RestAPI:
         return api_response(result=result)
 
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
-        log.debug(
+        self.log.debug(
             'Getting token list',
             registry_address=to_checksum_address(registry_address),
         )
@@ -765,7 +765,7 @@ class RestAPI:
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ):
-        log.debug(
+        self.log.debug(
             'Getting network events',
             registry_address=to_checksum_address(registry_address),
             from_block=from_block,
@@ -788,7 +788,7 @@ class RestAPI:
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ):
-        log.debug(
+        self.log.debug(
             'Getting token network blockchain events',
             token_address=to_checksum_address(token_address),
             from_block=from_block,
@@ -813,7 +813,7 @@ class RestAPI:
             limit: int = None,
             offset: int = None,
     ):
-        log.debug(
+        self.log.debug(
             'Getting payment history',
             token_address=optional_address_to_string(token_address),
             target_address=optional_address_to_string(target_address),
@@ -839,7 +839,7 @@ class RestAPI:
             elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.dump(event)
             else:
-                log.warning('Unexpected event', unexpected_event=event.wrapped_event)
+                self.log.warning('Unexpected event', unexpected_event=event.wrapped_event)
 
             result.append(serialized_event.data)
         return api_response(result=result)
@@ -860,7 +860,7 @@ class RestAPI:
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ):
-        log.debug(
+        self.log.debug(
             'Getting channel blockchain events',
             token_address=to_checksum_address(token_address),
             partner_address=optional_address_to_string(partner_address),
@@ -886,7 +886,7 @@ class RestAPI:
             token_address: typing.TokenAddress,
             partner_address: typing.Address,
     ):
-        log.debug(
+        self.log.debug(
             'Getting channel',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -911,7 +911,7 @@ class RestAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
     ):
-        log.debug(
+        self.log.debug(
             'Getting partners by token',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -951,7 +951,7 @@ class RestAPI:
             amount: typing.TokenAmount,
             identifier: typing.PaymentID,
     ):
-        log.debug(
+        self.log.debug(
             'Initiating payment',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -1006,7 +1006,7 @@ class RestAPI:
             channel_state: NettingChannelState,
             total_deposit: typing.TokenAmount,
     ):
-        log.debug(
+        self.log.debug(
             'Depositing to channel',
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
@@ -1061,7 +1061,7 @@ class RestAPI:
             registry_address: typing.PaymentNetworkID,
             channel_state: NettingChannelState,
     ):
-        log.debug(
+        self.log.debug(
             'Closing channel',
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
@@ -1107,7 +1107,7 @@ class RestAPI:
             total_deposit: typing.TokenAmount = None,
             state: str = None,
     ):
-        log.debug(
+        self.log.debug(
             'Patching channel',
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),

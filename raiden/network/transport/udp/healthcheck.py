@@ -17,9 +17,6 @@ from raiden.utils import pex, typing
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
 HealthEvents = namedtuple('HealthEvents', (
     'event_healthy',
     'event_unhealthy',
@@ -39,7 +36,7 @@ def healthcheck(
 ):
     """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches
-
+    log = structlog.get_logger(__name__)
     log.debug(
         'starting healthcheck for',
         node=pex(transport.raiden.address),

@@ -28,8 +28,6 @@ from raiden.utils import compare_versions, pex, privatekey_to_address, typing
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 class TokenNetworkRegistry:
     def __init__(
@@ -61,6 +59,7 @@ class TokenNetworkRegistry:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
+        self.log = structlog.get_logger(__name__)
 
     def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:
         """ Return the token network address for the given token or None if
@@ -83,7 +82,7 @@ class TokenNetworkRegistry:
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
-        log.info(
+        self.log.info(
             'add_token called',
             node=pex(self.node_address),
             token_address=pex(token_address),
@@ -98,7 +97,7 @@ class TokenNetworkRegistry:
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.info(
+            self.log.info(
                 'add_token failed',
                 node=pex(self.node_address),
                 token_address=pex(token_address),
@@ -111,7 +110,7 @@ class TokenNetworkRegistry:
         token_network_address = self.get_token_network(token_address)
 
         if token_network_address is None:
-            log.info(
+            self.log.info(
                 'add_token failed and check_transaction_threw didnt detect it',
                 node=pex(self.node_address),
                 token_address=pex(token_address),
@@ -120,7 +119,7 @@ class TokenNetworkRegistry:
 
             raise RuntimeError('token_to_token_networks failed')
 
-        log.info(
+        self.log.info(
             'add_token successful',
             node=pex(self.node_address),
             token_address=pex(token_address),

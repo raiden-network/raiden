@@ -110,8 +110,6 @@ if True:
         CONTRACT_TOKEN_NETWORK_REGISTRY,
     )
 
-log = structlog.get_logger(__name__)
-
 
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
     '\n'
@@ -613,6 +611,7 @@ def run_app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
+    log = structlog.get_logger(__name__)
 
     if not assert_sqlite_version():
         log.error('SQLite3 should be at least version {}'.format(
@@ -952,6 +951,7 @@ class NodeRunner:
         self._options = options
         self._ctx = ctx
         self._raiden_api = None
+        self.log = structlog.get_logger(__name__)
 
     @property
     def _welcome_string(self):
@@ -995,7 +995,7 @@ class NodeRunner:
         )
 
         if self._options['config_file']:
-            log.debug('Using config file', config_file=self._options['config_file'])
+            self.log.debug('Using config file', config_file=self._options['config_file'])
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did

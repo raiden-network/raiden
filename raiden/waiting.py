@@ -13,8 +13,6 @@ from raiden.utils import typing
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def wait_for_block(
         raiden: RaidenService,
@@ -132,8 +130,13 @@ def wait_for_payment_balance(
         partner_address,
     )
 
+    log = structlog.get_logger(__name__)
     while balance(channel_state) < target_balance:
-        log.critical('wait', b=balance(channel_state), t=target_balance)
+        log.critical(
+            'waiting for balance',
+            current_balance=balance(channel_state),
+            target_balance=target_balance,
+        )
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),

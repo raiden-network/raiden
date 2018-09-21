@@ -76,8 +76,6 @@ from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
 from raiden_libs.utils.signing import eth_recover, eth_sign
 
-log = structlog.get_logger(__name__)
-
 _CT = TypeVar('CT')  # class type
 _CIT = Union[_CT, Type[_CT]]  # class or instance type
 _RT = TypeVar('RT')  # return type
@@ -165,7 +163,7 @@ class MatrixTransport(Runnable):
                         f"Unable to find a reachable Matrix server. "
                         f"Please check your network connectivity.",
                     ) from ex
-                log.warning(f"Selected server '{self._server_url}' not usable. Retrying.")
+                self.log.warning(f"Selected server '{self._server_url}' not usable. Retrying.")
 
         self.greenlets = list()
 
@@ -340,6 +338,7 @@ class MatrixTransport(Runnable):
     @property
     @cachedmethod(_cachegetter('__log_cache', dict), key=attrgetter('_user_id'))
     def log(self):
+        log = structlog.get_logger(__name__)
         if not self._user_id:
             return log
         return log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
@@ -964,7 +963,7 @@ class MatrixTransport(Runnable):
                 invitees=invitees_uids,
                 is_public=True,
             )
-            log.warning(
+            self.log.warning(
                 'Could not create nor join a named room. Successfuly created an unnamed one',
                 room=room,
                 invitees=invitees,

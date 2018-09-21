@@ -4,10 +4,9 @@ import structlog
 
 from raiden.transfer.architecture import StateManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def restore_to_state_change(transition_function, storage, state_change_identifier):
+    log = structlog.get_logger(__name__)
     snapshot = storage.get_snapshot_closest_to_state_change(state_change_identifier)
 
     from_state_change_id = 0
