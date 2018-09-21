@@ -79,6 +79,7 @@ ID_TO_NETWORKNAME = {
 ID_TO_NETWORK_CONFIG = {
     3: {
         NetworkType.TEST: {
+            'network_type': NetworkType.TEST,
             'contract_addresses': {
                 CONTRACT_ENDPOINT_REGISTRY: to_canonical_address(ROPSTEN_DISCOVERY_ADDRESS),
                 CONTRACT_SECRET_REGISTRY: to_canonical_address(ROPSTEN_SECRET_REGISTRY_ADDRESS),
@@ -88,6 +89,7 @@ ID_TO_NETWORK_CONFIG = {
             START_QUERY_BLOCK_KEY: 3604000,
         },
         NetworkType.MAIN: {
+            'network_type': NetworkType.MAIN,
             'contract_addresses': {
                 CONTRACT_ENDPOINT_REGISTRY: to_canonical_address(ROPSTEN_LIMITS_DISCOVERY_ADDRESS),
                 CONTRACT_SECRET_REGISTRY: to_canonical_address(
