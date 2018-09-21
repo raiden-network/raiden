@@ -407,7 +407,7 @@ class RaidenEventHandler:
                 chain_id=raiden.chain.network_id,
                 token_network_id=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
-                balance_hash=participants_details.our_details.balance_hash,
+                balance_hash=our_balance_hash,
             )
 
         if our_balance_proof:
@@ -429,7 +429,7 @@ class RaidenEventHandler:
                 token_network_id=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
                 sender=participants_details.partner_details.address,
-                balance_hash=participants_details.partner_details.balance_hash,
+                balance_hash=partner_balance_hash,
             )
 
         if partner_balance_proof:
