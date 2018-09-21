@@ -1,7 +1,8 @@
 import pytest
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.tests.utils import factories
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -67,10 +68,11 @@ def token_network_registry_proxy(deploy_client, token_network_registry_contract)
 
 @pytest.fixture
 def token_network_contract(
-    chain_id,
-    deploy_contract,
-    secret_registry_contract,
-    token_contract,
+        chain_id,
+        deploy_contract,
+        secret_registry_contract,
+        token_contract,
+        network_type,
 ):
     return deploy_contract(
         CONTRACT_TOKEN_NETWORK,
@@ -80,6 +82,7 @@ def token_network_contract(
             chain_id,
             TEST_SETTLE_TIMEOUT_MIN,
             TEST_SETTLE_TIMEOUT_MAX,
+            to_checksum_address(factories.make_address()),
         ],
     )
 
