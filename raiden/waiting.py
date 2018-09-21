@@ -158,12 +158,12 @@ def wait_for_close(
     channel_ids = list(channel_ids)
 
     while channel_ids:
-        first_id = channel_ids[0]
+        last_id = channel_ids[-1]
         channel_state = views.get_channelstate_by_id(
             views.state_from_raiden(raiden),
             payment_network_id,
             token_address,
-            first_id,
+            last_id,
         )
 
         channel_is_settled = (
@@ -215,12 +215,12 @@ def wait_for_settle(
     channel_ids = list(channel_ids)
 
     while channel_ids:
-        first_id = channel_ids[0]
+        last_id = channel_ids[-1]
         channel_state = views.get_channelstate_by_id(
             views.state_from_raiden(raiden),
             payment_network_id,
             token_address,
-            first_id,
+            last_id,
         )
 
         channel_is_settled = (
