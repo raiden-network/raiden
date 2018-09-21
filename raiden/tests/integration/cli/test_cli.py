@@ -10,10 +10,15 @@ from raiden.ui.cli import run
 
 
 def spawn_raiden(args):
+    # Terminal which doesn't support colors. This is useful because pexpect
+    # expressions don't need to account for the colors
+    dumb_term = 'dumb'
+
     return pexpect.spawn(
         sys.executable, ['-m', 'raiden'] + args,
         logfile=sys.stdout,
         encoding='utf-8',
+        env={'TERM': dumb_term},
     )
 
 
@@ -41,16 +46,16 @@ def expect_cli_until_acknowledgment(child):
 
 def expect_cli_until_account_selection(child):
     expect_cli_until_acknowledgment(child)
-    child.expect('The following accounts were found in your machine:')
-    child.expect('Select one of them by index to continue: ')
-    child.sendline('0')
+    child.expect('Use the arrow keys to select the address to be used by Raiden')
+    child.expect(' > 0x67a5E21E34A58eD8D47c719fE291dDD2ea825E12')
+    child.sendcontrol('m')
 
 
 def expect_cli_normal_startup(child):
     expect_cli_until_acknowledgment(child)
-    child.expect('The following accounts were found in your machine:')
-    child.expect('Select one of them by index to continue: ')
-    child.sendline('0')
+    child.expect('Use the arrow keys to select the address to be used by Raiden')
+    child.expect(' > 0x67a5E21E34A58eD8D47c719fE291dDD2ea825E12')
+    child.sendcontrol('m')
     child.expect('You are connected')
     child.expect('The Raiden API RPC server is now running')
 
