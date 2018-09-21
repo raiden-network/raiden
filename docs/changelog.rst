@@ -2,7 +2,7 @@
 Changelog
 =========
 
-
+* :release:`0.10.0 <2018-09-21>`
 * :bug:`2515` Adds validation for settle timeout against reveal timeout when opening a channel from the webui.
 * :feature:`2517` Increase the time a notification stays visible on the webui.
 * :feature:`2470` Add a main/test network switch enabling or disabling specific functionality depending on the network type.
