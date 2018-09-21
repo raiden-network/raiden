@@ -8,6 +8,7 @@ from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import NetworkType
+from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_all_eth
@@ -17,7 +18,6 @@ from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
-    MAX_TOKENS_DEPLOY,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
@@ -732,6 +732,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
+@pytest.mark.skip('multiple tokens not working in red eyes')
 def test_api_tokens(test_api_server, blockchain_services, token_addresses):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address1 = token_addresses[0]
@@ -929,6 +930,7 @@ def test_register_token_mainnet(test_api_server, token_amount, token_addresses, 
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.skip('registration not working in red eyes')
 def test_register_token(test_api_server, token_amount, token_addresses, raiden_network):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
@@ -987,7 +989,9 @@ def test_register_token(test_api_server, token_amount, token_addresses, raiden_n
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('number_of_tokens', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
+# For non-red eyes mainnet code set number_of_tokens to 2 and uncomment the code
+# at the end of this test
 def test_get_connection_managers_info(test_api_server, token_addresses):
     # check that there are no registered tokens
     request = grequests.get(
@@ -1024,37 +1028,37 @@ def test_get_connection_managers_info(test_api_server, token_addresses):
     assert isinstance(result[token_address1], dict)
     assert set(result[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
 
-    funds = 100
-    token_address2 = to_checksum_address(token_addresses[1])
-    connect_data_obj = {
-        'funds': funds,
-    }
-    request = grequests.put(
-        api_url_for(
-            test_api_server,
-            'connectionsresource',
-            token_address=token_address2,
-        ),
-        json=connect_data_obj,
-    )
-    response = request.send().response
-    assert_no_content_response(response)
+    # funds = 100
+    # token_address2 = to_checksum_address(token_addresses[1])
+    # connect_data_obj = {
+    #     'funds': funds,
+    # }
+    # request = grequests.put(
+    #     api_url_for(
+    #         test_api_server,
+    #         'connectionsresource',
+    #         token_address=token_address2,
+    #     ),
+    #     json=connect_data_obj,
+    # )
+    # response = request.send().response
+    # assert_no_content_response(response)
 
-    # check that there now are two registered channel managers
-    request = grequests.get(
-        api_url_for(test_api_server, 'connectionsinforesource'),
-    )
-    response = request.send().response
-    result = response.json()
-    assert isinstance(result, dict) and len(result.keys()) == 2
-    assert token_address2 in result
-    assert isinstance(result[token_address2], dict)
-    assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
+    # # check that there now are two registered channel managers
+    # request = grequests.get(
+    #     api_url_for(test_api_server, 'connectionsinforesource'),
+    # )
+    # response = request.send().response
+    # result = response.json()
+    # assert isinstance(result, dict) and len(result.keys()) == 2
+    # assert token_address2 in result
+    # assert isinstance(result[token_address2], dict)
+    # assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('number_of_tokens', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
 def test_connect_insufficient_reserve(test_api_server, token_addresses):
 
     # Burn all eth and then try to connect to a token network
@@ -1227,7 +1231,7 @@ def test_api_deposit_limit(
     first_partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address = token_addresses[0]
     settle_timeout = 1650
-    balance_working = MAX_TOKENS_DEPLOY * (10 ** 2)  # token has two digits
+    balance_working = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
     channel_data_obj = {
         'partner_address': first_partner_address,
         'token_address': to_checksum_address(token_address),
@@ -1277,7 +1281,10 @@ def test_api_deposit_limit(
 
     assert_proper_response(response, HTTPStatus.CONFLICT)
     response = response.json()
-    assert response['errors'] == 'The deposit of 10001 is bigger than the current limit of 10000'
+    assert (
+        response['errors'] ==
+        'The deposit of 75000000000000001 is bigger than the current limit of 75000000000000000'
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])

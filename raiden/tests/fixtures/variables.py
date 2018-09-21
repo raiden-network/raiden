@@ -23,6 +23,8 @@ DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
 DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
+RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
+
 
 @pytest.fixture
 def settle_timeout(reveal_timeout):
@@ -176,7 +178,7 @@ def privatekey_seed(request):
 
 @pytest.fixture
 def token_amount(number_of_nodes, deposit):
-    total_per_node = 3 * (deposit + 1)
+    total_per_node = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT * 4
     total_token = total_per_node * number_of_nodes
     return total_token
 
@@ -315,4 +317,4 @@ def private_rooms():
 @pytest.fixture
 def network_type():
     """Specifies the network type"""
-    return NetworkType.TEST
+    return NetworkType.MAIN
