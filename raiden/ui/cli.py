@@ -699,23 +699,29 @@ def run_app(
     else:
         config['network_type'] = NetworkType.TEST
 
+    network_type = config['network_type']
+    chain_config = {}
+    contract_addresses_known = False
+    contract_addresses = dict()
     if net_id in ID_TO_NETWORK_CONFIG:
-        contract_addresses_known = True
-        contract_addresses = ID_TO_NETWORK_CONFIG[net_id]['contract_addresses']
+        network_config = ID_TO_NETWORK_CONFIG[net_id]
         not_allowed = (
-            ID_TO_NETWORK_CONFIG[net_id] == NetworkType.MAIN and
-            config['network_type'] == NetworkType.TEST
+            NetworkType.TEST not in network_config and
+            network_type == NetworkType.TEST
         )
         if not_allowed:
             print(
-                'The chosen network {} is identified as a mainnet but a test network type '
+                'The chosen network {} has no test configuration but a test network type '
                 'was given. This is not allowed.'.format(
                     ID_TO_NETWORKNAME[network_id],
                 ),
             )
-    else:
-        contract_addresses_known = False
-        contract_addresses = dict()
+            sys.exit(1)
+
+        if network_type in network_config:
+            chain_config = network_config[network_type]
+            contract_addresses = chain_config['contract_addresses']
+            contract_addresses_known = True
 
     if sync_check:
         check_synced(blockchain_service)
@@ -812,7 +818,6 @@ def run_app(
     raiden_event_handler = RaidenEventHandler()
 
     try:
-        chain_config = ID_TO_NETWORK_CONFIG.get(net_id, {})
         start_block = chain_config.get(START_QUERY_BLOCK_KEY, 0)
         raiden_app = App(
             config=config,
