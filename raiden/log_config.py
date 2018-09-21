@@ -3,6 +3,7 @@ import logging.config
 import os
 import re
 import sys
+import tempfile
 from functools import wraps
 from traceback import TracebackException
 from typing import Callable, Dict, List, Pattern, Tuple
@@ -98,42 +99,6 @@ class RaidenFilter(logging.Filter):
         return self._log_filter.should_log(record.name, record.levelname)
 
 
-def _get_log_handler(formatter: str, log_file: str) -> Dict:
-    if log_file:
-        return {
-            'file': {
-                'class': 'logging.handlers.WatchedFileHandler',
-                'filename': log_file,
-                'level': 'DEBUG',
-                'formatter': formatter,
-                'filters': ['log_level_filter'],
-            },
-        }
-    else:
-        return {
-            'default': {
-                'class': 'logging.StreamHandler',
-                'level': 'DEBUG',
-                'formatter': formatter,
-                'filters': ['log_level_filter'],
-            },
-        }
-
-
-def _get_log_file_handler() -> Dict:
-    return {
-        'debug-info': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': f'raiden-debug.log',
-            'level': 'DEBUG',
-            'formatter': 'debug',
-            'maxBytes': MAX_LOG_FILE_SIZE,
-            'backupCount': 3,
-            'filters': ['log_level_debug_filter'],
-        },
-    }
-
-
 def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
     def processor_wrapper(msg: str) -> str:
@@ -182,37 +147,45 @@ def configure_logging(
         structlog.processors.format_exc_info,
     ]
 
-    formatter = 'colorized' if colorize and not log_file else 'plain'
     if log_json:
         formatter = 'json'
+    elif colorize and not log_file:
+        formatter = 'colorized'
+    else:
+        formatter = 'plain'
 
     redact = redactor({
         re.compile(r'\b(access_?token=)([a-z0-9_-]+)', re.I): r'\1<redacted>',
     })
     _wrap_tracebackexception_format(redact)
 
-    log_handler = _get_log_handler(
-        formatter,
-        log_file,
-    )
-    if disable_debug_logfile:
-        combined_log_handlers = log_handler
+    enabled_log_handlers = []
+    if log_file:
+        enabled_log_handlers.append('file')
     else:
-        debug_log_file_handler = _get_log_file_handler()
-        combined_log_handlers = {**log_handler, **debug_log_file_handler}
+        # even though the handler is not enabled, it's configured, and the file
+        # must not be None
+        log_file = tempfile.mktemp()
+        enabled_log_handlers.append('default')
+
+    if not disable_debug_logfile:
+        enabled_log_handlers.append('debug-info')
 
     logging.config.dictConfig(
         {
             'version': 1,
             'disable_existing_loggers': False,
             'filters': {
-                'log_level_filter': {
+                'user_filter': {
                     '()': RaidenFilter,
                     'log_level_config': logger_level_config,
                 },
-                'log_level_debug_filter': {
+                'raiden_debug_file_filter': {
                     '()': RaidenFilter,
-                    'log_level_config': {'': DEFAULT_LOG_LEVEL, 'raiden': 'DEBUG'},
+                    'log_level_config': {
+                        '': DEFAULT_LOG_LEVEL,
+                        'raiden': 'DEBUG',
+                    },
                 },
             },
             'formatters': {
@@ -237,10 +210,33 @@ def configure_logging(
                     'foreign_pre_chain': processors,
                 },
             },
-            'handlers': combined_log_handlers,
+            'handlers': {
+                'file': {
+                    'class': 'logging.handlers.WatchedFileHandler',
+                    'filename': log_file,
+                    'level': 'DEBUG',
+                    'formatter': formatter,
+                    'filters': ['user_filter'],
+                },
+                'default': {
+                    'class': 'logging.StreamHandler',
+                    'level': 'DEBUG',
+                    'formatter': formatter,
+                    'filters': ['user_filter'],
+                },
+                'debug-info': {
+                    'class': 'logging.handlers.RotatingFileHandler',
+                    'filename': 'raiden-debug.log',
+                    'level': 'DEBUG',
+                    'formatter': 'debug',
+                    'maxBytes': MAX_LOG_FILE_SIZE,
+                    'backupCount': 3,
+                    'filters': ['raiden_debug_file_filter'],
+                },
+            },
             'loggers': {
                 '': {
-                    'handlers': list(combined_log_handlers.keys()),
+                    'handlers': enabled_log_handlers,
                     'propagate': True,
                 },
             },
