@@ -294,17 +294,17 @@ class ConnectionManager:
             )
         except TransactionThrew:
             log.exception('connection manager: deposit failed')
+        except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
+            log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
+        except InvalidDBData:
+            raise
         except RaidenRecoverableError:
             log.exception('connection manager: channel not in opened state')
         except RaidenUnrecoverableError as e:
             if self.raiden.config['network_type'] == NetworkType.MAIN:
-                if isinstance(e, InvalidDBData):
-                    raise
                 log.error(str(e))
             else:
                 raise
-        except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
-            log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`
