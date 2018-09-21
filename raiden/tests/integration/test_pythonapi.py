@@ -28,6 +28,7 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.skip('token registration not working in red eyes')
 def test_register_token(raiden_network, token_amount):
     app1 = raiden_network[0]
 
@@ -91,6 +92,7 @@ def test_register_token_insufficient_eth(raiden_network, token_amount):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.skip('token registration not working in red eyes')
 def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
     """If a token is registered it must appear on the token list.
 
