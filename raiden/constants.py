@@ -35,6 +35,11 @@ class NetworkType(Enum):
 ROPSTEN_REGISTRY_ADDRESS = '0xf2a175A52Bd3c815eD7500c765bA19652AB89B30'
 ROPSTEN_DISCOVERY_ADDRESS = '0xEEADDC1667B6EBc7784721B123a6F669B69Eb9bD'
 ROPSTEN_SECRET_REGISTRY_ADDRESS = '0x16a25511A92C5ebfc6C30ad98F754e4c820c6822'
+# Deployed to Ropsten revival on 2018-09-21 from
+# raiden-contracts@bfb24fed3ebda2799e4d11ad1bb5a6de116bd12d
+ROPSTEN_LIMITS_REGISTRY_ADDRESS = '0x6cC27CBF184B4177CD3c5D1a39a875aD07345eEb'
+ROPSTEN_LIMITS_DISCOVERY_ADDRESS = '0xcF47EDF0D951c862ED9825F47075c15BEAf5Db1B'
+ROPSTEN_LIMITS_SECRET_REGISTRY_ADDRESS = '0x8167a262Fa3Be92F05420675c3b409c64Be3d348'
 
 DISCOVERY_TX_GAS_LIMIT = 76000
 
@@ -81,6 +86,19 @@ ID_TO_NETWORK_CONFIG = {
             },
             # 924 blocks before token network registry deployment
             START_QUERY_BLOCK_KEY: 3604000,
+        },
+        NetworkType.MAIN: {
+            'contract_addresses': {
+                CONTRACT_ENDPOINT_REGISTRY: to_canonical_address(ROPSTEN_LIMITS_DISCOVERY_ADDRESS),
+                CONTRACT_SECRET_REGISTRY: to_canonical_address(
+                    ROPSTEN_LIMITS_SECRET_REGISTRY_ADDRESS,
+                ),
+                CONTRACT_TOKEN_NETWORK_REGISTRY: to_canonical_address(
+                    ROPSTEN_LIMITS_REGISTRY_ADDRESS,
+                ),
+            },
+            # 153 blocks before token network registry deployment
+            START_QUERY_BLOCK_KEY: 4084000,
         },
     },
 }
