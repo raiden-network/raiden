@@ -8,7 +8,6 @@ from raiden.utils import pex, typing
 
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def event_first_of(*events: _AbstractLinkable) -> Event:
@@ -88,7 +87,7 @@ def retry(
     Returns:
         bool: True if the message was acknowledged, False otherwise.
     """
-
+    log = structlog.get_logger(__name__)
     async_result = transport.maybe_sendraw_with_result(
         recipient,
         messagedata,
@@ -151,7 +150,7 @@ def retry_with_recovery(
         backoff must be an infinite iterator, otherwise this task will
         become a hot loop.
     """
-
+    log = structlog.get_logger(__name__)
     # The underlying unhealthy will be cleared, care must be taken to properly
     # clear stop_or_unhealthy too.
     stop_or_unhealthy = event_first_of(

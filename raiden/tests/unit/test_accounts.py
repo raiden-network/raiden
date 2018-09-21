@@ -3,7 +3,6 @@ import os
 from unittest.mock import patch
 
 import pytest
-import structlog
 from eth_utils import encode_hex
 
 from raiden.accounts import AccountManager
@@ -11,8 +10,6 @@ from raiden.utils import get_project_root
 
 KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
-
-log = structlog.get_logger()
 
 
 @pytest.yield_fixture(scope='module')

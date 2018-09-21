@@ -56,8 +56,6 @@ from raiden.utils import (
 )
 from raiden.utils.runnable import Runnable
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def initiator_init(
         raiden,
@@ -198,6 +196,7 @@ class RaidenService(Runnable):
             self.db_lock = None
 
         self.event_poll_lock = gevent.lock.Semaphore()
+        self.log = structlog.get_logger(__name__)
 
     def start(self):
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
@@ -226,7 +225,7 @@ class RaidenService(Runnable):
         )
 
         if self.wal.state_manager.current_state is None:
-            log.debug(
+            self.log.debug(
                 'No recoverable state available, created inital state',
                 node=pex(self.address),
             )
@@ -258,7 +257,7 @@ class RaidenService(Runnable):
             # for that given block have been processed, filters can be safely
             # installed starting from this position without losing events.
             last_log_block_number = views.block_number(self.wal.state_manager.current_state)
-            log.debug(
+            self.log.debug(
                 'Restored state from WAL',
                 last_restored_block=last_log_block_number,
                 node=pex(self.address),
@@ -312,7 +311,7 @@ class RaidenService(Runnable):
         pending_transactions = views.get_pending_transactions(
             chain_state,
         )
-        log.debug(
+        self.log.debug(
             'Processing pending transactions',
             num_pending_transactions=len(pending_transactions),
             node=pex(self.address),
@@ -322,12 +321,12 @@ class RaidenService(Runnable):
                 try:
                     self.raiden_event_handler.on_raiden_event(self, transaction)
                 except RaidenRecoverableError as e:
-                    log.error(str(e))
+                    self.log.error(str(e))
                 except RaidenUnrecoverableError as e:
                     if self.config['network_type'] == NetworkType.MAIN:
                         if isinstance(e, InvalidDBData):
                             raise
-                        log.error(str(e))
+                        self.log.error(str(e))
                     else:
                         raise
 
@@ -416,7 +415,7 @@ class RaidenService(Runnable):
         return views.block_number(self.wal.state_manager.current_state)
 
     def handle_state_change(self, state_change):
-        log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
+        self.log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
 
         event_list = self.wal.log_and_dispatch(state_change)
 
@@ -424,7 +423,7 @@ class RaidenService(Runnable):
             return []
 
         for event in event_list:
-            log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
+            self.log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
 
             try:
                 self.raiden_event_handler.on_raiden_event(
@@ -432,12 +431,12 @@ class RaidenService(Runnable):
                     event=event,
                 )
             except RaidenRecoverableError as e:
-                log.error(str(e))
+                self.log.error(str(e))
             except RaidenUnrecoverableError as e:
                 if self.config['network_type'] == NetworkType.MAIN:
                     if isinstance(e, InvalidDBData):
                         raise
-                    log.error(str(e))
+                    self.log.error(str(e))
                 else:
                     raise
 
@@ -447,7 +446,7 @@ class RaidenService(Runnable):
         # capturing a snapshot should take place
         new_snapshot_group = self.wal.storage.count_state_changes() // SNAPSHOT_STATE_CHANGES_COUNT
         if new_snapshot_group > self.snapshot_group:
-            log.debug(f'Storing snapshot: {new_snapshot_group}')
+            self.log.debug(f'Storing snapshot: {new_snapshot_group}')
             self.wal.snapshot()
             self.snapshot_group = new_snapshot_group
 
@@ -569,7 +568,7 @@ class RaidenService(Runnable):
         self.wal.log_and_dispatch(state_change)
 
     def close_and_settle(self):
-        log.info('raiden will close and settle all channels now')
+        self.log.info('raiden will close and settle all channels now')
 
         self.leave_all_token_networks()
 

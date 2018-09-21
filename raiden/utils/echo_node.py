@@ -16,8 +16,6 @@ from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import pex
 
-log = structlog.get_logger(__name__)
-
 # number of transfers we will check for duplicates
 TRANSFER_MEMORY = 4096
 
@@ -29,6 +27,7 @@ class EchoNode:
         self.ready = Event()
 
         self.api = api
+        self.log = structlog.get_logger(__name__)
         self.token_address = token_address
 
         existing_channels = self.api.get_channel_list(
@@ -68,7 +67,7 @@ class EchoNode:
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
-        log.info('Echo node started')
+        self.log.info('Echo node started')
 
     def echo_node_alarm_callback(self, block_number):
         """ This can be registered with the raiden AlarmTask.
@@ -77,7 +76,7 @@ class EchoNode:
         """
         if not self.ready.is_set():
             self.ready.set()
-        log.debug('echo_node callback', block_number=block_number)
+        self.log.debug('echo_node callback', block_number=block_number)
         if self.stop_signal is not None:
             return REMOVE_CALLBACK
         else:
@@ -118,7 +117,7 @@ class EchoNode:
                         self.last_poll_offset += len(received_transfers)
 
                     if not self.echo_worker_greenlet.started:
-                        log.debug(
+                        self.log.debug(
                             'restarting echo_worker_greenlet',
                             dead=self.echo_worker_greenlet.dead,
                             successful=self.echo_worker_greenlet.successful(),
@@ -126,7 +125,7 @@ class EchoNode:
                         )
                         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         except Timeout:
-            log.info('timeout while polling for events')
+            self.log.info('timeout while polling for events')
         finally:
             if locked:
                 self.lock.release()
@@ -134,12 +133,12 @@ class EchoNode:
     def echo_worker(self):
         """ The `echo_worker` works through the `self.received_transfers` queue and spawns
         `self.on_transfer` greenlets for all not-yet-seen transfers. """
-        log.debug('echo worker', qsize=self.received_transfers.qsize())
+        self.log.debug('echo worker', qsize=self.received_transfers.qsize())
         while self.stop_signal is None:
             if self.received_transfers.qsize() > 0:
                 transfer = self.received_transfers.get()
                 if transfer in self.seen_transfers:
-                    log.debug(
+                    self.log.debug(
                         'duplicate transfer ignored',
                         initiator=pex(transfer.initiator),
                         amount=transfer.amount,
@@ -167,7 +166,7 @@ class EchoNode:
             initiator """
         echo_amount = 0
         if transfer.amount % 3 == 0:
-            log.info(
+            self.log.info(
                 'ECHO amount - 1',
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
@@ -176,7 +175,7 @@ class EchoNode:
             echo_amount = transfer.amount - 1
 
         elif transfer.amount == 7:
-            log.info(
+            self.log.info(
                 'ECHO lucky number draw',
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
@@ -192,7 +191,7 @@ class EchoNode:
 
             if any(ticket.initiator == transfer.initiator for ticket in tickets):
                 assert transfer not in tickets
-                log.debug(
+                self.log.debug(
                     'duplicate lottery entry',
                     initiator=pex(transfer.initiator),
                     identifier=transfer.identifier,
@@ -203,7 +202,7 @@ class EchoNode:
 
             # payout
             elif len(tickets) == 6:
-                log.info('payout!')
+                self.log.info('payout!')
                 # reset the pool
                 assert self.lottery_pool.qsize() == 6
                 self.lottery_pool = Queue()
@@ -216,7 +215,7 @@ class EchoNode:
                 self.lottery_pool.put(transfer)
 
         else:
-            log.debug(
+            self.log.debug(
                 'echo transfer received',
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
@@ -225,7 +224,7 @@ class EchoNode:
             echo_amount = transfer.amount
 
         if echo_amount:
-            log.debug(
+            self.log.debug(
                 'sending echo transfer',
                 target=pex(transfer.initiator),
                 amount=echo_amount,

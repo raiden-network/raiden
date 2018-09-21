@@ -22,10 +22,6 @@ DELIVERED = 12
 LOCKEXPIRED = 13
 
 
-# pylint: disable=invalid-name
-log = structlog.get_logger(__name__)
-
-
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
 chain_id = make_field('chain_id', 32, '32s', integer(0, UINT256_MAX))
@@ -258,6 +254,8 @@ CMDID_MESSAGE = {
 
 def wrap(data):
     """ Try to decode data into a message, might return None if the data is invalid. """
+    log = structlog.get_logger(__name__)
+
     try:
         cmdid = data[0]
     except IndexError:

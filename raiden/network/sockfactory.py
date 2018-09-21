@@ -7,12 +7,11 @@ import structlog
 from raiden.exceptions import RaidenServicePortInUseError, STUNUnavailableException
 from raiden.network import stunsock, upnpsock
 
-log = structlog.get_logger(__name__)
-
 
 class PortMappedSocket:
     """Wrapper around a socket instance with port mapping information.
     """
+
     def __init__(self, sock, method, external_ip, external_port, **meta):
         self.socket = sock
         self.method = method
@@ -64,22 +63,23 @@ class SocketFactory:
         self.method = None
         self.socket = None
         self.storage = {}
+        self.log = structlog.get_logger(__name__)
 
     def __enter__(self):
-        log.debug('Acquiring socket', strategy=self.strategy_description)
+        self.log.debug('Acquiring socket', strategy=self.strategy_description)
 
         self._open_socket()
 
         for method in self.STRATEGY_TO_METHODS[self.strategy]:
-            log.debug('Trying', method=method)
+            self.log.debug('Trying', method=method)
 
             mapped_socket = getattr(self, 'map_{}'.format(method))()
             if mapped_socket:
                 assert isinstance(mapped_socket, PortMappedSocket)
                 self.method = method
-                log.debug('Success', method=method)
+                self.log.debug('Success', method=method)
                 break
-            log.debug('Unavailable', method=method)
+            self.log.debug('Unavailable', method=method)
         else:
             # This should not happen unless the method mapping has been broken (e.g. by
             # removing the 'none' fallback)
@@ -89,7 +89,7 @@ class SocketFactory:
             method = 'ext:{}'.format(
                 ':'.join(str(s) for s in self.strategy_args),
             )
-        log.info(
+        self.log.info(
             'Network port opened',
             method=method,
             internal='{}:{}'.format(self.source_ip, self.source_port),
@@ -151,10 +151,13 @@ class SocketFactory:
                 default_gw_if = netifaces.gateways()['default'][netifaces.AF_INET][1]
                 self.source_ip = netifaces.ifaddresses(default_gw_if)[netifaces.AF_INET][0]['addr']
             except (OSError, IndexError, KeyError):
-                log.critical("Couldn't get interface address. "
-                             "Try specifying with '--nat ext:<ip>'.")
+                msg = (
+                    "Couldn't get interface address. "
+                    "Try specifying with '--nat ext:<ip>'."
+                )
+                self.log.critical(msg)
                 raise
-        log.warning('Using internal interface address. Connectivity issues are likely.')
+        self.log.warning('Using internal interface address. Connectivity issues are likely.')
         return PortMappedSocket(self.socket, 'NONE', self.source_ip, self.source_port)
 
     def unmap_none(self):
@@ -174,7 +177,7 @@ class SocketFactory:
 
         try:
             sock.bind((self.source_ip, self.source_port))
-            log.debug(
+            self.log.debug(
                 'Socket opened',
                 ip=sock.getsockname()[0],
                 port=sock.getsockname()[1],

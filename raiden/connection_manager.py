@@ -24,8 +24,6 @@ from raiden.transfer import views
 from raiden.utils import pex, typing
 from raiden.utils.typing import Address
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def log_open_channels(raiden, registry_address, token_address, funds):
     chain_state = views.state_from_raiden(raiden)
@@ -41,7 +39,7 @@ def log_open_channels(raiden, registry_address, token_address, funds):
             registry_address,
             token_address,
         )
-        log.debug(
+        structlog.get_logger(__name__).debug(
             'connect() called on an already joined token network',
             registry_address=pex(registry_address),
             token_address=pex(token_address),
@@ -90,6 +88,7 @@ class ConnectionManager:
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
         self.api = RaidenAPI(raiden)
+        self.log = structlog.get_logger(__name__)
 
     def connect(
             self,
@@ -139,7 +138,7 @@ class ConnectionManager:
             )
 
             if not qty_network_channels:
-                log.debug('bootstrapping token network.')
+                self.log.debug('bootstrapping token network.')
                 # make ourselves visible
                 self.api.channel_open(
                     self.registry_address,
@@ -219,16 +218,16 @@ class ConnectionManager:
                     joining_funds,
                 )
             except RaidenRecoverableError:
-                log.exception('connection manager join: channel not in opened state')
+                self.log.exception('connection manager join: channel not in opened state')
             except RaidenUnrecoverableError as e:
                 if self.raiden.config['network_type'] == NetworkType.MAIN:
                     if isinstance(e, InvalidDBData):
                         raise
-                    log.error(str(e))
+                    self.log.error(str(e))
                 else:
                     raise
             else:
-                log.debug(
+                self.log.debug(
                     'joined a channel!',
                     funds=joining_funds,
                     me=pex(self.raiden.address),
@@ -268,7 +267,7 @@ class ConnectionManager:
         shuffle(available)
         new_partners = available
 
-        log.debug('found {} partners'.format(len(available)))
+        self.log.debug('found {} partners'.format(len(available)))
 
         return new_partners
 
@@ -293,18 +292,18 @@ class ConnectionManager:
                 self._initial_funding_per_partner,
             )
         except TransactionThrew:
-            log.exception('connection manager: deposit failed')
+            self.log.exception('connection manager: deposit failed')
         except RaidenRecoverableError:
-            log.exception('connection manager: channel not in opened state')
+            self.log.exception('connection manager: channel not in opened state')
         except RaidenUnrecoverableError as e:
             if self.raiden.config['network_type'] == NetworkType.MAIN:
                 if isinstance(e, InvalidDBData):
                     raise
-                log.error(str(e))
+                self.log.error(str(e))
             else:
                 raise
         except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
-            log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
+            self.log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`

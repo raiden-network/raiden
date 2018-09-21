@@ -1,8 +1,6 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
 
-import structlog
-
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
     Address,
@@ -37,8 +35,6 @@ from raiden.utils.typing import (
 # processed, i.e. the state change must be self contained and the result state
 # tree must be serializable to produce a snapshot. To enforce this inputs and
 # outputs are separated under different class hierarquies (StateChange and Event).
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class State:
