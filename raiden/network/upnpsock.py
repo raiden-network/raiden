@@ -6,8 +6,6 @@ import structlog
 MAX_PORT = 65535
 RAIDEN_IDENTIFICATOR = 'raiden-network udp service'
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 NON_MAPPABLE = [
     '127.0.0.1',
     '0.0.0.0',
@@ -26,7 +24,7 @@ def valid_mappable_ipv4(address):
     try:
         parsed = ipaddress.ip_address(address_uni)
     except ValueError:
-        log.debug('invalid IPv4 address', input=address)
+        structlog.get_logger(__name__).debug('invalid IPv4 address', input=address)
         return False
     if parsed is not None and parsed.version == 4:
         return True
@@ -43,6 +41,7 @@ def connect():
     upnp = miniupnpc.UPnP()
     upnp.discoverdelay = 200
     providers = upnp.discover()
+    log = structlog.get_logger(__name__)
     if providers > 1:
         log.debug('multiple upnp providers found', num_providers=providers)
     elif providers < 1:
@@ -84,6 +83,8 @@ def open_port(upnp, internal_port, external_start_port=None):
 
     if upnp is None:
         return
+
+    log = structlog.get_logger(__name__)
 
     def register(internal, external):
         # test existing mappings
@@ -169,6 +170,7 @@ def release_port(upnp, external_port):
         success (boolean): if the release was successful.
     """
     mapping = upnp.getspecificportmapping(external_port, 'UDP')
+    log = structlog.get_logger(__name__)
 
     if mapping is None:
         log.error('could not find a port mapping', external=external_port)

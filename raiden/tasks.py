@@ -18,7 +18,6 @@ RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
 REMOVE_CALLBACK = object()
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def check_version(current_version: str):
@@ -53,6 +52,8 @@ def check_version(current_version: str):
 
 def check_gas_reserve(raiden):
     """ Check periodically for gas reserve in the account """
+    log = structlog.get_logger(__name__)
+
     while True:
         has_enough_balance, estimated_required_balance = gas_reserve.has_enough_gas_reserve(
             raiden,
@@ -87,6 +88,7 @@ class AlarmTask(Runnable):
         self.chain_id = None
         self.last_block_number = None
         self._stop_event = AsyncResult()
+        self.log = structlog.get_logger(__name__)
 
         # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.
@@ -140,7 +142,7 @@ class AlarmTask(Runnable):
                 )
 
             if latest_block_number != last_block_number:
-                log.debug(
+                self.log.debug(
                     'new block',
                     number=latest_block_number,
                     gas_limit=latest_block['gasLimit'],
@@ -149,7 +151,7 @@ class AlarmTask(Runnable):
 
                 if latest_block_number > last_block_number + 1:
                     missed_blocks = latest_block_number - last_block_number - 1
-                    log.info(
+                    self.log.info(
                         'missed blocks',
                         missed_blocks=missed_blocks,
                         latest_block=latest_block,
@@ -164,7 +166,7 @@ class AlarmTask(Runnable):
         chain_id = self.chain.network_id
         latest_block = self.chain.get_block(block_identifier='latest')
 
-        log.debug(
+        self.log.debug(
             'starting at block number',
             number=latest_block['number'],
             gas_limit=latest_block['gasLimit'],

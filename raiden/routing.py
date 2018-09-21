@@ -14,8 +14,6 @@ from raiden.transfer.state import (
 )
 from raiden.utils import pex, typing
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def get_ordered_partners(
         network_graph: networkx.Graph,
@@ -63,6 +61,7 @@ def get_best_routes(
     # rate from in the range [0.0,1.0].
 
     available_routes = list()
+    log = structlog.get_logger(__name__)
 
     token_network = views.get_token_network_by_identifier(
         chain_state,

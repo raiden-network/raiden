@@ -3,8 +3,6 @@ import stun
 
 from raiden.exceptions import STUNUnavailableException
 
-log = structlog.get_logger(__name__)
-
 
 def stun_socket(
     socket,
@@ -13,6 +11,7 @@ def stun_socket(
     stun_host=None,
     stun_port=3478,
 ):
+    log = structlog.get_logger(__name__)
     timeout = socket.gettimeout()
     socket.settimeout(2)
     log.debug('Initiating STUN', source_ip=source_ip, source_port=source_port)

@@ -30,8 +30,6 @@ from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 EVENTS_PAYMENT_HISTORY_RELATED = (
     EventPaymentSentSuccess,
     EventPaymentSentFailed,
@@ -84,6 +82,7 @@ class RaidenAPI:
 
     def __init__(self, raiden):
         self.raiden = raiden
+        self.log = structlog.get_logger(__name__)
 
     @property
     def address(self):
@@ -301,7 +300,7 @@ class RaidenAPI:
                 settle_timeout,
             )
         except DuplicatedChannelError:
-            log.info('partner opened channel first')
+            self.log.info('partner opened channel first')
 
         waiting.wait_for_newchannel(
             self.raiden,
@@ -645,7 +644,7 @@ class RaidenAPI:
         if token_address not in valid_tokens:
             raise UnknownTokenAddress('Token address is not known.')
 
-        log.debug(
+        self.log.debug(
             'initiating transfer',
             initiator=pex(self.raiden.address),
             target=pex(target),

@@ -26,8 +26,6 @@ from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveProcessed, ReceiveTransferDirect, ReceiveUnlock
 from raiden.utils import random_secret
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest):
     secret_request = ReceiveSecretRequest(
@@ -152,7 +150,7 @@ def on_message(raiden: RaidenService, message: Message):
     elif type(message) == Processed:
         handle_message_processed(raiden, message)
     else:
-        log.error('Unknown message cmdid {}'.format(message.cmdid))
+        structlog.get_logger(__name__).error('Unknown message cmdid {}'.format(message.cmdid))
         return False
 
     # Inform the transport that it's okay to send a Delivered message

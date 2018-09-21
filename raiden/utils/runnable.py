@@ -3,8 +3,6 @@ from typing import Sequence
 import structlog
 from gevent import Greenlet
 
-log = structlog.get_logger(__name__)
-
 
 class Runnable:
     """Greenlet-like class, __run() inside one, but can be stopped and restarted
@@ -62,7 +60,8 @@ class Runnable:
         """ Default callback for substasks link_exception
 
         Default callback re-raises the exception inside _run() """
-        log.error(
+
+        structlog.get_logger(__name__).error(
             'Runnable subtask died!',
             this=self,
             running=bool(self),

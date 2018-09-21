@@ -3,7 +3,6 @@ from binascii import hexlify
 from collections import namedtuple
 
 import gevent
-import structlog
 from gevent import server
 
 from raiden import waiting
@@ -16,8 +15,6 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import merge_dict
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 BlockchainServices = namedtuple(

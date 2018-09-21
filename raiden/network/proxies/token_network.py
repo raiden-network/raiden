@@ -39,8 +39,6 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 class ChannelData(NamedTuple):
     channel_identifier: typing.ChannelID
@@ -106,6 +104,7 @@ class TokenNetwork:
         # exclusive lock, since we need to coordinate the approve and
         # setTotalDeposit calls.
         self.deposit_lock = Semaphore()
+        self.log = structlog.get_logger(__name__)
 
     def _call_and_check_result(self, function_name: str, *args):
         fn = getattr(self.proxy.contract.functions, function_name)
@@ -158,7 +157,7 @@ class TokenNetwork:
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:
-                log.info(
+                self.log.info(
                     'new_netting_channel called',
                     peer1=pex(self.node_address),
                     peer2=pex(partner),
@@ -177,7 +176,7 @@ class TokenNetwork:
 
         channel_created = self.channel_exists_and_not_settled(self.node_address, partner)
         if channel_created is False:
-            log.error(
+            self.log.error(
                 'creating new channel failed',
                 peer1=pex(self.node_address),
                 peer2=pex(partner),
@@ -185,7 +184,7 @@ class TokenNetwork:
             raise RaidenUnrecoverableError('creating new channel failed')
 
         channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
-        log.info(
+        self.log.info(
             'new_netting_channel created succesfully with',
             peer1=pex(self.node_address),
             peer2=pex(partner),
@@ -576,7 +575,7 @@ class TokenNetwork:
                 'amount_to_deposit': amount_to_deposit,
                 'id': id(self),
             }
-            log.info('deposit called', **log_details)
+            self.log.info('deposit called', **log_details)
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
@@ -600,7 +599,7 @@ class TokenNetwork:
                 else:
                     log_msg = 'deposit failed'
 
-                log.critical(log_msg, **log_details)
+                self.log.critical(log_msg, **log_details)
 
                 self._check_channel_state_for_deposit(
                     self.node_address,
@@ -611,7 +610,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Deposit', receipt_or_none)
 
-            log.info('deposit successful', **log_details)
+            self.log.info('deposit successful', **log_details)
 
     def close(
             self,
@@ -639,7 +638,7 @@ class TokenNetwork:
             'additional_hash': encode_hex(additional_hash),
             'signature': encode_hex(signature),
         }
-        log.info('close called', **log_details)
+        self.log.info('close called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -667,7 +666,7 @@ class TokenNetwork:
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.critical('close failed', **log_details)
+                self.log.critical('close failed', **log_details)
 
                 self._check_channel_state_for_close(
                     self.node_address,
@@ -677,7 +676,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Close', receipt_or_none)
 
-            log.info('close successful', **log_details)
+            self.log.info('close successful', **log_details)
 
     def update_transfer(
             self,
@@ -699,7 +698,7 @@ class TokenNetwork:
             'closing_signature': encode_hex(closing_signature),
             'non_closing_signature': encode_hex(non_closing_signature),
         }
-        log.info('updateNonClosingBalanceProof called', **log_details)
+        self.log.info('updateNonClosingBalanceProof called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -723,7 +722,7 @@ class TokenNetwork:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical('updateNonClosingBalanceProof failed', **log_details)
+            self.log.critical('updateNonClosingBalanceProof failed', **log_details)
             channel_closed = self.channel_is_closed(
                 participant1=self.node_address,
                 participant2=partner,
@@ -733,7 +732,7 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError('Channel is not in a closed state')
             raise TransactionThrew('Update NonClosing balance proof', receipt_or_none)
 
-        log.info('updateNonClosingBalanceProof successful', **log_details)
+        self.log.info('updateNonClosingBalanceProof successful', **log_details)
 
     def withdraw(
             self,
@@ -751,7 +750,7 @@ class TokenNetwork:
             'partner_signature': encode_hex(partner_signature),
             'signature': encode_hex(signature),
         }
-        log.info('withdraw called', **log_details)
+        self.log.info('withdraw called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -786,7 +785,7 @@ class TokenNetwork:
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.critical('withdraw failed', **log_details)
+                self.log.critical('withdraw failed', **log_details)
 
                 self._check_channel_state_for_withdraw(
                     self.node_address,
@@ -797,7 +796,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
-            log.info('withdraw successful', **log_details)
+            self.log.info('withdraw successful', **log_details)
 
     def unlock(
             self,
@@ -813,10 +812,10 @@ class TokenNetwork:
         }
 
         if merkle_tree_leaves is None or not merkle_tree_leaves:
-            log.info('skipping unlock, tree is empty', **log_details)
+            self.log.info('skipping unlock, tree is empty', **log_details)
             return
 
-        log.info('unlock called', **log_details)
+        self.log.info('unlock called', **log_details)
 
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
@@ -839,15 +838,18 @@ class TokenNetwork:
             )
 
             if channel_settled is False:
-                log.critical('unlock failed. Channel is not in a settled state', **log_details)
+                self.log.critical(
+                    'unlock failed. Channel is not in a settled state',
+                    **log_details,
+                )
                 raise RaidenUnrecoverableError(
                     'Channel is not in a settled state. An unlock cannot be made',
                 )
 
-            log.critical('unlock failed', **log_details)
+            self.log.critical('unlock failed', **log_details)
             raise TransactionThrew('Unlock', receipt_or_none)
 
-        log.info('unlock successful', **log_details)
+        self.log.info('unlock successful', **log_details)
 
     def settle(
             self,
@@ -876,7 +878,7 @@ class TokenNetwork:
             'partner_locked_amount': partner_locked_amount,
             'partner_locksroot': encode_hex(partner_locksroot),
         }
-        log.info('settle called', **log_details)
+        self.log.info('settle called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -921,7 +923,7 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.info('settle failed', **log_details)
+                self.log.info('settle failed', **log_details)
                 self._check_channel_state_for_settle(
                     self.node_address,
                     partner,
@@ -929,7 +931,7 @@ class TokenNetwork:
                 )
                 raise TransactionThrew('Settle', receipt_or_none)
 
-            log.info('settle successful', **log_details)
+            self.log.info('settle successful', **log_details)
 
     def events_filter(
             self,

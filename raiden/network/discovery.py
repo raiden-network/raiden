@@ -7,8 +7,6 @@ from raiden.exceptions import InvalidAddress, UnknownAddress
 from raiden.network import proxies
 from raiden.utils import host_port_to_endpoint, pex, split_endpoint
 
-log = structlog.get_logger(__name__)
-
 
 class Discovery:
     """ Mock mapping address: host, port """
@@ -53,6 +51,7 @@ class ContractDiscovery(Discovery):
 
         self.node_address = node_address
         self.discovery_proxy = discovery_proxy
+        self.log = structlog.get_logger(__name__)
 
     def register(self, node_address: bytes, host: str, port: int):
         if node_address != self.node_address:
@@ -75,7 +74,7 @@ class ContractDiscovery(Discovery):
             current_value = None
 
         if current_value == (host, port):
-            log.info(
+            self.log.info(
                 'endpoint already registered',
                 node_address=pex(node_address),
                 host=host,
@@ -84,7 +83,7 @@ class ContractDiscovery(Discovery):
         else:
             endpoint = host_port_to_endpoint(host, port)
             self.discovery_proxy.register_endpoint(node_address, endpoint)
-            log.info(
+            self.log.info(
                 'registered endpoint in discovery',
                 node_address=pex(node_address),
                 host=host,
