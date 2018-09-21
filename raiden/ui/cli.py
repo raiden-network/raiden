@@ -129,11 +129,12 @@ def check_synced(blockchain_service: BlockChainService) -> None:
     try:
         network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
-        print(
+        click.secho(
             'Could not determine the network the ethereum node is connected.\n'
             'Because of this there is no way to determine the latest\n'
             'block with an oracle, and the events from the ethereum\n'
             'node cannot be trusted. Giving up.\n',
+            fg='red',
         )
         sys.exit(1)
     except KeyError:
@@ -142,6 +143,7 @@ def check_synced(blockchain_service: BlockChainService) -> None:
             'network with network-ID {}. Since we can not check if the client \n'
             'is synced please restart raiden with the --no-sync-check argument.'
             '\n'.format(net_id),
+            fg='red',
         )
         sys.exit(1)
 
@@ -166,12 +168,13 @@ def check_discovery_registration_gas(
 
     # pylint: disable=no-member
     if discovery_tx_cost > account_balance:
-        print(
+        click.secho(
             'Account has insufficient funds for discovery registration.\n'
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
             'Please deposit additional funds into this account.'
             .format(discovery_tx_cost / denoms.ether, account_balance / denoms.ether),
+            fg='red',
         )
         sys.exit(1)
 
@@ -273,24 +276,26 @@ def wait_for_sync(
 
 def handle_contract_version_mismatch(name: str, address: typing.Address) -> None:
     hex_addr = to_checksum_address(address)
-    print(
+    click.secho(
         f'Error: Provided {name} {hex_addr} contract version mismatch. '
         'Please update your Raiden installation.',
+        fg='red',
     )
     sys.exit(1)
 
 
 def handle_contract_no_code(name: str, address: typing.Address) -> None:
     hex_addr = to_checksum_address(address)
-    print(f'Error: Provided {name} {hex_addr} contract does not contain code')
+    click.secho(f'Error: Provided {name} {hex_addr} contract does not contain code', fg='red')
     sys.exit(1)
 
 
 def handle_contract_wrong_address(name: str, address: typing.Address) -> None:
     hex_addr = to_checksum_address(address)
-    print(
+    click.secho(
         f'Error: Provided address {hex_addr} for {name} contract'
         ' does not contain expected code.',
+        fg='red',
     )
     sys.exit(1)
 
@@ -665,7 +670,10 @@ def run_app(
 
     supported, _ = is_supported_client(node_version)
     if not supported:
-        print('You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2')
+        click.secho(
+            'You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2',
+            fg='red',
+        )
         sys.exit(1)
 
     rpc_client = JSONRPCClient(
@@ -679,15 +687,19 @@ def run_app(
     net_id = blockchain_service.network_id
     if net_id != network_id:
         if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
-            print((
-                "The chosen ethereum network '{}' differs from the ethereum client '{}'. "
-                'Please update your settings.'
-            ).format(ID_TO_NETWORKNAME[network_id], ID_TO_NETWORKNAME[net_id]))
+            click.secho(
+                f"The chosen ethereum network '{ID_TO_NETWORKNAME[network_id]}' "
+                f"differs from the ethereum client '{ID_TO_NETWORKNAME[net_id]}'. "
+                "Please update your settings.",
+                fg='red',
+            )
         else:
-            print((
-                "The chosen ethereum network id '{}' differs from the ethereum client '{}'. "
-                'Please update your settings.'
-            ).format(network_id, net_id))
+            click.secho(
+                f"The chosen ethereum network id '{network_id}' differs from the "
+                f"ethereum client '{net_id}'. "
+                "Please update your settings.",
+                fg='red',
+            )
         sys.exit(1)
 
     config['chain_id'] = network_id
@@ -710,11 +722,12 @@ def run_app(
             network_type == NetworkType.TEST
         )
         if not_allowed:
-            print(
+            click.secho(
                 'The chosen network {} has no test configuration but a test network type '
                 'was given. This is not allowed.'.format(
                     ID_TO_NETWORKNAME[network_id],
                 ),
+                fg='red',
             )
             sys.exit(1)
 
@@ -733,10 +746,11 @@ def run_app(
     )
 
     if not contract_addresses_given and not contract_addresses_known:
-        print((
-              "There are no known contract addresses for network id '{}'. Please provide "
-              'them in the command line or in the configuration file.'
-              ).format(net_id))
+        click.secho(
+            f"There are no known contract addresses for network id '{net_id}'. "
+            "Please provide them in the command line or in the configuration file.",
+            fg='red',
+        )
         sys.exit(1)
 
     try:
@@ -840,9 +854,10 @@ def run_app(
         sys.exit(1)
     except filelock.Timeout:
         name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
-        print(
+        click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
+            fg='red',
         )
         sys.exit(1)
 
@@ -852,18 +867,21 @@ def run_app(
 def prompt_account(address_hex, keystore_path, password_file):
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
-        print(
+        click.secho(
             'No Ethereum accounts found in the provided keystore directory {}. '
             'Please provide a directory containing valid ethereum account '
             'files.'.format(keystore_path),
+            fg='red',
         )
         sys.exit(1)
 
     if not accmgr.address_in_keystore(address_hex):
         # check if an address has been passed
         if address_hex is not None:
-            print("Account '{}' could not be found on the system. Aborting ...".format(
-                address_hex))
+            click.secho(
+                f"Account '{address_hex}' could not be found on the system. Aborting ...",
+                fg='red',
+            )
             sys.exit(1)
 
         addresses = list(accmgr.accounts.keys())
@@ -899,7 +917,10 @@ def prompt_account(address_hex, keystore_path, password_file):
             privatekey_bin = accmgr.get_privkey(address_hex, password)
         except ValueError:
             # ValueError exception raised if the password is incorrect
-            print('Incorrect password for {} in file. Aborting ...'.format(address_hex))
+            click.secho(
+                f'Incorrect password for {address_hex} in file. Aborting ...',
+                fg='red',
+            )
             sys.exit(1)
     else:
         unlock_tries = 3
@@ -910,9 +931,9 @@ def prompt_account(address_hex, keystore_path, password_file):
             except ValueError:
                 # ValueError exception raised if the password is incorrect
                 if unlock_tries == 0:
-                    print(
-                        'Exhausted passphrase unlock attempts for {}. Aborting ...'
-                        .format(address_hex),
+                    click.secho(
+                        f'Exhausted passphrase unlock attempts for {address_hex}. Aborting ...',
+                        fg='red',
                     )
                     sys.exit(1)
 
@@ -990,10 +1011,11 @@ class NodeRunner:
                         app = self._run_app()
 
                 except RaidenServicePortInUseError:
-                    print(
+                    click.secho(
                         'ERROR: Address %s:%s is in use. '
                         'Use --listen-address <host:port> to specify port to listen on.' %
                         (listen_host, listen_port),
+                        fg='red',
                     )
                     sys.exit(1)
             elif self._options['transport'] == 'matrix':
@@ -1004,9 +1026,10 @@ class NodeRunner:
                 raise RuntimeError(f"Invalid transport type '{self._options['transport']}'")
             app.stop()
         except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
-            print(
+            click.secho(
                 '{}. Please make sure that this Raiden node is the '
                 'only user of the selected account'.format(str(e)),
+                fg='red',
             )
             sys.exit(1)
 
