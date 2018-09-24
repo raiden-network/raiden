@@ -11,7 +11,6 @@ from eth_utils import (
     to_normalized_address,
 )
 from web3.exceptions import BadFunctionCallOutput
-from web3.utils.filters import Filter
 
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
@@ -21,7 +20,7 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     TransactionThrew,
 )
-from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address, typing
@@ -134,7 +133,7 @@ class TokenNetworkRegistry:
             self,
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
-    ) -> Filter:
+    ) -> StatelessFilter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_TOKEN_NETWORK_REGISTRY,
             EVENT_TOKEN_NETWORK_CREATED,

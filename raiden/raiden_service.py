@@ -396,8 +396,6 @@ class RaidenService(Runnable):
         except gevent.Timeout:
             pass
 
-        self.blockchain_events.reset()
-
         if self.db_lock is not None:
             self.db_lock.release()
 

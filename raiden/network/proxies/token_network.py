@@ -11,7 +11,6 @@ from eth_utils import (
 )
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
-from web3.utils.filters import Filter
 
 from raiden.exceptions import (
     ChannelOutdatedError,
@@ -27,7 +26,7 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies import Token
-from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address, typing
@@ -936,7 +935,7 @@ class TokenNetwork:
             topics: List[str] = None,
             from_block: typing.BlockSpecification = None,
             to_block: typing.BlockSpecification = None,
-    ) -> Filter:
+    ) -> StatelessFilter:
         """ Install a new filter for an array of topics emitted by the contract.
         Args:
             topics: A list of event ids to filter for. Can also be None,
@@ -957,7 +956,7 @@ class TokenNetwork:
             self,
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
-    ) -> Filter:
+    ) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract
 
         Args:

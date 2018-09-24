@@ -16,7 +16,6 @@ from requests import ConnectTimeout
 from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.utils.filters import Filter
 
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
@@ -504,7 +503,7 @@ class JSONRPCClient:
             topics: List[str] = None,
             from_block: BlockSpecification = 0,
             to_block: BlockSpecification = 'latest',
-    ) -> Filter:
+    ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
         return StatelessFilter(
             self.web3,
