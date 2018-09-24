@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import Dict, List
 
 import structlog
-from eth_utils import encode_hex, event_abi_to_log_topic, to_canonical_address
+from eth_utils import to_canonical_address
 
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
@@ -25,15 +25,6 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
 
-
-def verify_block_number(number: typing.BlockSpecification, argname: str):
-    if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
-        raise InvalidBlockNumberInput(
-            'Provided block number {} for {} is invalid. Has to be in the range '
-            'of [0, UINT64_MAX]'.format(number, argname),
-        )
-
-
 EventListener = namedtuple(
     'EventListener',
     ('event_name', 'filter', 'abi'),
@@ -42,6 +33,14 @@ EventListener = namedtuple(
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def verify_block_number(number: typing.BlockSpecification, argname: str):
+    if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
+        raise InvalidBlockNumberInput(
+            'Provided block number {} for {} is invalid. Has to be in the range '
+            'of [0, UINT64_MAX]'.format(number, argname),
+        )
 
 
 def get_contract_events(
@@ -73,10 +72,6 @@ def get_contract_events(
             del decoded_event['blockNumber']
         result.append(decoded_event)
     return result
-
-
-# These helpers have a better descriptive name and provide the translator for
-# the caller.
 
 
 def get_token_network_registry_events(
@@ -120,7 +115,6 @@ def get_all_netting_channel_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
-        events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
@@ -143,85 +137,9 @@ def get_all_netting_channel_events(
     )
 
 
-def get_netting_channel_closed_events(
-        chain: BlockChainService,
-        token_network_address: Address,
-        netting_channel_identifier: ChannelID,
-        events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = 'latest',
-) -> List[Dict]:
-    closed_event_abi = CONTRACT_MANAGER.get_event_abi(
-        CONTRACT_TOKEN_NETWORK,
-        ChannelEvent.CLOSED,
-    )
-    closed_event_id = encode_hex(event_abi_to_log_topic(closed_event_abi))
-    closed_topics = [closed_event_id]
-
-    return get_contract_events(
-        chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
-        closed_topics,
-        from_block,
-        to_block,
-    )
-
-
-def get_netting_channel_deposit_events(
-        chain: BlockChainService,
-        token_network_address: Address,
-        netting_channel_identifier: ChannelID,
-        events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = 'latest',
-) -> List[Dict]:
-    deposit_event_abi = CONTRACT_MANAGER.get_event_abi(
-        CONTRACT_TOKEN_NETWORK,
-        ChannelEvent.DEPOSIT,
-    )
-    deposit_event_id = encode_hex(event_abi_to_log_topic(deposit_event_abi))
-    deposit_topics = [deposit_event_id]
-
-    return get_contract_events(
-        chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
-        deposit_topics,
-        from_block,
-        to_block,
-    )
-
-
-def get_netting_channel_settled_events(
-        chain: BlockChainService,
-        token_network_address: Address,
-        netting_channel_identifier: ChannelID,
-        events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = 'latest',
-) -> List[Dict]:
-    settled_event_abi = CONTRACT_MANAGER.get_event_abi(
-        CONTRACT_TOKEN_NETWORK,
-        ChannelEvent.SETTLED,
-    )
-    settled_event_id = encode_hex(event_abi_to_log_topic(settled_event_abi))
-    settled_topics = [settled_event_id]
-
-    return get_contract_events(
-        chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
-        settled_topics,
-        from_block,
-        to_block,
-    )
-
-
 def get_all_secret_registry_events(
         chain: BlockChainService,
         secret_registry_address: Address,
-        events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
@@ -233,7 +151,7 @@ def get_all_secret_registry_events(
             CONTRACT_SECRET_REGISTRY,
         ),
         secret_registry_address,
-        events,
+        ALL_EVENTS,
         from_block,
         to_block,
     )
