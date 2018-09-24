@@ -220,10 +220,10 @@ class ConnectionManager:
                 )
             except RaidenRecoverableError:
                 log.exception('connection manager join: channel not in opened state')
+            except InvalidDBData as e:
+                raise
             except RaidenUnrecoverableError as e:
                 if self.raiden.config['network_type'] == NetworkType.MAIN:
-                    if isinstance(e, InvalidDBData):
-                        raise
                     log.error(str(e))
                 else:
                     raise
