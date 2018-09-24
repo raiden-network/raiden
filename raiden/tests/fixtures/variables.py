@@ -69,7 +69,7 @@ def reveal_timeout(number_of_nodes):
     #
     # Because the lock expiration is fixed, and it's computed based on the
     # reveal timeout value, we need to make it large enough to accomodate for
-    # the room creation and invite, the formula bellow is used for that:
+    # the room creation and invite, the formula below is used for that:
     return number_of_nodes * 4
 
 

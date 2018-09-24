@@ -474,7 +474,7 @@ class RaidenService(Runnable):
         # for the transaction to be mined and force polled the event to update
         # the node's state. This pattern introduced a race with the alarm task
         # and the task which served the user request, because the events are
-        # returned only once per filter. The lock bellow is to protect against
+        # returned only once per filter. The lock below is to protect against
         # these races (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
