@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 from itertools import combinations, count
 
@@ -18,6 +19,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
+from raiden.utils.cli import LogLevelConfigType
 
 log = structlog.get_logger(__name__)
 
@@ -30,6 +32,55 @@ def _url_for(apiserver, endpoint, **kwargs):
 
     with apiserver.flask_app.app_context():
         return url_for('v1_resources.{}'.format(endpoint), **kwargs)
+
+
+def _trimmed_logging(logger_level_config):
+    structlog.reset_defaults()
+
+    logger_level_config = logger_level_config or dict()
+    logger_level_config.setdefault('filelock', 'ERROR')
+    logger_level_config.setdefault('', 'DEBUG')
+
+    processors = [
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
+
+    logging.config.dictConfig(
+        {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'formatters': {
+                'plain': {
+                    '()': structlog.stdlib.ProcessorFormatter,
+                    'processor': structlog.dev.ConsoleRenderer(colors=False),
+                    'foreign_pre_chain': processors,
+                },
+            },
+            'handlers': {
+                'default': {
+                    'class': 'logging.StreamHandler',
+                    'level': 'DEBUG',
+                    'formatter': 'plain',
+                },
+            },
+            'loggers': {
+                '': {
+                    'handlers': ['default'],
+                    'propagate': True,
+                },
+            },
+        },
+    )
+    structlog.configure(
+        processors=processors + [
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
 
 
 def start_apiserver(raiden_app, rest_api_port_number):
@@ -298,6 +349,7 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize('settle_timeout', [120])
 @pytest.mark.skip(reason='Issue 2492')
 def test_stress(
+        request,
         raiden_network,
         deposit,
         retry_timeout,
@@ -305,6 +357,15 @@ def test_stress(
         port_generator,
         skip_if_not_udp,
 ):
+
+    config_converter = LogLevelConfigType()
+    logging_levels = config_converter.convert(
+        value=request.config.option.log_config,
+        param=None,
+        ctx=None,
+    )
+    _trimmed_logging(logging_levels)
+
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
