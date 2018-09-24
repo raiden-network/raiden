@@ -7,7 +7,7 @@ import structlog
 from gevent import Greenlet
 from gevent.pool import Group
 
-from scenario_player.exceptions import ScenarioError
+from scenario_player.exceptions import ScenarioError, RESTAPIError
 
 from .base import Task, get_task_class_for_type
 
@@ -82,3 +82,34 @@ class ProcessTask(Task):
     def _handle_process(self, greenlet):
         greenlet.join()
         greenlet.get()
+
+
+class RaiseTask(Task):
+    _name = 'raise'
+
+    def __init__(
+        self,
+        runner: 'ScenarioRunner',
+        config: Any,
+        parent: 'Task' = None,
+        abort_on_fail=True,
+    ) -> None:
+        super().__init__(runner, config, parent, abort_on_fail)
+
+        self._tasks = []
+        for _ in range(config.get('repeat', 1)):
+            for task in self._config.get('tasks', []):
+                for task_type, task_config in task.items():
+                    task_class = get_task_class_for_type(task_type)
+                    self._tasks.append(
+                        task_class(runner=self._runner, config=task_config, parent=self),
+                    )
+
+    def _run(self, *args, **kwargs):
+        for task in self._tasks:
+            try:
+                task()
+            except RESTAPIError:
+                pass
+            else:
+                assert False, "Task did not raise."
