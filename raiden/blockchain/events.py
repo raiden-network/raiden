@@ -38,10 +38,6 @@ EventListener = namedtuple(
     'EventListener',
     ('event_name', 'filter', 'abi'),
 )
-Proxies = namedtuple(
-    'Proxies',
-    ('token_registry', 'token_networks'),
-)
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
