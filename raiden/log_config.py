@@ -131,6 +131,7 @@ def configure_logging(
         log_json: bool = False,
         log_file: str = None,
         disable_debug_logfile: bool = False,
+        cache_logger_on_first_use: bool = True,
 ):
     structlog.reset_defaults()
 
@@ -248,7 +249,7 @@ def configure_logging(
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        cache_logger_on_first_use=cache_logger_on_first_use,
     )
 
     # set logging level of the root logger to DEBUG, to be able to intercept
