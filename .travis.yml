@@ -59,133 +59,133 @@ notifications:
 
 jobs:
   include:
-    - stage: lint
-      sudo: false
-      install: pip install -r requirements-lint.txt
-      script:
-        - git rev-parse HEAD
-        - make lint
+#   - stage: lint
+#     sudo: false
+#     install: pip install -r requirements-lint.txt
+#     script:
+#       - git rev-parse HEAD
+#       - make lint
 
-    - stage: test
-      <<: *job-template-test
-      script: .travis/run_smoketest.sh
-      after_script: /bin/true
-      env:
-        - SMOKETEST=1
+#   - stage: test
+#     <<: *job-template-test
+#     script: .travis/run_smoketest.sh
+#     after_script: /bin/true
+#     env:
+#       - SMOKETEST=1
 
-    - stage: test
-      <<: *job-template-test
-      script: .travis/run_smoketest.sh
-      after_script: /bin/true
-      env:
-        - SMOKETEST=1
-        - RUN_SYNAPSE=1
+#   - stage: test
+#     <<: *job-template-test
+#     script: .travis/run_smoketest.sh
+#     after_script: /bin/true
+#     env:
+#       - SMOKETEST=1
+#       - RUN_SYNAPSE=1
 
-    - stage: test
-      <<: *job-template-test
-      env:
-        - BLOCKCHAIN_TYPE='tester'
-        - TEST='raiden/tests/unit raiden/tests/integration/contracts'
-
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
-        - TRANSPORT_OPTIONS='--transport=udp'
+#   - stage: test
+#     <<: *job-template-test
+#     env:
+#       - BLOCKCHAIN_TYPE='tester'
+#       - TEST='raiden/tests/unit raiden/tests/integration/contracts'
 
     - stage: integration
       <<: *job-template-integration
       env:
         - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
-        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-        - RUN_SYNAPSE=1
-
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/transfer'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/transfer'
-        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-        - RUN_SYNAPSE=1
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
+#       - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#       - RUN_SYNAPSE=1
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/long_running'
-        - TRANSPORT_OPTIONS='--transport=udp'
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/transfer'
+#       - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/long_running'
-        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-        - RUN_SYNAPSE=1
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/transfer'
+#       - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#       - RUN_SYNAPSE=1
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/contracts'
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/long_running'
+#       - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/api'
-        - TRANSPORT_OPTIONS='--transport=udp'
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/long_running'
+#       - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#       - RUN_SYNAPSE=1
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/api'
-        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-        - RUN_SYNAPSE=1
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/contracts'
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/cli'
-        - TRANSPORT_OPTIONS='--transport=udp'
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/api'
+#       - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration
-      <<: *job-template-integration
-      env:
-        - TEST='raiden/tests/integration/cli'
-        - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
-        - RUN_SYNAPSE=1
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/api'
+#       - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#       - RUN_SYNAPSE=1
 
-    - stage: deploy
-      before_install:
-        - mkdir -p $HOME/.bin
-        - export PATH=$PATH:$HOME/.bin
-        # Shallow clones break setuptools_scm. See: https://github.com/pypa/setuptools_scm/issues/93
-        - git fetch --unshallow
-        - git pull --tags
-        - .travis/before_install.sh
-      install: .travis/install.sh
-      script:
-        - source .travis/set_tag.sh
-        - REPO=${TRAVIS_REPO_SLUG} RAIDENVERSION=${TRAVIS_COMMIT} make bundle-docker
-        - tar -C dist -xvzf dist/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
-        - echo raiden-${ARCHIVE_TAG}-linux.tar.gz > dist/archive/_LATEST-linux.txt
-        # Make sure the produced binary works
-        # Skip smoketest until raiden-network/raiden#2384 is fixed
-        #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/cli'
+#       - TRANSPORT_OPTIONS='--transport=udp'
 
-      deploy:
-      - provider: releases
-        api_key:
-          secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-        file: dist/archive/raiden-*-linux.tar.gz
-        file_glob: true
-        skip_cleanup: true
-        on:
-          tags: true
-          repo: raiden-network/raiden
-          branch: master
+#   - stage: integration
+#     <<: *job-template-integration
+#     env:
+#       - TEST='raiden/tests/integration/cli'
+#       - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
+#       - RUN_SYNAPSE=1
+
+#   - stage: deploy
+#     before_install:
+#       - mkdir -p $HOME/.bin
+#       - export PATH=$PATH:$HOME/.bin
+#       # Shallow clones break setuptools_scm. See: https://github.com/pypa/setuptools_scm/issues/93
+#       - git fetch --unshallow
+#       - git pull --tags
+#       - .travis/before_install.sh
+#     install: .travis/install.sh
+#     script:
+#       - source .travis/set_tag.sh
+#       - REPO=${TRAVIS_REPO_SLUG} RAIDENVERSION=${TRAVIS_COMMIT} make bundle-docker
+#       - tar -C dist -xvzf dist/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
+#       - echo raiden-${ARCHIVE_TAG}-linux.tar.gz > dist/archive/_LATEST-linux.txt
+#       # Make sure the produced binary works
+#       # Skip smoketest until raiden-network/raiden#2384 is fixed
+#       #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
+
+#     deploy:
+#     - provider: releases
+#       api_key:
+#         secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
+#       file: dist/archive/raiden-*-linux.tar.gz
+#       file_glob: true
+#       skip_cleanup: true
+#       on:
+#         tags: true
+#         repo: raiden-network/raiden
+#         branch: master
 
 ## Disabled until automated release account is reactivated
 #      - provider: pypi
@@ -199,64 +199,64 @@ jobs:
 #          repo: raiden-network/raiden
 #          branch: master
 
-      - provider: script
-        skip_cleanup: true
-        script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
-        on:
-          repo: raiden-network/raiden
-          all_branches: true
+#     - provider: script
+#       skip_cleanup: true
+#       script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
+#       on:
+#         repo: raiden-network/raiden
+#         all_branches: true
 
-    - stage: deploy
-      os: osx
-      language: generic
-      osx_image: xcode8.3
-      env: TEST=""
-      before_install:
-        - sysctl -n machdep.cpu.brand_string
-        - mkdir -p $HOME/.bin
-        - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:/usr/local/bin/:$PATH
-        # Shallow clones break setuptools_scm. See: https://github.com/pypa/setuptools_scm/issues/93
-        - git fetch --unshallow
-        - git pull --tags
-        - .travis/before_install.sh
-      install:
-        - .travis/install.sh
-        # pdbpp interferes with pyinstaller, uninstall it
-        - pip uninstall -y pdbpp
-      before_script:
-        - python setup.py build
-        - RAIDEN_NPM_MISSING_FATAL=1 python setup.py compile_webui
-      script:
-        - source .travis/set_tag.sh
-        - mkdir -p dist/archive
-        - pyinstaller --noconfirm --clean raiden.spec
-        - zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden*
-        - echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
-        # Skip smoketest for now, because smoketest can't use anything from raiden.tests
-        #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
-        # "Fix" Travis issues #6307 #6522 #9486
-        - shell_session_update() { :; };
-      deploy:
-        - provider: releases
-          api_key:
-            secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-          file: dist/archive/raiden-*-macOS.zip
-          file_glob: true
-          skip_cleanup: true
-          on:
-            tags: true
-            repo: raiden-network/raiden
-            branch: master
-        - provider: script
-          script: .travis/update_formula.sh
-          skip_cleanup: true
-          on:
-            tags: true
-            repo: raiden-network/raiden
-            branch: master
-        - provider: script
-          script: .travis/upload_to_s3.sh "$DO_S3_ACCESS_KEY" "$DO_S3_SECRET_KEY" dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
-          skip_cleanup: true
-          on:
-            repo: raiden-network/raiden
-            all_branches: true
+#   - stage: deploy
+#     os: osx
+#     language: generic
+#     osx_image: xcode8.3
+#     env: TEST=""
+#     before_install:
+#       - sysctl -n machdep.cpu.brand_string
+#       - mkdir -p $HOME/.bin
+#       - export PATH=$HOME/.bin:$HOME/Library/Python/3.6/bin:/usr/local/bin/:$PATH
+#       # Shallow clones break setuptools_scm. See: https://github.com/pypa/setuptools_scm/issues/93
+#       - git fetch --unshallow
+#       - git pull --tags
+#       - .travis/before_install.sh
+#     install:
+#       - .travis/install.sh
+#       # pdbpp interferes with pyinstaller, uninstall it
+#       - pip uninstall -y pdbpp
+#     before_script:
+#       - python setup.py build
+#       - RAIDEN_NPM_MISSING_FATAL=1 python setup.py compile_webui
+#     script:
+#       - source .travis/set_tag.sh
+#       - mkdir -p dist/archive
+#       - pyinstaller --noconfirm --clean raiden.spec
+#       - zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden*
+#       - echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
+#       # Skip smoketest for now, because smoketest can't use anything from raiden.tests
+#       #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
+#       # "Fix" Travis issues #6307 #6522 #9486
+#       - shell_session_update() { :; };
+#     deploy:
+#       - provider: releases
+#         api_key:
+#           secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
+#         file: dist/archive/raiden-*-macOS.zip
+#         file_glob: true
+#         skip_cleanup: true
+#         on:
+#           tags: true
+#           repo: raiden-network/raiden
+#           branch: master
+#       - provider: script
+#         script: .travis/update_formula.sh
+#         skip_cleanup: true
+#         on:
+#           tags: true
+#           repo: raiden-network/raiden
+#           branch: master
+#       - provider: script
+#         script: .travis/upload_to_s3.sh "$DO_S3_ACCESS_KEY" "$DO_S3_SECRET_KEY" dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
+#         skip_cleanup: true
+#         on:
+#           repo: raiden-network/raiden
+#           all_branches: true
