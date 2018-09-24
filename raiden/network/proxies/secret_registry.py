@@ -4,7 +4,6 @@ import structlog
 from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
 from gevent.event import AsyncResult
 from web3.exceptions import BadFunctionCallOutput
-from web3.utils.filters import Filter
 
 from raiden.exceptions import (
     AddressWrongContract,
@@ -12,7 +11,7 @@ from raiden.exceptions import (
     InvalidAddress,
     TransactionThrew,
 )
-from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address, sha3, typing
@@ -130,7 +129,7 @@ class SecretRegistry:
             self,
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
-    ) -> Filter:
+    ) -> StatelessFilter:
         event_abi = CONTRACT_MANAGER.get_event_abi(
             CONTRACT_SECRET_REGISTRY,
             EVENT_SECRET_REVEALED,

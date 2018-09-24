@@ -106,19 +106,13 @@ class StatelessFilter(LogFilter):
         self._last_block: int = -1
         self._lock = Semaphore()
 
-    def get_new_entries(self, block_number: int = None):
+    def get_new_entries(self, block_number: int):
         with self._lock:
             filter_params = self.filter_params.copy()
             filter_params['fromBlock'] = max(
                 filter_params.get('fromBlock', 0),
                 self._last_block + 1,
             )
-            # This logic may contain a race condition. It's possible that after
-            # `web.eth.blockNumber` and before `web3.eth.getLogs` a new block is mined.
-            # This is okay because any new logs on this new block will be fetched on the
-            # next call to `get_new_entries`
-            if block_number is None:
-                block_number = self.web3.eth.blockNumber
             if self.filter_params.get('toBlock') in (None, 'latest', 'pending'):
                 filter_params['toBlock'] = block_number or 'latest'
             self._last_block = filter_params.get('toBlock') or block_number

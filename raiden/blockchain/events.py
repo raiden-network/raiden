@@ -36,7 +36,7 @@ def verify_block_number(number: typing.BlockSpecification, argname: str):
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'abi', 'first_run'),
+    ('event_name', 'filter', 'abi'),
 )
 Proxies = namedtuple(
     'Proxies',
@@ -310,35 +310,17 @@ class BlockchainEvents:
     def __init__(self):
         self.event_listeners = list()
 
-    def reset(self):
-        listeners = [
-            event_listener._replace(first_run=True)
-            for event_listener in self.event_listeners
-        ]
-        self.event_listeners = listeners
-
     def poll_blockchain_events(self, block_number: int = None):
-        # When we test with geth if the contracts have already been deployed
-        # before the filter creation we need to use `get_all_entries` to make
-        # sure we get all the events. With tester this is not required.
-
         for event_listener in self.event_listeners:
-            if isinstance(event_listener.filter, StatelessFilter):
-                events = event_listener.filter.get_new_entries(block_number)
-            elif event_listener.first_run is True:
-                events = event_listener.filter.get_all_entries()
-                index = self.event_listeners.index(event_listener)
-                self.event_listeners[index] = event_listener._replace(first_run=False)
-            else:
-                events = event_listener.filter.get_new_entries()
+            assert isinstance(event_listener.filter, StatelessFilter)
 
-            for log_event in events:
+            for log_event in event_listener.filter.get_new_entries(block_number):
                 decoded_event = dict(decode_event(
                     event_listener.abi,
                     log_event,
                 ))
 
-                if decoded_event is not None:
+                if decoded_event:
                     decoded_event['block_number'] = log_event.get('blockNumber', 0)
                     event = Event(
                         to_canonical_address(log_event['address']),
@@ -361,7 +343,6 @@ class BlockchainEvents:
             event_name,
             eth_filter,
             abi,
-            True,
         )
         self.event_listeners.append(event)
 
@@ -384,12 +365,12 @@ class BlockchainEvents:
             token_network_proxy,
             from_block: typing.BlockSpecification = 'latest',
     ):
-        _filter = token_network_proxy.all_events_filter(from_block=from_block)
+        token_network_filter = token_network_proxy.all_events_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
 
         self.add_event_listener(
             'TokenNetwork {}'.format(pex(token_network_address)),
-            _filter,
+            token_network_filter,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         )
 
