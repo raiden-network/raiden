@@ -1,6 +1,5 @@
 import gevent
 import pytest
-import structlog
 
 from raiden.tests.utils.network import (
     CHAIN,
@@ -12,8 +11,6 @@ from raiden.tests.utils.network import (
     wait_for_channels,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @pytest.fixture

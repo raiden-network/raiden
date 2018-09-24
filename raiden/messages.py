@@ -1,6 +1,5 @@
 from operator import attrgetter
 
-import structlog
 from cachetools import LRUCache, cached
 from eth_utils import (
     big_endian_to_int,
@@ -61,7 +60,6 @@ __all__ = (
     'from_dict',
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 _senders_cache = LRUCache(maxsize=128)
 _hashes_cache = LRUCache(maxsize=128)
 _lock_bytes_cache = LRUCache(maxsize=128)

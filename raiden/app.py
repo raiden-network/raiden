@@ -1,6 +1,5 @@
 from binascii import unhexlify
 
-import structlog
 from eth_utils import to_checksum_address
 
 from raiden.exceptions import InvalidSettleTimeout
@@ -22,8 +21,6 @@ from raiden.settings import (
     INITIAL_PORT,
 )
 from raiden.utils import pex, typing
-
-log = structlog.get_logger(__name__)
 
 
 class App:  # pylint: disable=too-few-public-methods
