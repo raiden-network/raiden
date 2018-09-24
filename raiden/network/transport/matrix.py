@@ -1287,9 +1287,17 @@ class MatrixTransport(Runnable):
         if changed:
             self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
 
+        def leave(room: Room):
+            """A race between /leave and /sync may remove the room before
+            del on _client.rooms key. Suppress it, as the end result is the same: no more room"""
+            try:
+                return room.leave()
+            except KeyError:
+                return True
+
         for room_id, room in rooms:
             if self._discovery_room and room_id == self._discovery_room.room_id:
                 # don't leave discovery room
                 continue
             if room_id not in keep_rooms:
-                self._spawn(room.leave)
+                self._spawn(leave, room)
