@@ -1,4 +1,3 @@
-import structlog
 from flask import Blueprint
 from flask_restful import Resource
 from webargs.flaskparser import use_kwargs
@@ -13,8 +12,6 @@ from raiden.api.v1.encoding import (
     RaidenEventsRequestSchema,
 )
 from raiden.utils import typing
-
-log = structlog.get_logger(__name__)
 
 
 def create_blueprint():

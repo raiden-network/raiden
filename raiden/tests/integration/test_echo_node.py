@@ -1,6 +1,5 @@
 import gevent
 import pytest
-import structlog
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.events import must_contain_entry
@@ -8,8 +7,6 @@ from raiden.tests.utils.network import CHAIN
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import wait_until
 from raiden.utils.echo_node import EchoNode
-
-log = structlog.get_logger(__name__)
 
 
 @pytest.mark.parametrize('number_of_nodes', [4])

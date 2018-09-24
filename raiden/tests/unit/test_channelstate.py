@@ -5,7 +5,6 @@ from copy import deepcopy
 from itertools import cycle
 
 import pytest
-import structlog
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer, Secret
@@ -61,9 +60,6 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils import privatekey_to_address, random_secret, sha3
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
 
 PartnerStateModel = namedtuple(
     'PartnerStateModel',

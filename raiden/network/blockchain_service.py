@@ -1,5 +1,4 @@
 import gevent
-import structlog
 from cachetools.func import ttl_cache
 from eth_utils import is_binary_address
 from gevent.lock import Semaphore
@@ -15,8 +14,6 @@ from raiden.network.proxies import (
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
 from raiden.utils.typing import Address, ChannelID, T_ChannelID
-
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class BlockChainService:
