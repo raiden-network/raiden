@@ -4,6 +4,7 @@ import click
 import gevent
 import requests
 import structlog
+from eth_utils import to_hex
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
@@ -141,16 +142,16 @@ class AlarmTask(Runnable):
 
             if latest_block_number != last_block_number:
                 log.debug(
-                    'new block',
+                    'Received new block',
                     number=latest_block_number,
                     gas_limit=latest_block['gasLimit'],
-                    block_hash=latest_block['hash'],
+                    block_hash=to_hex(latest_block['hash']),
                 )
 
                 if latest_block_number > last_block_number + 1:
                     missed_blocks = latest_block_number - last_block_number - 1
                     log.info(
-                        'missed blocks',
+                        'Missed block(s)',
                         missed_blocks=missed_blocks,
                         latest_block=latest_block,
                     )
