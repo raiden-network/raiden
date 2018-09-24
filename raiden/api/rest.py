@@ -358,9 +358,13 @@ class APIServer(Runnable):
             # Inside frozen pyinstaller image
             self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
 
-        self.flask_app.errorhandler(HTTPStatus.NOT_FOUND)(endpoint_not_found)
-        self.flask_app.errorhandler(Exception)(self.unhandled_exception)
+        self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
+        self.flask_app.register_error_handler(Exception, self.unhandled_exception)
         self.flask_app.before_request(self._is_raiden_running)
+
+        # needed so flask_restful propagates the exception to our error handler above
+        # or else, it'll replace it with a E500 response
+        self.flask_app.config['PROPAGATE_EXCEPTIONS'] = True
 
         if web_ui:
             for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
@@ -460,13 +464,9 @@ class APIServer(Runnable):
         """ Flask.errorhandler when an exception wasn't correctly handled """
         log.critical(
             'Unhandled exception when processing endpoint request',
-            exc_type=exception.__class__,
-            exception=str(exception),
+            exc_info=True,
         )
-        try:
-            self.greenlet.kill(exception)
-        finally:
-            raise exception  # re-raise to avoid further handling
+        self.greenlet.kill(exception)
 
 
 class RestAPI:
