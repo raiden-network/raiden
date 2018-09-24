@@ -466,24 +466,20 @@ class RaidenService(Runnable):
             duplicated `Block` state changes in the log.
 
             Therefore this method should be called only once a new block is
-            mined with the appropriate block_number argument from the
-            AlarmTask.
+            mined with the corresponding block data from the AlarmTask.
         """
-        # Raiden relies on blockchain events to update its off-chain state,
-        # therefore some APIs /used/ to forcefully poll for events.
-        #
-        # This was done for APIs which have on-chain side-effects, e.g.
-        # openning a channel, where polling the event is required to update
-        # off-chain state to providing a consistent view to the caller, e.g.
-        # the channel exists after the API call returns.
-        #
-        # That pattern introduced a race, because the events are returned only
-        # once per filter, and this method would be called concurrently by the
-        # API and the AlarmTask. The following lock is necessary, to ensure the
-        # expected side-effects are properly applied (introduced by the commit
+        # User facing APIs, which have on-chain side-effects, force polled the
+        # blockchain to update the node's state. This force poll is used to
+        # provide a consistent view to the user, e.g. a channel open call waits
+        # for the transaction to be mined and force polled the event to update
+        # the node's state. This pattern introduced a race with the alarm task
+        # and the task which served the user request, because the events are
+        # returned only once per filter. The lock bellow is to protect against
+        # these races (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
-        latest_block_number = latest_block['number']
         with self.event_poll_lock:
+            latest_block_number = latest_block['number']
+
             for event in self.blockchain_events.poll_blockchain_events(latest_block_number):
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the ChainState's block_number.
