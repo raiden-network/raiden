@@ -135,6 +135,7 @@ def configure_logging(
         disable_debug_logfile: bool = False,
         debug_log_file_name: str = 'raiden-debug.log',
         _first_party_packages: FrozenSet[str] =_FIRST_PARTY_PACKAGES,
+        cache_logger_on_first_use: bool = True,
 ):
     structlog.reset_defaults()
 
@@ -252,7 +253,7 @@ def configure_logging(
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        cache_logger_on_first_use=cache_logger_on_first_use,
     )
 
     # set logging level of the root logger to DEBUG, to be able to intercept
