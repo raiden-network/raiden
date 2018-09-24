@@ -106,30 +106,39 @@ class StatelessFilter(LogFilter):
         self._last_block: int = -1
         self._lock = Semaphore()
 
-    def get_new_entries(self, block_number: int):
+    def get_new_entries(self, block_number: BlockSpecification):
         with self._lock:
             filter_params = self.filter_params.copy()
             filter_params['fromBlock'] = max(
                 filter_params.get('fromBlock', 0),
                 self._last_block + 1,
             )
+
             if self.filter_params.get('toBlock') in (None, 'latest', 'pending'):
                 filter_params['toBlock'] = block_number or 'latest'
-            self._last_block = filter_params.get('toBlock') or block_number
-            try:
-                return self.web3.eth.getLogs(filter_params)
-            except BlockNotFound:
-                return []
 
-    def get_all_entries(self, block_number: int = None):
+            try:
+                result = self.web3.eth.getLogs(filter_params)
+            except BlockNotFound:
+                result = []
+            else:
+                self._last_block = filter_params.get('toBlock') or block_number
+
+            return result
+
+    def get_all_entries(self, block_number: BlockSpecification = None):
         with self._lock:
             filter_params = self.filter_params.copy()
-            if block_number is None:
-                block_number = self.web3.eth.blockNumber
+            block_number = block_number or self.web3.eth.blockNumber
+
             if self.filter_params.get('toBlock') in ('latest', 'pending'):
                 filter_params['toBlock'] = block_number
-            self._last_block = filter_params.get('toBlock') or block_number
+
             try:
-                return self.web3.eth.getLogs(filter_params)
+                result = self.web3.eth.getLogs(filter_params)
             except BlockNotFound:
-                return []
+                result = []
+            else:
+                self._last_block = filter_params.get('toBlock') or block_number
+
+            return result
