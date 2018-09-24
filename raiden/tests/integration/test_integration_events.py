@@ -1,18 +1,20 @@
+from typing import Dict, List
+
 import gevent
 import pytest
-from eth_utils import to_checksum_address
+from eth_utils import is_list_like, to_checksum_address
+from web3.utils.events import construct_event_topic_set
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.blockchain.events import (
     ALL_EVENTS,
     get_all_netting_channel_events,
-    get_netting_channel_closed_events,
-    get_netting_channel_deposit_events,
-    get_netting_channel_settled_events,
+    get_contract_events,
     get_token_network_events,
     get_token_network_registry_events,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -23,7 +25,107 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import channel, views
 from raiden.utils import sha3
-from raiden_contracts.constants import EVENT_TOKEN_NETWORK_CREATED, ChannelEvent
+from raiden.utils.typing import Address, BlockSpecification, ChannelID
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK,
+    EVENT_TOKEN_NETWORK_CREATED,
+    ChannelEvent,
+)
+from raiden_contracts.contract_manager import CONTRACT_MANAGER
+
+
+def get_netting_channel_closed_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    closed_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        ChannelEvent.CLOSED,
+    )
+
+    topic_set = construct_event_topic_set(
+        event_abi=closed_event_abi,
+        arguments={'channel_identifier': netting_channel_identifier},
+    )
+
+    if len(topic_set) == 1 and is_list_like(topic_set[0]):
+        topics = topic_set[0]
+    else:
+        topics = topic_set
+
+    return get_contract_events(
+        chain=chain,
+        abi=CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_address=token_network_address,
+        topics=topics,
+        from_block=from_block,
+        to_block=to_block,
+    )
+
+
+def get_netting_channel_deposit_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    deposit_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        ChannelEvent.DEPOSIT,
+    )
+    topic_set = construct_event_topic_set(
+        event_abi=deposit_event_abi,
+        arguments={'channel_identifier': netting_channel_identifier},
+    )
+
+    if len(topic_set) == 1 and is_list_like(topic_set[0]):
+        topics = topic_set[0]
+    else:
+        topics = topic_set
+
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
+        topics,
+        from_block,
+        to_block,
+    )
+
+
+def get_netting_channel_settled_events(
+        chain: BlockChainService,
+        token_network_address: Address,
+        netting_channel_identifier: ChannelID,
+        from_block: BlockSpecification = 0,
+        to_block: BlockSpecification = 'latest',
+) -> List[Dict]:
+    settled_event_abi = CONTRACT_MANAGER.get_event_abi(
+        CONTRACT_TOKEN_NETWORK,
+        ChannelEvent.SETTLED,
+    )
+    topic_set = construct_event_topic_set(
+        event_abi=settled_event_abi,
+        arguments={'channel_identifier': netting_channel_identifier},
+    )
+
+    if len(topic_set) == 1 and is_list_like(topic_set[0]):
+        topics = topic_set[0]
+    else:
+        topics = topic_set
+
+    return get_contract_events(
+        chain,
+        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        token_network_address,
+        topics,
+        from_block,
+        to_block,
+    )
 
 
 def wait_both_channel_open(
