@@ -323,10 +323,10 @@ class RaidenService(Runnable):
                     self.raiden_event_handler.on_raiden_event(self, transaction)
                 except RaidenRecoverableError as e:
                     log.error(str(e))
+                except InvalidDBData as e:
+                    raise
                 except RaidenUnrecoverableError as e:
                     if self.config['network_type'] == NetworkType.MAIN:
-                        if isinstance(e, InvalidDBData):
-                            raise
                         log.error(str(e))
                     else:
                         raise
@@ -430,10 +430,10 @@ class RaidenService(Runnable):
                 )
             except RaidenRecoverableError as e:
                 log.error(str(e))
+            except InvalidDBData as e:
+                raise
             except RaidenUnrecoverableError as e:
                 if self.config['network_type'] == NetworkType.MAIN:
-                    if isinstance(e, InvalidDBData):
-                        raise
                     log.error(str(e))
                 else:
                     raise
