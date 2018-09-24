@@ -674,7 +674,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/ HTTP/1.1
+      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -788,7 +788,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
 Now for the internal Raiden events:
 
-.. http:get:: /api/(version)/_debug/raiden_events/
+.. http:get:: /api/(version)/_debug/raiden_events
 
    Query for Raiden internal node events.
 
@@ -796,7 +796,7 @@ Now for the internal Raiden events:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/raiden_events/ HTTP/1.1
+      GET /api/1/_debug/raiden_events HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
