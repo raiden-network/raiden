@@ -1525,7 +1525,7 @@ def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeo
 
 
 def test_payee_timeout_must_be_equal_to_payer_timeout():
-    # The description bellow /was/ true without a secret registry. With the
+    # The description below /was/ true without a secret registry. With the
     # secret registry expirations are constant and the race below is not
     # possible anymore.
     #
