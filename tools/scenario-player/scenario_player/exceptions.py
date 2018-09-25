@@ -26,6 +26,10 @@ class RESTAPIError(ScenarioError):
     pass
 
 
+class RESTAPIStatusMismatchError(ScenarioError):
+    pass
+
+
 class UnknownTaskTypeError(ScenarioError):
     pass
 
