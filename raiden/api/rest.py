@@ -93,6 +93,7 @@ ERROR_STATUS_CODES = [
     HTTPStatus.BAD_REQUEST,
     HTTPStatus.NOT_FOUND,
     HTTPStatus.NOT_IMPLEMENTED,
+    HTTPStatus.INTERNAL_SERVER_ERROR,
 ]
 
 URLS_V1 = [
@@ -467,6 +468,7 @@ class APIServer(Runnable):
             exc_info=True,
         )
         self.greenlet.kill(exception)
+        return api_error([str(exception)], HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
 class RestAPI:
