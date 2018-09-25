@@ -253,7 +253,6 @@ def handle_block(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
-        pseudo_random_generator: random.Random,
 ):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
@@ -323,7 +322,6 @@ def state_transition(
             target_state,
             channel_state,
             state_change.block_number,
-            pseudo_random_generator,
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_secretreveal(
