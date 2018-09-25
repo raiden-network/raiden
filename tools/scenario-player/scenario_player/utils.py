@@ -141,7 +141,7 @@ def send_notification_mail(target_mail, subject, message, api_key):
 
 def get_gas_price_strategy(gas_price: Union[int, str]) -> callable:
     if isinstance(gas_price, int):
-        def fixed_gas_price(web3, tx):
+        def fixed_gas_price(_web3, _tx):
             return gas_price
         return fixed_gas_price
     elif gas_price == 'fast':

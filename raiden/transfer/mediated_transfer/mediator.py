@@ -695,7 +695,6 @@ def events_for_expired_locks(
 ):
     events = list()
 
-    transfer_pair: MediationPairState
     for transfer_pair in mediator_state.transfers_pair:
         balance_proof = transfer_pair.payee_transfer.balance_proof
         channel_identifier = balance_proof.channel_identifier
@@ -817,8 +816,6 @@ def mediate_transfer(
     send a refund back to the payer, allowing the payer to try a different
     route.
     """
-    transfer_pair = None
-
     available_routes = filter_used_routes(
         state.transfers_pair,
         possible_routes,
@@ -1085,7 +1082,6 @@ def handle_lock_expired(
 ):
     events = list()
 
-    transfer_pair: MediationPairState
     for transfer_pair in mediator_state.transfers_pair:
         balance_proof = transfer_pair.payer_transfer.balance_proof
         channel_state = channelidentifiers_to_channels.get(balance_proof.channel_identifier)

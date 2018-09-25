@@ -1765,8 +1765,6 @@ def handle_receive_refundtransfercancelroute(
 
 
 def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
-    events: typing.List[Event]
-
     is_valid, msg, unlocked_merkletree = is_valid_unlock(
         unlock,
         channel_state,

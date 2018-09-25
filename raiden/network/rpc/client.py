@@ -40,7 +40,7 @@ except (ModuleNotFoundError, DistributionNotFound):
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def make_connection_test_middleware(client):
+def make_connection_test_middleware():
     def connection_test_middleware(make_request, web3):
         """ Creates middleware that checks if the provider is connected. """
 
@@ -153,7 +153,7 @@ def monkey_patch_web3(web3, client, gas_price_strategy):
 
     # create the connection test middleware (but only for non-tester chain)
     if not hasattr(web3, 'testing'):
-        connection_test = make_connection_test_middleware(client)
+        connection_test = make_connection_test_middleware()
         web3.middleware_stack.inject(connection_test, layer=0)
 
 
