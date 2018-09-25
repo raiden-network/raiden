@@ -267,7 +267,7 @@ class BlockchainEvents:
         token_network_registry_address = token_network_registry_proxy.address
 
         self.add_event_listener(
-            'TokenNetwork {}'.format(pex(token_network_registry_address)),
+            'TokenNetworkRegistry {}'.format(pex(token_network_registry_address)),
             token_new_filter,
             CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         )
