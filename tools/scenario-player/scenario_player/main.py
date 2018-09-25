@@ -9,6 +9,7 @@ import gevent
 import structlog
 from blessings import Terminal
 from eth_utils import to_checksum_address
+from web3.utils.transactions import TRANSACTION_DEFAULTS
 
 from raiden.accounts import Account
 from raiden.log_config import configure_logging
@@ -18,6 +19,8 @@ from scenario_player.tasks.base import TaskState, collect_tasks
 from scenario_player.utils import DummyStream, LogBuffer, send_notification_mail
 
 log = structlog.get_logger(__name__)
+
+TRANSACTION_DEFAULTS['gas'] = lambda web3, tx: web3.eth.estimateGas(tx) * 2
 
 
 def _ui(term, runner, log_file_name, log_buffer):
