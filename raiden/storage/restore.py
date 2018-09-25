@@ -9,7 +9,6 @@ from .wal import restore_to_state_change
 def channel_state_until_state_change(
         raiden: 'RaidenService',
         token_address: typing.TokenAddress,
-        token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
         state_change_identifier: int,
 ) -> typing.Optional[NettingChannelState]:

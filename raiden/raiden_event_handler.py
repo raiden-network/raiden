@@ -358,7 +358,6 @@ class RaidenEventHandler:
         restored_channel_state = channel_state_until_state_change(
             raiden=raiden,
             token_address=channel_unlock_event.token_address,
-            token_network_identifier=channel_unlock_event.token_network_identifier,
             channel_identifier=channel_unlock_event.channel_identifier,
             state_change_identifier=record.state_change_identifier,
         )
