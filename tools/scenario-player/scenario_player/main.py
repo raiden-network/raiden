@@ -26,7 +26,6 @@ def _ui(term, runner, log_file_name, log_buffer):
     separator = 1
     scrollback_tasks = 0
     scrollback_logs = 0
-    task_listing = ""
 
     while True:
         size_changed = (

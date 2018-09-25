@@ -478,7 +478,6 @@ def handle_token_network_action(
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     # TODO: improve the complexity of this algorithm
     queueids_to_remove = []
-    queueid: QueueIdentifier
     for queueid, queue in chain_state.queueids_to_queues.items():
         if queueid.channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE:
             filtered_queue = [

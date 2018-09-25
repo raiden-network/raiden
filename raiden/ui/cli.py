@@ -1056,7 +1056,6 @@ class NodeRunner:
 
         self._raiden_api = RaidenAPI(app_.raiden)
 
-        api_server = None
         if self._options['rpc']:
             rest_api = RestAPI(self._raiden_api)
             api_server = APIServer(

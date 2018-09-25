@@ -322,7 +322,6 @@ class RaidenEventHandler:
 
         partner_details = participants_details.partner_details
         partner_locksroot = partner_details.locksroot
-        record = None
 
         if (partner_details.address == channel_unlock_event.participant and
                 partner_locksroot != EMPTY_HASH):

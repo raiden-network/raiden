@@ -324,8 +324,6 @@ def geth_run_nodes(
         verbosity,
     )
 
-    stdout = None
-    stderr = None
     processes_list = []
     for pos, cmd in enumerate(cmds):
         log_path = os.path.join(logdir, str(pos))
