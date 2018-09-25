@@ -441,7 +441,6 @@ def is_valid_lockedtransfer(
         receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
     return valid_lockedtransfer_check(
-        transfer_state,
         channel_state,
         sender_state,
         receiver_state,
@@ -541,7 +540,6 @@ def is_valid_lock_expired(
 
 
 def valid_lockedtransfer_check(
-        mediated_transfer: LockedTransferSignedState,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
@@ -673,7 +671,6 @@ def is_valid_refund(
         received_transfer: LockedTransferUnsignedState,
 ) -> MerkletreeOrError:
     is_valid_locked_transfer, msg, merkletree = valid_lockedtransfer_check(
-        refund,
         channel_state,
         sender_state,
         receiver_state,
