@@ -1251,7 +1251,7 @@ class MatrixTransport(Runnable):
 
         keep_rooms: Set[_RoomID] = set()
 
-        for address_hex, room_ids in _address_to_room_ids.items():
+        for address_hex, room_ids in list(_address_to_room_ids.items()):
             if not room_ids:  # None or empty
                 room_ids = list()
             if not isinstance(room_ids, list):  # old version, single room
