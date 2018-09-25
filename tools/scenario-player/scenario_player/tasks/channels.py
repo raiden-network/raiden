@@ -19,7 +19,7 @@ class OpenChannelTask(RaidenAPIActionTask):
             ],
         )
         total_deposit = self._config.get('total_deposit')
-        if total_deposit:
+        if total_deposit is not None:
             params['total_deposit'] = total_deposit
         return params
 

@@ -1,0 +1,67 @@
+settings:
+  gas_price: "fast"
+
+token:
+  balance_min: 40
+
+nodes:
+  commands:
+    #start: "docker start raiden_{:02d}"
+    #stop: "docker stop raiden_{:02d}"
+    #kill: "docker kill raiden_{:02d}"
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 4
+    template: "127.0.0.1:50{:02d}"
+
+scenario:
+  serial:
+    name: "Open channel scenarios"
+    tasks:
+      - parallel:
+          name: "Create channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 20, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 20, expected_http_status: 201}
+      - parallel:
+          name: "Verify if channels were opened corectly"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 20, balance: 20,  state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 20, balance: 20,  state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 0,  state: "opened"}
+      - parallel:
+          name: "Testing different cases"
+          tasks:
+            # Try to open a channel with himself
+            - open_channel: {from: 0, to: 0, total_deposit: 10, expected_http_status: 409}
+            # Try to open a channel with the same partner and check for expected response
+            - open_channel: {from: 0, to: 1, total_deposit: 10, expected_http_status: 409}
+            # Try to open a channel with 0 tokens for the initial deposit
+            - open_channel: {from: 1, to: 3, total_deposit: 0, expected_http_status: 201}
+            # Try to open a channel without having enough tokens for the initial deposit
+            - open_channel: {from: 0, to: 2, total_deposit: 40, expected_http_status: 402}
+      - parallel:
+          name: "Verify if channels were opened corectly"
+          tasks:
+            - assert: {from: 1, to: 3, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 0, balance: 0,  state: "opened"}
+      - parallel:
+          name: "Close the opened channels"
+          tasks:
+            - close_channel: {from: 0, to: 1}
+            - close_channel: {from: 1, to: 2}
+            - close_channel: {from: 1, to: 3}
+      - parallel:
+          name: "Check if the channels were closed"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 20, balance: 20,  state: "closed"}
+            - assert: {from: 1, to: 2, total_deposit: 20, balance: 20,  state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 0,  state: "closed"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 0,  state: "closed"}
+            - assert: {from: 1, to: 3, total_deposit: 0, balance: 0,  state: "closed"}
+            - assert: {from: 3, to: 1, total_deposit: 0, balance: 0,  state: "closed"}
+
