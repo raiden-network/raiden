@@ -117,3 +117,8 @@ scenario:
 #            - close_channel: {from: 0, to: 1}
 #            - close_channel: {from: 1, to: 2}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
+
+# Status code matching (int or regex):
+#      - open_channel: {from: 0, to: 1}
+#      - open_channel: {from: 0, to: 1, expected_http_status: 409}
+#      - open_channel: {from: 0, to: 1, expected_http_status: '4.9'}

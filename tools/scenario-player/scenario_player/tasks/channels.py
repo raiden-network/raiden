@@ -70,16 +70,19 @@ class AssertTask(ChannelActionTask):
     _name = 'assert'
     _method = 'get'
 
-    def _process_response(self, response: dict):
+    def _process_response(self, response_dict: dict):
+        response_dict = super()._process_response(response_dict)
         for field in ['balance', 'total_deposit', 'state']:
             if field not in self._config:
                 continue
-            if field not in response:
-                raise ScenarioAssertionError(f'Field "{field}" is missing in channel: {response}')
-            if response[field] != self._config[field]:
+            if field not in response_dict:
+                raise ScenarioAssertionError(
+                    f'Field "{field}" is missing in channel: {response_dict}',
+                )
+            if response_dict[field] != self._config[field]:
                 raise ScenarioAssertionError(
                     f'Value mismatch for "{field}". '
                     f'Should: "{self._config[field]}" '
-                    f'Is: "{response[field]}" '
-                    f'Channel: {response}',
+                    f'Is: "{response_dict[field]}" '
+                    f'Channel: {response_dict}',
                 )
