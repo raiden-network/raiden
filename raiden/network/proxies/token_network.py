@@ -150,6 +150,12 @@ class TokenNetwork:
         if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
+        log_details = {
+            'peer1': pex(self.node_address),
+            'peer2': pex(partner),
+        }
+        log.debug('new_netting_channel called', **log_details)
+
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
         if partner not in self.open_channel_transactions:
@@ -157,13 +163,9 @@ class TokenNetwork:
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:
-                log.info(
-                    'new_netting_channel called',
-                    peer1=pex(self.node_address),
-                    peer2=pex(partner),
-                )
                 transaction_hash = self._new_netting_channel(partner, settle_timeout)
             except Exception as e:
+                log.critical('new_netting_channel failed', **log_details)
                 new_open_channel_transaction.set_exception(e)
                 raise
             else:
@@ -176,20 +178,12 @@ class TokenNetwork:
 
         channel_created = self.channel_exists_and_not_settled(self.node_address, partner)
         if channel_created is False:
-            log.error(
-                'creating new channel failed',
-                peer1=pex(self.node_address),
-                peer2=pex(partner),
-            )
+            log.critical('new_netting_channel failed', **log_details)
             raise RaidenUnrecoverableError('creating new channel failed')
 
         channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
-        log.info(
-            'new_netting_channel created succesfully with',
-            peer1=pex(self.node_address),
-            peer2=pex(partner),
-            channel_identifier=channel_identifier,
-        )
+        log_details['channel_identifier'] = channel_identifier
+        log.info('new_netting_channel succesful', **log_details)
 
         return channel_identifier
 
@@ -515,17 +509,34 @@ class TokenNetwork:
                 partner,
             ).deposit
             amount_to_deposit = total_deposit - current_deposit
+
+            log_details = {
+                'token_network': pex(self.address),
+                'node': pex(self.node_address),
+                'partner': pex(partner),
+                'total_deposit': total_deposit,
+                'amount_to_deposit': amount_to_deposit,
+                'id': id(self),
+            }
+            log.debug('setTotalDeposit called', **log_details)
+
+            # These two scenarions can happen if two calls to deposit happen
+            # and then we get here on the second call
             if total_deposit < current_deposit:
-                raise DepositMismatch(
+                msg = (
                     f'Current deposit ({current_deposit}) is already larger '
-                    f'than the requested total deposit amount ({total_deposit})',
+                    f'than the requested total deposit amount ({total_deposit})'
                 )
+                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                raise DepositMismatch(msg)
+
             if amount_to_deposit <= 0:
-                # Can happen if two calls to deposit happen and then we get here on the second call
-                raise DepositMismatch(
+                msg = (
                     f'total_deposit - current_deposit =  '
                     f'{amount_to_deposit} must be greater than 0.',
                 )
+                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                raise DepositMismatch(msg)
 
             # A node may be setting up multiple channels for the same token
             # concurrently. Because each deposit changes the user balance this
@@ -541,11 +552,13 @@ class TokenNetwork:
             #
             current_balance = token.balance_of(self.node_address)
             if current_balance < amount_to_deposit:
-                raise DepositMismatch(
+                msg = (
                     f'total_deposit - current_deposit =  {amount_to_deposit} can not '
                     f'be larger than the available balance {current_balance}, '
-                    f'for token at address {pex(token_address)}',
+                    f'for token at address {pex(token_address)}'
                 )
+                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                raise DepositMismatch(msg)
 
             # If there are channels being set up concurrenlty either the
             # allowance must be accumulated *or* the calls to `approve` and
@@ -567,16 +580,6 @@ class TokenNetwork:
             #  making the second deposit fail.
             token.approve(self.address, amount_to_deposit)
 
-            log_details = {
-                'token_network': pex(self.address),
-                'node': pex(self.node_address),
-                'partner': pex(partner),
-                'total_deposit': total_deposit,
-                'amount_to_deposit': amount_to_deposit,
-                'id': id(self),
-            }
-            log.info('deposit called', **log_details)
-
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
                 channel_identifier,
@@ -591,13 +594,14 @@ class TokenNetwork:
             if receipt_or_none:
                 if token.allowance(self.node_address, self.address) < amount_to_deposit:
                     log_msg = (
-                        'deposit failed. The allowance is insufficient, check concurrent deposits '
-                        'for the same token network but different proxies.'
+                        'setTotalDeposit failed. The allowance is insufficient, '
+                        'check concurrent deposits for the same token network '
+                        'but different proxies.'
                     )
                 elif token.balance_of(self.node_address) < amount_to_deposit:
-                    log_msg = 'deposit failed. The address doesnt have funds'
+                    log_msg = 'setTotalDeposit failed. The address doesnt have funds'
                 else:
-                    log_msg = 'deposit failed'
+                    log_msg = 'setTotalDeposit failed'
 
                 log.critical(log_msg, **log_details)
 
@@ -610,7 +614,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Deposit', receipt_or_none)
 
-            log.info('deposit successful', **log_details)
+            log.info('setTotalDeposit successful', **log_details)
 
     def close(
             self,
@@ -638,7 +642,7 @@ class TokenNetwork:
             'additional_hash': encode_hex(additional_hash),
             'signature': encode_hex(signature),
         }
-        log.info('close called', **log_details)
+        log.debug('closeChannel called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -666,7 +670,7 @@ class TokenNetwork:
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.critical('close failed', **log_details)
+                log.critical('closeChannel failed', **log_details)
 
                 self._check_channel_state_for_close(
                     self.node_address,
@@ -676,7 +680,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Close', receipt_or_none)
 
-            log.info('close successful', **log_details)
+            log.info('closeChannel successful', **log_details)
 
     def update_transfer(
             self,
@@ -698,7 +702,7 @@ class TokenNetwork:
             'closing_signature': encode_hex(closing_signature),
             'non_closing_signature': encode_hex(non_closing_signature),
         }
-        log.info('updateNonClosingBalanceProof called', **log_details)
+        log.debug('updateNonClosingBalanceProof called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -722,15 +726,19 @@ class TokenNetwork:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical('updateNonClosingBalanceProof failed', **log_details)
             channel_closed = self.channel_is_closed(
                 participant1=self.node_address,
                 participant2=partner,
                 channel_identifier=channel_identifier,
             )
             if channel_closed is False:
-                raise RaidenUnrecoverableError('Channel is not in a closed state')
-            raise TransactionThrew('Update NonClosing balance proof', receipt_or_none)
+                msg = 'Channel is not in a closed state'
+                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+                raise RaidenUnrecoverableError(msg)
+
+            msg = 'Update NonClosing balance proof'
+            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+            raise TransactionThrew(msg, receipt_or_none)
 
         log.info('updateNonClosingBalanceProof successful', **log_details)
 
@@ -750,7 +758,7 @@ class TokenNetwork:
             'partner_signature': encode_hex(partner_signature),
             'signature': encode_hex(signature),
         }
-        log.info('withdraw called', **log_details)
+        log.debug('setTotalWithdraw called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -764,13 +772,19 @@ class TokenNetwork:
             partner,
         ).withdrawn
         amount_to_withdraw = total_withdraw - current_withdraw
+
         if total_withdraw < current_withdraw:
-            raise WithdrawMismatch(
+            msg = (
                 f'Current withdraw ({current_withdraw}) is already larger '
                 f'than the requested total withdraw amount ({total_withdraw})',
             )
+            log.critical(f'setTotalWithdraw failed, {msg}', **log_details)
+            raise WithdrawMismatch(msg)
+
         if amount_to_withdraw <= 0:
-            raise ValueError(f'withdraw {amount_to_withdraw} must be greater than 0.')
+            msg = f'withdraw {amount_to_withdraw} must be greater than 0.'
+            log.critical(f'setTotalWithdraw failed, {msg}', **log_details)
+            raise ValueError(msg)
 
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
@@ -785,7 +799,7 @@ class TokenNetwork:
 
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.critical('withdraw failed', **log_details)
+                log.critical('setTotalWithdraw failed', **log_details)
 
                 self._check_channel_state_for_withdraw(
                     self.node_address,
@@ -796,7 +810,7 @@ class TokenNetwork:
 
                 raise TransactionThrew('Withdraw', receipt_or_none)
 
-            log.info('withdraw successful', **log_details)
+            log.info('setTotalWithdraw successful', **log_details)
 
     def unlock(
             self,
@@ -875,7 +889,7 @@ class TokenNetwork:
             'partner_locked_amount': partner_locked_amount,
             'partner_locksroot': encode_hex(partner_locksroot),
         }
-        log.info('settle called', **log_details)
+        log.debug('settle called', **log_details)
 
         self._check_for_outdated_channel(
             self.node_address,
@@ -920,7 +934,7 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                log.info('settle failed', **log_details)
+                log.critical('settle failed', **log_details)
                 self._check_channel_state_for_settle(
                     self.node_address,
                     partner,

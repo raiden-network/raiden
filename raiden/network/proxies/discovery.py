@@ -1,3 +1,4 @@
+import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from web3.exceptions import BadFunctionCallOutput
 
@@ -12,9 +13,11 @@ from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
-from raiden.utils import compare_versions, pex
+from raiden.utils import compare_versions, pex, privatekey_to_address
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 from raiden_contracts.contract_manager import CONTRACT_MANAGER
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class Discovery:
@@ -50,6 +53,7 @@ class Discovery:
             raise AddressWrongContract('')
 
         self.address = discovery_address
+        self.node_address = privatekey_to_address(jsonrpc_client.privkey)
         self.client = jsonrpc_client
         self.not_found_address = NULL_ADDRESS
         self.proxy = proxy
@@ -57,6 +61,13 @@ class Discovery:
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
             raise ValueError("node_address doesnt match this node's address")
+
+        log_details = {
+            'node': pex(self.node_address),
+            'node_address': pex(node_address),
+            'endpoint': endpoint,
+        }
+        log.debug('registerEndpoint called', **log_details)
 
         transaction_hash = self.proxy.transact(
             'registerEndpoint',
@@ -67,7 +78,10 @@ class Discovery:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
+            log.critical('registerEndpoint failed', **log_details)
             raise TransactionThrew('Register Endpoint', receipt_or_none)
+
+        log.debug('registerEndpoint successful', **log_details)
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = to_checksum_address(node_address_bin)
