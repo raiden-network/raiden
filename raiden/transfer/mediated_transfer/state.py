@@ -187,7 +187,7 @@ class MediatorTransferState(State):
         # for convenience
         self.secrethash = secrethash
         self.secret = None
-        self.transfers_pair = list()
+        self.transfers_pair: MediationPairState = list()
 
     def __repr__(self):
         return '<MediatorTransferState secrethash:{} qtd_transfers:{}>'.format(
