@@ -387,14 +387,13 @@ class RaidenService(Runnable):
         #
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
-        try:
-            self.transport.stop()
-            self.alarm.stop()
-            self.transport.get()
-            self.alarm.get()
-            self.blockchain_events.uninstall_all_event_listeners()
-        except gevent.Timeout:
-            pass
+        self.transport.stop()
+        self.alarm.stop()
+
+        self.transport.join()
+        self.alarm.join()
+
+        self.blockchain_events.uninstall_all_event_listeners()
 
         if self.db_lock is not None:
             self.db_lock.release()
