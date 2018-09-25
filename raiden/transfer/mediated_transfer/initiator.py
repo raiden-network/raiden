@@ -307,7 +307,6 @@ def handle_onchain_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
-        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     """ Validates and handles a ContractReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
