@@ -905,12 +905,11 @@ def handle_block(
         state_change: Block,
         channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
 ):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time locks.
     Args:
-        state (MediatorTransferState): The current state.
+        state: The current state.
     Return:
         TransitionResult: The resulting iteration
     """
@@ -918,19 +917,19 @@ def handle_block(
     expired_locks_events = events_for_expired_locks(
         mediator_state,
         channelidentifiers_to_channels,
-        block_number,
+        state_change.block_number,
         pseudo_random_generator,
     )
 
     secret_reveal_events = events_for_onchain_secretreveal(
         channelidentifiers_to_channels,
         mediator_state.transfers_pair,
-        block_number,
+        state_change.block_number,
     )
 
     unlock_fail_events = set_expired_pairs(
         mediator_state.transfers_pair,
-        block_number,
+        state_change.block_number,
     )
 
     iteration = TransitionResult(
@@ -1125,7 +1124,6 @@ def state_transition(
             state_change,
             channelidentifiers_to_channels,
             pseudo_random_generator,
-            block_number,
         )
 
     elif isinstance(state_change, ReceiveTransferRefund):

@@ -87,7 +87,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
             block_state_change,
             channel_map,
             pseudo_random_generator,
-            block_number,
         )
         new_state = block_iteration.new_state
 
@@ -120,5 +119,4 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         expired_block_state_change,
         channel_map,
         pseudo_random_generator,
-        expired_block_number,
     )
