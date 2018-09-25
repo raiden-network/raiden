@@ -28,6 +28,42 @@ from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils import typing
 
 
+def events_for_unlock_lock(
+        initiator_state,
+        channel_state,
+        secret,
+        secrethash,
+        pseudo_random_generator,
+):
+    # next hop learned the secret, unlock the token locally and send the
+    # lock claim message to next hop
+    transfer_description = initiator_state.transfer_description
+
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    unlock_lock = channel.send_unlock(
+        channel_state=channel_state,
+        message_identifier=message_identifier,
+        payment_identifier=transfer_description.payment_identifier,
+        secret=secret,
+        secrethash=secrethash,
+    )
+
+    payment_sent_success = EventPaymentSentSuccess(
+        payment_network_identifier=channel_state.payment_network_identifier,
+        token_network_identifier=channel_state.token_network_identifier,
+        identifier=transfer_description.payment_identifier,
+        amount=transfer_description.amount,
+        target=transfer_description.target,
+    )
+
+    unlock_success = EventUnlockSuccess(
+        transfer_description.payment_identifier,
+        transfer_description.secrethash,
+    )
+
+    return [unlock_lock, payment_sent_success, unlock_success]
+
+
 def handle_block(
         initiator_state: InitiatorTransferState,
         state_change: Block,
@@ -257,48 +293,31 @@ def handle_secretreveal(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
-    """ Send a balance proof to the next hop with the current mediated transfer
-    lock removed and the balance updated.
+    """ Once the next hop proves it knows the secret, the initiator can unlock
+    the mediated transfer.
+
+    This will validate the secret, and if valid a new balance proof is sent to
+    the next hop with the current lock removed from the merkle tree and the
+    transferred amount updated.
     """
     is_valid_secret_reveal = (
         state_change.sender == channel_state.partner_state.address and
         state_change.secrethash == initiator_state.transfer_description.secrethash
     )
-
-    # If the channel is closed the balance proof must not be sent
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
     if is_valid_secret_reveal and is_channel_open:
-        # next hop learned the secret, unlock the token locally and send the
-        # lock claim message to next hop
-        transfer_description = initiator_state.transfer_description
-
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        unlock_lock = channel.send_unlock(
-            channel_state=channel_state,
-            message_identifier=message_identifier,
-            payment_identifier=transfer_description.payment_identifier,
-            secret=state_change.secret,
-            secrethash=state_change.secrethash,
+        events = events_for_unlock_lock(
+            initiator_state,
+            channel_state,
+            state_change.secret,
+            state_change.secrethash,
+            pseudo_random_generator,
         )
-
-        # TODO: Emit these events after on-chain unlock
-        payment_sent_success = EventPaymentSentSuccess(
-            payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifier,
-            identifier=transfer_description.payment_identifier,
-            amount=transfer_description.amount,
-            target=transfer_description.target,
-        )
-
-        unlock_success = EventUnlockSuccess(
-            transfer_description.payment_identifier,
-            transfer_description.secrethash,
-        )
-
-        iteration = TransitionResult(None, [payment_sent_success, unlock_success, unlock_lock])
+        iteration = TransitionResult(None, events)
     else:
-        iteration = TransitionResult(initiator_state, list())
+        events = list()
+        iteration = TransitionResult(initiator_state, events)
 
     return iteration
 
@@ -308,20 +327,27 @@ def handle_onchain_secretreveal(
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
 ) -> TransitionResult:
-    """ Validates and handles a ContractReceiveSecretReveal state change. """
-    valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
+    """ When a secret is revealed on-chain all nodes learn the secret.
 
-    iteration = TransitionResult(initiator_state, list())
-    if valid_secret:
-        # Register LockedTransfer in secrethashes_to_onchain_unlockedlocks
-        # without removing the LockedTransfer from secrethashes_to_lockedlocks
-        channel.register_onchain_secret(
-            channel_state=channel_state,
-            secret=state_change.secret,
-            secrethash=state_change.secrethash,
-            secret_reveal_block_number=state_change.block_number,
-            delete_lock=False,
+    This check the on-chain secret corresponds to the one used by the
+    initiator, and if valid a new balance proof is sent to the next hop with
+    the current lock removed from the merkle tree and the transferred amount
+    updated.
+    """
+    is_valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
+    is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+
+    if is_valid_secret and is_channel_open:
+        events = events_for_unlock_lock(
+            initiator_state,
+            channel_state,
+            state_change.secret,
+            state_change.secrethash,
+            pseudo_random_generator,
         )
-        iteration.new_state = initiator_state
+        iteration = TransitionResult(None, events)
+    else:
+        events = list()
+        iteration = TransitionResult(initiator_state, events)
 
     return iteration
