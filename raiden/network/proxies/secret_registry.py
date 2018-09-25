@@ -56,67 +56,58 @@ class SecretRegistry:
         self.register_secret_batch([secret])
 
     def register_secret_batch(self, secrets: List[typing.Secret]):
-        secret_batch = list()
+        secrets_to_register = list()
+        secrethashes_to_register = list()
+        secrethashes_not_sent = list()
         secret_registry_transaction = AsyncResult()
 
         for secret in secrets:
             secrethash = sha3(secret)
-            if not self.check_registered(secrethash):
-                if secret not in self.open_secret_transactions:
-                    secret_batch.append(secret)
-                    self.open_secret_transactions[secret] = secret_registry_transaction
+
+            is_register_needed = (
+                not self.check_registered(secrethash) and
+                secret not in self.open_secret_transactions
+            )
+            if is_register_needed:
+                secrets_to_register.append(secret)
+                secrethashes_to_register.append(secrethash)
+                self.open_secret_transactions[secret] = secret_registry_transaction
             else:
-                log.info(
-                    f'secret {encode_hex(secrethash)} already registered.',
-                    node=pex(self.node_address),
-                    contract=pex(self.address),
-                    secrethash=encode_hex(secrethash),
-                )
+                secrethashes_not_sent.append(secrethash)
 
-        if not secret_batch:
-            return
+        log_details = {
+            'node': pex(self.node_address),
+            'contract': pex(self.address),
+            'secrets': secrethashes_to_register,
+            'secrets_not_sent': secrethashes_not_sent,
+        }
 
-        log.info(
-            'registerSecretBatch called',
-            node=pex(self.node_address),
-            contract=pex(self.address),
-        )
+        if not secrets_to_register:
+            log.debug('registerSecretBatch skipped', **log_details)
+
+        log.debug('registerSecretBatch called', **log_details)
 
         try:
-            transaction_hash = self._register_secret_batch(secret_batch)
+            transaction_hash = self._register_secret_batch(secrets_to_register)
         except Exception as e:
+            log.critical('registerSecretBatch failed', **log_details)
             secret_registry_transaction.set_exception(e)
             raise
         else:
+            log.info('registerSecretBatch successful', **log_details)
             secret_registry_transaction.set(transaction_hash)
         finally:
-            for secret in secret_batch:
+            for secret in secrets_to_register:
                 self.open_secret_transactions.pop(secret, None)
 
     def _register_secret_batch(self, secrets):
-        transaction_hash = self.proxy.transact(
-            'registerSecretBatch',
-            secrets,
-        )
-
+        transaction_hash = self.proxy.transact('registerSecretBatch', secrets)
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            log.critical(
-                'registerSecretBatch failed',
-                node=pex(self.node_address),
-                contract=pex(self.address),
-                secrets=secrets,
-            )
             raise TransactionThrew('registerSecretBatch', receipt_or_none)
 
-        log.info(
-            'registerSecretBatch successful',
-            node=pex(self.node_address),
-            contract=pex(self.address),
-            secrets=secrets,
-        )
         return transaction_hash
 
     def get_register_block_for_secrethash(self, secrethash: typing.Keccak256) -> int:

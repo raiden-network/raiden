@@ -82,12 +82,12 @@ class TokenNetworkRegistry:
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
-        log.info(
-            'add_token called',
-            node=pex(self.node_address),
-            token_address=pex(token_address),
-            registry_address=pex(self.address),
-        )
+        log_details = {
+            'node': pex(self.node_address),
+            'token_address': pex(token_address),
+            'registry_address': pex(self.address),
+        }
+        log.debug('createERC20TokenNetwork called', **log_details)
 
         transaction_hash = self.proxy.transact(
             'createERC20TokenNetwork',
@@ -97,34 +97,28 @@ class TokenNetworkRegistry:
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.info(
-                'add_token failed',
-                node=pex(self.node_address),
-                token_address=pex(token_address),
-                registry_address=pex(self.address),
-            )
             if self.get_token_network(token_address):
-                raise RaidenRecoverableError('Token already registered')
+                msg = 'Token already registered'
+                log.info(f'createERC20TokenNetwork failed, {msg}', **log_details)
+                raise RaidenRecoverableError(msg)
+
+            log.critical(f'createERC20TokenNetwork failed', **log_details)
             raise TransactionThrew('createERC20TokenNetwork', receipt_or_none)
 
         token_network_address = self.get_token_network(token_address)
 
         if token_network_address is None:
-            log.info(
-                'add_token failed and check_transaction_threw didnt detect it',
-                node=pex(self.node_address),
-                token_address=pex(token_address),
-                registry_address=pex(self.address),
+            log.critical(
+                'createERC20TokenNetwork failed and check_transaction_threw didnt detect it',
+                **log_details,
             )
 
             raise RuntimeError('token_to_token_networks failed')
 
         log.info(
-            'add_token successful',
-            node=pex(self.node_address),
-            token_address=pex(token_address),
-            registry_address=pex(self.address),
+            'createERC20TokenNetwork successful',
             token_network_address=pex(token_network_address),
+            **log_details,
         )
 
         return token_network_address
