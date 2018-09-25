@@ -1,0 +1,38 @@
+settings:
+  gas_price: "fast"
+
+nodes:
+  commands:
+    #start: "docker start raiden_{:02d}"
+    #stop: "docker stop raiden_{:02d}"
+    #kill: "docker kill raiden_{:02d}"
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 3
+    template: "localhost:50{:02d}"
+
+# Open and close all channels, and check that leaving the network succeeds
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          tasks:
+            # Open Channels
+            - open_channel: {from: 2, to: 0, total_deposit: 10}
+            - open_channel: {from: 2, to: 1, total_deposit: 10}
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+      - parallel:
+          tasks:
+            - close_channel: {from: 2, to: 0}
+            - close_channel: {from: 2, to: 1}
+            - close_channel: {from: 0, to: 1}
+      - parallel:
+          tasks:
+            # Check that the channels with node 2 are closed
+            - assert: {from: 2, to: 0, expected_http_status: 200, state: "closed"}
+            - assert: {from: 2, to: 1, expected_http_status: 200, state: "closed"}
+      # Doesn't do much, just make sure this step returns successfully.
+      - leave_network: {from: 2}
