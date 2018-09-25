@@ -289,7 +289,6 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     restored_channel_state = channel_state_until_state_change(
         alice_app.raiden,
         token_address,
-        token_network_identifier,
         alice_bob_channel_state.identifier,
         'latest',
     )
