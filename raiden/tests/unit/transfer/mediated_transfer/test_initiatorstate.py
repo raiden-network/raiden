@@ -682,7 +682,6 @@ def test_handle_secretreveal():
 def test_initiator_lock_expired():
     amount = UNIT_TRANSFER_AMOUNT * 2
     block_number = 1
-    refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -794,12 +793,11 @@ def test_initiator_lock_expired():
 
 
 def test_initiator_handle_contract_receive_secret_reveal():
-    """ Make sure the initiator handles ContractReceiveSecretReveal
-    and checks the existence of the transfer's secrethash in
-    secrethashes_to_lockedlocks and secrethashes_to_onchain_unlockedlocks. """
+    """ Initiator must unlock off-chain if the secret is revealed on-chain and
+    the channel is open.
+    """
     amount = UNIT_TRANSFER_AMOUNT * 2
     block_number = 1
-    refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
@@ -838,11 +836,15 @@ def test_initiator_handle_contract_receive_secret_reveal():
         block_number=block_number + 1,
     )
 
-    initiator_manager.handle_onchain_secretreveal(
+    message_identifier = message_identifier_from_prng(deepcopy(pseudo_random_generator))
+
+    iteration = initiator_manager.handle_onchain_secretreveal(
         payment_state=current_state,
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
     )
 
-    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
-    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_onchain_unlockedlocks
+    assert events.must_contain_entry(iteration.events, SendBalanceProof, {
+        'message_identifier': message_identifier,
+        'payment_identifier': current_state.initiator.transfer_description.payment_identifier,
+    })
