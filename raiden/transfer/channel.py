@@ -255,7 +255,6 @@ def is_balance_proof_usable_onchain(
         received_balance_proof: BalanceProofSignedState,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
-        receiver_state: NettingChannelEndState,
 ) -> typing.SuccessOrError:
     """ Checks the balance proof can be used on-chain.
 
@@ -369,7 +368,6 @@ def is_valid_directtransfer(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
-        receiver_state=receiver_state,
     )
 
     if not is_balance_proof_usable:
@@ -483,12 +481,11 @@ def is_valid_lock_expired(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
-        receiver_state=receiver_state,
     )
 
     if not is_balance_proof_usable:
         msg = 'Invalid LockExpired message. {}'.format(invalid_balance_proof_msg)
-        result = (False, invalid_balance_proof_msg, None)
+        result = (False, msg, None)
 
     elif merkletree is None:
         msg = 'Invalid LockExpired message. Same lockhash handled twice.'
@@ -564,12 +561,11 @@ def valid_lockedtransfer_check(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
-        receiver_state=receiver_state,
     )
 
     if not is_balance_proof_usable:
         msg = f'Invalid {message_name} message. {invalid_balance_proof_msg}'
-        result = (False, invalid_balance_proof_msg, None)
+        result = (False, msg, None)
 
     elif merkletree is None:
         msg = 'Invalid {} message. Same lockhash handled twice.'.format(message_name)
@@ -728,7 +724,6 @@ def is_valid_unlock(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
-        receiver_state=receiver_state,
     )
 
     if not is_balance_proof_usable:
