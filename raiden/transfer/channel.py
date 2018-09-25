@@ -1782,9 +1782,9 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=unlock.message_identifier,
         )
-        events = [send_processed]
+        events: typing.List[Event] = [send_processed]
     else:
-        events = list()
+        events: typing.List[Event] = list()
 
     return is_valid, events, msg
 
