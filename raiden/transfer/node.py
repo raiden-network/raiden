@@ -28,7 +28,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     ChainState,
     InitiatorTask,
