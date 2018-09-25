@@ -1,0 +1,48 @@
+settings:
+  gas_price: "fast"
+
+nodes:
+  commands:
+    #start: "docker start raiden_{:02d}"
+    #stop: "docker stop raiden_{:02d}"
+    #kill: "docker kill raiden_{:02d}"
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 3
+    template: "localhost:50{:02d}"
+
+# Leave network when one of the nodes is down
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          tasks:
+            # Open Channels
+            - open_channel: {from: 2, to: 0, total_deposit: 10}
+            - open_channel: {from: 2, to: 1, total_deposit: 10}
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+      - parallel:
+          # Transfer from node 2 to other nodes in the network
+          tasks:
+            - transfer: {from: 2, to: 0, amount: 1}
+            - transfer: {from: 2, to: 1, amount: 1}
+      - wait: 2
+      - parallel:
+          tasks:
+            # Assert Balances
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10,  state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 1, state: "opened"}
+            - assert: {from: 2, to: 0, total_deposit: 10, balance: 9, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 0, balance: 1,  state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 10, balance: 9,  state: "opened"}
+      - stop_node: 1
+      - leave_network: {from: 2}
+      - parallel:
+          tasks:
+            # Check that the channels with node 2 are closed
+            - assert: {from: 1, to: 0, total_deposit: 10, balance: 0,  state: "opened"}
+            - assert: {from: 2, to: 0, expected_http_status: 404}
+            - assert: {from: 2, to: 1, expected_http_status: 404}
