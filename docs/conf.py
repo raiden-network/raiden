@@ -50,7 +50,7 @@ def check_if_nightly(version):
         else:
             return version
 
-    except BaseException as e:
+    except BaseException:
         return version
 
 

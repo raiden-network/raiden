@@ -547,7 +547,6 @@ class RaidenAPI:
         if partner_address and not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
 
-        result = list()
         if token_address and partner_address:
             channel_state = views.get_channelstate_for(
                 views.state_from_raiden(self.raiden),
