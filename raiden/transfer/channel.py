@@ -692,7 +692,6 @@ def is_valid_unlock(
         unlock: ReceiveUnlock,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
-        receiver_state: NettingChannelEndState,
 ) -> MerkletreeOrError:
     received_balance_proof = unlock.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
@@ -1772,7 +1771,6 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         unlock,
         channel_state,
         channel_state.partner_state,
-        channel_state.our_state,
     )
 
     if is_valid:
