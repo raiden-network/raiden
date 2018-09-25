@@ -166,10 +166,10 @@ class AlarmTask(Runnable):
         latest_block = self.chain.get_block(block_identifier='latest')
 
         log.debug(
-            'starting at block number',
-            number=latest_block['number'],
+            'Starting at block number',
+            block_number=latest_block['number'],
             gas_limit=latest_block['gasLimit'],
-            block_hash=latest_block['hash'],
+            block_hash=to_hex(latest_block['hash']),
         )
 
         self._run_callbacks(latest_block)
