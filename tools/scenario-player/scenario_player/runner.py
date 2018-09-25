@@ -5,6 +5,11 @@ import structlog
 import yaml
 from eth_utils import to_checksum_address
 from requests import RequestException, Session
+from toolz import first
+from web3 import HTTPProvider, Web3
+
+from raiden.accounts import Account
+from raiden.network.rpc.client import JSONRPCClient
 from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
 from scenario_player.utils import (
     TimeOutHTTPAdapter,
@@ -12,11 +17,6 @@ from scenario_player.utils import (
     get_or_deploy_token,
     wait_for_txs,
 )
-from toolz import first
-from web3 import HTTPProvider, Web3
-
-from raiden.accounts import Account
-from raiden.network.rpc.client import JSONRPCClient
 
 log = structlog.get_logger(__name__)
 
