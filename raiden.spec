@@ -80,7 +80,7 @@ a = Entrypoint(
     ],
     hiddenimports=['scrypt', 'eth_tester'],
     datas=[
-        ('raiden/smoketest_config.json', 'raiden'),
+        ('raiden/smoketest_genesis.json', 'raiden'),
     ],
     excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
 )
