@@ -1,21 +1,28 @@
 #!/usr/bin/env python
+import json
+
 import click
+from eth_utils import to_checksum_address
 from web3 import HTTPProvider, Web3
 
+from raiden.accounts import Account
 from raiden.network.rpc.client import JSONRPCClient
 
 WEI_TO_ETH = 10 ** 18
 
 
 @click.command()
-@click.argument("private-key")
+@click.option("--keystore-file", required=True, type=click.Path(exists=True, dir_okay=False))
+@click.password_option("--password", envvar="ACCOUNT_PASSWORD", required=True)
+@click.option("--rpc-url", default="http://localhost:8545")
 @click.argument("eth-amount", type=int)
 @click.argument("targets_file", type=click.File())
-@click.option("-p", "--port", default=8545)
-@click.option("-h", "--host", default="127.0.0.1")
-def main(private_key, eth_amount, targets_file, port, host):
-    web3 = Web3(HTTPProvider(f'http://{host}:{port}'))
-    client = JSONRPCClient(web3, private_key)
+def main(keystore_file, password, rpc_url, eth_amount, targets_file):
+    web3 = Web3(HTTPProvider(rpc_url))
+    with open(keystore_file, 'r') as keystore:
+        account = Account(json.load(keystore), password, keystore_file)
+        print("Using account:", to_checksum_address(account.address))
+    client = JSONRPCClient(web3, account.privkey)
 
     targets = [t.strip() for t in targets_file]
     balance = client.balance(client.sender)
