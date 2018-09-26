@@ -258,7 +258,9 @@ class NATChoiceType(click.Choice):
 
 class NetworkChoiceType(click.Choice):
     def convert(self, value, param, ctx):
-        if isinstance(value, str) and value.isnumeric():
+        if isinstance(value, int):
+            return value
+        elif isinstance(value, str) and value.isnumeric():
             try:
                 return int(value)
             except ValueError:
