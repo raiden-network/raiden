@@ -1,9 +1,7 @@
-import io
 import os
 import shutil
 import sys
 import tempfile
-import termios
 import traceback
 from binascii import hexlify, unhexlify
 from http import HTTPStatus
@@ -139,95 +137,6 @@ def run_smoketests(
         return error
 
 
-def start_ethereum():
-    ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
-
-    free_port = get_free_port('127.0.0.1', 27854)
-    rpc_port = next(free_port)
-    p2p_port = next(free_port)
-    is_miner = True
-    node_key = TEST_PRIVKEY
-    base_datadir = os.environ['RST_DATADIR']
-    genesis_path = os.path.join(get_project_root(), 'smoketest_genesis.json')
-
-    description = GethNodeDescription(
-        node_key,
-        rpc_port,
-        p2p_port,
-        is_miner,
-    )
-
-    rpc_endpoint = f'http://127.0.0.1:{rpc_port}'
-    web3 = Web3(HTTPProvider(rpc_endpoint))
-
-    verbosity = 0
-    geth_nodes = [description]
-    random_marker = hexlify(b'raiden').decode()
-
-    config = geth_node_config(
-        description.private_key,
-        description.p2p_port,
-        description.rpc_port,
-    )
-
-    if description.miner:
-        config['unlock'] = 0
-        config['mine'] = True
-        config['password'] = os.path.join(base_datadir, 'pw')
-
-    nodes_configuration = [config]
-    geth_node_config_set_bootnodes(nodes_configuration)
-    keystore = os.path.join(geth_node_to_datadir(config, base_datadir), 'keystore')
-
-    logdir = os.path.join(base_datadir, 'logs')
-
-    # check that the test is running on non-capture mode, and if it is save
-    # current term settings before running geth
-    if isinstance(sys.stdin, io.IOBase):
-        term_settings = termios.tcgetattr(sys.stdin)
-
-    processes_list = geth_run_nodes(
-        geth_nodes,
-        nodes_configuration,
-        base_datadir,
-        genesis_path,
-        RAIDENTEST_CHAINID,
-        verbosity,
-        logdir,
-    )
-
-    try:
-        geth_wait_and_check(web3, [], random_marker)
-
-        for process in processes_list:
-            process.poll()
-
-            if process.returncode is not None:
-                raise ValueError(f'geth process failed with exit code {process.returncode}')
-
-    except (ValueError, RuntimeError) as e:
-        # If geth_wait_and_check or the above loop throw an exception make sure
-        # we don't end up with a rogue geth process running in the background
-        for process in processes_list:
-            process.terminate()
-        raise e
-
-    finally:
-        # reenter echo mode (disabled by geth pasphrase prompt)
-        if isinstance(sys.stdin, io.IOBase):
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
-
-    ethereum_config = {
-        'rpc': str(rpc_port),
-        'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
-        'init_log_out': b'',
-        'init_log_err': b'',
-        'password_file': os.path.join(base_datadir, 'pw'),
-        'keystore': keystore,
-    }
-    return processes_list, ethereum_config
-
-
 def deploy_smoketest_contracts(client, chain_id):
     client.web3.personal.unlockAccount(
         client.web3.eth.accounts[0],
@@ -277,14 +186,73 @@ def get_private_key(keystore):
 
 def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Starting Ethereum node')
-    ethereum, ethereum_config = start_ethereum()
-    port = ethereum_config['rpc']
-    web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
-    web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
+
+    ensure_executable('geth')
+
+    free_port = get_free_port('127.0.0.1', 27854)
+    rpc_port = next(free_port)
+    p2p_port = next(free_port)
+    base_datadir = os.environ['RST_DATADIR']
+
+    description = GethNodeDescription(
+        private_key=TEST_PRIVKEY,
+        rpc_port=rpc_port,
+        p2p_port=p2p_port,
+        miner=True,
+    )
+
+    web3 = Web3(HTTPProvider(endpoint_uri=f'http://127.0.0.1:{rpc_port}'))
+    web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+
+    config = geth_node_config(
+        description.private_key,
+        description.p2p_port,
+        description.rpc_port,
+    )
+
+    config.update({
+        'unlock': 0,
+        'mine': True,
+        'password': os.path.join(base_datadir, 'pw'),
+    })
+
+    nodes_configuration = [config]
+    geth_node_config_set_bootnodes(nodes_configuration)
+    keystore = os.path.join(geth_node_to_datadir(config, base_datadir), 'keystore')
+
+    logdir = os.path.join(base_datadir, 'logs')
+
+    processes_list = geth_run_nodes(
+        geth_nodes=[description],
+        nodes_configuration=nodes_configuration,
+        base_datadir=base_datadir,
+        genesis_file=os.path.join(get_project_root(), 'smoketest_genesis.json'),
+        chain_id=RAIDENTEST_CHAINID,
+        verbosity=0,
+        logdir=logdir,
+    )
+
+    try:
+        # the marker is hardcoded in the genesis file
+        random_marker = hexlify(b'raiden').decode()
+        geth_wait_and_check(web3, [], random_marker)
+
+        for process in processes_list:
+            process.poll()
+
+            if process.returncode is not None:
+                raise ValueError(f'geth process failed with exit code {process.returncode}')
+
+    except (ValueError, RuntimeError) as e:
+        # If geth_wait_and_check or the above loop throw an exception make sure
+        # we don't end up with a rogue geth process running in the background
+        for process in processes_list:
+            process.terminate()
+        raise e
 
     print_step('Deploying Raiden contracts')
 
-    client = JSONRPCClient(web3_client, get_private_key(ethereum_config['keystore']))
+    client = JSONRPCClient(web3, get_private_key(keystore))
     contract_addresses = deploy_smoketest_contracts(client, RAIDENTEST_CHAINID)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
@@ -303,9 +271,9 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         secret_registry_contract_address=to_checksum_address(
             contract_addresses[CONTRACT_SECRET_REGISTRY],
         ),
-        eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
-        keystore_path=ethereum_config['keystore'],
-        address=ethereum_config['address'],
+        eth_rpc_endpoint='http://127.0.0.1:{}'.format(rpc_port),
+        keystore_path=keystore,
+        address=to_checksum_address(TEST_ACCOUNT_ADDRESS),
         network_id=str(RAIDENTEST_CHAINID),
         sync_check=False,
         transport=transport,
@@ -315,12 +283,11 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         gas_price='fast',
     )
 
-    args['password_file'] = click.File()(ethereum_config['password_file'])
+    args['password_file'] = click.File()(os.path.join(base_datadir, 'pw'))
     args['datadir'] = args['keystore_path']
     return dict(
         args=args,
         contract_addresses=contract_addresses,
-        ethereum=ethereum,
-        ethereum_config=ethereum_config,
+        ethereum=processes_list,
         token=token,
     )
