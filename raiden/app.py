@@ -1,5 +1,7 @@
+import os
 from binascii import unhexlify
 
+import structlog
 from eth_utils import to_checksum_address
 
 from raiden.exceptions import InvalidSettleTimeout
@@ -20,7 +22,10 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
     INITIAL_PORT,
 )
+from raiden.storage.versions import older_db_files_exist
 from raiden.utils import pex, typing
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class App:  # pylint: disable=too-few-public-methods
@@ -83,6 +88,16 @@ class App:  # pylint: disable=too-few-public-methods
             config=config,
             discovery=discovery,
         )
+
+        # Check if files with older versions of the DB exist, emit a warning
+        db_base_path = os.path.dirname(config['database_path'])
+        if older_db_files_exist(db_base_path):
+            log.warning(
+                'Older versions of the database exist in '
+                f'{db_base_path}. Since a newer breaking version is introduced, '
+                'it is advised that you leave all token networks before upgrading and ',
+                'then proceed with the upgrade.',
+            )
 
         # check that the settlement timeout fits the limits of the contract
         invalid_settle_timeout = (
