@@ -1340,9 +1340,10 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                 success = True
         finally:
             app.stop()
-            ethereum.send_signal(2)
+            node = ethereum[0]
+            node.send_signal(2)
+            err, out = node.communicate()
 
-            err, out = ethereum.communicate()
             append_report('Ethereum init stdout', ethereum_config['init_log_out'].decode('utf-8'))
             append_report('Ethereum init stderr', ethereum_config['init_log_err'].decode('utf-8'))
             append_report('Ethereum stdout', out)

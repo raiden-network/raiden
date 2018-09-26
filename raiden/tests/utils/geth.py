@@ -94,7 +94,7 @@ def geth_to_cmd(
     cmd.extend([
         '--nodiscover',
         '--rpc',
-        '--rpcapi', 'eth,net,web3',
+        '--rpcapi', 'eth,net,web3,personal',
         '--rpcaddr', '0.0.0.0',
         '--networkid', str(chain_id),
         '--verbosity', str(verbosity),
