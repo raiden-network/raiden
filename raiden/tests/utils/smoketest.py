@@ -1,5 +1,4 @@
 import io
-import json
 import os
 import shutil
 import sys
@@ -8,7 +7,6 @@ import termios
 import traceback
 from binascii import hexlify, unhexlify
 from http import HTTPStatus
-from typing import Dict
 
 import click
 import requests
@@ -86,7 +84,7 @@ def run_restapi_smoketests():
 
 def run_smoketests(
         raiden_service: RaidenService,
-        test_config: Dict,
+        transport: str,
         token_addresses,
         discovery_address,
         debug: bool = False,
@@ -103,7 +101,7 @@ def run_smoketests(
 
         assert events_token_addresses == token_addresses
 
-        if test_config.get('transport') == 'udp':
+        if transport == 'udp':
             discovery_addresses = list(chain.address_to_discovery.keys())
             assert len(discovery_addresses) == 1, repr(chain.address_to_discovery)
             assert discovery_addresses[0] == discovery_address
@@ -139,17 +137,6 @@ def run_smoketests(
             import pdb
             pdb.post_mortem()  # pylint: disable=no-member
         return error
-
-
-def load_smoketest_config():
-    smoketest_config_path = os.path.join(get_project_root(), 'smoketest_genesis.json')
-
-    # try to load the existing smoketest genesis config
-    if os.path.exists(smoketest_config_path):
-        with open(smoketest_config_path) as handler:
-            return json.load(handler)
-
-    return None
 
 
 def start_ethereum():
