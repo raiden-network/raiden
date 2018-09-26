@@ -1,7 +1,12 @@
 settings:
+  ## Mail notification address - needs a mailgun api key to be given on the command line
   #notify: "raiden-scenario-basic@example.com"
-  ## either `fast`, `medium` or an integer (in gwei)
+
+  ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
   gas_price: "fast"
+
+  ## Protocol to use to connect to the Raiden nodes, default: "http"
+  #protocol: "https"
 
 token:
   ## To re-use an existing token give an address
@@ -54,26 +59,31 @@ scenario:
   serial:
     tasks:
       - parallel:
+          name: "Open channels"
           tasks:
             - open_channel: {from: 0, to: 1, total_deposit: 10}
             - open_channel: {from: 1, to: 2, total_deposit: 10}
       - parallel:
+          name: "Assert after open"
           tasks:
             - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 0,  balance: 0,  state: "opened"}
       - parallel:
+          name: "Deposit reverse"
           tasks:
             - deposit: {from: 1, to: 0, total_deposit: 10}
             - deposit: {from: 2, to: 1, total_deposit: 10}
       - parallel:
+          name: "Assert after deposit"
           tasks:
             - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 10, balance: 10, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 10, balance: 10, state: "opened"}
       - parallel:
+          name: "Transfer"
           tasks:
             - transfer: {from: 0, to: 1, amount: 1}
             - transfer: {from: 1, to: 2, amount: 1}

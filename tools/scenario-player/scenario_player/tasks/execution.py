@@ -2,12 +2,14 @@ import shlex
 import subprocess
 from typing import Any
 
+import click
 import gevent
 import structlog
 from gevent import Greenlet
 from gevent.pool import Group
 
 from scenario_player.exceptions import ScenarioError
+from scenario_player.runner import ScenarioRunner
 
 from .base import Task, get_task_class_for_type
 
@@ -19,12 +21,13 @@ class SerialTask(Task):
 
     def __init__(
         self,
-        runner: 'ScenarioRunner',
+        runner: ScenarioRunner,
         config: Any,
         parent: 'Task' = None,
         abort_on_fail=True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
+        self._name = config.get('name')
 
         self._tasks = []
         for _ in range(config.get('repeat', 1)):
@@ -41,8 +44,11 @@ class SerialTask(Task):
 
     @property
     def _str_details(self):
+        name = ""
+        if self._name:
+            name = f' - {click.style(self._name, fg="blue")}'
         tasks = "\n".join(str(t) for t in self._tasks)
-        return f'\n{tasks}'
+        return f'{name}\n{tasks}'
 
 
 class ParallelTask(SerialTask):
