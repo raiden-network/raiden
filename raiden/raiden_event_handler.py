@@ -376,9 +376,7 @@ class RaidenEventHandler:
         # this channel state has the participants balance hash.
         restored_channel_state = channel_state_until_state_change(
             raiden=raiden,
-            payment_network_identifier=raiden.default_registry.address,
-            token_address=channel_unlock_event.token_address,
-            channel_identifier=channel_unlock_event.channel_identifier,
+            channel_unique_id=channel_unique_id,
             state_change_identifier=record.state_change_identifier,
         )
 
