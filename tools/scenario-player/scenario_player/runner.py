@@ -21,7 +21,7 @@ from scenario_player.utils import (
 log = structlog.get_logger(__name__)
 
 
-TOKEN_BALANCE_MIN = 5 * 10 ** 4
+DEFAULT_TOKEN_BALANCE_MIN = 5 * 10 ** 4
 TIMEOUT = 200
 API_URL_ADDRESS = "{protocol}://{target_host}/api/1/address"
 API_URL_TOKENS = "{protocol}://{target_host}/api/1/tokens"
@@ -91,13 +91,19 @@ class ScenarioRunner(object):
         token_address = self.token_address = to_checksum_address(token_ctr.contract_address)
         first_node = first(self.raiden_nodes)
 
+        token_balance_min = self.scenario.get('token', {}).get(
+            'balance_min',
+            DEFAULT_TOKEN_BALANCE_MIN,
+        )
         mint_tx = []
         for node, address in self.node_to_address.items():
             balance = token_ctr.contract.functions.balanceOf(address).call()
-            if balance < TOKEN_BALANCE_MIN:
-                mint_amount = TOKEN_BALANCE_MIN * 2
+            if balance < token_balance_min:
+                mint_amount = token_balance_min - balance
                 log.debug("Minting tokens for", address=address, node=node, amount=mint_amount)
                 mint_tx.append(token_ctr.transact('mintFor', mint_amount, address))
+            elif balance > token_balance_min:
+                log.warning("Node is overfunded", address=address, node=node, balance=balance)
         wait_for_txs(self.client, mint_tx)
 
         registered_tokens = set(
