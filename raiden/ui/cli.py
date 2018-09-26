@@ -1228,7 +1228,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     from raiden.tests.utils.smoketest import (
         TEST_PARTNER_ADDRESS,
         TEST_DEPOSIT_AMOUNT,
-        load_smoketest_config,
         run_smoketests,
         setup_testchain_and_raiden,
     )
@@ -1263,12 +1262,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         )
 
     print_step('Getting smoketest configuration')
-    smoketest_config = load_smoketest_config()
-    if not smoketest_config:
-        append_report(
-            'Smoketest configuration',
-            'Could not load the smoketest genesis configuration file.',
-        )
 
     result = setup_testchain_and_raiden(
         ctx.parent.params['transport'],
@@ -1281,7 +1274,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     ethereum = result['ethereum']
     ethereum_config = result['ethereum_config']
 
-    smoketest_config['transport'] = args['transport']
     for option_ in run.params:
         if option_.name in args.keys():
             args[option_.name] = option_.process_value(ctx, args[option_.name])
@@ -1322,7 +1314,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             print_step('Running smoketest')
             error = run_smoketests(
                 app.raiden,
-                smoketest_config,
+                args['transport'],
                 token_addresses,
                 contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
                 debug=debug,
@@ -1341,7 +1333,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             append_report('Ethereum init stderr', ethereum_config['init_log_err'].decode('utf-8'))
             append_report('Ethereum stdout', out)
             append_report('Ethereum stderr', err)
-            append_report('Smoketest configuration', json.dumps(smoketest_config))
         if success:
             print_step(f'Smoketest successful, report was written to {report_file}')
         else:
