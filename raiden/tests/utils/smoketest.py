@@ -84,32 +84,30 @@ def run_restapi_smoketests():
     assert response_json[0]['balance'] > 0
 
 
-def run_smoketests(raiden_service: RaidenService, test_config: Dict, debug: bool = False):
+def run_smoketests(
+        raiden_service: RaidenService,
+        test_config: Dict,
+        token_addresses,
+        discovery_address,
+        debug: bool = False,
+):
     """ Test that the assembled raiden_service correctly reflects the configuration from the
     smoketest_genesis. """
     try:
         chain = raiden_service.chain
-        assert (
-            raiden_service.default_registry.address ==
-            to_canonical_address(test_config['contracts']['registry_address'])
-        )
-        assert (
-            raiden_service.default_secret_registry.address ==
-            to_canonical_address(test_config['contracts']['secret_registry_address'])
-        )
-
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
-        token_addresses = [event['args']['token_address'] for event in token_network_added_events]
+        events_token_addresses = [
+            event['args']['token_address']
+            for event in token_network_added_events
+        ]
 
-        assert token_addresses == [test_config['contracts']['token_address']]
+        assert events_token_addresses == token_addresses
 
         if test_config.get('transport') == 'udp':
-            assert len(chain.address_to_discovery.keys()) == 1, repr(chain.address_to_discovery)
-            assert (
-                list(chain.address_to_discovery.keys())[0] ==
-                to_canonical_address(test_config['contracts']['discovery_address'])
-            )
-            discovery = list(chain.address_to_discovery.values())[0]
+            discovery_addresses = list(chain.address_to_discovery.keys())
+            assert len(discovery_addresses) == 1, repr(chain.address_to_discovery)
+            assert discovery_addresses[0] == discovery_address
+            discovery = chain.address_to_discovery[discovery_addresses[0]]
             assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
         token_networks = views.get_token_network_addresses_for(
@@ -144,7 +142,7 @@ def run_smoketests(raiden_service: RaidenService, test_config: Dict, debug: bool
 
 
 def load_smoketest_config():
-    smoketest_config_path = os.path.join(get_project_root(), 'smoketest_config.json')
+    smoketest_config_path = os.path.join(get_project_root(), 'smoketest_genesis.json')
 
     # try to load the existing smoketest genesis config
     if os.path.exists(smoketest_config_path):
@@ -154,7 +152,7 @@ def load_smoketest_config():
     return None
 
 
-def start_ethereum(smoketest_genesis):
+def start_ethereum():
     ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
 
     free_port = get_free_port('127.0.0.1', 27854)
@@ -163,10 +161,7 @@ def start_ethereum(smoketest_genesis):
     is_miner = True
     node_key = TEST_PRIVKEY
     base_datadir = os.environ['RST_DATADIR']
-
-    genesis_path = os.path.join(base_datadir, 'genesis.json')
-    with open(genesis_path, 'w') as handler:
-        json.dump(smoketest_genesis, handler)
+    genesis_path = os.path.join(get_project_root(), 'smoketest_genesis.json')
 
     description = GethNodeDescription(
         node_key,
@@ -293,9 +288,9 @@ def get_private_key(keystore):
     return accmgr.get_privkey(addresses[0], DEFAULT_PASSPHRASE)
 
 
-def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print_step):
+def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Starting Ethereum node')
-    ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
+    ethereum, ethereum_config = start_ethereum()
     port = ethereum_config['rpc']
     web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
     web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)

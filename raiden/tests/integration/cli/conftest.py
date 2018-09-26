@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.tests.utils.smoketest import load_smoketest_config, setup_testchain_and_raiden
+from raiden.tests.utils.smoketest import setup_testchain_and_raiden
 
 
 def append_arg_if_existing(argname, initial_args, new_args):
@@ -11,9 +11,7 @@ def append_arg_if_existing(argname, initial_args, new_args):
 
 @pytest.fixture(scope='session')
 def blockchain_provider():
-    smoketest_config = load_smoketest_config()
     result = setup_testchain_and_raiden(
-        smoketest_config,
         'matrix',
         'auto',
         lambda x: None,

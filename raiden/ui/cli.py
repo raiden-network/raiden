@@ -1271,7 +1271,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         )
 
     result = setup_testchain_and_raiden(
-        smoketest_config,
         ctx.parent.params['transport'],
         ctx.parent.params['matrix_server'],
         print_step,
@@ -1316,24 +1315,18 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             to_canonical_address(TEST_PARTNER_ADDRESS),
             TEST_DEPOSIT_AMOUNT,
         )
-
-        smoketest_config['contracts']['registry_address'] = to_checksum_address(
-            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-        )
-        smoketest_config['contracts']['secret_registry_address'] = to_checksum_address(
-            contract_addresses[CONTRACT_SECRET_REGISTRY],
-        )
-        smoketest_config['contracts']['discovery_address'] = to_checksum_address(
-            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-        )
-        smoketest_config['contracts']['token_address'] = to_checksum_address(
-            token.contract.address,
-        )
+        token_addresses = [to_checksum_address(token.contract.address)]
 
         success = False
         try:
             print_step('Running smoketest')
-            error = run_smoketests(app.raiden, smoketest_config, debug=debug)
+            error = run_smoketests(
+                app.raiden,
+                smoketest_config,
+                token_addresses,
+                contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+                debug=debug,
+            )
             if error is not None:
                 append_report('Smoketest assertion error', error)
             else:
