@@ -1,15 +1,13 @@
+import io
 import json
 import os
-import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
-import time
+import termios
 import traceback
 from binascii import hexlify, unhexlify
 from http import HTTPStatus
-from string import Template
 from typing import Dict
 
 import click
@@ -26,7 +24,14 @@ from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
 from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
-from raiden.tests.utils.geth import geth_create_account, geth_init_datadir, geth_wait_and_check
+from raiden.tests.utils.geth import (
+    GethNodeDescription,
+    geth_node_config,
+    geth_node_config_set_bootnodes,
+    geth_node_to_datadir,
+    geth_run_nodes,
+    geth_wait_and_check,
+)
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
@@ -43,36 +48,16 @@ from raiden_contracts.constants import (
 TEST_ENDPOINT = '9.9.9.9:9999'
 TEST_PARTNER_ADDRESS = '2' * 40
 TEST_DEPOSIT_AMOUNT = 5
+CHAIN_ID = 627
+
+TEST_PRIVKEY = (
+    b'\xad\xd4\xd3\x10\xba\x04$hy\x1d\xd7\xbf\x7fn\xae\x85\xac'
+    b'\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD'
+)
+TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 
 RST_DATADIR = tempfile.mkdtemp()
 os.environ['RST_DATADIR'] = RST_DATADIR
-
-GENESIS_PATH = Template('$RST_DATADIR/genesis.json').substitute(os.environ)
-
-# Environment variables in the command for datadir and ports allow customization.
-# We use DEFAULT_ETH_COMMAND, unless '$RST_ETH_COMMAND' is defined (all environment variables
-# specific to the raiden smoke test are prefixed 'RST_' for Raiden Smoke Test).
-# For customization, set the environment variable to fit your client like this:
-# RST_ETH_COMMAND="ethereum --rpc-port \$RST_RPC_PORT \
-#        --data-dir \$RST_DATADIR" raiden smoketest
-# FIXME: this does not work: the `init` phase is not customizable (gh issue #758)
-DEFAULT_ETH_COMMAND = """
-$RST_GETH_BINARY
-    --nodiscover
-    --nat none
-    --port 0
-    --ipcdisable
-    --rpc
-    --rpcaddr 127.0.0.1
-    --rpcapi eth,net,web3,personal
-    --rpcport $RST_RPC_PORT
-    --mine
-    --etherbase 0
-    --unlock 0
-    --networkid 627
-    --verbosity 3
-    --datadir $RST_DATADIR
-"""
 
 
 def ensure_executable(cmd):
@@ -83,13 +68,6 @@ def ensure_executable(cmd):
             'Make sure it is installed and added to the PATH variable.' % cmd,
         )
         sys.exit(1)
-
-
-TEST_PRIVKEY = (
-    b'\xad\xd4\xd3\x10\xba\x04$hy\x1d\xd7\xbf\x7fn\xae\x85\xac'
-    b'\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD'
-)
-TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 
 
 def run_restapi_smoketests():
@@ -178,55 +156,94 @@ def load_smoketest_config():
 
 def start_ethereum(smoketest_genesis):
     ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
-    RST_RPC_PORT = next(get_free_port('127.0.0.1', 27854))
-    os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
-    cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
-    args = shlex.split(
-        Template(cmd).substitute(os.environ),
-    )
 
-    keystore = os.path.join(os.environ['RST_DATADIR'], 'keystore')
-    if not os.path.exists(keystore):
-        os.makedirs(keystore)
+    free_port = get_free_port('127.0.0.1', 27854)
+    rpc_port = next(free_port)
+    p2p_port = next(free_port)
+    is_miner = True
+    node_key = TEST_PRIVKEY
+    base_datadir = os.environ['RST_DATADIR']
 
-    password_file = os.path.join(keystore, 'password')
-    with open(password_file, 'w') as handler:
-        handler.write(DEFAULT_PASSPHRASE)
-
-    with open(GENESIS_PATH, 'w') as handler:
+    genesis_path = os.path.join(base_datadir, 'genesis.json')
+    with open(genesis_path, 'w') as handler:
         json.dump(smoketest_genesis, handler)
 
-    geth_init_datadir(
-        os.environ['RST_DATADIR'],
-        GENESIS_PATH,
+    description = GethNodeDescription(
+        node_key,
+        rpc_port,
+        p2p_port,
+        is_miner,
     )
 
-    geth_create_account(
-        os.environ['RST_DATADIR'],
-        TEST_PRIVKEY,
+    rpc_endpoint = f'http://127.0.0.1:{rpc_port}'
+    web3 = Web3(HTTPProvider(rpc_endpoint))
+
+    verbosity = 0
+    geth_nodes = [description]
+    random_marker = hexlify(b'raiden').decode()
+
+    config = geth_node_config(
+        description.private_key,
+        description.p2p_port,
+        description.rpc_port,
     )
 
-    args.extend(['--password', os.path.join(keystore, 'password')])
-    ethereum_node = subprocess.Popen(
-        args,
-        universal_newlines=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='UTF-8',
+    if description.miner:
+        config['unlock'] = 0
+        config['mine'] = True
+        config['password'] = os.path.join(base_datadir, 'pw')
+
+    nodes_configuration = [config]
+    geth_node_config_set_bootnodes(nodes_configuration)
+    keystore = os.path.join(geth_node_to_datadir(config, base_datadir), 'keystore')
+
+    logdir = os.path.join(base_datadir, 'logs')
+
+    # check that the test is running on non-capture mode, and if it is save
+    # current term settings before running geth
+    if isinstance(sys.stdin, io.IOBase):
+        term_settings = termios.tcgetattr(sys.stdin)
+
+    processes_list = geth_run_nodes(
+        geth_nodes,
+        nodes_configuration,
+        base_datadir,
+        genesis_path,
+        CHAIN_ID,
+        verbosity,
+        logdir,
     )
-    ethereum_node.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
-    time.sleep(.1)
-    ethereum_node.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
-    ethereum_config = dict(
-        rpc=os.environ['RST_RPC_PORT'],
-        keystore=keystore,
-        address=to_checksum_address(TEST_ACCOUNT_ADDRESS),
-        init_log_out=b'',
-        init_log_err=b'',
-        password_file=password_file,
-    )
-    return ethereum_node, ethereum_config
+
+    try:
+        geth_wait_and_check(web3, [], random_marker)
+
+        for process in processes_list:
+            process.poll()
+
+            if process.returncode is not None:
+                raise ValueError(f'geth process failed with exit code {process.returncode}')
+
+    except (ValueError, RuntimeError) as e:
+        # If geth_wait_and_check or the above loop throw an exception make sure
+        # we don't end up with a rogue geth process running in the background
+        for process in processes_list:
+            process.terminate()
+        raise e
+
+    finally:
+        # reenter echo mode (disabled by geth pasphrase prompt)
+        if isinstance(sys.stdin, io.IOBase):
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
+
+    ethereum_config = {
+        'rpc': str(rpc_port),
+        'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
+        'init_log_out': b'',
+        'init_log_err': b'',
+        'password_file': os.path.join(base_datadir, 'pw'),
+        'keystore': keystore,
+    }
+    return processes_list, ethereum_config
 
 
 def deploy_smoketest_contracts(client, chain_id):
@@ -267,11 +284,10 @@ def deploy_smoketest_contracts(client, chain_id):
     return addresses
 
 
-def get_private_key():
-    keystore = os.path.join(os.environ['RST_DATADIR'], 'keystore')
+def get_private_key(keystore):
     accmgr = AccountManager(keystore)
     if not accmgr.accounts:
-        raise RuntimeError('No Ethereum accounts found in the user\'s system')
+        raise RuntimeError("No Ethereum accounts found in the user's system")
 
     addresses = list(accmgr.accounts.keys())
     return accmgr.get_privkey(addresses[0], DEFAULT_PASSPHRASE)
@@ -283,13 +299,10 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
     port = ethereum_config['rpc']
     web3_client = Web3(HTTPProvider(f'http://0.0.0.0:{port}'))
     web3_client.middleware_stack.inject(geth_poa_middleware, layer=0)
-    random_marker = hexlify(b'raiden').decode()
-    privatekeys = []
-    geth_wait_and_check(web3_client, privatekeys, random_marker)
 
     print_step('Deploying Raiden contracts')
 
-    client = JSONRPCClient(web3_client, get_private_key())
+    client = JSONRPCClient(web3_client, get_private_key(ethereum_config['keystore']))
     contract_addresses = deploy_smoketest_contracts(client, 627)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
