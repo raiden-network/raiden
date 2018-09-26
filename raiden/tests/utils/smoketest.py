@@ -25,7 +25,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
-from raiden.tests.utils.geth import geth_wait_and_check
+from raiden.tests.utils.geth import geth_init_datadir, geth_wait_and_check
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
@@ -192,24 +192,6 @@ def load_smoketest_config():
     return None
 
 
-def init_with_genesis(smoketest_genesis):
-    with open(GENESIS_PATH, 'w') as handler:
-        json.dump(smoketest_genesis, handler)
-
-    cmd = '$RST_GETH_BINARY --datadir $RST_DATADIR init {}'.format(GENESIS_PATH)
-    args = shlex.split(
-        Template(cmd).substitute(os.environ),
-    )
-    init = subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    out, err = init.communicate()
-    assert init.returncode == 0
-    return out, err
-
-
 def start_ethereum(smoketest_genesis):
     ensure_executable(os.environ.setdefault('RST_GETH_BINARY', 'geth'))
     RST_RPC_PORT = next(get_free_port('127.0.0.1', 27854))
@@ -227,7 +209,13 @@ def start_ethereum(smoketest_genesis):
     with open(os.path.join(keystore, 'password'), 'w') as handler:
         handler.write(TEST_ACCOUNT_PASSWORD)
 
-    init_out, init_err = init_with_genesis(smoketest_genesis)
+    with open(GENESIS_PATH, 'w') as handler:
+        json.dump(smoketest_genesis, handler)
+
+    geth_init_datadir(
+        os.environ['RST_DATADIR'],
+        GENESIS_PATH,
+    )
 
     args.extend(['--password', os.path.join(keystore, 'password')])
     ethereum_node = subprocess.Popen(
@@ -245,8 +233,8 @@ def start_ethereum(smoketest_genesis):
         rpc=os.environ['RST_RPC_PORT'],
         keystore=keystore,
         address=to_checksum_address(TEST_ACCOUNT['address']),
-        init_log_out=init_out,
-        init_log_err=init_err,
+        init_log_out=b'',
+        init_log_err=b'',
     )
     return ethereum_node, ethereum_config
 
