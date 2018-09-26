@@ -16,6 +16,7 @@ from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
+from raiden.constants import RAIDENTEST_CHAINID
 from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
@@ -46,7 +47,6 @@ from raiden_contracts.constants import (
 TEST_ENDPOINT = '9.9.9.9:9999'
 TEST_PARTNER_ADDRESS = '2' * 40
 TEST_DEPOSIT_AMOUNT = 5
-CHAIN_ID = 627
 
 TEST_PRIVKEY = (
     b'\xad\xd4\xd3\x10\xba\x04$hy\x1d\xd7\xbf\x7fn\xae\x85\xac'
@@ -191,7 +191,7 @@ def start_ethereum():
         nodes_configuration,
         base_datadir,
         genesis_path,
-        CHAIN_ID,
+        RAIDENTEST_CHAINID,
         verbosity,
         logdir,
     )
@@ -285,7 +285,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Deploying Raiden contracts')
 
     client = JSONRPCClient(web3_client, get_private_key(ethereum_config['keystore']))
-    contract_addresses = deploy_smoketest_contracts(client, 627)
+    contract_addresses = deploy_smoketest_contracts(client, RAIDENTEST_CHAINID)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
     registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
@@ -306,7 +306,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         eth_rpc_endpoint='http://127.0.0.1:{}'.format(port),
         keystore_path=ethereum_config['keystore'],
         address=ethereum_config['address'],
-        network_id='627',
+        network_id=str(RAIDENTEST_CHAINID),
         sync_check=False,
         transport=transport,
         matrix_server='http://localhost:8008'
