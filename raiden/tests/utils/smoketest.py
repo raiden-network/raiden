@@ -201,7 +201,8 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         miner=True,
     )
 
-    web3 = Web3(HTTPProvider(endpoint_uri=f'http://127.0.0.1:{rpc_port}'))
+    eth_rpc_endpoint = f'http://127.0.0.1:{rpc_port}'
+    web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
     web3.middleware_stack.inject(geth_poa_middleware, layer=0)
 
     config = geth_node_config(
@@ -260,34 +261,36 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     registry.add_token(to_canonical_address(token.contract.address))
 
     print_step('Setting up Raiden')
-    # setup cli arguments for starting raiden
-    args = dict(
-        discovery_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-        ),
-        registry_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-        ),
-        secret_registry_contract_address=to_checksum_address(
-            contract_addresses[CONTRACT_SECRET_REGISTRY],
-        ),
-        eth_rpc_endpoint='http://127.0.0.1:{}'.format(rpc_port),
-        keystore_path=keystore,
-        address=to_checksum_address(TEST_ACCOUNT_ADDRESS),
-        network_id=str(RAIDENTEST_CHAINID),
-        sync_check=False,
-        transport=transport,
-        matrix_server='http://localhost:8008'
-                      if matrix_server == 'auto'
-                      else matrix_server,
-        gas_price='fast',
-    )
 
-    args['password_file'] = click.File()(os.path.join(base_datadir, 'pw'))
-    args['datadir'] = args['keystore_path']
-    return dict(
-        args=args,
-        contract_addresses=contract_addresses,
-        ethereum=processes_list,
-        token=token,
+    if matrix_server == 'auto':
+        matrix_server = 'http://localhost:8008'
+
+    discovery_contract_address = to_checksum_address(
+        contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
     )
+    registry_contract_address = to_checksum_address(
+        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+    )
+    secret_registry_contract_address = to_checksum_address(
+        contract_addresses[CONTRACT_SECRET_REGISTRY],
+    )
+    return {
+        'args': {
+            'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
+            'datadir': keystore,
+            'discovery_contract_address': discovery_contract_address,
+            'eth_rpc_endpoint': eth_rpc_endpoint,
+            'gas_price': 'fast',
+            'keystore_path': keystore,
+            'matrix_server': matrix_server,
+            'network_id': str(RAIDENTEST_CHAINID),
+            'password_file': click.File()(os.path.join(base_datadir, 'pw')),
+            'registry_contract_address': registry_contract_address,
+            'secret_registry_contract_address': secret_registry_contract_address,
+            'sync_check': False,
+            'transport': transport,
+        },
+        'contract_addresses': contract_addresses,
+        'ethereum': processes_list,
+        'token': token,
+    }
