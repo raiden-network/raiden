@@ -461,10 +461,6 @@ class MatrixTransport(Runnable):
                     break
 
         self._discovery_room = discovery_room
-        # Populate initial members
-        for user in self._discovery_room.get_joined_members():
-            self._get_user(user)  # cache known users
-            self._maybe_invite_user(user)
 
     def _inventory_rooms(self):
         self.log.debug('INVENTORY ROOMS', rooms=self._client.rooms)
@@ -1000,7 +996,7 @@ class MatrixTransport(Runnable):
             return
         self._address_to_userids[address].add(user_id)
         # maybe inviting user used to also possibly invite user's from discovery presence changes
-        self._maybe_invite_user(user)
+        self._spawn(self._maybe_invite_user, user)
 
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
@@ -1071,7 +1067,15 @@ class MatrixTransport(Runnable):
             room.get_joined_members()
         if user.user_id not in room._members:
             self.log.debug('Inviting', user=user, room=room)
-            room.invite_user(user.user_id)
+            try:
+                room.invite_user(user.user_id)
+            except (json.JSONDecodeError, MatrixRequestError):
+                self.log.warning(
+                    'Exception inviting user, maybe their server is not healthy',
+                    user=user,
+                    room=room,
+                    exc_info=True,
+                )
 
     def _select_server(self, config):
         server = config['server']
