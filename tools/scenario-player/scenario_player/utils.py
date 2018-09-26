@@ -105,13 +105,14 @@ def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
     now = datetime.now()
     name = token_config.get('name', f"Scenario Test Token {token_id!s} {now:%Y-%m-%dT%H:%M}")
     symbol = token_config.get('symbol', f"T{token_id!s:.3}")
+    decimals = token_config.get('decimals', 0)
 
-    log.debug("Deploying token", name=name, symbol=symbol)
+    log.debug("Deploying token", name=name, symbol=symbol, decimals=decimals)
 
     token_ctr = client.deploy_solidity_contract(
         'CustomToken',
         CONTRACT_MANAGER._contracts,
-        constructor_parameters=(0, 0, name, symbol),
+        constructor_parameters=(0, decimals, name, symbol),
         confirmations=1,
 
     )
