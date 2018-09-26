@@ -129,12 +129,14 @@ def run_smoketests(
 
         # Run API test
         run_restapi_smoketests()
-    except Exception:
+    except:  # NOQA pylint: disable=bare-except
         error = traceback.format_exc()
         if debug:
             import pdb
             pdb.post_mortem()  # pylint: disable=no-member
         return error
+
+    return None
 
 
 def deploy_smoketest_contracts(client, chain_id):
