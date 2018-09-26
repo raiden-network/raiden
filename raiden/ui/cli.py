@@ -1272,7 +1272,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
     contract_addresses = result['contract_addresses']
     token = result['token']
     ethereum = result['ethereum']
-    ethereum_config = result['ethereum_config']
 
     for option_ in run.params:
         if option_.name in args.keys():
@@ -1329,8 +1328,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             node.send_signal(2)
             err, out = node.communicate()
 
-            append_report('Ethereum init stdout', ethereum_config['init_log_out'].decode('utf-8'))
-            append_report('Ethereum init stderr', ethereum_config['init_log_err'].decode('utf-8'))
             append_report('Ethereum stdout', out)
             append_report('Ethereum stderr', err)
         if success:
