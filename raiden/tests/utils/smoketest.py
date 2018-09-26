@@ -24,12 +24,13 @@ from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
+from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
 from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
-from raiden.tests.utils.geth import geth_init_datadir, geth_wait_and_check
+from raiden.tests.utils.geth import geth_create_account, geth_init_datadir, geth_wait_and_check
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.utils import get_project_root
+from raiden.utils import get_project_root, privatekey_to_address
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -84,28 +85,11 @@ def ensure_executable(cmd):
         sys.exit(1)
 
 
-TEST_ACCOUNT = {
-    'version': 3,
-    'crypto': {
-        'ciphertext': '4d9fecf81ca312f7b1ee1bd57196e9c51737d461d7faa019f566834d4d3d4615',
-        'cipherparams': {
-            'iv': 'd19d1a6a1a66fb8d86755eeee0cc5da8',
-        },
-        'kdf': 'pbkdf2',
-        'kdfparams': {
-            'dklen': 32,
-            'c': 262144,
-            'prf': 'hmac-sha256',
-            'salt': '6725f3e185b3f0475e52507e512b1b2c',
-        },
-        'mac': 'ec86b1e6188dc2e7e415fa4214153636387338dbffe2edf1b04fac6be23eead4',
-        'cipher': 'aes-128-ctr',
-        'version': 1,
-    },
-    'address': '67a5e21e34a58ed8d47c719fe291ddd2ea825e12',
-}
-TEST_ACCOUNT_PASSWORD = 'password'
-TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44'
+TEST_PRIVKEY = (
+    b'\xad\xd4\xd3\x10\xba\x04$hy\x1d\xd7\xbf\x7fn\xae\x85\xac'
+    b'\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD'
+)
+TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 
 
 def run_restapi_smoketests():
@@ -204,10 +188,10 @@ def start_ethereum(smoketest_genesis):
     keystore = os.path.join(os.environ['RST_DATADIR'], 'keystore')
     if not os.path.exists(keystore):
         os.makedirs(keystore)
-    with open(os.path.join(keystore, 'account.json'), 'w') as handler:
-        json.dump(TEST_ACCOUNT, handler)
-    with open(os.path.join(keystore, 'password'), 'w') as handler:
-        handler.write(TEST_ACCOUNT_PASSWORD)
+
+    password_file = os.path.join(keystore, 'password')
+    with open(password_file, 'w') as handler:
+        handler.write(DEFAULT_PASSPHRASE)
 
     with open(GENESIS_PATH, 'w') as handler:
         json.dump(smoketest_genesis, handler)
@@ -215,6 +199,11 @@ def start_ethereum(smoketest_genesis):
     geth_init_datadir(
         os.environ['RST_DATADIR'],
         GENESIS_PATH,
+    )
+
+    geth_create_account(
+        os.environ['RST_DATADIR'],
+        TEST_PRIVKEY,
     )
 
     args.extend(['--password', os.path.join(keystore, 'password')])
@@ -226,15 +215,16 @@ def start_ethereum(smoketest_genesis):
         stderr=subprocess.PIPE,
         encoding='UTF-8',
     )
-    ethereum_node.stdin.write(TEST_ACCOUNT_PASSWORD + os.linesep)
+    ethereum_node.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
     time.sleep(.1)
-    ethereum_node.stdin.write(TEST_ACCOUNT_PASSWORD + os.linesep)
+    ethereum_node.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
     ethereum_config = dict(
         rpc=os.environ['RST_RPC_PORT'],
         keystore=keystore,
-        address=to_checksum_address(TEST_ACCOUNT['address']),
+        address=to_checksum_address(TEST_ACCOUNT_ADDRESS),
         init_log_out=b'',
         init_log_err=b'',
+        password_file=password_file,
     )
     return ethereum_node, ethereum_config
 
@@ -242,7 +232,7 @@ def start_ethereum(smoketest_genesis):
 def deploy_smoketest_contracts(client, chain_id):
     client.web3.personal.unlockAccount(
         client.web3.eth.accounts[0],
-        TEST_ACCOUNT_PASSWORD,
+        DEFAULT_PASSPHRASE,
     )
 
     endpoint_registry_address = deploy_contract_web3(
@@ -284,7 +274,7 @@ def get_private_key():
         raise RuntimeError('No Ethereum accounts found in the user\'s system')
 
     addresses = list(accmgr.accounts.keys())
-    return accmgr.get_privkey(addresses[0], TEST_ACCOUNT_PASSWORD)
+    return accmgr.get_privkey(addresses[0], DEFAULT_PASSPHRASE)
 
 
 def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print_step):
@@ -329,11 +319,8 @@ def setup_testchain_and_raiden(smoketest_config, transport, matrix_server, print
                       else matrix_server,
         gas_price='fast',
     )
-    password_file = os.path.join(args['keystore_path'], 'password')
-    with open(password_file, 'w') as handler:
-        handler.write('password')
 
-    args['password_file'] = click.File()(password_file)
+    args['password_file'] = click.File()(ethereum_config['password_file'])
     args['datadir'] = args['keystore_path']
     return dict(
         args=args,
