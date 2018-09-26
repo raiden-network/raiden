@@ -59,6 +59,27 @@ from raiden.utils.runnable import Runnable
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def _redact_secret(data):
+    """ Modify `data` in-place and replace keys named `secret`. """
+
+    if isinstance(data, dict):
+        stack = [data]
+    else:
+        stack = []
+
+    while stack:
+        current = stack.pop()
+
+        if 'secret' in current:
+            current['secret'] = '<redacted>'
+        else:
+            stack.extend(
+                value
+                for value in current.values()
+                if isinstance(value, dict)
+            )
+
+
 def initiator_init(
         raiden,
         transfer_identifier,
@@ -414,7 +435,11 @@ class RaidenService(Runnable):
         return views.block_number(self.wal.state_manager.current_state)
 
     def handle_state_change(self, state_change):
-        log.debug('STATE CHANGE', node=pex(self.address), state_change=state_change)
+        log.debug(
+            'STATE CHANGE',
+            node=pex(self.address),
+            state_change=_redact_secret(serialize.JSONSerializer.serialize(state_change)),
+        )
 
         event_list = self.wal.log_and_dispatch(state_change)
 
@@ -422,7 +447,11 @@ class RaidenService(Runnable):
             return []
 
         for event in event_list:
-            log.debug('RAIDEN EVENT', node=pex(self.address), raiden_event=event)
+            log.debug(
+                'RAIDEN EVENT',
+                node=pex(self.address),
+                raiden_event=_redact_secret(serialize.JSONSerializer.serialize(event)),
+            )
 
             try:
                 self.raiden_event_handler.on_raiden_event(
