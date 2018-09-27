@@ -319,6 +319,7 @@ def handle_onchain_secretreveal(
             channel_state=channel_state,
             secret=state_change.secret,
             secrethash=state_change.secrethash,
+            secret_reveal_block_number=state_change.block_number,
             delete_lock=False,
         )
         iteration.new_state = initiator_state
