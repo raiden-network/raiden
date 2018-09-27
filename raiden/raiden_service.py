@@ -246,6 +246,7 @@ class RaidenService(Runnable):
             state_change = ContractReceiveNewPaymentNetwork(
                 constants.EMPTY_HASH,
                 payment_network,
+                block_number,
             )
             self.handle_state_change(state_change)
 

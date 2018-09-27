@@ -1836,7 +1836,7 @@ def handle_channel_closed(
     )
 
     if just_closed:
-        set_closed(channel_state, state_change.closed_block_number)
+        set_closed(channel_state, state_change.block_number)
 
         balance_proof = channel_state.partner_state.balance_proof
         call_update = (
@@ -1845,7 +1845,7 @@ def handle_channel_closed(
             channel_state.update_transaction is None
         )
         if call_update:
-            expiration = state_change.closed_block_number + channel_state.settle_timeout
+            expiration = state_change.block_number + channel_state.settle_timeout
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
@@ -1855,7 +1855,7 @@ def handle_channel_closed(
                 balance_proof,
             )
             channel_state.update_transaction = TransactionExecutionStatus(
-                started_block_number=state_change.closed_block_number,
+                started_block_number=state_change.block_number,
                 finished_block_number=None,
                 result=None,
             )
@@ -1890,7 +1890,7 @@ def handle_channel_settled(
     # At the moment each participant unlocks its receiving half of the
     # channel automatically
     if state_change.channel_identifier == channel_state.identifier:
-        set_settled(channel_state, state_change.settle_block_number)
+        set_settled(channel_state, state_change.block_number)
 
         is_settle_pending = channel_state.our_unlock_transaction is not None
         merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
