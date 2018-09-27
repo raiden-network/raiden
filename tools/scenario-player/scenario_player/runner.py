@@ -91,10 +91,12 @@ class ScenarioRunner(object):
         token_address = self.token_address = to_checksum_address(token_ctr.contract_address)
         first_node = first(self.raiden_nodes)
 
-        token_balance_min = self.scenario.get('token', {}).get(
+        token_settings = self.scenario.get('token') or {}
+        token_balance_min = token_settings.get(
             'balance_min',
             DEFAULT_TOKEN_BALANCE_MIN,
         )
+
         mint_tx = []
         for node, address in self.node_to_address.items():
             balance = token_ctr.contract.functions.balanceOf(address).call()
