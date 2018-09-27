@@ -835,6 +835,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         secret_registry_address=factories.make_address(),
         secrethash=transfer.lock.secrethash,
         secret=UNIT_SECRET,
+        block_number=block_number + 1,
     )
 
     initiator_manager.handle_onchain_secretreveal(

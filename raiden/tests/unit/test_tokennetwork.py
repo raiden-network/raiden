@@ -36,6 +36,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
         factories.make_transaction_hash(),
         token_network_id,
         channel_state1,
+        block_number,
     )
 
     token_network.state_transition(
@@ -60,6 +61,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
         factories.make_transaction_hash(),
         token_network_id,
         channel_state2,
+        block_number + 1,
     )
 
     # replay the ContractReceiveChannelNew state change
@@ -97,6 +99,7 @@ def test_channel_settle_must_properly_cleanup():
         factories.make_transaction_hash(),
         token_network_id,
         channel_state,
+        open_block_number,
     )
 
     channel_new_iteration = token_network.state_transition(
@@ -169,6 +172,7 @@ def test_channel_data_removed_after_unlock(
         factories.make_transaction_hash(),
         token_network_state.address,
         channel_state,
+        open_block_number,
     )
 
     channel_new_iteration = token_network.state_transition(
@@ -252,6 +256,7 @@ def test_channel_data_removed_after_unlock(
         locksroot=lock_secrethash,
         unlocked_amount=lock_amount,
         returned_tokens=0,
+        block_number=closed_block_number + 1,
     )
     channel_unlock_iteration = token_network.state_transition(
         payment_network_identifier,
@@ -290,6 +295,7 @@ def test_multiple_channel_states(
         factories.make_transaction_hash(),
         token_network_state.address,
         channel_state,
+        open_block_number,
     )
 
     channel_new_iteration = token_network.state_transition(
@@ -374,6 +380,7 @@ def test_multiple_channel_states(
         factories.make_transaction_hash(),
         token_network_state.address,
         new_channel_state,
+        closed_block_number + 1,
     )
 
     channel_new_iteration = token_network.state_transition(
@@ -416,6 +423,7 @@ def test_routing_updates(
         transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_state=channel_state,
+        block_number=open_block_number,
     )
 
     channel_new_iteration1 = token_network.state_transition(
@@ -440,6 +448,7 @@ def test_routing_updates(
         channel_identifier=new_channel_identifier,
         participant1=address2,
         participant2=address3,
+        block_number=open_block_number,
     )
 
     channel_new_iteration2 = token_network.state_transition(
@@ -465,7 +474,7 @@ def test_routing_updates(
         transaction_from=channel_state.partner_state.address,
         token_network_identifier=token_network_state.address,
         channel_identifier=channel_state.identifier,
-        closed_block_number=closed_block_number,
+        block_number=closed_block_number,
     )
 
     channel_closed_iteration1 = token_network.state_transition(
@@ -484,7 +493,7 @@ def test_routing_updates(
         transaction_from=channel_state.our_state.address,
         token_network_identifier=token_network_state.address,
         channel_identifier=channel_state.identifier,
-        closed_block_number=closed_block_number,
+        block_number=closed_block_number,
     )
 
     channel_closed_iteration2 = token_network.state_transition(
@@ -507,6 +516,7 @@ def test_routing_updates(
         transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_identifier=new_channel_identifier,
+        block_number=closed_block_number,
     )
 
     channel_closed_iteration3 = token_network.state_transition(
@@ -524,6 +534,7 @@ def test_routing_updates(
         transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_identifier=new_channel_identifier,
+        block_number=closed_block_number + 10,
     )
 
     channel_closed_iteration4 = token_network.state_transition(

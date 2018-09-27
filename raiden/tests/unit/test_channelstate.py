@@ -269,6 +269,7 @@ def test_channelstate_update_contract_balance():
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
+        block_number,
     )
 
     pseudo_random_generator = random.Random()
@@ -315,6 +316,7 @@ def test_channelstate_decreasing_contract_balance():
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
+        deposit_block_number,
     )
 
     pseudo_random_generator = random.Random()
@@ -354,6 +356,7 @@ def test_channelstate_repeated_contract_balance():
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
+        deposit_block_number,
     )
 
     our_model2 = our_model1._replace(
@@ -407,6 +410,7 @@ def test_deposit_must_wait_for_confirmation():
         channel_state.token_network_identifier,
         channel_state.identifier,
         deposit_transaction,
+        block_number,
     )
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
@@ -1747,6 +1751,7 @@ def test_update_transfer():
         channel_state.token_network_identifier,
         channel_state.identifier,
         23,
+        closed_block_number + 1,
     )
 
     update_block_number = 20

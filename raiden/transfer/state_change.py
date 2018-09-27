@@ -273,6 +273,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_state=data['channel_state'],
+            block_number=data['block_number'],
         )
 
 
@@ -1017,7 +1018,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             nonce: typing.Nonce,
-            block_number: typing.block_number,
+            block_number: typing.BlockNumber,
     ):
         super().__init__(transaction_hash, block_number)
 

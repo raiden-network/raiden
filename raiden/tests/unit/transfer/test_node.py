@@ -24,6 +24,7 @@ def test_is_transaction_effect_satisfied(
         locksroot=EMPTY_MERKLE_ROOT,
         unlocked_amount=0,
         returned_tokens=0,
+        block_number=1,
     )
     # unlock for a channel in which this node is not a participant must return False
     assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
