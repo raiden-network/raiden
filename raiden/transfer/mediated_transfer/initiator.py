@@ -337,8 +337,15 @@ def handle_onchain_secretreveal(
     """
     is_valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+    is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration
 
-    if is_valid_secret and is_channel_open:
+    is_lock_unlocked = (
+        is_valid_secret and
+        is_channel_open and
+        not is_lock_expired
+    )
+
+    if is_lock_unlocked:
         events = events_for_unlock_lock(
             initiator_state,
             channel_state,

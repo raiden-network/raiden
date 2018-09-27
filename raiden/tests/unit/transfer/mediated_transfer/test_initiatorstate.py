@@ -833,7 +833,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         secret_registry_address=factories.make_address(),
         secrethash=transfer.lock.secrethash,
         secret=UNIT_SECRET,
-        block_number=block_number + 1,
+        block_number=transfer.lock.expiration,
     )
 
     message_identifier = message_identifier_from_prng(deepcopy(pseudo_random_generator))
@@ -849,3 +849,57 @@ def test_initiator_handle_contract_receive_secret_reveal():
         'message_identifier': message_identifier,
         'payment_identifier': current_state.initiator.transfer_description.payment_identifier,
     })
+
+
+def test_initiator_handle_contract_receive_secret_reveal_expired():
+    """ Initiator must *not* unlock off-chain if the secret is revealed
+    on-chain *after* the lock expiration.
+    """
+    amount = UNIT_TRANSFER_AMOUNT * 2
+    block_number = 1
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    pseudo_random_generator = random.Random()
+
+    channel_map = {
+        channel1.identifier: channel1,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        routes=available_routes,
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    transfer = current_state.initiator.transfer
+
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    state_change = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_transaction_hash(),
+        secret_registry_address=factories.make_address(),
+        secrethash=transfer.lock.secrethash,
+        secret=UNIT_SECRET,
+        block_number=transfer.lock.expiration + 1,
+    )
+
+    iteration = initiator_manager.handle_onchain_secretreveal(
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert events.must_contain_entry(iteration.events, SendBalanceProof, {}) is None
