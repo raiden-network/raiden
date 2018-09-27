@@ -176,8 +176,17 @@ def subdispatch_to_paymenttask(
                 events = sub_iteration.events
 
         elif isinstance(sub_task, TargetTask):
-            channel_unique_id = sub_task.get_channel_unique_id(chain_state)
-            channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
+            channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+                chain_state=chain_state,
+                token_network_id=sub_task.token_network_identifier,
+                channel_id=sub_task.channel_identifier,
+            )
+            channel_state = None
+            if channel_unique_id:
+                channel_state = views.get_channelstate_by_unique_id(
+                    chain_state=chain_state,
+                    channel_unique_id=channel_unique_id,
+                )
 
             if channel_state:
                 sub_iteration = target.state_transition(
@@ -323,11 +332,17 @@ def subdispatch_targettask(
     events = list()
     channel_state = None
     if is_valid_subtask:
-        channel_unique_id = chain_state.get_channel_unique_id_by_token_network_id(
-            token_network_identifier,
-            channel_identifier,
+        channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+            chain_state=chain_state,
+            token_network_id=token_network_identifier,
+            channel_id=channel_identifier,
         )
-        channel_state = views.get_channelstate_by_unique_id(chain_state, channel_unique_id)
+        channel_state = None
+        if channel_unique_id:
+            channel_state = views.get_channelstate_by_unique_id(
+                chain_state=chain_state,
+                channel_unique_id=channel_unique_id,
+            )
 
     if channel_state:
         pseudo_random_generator = chain_state.pseudo_random_generator

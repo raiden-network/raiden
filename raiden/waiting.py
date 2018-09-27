@@ -245,7 +245,11 @@ def wait_for_settle_all_channels(
             channel_ids = token_network_state.channelidentifiers_to_channels.keys()
 
             channel_unique_ids = [
-                chain_state.get_channel_unique_id_by_token_network_id(token_network_id, channel_id)
+                views.get_channel_unique_id_by_token_network_id(
+                    chain_state=chain_state,
+                    token_network_id=token_network_id,
+                    channel_id=channel_id,
+                )
                 for channel_id in channel_ids
             ]
 

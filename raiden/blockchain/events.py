@@ -210,9 +210,10 @@ def add_channel_unique_identifier(raiden, event):
 
     if 'channel_identifier' in data:
         chain_state = views.state_from_raiden(raiden)
-        channel_unique_id = chain_state.get_channel_unique_id_by_token_network_id(
-            event.originating_contract,
-            data['channel_identifier'],
+        channel_unique_id = views.get_channel_unique_id_by_token_network_id(
+            chain_state=chain_state,
+            token_network_id=event.originating_contract,
+            channel_id=data['channel_identifier'],
         )
 
         data['channel_unique_identifier'] = channel_unique_id
